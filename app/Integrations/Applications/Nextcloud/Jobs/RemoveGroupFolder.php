@@ -1,0 +1,59 @@
+<?php
+
+namespace App\Integrations\Applications\Nextcloud\Jobs;
+
+use App\AppInstance;
+use App\Integrations\Applications\Nextcloud\Services\GroupFolderService;
+use App\Task;
+use Illuminate\Bus\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Throwable;
+
+class RemoveGroupFolder
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $app_instance;
+
+    public $values;
+
+    public $organization;
+
+    public $task;
+
+    /**
+     * Create a new job instance.
+     *
+     * @return void
+     */
+    public function __construct(AppInstance $app_instance, $values, ?Task $task = null)
+    {
+        $this->app_instance = $app_instance;
+        $this->values = $values;
+        $this->organization = $app_instance->organization;
+        $this->task = $task;
+    }
+
+    /**
+     * Execute the job.
+     *
+     * @return void
+     */
+    public function handle()
+    {
+        $options = $this->values;
+
+        // Get group name
+        $group_name = array_key_exists('original_name', $options) ? $options['original_name'] : $options['name'];
+
+        $group_service = new GroupFolderService($this->app_instance, $group_name);
+
+        if ($group_service->group_folder->exists()) {
+            $group_service->delete();
+        }
+    }
+
+    public function failed(Throwable $e) {}
+}

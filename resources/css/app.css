@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+a {
+    color: var(--va-primary);
+}
+
+a:hover {
+    color: var(--va-primary-lighten, --va-primary)
+}
+
+.va-tabs__tabs-items a {
+    color: #000;
+    font-weight: bold;
+}

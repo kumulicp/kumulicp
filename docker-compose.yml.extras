@@ -1,0 +1,142 @@
+
+services:
+    rancher:
+        image: rancher/rancher:latest
+        container_name: ${RANCHER_HOST}
+        command: --no-cacerts
+        ports:
+        - '8081:80'
+        - '443:443'
+        privileged: true
+        environment:
+          CATTLE_BOOTSTRAP_PASSWORD: secretrancherpassword
+        volumes:
+         - rancher-vol:/var/lib/rancher
+        networks:
+         - sail
+
+    nextclouddb:
+        image: mariadb:10.6
+        container_name: nextcloud-db-1
+        command: --transaction-isolation=READ-COMMITTED --log-bin=binlog --binlog-format=ROW
+        volumes:
+        - nextcloud-db:/var/lib/mysql
+        environment:
+        - MYSQL_ROOT_PASSWORD=nextcloud
+        - MYSQL_PASSWORD=nextcloud
+        - MYSQL_DATABASE=nextcloud
+        - MYSQL_USER=nextcloud
+        networks:
+          - sail
+    nextcloud:
+        image: nextcloud
+        container_name: '${NEXTCLOUD_HOST}'
+        ports:
+        - 8082:80
+        links:
+        - nextclouddb
+        volumes:
+        - nextcloud:/var/www/html
+        - ./scripts/nextcloud/post-installation:/docker-entrypoint-hooks.d/post-installation:z
+        environment:
+        - MYSQL_PASSWORD=nextcloud
+        - MYSQL_DATABASE=nextcloud
+        - MYSQL_USER=nextcloud
+        - MYSQL_HOST=nextcloud-db-1
+        - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_HOST} localhost
+        - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+        - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+        - USE_LDAP=true
+        - LDAP_HOST=${LDAP_HOST}
+        - LDAP_PORT=389
+        - LDAP_ADMIN=cn=admin,${LDAP_BASE_DN}
+        - LDAP_AGENT_PASSWORD=${LDAP_PASSWORD}
+        - LDAP_BASE=o=demo,${LDAP_BASE_DN}
+        - LOGIN_FILTER=(&(|(objectclass=inetOrgPerson))(|(memberof=cn=nextcloud,ou=applications,o=demo,${LDAP_BASE_DN}))(|(cn=%uid)(mail=%uid)))
+        - USER_FILTER=(&(|(objectclass=inetOrgPerson))(|(memberof=cn=nextcloud,ou=applications,o=demo,${LDAP_BASE_DN})))
+        networks:
+          - sail
+    wordpressdb:
+        image: docker.io/bitnami/mariadb:11.1
+        container_name: k-wordpress-db-1
+        volumes:
+        - wordpress-db:/bitnami/mariadb
+        environment:
+        # ALLOW_EMPTY_PASSWORD is recommended only for development.
+        - ALLOW_EMPTY_PASSWORD=yes
+        - MARIADB_USER=bn_wordpress
+        - MARIADB_DATABASE=bitnami_wordpress
+        networks:
+        - sail
+    wordpress:
+        image: docker.io/bitnami/wordpress:6
+        container_name: ${WORDPRESS_HOST}
+        ports:
+        - 8085:8080
+        volumes:
+        - wordpress-data:/bitnami/wordpress
+        depends_on:
+        - wordpressdb
+        environment:
+        # ALLOW_EMPTY_PASSWORD is recommended only for development.
+        - ALLOW_EMPTY_PASSWORD=yes
+        - WORDPRESS_DATABASE_HOST=wordpressdb
+        - WORDPRESS_DATABASE_PORT_NUMBER=3306
+        - WORDPRESS_DATABASE_USER=bn_wordpress
+        - WORDPRESS_DATABASE_NAME=bitnami_wordpress
+        - WORDPRESS_USER=${WORDPRESS_ADMIN_USER}
+        - WORDPRESS_PASSWORD=${WORDPRESS_ADMIN_PASSWORD}
+        - WORDPRESS_EMAIL=demo@example.com
+        - WORDPRESS_FIRST_NAME=Demo
+        - WORDPRESS_LAST_NAME=User
+        - WORDPRESS_BLOG_NAME=Demo Wordpress Website
+        - WORDPRESS_SKIP_BOOTSTRAP=yes
+        networks:
+        - sail
+    mailserver:
+        image: ghcr.io/docker-mailserver/docker-mailserver:latest
+        container_name: k-mailserver-1
+        # Provide the FQDN of your mail server here (Your DNS MX record should point to this value)
+        hostname: demo.com
+        ports:
+        - "25:25"
+        - "465:465"
+        - "587:587"
+        - "993:993"
+        - "143:143"
+        volumes:
+        - ./docker-data/dms/mail-data/:/var/mail/:z
+        - ./docker-data/dms/mail-state/:/var/mail-state/:z
+        - ./docker-data/dms/mail-logs/:/var/log/mail/:z
+        - ./docker-data/dms/config/:/tmp/docker-mailserver/:z
+        - /etc/localtime:/etc/localtime:ro
+        environment:
+        - ENABLE_RSPAMD=1
+        - ENABLE_CLAMAV=1
+        - ENABLE_FAIL2BAN=1
+        - LDAP_START_TLS=yes
+        - ACCOUNT_PROVISIONER=LDAP
+        - LDAP_SERVER_HOST=${LDAP_HOST}
+        - LDAP_SEARCH_BASE=${LDAP_BASE_DN}
+        - LDAP_BIND_DN=cn=admin,${LDAP_BASE_DN}
+        - LDAP_BIND_PW=${LDAP_PASSWORD}
+        - SPOOF_PROTECTION=1
+        - LDAP_QUERY_FILTER_DOMAIN=(mail=*@%s)
+        - LDAP_QUERY_FILTER_USER=(mail=%s)
+        - LDAP_QUERY_FILTER_ALIAS=(|) # doesn't match anything
+        - LDAP_QUERY_FILTER_GROUP=(|) # doesn't match anything
+        - LDAP_QUERY_FILTER_SENDERS=(|(mail=%s)(mail=admin@*))
+        - DOVECOT_USER_ATTRS=mailHomeDirectory=home,mailUidNumber=uid,mailGidNumber=gid,mailStorageDirectory=mail
+        - DOVECOT_PASS_ATTRS=cn=user,userPassword=password
+        - DOVECOT_USER_FILTER=(&(objectClass=inetOrgPerson)(cn=%n))
+        cap_add:
+        - NET_ADMIN # For Fail2Ban to work
+        networks:
+        - sail
+
+volumes:
+    rancher-vol:
+    nextcloud:
+    nextcloud-db:
+    wordpress-data:
+    wordpress-db:

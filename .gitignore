@@ -1,0 +1,46 @@
+#sub-git folders
+.git/
+
+# environment config
+.env
+
+# cache required to run
+/storage/framework/cache/*
+/storage/framework/views/*
+/storage/framework/sessions/*
+/storage/logs/*
+/storage/debugbar
+/storage/app/addons/*
+/storage/app/apps/*
+
+# handled by composer
+/vendor
+
+# /Modules
+modules_statuses.json
+/modules/*/*
+
+/public/plugins
+/public/dist
+/public/fonts
+/public/vendor
+/public/js
+/public/css
+/public/build
+/public/widgets
+
+docker-compose.yml
+docker-data
+docker
+
+.phpunit.result.cache
+.phpunit.cache
+.env.testing
+
+/bootstrap/ssr
+
+#handled by npm
+/node_modules
+
+# IDE settings
+/.vscode

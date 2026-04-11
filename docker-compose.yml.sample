@@ -1,0 +1,116 @@
+# For more information: https://laravel.com/docs/sail
+services:
+    laravel.test:
+        build:
+            context: ./vendor/laravel/sail/runtimes/8.4
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-8.4/app
+        ports:
+            - '${APP_PORT:-80}:80'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+        volumes:
+            - '.:/var/www/html:z'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+    mysql:
+        image: mysql:8.4
+        container_name: '${DB_HOST}'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: "%"
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        volumes:
+            - 'sail-mysql:/var/lib/mysql'
+            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh:z'
+        networks:
+            - sail
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
+            retries: 3
+            timeout: 5s
+    openldap:
+        image: osixia/openldap:1.5.0
+        container_name: '${LDAP_HOST}'
+        command: --copy-service
+        ports:
+        - '389:389'
+        - '636:636'
+        environment:
+            LDAP_DOMAIN: '${LDAP_DOMAIN}'
+            LDAP_BASE_DN: '${LDAP_BASE_DN}'
+            LDAP_ADMIN_PASSWORD: '${LDAP_PASSWORD}'
+            LDAP_CONFIG_PASSWORD: '${LDAP_PASSWORD}'
+            LDAP_TLS: 'false'
+            LDAP_LOG_LEVEL: 0
+        volumes:
+        - './docker/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom:z'
+        - 'openldap-config:/etc/ldap/slapd.d'
+        - 'openldap-db:/var/lib/ldap'
+        networks:
+            - sail
+    phpldapadmin:
+        image: phpldapadmin/phpldapadmin:2.3.4
+        ports:
+        - 8083:8080
+        environment:
+            LDAP_HOST: ${LDAP_HOST}
+            LDAP_CONNECTION: ldap
+            APP_TIMEZONE: 'America/Vancouver'
+            APP_DEBUG: 'true'
+            LDAP_NAME: 'Dev LDAP'
+            LDAP_LOGIN_OBJECTCLASS: 'simpleSecurityObject'
+            LDAP_PORT: '389'
+            LDAP_LOGIN_ATTR: 'cn'
+            LDAP_BASE_DN: ${LDAP_BASE_DN}
+            LDAP_PASSWORD: ${LDAP_PASSWORD}
+            LDAP_USERNAME: ${LDAP_USERNAME}
+            LDAP_CACHE: false
+            LDAP_ALLOW_GUEST: true
+        networks:
+            - sail
+    phpmyadmin:
+        image: phpmyadmin:latest
+        ports:
+            - 8080:80
+        environment:
+            PMA_HOST: '${DB_HOST}'
+            PMA_PORT: '${DB_PORT}'
+            PMA_USER: root
+            PMA_PASSWORD: '${DB_PASSWORD}'
+            UPLOAD_LIMIT: 160000000
+        networks:
+         - sail
+
+    redis:
+        image: redis:7
+        container_name: '${REDIS_HOST}'
+        ports:
+        - '6379:6379'
+        command: redis-server --save 20 1 --loglevel warning --requirepass '${REDIS_PASSWORD}'
+        volumes:
+        - redis-volume:/data
+        networks:
+         - sail
+
+networks:
+    sail:
+        driver: bridge
+volumes:
+    redis-volume:
+    openldap-config:
+    openldap-db:
+    sail-mysql:
+
