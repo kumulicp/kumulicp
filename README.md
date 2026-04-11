@@ -2,10 +2,8 @@
 
 KumuliCP wants to simplify app hosting with the power and flexibility of Kubernetes and Helm Charts.
 
-::: error
-This is currently in the Alpha stage of development and should not be used in production. Breaking changes are all I can guarantee right now. Please provide feedback, bug reports, feature requests or even code so this can be the best control panel out there.
-
-:::
+> [!CAUTION]
+> This is currently in the Alpha stage of development and should not be used in production. Breaking changes are all I can guarantee right now. Please provide feedback, bug reports, feature requests or even code so this can be the best control panel out there.
 
 ## ✨ Features
 
@@ -97,10 +95,8 @@ To view the database with phpmyadmin go to http://localhost:8080
 
 ### Rancher
 
-::: info
-This will not create a fully testable rancher environment, but you can activate apps and see that they’ve loaded in Rancher successfully.
-
-:::
+> [!NOTE]
+>This will not create a fully testable rancher environment, but you can activate apps and see that they’ve loaded in Rancher successfully.
 
 1. Copy the rancher service and volume from docker-compose.yml.extras to your docker-compose.yml
 2. Run sail up. Give it time to setup
