@@ -79,6 +79,6 @@ class Configurations extends Controller
         ]);
         $plan->save();
 
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/configurations")->with('success', 'Plan: '.$plan->name.' configurations updated!');
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/configurations")->with('success', __('admin.applications.plans.configurations_updated', ['plan' => $plan->name]));
     }
 }

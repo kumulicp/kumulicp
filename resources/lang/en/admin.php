@@ -52,8 +52,19 @@ return [
     'denied' => 'You must be an administrator to continue',
     'applications' => [
         'plans' => [
+            'added' => 'Plan added',
+            'updated' => ':plan plan updated',
+            'deleted' => ':plan plan deleted',
+            'order_updated' => 'Plan order updated',
+            'archived' => 'Plan archived',
+            'unarchived' => 'Plan unarchived',
             'first_plan_name' => 'First Plan',
             'first_plan_description' => 'First plan to be changed',
+            'configurations_updated' => ':plan plan configurations updated!',
+            'features_updated' => ':plan plan features updated!',
+            'denied' => [
+                'delete' => "Plan can't be deleted as organizations are currently subscribed to it. Please consider archiving for now.",
+            ],
         ],
     ],
 ];

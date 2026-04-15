@@ -166,7 +166,7 @@ class Plans extends Controller
         ];
         $plan->save();
 
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', 'Plan added!');
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
     }
 
     public function edit(Application $app, AppPlan $plan)
@@ -353,7 +353,7 @@ class Plans extends Controller
 
         Cache::flush();
 
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', 'Plan: '.$plan->name.' updated!');
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added', ['plan' => $plan->name]));
     }
 
     public function remove(Application $app, AppPlan $plan)
@@ -366,10 +366,10 @@ class Plans extends Controller
                 $plan_name = '';
             }
 
-            return redirect("/admin/apps/{$app->slug}/plans")->with('success', 'Plan: '.$plan_name.' was deleted.');
+            return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.added', ['plan' => $plan_name]));
         }
 
-        return redirect("/admin/apps/{$app->slug}/plans")->with('error', "Plan can't be deleted as organizations are currently subscribed to it. Please consider archiving for now.");
+        return redirect("/admin/apps/{$app->slug}/plans")->with('error', __('admin.applications.plans.added'));
 
     }
 
@@ -389,7 +389,7 @@ class Plans extends Controller
             $n++;
         }
 
-        return redirect("/admin/apps/{$app->slug}/plans")->with('success', 'Plan order has been updated');
+        return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.order_updated'));
     }
 
     public function archive(Application $app, AppPlan $plan)
@@ -397,7 +397,7 @@ class Plans extends Controller
         $plan->archive = true;
         $plan->save();
 
-        return redirect("/admin/apps/{$app->slug}/plans")->with('success', 'Plan: '.$plan->name.' was archived!');
+        return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.archived'));
     }
 
     public function unarchive(Application $app, AppPlan $plan)
@@ -405,7 +405,7 @@ class Plans extends Controller
         $plan->archive = false;
         $plan->save();
 
-        return redirect("/admin/apps/{$app->slug}/plans")->with('success', 'Plan: '.$plan->name.' is back on display!');
+        return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.unarchived'));
     }
 
     public function retrieve(Application $app)
