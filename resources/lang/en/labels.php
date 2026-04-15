@@ -65,4 +65,6 @@ return [
     'sso' => 'Single Sign-on',
     'shared_apps' => 'Shared Apps',
     'none_org_type' => 'Individual',
+    'enabled' => 'Enabled',
+    'disabled' => 'Disabled',
 ];

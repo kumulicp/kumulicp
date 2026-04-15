@@ -27,11 +27,11 @@ class SsoProviders extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Settings',
+                    'label' => __('admin.settings.control_panel_settings'),
                     'url' => '/admin/settings',
                 ],
                 [
-                    'label' => 'SSO Providers',
+                    'label' => __('admin.settings.sso_providers.providers'),
                 ],
             ],
         ]);
@@ -51,7 +51,7 @@ class SsoProviders extends Controller
         $provider->scopes = 'openid email profile';
         $provider->save();
 
-        return redirect('/admin/settings/sso-providers/'.$provider->id)->with('success', 'Provider added');
+        return redirect('/admin/settings/sso-providers/'.$provider->id)->with('success', __('admin.settings.sso_providers.added'));
     }
 
     public function show(SsoProvider $provider)
@@ -70,11 +70,11 @@ class SsoProviders extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Settings',
+                    'label' => __('admin.settings.control_panel_settings'),
                     'url' => '/admin/settings',
                 ],
                 [
-                    'label' => 'Providers',
+                    'label' => __('admin.settings.sso_providers.providers'),
                     'url' => '/admin/settings/sso-providers',
                 ],
                 [
@@ -113,13 +113,13 @@ class SsoProviders extends Controller
         $provider->scopes = $validated['scopes'];
         $provider->save();
 
-        return redirect('/admin/server/settings/sso-providers/'.$provider->id)->with('success', 'Provider updated');
+        return redirect('/admin/server/settings/sso-providers/'.$provider->id)->with('success', __('admin.settings.sso_providers.updated'));
     }
 
     public function destroy(SsoProvider $ssoProvider)
     {
         $ssoProvider->delete();
 
-        return response()->json(['message' => 'Provider deleted']);
+        return response()->json(['message' => __('admin.settings.sso_providers.deleted')]);
     }
 }

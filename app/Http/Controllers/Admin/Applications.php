@@ -27,7 +27,7 @@ class Applications extends Controller
                     'id' => $app->id,
                     'slug' => $app->slug,
                     'name' => $app->name,
-                    'status' => $app->enabled ? 'Enabled' : 'Disabled',
+                    'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
             'meta' => [
@@ -37,7 +37,7 @@ class Applications extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
             ],
         ]);
@@ -89,7 +89,7 @@ class Applications extends Controller
         ];
         $plan->save();
 
-        return redirect("/admin/apps/{$slug}")->with('success', '');
+        return redirect("/admin/apps/{$slug}")->with('success', __('admin.applications.added', ['app' => $app->name]));
     }
 
     public function show(Application $app)
@@ -111,7 +111,7 @@ class Applications extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -165,7 +165,7 @@ class Applications extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -205,7 +205,7 @@ class Applications extends Controller
         $app->can_update_domain = $request->can_update_domain;
         $app->save();
 
-        return redirect("/admin/apps/{$app->slug}/edit")->with('success', $app->name.' has been updated!');
+        return redirect("/admin/apps/{$app->slug}/edit")->with('success', __('admin.applications.apps', ['app' => $app->name]));
     }
 
     public function enable(Request $request, Application $app)
@@ -232,9 +232,9 @@ class Applications extends Controller
             $app->enabled = 1;
             $app->save();
 
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', 'Application is enabled. Organizations can now activate and begin using it.');
+            return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.enabled'));
         } else {
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', 'This application cannot be enabled yet. You must first enable a default version.');
+            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.applications.denied.enable'));
         }
     }
 
@@ -243,6 +243,6 @@ class Applications extends Controller
         $app->enabled = 0;
         $app->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', 'Application was disabled. Organizations who have activated it will continue to be able to use it. Organizations will no longer be able to do fresh installs it or run custom updates.');
+        return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.disabled'));
     }
 }

@@ -1,8 +1,8 @@
 @component('mail::message')
 @if (count($folders) == 1)
-One of your team folders is low on storage space!
+{{ __('messages.api.nextcloud.team_folders.quota_reached.low_1') }}
 @else
-Some of your team folders are low on storage space!
+{{ __('messages.api.nextcloud.team_folders.quota_reached.low_2') }}
 @endif
 
 @foreach ($folders as $folder)
@@ -10,13 +10,13 @@ Some of your team folders are low on storage space!
 @component('mail::panel')
 @endif
 # {{ $folder['name'] }}
-*Current Usuage:* {{ $folder['size'] }}
+*{{ __('messages.api.nextcloud.team_folders.quota_reached.current') }}:* {{ $folder['size'] }}
 
-*Storage Limit:* {{ $folder['quota'] }}
+*{{ __('messages.api.nextcloud.team_folders.quota_reached.limit') }}:* {{ $folder['quota'] }}
 
-*Percent Used:* {{ round($folder['percent'], 0) }}%
+*{{ __('messages.api.nextcloud.team_folders.quota_reached.percent_used') }}:* {{ round($folder['percent'], 0) }}%
 
-**Storage Left:** {{ $folder['available'] }}
+**{{ __('messages.api.nextcloud.team_folders.quota_reached.remaining') }}:** {{ $folder['available'] }}
 
 @if ($folder['percent'] > 90)
 @endcomponent
@@ -24,11 +24,11 @@ Some of your team folders are low on storage space!
 @endforeach
 
 @component('mail::button', ['url' => config('app.url').'/groups'])
-Manage Groups
+{{ __('messages.api.nextcloud.team_folders.quota_reached.manage_groups') }}
 @endcomponent
 
 @component('mail::button', ['url' => $app_instance->address()])
-Go to Nextcloud
+{{ __('messages.api.nextcloud.team_folders.quota_reached.go_to_nextcloud') }}
 @endcomponent
 
 Thanks,<br>

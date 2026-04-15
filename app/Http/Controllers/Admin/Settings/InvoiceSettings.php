@@ -23,7 +23,7 @@ class InvoiceSettings extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Server Settings',
+                    'label' => __('admin.settings.control_panel_settings'),
                 ],
             ],
         ]);
@@ -53,6 +53,6 @@ class InvoiceSettings extends Controller
         SettingsFacade::update('invoice_vendor_url', $validated['invoice_vendor_url']);
         SettingsFacade::update('invoice_vendor_vat', $validated['invoice_vendor_vat']);
 
-        return redirect('admin/settings/invoice')->with('success', 'Settings have been updated!');
+        return redirect('admin/settings/invoice')->with('success', __('admin.settings.updated'));
     }
 }

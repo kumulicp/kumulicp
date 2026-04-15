@@ -28,7 +28,7 @@ class Tasks extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Tasks',
+                    'label' => __('admin.tasks.tasks'),
                 ],
             ],
         ]);
@@ -93,7 +93,7 @@ class Tasks extends Controller
     {
         Action::retry($task);
 
-        return redirect('/admin/server/tasks/')->with('success', 'Task will attempt to run again');
+        return redirect('/admin/server/tasks');
     }
 
     public function retrieve()
@@ -111,7 +111,7 @@ class Tasks extends Controller
         $remove = Task::where('id', $task)
             ->delete();
 
-        return redirect('/admin/server/tasks');
+        return redirect('/admin/server/tasks')->with('success', __('admin.tasks.deleted'));
     }
 
     public function dummy()
@@ -120,20 +120,20 @@ class Tasks extends Controller
 
         $task = Action::execute(new DummyAction);
 
-        return redirect('/admin/server/tasks');
+        return redirect('/admin/server/tasks')->with('success', __('admin.tasks.dummy'));
     }
 
     public function run_schedule()
     {
         Artisan::call('schedule:run');
 
-        return redirect('/admin/server/tasks');
+        return redirect('/admin/server/tasks')->with('success', __('admin.tasks.run_schedule'));
     }
 
     public function restart_queue()
     {
         Artisan::call('queue:restart');
 
-        return redirect('/admin/server/tasks');
+        return redirect('/admin/server/tasks')->with('success', __('admin.tasks.restart_queue'));
     }
 }

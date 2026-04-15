@@ -51,7 +51,7 @@ class BackupRestore extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -59,7 +59,7 @@ class BackupRestore extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Details',
+                    'label' => __('admin.organizations.details'),
                 ],
             ],
         ]);
@@ -84,7 +84,7 @@ class BackupRestore extends Controller
             $app_instance = $organization->app_instances()->where('id', $validated['backup'])->first();
             $org_server = $app_instance->database_server;
         } else {
-            return redirect('/admin/organizations/'.$organization->slug.'/backups')->with('error', 'Backup type does not exist');
+            return redirect('/admin/organizations/'.$organization->slug.'/backups')->with('error', __('admin.backups.denied.exists'));
         }
 
         $date_time = (new Carbon($validated['date_time']))->setTimezone(config('app.timezone'));
@@ -104,7 +104,7 @@ class BackupRestore extends Controller
             app_instance: $validated['backup_type'] != 'email' ? $app_instance : null,
         );
 
-        return redirect('/admin/organizations/'.$organization->id.'/backups')->with('success', 'Backup has been scheduled');
+        return redirect('/admin/organizations/'.$organization->id.'/backups')->with('success', __('admin.backups.scheduled'));
     }
 
     public function restore(Organization $organization, OrgBackup $backup)
@@ -121,7 +121,7 @@ class BackupRestore extends Controller
         $restore->org_server_id = $backup->org_server_id;
         $restore->save();
 
-        return redirect("/admin/organizations/{$organization->id}/backups")->with('success', 'Backup will be restored');
+        return redirect("/admin/organizations/{$organization->id}/backups")->with('success', __('admin.backups.restoring'));
     }
 
     public function destroy(Request $request, Organization $organization, OrgBackup $backup)
@@ -132,9 +132,9 @@ class BackupRestore extends Controller
         if ($backup->status === 'scheduled') {
             $backup->delete();
 
-            return redirect($redirect)->with('success', "Backup scheduled for {$scheduled} was cancelled");
+            return redirect($redirect)->with('success', __('admin.backups.cancelled', ['time' => $scheduled]));
         }
 
-        return redirect($redirect)->with('failed', "Backup scheduled for {$scheduled} cannot be deleted");
+        return redirect($redirect)->with('failed', __('admin.backups.denied.delete', ['time' => $scheduled]));
     }
 }

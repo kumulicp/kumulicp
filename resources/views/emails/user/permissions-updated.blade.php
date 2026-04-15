@@ -2,53 +2,52 @@
 
 ## {{ $user->attribute('name') }},
 
-You're permissions have been updated.
+{{ ('messages.notifications.permissions_updated.message') }}
 
 @if (array_key_exists('access', $permissions) && count($permissions['access']) > 0)
-### Application Access
+### {{ __('messages.notifications.permissions_updated.app_access_title') }}
 
 @foreach ($permissions['access'] as $permission)
 @if ($permission['access'] === true || $permission['access'] == 'standard')
-You have been given access to {{ $permission['application'] }}!
-@elseif ($permission['access'] == 'basic')
-You have been given {{ str($permission['label'])->lower() }} access to {{ $permission['application'] }}!
+{{ __('messages.notifications.permissions_updated.access_granted', ['app' => $permission['application']]) }}
+{{ __('messages.notifications.permissions_updated.basic_access_granted', ['role' => str($permission['label'])->lower(), 'app' => $permission['application']]) }}
 @elseif ($permission['access'] == false)
-Your access to {{ $permission['application'] }} has been revoked
+{{ __('messages.notifications.permissions_updated.access_revoked', ['app' => $permission['application']]) }}
 @endif
 
 @endforeach
 @endif
 
 @if (array_key_exists('added', $permissions) && count($permissions['added']) > 0)
-### Permissions Granted
+### {{ __('messages.notifications.permissions_updated.permissions_granted_title') }}
 
 @foreach ($permissions['added'] as $permission)
-You have been granted {{ $permission['role'] }} permission in {{ $permission['application'] }}
+{{ __('messages.notifications.permissions_updated.permissions_granted', ['app' => $permission['application'], 'role' => $permission['role']]) }}
 
 @endforeach
 @endif
 
 @if (array_key_exists('modified', $permissions) && count($permissions['modified']) > 0)
-### Permissions Modified
+### {{ __('messages.notifications.permissions_updated.permissions_modified_title') }}
 
 @foreach ($permissions['modified'] as $permission)
-Your permissions have changed to {{ $permission['role'] }} in {{ $permission['application'] }}
+{{ __('messages.notifications.permissions_updated.permissions_modified', ['app' => $permission['application'], 'role' => $permission['role']]) }}
 
 @endforeach
 @endif
 
 @if (array_key_exists('removed', $permissions) && count($permissions['removed']) > 0)
-### Permissions Removed
+### {{ __('messages.notifications.permissions_updated.permissions_removed_title', ['app' => $permission['application']]) }}
 
 @foreach ($permissions['removed'] as $permission)
-Your {{ $permission['role'] }} permission have been revoked in {{ $permission['application'] }}
+{{ __('messages.notifications.permissions_updated.permissions_removed', ['app' => $permission['application'], 'role' => $permission['role']]) }}
 
 @endforeach
 @endif
 
 @foreach ($apps as $app)
 @component('mail::button', ['url' => $app->admin_address()])
-Go To {{ $app->label }}
+{{ __('messages.notifications.permissions_updated.go_to', ['app' => $app->label]) }}
 @endcomponent
 @endforeach
 

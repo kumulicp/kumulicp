@@ -65,7 +65,7 @@ class RecurringBackups extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Backups',
+                    'label' => __('admin.backups.backups'),
                 ],
             ],
         ]);
@@ -98,7 +98,7 @@ class RecurringBackups extends Controller
         $recurring_backups->application_id = array_key_exists('application', $validated) ? $validated['application'] : null;
         $recurring_backups->save();
 
-        return redirect('/admin/server/backup_scheduler/recurring')->with('success', 'Recurring backup added!');
+        return redirect('/admin/server/backup_scheduler/recurring')->with('success', __('admin.backups.recurring.added'));
     }
 
     public function update(Request $request, $backup_id) {}
@@ -107,7 +107,7 @@ class RecurringBackups extends Controller
     {
         $backup = RecurringBackup::where('id', $backup_id)->delete();
 
-        return redirect('/admin/server/backup_scheduler/recurring')->with('success', 'Recurring backup was deleted');
+        return redirect('/admin/server/backup_scheduler/recurring')->with('success', __('admin.backups.recurring.deleted'));
     }
 
     public function activate($backup_id)
@@ -116,7 +116,7 @@ class RecurringBackups extends Controller
         $backup->status = 'active';
         $backup->save();
 
-        return redirect('/admin/server/backup_scheduler/recurring')->with('success', '');
+        return redirect('/admin/server/backup_scheduler/recurring')->with('success', __('admin.backups.recurring.activated'));
     }
 
     public function deactivate($backup_id)
@@ -125,6 +125,6 @@ class RecurringBackups extends Controller
         $backup->status = 'inactive';
         $backup->save();
 
-        return redirect('/admin/server/backup_scheduler/recurring')->with('success', '');
+        return redirect('/admin/server/backup_scheduler/recurring')->with('success', __('admin.backups.recurring.deactivated'));
     }
 }

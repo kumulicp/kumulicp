@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'organization' => 'Organization',
     'updated' => 'Organization settings updated!',
     'app' => [
         'updated' => ':app has been updated!',

@@ -75,7 +75,7 @@ class Servers extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/server/servers',
-                    'label' => 'Servers',
+                    'label' => __('admin.servers.servers'),
                 ],
                 [
                     'label' => $server->name,
@@ -109,7 +109,7 @@ class Servers extends Controller
             Action::execute(new ServerActivate($server, $app, $plan, $validated['name']));
         }
 
-        return redirect("/admin/server/servers/{$server->id}/edit")->with('success', 'Server added successfully');
+        return redirect("/admin/server/servers/{$server->id}/edit")->with('success', __('admin.servers.added', ['server' => $server->name]));
     }
 
     public function edit(Server $server)
@@ -159,14 +159,11 @@ class Servers extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/server/servers',
-                    'label' => 'Servers',
+                    'label' => __('admin.servers.servers'),
                 ],
                 [
                     'url' => '/admin/server/servers/'.$server->id,
                     'label' => $server->name,
-                ],
-                [
-                    'label' => 'Edit',
                 ],
             ],
         ]);
@@ -199,7 +196,7 @@ class Servers extends Controller
         $server->is_backup_server = $validated['is_backup_server'];
         $server->save();
 
-        return redirect('/admin/server/servers/'.$server->id)->with('success', 'Server has been updated!');
+        return redirect('/admin/server/servers/'.$server->id)->with('success', __('admin.servers.updated', ['server' => $server->name]));
     }
 
     public function confirm(Server $server)
@@ -208,7 +205,7 @@ class Servers extends Controller
             $server->status = 'active';
             $server->save();
 
-            return redirect("/admin/server/servers/{$server->id}")->with('success', 'Server validated successfully');
+            return redirect("/admin/server/servers/{$server->id}")->with('success', __('admin.servers.validated', ['server' => $server->name]));
         }
 
         return redirect("/admin/server/servers/{$server->id}")->with('error', 'No successfully run tests found. You must successfully run a test before you can enable this server.');
@@ -226,7 +223,7 @@ class Servers extends Controller
             $server->save();
         }
 
-        return redirect("/admin/server/servers/{$server->id}")->with('success', 'Server is set as default');
+        return redirect("/admin/server/servers/{$server->id}")->with('success', __('admin.servers.is_default', ['server' => $server->name]));
     }
 
     public function chart(Server $server)
@@ -240,14 +237,14 @@ class Servers extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/server/servers',
-                    'label' => 'Servers',
+                    'label' => __('admin.servers.servers'),
                 ],
                 [
                     'url' => '/admin/server/servers/'.$server->id,
                     'label' => $server->name,
                 ],
                 [
-                    'label' => 'Chart',
+                    'label' => __('admin.servers.chart'),
                 ],
             ],
         ]);
@@ -259,6 +256,6 @@ class Servers extends Controller
             $server->delete();
         }
 
-        return redirect('/admin/server/servers')->with('success', 'Server deleted!');
+        return redirect('/admin/server/servers')->with('success', __('admin.servers.deleted'));
     }
 }

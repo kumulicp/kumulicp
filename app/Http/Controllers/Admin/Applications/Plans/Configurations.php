@@ -30,7 +30,7 @@ class Configurations extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -38,7 +38,7 @@ class Configurations extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => 'Plans',
+                    'label' => __('admin.applications.plans.plans'),
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,

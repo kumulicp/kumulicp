@@ -38,14 +38,14 @@ class Versions extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
                     'url' => '/admin/apps/'.$app->slug,
                 ],
                 [
-                    'label' => 'Versions',
+                    'label' => __('admin.applications.versions.versions'),
                 ],
             ],
         ]);
@@ -90,7 +90,7 @@ class Versions extends Controller
         $app_version->admin_path = $admin_path;
         $app_version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', $app->slug.' version '.$app_version->name.' was created!');
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $version->name]));
     }
 
     public function edit(Application $app, AppVersion $version)
@@ -147,7 +147,7 @@ class Versions extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -155,7 +155,7 @@ class Versions extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/versions',
-                    'label' => 'Versions',
+                    'label' => __('admin.applications.versions.versions'),
                 ],
                 [
                     'label' => $version->name,
@@ -201,7 +201,7 @@ class Versions extends Controller
         $version->announcement_url = $request->input('announcement_url');
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$request->input('version'))->with('success', 'Version '.$version->name.' was updated');
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$request->input('version'))->with('success', __('admin.applications.versions.updated', ['version' => $version->name]));
     }
 
     public function enable(Application $app, AppVersion $version)
@@ -218,7 +218,7 @@ class Versions extends Controller
         $version->status = 'active';
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', 'This version has been set as the default.');
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
     }
 
     public function disable(Application $app, AppVersion $version)
@@ -229,7 +229,7 @@ class Versions extends Controller
         $app->enabled = false;
         $app->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', 'This application has been disabled as no default version is currently selected.');
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.disabled', ['version' => $version->name]));
     }
 
     public function roles(Application $app, AppVersion $version)
@@ -276,7 +276,7 @@ class Versions extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -284,7 +284,7 @@ class Versions extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/versions',
-                    'label' => 'Versions',
+                    'label' => __('admin.applications.versions.versions'),
                 ],
                 [
                     'label' => $version->name,
@@ -310,6 +310,6 @@ class Versions extends Controller
         $version->roles = $roles;
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name.'/roles')->with('success', 'Role order updated!');
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name.'/roles')->with('success', __('admin.applications.versions.order_updated'));
     }
 }

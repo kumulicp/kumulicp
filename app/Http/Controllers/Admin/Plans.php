@@ -43,7 +43,7 @@ class Plans extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Plans',
+                    'label' => __('admin.plans.plans'),
                 ],
             ],
         ]);
@@ -84,7 +84,7 @@ class Plans extends Controller
         $plan->status = 'hidden';
         $plan->save();
 
-        return redirect('/admin/service/plans/'.$plan->id)->with('success', 'Plan added!');
+        return redirect('/admin/service/plans/'.$plan->id)->with('success', __('admin.plans.added', ['plan' => $plan->name]));
     }
 
     public function edit(Plan $plan)
@@ -160,7 +160,7 @@ class Plans extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/service/plans',
-                    'label' => 'Plans',
+                    'label' => __('admin.plans.plans'),
                 ],
                 [
                     'label' => $plan->name,
@@ -279,7 +279,7 @@ class Plans extends Controller
 
         Cache::flush();
 
-        return redirect('/admin/service/plans')->with('success', 'Plan: '.$plan->name.' updated!');
+        return redirect('/admin/service/plans')->with('success', __('admin.plans.updated', ['plan' => $plan->name]));
     }
 
     public function remove($plan_id)
@@ -294,7 +294,7 @@ class Plans extends Controller
                 $plan_name = '';
             }
 
-            return redirect('/admin/service/plans')->with('success', 'Plan: '.$plan_name.' was deleted.');
+            return redirect('/admin/service/plans')->with('success', __('admin.plans.deleted', ['plan' => $plan->name]));
         }
 
         return redirect('/admin/service/plans')->with('error', "Plan can't be deleted as organizations are currently subscribed to it. Please consider archiving for now.");
@@ -317,7 +317,7 @@ class Plans extends Controller
             $n++;
         }
 
-        return redirect('/admin/service/plans')->with('success', 'Plan order updated!');
+        return redirect('/admin/service/plans')->with('success', __('admin.plans.order_updated'));
     }
 
     public function archive(Plan $plan)
@@ -325,7 +325,7 @@ class Plans extends Controller
         $plan->archive = true;
         $plan->save();
 
-        return redirect('/admin/service/plans')->with('success', 'Plan: '.$plan->name.' was archived!');
+        return redirect('/admin/service/plans')->with('success', __('admin.plans.archived', ['plan' => $plan->name]));
     }
 
     public function unarchive(Plan $plan)
@@ -333,6 +333,6 @@ class Plans extends Controller
         $plan->archive = false;
         $plan->save();
 
-        return redirect('/admin/service/plans')->with('success', 'Plan: '.$plan->name.' is back on display!');
+        return redirect('/admin/service/plans')->with('success', __('admin.plans.unarchived', ['plan' => $plan->name]));
     }
 }

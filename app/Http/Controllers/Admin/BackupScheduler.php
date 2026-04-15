@@ -61,7 +61,7 @@ class BackupScheduler extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Backups',
+                    'label' => __('admin.backups.backups'),
                 ],
             ],
         ]);
@@ -94,7 +94,7 @@ class BackupScheduler extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Backups',
+                    'label' => __('admin.backups.backups'),
                     'url' => '/admin/server/backup_scheduler',
                 ],
                 [
@@ -145,7 +145,7 @@ class BackupScheduler extends Controller
             }
         }
 
-        return redirect('/admin/server/backup_scheduler')->with('success', "Backup for {$scheduled_at} added!");
+        return redirect('/admin/server/backup_scheduler')->with('success', __('admin.backups.added', ['time' => $scheduled_at]));
     }
 
     public function destroy($scheduled_backup)
@@ -155,9 +155,9 @@ class BackupScheduler extends Controller
             $scheduled_backup->backups()->delete();
             $scheduled_backup->delete();
 
-            return redirect('/admin/server/backup_scheduler')->with('success', 'Scheduled backup canceled');
+            return redirect('/admin/server/backup_scheduler')->with('success', __('admin.backups.cancelled', ['time' => $scheduled_backup->scheduled_at]));
         }
 
-        return redirect('/admin/server/backup_scheduler')->with('error', 'Past scheduled backups cannot be cancelled');
+        return redirect('/admin/server/backup_scheduler')->with('error', __('admin.backups.denied.delete', ['time' => $scheduled_backup->scheduled_at]));
     }
 }

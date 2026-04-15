@@ -75,7 +75,7 @@ class ProcessUserOptions extends Action
                 $task->notified();
                 $task->delete();
             } else {
-                throw \Exception(__('actions.nextcloud.quota_not_changed'))
+                throw \Exception(__('actions.nextcloud.quota_not_changed'));
             }
         } catch (\Throwable $e) {
             $task->status = 'pending';

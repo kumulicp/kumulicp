@@ -33,14 +33,14 @@ class Roles extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
                     'url' => '/admin/apps/'.$app->slug,
                 ],
                 [
-                    'label' => 'Roles',
+                    'label' => __('admin.applications.roles.roles'),
                 ],
             ],
         ]);
@@ -86,7 +86,7 @@ class Roles extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -94,7 +94,7 @@ class Roles extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/roles',
-                    'label' => 'Roles',
+                    'label' => __('admin.applications.roles.roles'),
                 ],
                 [
                     'label' => $role->name,
@@ -129,7 +129,7 @@ class Roles extends Controller
 
             $role->save();
 
-            return redirect('admin/apps/'.$app->slug.'/roles')->with('success', $role->name.' was added successfully!');
+            return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.added', ['role' => $role->name]));
         }
     }
 
@@ -161,7 +161,7 @@ class Roles extends Controller
             $role->implied_roles()->sync($validatedData['implied_roles']);
             $role->save();
 
-            return redirect('admin/apps/'.$app->slug.'/roles')->with('success', $role->label.' was updated');
+            return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.updated', ['role' => $role->name]));
         }
 
         return redirect('admin/apps/'.$app->slug.'/roles')->with('error', 'App role does not exist');
@@ -173,7 +173,7 @@ class Roles extends Controller
         $role->status = 'enabled';
         $role->save();
 
-        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit');
+        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.enabled', ['role' => $role->name]));
     }
 
     public function disable($application_id, $roleid)
@@ -182,7 +182,7 @@ class Roles extends Controller
         $role->status = 'disabled';
         $role->save();
 
-        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit');
+        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.disabled', ['role' => $role->name]));
     }
 
     public function remove($application_id, $roleid)
@@ -194,6 +194,6 @@ class Roles extends Controller
 
         $role->delete();
 
-        return redirect('admin/apps/'.$application_id.'/roles/');
+        return redirect('admin/apps/'.$application_id.'/roles/')->with('success', __('admin.applications.roles.deleted', ['role' => $role->name]));
     }
 }

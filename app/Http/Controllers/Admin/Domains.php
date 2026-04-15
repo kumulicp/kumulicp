@@ -17,7 +17,7 @@ class Domains extends Controller
             'domains' => $domains,
             'breadcrumbs' => [
                 [
-                    'label' => 'Domains',
+                    'label' => __('admin.domains.domains'),
                 ],
             ],
         ]);
@@ -38,9 +38,9 @@ class Domains extends Controller
             $org_domain->whois_guard_id = $domain['whois_guard']['id'];
             $org_domain->save();
 
-            return redirect('/admin/service/domains')->with('success', "{$domain_name} updated successfully");
+            return redirect('/admin/service/domains')->with('success', __('admin.domains.updated', ['domain' => $domain_name]));
         }
 
-        return redirect('/admin/service/domains')->with('error', "{$domain_name} isn't owned by any of your customers.");
+        return redirect('/admin/service/domains')->with('error', __('admin.domains.denied.update', ['domain' => $domain_name]));
     }
 }
