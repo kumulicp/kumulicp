@@ -125,7 +125,7 @@ export default {
       category.value = category.ou
       category.text = category.name
       categories[key] = category
-      for (const group of Object.entries(category.groups)) {
+      for (const group of Object.values(category.groups)) {
         groups.push({
           slug: group.slug,
           name: group.name,
@@ -134,6 +134,7 @@ export default {
       }
       numberOfGroups = numberOfGroups + category.groups.length
     }
+
     return {
       curPageValue: 1,
       pageSize: 10,
