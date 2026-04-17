@@ -333,7 +333,9 @@
     "disabled": "Disabled",
     "optional": "Optional",
     "updatedAt": "Updated At",
-    "createdAt": "Created At"
+    "createdAt": "Created At",
+    "passed": "Passed",
+    "failed": "Failed"
   },
   "settings": {
     "vendorName": "Vendor Name",
@@ -367,6 +369,8 @@
   },
   "setup": {
     "settingsHeader": "Account Settings",
-    "slugMessage": "System name to identify your account. Must be lowercase and dashes only"
+    "slugMessage": "System name to identify your account. Must be lowercase and dashes only",
+    "systemCheckFailed": "System Check Failed",
+    "checkName": "Check Name"
   }
 }

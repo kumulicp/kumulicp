@@ -1,19 +1,22 @@
 <script setup>
 import BlankLayout from '@/layouts/BlankLayout.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 <template>
   <div class="groups-list">
     <div class="setup-layout row justify-center align-content-center">
       <div class="flex flex-col xs12 lg4 pa-3">
         <va-card class="mb-4">
-          <va-card-title>System Check Failed</va-card-title>
+          <va-card-title>{{ t('setup.systemCheckFailed') }}</va-card-title>
           <va-card-content>
             <div class="table-wrapper">
               <table class="va-table va-table--hoverable mt-3">
                 <thead>
                   <tr>
                     <th scope="col">
-                      Check Name
+                      {{ t('setup.checkName') }}
                     </th>
                     <th scope="col">
                       Result
@@ -26,8 +29,8 @@ import BlankLayout from '@/layouts/BlankLayout.vue'
                       {{ name }}
                     </td>
                     <td>
-                      <div v-if="result" style="color: green">Passed</div>
-                      <div v-else style="color: red">Failed</div>
+                      <div v-if="result" style="color: green">{{ t('status.passed') }}</div>
+                      <div v-else style="color: red">{{ t('status.failed') }}</div>
                     </td>
                   </tr>
                 </tbody>
