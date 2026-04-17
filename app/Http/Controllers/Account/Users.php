@@ -314,7 +314,7 @@ class Users extends Controller
                 'last_name' => $user->attribute('last_name'),
                 'phone_number' => $user->attribute('phone_number'),
                 'personal_email' => $user->attribute('email'),
-                'org_emails' => $user->attribute('org_email'),
+                'org_email' => $user->attribute('org_email'),
                 'additional_storage' => $user_storage,
                 'organization' => $user->organization()->id,
                 'can' => [

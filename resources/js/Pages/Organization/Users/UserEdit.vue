@@ -94,15 +94,14 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <h5>Organizational Email</h5>
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
-          <template v-for="(org_email, index) in user.org_emails" :key="index">
             <div class="row">
               <div class="flex flex-col xs11">
                 <a :href="'mailto:'+org_email" class="mr-3">
-                  <div class="py-1">{{ org_email }}</div>
+                  <div class="py-1">{{ user.org_email }}</div>
                 </a>
               </div>
               <div class="flex flex-col xs1">
-                <a :href="'/users/'+user.id+'/remove/accountemail/'+org_email" class="ml-3">
+                <a :href="'/users/'+user.id+'/remove/accountemail/'+user.org_email" class="ml-3">
                   <va-icon name="entypo-cancel"
                     title="Delete email"
                     color="danger"
@@ -110,7 +109,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                 </a>
               </div>
             </div>
-          </template>
           <template v-if="user.can.add_email_account">
             <template v-for="(domain, index) in email_domains" :key="index">
               <a :href="'/users/'+user.id+'/create/accountemail/'+domain.id">
