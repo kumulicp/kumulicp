@@ -29,7 +29,7 @@ class HelmChart extends Chart
 
         foreach ($additionalConfigs as $config) {
             $key = str_replace('-', '.', $config['name']);
-            Arr::set($values, "charts.0.values.$key", $app_instance->configuration($config['name']));
+            Arr::set($values, $key, $app_instance->configuration($config['name']));
         }
 
         $chart = [
