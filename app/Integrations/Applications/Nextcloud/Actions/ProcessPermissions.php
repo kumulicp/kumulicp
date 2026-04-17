@@ -35,10 +35,6 @@ class ProcessPermissions extends Action
         try {
             $user->find($task->getValue('user'));
         } catch (\Throwable $e) {
-            if ($user->statusCode() != 404) {
-                report($e);
-            }
-
             if (AccountManager::driver() == 'direct') {
                 $user->add($organization_values['user']);
             }
