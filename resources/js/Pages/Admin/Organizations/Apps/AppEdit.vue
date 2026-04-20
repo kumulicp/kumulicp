@@ -8,7 +8,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Organization App - Control Panel</title>
+    <title>{{ t('admin.apps.pageTitle') }}</title>
   </Head>
     <div class="row justify-center">
         <VaButtonGroup>
@@ -24,7 +24,7 @@ const { t } = useI18n()
         <table class="va-table va-table--hoverable mt-3">
         <thead>
             <tr>
-            <th>Version</th>
+            <th>{{ t('admin.versions.version') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -43,7 +43,7 @@ const { t } = useI18n()
         <va-list-item class="py-3">
         <va-list-item-section label>
             <va-list-item-label>
-            <h5>API Password</h5>
+            <h5>{{ t('admin.apps.apiPassword') }}</h5>
             </va-list-item-label>
         </va-list-item-section>
         <va-list-item-section>
@@ -73,7 +73,7 @@ const { t } = useI18n()
         <va-textarea
             v-model="form.settings"
             class="flex flex-col sm12"
-            label="JSON Settings"
+            :label="t('admin.apps.jsonSettings')"
             rows="50"
             placeholder="{}"
             min-rows="30"
@@ -185,14 +185,18 @@ export default {
         when: 'later',
         start_time: '',
         end_time: ''
-      }),
-      deleteWhen: [
+      })
+    }
+  },
+  computed: {
+    deleteWhen () {
+      return [
         {
-          text: 'Now',
+          text: this.$t('admin.apps.deleteNow'),
           value: 'now'
         },
         {
-          text: 'Later',
+          text: this.$t('admin.apps.deleteLater'),
           value: 'later'
         }
       ]
