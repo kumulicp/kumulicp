@@ -8,7 +8,7 @@ const { t } = useI18n()
     <div class="row">
       <div class="flex xs12 lg12">
         <va-card class="mb-4">
-          <va-card-title>Web Domains</va-card-title>
+          <va-card-title>{{ t('organization.webDomains.webDomains') }}</va-card-title>
           <va-card-content>
             <slot />
           </va-card-content>

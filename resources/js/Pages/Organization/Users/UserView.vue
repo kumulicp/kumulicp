@@ -8,7 +8,7 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>User Profile - Control Panel</title>
+    <title>{{ t('organization.users.userProfile') }} - Control Panel</title>
   </Head>
   <div class="user-view">
     <va-badge
@@ -25,7 +25,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Username:</h5>
+                <h5>{{ t('auth.username') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -40,7 +40,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Personal Email:</h5>
+                <h5>{{ t('organization.users.personalEmail') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -56,7 +56,7 @@ const { t } = useI18n()
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Organizational Email:</h5>
+                  <h5>{{ t('organization.users.organizationalEmail') }}:</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -70,7 +70,7 @@ const { t } = useI18n()
           <va-list-item v-if="user.phone_number" class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Phone Number:</h5>
+                <h5>{{ t('organization.users.phoneNumber') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -85,7 +85,7 @@ const { t } = useI18n()
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Groups:</h5>
+                  <h5>{{ t('organization.groups.groups') }}:</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -121,13 +121,13 @@ const { t } = useI18n()
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>{{ storage.app }} Storage:</h5>
+                  <h5>{{ t('organization.users.storageLabel', { app: storage.app }) }}:</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
                 <va-list-item-label>
                   <template v-if="storage.error">
-                    Error: could not retrieve storage info
+                    {{ t('organization.users.storageError') }}
                   </template>
                   <template v-else>
                     {{ storage.quota_used }} / {{ storage.quota_total }} {{ storage.unit }}

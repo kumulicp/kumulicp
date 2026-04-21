@@ -6,10 +6,10 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Email Accounts - Control Panel</title>
+    <title>{{ t('organization.emailAccounts.emailAccounts') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Email Accounts</va-card-title>
+    <va-card-title>{{ t('organization.emailAccounts.emailAccounts') }}</va-card-title>
     <va-card-content>
       <va-tabs v-model="value" hide-slider>
         <template #tabs>
@@ -24,18 +24,19 @@ const { t } = useI18n()
 <script lang="ts">
 export default {
   data () {
+    const i18n = useI18n()
     const pathname = (new URL(window.location.href)).pathname
     const tabs = [
       {
-        title: 'Accounts',
+        title: i18n.t('organization.emailAccounts.accounts'),
         url: '/settings/email/accounts'
       },
       {
-        title: 'Forwarders',
+        title: i18n.t('organization.emailAccounts.forwarders'),
         url: '/settings/email/forwarders'
       }
     ]
-    let value = 'Accounts'
+    let value = i18n.t('organization.emailAccounts.accounts')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

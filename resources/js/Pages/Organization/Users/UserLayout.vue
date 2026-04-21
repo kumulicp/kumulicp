@@ -33,24 +33,24 @@ export default {
     const basePath = '/users/' + user.id
     const tabs = [
       {
-        title: 'View',
+        title: useI18n().t('form.view'),
         url: basePath
       },
       {
-        title: 'Profile',
+        title: useI18n().t('organization.profile.profile'),
         url: basePath + '/edit'
       },
       {
-        title: 'Groups',
+        title: useI18n().t('organization.groups.groups'),
         url: basePath + '/groups'
       },
       {
-        title: 'Permissions',
+        title: useI18n().t('organization.users.permissions'),
         url: basePath + '/permissions'
       }
     ]
 
-    let value = 'View'
+    let value = useI18n().t('form.view')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

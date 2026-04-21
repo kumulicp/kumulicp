@@ -15,25 +15,25 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Domain Settings - Control Panel</title>
+    <title>{{ t('organization.webDomains.domainSettings') }} - Control Panel</title>
   </Head>
   <div class="row justify-center mb-3">
     <new-domain-modal :showModal="showAddDomain" @update:showModal="showAddDomain = $event" />
     <va-button-dropdown v-if="number_of_actions > 0"
       size="medium"
-      label="Actions"
+      :label="t('organization.webDomains.actions')"
       color="secondary"
       class="ml-3 my-2"
       :verticalScrollOnOverflow="false"
     >
       <div>
-        <a v-if="domain.actions.enable_email" href="#" @click="showActionModal(domain.name, 'enable_email')"><div class="action_dropdown">Enable Email Accounts</div></a>
-        <a v-if="domain.actions.renew" href="#" @click="showActionModal(domain.name, 'renew')"><div class="action_dropdown">Renew</div></a>
-        <a v-if="domain.actions.reactivate" href="#" @click="showActionModal(domain.name, 'reactivate')"><div class="action_dropdown">Reactivate</div></a>
-        <a v-if="domain.actions.self_manage" href="#" @click="showActionModal(domain.name, 'self_manage')"><div class="action_dropdown">Self-manage</div></a>
-        <a v-if="domain.actions.transfer_in" href="#" @click="showActionModal(domain.name, 'transfer_in')"><div class="action_dropdown">Transfer In</div></a>
-        <a v-if="domain.actions.request_transfer" href="#" @click="showActionModal(domain.name, 'request_transfer')"><div class="action_dropdown">Request domain transfer</div></a>
-        <a v-if="domain.actions.remove" color="danger" href="#" @click="showActionModal(domain.name, 'remove')"><div class="action_dropdown">Remove</div></a>
+        <a v-if="domain.actions.enable_email" href="#" @click="showActionModal(domain.name, 'enable_email')"><div class="action_dropdown">{{ t('organization.webDomains.enableEmailAccounts') }}</div></a>
+        <a v-if="domain.actions.renew" href="#" @click="showActionModal(domain.name, 'renew')"><div class="action_dropdown">{{ t('organization.webDomains.renew') }}</div></a>
+        <a v-if="domain.actions.reactivate" href="#" @click="showActionModal(domain.name, 'reactivate')"><div class="action_dropdown">{{ t('organization.webDomains.reactivate') }}</div></a>
+        <a v-if="domain.actions.self_manage" href="#" @click="showActionModal(domain.name, 'self_manage')"><div class="action_dropdown">{{ t('organization.webDomains.selfManage') }}</div></a>
+        <a v-if="domain.actions.transfer_in" href="#" @click="showActionModal(domain.name, 'transfer_in')"><div class="action_dropdown">{{ t('organization.webDomains.transferIn') }}</div></a>
+        <a v-if="domain.actions.request_transfer" href="#" @click="showActionModal(domain.name, 'request_transfer')"><div class="action_dropdown">{{ t('organization.webDomains.requestTransfer') }}</div></a>
+        <a v-if="domain.actions.remove" color="danger" href="#" @click="showActionModal(domain.name, 'remove')"><div class="action_dropdown">{{ t('form.remove') }}</div></a>
       </div>
     </va-button-dropdown>
   </div>
@@ -46,7 +46,7 @@ const { t } = useI18n()
     outline
     class="mb-4 py-2"
   >
-    Email is being activated. <span v-if="domain.type == 'connection'">Please make sure you DNS records contain the following:</span>
+    {{ t('organization.webDomains.emailBeingActivated') }} <span v-if="domain.type == 'connection'">{{ t('organization.webDomains.dnsRecordsMust') }}</span>
   </va-alert>
   <va-alert
     v-if="domain.email.status == 'waiting_dns'"
@@ -56,7 +56,7 @@ const { t } = useI18n()
     outline
     class="mb-2 py-2"
   >
-    <span v-if="domain.type == 'connection'">Before you can start creating email accounts, you're DNS records must include the following:</span>
+    <span v-if="domain.type == 'connection'">{{ t('organization.webDomains.beforeEmailAccounts') }}</span>
   </va-alert>
   <form v-if="organizations.length > 1" @submit.prevent="form.post('/settings/domains/'+domain.name)">
     <div class="row my-3">
@@ -65,7 +65,7 @@ const { t } = useI18n()
           v-model="form.organization"
           value-by="id"
           text-by="name"
-          label="Organization"
+          :label="t('organization.organization')"
           immediateValidation
           :options="organizations"
           :error="$page.props.errors.organization"
@@ -76,7 +76,7 @@ const { t } = useI18n()
     <div class="row ml-1 mb-3">
       <div class="flex flex-col xs12">
         <div>
-          <va-button type="submit">Update</va-button>
+          <va-button type="submit">{{ t('form.update') }}</va-button>
         </div>
       </div>
     </div>
@@ -91,10 +91,10 @@ const { t } = useI18n()
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>Type</th>
-            <th>Host</th>
-            <th>Value</th>
-            <th>Priority</th>
+            <th>{{ t('organization.webDomains.type') }}</th>
+            <th>{{ t('organization.webDomains.host') }}</th>
+            <th>{{ t('organization.webDomains.value') }}</th>
+            <th>{{ t('organization.webDomains.priority') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -118,9 +118,9 @@ const { t } = useI18n()
   </div>
 
   <va-list-separator class="my-3" fit />
-  <h6 class="va-h6">Subdomains</h6>
+  <h6 class="va-h6">{{ t('organization.webDomains.subdomains') }}</h6>
   <div class="row justify-center">
-    <va-button @click="showAddRecordModal = true">Add Host</va-button>
+    <va-button @click="showAddRecordModal = true">{{ t('organization.webDomains.addHost') }}</va-button>
   </div>
   <va-scroll-container
     color="primary"
@@ -129,11 +129,11 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th style>Type</th>
-          <th>Host</th>
-          <th style="width: 30%">Domain name</th>
-          <th style="width: 50%">IP/Value/App</th>
-          <th v-if="domain.type === 'managed'">TTL</th>
+          <th style>{{ t('organization.webDomains.type') }}</th>
+          <th>{{ t('organization.webDomains.host') }}</th>
+          <th style="width: 30%">{{ t('organization.webDomains.domainName') }}</th>
+          <th style="width: 50%">{{ t('organization.webDomains.ipValueApp') }}</th>
+          <th v-if="domain.type === 'managed'">{{ t('organization.webDomains.ttl') }}</th>
           <th style="width: 200px"></th>
         </tr>
       </thead>
@@ -150,15 +150,15 @@ const { t } = useI18n()
           <td class="va-text-right">
             <va-button v-if="subdomain.can.edit"
               class="mr-2"
-              :title="'Edit '+subdomain.name"
+              :title="t('organization.webDomains.editName', { name: subdomain.name })"
               @click="showEditRecord(subdomain)">
-              Edit
+              {{ t('form.edit') }}
             </va-button>
             <va-button v-if="subdomain.can.delete"
               color="danger"
-              :title="'Remove '+subdomain.name"
+              :title="t('organization.webDomains.removeName', { name: subdomain.name })"
               @click="deleteSubdomain(subdomain)">
-              Delete
+              {{ t('modal.delete') }}
             </va-button>
           </td>
         </tr>
@@ -168,14 +168,14 @@ const { t } = useI18n()
   <va-modal v-model="showAddRecordModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content="{ ok }">
       <form @submit.prevent="recordForm.post('/settings/domains/'+domain.name+'/subdomains', {onSuccess: () => recordAdded()})">
-        <va-card-title class="m-0">Add Host</va-card-title>
+        <va-card-title class="m-0">{{ t('organization.webDomains.addHost') }}</va-card-title>
         <va-card-content class="m-0">
           <va-select v-model="recordForm.type"
             v-if="domain.type === 'managed'"
             immediateValidation
             id="type"
             required-mark
-            label="Type"
+            :label="t('organization.webDomains.type')"
             class="mb-3"
             value-by="value"
             text-by="text"
@@ -187,7 +187,7 @@ const { t } = useI18n()
             id="host"
             required-mark
             immediateValidation
-            label="Host"
+            :label="t('organization.webDomains.host')"
             class="mb-3"
             :error="$page.props.errors.host"
             :error-messages="$page.props.errors.host"
@@ -197,7 +197,7 @@ const { t } = useI18n()
             immediateValidation
             id="app"
             required-mark
-            label="App"
+            :label="t('admin.apps.appWord')"
             class="mb-3"
             :options="all_app_instance_options"
             value-by="value"
@@ -210,7 +210,7 @@ const { t } = useI18n()
             id="value"
             required-mark
             immediateValidation
-            label="value"
+            :label="t('organization.webDomains.value')"
             class="mb-3"
             :error="$page.props.errors.value"
             :error-messages="$page.props.errors.value"
@@ -221,7 +221,7 @@ const { t } = useI18n()
             id="ttl"
             required-mark
             immediateValidation
-            label="TTL"
+            :label="t('organization.webDomains.ttl')"
             class="mb-3"
             :error="$page.props.errors.ttl"
             :error-messages="$page.props.errors.ttl"
@@ -243,14 +243,14 @@ const { t } = useI18n()
     >
     <template #content="{ ok }">
       <form @submit.prevent="recordForm.put('/settings/domains/'+domain.name+'/subdomains/'+subdomainToUpdate.id, {onSuccess: () => recordAdded()})">
-        <va-card-title class="m-0">Edit DNS Record</va-card-title>
+        <va-card-title class="m-0">{{ t('organization.webDomains.editDnsRecord') }}</va-card-title>
         <va-card-content class="m-0">
           <va-select v-model="recordForm.type"
             v-if="domain.type === 'managed'"
             immediateValidation
             id="type"
             required-mark
-            label="Type"
+            :label="t('organization.webDomains.type')"
             class="mb-3"
             value-by="value"
             text-by="text"
@@ -262,7 +262,7 @@ const { t } = useI18n()
             id="host"
             required-mark
             immediateValidation
-            label="Host"
+            :label="t('organization.webDomains.host')"
             class="mb-3"
             :error="$page.props.errors.host"
             :error-messages="$page.props.errors.host"
@@ -272,7 +272,7 @@ const { t } = useI18n()
             immediateValidation
             id="app"
             required-mark
-            label="App"
+            :label="t('admin.apps.appWord')"
             class="mb-3"
             :options="all_app_instance_options"
             value-by="value"
@@ -285,7 +285,7 @@ const { t } = useI18n()
             id="value"
             required-mark
             immediateValidation
-            label="value"
+            :label="t('organization.webDomains.value')"
             class="mb-3"
             :error="$page.props.errors.value"
             :error-messages="$page.props.errors.value"
@@ -296,7 +296,7 @@ const { t } = useI18n()
             id="ttl"
             required-mark
             immediateValidation
-            label="TTL"
+            :label="t('organization.webDomains.ttl')"
             class="mb-3"
             :error="$page.props.errors.ttl"
             :error-messages="$page.props.errors.ttl"
@@ -309,8 +309,8 @@ const { t } = useI18n()
       </form>
     </template>
   </va-modal>
-  <va-modal v-model="showDeleteSubdomainModal" hide-default-actions :title="'Remove ' + subdomainToDelete.name + '?'"
-    :message="'Are you sure you want to remove ' + subdomainToDelete.name + '? This action is permanent.'">
+  <va-modal v-model="showDeleteSubdomainModal" hide-default-actions :title="t('organization.webDomains.removeSubdomainTitle', { name: subdomainToDelete.name })"
+    :message="t('organization.webDomains.removeSubdomainMessage', { name: subdomainToDelete.name })">
     <template #footer>
       <va-button color="backgroundSecondary" @click="showDeleteSubdomainModal = false">
         {{ t('form.cancel') }}
@@ -374,65 +374,28 @@ export default {
         type: 'app',
         app: null
       }),
-      recordOptions: [
-        {
-          value: 'app',
-          text: 'App'
-        },
-        {
-          value: 'A',
-          text: 'A Record'
-        },
-        {
-          value: 'AAAA',
-          text: 'AAAA Record'
-        },
-        {
-          value: 'ALIAS',
-          text: 'ALIAS Record'
-        },
-        {
-          value: 'CAA',
-          text: 'CAA Record'
-        },
-        {
-          value: 'CNAME',
-          text: 'CNAME Record'
-        },
-        {
-          value: 'MX',
-          text: 'MX Record'
-        },
-        {
-          value: 'MXE',
-          text: 'MXE Record'
-        },
-        {
-          value: 'NS',
-          text: 'NS Record'
-        },
-        {
-          value: 'TXT',
-          text: 'TXT Record'
-        },
-        {
-          value: 'URL',
-          text: 'URL Record'
-        },
-        {
-          value: 'URL301',
-          text: 'URL301 Record'
-        },
-        {
-          value: 'FRAME',
-          text: 'FRAME Record'
-        }
-      ],
       showAddRecordModal: false,
       showEditRecordModal: false
     }
   },
   computed: {
+    recordOptions () {
+      return [
+        { value: 'app', text: this.$t('admin.apps.appWord') },
+        { value: 'A', text: this.$t('organization.webDomains.aRecord') },
+        { value: 'AAAA', text: this.$t('organization.webDomains.aaaaRecord') },
+        { value: 'ALIAS', text: this.$t('organization.webDomains.aliasRecord') },
+        { value: 'CAA', text: this.$t('organization.webDomains.caaRecord') },
+        { value: 'CNAME', text: this.$t('organization.webDomains.cnameRecord') },
+        { value: 'MX', text: this.$t('organization.webDomains.mxRecord') },
+        { value: 'MXE', text: this.$t('organization.webDomains.mxeRecord') },
+        { value: 'NS', text: this.$t('organization.webDomains.nsRecord') },
+        { value: 'TXT', text: this.$t('organization.webDomains.txtRecord') },
+        { value: 'URL', text: this.$t('organization.webDomains.urlRecord') },
+        { value: 'URL301', text: this.$t('organization.webDomains.url301Record') },
+        { value: 'FRAME', text: this.$t('organization.webDomains.frameRecord') }
+      ]
+    },
     number_of_actions () {
       let n = 0
       Object.values(this.domain.actions).forEach((value) => {

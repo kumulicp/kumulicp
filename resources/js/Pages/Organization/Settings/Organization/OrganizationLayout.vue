@@ -27,16 +27,16 @@ export default {
     const basePath = '/settings/organization'
     const tabs = [
       {
-        title: 'Settings',
+        title: useI18n().t('settings.settings'),
         url: basePath
       },
       {
-        title: 'Suborganizations',
+        title: useI18n().t('organization.settings.suborganizations'),
         url: basePath + '/subs'
       }
     ]
 
-    let value = 'Settings'
+    let value = useI18n().t('settings.settings')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

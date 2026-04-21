@@ -7,15 +7,15 @@ const { t } = useI18n()
 <template>
   <va-modal
     v-model="show"
-    :title="'Reactivate '+domain.name"
+    :title="t('organization.webDomains.reactivateTitle', { name: domain.name })"
     hide-default-actions
   >
     <template #default>
-      If you are sure you want to reactivate {{ domain.name }}, please select how many years you want to renew for.
+      {{ t('organization.webDomains.reactivateConfirm', { name: domain.name }) }}
       <va-input
         v-model="form.years"
         type="number"
-        label="Years"
+        :label="t('organization.webDomains.years')"
         immediateValidation
         :error="$page.props.errors.years"
         :error-messages="$page.props.errors.years"
@@ -30,13 +30,13 @@ const { t } = useI18n()
           color="backgroundSecondary"
           @click="show = !show"
         >
-          Cancel
+          {{ t('common.cancel') }}
         </va-button>
         <va-button
           @click="form.post('/settings/domains/'+domain.name+'/reactivate')"
           :disabled="form.processing"
         >
-          Reactivate
+          {{ t('organization.webDomains.reactivate') }}
         </va-button>
       </va-card-actions>
     </template>

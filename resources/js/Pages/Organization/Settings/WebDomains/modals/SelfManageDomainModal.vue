@@ -7,30 +7,30 @@ const { t } = useI18n()
 <template>
   <va-modal
     v-model="show"
-    title="Self Manage"
+    :title="t('organization.webDomains.selfManage')"
     hide-default-actions
   >
     <template #default>
-      <p>Self managing your domain means that you register your domain yourself and manage your DNS settings yourself. Reasons you might want to do this include:</p>
+      <p>{{ t('organization.webDomains.selfManageDesc') }}</p>
       <ul class="va-unordered">
-          <li>Wanting to discontinue use of the Control Panel</li>
-          <li>Needing more control over your DNS settings than this Control Panel is currently able to offer</li>
-          <li>Not being able to transfer your domain to the Control Panel for technical reasons</li>
+          <li>{{ t('organization.webDomains.selfManageReason1') }}</li>
+          <li>{{ t('organization.webDomains.selfManageReason2') }}</li>
+          <li>{{ t('organization.webDomains.selfManageReason3') }}</li>
       </ul>
-      <p><b>Warning:</b> By self managing your domain, we are no longer able to automatically update the DNS settings accordingly. If there is any change in our servers requiring DNS record updates, you'll have to follow those announcements and be able to update your DNS records accordingly.</p>
-      <p>To find out what DNS host records you need to have, please visit <a href="/docs/controlpanel/register-custom-domain" target="_blank">our documentation</a></p>
+      <p><b>{{ t('organization.webDomains.warning') }}:</b> {{ t('organization.webDomains.selfManageWarning') }}</p>
+      <p v-html="t('organization.webDomains.selfManageDocs')"></p>
     </template>
     <template #footer>
       <va-button
         color="backgroundSecondary"
         @click="show = false"
       >
-        Cancel
+        {{ t('common.cancel') }}
       </va-button>
       <va-button
         @click="form.post('/settings/domains/'+domain.name+'/self_manage'); show = false"
       >
-        Self manage
+        {{ t('organization.webDomains.selfManage') }}
       </va-button>
     </template>
   </va-modal>

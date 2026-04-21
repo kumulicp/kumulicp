@@ -7,10 +7,10 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Plan Overview - Control Panel</title>
+    <title>{{ t('organization.subscription.planOverview') }} - Control Panel</title>
   </Head>
   <va-card>
-    <va-card-title>Upcoming Invoice</va-card-title>
+    <va-card-title>{{ t('organization.subscription.upcomingInvoice') }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
         <div class="flex lg3 xs12">
@@ -19,7 +19,7 @@ const { t } = useI18n()
               <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.due_date }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              Due date
+              {{ t('organization.subscription.dueDate') }}
             </div>
           </div>
         </div>
@@ -30,7 +30,7 @@ const { t } = useI18n()
             <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.amount_due }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              Amount due
+              {{ t('organization.subscription.amountDue') }}
             </div>
           </div>
         </div>
@@ -41,14 +41,14 @@ const { t } = useI18n()
               <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.status }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              Subscription Status
+              {{ t('organization.subscription.subscriptionStatus') }}
             </div>
           </div>
         </div>
       </div>
       <div class="row va-text-center payment_note">
         <div class="flex flex-col xs12">
-          *Note: Payments will come out automatically from the credit card in your billing info
+          {{ t('organization.subscription.paymentNote') }}
         </div>
       </div>
     </va-card-content>
@@ -56,7 +56,7 @@ const { t } = useI18n()
   <div class="row">
     <div class="flex sm12 lg6 xs12">
       <va-card class="mb-4 pb-2">
-        <va-card-title>Invoice Summary</va-card-title>
+        <va-card-title>{{ t('organization.subscription.invoiceSummary') }}</va-card-title>
         <va-card-content>
           <template v-for="(item, index) in stats" :key="index">
             <div class="va-title text-align-center">
@@ -65,11 +65,11 @@ const { t } = useI18n()
             <table class="va-table va-table--striped mb-2">
               <thead>
                 <tr>
-                  <th>Description</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                  <th>For Every</th>
-                  <th>Total</th>
+                  <th>{{ t('organization.subscription.description') }}</th>
+                  <th>{{ t('organization.subscription.quantity') }}</th>
+                  <th>{{ t('admin.plans.price') }}</th>
+                  <th>{{ t('organization.subscription.forEvery') }}</th>
+                  <th>{{ t('organization.subscription.total') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,7 +87,7 @@ const { t } = useI18n()
           <div v-if="discount.type === 'amount' || discount.type === 'percent'"
             class="row">
             <div class="flex xs12 bold">
-              Discount: {{ discount.amount }}
+              {{ t('organization.subscription.discount') }}: {{ discount.amount }}
             </div>
           </div>
         </va-card-content>
@@ -95,7 +95,7 @@ const { t } = useI18n()
     </div>
     <div class="flex sm12 lg6 xs12">
       <va-card class="mb-4 pb-2">
-        <va-card-title>Past Invoices</va-card-title>
+        <va-card-title>{{ t('organization.subscription.pastInvoices') }}</va-card-title>
         <va-card-content>
           <va-list>
             <va-list-item
