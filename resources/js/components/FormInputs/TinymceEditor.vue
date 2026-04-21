@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
-
 // Everything tinymce
 import tinymce from 'tinymce'
 
@@ -29,6 +25,10 @@ import 'tinymce/plugins/help/js/i18n/keynav/en'
 import '@/components/TinymcePlugins/persistentgrid'
 
 import Editor from '@tinymce/tinymce-vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 </script>
 <template>
   <template v-if="tinymceCssFile">
