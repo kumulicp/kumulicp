@@ -44,7 +44,7 @@ class CiviCRMStandaloneChart extends HelmChart
                 ],
             ],
             'replicaCount' => $this->replicaCount(),
-            'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-'.$this->chartName()),
+            'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $this->chartName()),
             'containerSecurityContext' => [
                 'enabled' => false,
                 'runAsUser' => 0,
