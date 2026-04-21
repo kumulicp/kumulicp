@@ -25,39 +25,22 @@ export default {
     const app = this.$page.props.app
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/apps/' + app.slug
-    const tabs = [
-      {
-        title: 'View',
-        url: basePath
-      },
-      {
-        title: 'Edit',
-        url: basePath + '/edit'
-      },
-      {
-        title: 'Versions',
-        url: basePath + '/versions'
-      },
-      {
-        title: 'Plans',
-        url: basePath + '/plans'
-      },
-      {
-        title: 'Roles',
-        url: basePath + '/roles'
-      }
-    ]
-
-    let value = 'View'
-    Object.values(tabs).forEach((tab) => {
-      if (tab.url === pathname) {
-        value = tab.title
-      }
-    })
 
     return {
-      tabs,
-      value
+      basePath,
+      pathname,
+      value: pathname
+    }
+  },
+  computed: {
+    tabs () {
+      return [
+        { title: this.$t('form.view'), url: this.basePath },
+        { title: this.$t('form.edit'), url: this.basePath + '/edit' },
+        { title: this.$t('admin.versions.versions'), url: this.basePath + '/versions' },
+        { title: this.$t('admin.plans.plan'), url: this.basePath + '/plans' },
+        { title: this.$t('admin.roles.details'), url: this.basePath + '/roles' }
+      ]
     }
   }
 }
