@@ -146,11 +146,11 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
             $roles = $this->user->groups()->in(Dn::create($this->organization, 'applications'))->get();
             foreach ($roles as $role) {
                 if ($role->appRole()) {
-                    if ($type != 'basic' && $role->appRoleAccessType() == 'minimal') {
+                    if ($type != 'basic' && $role->appRoleAccessType()->value == 'minimal') {
                         $type = 'minimal';
-                    } elseif ($type != 'standard' && $role->appRoleAccessType() == 'basic') {
+                    } elseif ($type != 'standard' && $role->appRoleAccessType()->value == 'basic') {
                         $type = 'basic';
-                    } elseif ($role->appRoleAccessType() == 'standard') {
+                    } elseif ($role->appRoleAccessType()->value == 'standard') {
                         $type = 'standard';
                         break;
                     }
