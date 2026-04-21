@@ -9,7 +9,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Version Roles - Control Panel</title>
+    <title>{{ t('admin.versions.versionRoles') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
     <div class="row">
@@ -48,7 +48,7 @@ const { t } = useI18n()
           </template>
           </draggable>
         </va-list>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">Update</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
       </form>
       </div>
       <div class="flex xs12 lg4">

@@ -2,6 +2,9 @@
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
 import { Stripe } from '@vue-stripe/vue-stripe'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 <template>
   <div>
@@ -21,7 +24,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
             <va-list-item-label v-if="payment_method.brand" lines="2">
               {{ payment_method.brand }} ****{{ payment_method.last4 }}
               <br />
-              Expires {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>

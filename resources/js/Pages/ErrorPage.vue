@@ -1,5 +1,8 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 <template>
   <Head>
@@ -14,7 +17,7 @@ import { Link } from '@inertiajs/vue3'
           <p v-else class="mb-3">{{ description }}</p>
           <Link href="/">
             <va-button>
-                Go Home
+                {{ t('errors.goHome') }}
             </va-button>
           </Link>
         </div>
@@ -32,18 +35,18 @@ export default {
   computed: {
     title () {
       return {
-        503: '503: Service Unavailable',
-        500: '500: Server Error',
-        404: '404: Page Not Found',
-        403: '403: Forbidden'
+        503: this.$t('errors.503title'),
+        500: this.$t('errors.500title'),
+        404: this.$t('errors.404title'),
+        403: this.$t('errors.403title')
       }[this.status]
     },
     description () {
       return {
-        503: 'Sorry, we are doing some maintenance. Please check back soon.',
-        500: 'Whoops, something went wrong on our servers.',
-        404: 'Sorry, the page you are looking for could not be found.',
-        403: 'Sorry, you are forbidden from accessing this page.'
+        503: this.$t('errors.503description'),
+        500: this.$t('errors.500description'),
+        404: this.$t('errors.404description'),
+        403: this.$t('errors.403description')
       }[this.status]
     }
   }

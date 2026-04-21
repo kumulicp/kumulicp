@@ -28,16 +28,16 @@ export default {
     const basePath = '/admin/apps/' + app.slug + '/versions/' + version.version
     const tabs = [
       {
-        title: 'Edit',
+        title: useI18n().t('form.edit'),
         url: basePath
       },
       {
-        title: 'Roles',
+        title: useI18n().t('admin.roles.roles'),
         url: basePath + '/roles'
       }
     ]
 
-    let value = 'Edit'
+    let value = useI18n().t('form.edit')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

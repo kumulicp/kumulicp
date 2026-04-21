@@ -11,7 +11,7 @@ const { t } = useI18n()
     <title>{{ app.name }} - {{ t('admin.versions.versions') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <va-button id="addVersion" @click="showAddVersion = !showAddVersion">Add Version</va-button>
+    <va-button id="addVersion" @click="showAddVersion = !showAddVersion">{{ t('admin.versions.addVersion') }}</va-button>
     <va-modal v-model="showAddVersion" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
         <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions')">
@@ -28,7 +28,7 @@ const { t } = useI18n()
               />
 
             <div class="mt-2 va-input-label va-input-wrapper__label va-input-wrapper__label--outer" style="color: var(--va-primary);">
-              Where do you want to copy values from?
+              {{ t('admin.versions.copyValuesFrom') }}
             </div>
             <va-radio v-model="form.copy_from"
               :options="copyFrom"

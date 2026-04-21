@@ -8,7 +8,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Discover App - Control Panel</title>
+    <title>{{ t('organization.discover.discoverApp') }} - Control Panel</title>
   </Head>
   <div class="discover-app">
     <div class="row">
@@ -36,7 +36,7 @@ const { t } = useI18n()
                       class="ml-4"
                       size="small"
                     >
-                      Activate {{ app.parent_app.name }} here
+                      {{ t('organization.discover.activateParentApp', { name: app.parent_app.name }) }}
                     </va-button>
                   </Link>
                 </div>
@@ -47,7 +47,7 @@ const { t } = useI18n()
                       class="ml-4"
                       size="small"
                     >
-                      Upgrade Plan Here
+                      {{ t('organization.discover.upgradePlanHere') }}
                     </va-button>
                   </Link>
                 </div>
@@ -57,8 +57,8 @@ const { t } = useI18n()
             <va-divider class="mb-3"></va-divider>
             <div v-if="can.activate" class="row">
               <div class="flex flex-col xs12">
-                <Link v-if="app.plan_count == 1" :href="'/discover/'+app.slug+'/plans/'+app.plan_id+'/review'"><va-button class="mb-3">Select</va-button></Link>
-                <Link v-if="app.plan_count > 1" :href="'/discover/'+app.slug+'/plans'"><va-button class="mb-3">Choose Your Plan</va-button></Link>
+                <Link v-if="app.plan_count == 1" :href="'/discover/'+app.slug+'/plans/'+app.plan_id+'/review'"><va-button class="mb-3">{{ t('organization.discover.select') }}</va-button></Link>
+                <Link v-if="app.plan_count > 1" :href="'/discover/'+app.slug+'/plans'"><va-button class="mb-3">{{ t('organization.discover.chooseYourPlan') }}</va-button></Link>
               </div>
             </div>
           </va-card-content>

@@ -26,16 +26,16 @@ export default {
     const basePath = '/admin/server/backup_scheduler'
     const tabs = [
       {
-        title: 'Past/Upcoming',
+        title: useI18n().t('admin.backups.pastUpcoming'),
         url: basePath
       },
       {
-        title: 'Recurring Settings',
+        title: useI18n().t('admin.backups.recurringSettings'),
         url: basePath + '/recurring'
       }
     ]
 
-    let value = 'View'
+    let value = useI18n().t('admin.backups.pastUpcoming')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

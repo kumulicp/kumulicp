@@ -6,7 +6,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Welcome! - Control Panel</title>
+    <title>{{ t('auth.welcomeGreeting') }} - Control Panel</title>
   </Head>
   <div class="welcome">
     <div class="row">

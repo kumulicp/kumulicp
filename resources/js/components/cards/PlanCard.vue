@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 <template>
   <va-card :class="cardClass" :color="chooseColor()" :gradient="!select" :stripe="!select">
@@ -11,7 +14,7 @@ import { Link } from '@inertiajs/vue3'
             <div color="secondary">{{ plan.description }}</div>
           </div>
           <va-divider class="my-1" />
-          <h5 class="mb-1 va-h5">Prices</h5>
+          <h5 class="mb-1 va-h5">{{ t('plans.prices') }}</h5>
           <template v-if="plan.features.prices.length > 0">
             <div v-for="(feature, index) in plan.features.prices" :key="index" class="my-3">
                 <span class="va-text-bold">{{ feature.name }}:</span> {{ feature.description }}
@@ -19,12 +22,12 @@ import { Link } from '@inertiajs/vue3'
           </template>
           <template v-else>
             <div class="my-3">
-                Free!
+                {{ t('plans.free') }}
             </div>
           </template>
           <template v-if="plan.features.features.length > 0">
             <va-divider class="my-1" />
-            <h5 class="mb-1 va-h5">Features</h5>
+            <h5 class="mb-1 va-h5">{{ t('plans.features') }}</h5>
             <template v-for="(feature, index) in plan.features.features" :key="index">
               <div class="my-3">
                   <span class="va-text-bold">{{ feature.name }}:</span> {{ feature.description }}
@@ -36,7 +39,7 @@ import { Link } from '@inertiajs/vue3'
           <va-spacer class="spacer" />
           <div style="align-content: flex-end">
             <div v-if="select" class="va-text-center">
-              <Link :id="'select'+plan.id" :href="plan.url"><va-button>Select</va-button></Link>
+              <Link :id="'select'+plan.id" :href="plan.url"><va-button>{{ t('plans.select') }}</va-button></Link>
             </div>
           </div>
         </template>
@@ -44,7 +47,7 @@ import { Link } from '@inertiajs/vue3'
           <va-spacer class="spacer" />
           <div style="align-content: flex-end">
             <div class="va-text-center">
-              <va-button disabled>Current Plan</va-button>
+              <va-button disabled>{{ t('plans.currentPlan') }}</va-button>
             </div>
           </div>
         </template>

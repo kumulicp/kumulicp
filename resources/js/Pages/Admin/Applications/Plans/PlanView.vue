@@ -12,8 +12,8 @@ const { t } = useI18n()
   <table>
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Value</th>
+        <th>{{ t('admin.plans.name') }}</th>
+        <th>{{ t('admin.plans.value') }}</th>
       </tr>
     </thead>
     <tbody>

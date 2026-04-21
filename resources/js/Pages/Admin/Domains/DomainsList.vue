@@ -9,7 +9,7 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Domains - Control Panel</title>
+    <title>{{ t('admin.domains.domains') }} - Control Panel</title>
   </Head>
   <VaScrollContainer
     color="primary"
@@ -18,17 +18,17 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Domain Name</th>
-          <th>User</th>
-          <th>Created</th>
-          <th>Expires</th>
-          <th>Is Expired</th>
-          <th>Is Locked</th>
-          <th>Auto Renew</th>
-          <th>WhoisGuard</th>
-          <th>Is Premium</th>
-          <th>Is Namecheap DNS</th>
+          <th>{{ t('admin.domains.id') }}</th>
+          <th>{{ t('admin.domains.domainName') }}</th>
+          <th>{{ t('admin.domains.user') }}</th>
+          <th>{{ t('admin.domains.created') }}</th>
+          <th>{{ t('admin.domains.expires') }}</th>
+          <th>{{ t('admin.domains.isExpired') }}</th>
+          <th>{{ t('admin.domains.isLocked') }}</th>
+          <th>{{ t('admin.domains.autoRenew') }}</th>
+          <th>{{ t('admin.domains.whoisGuard') }}</th>
+          <th>{{ t('admin.domains.isPremium') }}</th>
+          <th>{{ t('admin.domains.isNamecheapDns') }}</th>
           <th></th>
         </tr>
       </thead>
@@ -68,7 +68,7 @@ const { t } = useI18n()
             {{ domain.is_our_dns }}
           </td>
           <td class="va-text-center">
-            <Link :href="'/admin/service/domains/'+domain.name">Update DB</Link>
+            <Link :href="'/admin/service/domains/'+domain.name">{{ t('admin.domains.updateDb') }}</Link>
           </td>
         </tr>
       </tbody>

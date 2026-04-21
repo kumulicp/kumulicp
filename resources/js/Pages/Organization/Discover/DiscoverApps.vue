@@ -8,11 +8,11 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Discover Apps - Control Panel</title>
+    <title>{{ t('organization.discover.discoverApps') }} - Control Panel</title>
   </Head>
   <div class="discover-apps">
     <div class="row">
-      <h3 class="va-h5 mb-4 px-3">App Discovery</h3>
+      <h3 class="va-h5 mb-4 px-3">{{ t('organization.discover.appDiscovery') }}</h3>
     </div>
     <div class="row">
       <!-- a single app card -->
@@ -40,13 +40,13 @@ const { t } = useI18n()
                       <p>{{ app.description }}</p>
                     </div>
                     <div class="w-full" style="display: grid; flex-direction: row; align-items: end; place-items: end;">
-                      <Link :href="'/discover/'+app.slug"><va-button class="px-2">View</va-button></Link>
+                      <Link :href="'/discover/'+app.slug"><va-button class="px-2">{{ t('form.view') }}</va-button></Link>
                     </div>
                   </div>
               </div>
           </va-card-content>
           <div style="display: flex; flex-direction: row; align-items: end; flex:none">
-            <va-alert color="success" icon="info" center class="mb-0 flex-none py-2 px-3 w-full">{{ app.count }} <template v-if="app.count === 1">instance</template><template v-else>instances</template> activated</va-alert>
+            <va-alert color="success" icon="info" center class="mb-0 flex-none py-2 px-3 w-full">{{ app.count }} <template v-if="app.count === 1">{{ t('organization.discover.instance') }}</template><template v-else>{{ t('organization.discover.instances') }}</template> {{ t('organization.discover.activated') }}</va-alert>
           </div>
         </div>
         </va-card>

@@ -39,7 +39,7 @@
           v-model="setting_values[setting.name]"
           type="password"
           class="pb-1"
-          placeholder="Leave this blank to keep current password"
+          :placeholder="$t('components.appSettings.leavePasswordBlank')"
           @update:v-model="updateSettings"
           />
         <va-select

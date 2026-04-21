@@ -9,7 +9,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit Version - Control Panel</title>
+    <title>{{ t('admin.versions.editVersion') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
     <div class="row justify-center">
@@ -17,7 +17,7 @@ const { t } = useI18n()
       <va-modal v-model="showEnableDisable" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
           <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.version+'/'+version.toggle.state)">
-            <va-card-title class="m-0"> {{ version.toggle.label }} Version </va-card-title>
+            <va-card-title class="m-0"> {{ version.toggle.label }} {{ t('admin.versions.version') }} </va-card-title>
             <va-card-content class="m-0">
               <div v-if="version.toggle.state == 'disable'">
                 {{ t('admin.versions.disablingVersionWarning') }}

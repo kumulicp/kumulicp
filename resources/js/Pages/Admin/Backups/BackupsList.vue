@@ -8,23 +8,23 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Backups - Control Panel</title>
+    <title>{{ t('admin.backups.backups') }} - Control Panel</title>
   </Head>
   <div class="backups-list">
     <div class="row">
       <div class="flex flex-col xs12 lg12">
         <va-card class="mb-4">
-          <va-card-title>Scheduled Backups</va-card-title>
+          <va-card-title>{{ t('admin.backups.scheduledBackups') }}</va-card-title>
           <va-card-content>
             <table class="va-table va-table--hoverable mt-3">
               <thead>
                 <tr>
-                  <th>Organization</th>
-                  <th>App</th>
-                  <th>Type</th>
-                  <th>Scheduled At</th>
-                  <th>Completed At</th>
-                  <th>Status</th>
+                  <th>{{ t('organization.organization') }}</th>
+                  <th>{{ t('admin.apps.appWord') }}</th>
+                  <th>{{ t('admin.backups.type') }}</th>
+                  <th>{{ t('admin.backups.scheduledAt') }}</th>
+                  <th>{{ t('admin.backups.completedAt') }}</th>
+                  <th>{{ t('admin.apps.status') }}</th>
                   <th style="width:50px"></th>
                 </tr>
               </thead>
@@ -48,14 +48,14 @@ const { t } = useI18n()
             <va-pagination v-if="backups.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="backups.length" boundary-numbers :page-size="pageSize" />
           </va-card-content>
         </va-card>
-        <va-modal v-model="showRemoveBackup" hide-default-actions :title="'Remove ' + removeBackup.name + '?'"
-          :message="'Are you sure you want to delete from the backup scheduled for '+ removeBackup.scheduled_at+'? This action is permanent.'">
+        <va-modal v-model="showRemoveBackup" hide-default-actions :title="t('admin.backups.removeTitle', { name: removeBackup.name })"
+          :message="t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              Cancel
+              {{ t('modal.cancel') }}
             </va-button>
             <va-button color="danger"
-              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">Delete</va-button>
+              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ t('modal.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

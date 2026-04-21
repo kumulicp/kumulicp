@@ -34,24 +34,24 @@ export default {
     const basePath = '/admin/apps/' + app.slug + '/plans/' + plan.id
     const tabs = [
       {
-        title: 'View',
+        title: useI18n().t('form.view'),
         url: basePath
       },
       {
-        title: 'Settings',
+        title: useI18n().t('admin.plans.settings'),
         url: basePath + '/edit'
       },
       {
-        title: 'Features',
+        title: useI18n().t('admin.plans.features'),
         url: basePath + '/features'
       },
       {
-        title: 'Server Configurations',
+        title: useI18n().t('admin.plans.serverConfigurations'),
         url: basePath + '/configurations'
       }
     ]
 
-    let value = 'View'
+    let value = useI18n().t('form.view')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

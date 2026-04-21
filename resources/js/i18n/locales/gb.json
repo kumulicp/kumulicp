@@ -1,4 +1,9 @@
 {
+  "404": {
+    "title": "This page’s gone fishing.",
+    "text": "If you feel that it’s not right, please send us a message at ",
+    "back_button": "Back to dashboard"
+  },
   "auth": {
     "agree": "I agree to",
     "createAccount": "Create account",
@@ -49,12 +54,8 @@
     "controlPanelLabel": "Control Panel",
     "controlPanelDescription": "The Control Panel is the central hub of our product. From here you can manage your apps, subscription, users and user groups and more!",
     "yourApps": "Your Apps",
-    "noAppsAccess": "You currently don't have access to any applications. If you believe you should, please contact your organization admins to give you access."
-  },
-  "404": {
-    "title": "This page’s gone fishing.",
-    "text": "If you feel that it’s not right, please send us a message at ",
-    "back_button": "Back to dashboard"
+    "noAppsAccess": "You currently don't have access to any applications. If you believe you should, please contact your organization admins to give you access.",
+    "changePassword": "Change Password"
   },
   "admin": {
     "announcement": {
@@ -97,7 +98,8 @@
       "standardUsers": "Standard users",
       "basicUsers": "Basic users",
       "ignoreRole": "Ignore role",
-      "ignoreRoleCaption": "Will only include implied roles"
+      "ignoreRoleCaption": "Will only include implied roles",
+      "roles": "Roles"
     },
     "plans": {
       "plan": "Plan",
@@ -173,7 +175,6 @@
       "maxAdditionalStorage": "Max Additional Storage",
       "maxAdditionalStorageCaption": "The maximum amount of additional storage a organization can have. (If you set the storage amount below to 5GB and set the max to 5, your organizations can only have 25GB)",
       "additionalStorageQuantityCaption": "The amount of GB that organizations can increment by (Ex: 5, 10, 15, 20)",
-      "features": "Features",
       "howFeatureIsBilled": "How feature is billed",
       "configurations": "Configurations",
       "persistentSetting": "Persistent Setting",
@@ -204,7 +205,16 @@
       "minimalUserLabel": "Minimal User Label",
       "emailServer": "Email Server",
       "value": "Value",
-      "accessType": "Access Type"
+      "accessType": "Access Type",
+      "addFeature": "Add Feature",
+      "displayedFeatures": "Displayed Features",
+      "displayedFeaturesDescription": "Show additional features",
+      "featureStatus": "Feature Status",
+      "parentServer": "Parent Server",
+      "plans": "Plans",
+      "removeConfig": "Remove Config",
+      "serverConfigurations": "Server Configurations",
+      "settings": "Settings"
     },
     "versions": {
       "versions": "Versions",
@@ -233,7 +243,10 @@
       "helmChart": "Helm Chart",
       "recommendations": "Recommendations",
       "previousVersion": "Previous Version",
-      "none": "None"
+      "none": "None",
+      "copyValuesFrom": "Where do you want to copy values from?",
+      "editVersion": "Edit Version",
+      "versionRoles": "Version Roles"
     },
     "apps": {
       "appSettings": "App Settings",
@@ -292,6 +305,59 @@
       "shortDescription": "Short Description",
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
       "description": "Page Description"
+    },
+    "backups": {
+      "addBackup": "Add Backup",
+      "addRecurringBackups": "Add Recurring Backups",
+      "application": "Application",
+      "appsToBackup": "Apps to Backup",
+      "backups": "Backups",
+      "backupsInterval": "Backups",
+      "completedAt": "Completed At",
+      "daily": "Daily",
+      "date": "Date",
+      "days": "days",
+      "daysInterval": "Days",
+      "deleteAfter": "Delete After",
+      "keep": "Keep",
+      "keepFor": "Keep For",
+      "lastScheduledAt": "Last Scheduled At",
+      "monthly": "Monthly",
+      "monthsInterval": "Months",
+      "organizations": "Organizations",
+      "pastUpcoming": "Past/Upcoming",
+      "recurrence": "Recurrence",
+      "recurringSettings": "Recurring Settings",
+      "removeMessage": "Are you sure you want to delete from the backup scheduled for {date}? This action is permanent.",
+      "removeTitle": "Remove {name}?",
+      "scheduledAt": "Scheduled At",
+      "scheduledBackups": "Scheduled Backups",
+      "server": "Server",
+      "time": "Time",
+      "type": "Type"
+    },
+    "domains": {
+      "addTld": "Add TLD",
+      "autoRenew": "Auto Renew",
+      "created": "Created",
+      "customPrice": "Custom Price",
+      "domainName": "Domain Name",
+      "domains": "Domains",
+      "editTld": "Edit TLD",
+      "editTldTitle": "Edit .{name} TLD",
+      "expires": "Expires",
+      "id": "ID",
+      "isExpired": "Is Expired",
+      "isLocked": "Is Locked",
+      "isNamecheapDns": "Is Namecheap DNS",
+      "isPremium": "Is Premium",
+      "overridePricingMessage": "Override the registrars pricing.",
+      "refreshList": "Refresh List",
+      "registrationAllowed": "Registration Allowed",
+      "tlds": "TLDs",
+      "updateDb": "Update DB",
+      "user": "User",
+      "whoisGuard": "WhoisGuard"
     }
   },
   "language": {
@@ -318,7 +384,7 @@
     "noOptions": "No Options Available",
     "search": "Search"
   },
-  "messages":  {
+  "messages": {
     "status": {
       "deactivating": "Your organization's account will be deactivated",
       "deactivated": "Your organization's account is deactivated. Your controls are limited until you subscribe to a new plan"
@@ -347,7 +413,15 @@
       "subdomainPlaceholder": "Type your subdomain",
       "choosePrimaryDomain": "Choose your primary domain",
       "noDomainForSubdomain": "Register, transfer or connect an existing domain to create a subdomain",
-      "unableToUpdate": "Unable to update"
+      "unableToUpdate": "Unable to update",
+      "actions": "Actions",
+      "appsTitle": "Apps",
+      "deactivateTitle": "Deactivate {name}",
+      "discoverMore": "Discover More",
+      "loginToApp": "Login to App",
+      "planSettings": "{label} Plan Settings",
+      "plansTitle": "{label} Plans",
+      "visitWebsite": "Visit Website"
     },
     "city": "City",
     "state": "Province/State",
@@ -358,7 +432,69 @@
     "name": "Name",
     "createFirstAccount": "Create First Account",
     "baseDomain": "Base Domain Name",
-    "slug": "Slug"
+    "slug": "Slug",
+    "dashboard": {
+      "discoverApps": "Discover apps",
+      "group": "Group",
+      "nextcloudFolders": "Nextcloud Team Folders",
+      "plans": "Plans",
+      "storage": "Storage",
+      "title": "Dashboard",
+      "trialApps": "We have many apps to offer",
+      "trialPlans": "Once you're done trialling our apps, upgrade your plan to gain the full range of benefits and features",
+      "trialWelcome": "Welcome to the Control Panel<br /> You are currently on our 1 month trial",
+      "upgradePlan": "Upgrade plan"
+    },
+    "discover": {
+      "activate": "Activate",
+      "activateParentApp": "Activate {name} here",
+      "activated": "activated",
+      "addSubdomain": "Add Subdomain",
+      "addToApp": "Add to App",
+      "addonTo": "This will be an add-on to your {name} app.",
+      "appDiscovery": "App Discovery",
+      "appPlanOverview": "App Plan Overview",
+      "appPlans": "App Plans",
+      "autoActivatedWith": "This will be automatically activated along with {name}.",
+      "chooseYourPlan": "Choose Your Plan",
+      "customizations": "Customizations",
+      "discoverApp": "Discover App",
+      "discoverApps": "Discover Apps",
+      "instance": "instance",
+      "instances": "instances",
+      "labelMessage": "Helps identify this app from others. Useful if you have multiple websites for example.",
+      "multipleOrgsMessage": "There are multiple suborganizations you can assign this app to. Please select one.",
+      "nothingLeftActivate": "There's nothing left to do except activate!",
+      "select": "Select",
+      "upgradePlanHere": "Upgrade Plan Here"
+    },
+    "groups": {
+      "addGroup": "Add Group",
+      "category": "Category",
+      "createGroup": "Create Group",
+      "deletingNextcloudFolder": "Deleting Nextcloud Team Folder",
+      "department": "Department",
+      "editGroup": "Edit {name} Group",
+      "groupName": "Group Name",
+      "groupType": "Group Type",
+      "groups": "Groups",
+      "keepFolder": "No! I want to keep it",
+      "managers": "Managers",
+      "members": "Members",
+      "ministry": "Ministry",
+      "nextcloudNoteMessage": "This action won't take affect until you click \"Update Group\"",
+      "nextcloudWarningMessage": "This will destroy any data you have this in folder. Are you absolutely certain you want to remove this Nextcloud Team Folder?",
+      "noGroups": "No Groups Available",
+      "note": "Note",
+      "project": "Project",
+      "removingFolder": "Yes, I'm removing the folder",
+      "team": "Team",
+      "updateGroup": "Update Group",
+      "warning": "Warning"
+    },
+    "email": {
+      "editEmailAccounts": "Edit Email Accounts"
+    }
   },
   "nothing": "Nothing",
   "plan": {
@@ -461,5 +597,84 @@
     "slugMessage": "System name to identify your account. Must be lowercase and dashes only",
     "systemCheckFailed": "System Check Failed",
     "checkName": "Check Name"
+  },
+  "components": {
+    "adminSettings": {
+      "title": "Settings"
+    },
+    "appSettings": {
+      "leavePasswordBlank": "Leave this blank to keep current password"
+    },
+    "passwordChecker": {
+      "uppercase": "Must contain uppercase letters",
+      "lowercase": "Must contain lowercase letters",
+      "numbers": "Must contain numbers",
+      "symbols": "Must contain symbols",
+      "minLength": "Must be at least 8 characters long",
+      "match": "Must match"
+    }
+  },
+  "errors": {
+    "goHome": "Go Home",
+    "503title": "503: Service Unavailable",
+    "500title": "500: Server Error",
+    "404title": "404: Page Not Found",
+    "403title": "403: Forbidden",
+    "503description": "Sorry, we are doing some maintenance. Please check back soon.",
+    "500description": "Whoops, something went wrong on our servers.",
+    "404description": "Sorry, the page you are looking for could not be found.",
+    "403description": "Sorry, you are forbidden from accessing this page."
+  },
+  "layout": {
+    "chooseYourPlan": "Choose your Plan",
+    "activateAnApp": "Activate an App",
+    "addUsers": "Add Users"
+  },
+  "navbar": {
+    "welcomeToControlPanel": "Welcome to the Control Panel.",
+    "controlPanel": "Kumuli Control Panel",
+    "systemAdmin": "System Admin",
+    "yourDashboard": "Your Dashboard",
+    "helpDesk": "Help Desk",
+    "helpDeskDescription": "Before submitting a support ticket, please check out our",
+    "helpDeskError": "There was an error submitting your service request. Please try again shortly.",
+    "subject": "Subject",
+    "subjectMessage": "A brief summary",
+    "description": "Description",
+    "descriptionMessage": "Be as detailed as possible",
+    "typeOfRequest": "Type of Request",
+    "question": "Question",
+    "reportBug": "Report as Bug",
+    "featureRequest": "Feature Request",
+    "ticketSubmitted": "Ticket Submitted Sucessfully",
+    "ticketError": "An error occured while submitting your ticket! Please try again in a minute.",
+    "clearAll": "Clear all",
+    "noNotifications": "No notifications"
+  },
+  "payment": {
+    "addPaymentMethod": "Add Payment Method",
+    "addPaymentMethodMessage": "Please add payment information to proceed.",
+    "cardNumber": "Card Number",
+    "cvc": "CVC",
+    "deleteCreditCard": "Delete Credit Card",
+    "deletePaymentMethod": "Delete Payment Method",
+    "deletePaymentMethodMessage": "If you are subscribed to a paid plan, this will also cancel that plan unless you add a new payment method before your next payment date or change your subscription to a free plan. If you want to remain subscribed, we recommend just updating your current payment method. Are you sure you want to to delete this payment method?",
+    "expires": "Expires",
+    "expiry": "Expiry",
+    "updatePaymentMethod": "Update Payment Method",
+    "updatePaymentMethodMessage": "Is this the right payment info? If not, update it below.",
+    "updatePaymentMethodSuccess": "Update Payment Method Successfully"
+  },
+  "plans": {
+    "currentPlan": "Current Plan",
+    "features": "Features",
+    "free": "Free!",
+    "prices": "Prices",
+    "select": "Select"
+  },
+  "pricing": {
+    "perAppMessage": "Pricing varies depending on the plan you choose for each app you activate.",
+    "pricing": "Pricing",
+    "total": "Total"
   }
 }

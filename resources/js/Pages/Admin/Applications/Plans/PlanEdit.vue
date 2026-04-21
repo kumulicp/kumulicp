@@ -188,8 +188,8 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>Displayed Features</template>
-      <template #description>Show additional features</template>
+      <template #name>{{ t('admin.plans.displayedFeatures') }}</template>
+      <template #description>{{ t('admin.plans.displayedFeaturesDescription') }}</template>
       <template #settings>
         <template v-for="(feature, index) in plan.features" :key="index">
           <div class="row">
@@ -216,7 +216,7 @@ const { t } = useI18n()
             </div>
           </div>
         </template>
-        <va-button @click="addNewFeature()">Add Feature</va-button>
+        <va-button @click="addNewFeature()">{{ t('admin.plans.addFeature') }}</va-button>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />

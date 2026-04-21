@@ -7,13 +7,13 @@ const { t } = useI18n()
 
 <template>
   <va-card class="mb-4">
-    <va-card-title>Nextcloud Team Folders</va-card-title>
+    <va-card-title>{{ t('organization.dashboard.nextcloudFolders') }}</va-card-title>
     <va-card-content>
       <table class="va-table va-table--striped">
         <thead>
           <tr>
-            <th>Group</th>
-            <th>Storage</th>
+            <th>{{ t('organization.dashboard.group') }}</th>
+            <th>{{ t('organization.dashboard.storage') }}</th>
           </tr>
         </thead>
         <tbody>

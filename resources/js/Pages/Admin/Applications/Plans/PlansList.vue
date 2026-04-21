@@ -9,7 +9,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Plans - Control Panel</title>
+    <title>{{ t('admin.plans.plans') }} - Control Panel</title>
   </Head>
   <div class="row">
     <div class="flex flex-col xs12 va-text-center">

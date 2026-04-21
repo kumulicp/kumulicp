@@ -10,7 +10,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Dashboard - Control Panel</title>
+    <title>{{ t('organization.dashboard.title') }} - Control Panel</title>
   </Head>
   <div class="dashboard">
     <DashboardTrialInfo v-if="trial_plan" />

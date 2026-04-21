@@ -163,7 +163,7 @@ onResize()
           {{ $page.props.auth.organization.name }}
         </template>
         <template #center>
-          Kumuli Control Panel
+          {{ $t('navbar.controlPanel') }}
         </template>
       </VaNavbar>
     </template>
@@ -186,15 +186,15 @@ export default {
     steps () {
       return [
         {
-          label: 'Choose your Plan',
+          label: this.$t('layout.chooseYourPlan'),
           disabled: (this.$page.props.step < 0)
         },
         {
-          label: 'Activate an App',
+          label: this.$t('layout.activateAnApp'),
           disabled: (this.$page.props.step < 1)
         },
         {
-          label: 'Add Users',
+          label: this.$t('layout.addUsers'),
           disabled: (this.$page.props.step < 2)
         }
       ]

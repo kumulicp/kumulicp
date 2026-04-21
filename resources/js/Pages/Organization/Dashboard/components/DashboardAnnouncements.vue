@@ -6,7 +6,7 @@ const { t } = useI18n()
 </script>
 <template>
   <va-card class="mb-4">
-    <va-card-title>Announcements</va-card-title>
+    <va-card-title>{{ t('admin.announcement.title') }}</va-card-title>
     <va-card-content>
       <va-accordian v-model="basicAccordionValue" :multiple="false">
         <va-collapse

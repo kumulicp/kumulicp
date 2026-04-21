@@ -91,7 +91,7 @@ const { t } = useI18n()
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section v-if="config.additional" icon>
-                <va-button color="backgroundSecondary" @click="removeConfig(index)" :title="'Remove Config'"><va-icon name="fa-x" color="danger" /></va-button>
+                <va-button color="backgroundSecondary" @click="removeConfig(index)" :title="t('admin.plans.removeConfig')"><va-icon name="fa-x" color="danger" /></va-button>
           </va-list-item-section>
         </va-list-item>
       <va-list-separator class="my-1" fit v-if="(index+1) != configs.length" />
@@ -100,7 +100,7 @@ const { t } = useI18n()
     <div class="row mb-3 ml-1">{{ t('admin.plans.persistentSettingsNotice') }}</div>
     <va-card v-if="showAddNewConfigOptions" stripe stripe-color="success" class="mb-2">
       <va-card-title>
-        {{ t()}}
+        {{ t('admin.plans.addConfig') }}
       </va-card-title>
       <va-card-content>
         <div class="row">

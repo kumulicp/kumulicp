@@ -8,7 +8,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Roles - Control Panel</title>
+    <title>{{ t('admin.roles.roles') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
     <va-button class="" @click="showAddRole = !showAddRole">{{ t('admin.roles.addRole') }}</va-button>
@@ -71,8 +71,8 @@ const { t } = useI18n()
             />
           </va-card-content>
           <va-card-actions align="right">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
-            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">Submit</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
+            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>
@@ -84,9 +84,9 @@ const { t } = useI18n()
         <table class="va-table va-table--hoverable mt-3">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Access Type</th>
-              <th style="width: 50px">Status</th>
+              <th>{{ t('admin.roles.name') }}</th>
+              <th>{{ t('admin.roles.accessType') }}</th>
+              <th style="width: 50px">{{ t('admin.apps.status') }}</th>
             </tr>
           </thead>
           <tbody>

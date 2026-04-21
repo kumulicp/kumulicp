@@ -1,12 +1,15 @@
 <script setup>
 import axios from 'axios'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 </script>
 
 <template>
   <va-select
     v-model="selected_state"
     id="state"
-    :label="label ? 'Province/State' : false"
+    :label="label ? t('organization.state') : false"
     :required-mark="required"
     searchable
     :options="states"

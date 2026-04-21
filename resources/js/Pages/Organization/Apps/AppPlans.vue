@@ -7,11 +7,11 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ app.name }} Plans - Control Panel</title>
+    <title>{{ app.name }} - Control Panel</title>
   </Head>
   <div class="discover-app">
     <div class="row justify-center">
-      <h4 class="va-h4">{{ app.label }} Plans</h4>
+      <h4 class="va-h4">{{ t('organization.apps.plansTitle', { label: app.label }) }}</h4>
     </div>
     <div class="row justify-center">
       <div v-for="(plan, index) in plans" class="flex xs12 md6 lg4 xl3" :key="index">

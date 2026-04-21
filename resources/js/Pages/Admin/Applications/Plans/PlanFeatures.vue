@@ -33,7 +33,7 @@ const { t } = useI18n()
           <va-select
             v-model="form['features'][feature.value]['status']"
             :options="feature_options"
-            :label="useI18n().t('options')"
+            :label="t('admin.plans.featureStatus')"
             immediateValidation
             class="pb-2"
             value-by="value"
