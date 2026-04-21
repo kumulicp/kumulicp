@@ -1,7 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
-import { Stripe } from '@vue-stripe/vue-stripe'
+import { StripeElements, StripeElement, useStripe } from "@vue-stripe/vue-stripe"
 </script>
 <template>
   <div>
@@ -18,14 +18,14 @@ import { Stripe } from '@vue-stripe/vue-stripe'
             </va-inner-loading>
           </va-list-item-section>
           <va-list-item-section>
-            <va-list-item-label v-if="payment_method.brand" lines="2">
-              {{ payment_method.brand }} ****{{ payment_method.last4 }}
+            <va-list-item-label v-if="paymentMethod.brand" lines="2">
+              {{ paymentMethod.brand }} ****{{ paymentMethod.last4 }}
               <br />
-              Expires {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              Expires {{ paymentMethod.exp_month }}/{{ paymentMethod.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>
-            <va-list-item-label v-if="payment_method.brand">
+            <va-list-item-label v-if="paymentMethod.brand">
               <va-icon
                 name="fa-trash"
                 title="Delete Credit Card"
@@ -110,10 +110,11 @@ import { Stripe } from '@vue-stripe/vue-stripe'
                 </fieldset>
               </div>
             </div>
-<!--             <div id="card-element"></div> -->
+            <!--<div id="card-element"></div>-->
           </div>
         </div>
       </div>
+
       <div class="row justify-center mb-2">
         <va-button @click="updatePaymentMethod"
           id="updateCreditCard"
@@ -139,7 +140,8 @@ import { Stripe } from '@vue-stripe/vue-stripe'
 export default {
   props: {
     hasDefaultPaymentMethod: Boolean,
-    csrf_token: String
+    csrf_token: String,
+    onUpdateDefaultPaymentMethod: Function
   },
   data () {
     return {
@@ -147,10 +149,8 @@ export default {
       cardSubmittedSuccessfully: false,
       showDefaultPaymentMethod: this.hasDefaultPaymentMethod,
       currentUrl: window.location.href,
-      intent: {
-        client_secret: ''
-      },
-      payment_method: {
+      clientSecret: null,
+      paymentMethod: {
         brand: '',
         last4: '',
         exp_month: '',
@@ -159,13 +159,14 @@ export default {
       brand_image: '',
       stripe: null,
       cardHolderName: '',
-      stripe_key: '',
+      stripeKey: '',
       error: false,
-      stripe_processing: false,
+      stripeProcessing: false,
       cardElement: '',
       cardNumber: '',
       cardExpiry: '',
-      cardCvc: ''
+      cardCvc: '',
+      stripeMounted: false
     }
   },
   mounted () {
@@ -179,17 +180,24 @@ export default {
         .then((response) => {
           const data = response.data
           vueState.showDefaultPaymentMethod = data.hasDefaultPaymentMethod
-          vueState.stripe_key = data.stripe_key
+          vueState.defaultPaymentMethod = data.hasDefaultPaymentMethod
+          vueState.stripeKey = data.stripe_key
           vueState.cardHolderName = ''
           vueState.brand_image = data.brand_image
-          vueState.payment_method = data.defaultPaymentMethod.card
-          vueState.intent.client_secret = data.intent.client_secret
+          vueState.paymentMethod = data.defaultPaymentMethod.card
+          vueState.clientSecret = data.intent.client_secret
+
+          console.log(data.hasDefaultPaymentMethod)
         }).then(() => {
           this.mountStripe()
-        }).catch(function () {
+        }).catch(function (error) {
+          console.log(error)
         })
     },
     mountStripe () {
+      if (this.stripeMounted) {
+        return
+      }
       // Style Object documentation here: https://stripe.com/docs/js/appendix/style
       const style = {
         base: {
@@ -207,8 +215,7 @@ export default {
         }
       }
 
-      this.stripe = Stripe(this.stripe_key)
-
+      this.stripe = Stripe(this.stripeKey)
       const elements = this.stripe.elements()
       // this.cardElement = elements.create('card')
       // this.cardElement.mount('#card-element')
@@ -218,12 +225,14 @@ export default {
       this.cardExpiry.mount('#card-expiry')
       this.cardCvc = elements.create('cardCvc', { style })
       this.cardCvc.mount('#card-cvc')
+
+      this.stripeMounted = true
     },
     updatePaymentMethod () {
       const vueState = this
       this.error = false
-      this.stripe_processing = true
-      this.stripe.confirmCardSetup(vueState.intent.client_secret, {
+      this.stripeProcessing = true
+      this.stripe.confirmCardSetup(vueState.clientSecret, {
         payment_method: {
           card: vueState.cardNumber,
           billing_details: { name: vueState.cardHolderName }
@@ -234,16 +243,18 @@ export default {
           _token: vueState.csrf_token
         }).then(() => {
           this.getCardInformation()
-          vueState.stripe_processing = false
+          vueState.stripeProcessing = false
           vueState.cardSubmittedSuccessfully = true
+          vueState.onUpdateDefaultPaymentMethod?.(true)
+          vueState.showDefaultPaymentMethod = true
         }).catch(() => {
           vueState.error = 'There has been an error updating your payment method. Try reloading this page and trying again. If that still fails, please click the question mark at the top of the screen and let us know so we can fix it right away.'
-          vueState.stripe_processing = false
+          vueState.stripeProcessing = false
         })
       }).catch(() => {
         this.getCardInformation()
         vueState.error = 'There has been an error updating your payment method. Please reload and try again'
-        vueState.stripe_processing = false
+        vueState.stripeProcessing = false
       })
     },
     submit () {
