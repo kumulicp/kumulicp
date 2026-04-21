@@ -12,12 +12,12 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
 </script>
 <template>
   <Head>
-    <title>Signup - Control Panel</title>
+    <title>{{ t('auth.signupTitle') }} - Control Panel</title>
   </Head>
     <template v-if="can.register">
     <form @submit.prevent="form.post('/register')">
 
-      <h5 class="mb-3">User Info</h5>
+      <h5 class="mb-3">{{ t('auth.userInfo') }}</h5>
       <va-input
         v-model="form.username"
         id="username"
@@ -125,7 +125,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="subdomain"
         maxlength="30"
         class="mb-3"
-        label="Subdomain name"
+        :label="t('auth.subdomainName')"
         immediateValidation
         :error="$page.props.errors.subdomain"
         :error-messages="$page.props.errors.subdomain"
@@ -148,7 +148,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           </template>
         </va-checkbox>
             <span class="ml-2">
-              I agree to
+              {{ t('auth.agree') }}
               <a :href="terms_url" target="blank" class="va-link">{{ t('auth.terms') }}</a>
             </span>
       </div>
@@ -159,7 +159,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           :disabled="form.processing"
           class="my-0"
         >
-          Register
+          {{ t('auth.register') }}
         </va-button>
       </div>
     </form>

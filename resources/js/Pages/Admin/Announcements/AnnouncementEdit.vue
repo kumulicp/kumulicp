@@ -8,7 +8,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Announcement - Control Panel</title>
+    <title>{{ t('admin.announcement.pageTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
     <va-card-title>{{ announcement.title }}</va-card-title>

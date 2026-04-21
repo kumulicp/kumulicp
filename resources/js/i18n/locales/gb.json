@@ -22,7 +22,34 @@
     "registrationError2": "You are unable to register at this time due to technical issues. Please return shortly to begin your registration.",
     "orgType": "Account Type",
     "subdomainMessage": "Your apps can be accessed from '{domain}' until you register your own domain name",
-    "orgName": "Organization Name"
+    "orgName": "Organization Name",
+    "loginWith": "Login with {provider}",
+    "signupTitle": "Signup",
+    "userInfo": "User Info",
+    "subdomainName": "Subdomain name",
+    "register": "Register",
+    "checkEmailForReset": "Check your email for a link to reset your password.",
+    "registeredTitle": "Registered!",
+    "registeredCongrats": "Congraduations on registering your account with us!",
+    "registeredVerifyEmail": "Please check your email to verify your account in order to complete your registration.",
+    "setNewPasswordTitle": "Set your new password!",
+    "changingPasswordFor": "You are changing the password for {email}.",
+    "notYourEmail": "If this is not your email, leave this page.",
+    "verifyEmailTitle": "Verify Email",
+    "verificationEmailSent": "A new verification email has been sent",
+    "helloUser": "Hello {name},",
+    "emailNotVerified": "You're email hasn't been verified yet. Please check your email for your verification link.",
+    "resendEmail": "Resend Email",
+    "welcomeTitle": "Welcome!",
+    "welcomeGreeting": "Welcome!",
+    "passwordUpdated": "Your password was successfully updated!",
+    "oneStopShop": "We aim to be a one-stop-shop for all the online apps your organization might need to run smoothly",
+    "accessGivenSingle": "You've been given access to the app below. You can use the username you were assigned and password you just set to access any app.",
+    "accessGivenMultiple": "You've been given access to the apps below. You can use the username you were assigned and password you just set to access any app.",
+    "controlPanelLabel": "Control Panel",
+    "controlPanelDescription": "The Control Panel is the central hub of our product. From here you can manage your apps, subscription, users and user groups and more!",
+    "yourApps": "Your Apps",
+    "noAppsAccess": "You currently don't have access to any applications. If you believe you should, please contact your organization admins to give you access."
   },
   "404": {
     "title": "This page’s gone fishing.",
@@ -32,10 +59,14 @@
   "admin": {
     "announcement": {
       "title": "Announcements",
+      "pageTitle": "Announcement",
       "relevantApps": "Relevant Apps",
       "summary": "Summary",
       "description": "Description",
-      "addAnnouncement": "Add Announcement"
+      "addAnnouncement": "Add Announcement",
+      "titleLabel": "Title",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "Are you sure you want to remove {name}? This action is permanent."
     },
     "tests": {
       "description": "Description",
@@ -172,7 +203,8 @@
       "enableSuborganizations": "Enable Suborganizations",
       "minimalUserLabel": "Minimal User Label",
       "emailServer": "Email Server",
-      "value": "Value"
+      "value": "Value",
+      "accessType": "Access Type"
     },
     "versions": {
       "versions": "Versions",
@@ -206,6 +238,8 @@
     "apps": {
       "appSettings": "App Settings",
       "pageTitle": "Organization App - Control Panel",
+      "pageTitleShort": "Organization App",
+      "editPageTitle": "Edit App",
       "apiPassword": "API Password",
       "jsonSettings": "JSON Settings",
       "update": "Update App Settings",
@@ -235,6 +269,23 @@
       "parentAppMessage": "Some apps require another app to be active first",
       "accessType": "User Access Type",
       "accessTypeMessage": "Standard: full price & full access > Basic: minimal pricing & limited access > Minimal: free users for cases where they need zero admin access",
+      "accessTypeMinimal": "Minimal - free users",
+      "accessTypeBasic": "Basic - minimal charge",
+      "accessTypeStandard": "Standard",
+      "domainName": "Domain name",
+      "domainOptionNone": "No domains allowed",
+      "domainOptionAll": "All options are available",
+      "domainOptionSubdomains": "Only Subdomains",
+      "domainOptionPrimary": "Only Primary Domains",
+      "domainOptionBase": "Use System Provided Domain",
+      "domainOptionParent": "Use Parent Domain (Only use if this has a parent app set)",
+      "aboutApp": "About App",
+      "settings": "Settings",
+      "appWord": "App",
+      "disableWarning": "Disabling this app will prevent organizations from activating it. Organizations who have already activated it will continue to be able to use it. Are you sure you want to disable this app?",
+      "enableWarning": "Enabling this app allows organizations with the the proper plan to active this app. Are you sure you want to enable this version?",
+      "noDefaultVersion": "You have no default version selected. You can select one here or go to your list of versions to enable one.",
+      "status": "Status",
       "shortDescription": "Short Description",
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
       "description": "Page Description"
@@ -277,9 +328,23 @@
   },
   "organization": {
     "organization": "Organization",
+    "announcement": {
+      "pageTitle": "{title}"
+    },
     "apps": {
       "loginPassword": "Login Password",
-      "recommendPasswordChange": "It's recommended you change this password when you login"
+      "recommendPasswordChange": "It's recommended you change this password when you login",
+      "settingsTitle": "App Settings",
+      "labelSettings": "{label} Settings",
+      "viewDocs": "View Docs",
+      "addonTo": "Addon to",
+      "domainLabel": "Domain",
+      "appLabel": "Label",
+      "subdomain": "Subdomain",
+      "subdomainPlaceholder": "Type your subdomain",
+      "choosePrimaryDomain": "Choose your primary domain",
+      "noDomainForSubdomain": "Register, transfer or connect an existing domain to create a subdomain",
+      "unableToUpdate": "Unable to update"
     },
     "city": "City",
     "state": "Province/State",
@@ -329,6 +394,7 @@
     "remove": "Remove",
     "submit": "Submit",
     "edit": "Edit",
+    "view": "View",
     "name": "Name",
     "cancel": "Cancel",
     "cleanYaml": "Clean up YAML"
@@ -364,9 +430,24 @@
     "supportEmail": "Support Email",
     "errorEmail": "Error Email",
     "ldap": "LDAP",
+    "ldapFullName": "Full Name",
+    "ldapPersonalEmail": "Personal Email",
+    "ldapOrganizationEmail": "Organization Email",
     "controlPanel": "Control Panel",
     "ssoProviders": "SSO Providers",
-    "invoice": "Invoice"
+    "invoice": "Invoice",
+    "editServerSettings": "Edit Server Settings",
+    "invoiceInfo": "Invoice Info",
+    "sso": {
+      "editSsoProvider": "Edit SSO Provider",
+      "label": "Label",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "baseUrl": "Base URL",
+      "redirectUrl": "Redirect URL",
+      "scopes": "Scopes",
+      "publicFacingLabel": "Public facing label"
+    }
   },
   "other": {
     "initialSetup": "Initial Setup",

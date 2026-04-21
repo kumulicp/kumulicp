@@ -10,22 +10,22 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit App - Control Panel</title>
+    <title>{{ t('admin.apps.editPageTitle') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
     <va-button class="" @click="showEnableDisable = !showEnableDisable">{{ app.toggle.label }}</va-button>
   </div>
   <va-modal v-model="showEnableDisable"
-    :title="app.toggle.label+' App'"
+    :title="app.toggle.label+' '+t('admin.apps.appWord')"
     hide-default-actions
     >
     <template #default>
         <div v-if="app.toggle.state == 'disable'">
-          Disabling this app will prevent organizations from activating it. Organizations who have already activated it will continue to be able to use it. Are you sure you want to disable this app?
+          {{ t('admin.apps.disableWarning') }}
         </div>
         <div v-if="app.toggle.state == 'enable'">
           <div v-if="!app.default_version.id">
-            <p class="mb-3">You have no default version selected. You can select one here or go to your list of versions to enable one.</p>
+            <p class="mb-3">{{ t('admin.apps.noDefaultVersion') }}</p>
             <va-select v-model="toggle.version"
               :options="app.versions"
               value-by="id"
@@ -36,11 +36,11 @@ const { t } = useI18n()
               :error-messages="$page.props.errors.version"
             />
           </div>
-          Enabling this app allows organizations with the the proper plan to active this app. Are you sure you want to enable this version?
+          {{ t('admin.apps.enableWarning') }}
         </div>
       </template>
       <template #footer="{ ok }">
-        <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
+        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
         <va-button @click="toggle.post('/admin/apps/'+app.slug+'/'+app.toggle.state, {
             onSuccess: () => showEnableDisable = false
           })"
@@ -49,7 +49,7 @@ const { t } = useI18n()
   </va-modal>
   <form @submit.prevent="form.post('/admin/apps/'+app.slug)">
     <AdminSettings>
-      <template #name>About App</template>
+      <template #name>{{ t('admin.apps.aboutApp') }}</template>
       <template #settings>
         <va-input v-model="form.name"
           :label="t('admin.apps.name')"
@@ -101,7 +101,7 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>Settings</template>
+      <template #name>{{ t('admin.apps.settings') }}</template>
       <template #settings>
         <va-checkbox v-model="form.primary_domain_allowed"
           :label="t('admin.apps.primaryDomainAllowed')"
@@ -139,7 +139,7 @@ const { t } = useI18n()
           :options="apps"
           text-by="text"
           value-by="value"
-          placeholder="None"
+          :placeholder="t('admin.versions.none')"
           clearable
           :error="$page.props.errors.parent_app"
           :error-messages="$page.props.errors.parent_app"
@@ -166,7 +166,7 @@ const { t } = useI18n()
     <div class="mb-3">
       <tinymce-editor v-model:htmlContent="form.description" />
     </div>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">Update</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
   </form>
 </template>
 
@@ -183,19 +183,6 @@ export default {
   data () {
     return {
       showEnableDisable: false,
-      access_types: [
-        { value: 'minimal', text: 'Minimal - free users' },
-        { value: 'basic', text: 'Basic - minimal charge' },
-        { value: 'standard', text: 'Standard' }
-      ],
-      domain_options: [
-        { value: 'none', text: 'No domains allowed' },
-        { value: 'all', text: 'All options are available' },
-        { value: 'subdomains', text: 'Only Subdomains' },
-        { value: 'primary', text: 'Only Primary Domains' },
-        { value: 'base', text: 'Use System Provided Domain' },
-        { value: 'parent', text: 'Use Parent Domain (Only use if this has a parent app set)' }
-      ],
       form: useForm({
         id: this.app.id,
         name: this.app.name,
@@ -212,6 +199,25 @@ export default {
       toggle: useForm({
         version: ''
       })
+    }
+  },
+  computed: {
+    access_types () {
+      return [
+        { value: 'minimal', text: this.$t('admin.apps.accessTypeMinimal') },
+        { value: 'basic', text: this.$t('admin.apps.accessTypeBasic') },
+        { value: 'standard', text: this.$t('admin.apps.accessTypeStandard') }
+      ]
+    },
+    domain_options () {
+      return [
+        { value: 'none', text: this.$t('admin.apps.domainOptionNone') },
+        { value: 'all', text: this.$t('admin.apps.domainOptionAll') },
+        { value: 'subdomains', text: this.$t('admin.apps.domainOptionSubdomains') },
+        { value: 'primary', text: this.$t('admin.apps.domainOptionPrimary') },
+        { value: 'base', text: this.$t('admin.apps.domainOptionBase') },
+        { value: 'parent', text: this.$t('admin.apps.domainOptionParent') }
+      ]
     }
   }
 }

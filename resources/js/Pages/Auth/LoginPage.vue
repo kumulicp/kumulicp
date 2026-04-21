@@ -7,7 +7,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Login - Control Panel</title>
+    <title>{{ t('auth.login') }} - Control Panel</title>
   </Head>
   <va-alert
     v-if="verified"
@@ -25,7 +25,7 @@ const { t } = useI18n()
       immediateValidation
       class="mb-3"
       type="email"
-      label="Email"
+      :label="t('auth.email')"
       :error="$page.props.errors.email"
       :error-messages="$page.props.errors.email"
       autofocus
@@ -43,7 +43,7 @@ const { t } = useI18n()
     />
 
     <div class="auth-layout__options d-flex align-center justify-space-between">
-      <va-checkbox v-model="form.remember" class="mb-0" label="Keep Logged In" />
+      <va-checkbox v-model="form.remember" class="mb-0" :label="t('auth.keepLoggedIn')" />
       <Link href="/password/reset">
         {{ t('auth.forgotPassword') }}
       </Link>
@@ -65,7 +65,7 @@ const { t } = useI18n()
     </div>
     <div class="row">
       <div v-for="(provider, i) in sso_providers" class="flex flex-col xs12 text-center mt-3" :key="i">
-        <a :href="'/auth/'+provider.name" class="ml-2"><va-button color="secondary" id="oauth_link">Login with {{ provider.label }}</va-button></a>
+        <a :href="'/auth/'+provider.name" class="ml-2"><va-button color="secondary" id="oauth_link">{{ t('auth.loginWith', { provider: provider.label }) }}</va-button></a>
       </div>
     </div>
   </template>

@@ -8,7 +8,7 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Announcements - Control Panel</title>
+    <title>{{ t('admin.announcement.title') }} - Control Panel</title>
   </Head>
   <div class="announcements-list">
     <div class="row">
@@ -32,7 +32,7 @@ const { t } = useI18n()
                         id="title"
                         required-mark
                         immediateValidation
-                        label="Title"
+                        :label="t('admin.announcement.titleLabel')"
                         :error="$page.props.errors.title"
                         :error-messages="$page.props.errors.title"
                       />
@@ -73,11 +73,11 @@ const { t } = useI18n()
                 :page-size="pageSize" />
           </va-card-content>
         </va-card>
-        <va-modal v-model="showRemoveAnnouncement" hide-default-actions :title="'Remove ' + removeAnnouncement.title + '?'"
-          :message="'Are you sure you want to remove '+ removeAnnouncement.title +'? This action is permanent.'">
+        <va-modal v-model="showRemoveAnnouncement" hide-default-actions :title="t('admin.announcement.removeTitle', { name: removeAnnouncement.title })"
+          :message="t('admin.announcement.removeMessage', { name: removeAnnouncement.title })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              Cancel
+              {{ t('modal.cancel') }}
             </va-button>
             <va-button color="danger"
               @click="remove.delete('/admin/service/announcements/' + removeAnnouncement.id); showRemoveAnnouncement = !showRemoveAnnouncement">{{ t('modal.delete') }}</va-button>

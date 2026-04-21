@@ -32,27 +32,25 @@ export default {
     const app = this.$page.props.app
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id + '/apps/' + app.id
-    const tabs = [
-      {
-        title: useI18n().t('View'),
-        url: basePath
-      },
-      {
-        title: useI18n().t('Edit'),
-        url: basePath + '/edit'
-      }
-    ]
-
-    let value = 'View'
-    Object.values(tabs).forEach((tab) => {
-      if (tab.url === pathname) {
-        value = tab.title
-      }
-    })
 
     return {
-      tabs,
-      value
+      basePath,
+      pathname,
+      value: pathname
+    }
+  },
+  computed: {
+    tabs () {
+      return [
+        {
+          title: this.$t('form.view'),
+          url: this.basePath
+        },
+        {
+          title: this.$t('form.edit'),
+          url: this.basePath + '/edit'
+        }
+      ]
     }
   }
 }

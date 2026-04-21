@@ -14,11 +14,11 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
 </script>
 <template>
   <Head>
-    <title>Edit Server Settings - Control Panel</title>
+    <title>{{ t('settings.editServerSettings') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/settings/invoice')">
     <AdminSettings>
-        <template #name>Invoice Info</template>
+        <template #name>{{ t('settings.invoiceInfo') }}</template>
         <template #settings>
           <va-input v-model="form.invoice_vendor_name"
             id="invoiceVendorName"

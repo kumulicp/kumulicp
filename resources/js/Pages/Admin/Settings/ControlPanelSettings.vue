@@ -11,7 +11,7 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit Server Settings - Control Panel</title>
+    <title>{{ t('settings.editServerSettings') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/settings')">
     <AdminSettings>

@@ -7,10 +7,10 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Registered! - Control Panel</title>
+    <title>{{ t('auth.registeredTitle') }} - Control Panel</title>
   </Head>
-  <p>Congraduations on registering your account with us!</p>
-  <p>Please check your email to verify your account in order to complete your registration.</p>
+  <p>{{ t('auth.registeredCongrats') }}</p>
+  <p>{{ t('auth.registeredVerifyEmail') }}</p>
 </template>
 
 <script lang="ts">

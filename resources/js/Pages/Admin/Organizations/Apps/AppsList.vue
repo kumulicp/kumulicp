@@ -8,15 +8,15 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Organization App - Control Panel</title>
+    <title>{{ t('admin.apps.pageTitleShort') }} - Control Panel</title>
   </Head>
   <table class="va-table va-table--hoverable mt-3">
     <thead>
       <tr>
-        <th>Name</th>
-        <th>Version</th>
-        <th>Domain name</th>
-        <th>Status</th>
+        <th>{{ t('form.name') }}</th>
+        <th>{{ t('admin.versions.version') }}</th>
+        <th>{{ t('admin.apps.domainName') }}</th>
+        <th>{{ t('admin.apps.status') }}</th>
       </tr>
     </thead>
     <tbody>

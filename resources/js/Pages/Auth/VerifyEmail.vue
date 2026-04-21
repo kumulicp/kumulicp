@@ -9,7 +9,7 @@ const { t } = useI18n()
 
 <template>
   <Head>
-    <title>Verify Email - Control Panel</title>
+    <title>{{ t('auth.verifyEmailTitle') }} - Control Panel</title>
   </Head>
   <div class="auth-layout row align-content-center">
     <div class="flex xs12 pa-3 justify-center">
@@ -31,13 +31,13 @@ const { t } = useI18n()
                     name="info"
                   />
                 </template>
-                A new verification email has been sent
+                {{ t('auth.verificationEmailSent') }}
               </va-alert>
-              <h4 class="va-h4"> Hello {{ user.name }},</h4>
-              <p class="mb-3">You're email hasn't been verified yet. Please check your email for your verification link.</p>
+              <h4 class="va-h4"> {{ t('auth.helloUser', { name: user.name }) }}</h4>
+              <p class="mb-3">{{ t('auth.emailNotVerified') }}</p>
               <div class="va-text-center">
                 <va-button class="text-align-center" @click="form.post('/email/resend')">
-                    Resend Email
+                    {{ t('auth.resendEmail') }}
                 </va-button>
               </div>
             </div>
