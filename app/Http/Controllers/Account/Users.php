@@ -424,7 +424,7 @@ class Users extends Controller
         event(new DeletingUser($user));
         $user->delete();
 
-        Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::refresh()));
+        Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::refresh()), background: true);
         event(new UserDeleted($organization));
 
         return redirect('/users')->with('success', __('organization.user.removed', ['user' => $userid]));
