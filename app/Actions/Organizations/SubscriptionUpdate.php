@@ -9,6 +9,7 @@ use App\Notifications\SubscriptionUpdatedNotification;
 use App\Organization;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Billing;
+use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
 use App\Task;
@@ -40,10 +41,12 @@ class SubscriptionUpdate extends Action
         $subscription = unserialize($task->getValue('subscription'));
         $subscription->refresh();
 
+        FastCache::clear(organization: $task->organization);
+
         OrganizationFacade::setOrganization($task->organization);
         Billing::update();
         Bus::chain([
-            new UpdateUserStorage($organization),
+            new UpdateUserStorage($task->organization),
             function () use ($organization) {
                 // Update Subscription Summary with correct info
                 $organization->deactivate_at = null;
@@ -68,9 +71,11 @@ class SubscriptionUpdate extends Action
 
             // When organization account first created, it should send other emails
             if ($task->organization->status !== 'new' && ! $task->background) {
-                $task->organization->notifyAdmins(new SubscriptionUpdatedNotification($task));
+                $task->organization->notifyAdmins(new SubscriptionUpdatedNotification($task->organization->plan));
             }
         }
+
+        FastCache::clear(organization: $task->organization);
     }
 
     public static function retry(Task $task)

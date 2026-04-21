@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Channels\PanelChannel;
+use App\Plan;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -12,20 +13,13 @@ class SubscriptionUpdatedNotification extends Notification implements ShouldQueu
 {
     use Queueable;
 
-    public $task;
-
-    public $plan;
-
     /**
      * Create a new notification instance.
      *
      * @return void
      */
-    public function __construct($task)
-    {
-        $this->task = $task;
-        $this->plan = $task->organization->plan;
-    }
+    public function __construct(public Plan $plan)
+    {}
 
     /**
      * Get the notification's delivery channels.
@@ -46,13 +40,9 @@ class SubscriptionUpdatedNotification extends Notification implements ShouldQueu
      */
     public function toMail($notifiable)
     {
-        if ($this->plan) {
-            return (new MailMessage)
-                ->line(__('messages.notification.subscription.updated', ['plan' => $this->plan->name]));
-        } else {
-            return (new MailMessage)
-                ->line(__('messages.notification.subscription.update_failed', ['plan' => $this->plan->name]));
-        }
+        return (new MailMessage)
+            ->subject(__('messages.notification.subscription.updated_title', ['plan' => $this->plan->name]))
+            ->line(__('messages.notification.subscription.updated', ['plan' => $this->plan->name]));
     }
 
     /**
