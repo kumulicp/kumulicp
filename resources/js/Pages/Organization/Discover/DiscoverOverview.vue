@@ -20,7 +20,7 @@ const { t } = useI18n()
           <va-card-title>{{ app.name }} Settings</va-card-title>
           <va-card-content>
             <template v-if="plan.payment_enabled && !hasDefaultPaymentMethod">
-              <credit-card v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" />
+              <credit-card v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" :driver="driver" />
               <va-divider class="my-3" />
             </template>
             <form @submit.prevent="form.post('/discover/'+app.slug+'/plans/'+plan.id+'/activate')">
@@ -171,7 +171,8 @@ export default {
     default_label: String,
     organization: Object,
     settings: Object,
-    subdomain_required: Boolean
+    subdomain_required: Boolean,
+    driver: String
   },
   data () {
     let parentApp = null

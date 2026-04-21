@@ -13,14 +13,7 @@ const { t } = useI18n()
   <va-modal v-model="showAppPermissionsModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content>
       <va-card-title class="m-0"> Update {{ appPermissions.name }} </va-card-title>
-      <va-card-content class="m-0"><!--
-        <va-switch v-if="typeof appPermissions.allow === 'boolean'"
-          v-model="appAccessType[appPermissions.id]"
-          label="control panel"
-          true-value="standard"
-          false-value="none"
-          @update:modelValue="updateRoleOptions(appPermissions)"
-          />-->
+      <va-card-content class="m-0">
         <va-select
             v-if="plan.type === 'app' && filteredPermissions[appPermissions.id]['full'] === true"
             :id="'roles-'+appPermissions.id"
@@ -255,7 +248,7 @@ export default {
     })
     const accessTypes = {}
 
-    for (const accessType of Object.entries(this.access_types)) {
+    for (const accessType of Object.values(this.access_types)) {
       accessTypes[accessType.value] = accessType.text
     }
 
@@ -431,7 +424,7 @@ export default {
     updateAllRoleOptions () {
       const apps = JSON.parse(JSON.stringify(this.permissions))
       const filteredApps = {}
-      for (const app of Object.entries(apps)) {
+      for (const app of Object.values(apps)) {
         const newApp = app
 
         const filteredCategories = []
@@ -470,7 +463,7 @@ export default {
     },
     confirmAccessType () {
       const appAccessTypes = []
-      for (const app of Object.entries(this.permissions)) {
+      for (const app of Object.values(this.permissions)) {
         Object.values(this.form.permission[app.id]).forEach((role) => {
           appAccessTypes.push(this.roleAccessTypes[app.id][role])
         })
