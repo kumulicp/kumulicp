@@ -2,6 +2,8 @@
 
 use App\Logging\EmailCustomLogger;
 use App\Logging\EmailLoggingHandler;
+use App\Logging\MatrixLogger;
+use App\Logging\MatrixLoggingHandler;
 use App\Logging\MySQLCustomLogger;
 use App\Logging\MySQLLoggingHandler;
 use Monolog\Handler\NullHandler;
@@ -9,7 +11,6 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Default Log Channel
@@ -41,7 +42,14 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['daily', 'errorlog', 'emergency', 'mysql', 'email'],
+            'channels' => [
+                'daily',
+                'errorlog',
+                'emergency',
+                'mysql',
+                'matrix',
+                'email',
+            ],
             'ignore_exceptions' => true,
         ],
 
@@ -128,6 +136,13 @@ return [
             'via' => EmailCustomLogger::class,
             'level' => 'error',
         ],
-    ],
 
+        // Log to Matrix
+        'matrix' => [
+            'driver' => 'custom',
+            'handler' => MatrixLoggingHandler::class,
+            'via' => MatrixLogger::class,
+            'level' => 'error',
+        ],
+    ],
 ];

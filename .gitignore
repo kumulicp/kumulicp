@@ -44,3 +44,7 @@ docker
 
 # IDE settings
 /.vscode
+/.claude
+.mcp.json
+CLAUDE.md
+boost.json
