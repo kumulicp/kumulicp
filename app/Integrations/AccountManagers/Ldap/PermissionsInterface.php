@@ -28,7 +28,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
     public function __construct(UserManager $user)
     {
         $this->organization = $user->organization();
-        if (is_a(EmailUser::class, $user->user)) {
+        if (isset($user->user) && is_a(EmailUser::class, $user->user)) {
             $user = User::find($user->getDn());
         }
 
