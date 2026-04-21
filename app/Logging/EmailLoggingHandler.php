@@ -10,7 +10,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Monolog\Handler\AbstractProcessingHandler;
-use Monolog\Logger;
+use Monolog\Level;
 use Monolog\LogRecord;
 
 class EmailLoggingHandler extends AbstractProcessingHandler
@@ -19,7 +19,7 @@ class EmailLoggingHandler extends AbstractProcessingHandler
      * Reference:
      * https://github.com/markhilton/monolog-mysql/blob/master/src/Logger/Monolog/Handler/MysqlHandler.php
      */
-    public function __construct($level = Logger::ERROR, $bubble = true)
+    public function __construct($level = Level::Error, $bubble = true)
     {
         parent::__construct($level, $bubble);
     }

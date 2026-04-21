@@ -2,10 +2,10 @@
 
 namespace App\Logging;
 
-// use Illuminate\Log\Logger;
-use DB;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Monolog\Handler\AbstractProcessingHandler;
-use Monolog\Logger;
+use Monolog\Level;
 use Monolog\LogRecord;
 
 class MySQLLoggingHandler extends AbstractProcessingHandler
@@ -16,14 +16,13 @@ class MySQLLoggingHandler extends AbstractProcessingHandler
      * Reference:
      * https://github.com/markhilton/monolog-mysql/blob/master/src/Logger/Monolog/Handler/MysqlHandler.php
      */
-    public function __construct($level = Logger::INFO, $bubble = true)
+    public function __construct($level = Level::Info, $bubble = true)
     {
         parent::__construct($level, $bubble);
     }
 
     protected function write(LogRecord $record): void
     {
-
         if (in_array('REMOTE_ADDR', $_SERVER, true) && in_array('HTTP_USER_AGENT', $_SERVER, true)) {
             $remote_addr = $_SERVER['REMOTE_ADDR'];
             $http_user_agent = $_SERVER['HTTP_USER_AGENT'];
@@ -34,7 +33,7 @@ class MySQLLoggingHandler extends AbstractProcessingHandler
 
         $data = [
             'message' => $record['message'],
-            'organization_id' => $record['context']['organization_id'],
+            'organization_id' => Arr::get($record, 'context.organization_id'),
             'context' => json_encode($record['context']),
             'level' => $record['level'],
             'level_name' => $record['level_name'],

@@ -18,8 +18,7 @@ class SubscriptionUpdatedNotification extends Notification implements ShouldQueu
      *
      * @return void
      */
-    public function __construct(public Plan $plan)
-    {}
+    public function __construct(public Plan $plan) {}
 
     /**
      * Get the notification's delivery channels.
