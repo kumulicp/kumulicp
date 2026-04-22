@@ -316,7 +316,7 @@ const { t } = useI18n()
         {{ t('form.cancel') }}
       </va-button>
       <va-button id="delete" color="danger"
-        @click="remove.delete('/settings/domains/'+domain.name+'/subdomains/'+subdomainToDelete.id); showDeleteSubdomainModal = false">{{ $t('modal.delete') }}</va-button>
+        @click="remove.delete('/settings/domains/'+domain.name+'/subdomains/'+subdomainToDelete.id); showDeleteSubdomainModal = false">{{ t('modal.delete') }}</va-button>
     </template>
   </va-modal>
 

@@ -119,7 +119,7 @@ const { t } = useI18n()
         <va-button id="deactivate" color="danger"
           :disabled="deactivateName !== appToDeactivate.name"
           @click="deactivate.delete('/apps/'+appToDeactivate.id); showDeactivateModal = !showDeactivateModal">
-            {{ $t('modal.deactivate') }}
+            {{ t('modal.deactivate') }}
         </va-button>
       </va-card-actions>
     </template>

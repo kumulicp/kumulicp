@@ -43,11 +43,11 @@ const { t } = useI18n()
                   {{ plan.status }}
                 </td>
                 <td class="va-text-right vertical-middle">
-                  <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ $t('plan.change') }}</va-button></Link>
-                  <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, organization)">{{ $t('plan.unsubscribe') }}</va-button>
-                  <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, organization)">{{ $t('plan.resubscribe') }}</va-button>
-                  <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, organization)">{{ $t('plan.deactivate') }}</va-button>
-                  <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, organization)">{{ $t('plan.reactivate') }}</va-button>
+                  <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ t('plan.change') }}</va-button></Link>
+                  <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, organization)">{{ t('plan.unsubscribe') }}</va-button>
+                  <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, organization)">{{ t('plan.resubscribe') }}</va-button>
+                  <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, organization)">{{ t('plan.deactivate') }}</va-button>
+                  <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, organization)">{{ t('plan.reactivate') }}</va-button>
                 </td>
               </tr>
             </tbody>
@@ -80,11 +80,11 @@ const { t } = useI18n()
                     {{ plan.status }}
                   </td>
                   <td class="va-text-right vertical-middle">
-                    <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ $t('plan.change') }}</va-button></Link>
-                    <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, suborg)">{{ $t('plan.unsubscribe') }}</va-button>
-                    <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, suborg)">{{ $t('plan.resubscribe') }}</va-button>
-                    <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, suborg)">{{ $t('plan.deactivate') }}</va-button>
-                    <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, suborg)">{{ $t('plan.reactivate') }}</va-button>
+                    <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ t('plan.change') }}</va-button></Link>
+                    <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, suborg)">{{ t('plan.unsubscribe') }}</va-button>
+                    <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, suborg)">{{ t('plan.resubscribe') }}</va-button>
+                    <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, suborg)">{{ t('plan.deactivate') }}</va-button>
+                    <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, suborg)">{{ t('plan.reactivate') }}</va-button>
                   </td>
                 </tr>
               </tbody>
@@ -99,7 +99,7 @@ const { t } = useI18n()
             {{ t('modal.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ $t('modal.unsubscribe') }}</va-button>
+            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ t('modal.unsubscribe') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showResubscribeModal" hide-default-actions :title="t('organization.subscription.cancelUnsubscribeTitle')"
@@ -109,7 +109,7 @@ const { t } = useI18n()
             {{ t('modal.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ $t('modal.resubscribe') }}</va-button>
+            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ t('modal.resubscribe') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showDeactivateModal" hide-default-actions :title="t('organization.subscription.deactivateAppTitle')"
@@ -119,7 +119,7 @@ const { t } = useI18n()
             {{ t('modal.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ $t('modal.deactivate') }}</va-button>
+            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ t('modal.deactivate') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showReactivateModal" hide-default-actions :title="t('organization.subscription.cancelDeactivatingTitle')"
@@ -129,7 +129,7 @@ const { t } = useI18n()
             {{ t('modal.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ $t('modal.reactivate') }}</va-button>
+            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ t('modal.reactivate') }}</va-button>
         </template>
       </va-modal>
     </div>

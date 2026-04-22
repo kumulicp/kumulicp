@@ -139,7 +139,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               {{ t('modal.cancel') }}
             </va-button>
             <va-button id="delete" color="danger"
-              @click="remove.delete('/users/' + removeUser); showRemoveUser = !showRemoveUser">{{ $t('modal.delete') }}</va-button>
+              @click="remove.delete('/users/' + removeUser); showRemoveUser = !showRemoveUser">{{ t('modal.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

@@ -16,16 +16,16 @@ const { t } = useI18n()
     <va-modal v-model="showHelpDesk" no-outside-dismiss no-padding size="small">
       <template #content="{ ok }">
         <form @submit.prevent="submitTicket">
-          <va-card-title>{{ $t('navbar.helpDesk') }}</va-card-title>
+          <va-card-title>{{ t('navbar.helpDesk') }}</va-card-title>
           <va-card-content>
             <va-alert v-if="httpError"
               color="danger"
               icon="warning"
               class="mb-4"
             >
-              {{ $t('navbar.helpDeskError') }}
+              {{ t('navbar.helpDeskError') }}
             </va-alert>
-            <p class="va-p mb-3">{{ $t('navbar.helpDeskDescription') }} <a :href="$page.props.documentation" target="blank">documentation</a></p>
+            <p class="va-p mb-3">{{ t('navbar.helpDeskDescription') }} <a :href="$page.props.documentation" target="blank">documentation</a></p>
             <va-input v-model="form.subject"
               :label="$t('navbar.subject')"
               type="text"
@@ -61,9 +61,9 @@ const { t } = useI18n()
           </va-card-content>
           <va-card-actions align="right">
             <va-button color="textInverted" @click="ok">
-              {{ $t('modal.cancel') }}
+              {{ t('modal.cancel') }}
             </va-button>
-            <va-button type="submit" :disabled="processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+            <va-button type="submit" :disabled="processing" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>

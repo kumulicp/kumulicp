@@ -16,7 +16,7 @@ const { t } = useI18n()
     <template #icon>
       <va-icon name="info" />
     </template>
-    {{ $t('auth.accountVerified') }}
+    {{ t('auth.accountVerified') }}
   </va-alert>
   <form @submit.prevent="form.post('/login')">
     <va-input

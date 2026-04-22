@@ -24,7 +24,7 @@ const { t } = useI18n()
             <va-list-item-label v-if="payment_method.brand" lines="2">
               {{ payment_method.brand }} ****{{ payment_method.last4 }}
               <br />
-              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              {{ t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>
