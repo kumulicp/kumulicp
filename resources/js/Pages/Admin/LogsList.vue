@@ -7,10 +7,10 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Logs - Control Panel</title>
+    <title>{{ t('admin.logs.logs') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Logs</va-card-title>
+    <va-card-title>{{ t('admin.logs.logs') }}</va-card-title>
       <va-card-content>
         <va-scroll-container
             color="warning"
@@ -19,10 +19,10 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
           <thead>
               <tr>
-              <th style="width: 10rem">Level</th>
-              <th style="width: 15rem">Organization</th>
-              <th>Message</th>
-              <th style="width: 10rem">Time</th>
+              <th style="width: 10rem">{{ t('admin.logs.level') }}</th>
+              <th style="width: 15rem">{{ t('admin.logs.organization') }}</th>
+              <th>{{ t('admin.logs.message') }}</th>
+              <th style="width: 10rem">{{ t('admin.logs.time') }}</th>
               </tr>
           </thead>
           <tbody>

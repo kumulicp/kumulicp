@@ -8,14 +8,14 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit Plan - Control Panel</title>
+    <title>{{ t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Edit {{ plan.name }} Plan</va-card-title>
+    <va-card-title>{{ t('admin.plans.editPlanTitle', { name: plan.name }) }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <Link v-if="!plan.archived" :href="'/admin/service/plans/'+plan.id+'/archive'"><va-button id="createUser">Archive Plan</va-button></Link>
-        <Link v-else :href="'/admin/service/plans/'+plan.id+'/unarchive'"><va-button id="createUser">Make Public</va-button></Link>
+        <Link v-if="!plan.archived" :href="'/admin/service/plans/'+plan.id+'/archive'"><va-button id="createUser">{{ t('admin.plans.archivePlan') }}</va-button></Link>
+        <Link v-else :href="'/admin/service/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ t('admin.plans.makePublic') }}</va-button></Link>
       </div>
       <form @submit.prevent="form.post('/admin/service/plans/'+plan.id)">
       <AdminSettings>
@@ -31,7 +31,7 @@ const { t } = useI18n()
             />
           <va-checkbox v-model="form.default"
             :label="t('admin.plans.default')"
-            messages="Checking this box will override the current default plan if another plan is set as your default"
+            :messages="t('admin.plans.defaultPlanCaption')"
             class="my-2"
             immediateValidation
             :error="$page.props.errors.default"
@@ -83,8 +83,8 @@ const { t } = useI18n()
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Displayed Features</template>
-        <template #description>Show additional features</template>
+        <template #name>{{ t('admin.plans.displayedFeatures') }}</template>
+        <template #description>{{ t('admin.plans.displayedFeaturesDescription') }}</template>
         <template #settings>
           <template v-for="(feature, index) in plan.features" :key="index">
             <div class="row">
@@ -111,19 +111,19 @@ const { t } = useI18n()
               </div>
             </div>
           </template>
-          <va-button @click="addNewFeature()">Add Feature</va-button>
+          <va-button @click="addNewFeature()">{{ t('admin.plans.addFeature') }}</va-button>
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Base Options</template>
+        <template #name>{{ t('admin.plans.baseOptions') }}</template>
         <template #settings>
           <va-input
             type="number"
             v-model="form.base.price"
             :label="t('admin.plans.price')"
             class="my-2"
-            messages="Initial price to activate app. Additional user pricing will be added on top of this."
+            :messages="t('admin.plans.basePriceCaption')"
             immediateValidation
             min="0"
             step=".01"
@@ -140,20 +140,20 @@ const { t } = useI18n()
             v-model="form.base.minimal_label"
             :label="t('admin.plans.minimalUserLabel')"
             class="my-2"
-            messages="Reserved for users that aren't directly involved in the organization such as constituents, congregants or customers"
+            :messages="t('admin.plans.minimalUserLabelCaption')"
           />
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Standard User Options</template>
+        <template #name>{{ t('admin.plans.standardUserOptions') }}</template>
         <template #settings>
           <va-input
             type="number"
             v-model="form.standard.price"
             :label="t('admin.plans.price')"
             class="my-2"
-            messages="Increases price for organization per standard user"
+            :messages="t('admin.plans.standardUserPriceCaption')"
             immediateValidation
             min="0"
             step=".01"
@@ -167,11 +167,11 @@ const { t } = useI18n()
             v-model="form.standard.max"
             :label="t('admin.plans.maxUsers')"
             class="my-2"
-            messages="The maximum standard users that organizations can have permission to access this app"
+            :messages="t('admin.plans.maxUsersCaption')"
             immediateValidation
           >
             <template #appendInner>
-              users
+              {{ t('admin.plans.users') }}
             </template>
           </va-input>
           <va-input v-model="form.standard.price_id"
@@ -179,7 +179,7 @@ const { t } = useI18n()
           <va-input v-model="form.standard.storage"
             :label="t('admin.plans.baseStorage')"
             class="my-2"
-            messages="Initial storage per user. This can increase by adding additional storage"
+            :messages="t('admin.plans.standardUserStorageCaption')"
             type="number"
             immediateValidation
             min="0"
@@ -192,18 +192,18 @@ const { t } = useI18n()
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Basic User Options</template>
+        <template #name>{{ t('admin.plans.basicUserOptions') }}</template>
         <template #settings>
           <va-input v-model="form.basic.name"
             :label="t('admin.plans.name')"
-            messages="For example, for charities, you might want to call basic users Volunteers"
+            :messages="t('admin.plans.basicUserNameCaption')"
             class="my-2"
             immediateValidation />
           <va-input
             type="number"
             v-model="form.basic.price"
             :label="t('admin.plans.price')"
-            messages="Increases price for organization per basic user"
+            :messages="t('admin.plans.basicUserPriceCaption')"
             class="my-2"
             immediateValidation
             min="0"
@@ -217,12 +217,12 @@ const { t } = useI18n()
             type="number"
             v-model="form.basic.max"
             :label="t('admin.plans.maxUsers')"
-            messages="The maximum basic users that organizations can have permission to access this app"
+            :messages="t('admin.plans.maxBasicUsersCaption')"
             class="my-2"
             immediateValidation
           >
             <template #appendInner>
-              users
+              {{ t('admin.plans.users') }}
             </template>
           </va-input>
           <va-input v-model="form.basic.price_id"
@@ -231,7 +231,7 @@ const { t } = useI18n()
             immediateValidation />
           <va-input v-model="form.basic.storage"
             :label="t('admin.plans.baseStorage')"
-            messages="Initial storage per user. This can increase by adding additional storage"
+            :messages="t('admin.plans.basicUserStorageCaption')"
             class="my-2"
             immediateValidation
             type="number"
@@ -243,7 +243,7 @@ const { t } = useI18n()
           </va-input>
           <va-input v-model="form.basic.amount"
             :label="t('admin.plans.usersPerPrice')+form.basic.price"
-            messages="Basic users are batched at a cheaper price. (Ex: 10 users per $5)"
+            :messages="t('admin.plans.usersPerPriceCaption')"
             class="my-2"
             immediateValidation
             type="number"
@@ -257,13 +257,13 @@ const { t } = useI18n()
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Additional Storage Options</template>
+        <template #name>{{ t('admin.plans.additionalStorageOptions') }}</template>
         <template #settings>
           <va-input
             type="number"
             v-model="form.storage.price"
             :label="t('admin.plans.price')"
-            messages="Increases price for organization per basic user"
+            :messages="t('admin.plans.additionalStoragePriceCaption')"
             class="my-2"
             immediateValidation
             min="0"
@@ -278,7 +278,7 @@ const { t } = useI18n()
             min="0"
             v-model="form.storage.max"
             :label="t('admin.plans.maxAdditionalStorage')"
-            messages="The maximum amount of additional storage a organization can have. (If you set the storage amount below to 5GB and set the max to 5, your organizations can only have 25GB)"
+            :messages="t('admin.plans.maxAdditionalStorageCaption')"
             class="my-2"
             immediateValidation
           >
@@ -291,7 +291,7 @@ const { t } = useI18n()
             immediateValidation />
           <va-input v-model="form.storage.amount"
             :label="t('admin.plans.quantity')"
-            messages="The amount of GB that organizations can increment by (Ex: 5, 10, 15, 20)"
+            :messages="t('admin.plans.additionalStorageQuantityCaption')"
             class="my-2"
             immediateValidation
             type="number"
@@ -305,7 +305,7 @@ const { t } = useI18n()
       </AdminSettings>
       <va-list-separator v-if="email_servers.length > 0" class="my-1" fit />
       <AdminSettings v-if="email_servers.length > 0">
-        <template #name>Email Options</template>
+        <template #name>{{ t('admin.plans.emailOptions') }}</template>
         <template #settings>
           <va-checkbox v-model="form.email_enabled"
             :label="t('admin.plans.enableEmail')"
@@ -347,7 +347,7 @@ const { t } = useI18n()
             immediateValidation
           >
             <template #appendInner>
-              users
+              {{ t('admin.plans.users') }}
             </template>
           </va-input>
           <va-input v-model="form.email.price_id"
@@ -355,7 +355,7 @@ const { t } = useI18n()
             immediateValidation />
           <va-input v-model="form.email.storage"
             :label="t('admin.plans.baseStorage')"
-            messages="The amount storage per email account"
+            :messages="t('admin.plans.emailStorageCaption')"
             class="my-2"
             immediateValidation
             type="number"
@@ -369,7 +369,7 @@ const { t } = useI18n()
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
-        <template #name>Domains</template>
+        <template #name>{{ t('admin.plans.domains') }}</template>
         <template #settings>
           <va-checkbox v-model="form.domain_enabled"
             :label="t('admin.plans.enableDomains')"
@@ -412,7 +412,7 @@ const { t } = useI18n()
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />
-      <h1 class="va-h1">App Settings</h1>
+      <h1 class="va-h1">{{ t('admin.plans.appSettings') }}</h1>
       <AdminSettings v-for="(app, index) in apps" :key="index">
         <template #name>{{ app.name }}</template>
         <template #settings>
@@ -425,8 +425,8 @@ const { t } = useI18n()
             immediateValidation
             multiple
             clearable
-            placeholder="Disabled"
-            messages="Choose from any app plan or select a specific plan"
+            :placeholder="t('admin.plans.disabled')"
+            :messages="t('admin.plans.appPlanCaption')"
             />
           <va-input
             v-model="form['app_plans'][app.slug]['max']"
@@ -435,12 +435,12 @@ const { t } = useI18n()
             type="number"
             min="0"
             class="my-2"
-            messages="Choose the maximum number of times this app can be activated"
+            :messages="t('admin.plans.maxActivationsCaption')"
             />
         </template>
       </AdminSettings>
 
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">Update</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>
@@ -472,11 +472,11 @@ export default {
       app_plans: appPlans,
       planTypes: [
         {
-          text: 'Package',
+          text: useI18n().t('admin.plans.package'),
           value: 'package'
         },
         {
-          text: 'Pay per App',
+          text: useI18n().t('admin.plans.payPerApp'),
           value: 'app'
         }
       ],

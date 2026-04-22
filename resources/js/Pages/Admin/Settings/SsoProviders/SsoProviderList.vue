@@ -9,37 +9,37 @@ const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>SSO Providers - Control Panel</title>
+    <title>{{ t('admin.ssoProviders.ssoProviders') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <va-button id="createProvider" class="" @click="showAddProvider = !showAddProvider">Add SSO Provider</va-button>
+    <va-button id="createProvider" class="" @click="showAddProvider = !showAddProvider">{{ t('admin.ssoProviders.addSsoProvider') }}</va-button>
     <va-modal v-model="showAddProvider" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
         <form @submit.prevent="form.post('/admin/settings/sso-providers')">
-          <va-card-title class="m-0"> Add SSO Provider </va-card-title>
+          <va-card-title class="m-0"> {{ t('admin.ssoProviders.addSsoProvider') }} </va-card-title>
           <va-card-content class="m-0">
             <va-input v-model="form.name"
               immediateValidation
               id="name"
               required-mark
-              label="Name"
+              :label="t('admin.ssoProviders.name')"
               class="mb-3"
-              messages="Must be lowercase and dashes only"
+              :messages="t('admin.ssoProviders.nameMessage')"
               :error="$page.props.errors.name"
               :error-messages="$page.props.errors.name" />
             <va-input v-model="form.label"
               immediateValidation
               id="label"
               required-mark
-              label="Label"
+              :label="t('admin.ssoProviders.label')"
               class="mb-3"
-              messages="Public facing label"
+              :messages="t('admin.ssoProviders.labelMessage')"
               :error="$page.props.errors.label"
               :error-messages="$page.props.errors.label" />
           </va-card-content>
           <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
-            <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">Submit</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('common.cancel') }}</va-button>
+            <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>
@@ -52,7 +52,7 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th style="width:20rem">Name</th>
+          <th style="width:20rem">{{ t('admin.ssoProviders.name') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -66,11 +66,11 @@ const { t } = useI18n()
   </va-scroll-container>
 
   <va-pagination v-if="providers.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input />
-  <va-modal v-model="showRemoveProvider" hide-default-actions :title="'Remove ' + removeProvider + '?'"
-    :message="'Are you sure you want to remove ' + removeProvider + '? This action is permanent.'">
+  <va-modal v-model="showRemoveProvider" hide-default-actions :title="t('admin.ssoProviders.removeTitle', { name: removeProvider })"
+    :message="t('admin.ssoProviders.removeMessage', { name: removeProvider })">
     <template #footer>
       <va-button color="backgroundSecondary" @click="showRemoveProvider = false">
-        Cancel
+        {{ t('common.cancel') }}
       </va-button>
       <va-button id="delete" color="danger"
         @click="remove.delete('/admin/settings/sso-providers/' + removeProvider); showRemoveProvider = !showRemoveProvider">{{ $t('modal.delete') }}</va-button>
