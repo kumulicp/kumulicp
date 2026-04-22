@@ -5,6 +5,9 @@ import Navbar from '@/components/navbar/NavBar.vue'
 import Sidebar from '@/components/sidebar/SideBar.vue'
 import { useBreakpoint, useToast, useColors } from 'vuestic-ui'
 import { router, usePage } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const breakpoints = useBreakpoint()
 
