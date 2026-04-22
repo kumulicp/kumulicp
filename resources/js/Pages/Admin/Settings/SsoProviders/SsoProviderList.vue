@@ -73,7 +73,7 @@ const { t } = useI18n()
         Cancel
       </va-button>
       <va-button id="delete" color="danger"
-        @click="remove.delete('/admin/settings/sso-providers/' + removeProvider); showRemoveProvider = !showRemoveProvider">{{ $t('modal.delete') }}</va-button>
+        @click="remove.delete('/admin/settings/sso-providers/' + removeProvider); showRemoveProvider = !showRemoveProvider">{{ t('modal.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
