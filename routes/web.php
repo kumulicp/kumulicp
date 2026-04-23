@@ -187,6 +187,17 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::resource('server/tests', 'Admin\AccountTests');
         Route::get('server/tests/{test}/clear', 'Admin\AccountTests@clear');
         Route::get('server/tests/{test}/run', 'Admin\AccountTests@run');
+
+        Route::prefix('packages')->group(function () {
+            Route::get('', 'Admin\Packages@index')->name('admin.packages.index');
+            Route::post('download', 'Admin\Packages@download')->name('admin.packages.download');
+            Route::prefix('{vendor}/{package}')->group(function () {
+                Route::get('', 'Admin\Packages@show')->name('admin.packages.show');
+                Route::delete('', 'Admin\Packages@destroy')->name('admin.packages.destroy');
+                Route::post('enable', 'Admin\Packages@enable')->name('admin.packages.enable');
+                Route::post('disable', 'Admin\Packages@disable')->name('admin.packages.disable');
+            });
+        });
     });
 
     Route::resources([
