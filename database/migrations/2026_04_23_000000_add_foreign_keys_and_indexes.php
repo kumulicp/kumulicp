@@ -2,476 +2,353 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // users → organizations (cascade: users are destroyed with their org)
-        Schema::table('users', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // organizations self-ref + plan + primary_contact + account_test
-        // primary_domain_id / base_domain_id are NOT NULL and reference org_domains which in turn
-        // references organizations, making a cascade loop impossible — indexes only for those two.
-        Schema::table('organizations', function (Blueprint $table) {
-            $table->index('parent_organization_id');
-            $table->index('plan_id');
-            $table->index('primary_contact_id');
-            $table->index('account_test_id');
-            $table->index('primary_domain_id');
-            $table->index('base_domain_id');
-
-            $table->foreign('parent_organization_id')->references('id')->on('organizations')->nullOnDelete();
-            $table->foreign('plan_id')->references('id')->on('plans')->nullOnDelete();
-            // nullOnDelete: if the primary contact user is deleted, clear the reference
-            $table->foreign('primary_contact_id')->references('id')->on('users')->nullOnDelete();
-            // nullOnDelete: if the account test is deleted, clear the reference
-            $table->foreign('account_test_id')->references('id')->on('account_tests')->nullOnDelete();
-        });
-
-        // subscriptions — organization_id already covered by the composite index added in the
-        // original migration so no separate index is needed
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // subscription_items — subscription_id is the leading column of the existing unique
-        // composite (subscription_id, stripe_price), so the FK can reuse that index
-        Schema::table('subscription_items', function (Blueprint $table) {
-            $table->foreign('subscription_id')->references('id')->on('subscriptions')->cascadeOnDelete();
-        });
-
-        // app_instances
-        Schema::table('app_instances', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('application_id');
-            $table->index('version_id');
-            $table->index('plan_id');
-            $table->index('web_server_id');
-            $table->index('database_server_id');
-            $table->index('sso_server_id');
-            $table->index('parent_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->restrictOnDelete();
-            $table->foreign('version_id')->references('id')->on('app_versions')->restrictOnDelete();
-            $table->foreign('plan_id')->references('id')->on('app_plans')->nullOnDelete();
-            $table->foreign('web_server_id')->references('id')->on('org_servers')->restrictOnDelete();
-            $table->foreign('database_server_id')->references('id')->on('org_servers')->nullOnDelete();
-            $table->foreign('sso_server_id')->references('id')->on('org_servers')->nullOnDelete();
-            $table->foreign('parent_id')->references('id')->on('app_instances')->nullOnDelete();
-        });
-
-        // applications — self-referential parent hierarchy
-        Schema::table('applications', function (Blueprint $table) {
-            $table->index('parent_app_id');
-            $table->foreign('parent_app_id')->references('id')->on('applications')->nullOnDelete();
-        });
-
-        // tasks
-        Schema::table('tasks', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('application_id');
-            $table->index('version_id');
-            $table->index('app_instance_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->nullOnDelete();
-            $table->foreign('version_id')->references('id')->on('app_versions')->nullOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-        });
-
-        // app_versions
-        Schema::table('app_versions', function (Blueprint $table) {
-            $table->index('application_id');
-            $table->index('announcement_id');
-
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
-            $table->foreign('announcement_id')->references('id')->on('announcements')->nullOnDelete();
-        });
-
-        // plans — email_server_id added early so later tables can FK to servers freely
-        Schema::table('plans', function (Blueprint $table) {
-            $table->index('email_server_id');
-            $table->foreign('email_server_id')->references('id')->on('servers')->nullOnDelete();
-        });
-
-        // new_user_code
-        Schema::table('new_user_code', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // email_forwarders
-        Schema::table('email_forwarders', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('domain_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('domain_id')->references('id')->on('org_domains')->cascadeOnDelete();
-        });
-
-        // additional_storage
-        Schema::table('additional_storage', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('app_instance_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-        });
-
-        // app_roles
-        Schema::table('app_roles', function (Blueprint $table) {
-            $table->index('application_id');
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
-        });
-
-        // org_backups
-        Schema::table('org_backups', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('scheduled_backup_id');
-            $table->index('app_instance_id');
-            $table->index('org_server_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('scheduled_backup_id')->references('id')->on('backup_schedules')->nullOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('org_server_id')->references('id')->on('org_servers')->nullOnDelete();
-        });
-
-        // backup_schedules
-        Schema::table('backup_schedules', function (Blueprint $table) {
-            $table->index('recurring_backup_id');
-            $table->foreign('recurring_backup_id')->references('id')->on('recurring_backups')->cascadeOnDelete();
-        });
-
-        // recurring_backups
-        Schema::table('recurring_backups', function (Blueprint $table) {
-            $table->index('server_id');
-            $table->index('organization_id');
-            $table->index('application_id');
-
-            $table->foreign('server_id')->references('id')->on('servers')->restrictOnDelete();
-            $table->foreign('organization_id')->references('id')->on('organizations')->nullOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->nullOnDelete();
-        });
-
-        // org_domains — organization_id cascades so domains are cleaned up with the org;
-        // the reverse FKs (organizations.primary_domain_id / base_domain_id) are NOT NULL and
-        // therefore cannot use nullOnDelete, so those are index-only (added above in organizations)
-        Schema::table('org_domains', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('app_instance_id');
-            $table->index('parent_domain_id');
-            $table->index('tld_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('parent_domain_id')->references('id')->on('org_domains')->nullOnDelete();
-            $table->foreign('tld_id')->references('id')->on('tlds')->nullOnDelete();
-        });
-
-        // app_plans — web/db/sso server columns reference servers directly (not org_servers)
-        Schema::table('app_plans', function (Blueprint $table) {
-            $table->index('application_id');
-            $table->index('web_server_id');
-            $table->index('database_server_id');
-            $table->index('sso_server_id');
-            $table->index('shared_app_id');
-
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
-            $table->foreign('web_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('database_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('sso_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('shared_app_id')->references('id')->on('app_instances')->nullOnDelete();
-        });
-
-        // servers — app_instance_id is restrict so you cannot delete the control-panel
-        // app_instance while a server record still points at it
-        Schema::table('servers', function (Blueprint $table) {
-            $table->index('app_instance_id');
-            $table->index('default_backup_server_id');
-
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->restrictOnDelete();
-            $table->foreign('default_backup_server_id')->references('id')->on('servers')->nullOnDelete();
-        });
-
-        // org_servers
-        Schema::table('org_servers', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('server_id');
-            $table->index('backup_server_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('server_id')->references('id')->on('servers')->restrictOnDelete();
-            $table->foreign('backup_server_id')->references('id')->on('org_servers')->nullOnDelete();
-        });
-
-        // account_tests
-        Schema::table('account_tests', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('created_by_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('created_by_id')->references('id')->on('users')->restrictOnDelete();
-        });
-
-        // suborg_users
-        Schema::table('suborg_users', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // org_subdomains
-        Schema::table('org_subdomains', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->index('app_instance_id');
-            $table->index('parent_domain_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('parent_domain_id')->references('id')->on('org_domains')->nullOnDelete();
-        });
-
-        // app_implied_roles — both sides cascade so removing a role cleans up all its implications
-        Schema::table('app_implied_roles', function (Blueprint $table) {
-            $table->index('primary_app_role_id');
-            $table->index('implied_app_role_id');
-
-            $table->foreign('primary_app_role_id')->references('id')->on('app_roles')->cascadeOnDelete();
-            $table->foreign('implied_app_role_id')->references('id')->on('app_roles')->cascadeOnDelete();
-        });
-
-        // groups
-        Schema::table('groups', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // group_members
-        Schema::table('group_members', function (Blueprint $table) {
-            $table->index('group_id');
-            $table->index('user_id');
-
-            $table->foreign('group_id')->references('id')->on('groups')->cascadeOnDelete();
-            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-        });
+        $this->cleanupOrphanedNullableRefs();
+        $this->addIndexes();
+        $this->addForeignKeys();
     }
 
+    // -------------------------------------------------------------------------
+    // Step 1 — nullify any nullable FK columns that point at non-existent rows.
+    // This lets nullOnDelete FKs be added even on databases with dirty data.
+    // NOT-NULL FK columns are left for tryAddForeign() to handle individually.
+    // -------------------------------------------------------------------------
+    private function cleanupOrphanedNullableRefs(): void
+    {
+        $pairs = [
+            // [child_table, child_column, parent_table]
+            ['organizations', 'parent_organization_id', 'organizations'],
+            ['organizations', 'plan_id',                'plans'],
+            ['organizations', 'primary_contact_id',     'users'],
+            ['organizations', 'account_test_id',        'account_tests'],
+            ['app_instances', 'plan_id',                'app_plans'],
+            ['app_instances', 'database_server_id',     'org_servers'],
+            ['app_instances', 'sso_server_id',          'org_servers'],
+            ['app_instances', 'parent_id',              'app_instances'],
+            ['tasks',         'application_id',         'applications'],
+            ['tasks',         'version_id',             'app_versions'],
+            ['tasks',         'app_instance_id',        'app_instances'],
+            ['app_versions',  'announcement_id',        'announcements'],
+            ['plans',         'email_server_id',        'servers'],
+            ['additional_storage', 'app_instance_id',  'app_instances'],
+            ['org_backups',   'scheduled_backup_id',    'backup_schedules'],
+            ['org_backups',   'app_instance_id',        'app_instances'],
+            ['org_backups',   'org_server_id',          'org_servers'],
+            ['backup_schedules', 'recurring_backup_id', 'recurring_backups'],
+            ['recurring_backups', 'organization_id',    'organizations'],
+            ['recurring_backups', 'application_id',     'applications'],
+            ['org_domains',   'app_instance_id',        'app_instances'],
+            ['org_domains',   'parent_domain_id',       'org_domains'],
+            ['org_domains',   'tld_id',                 'tlds'],
+            ['app_plans',     'web_server_id',          'servers'],
+            ['app_plans',     'database_server_id',     'servers'],
+            ['app_plans',     'sso_server_id',          'servers'],
+            ['app_plans',     'shared_app_id',          'app_instances'],
+            ['servers',       'default_backup_server_id', 'servers'],
+            ['org_servers',   'backup_server_id',       'org_servers'],
+            ['org_subdomains', 'app_instance_id',       'app_instances'],
+            ['org_subdomains', 'parent_domain_id',      'org_domains'],
+            ['app_instances', 'primary_domain_id',      'org_domains'],
+        ];
+
+        foreach ($pairs as [$child, $column, $parent]) {
+            $count = DB::table($child)
+                ->whereNotNull($column)
+                ->whereNotIn($column, DB::table($parent)->pluck('id'))
+                ->update([$column => null]);
+
+            if ($count > 0) {
+                Log::warning("FK pre-cleanup: set {$count} orphaned {$child}.{$column} values to NULL");
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 2 — add indexes on every FK column (and high-value status columns).
+    // Indexes are safe on any data so no error handling is needed.
+    // -------------------------------------------------------------------------
+    private function addIndexes(): void
+    {
+        $indexMap = [
+            'users'              => ['organization_id'],
+            'organizations'      => ['parent_organization_id', 'plan_id', 'primary_contact_id',
+                                     'account_test_id', 'primary_domain_id', 'base_domain_id'],
+            'app_instances'      => ['organization_id', 'application_id', 'version_id', 'plan_id',
+                                     'web_server_id', 'database_server_id', 'sso_server_id',
+                                     'parent_id', 'status'],
+            'applications'       => ['parent_app_id'],
+            'tasks'              => ['organization_id', 'application_id', 'version_id',
+                                     'app_instance_id', 'status'],
+            'app_versions'       => ['application_id', 'announcement_id'],
+            'plans'              => ['email_server_id'],
+            'new_user_code'      => ['organization_id'],
+            'email_forwarders'   => ['organization_id', 'domain_id'],
+            'additional_storage' => ['organization_id', 'app_instance_id'],
+            'app_roles'          => ['application_id'],
+            'org_backups'        => ['organization_id', 'scheduled_backup_id', 'app_instance_id',
+                                     'org_server_id', 'status'],
+            'backup_schedules'   => ['recurring_backup_id'],
+            'recurring_backups'  => ['server_id', 'organization_id', 'application_id'],
+            'org_domains'        => ['organization_id', 'app_instance_id', 'parent_domain_id',
+                                     'tld_id', 'status'],
+            'app_plans'          => ['application_id', 'web_server_id', 'database_server_id',
+                                     'sso_server_id', 'shared_app_id'],
+            'servers'            => ['app_instance_id', 'default_backup_server_id'],
+            'org_servers'        => ['organization_id', 'server_id', 'backup_server_id'],
+            'account_tests'      => ['organization_id', 'created_by_id'],
+            'suborg_users'       => ['organization_id'],
+            'org_subdomains'     => ['organization_id', 'app_instance_id', 'parent_domain_id'],
+            'app_implied_roles'  => ['primary_app_role_id', 'implied_app_role_id'],
+            'groups'             => ['organization_id'],
+            'group_members'      => ['group_id', 'user_id'],
+        ];
+
+        foreach ($indexMap as $table => $columns) {
+            Schema::table($table, function (Blueprint $t) use ($columns) {
+                foreach ($columns as $col) {
+                    $t->index($col);
+                }
+            });
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Step 3 — add FK constraints individually so one failure (e.g. dirty data
+    // on a NOT-NULL column) does not prevent the remaining FKs from being added.
+    // -------------------------------------------------------------------------
+    private function addForeignKeys(): void
+    {
+        // users
+        $this->tryAddForeign('users', 'organization_id', 'organizations', 'cascade');
+
+        // organizations
+        $this->tryAddForeign('organizations', 'parent_organization_id', 'organizations', 'null');
+        $this->tryAddForeign('organizations', 'plan_id',                'plans',         'null');
+        $this->tryAddForeign('organizations', 'primary_contact_id',     'users',         'null');
+        $this->tryAddForeign('organizations', 'account_test_id',        'account_tests', 'null');
+
+        // subscriptions (organization_id already indexed by existing composite index)
+        $this->tryAddForeign('subscriptions', 'organization_id', 'organizations', 'cascade');
+
+        // subscription_items (subscription_id already indexed by existing unique composite)
+        $this->tryAddForeign('subscription_items', 'subscription_id', 'subscriptions', 'cascade');
+
+        // app_instances
+        $this->tryAddForeign('app_instances', 'organization_id',   'organizations', 'cascade');
+        $this->tryAddForeign('app_instances', 'application_id',    'applications',  'restrict');
+        $this->tryAddForeign('app_instances', 'version_id',        'app_versions',  'restrict');
+        $this->tryAddForeign('app_instances', 'plan_id',           'app_plans',     'null');
+        $this->tryAddForeign('app_instances', 'web_server_id',     'org_servers',   'restrict');
+        $this->tryAddForeign('app_instances', 'database_server_id','org_servers',   'null');
+        $this->tryAddForeign('app_instances', 'sso_server_id',     'org_servers',   'null');
+        $this->tryAddForeign('app_instances', 'parent_id',         'app_instances', 'null');
+
+        // applications
+        $this->tryAddForeign('applications', 'parent_app_id', 'applications', 'null');
+
+        // tasks
+        $this->tryAddForeign('tasks', 'organization_id',  'organizations', 'cascade');
+        $this->tryAddForeign('tasks', 'application_id',   'applications',  'null');
+        $this->tryAddForeign('tasks', 'version_id',       'app_versions',  'null');
+        $this->tryAddForeign('tasks', 'app_instance_id',  'app_instances', 'null');
+
+        // app_versions
+        $this->tryAddForeign('app_versions', 'application_id', 'applications', 'cascade');
+        $this->tryAddForeign('app_versions', 'announcement_id','announcements', 'null');
+
+        // plans
+        $this->tryAddForeign('plans', 'email_server_id', 'servers', 'null');
+
+        // new_user_code
+        $this->tryAddForeign('new_user_code', 'organization_id', 'organizations', 'cascade');
+
+        // email_forwarders
+        $this->tryAddForeign('email_forwarders', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('email_forwarders', 'domain_id',       'org_domains',   'cascade');
+
+        // additional_storage
+        $this->tryAddForeign('additional_storage', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('additional_storage', 'app_instance_id', 'app_instances', 'null');
+
+        // app_roles
+        $this->tryAddForeign('app_roles', 'application_id', 'applications', 'cascade');
+
+        // org_backups
+        $this->tryAddForeign('org_backups', 'organization_id',    'organizations',   'cascade');
+        $this->tryAddForeign('org_backups', 'scheduled_backup_id','backup_schedules','null');
+        $this->tryAddForeign('org_backups', 'app_instance_id',    'app_instances',   'null');
+        $this->tryAddForeign('org_backups', 'org_server_id',      'org_servers',     'null');
+
+        // backup_schedules
+        $this->tryAddForeign('backup_schedules', 'recurring_backup_id', 'recurring_backups', 'cascade');
+
+        // recurring_backups
+        $this->tryAddForeign('recurring_backups', 'server_id',      'servers',       'restrict');
+        $this->tryAddForeign('recurring_backups', 'organization_id','organizations', 'null');
+        $this->tryAddForeign('recurring_backups', 'application_id', 'applications',  'null');
+
+        // org_domains — organization_id cascades; the reverse circular refs
+        // (organizations.primary_domain_id / base_domain_id) are NOT NULL so only indexed, not FK'd
+        $this->tryAddForeign('org_domains', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('org_domains', 'app_instance_id', 'app_instances', 'null');
+        $this->tryAddForeign('org_domains', 'parent_domain_id','org_domains',   'null');
+        $this->tryAddForeign('org_domains', 'tld_id',          'tlds',          'null');
+
+        // app_plans — web/db/sso server columns reference servers directly (not org_servers)
+        $this->tryAddForeign('app_plans', 'application_id',    'applications', 'cascade');
+        $this->tryAddForeign('app_plans', 'web_server_id',     'servers',      'null');
+        $this->tryAddForeign('app_plans', 'database_server_id','servers',      'null');
+        $this->tryAddForeign('app_plans', 'sso_server_id',     'servers',      'null');
+        $this->tryAddForeign('app_plans', 'shared_app_id',     'app_instances','null');
+
+        // servers
+        $this->tryAddForeign('servers', 'app_instance_id',        'app_instances', 'restrict');
+        $this->tryAddForeign('servers', 'default_backup_server_id','servers',      'null');
+
+        // org_servers
+        $this->tryAddForeign('org_servers', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('org_servers', 'server_id',       'servers',       'restrict');
+        $this->tryAddForeign('org_servers', 'backup_server_id','org_servers',   'null');
+
+        // account_tests
+        $this->tryAddForeign('account_tests', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('account_tests', 'created_by_id',   'users',         'restrict');
+
+        // suborg_users
+        $this->tryAddForeign('suborg_users', 'organization_id', 'organizations', 'cascade');
+
+        // org_subdomains
+        $this->tryAddForeign('org_subdomains', 'organization_id', 'organizations', 'cascade');
+        $this->tryAddForeign('org_subdomains', 'app_instance_id', 'app_instances', 'null');
+        $this->tryAddForeign('org_subdomains', 'parent_domain_id','org_domains',   'null');
+
+        // app_implied_roles
+        $this->tryAddForeign('app_implied_roles', 'primary_app_role_id', 'app_roles', 'cascade');
+        $this->tryAddForeign('app_implied_roles', 'implied_app_role_id', 'app_roles', 'cascade');
+
+        // groups
+        $this->tryAddForeign('groups', 'organization_id', 'organizations', 'cascade');
+
+        // group_members
+        $this->tryAddForeign('group_members', 'group_id', 'groups', 'cascade');
+        $this->tryAddForeign('group_members', 'user_id',  'users',  'cascade');
+    }
+
+    private function tryAddForeign(string $table, string $column, string $on, string $onDelete): void
+    {
+        try {
+            Schema::table($table, function (Blueprint $t) use ($column, $on, $onDelete) {
+                $fk = $t->foreign($column)->references('id')->on($on);
+                match ($onDelete) {
+                    'cascade'  => $fk->cascadeOnDelete(),
+                    'null'     => $fk->nullOnDelete(),
+                    'restrict' => $fk->restrictOnDelete(),
+                };
+            });
+        } catch (\Throwable $e) {
+            Log::warning("add_foreign_keys migration: skipped FK {$table}.{$column} → {$on}: {$e->getMessage()}");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // down() — drop FKs first (reverse order), then indexes
+    // -------------------------------------------------------------------------
     public function down(): void
     {
-        Schema::table('group_members', function (Blueprint $table) {
-            $table->dropForeign(['group_id']);
-            $table->dropForeign(['user_id']);
-            $table->dropIndex(['group_id']);
-            $table->dropIndex(['user_id']);
-        });
+        $foreignKeys = [
+            'group_members'      => ['group_id', 'user_id'],
+            'groups'             => ['organization_id'],
+            'app_implied_roles'  => ['primary_app_role_id', 'implied_app_role_id'],
+            'org_subdomains'     => ['organization_id', 'app_instance_id', 'parent_domain_id'],
+            'suborg_users'       => ['organization_id'],
+            'account_tests'      => ['organization_id', 'created_by_id'],
+            'org_servers'        => ['organization_id', 'server_id', 'backup_server_id'],
+            'servers'            => ['app_instance_id', 'default_backup_server_id'],
+            'app_plans'          => ['application_id', 'web_server_id', 'database_server_id',
+                                     'sso_server_id', 'shared_app_id'],
+            'org_domains'        => ['organization_id', 'app_instance_id', 'parent_domain_id', 'tld_id'],
+            'recurring_backups'  => ['server_id', 'organization_id', 'application_id'],
+            'backup_schedules'   => ['recurring_backup_id'],
+            'org_backups'        => ['organization_id', 'scheduled_backup_id', 'app_instance_id', 'org_server_id'],
+            'app_roles'          => ['application_id'],
+            'additional_storage' => ['organization_id', 'app_instance_id'],
+            'email_forwarders'   => ['organization_id', 'domain_id'],
+            'new_user_code'      => ['organization_id'],
+            'plans'              => ['email_server_id'],
+            'app_versions'       => ['application_id', 'announcement_id'],
+            'tasks'              => ['organization_id', 'application_id', 'version_id', 'app_instance_id'],
+            'applications'       => ['parent_app_id'],
+            'app_instances'      => ['organization_id', 'application_id', 'version_id', 'plan_id',
+                                     'web_server_id', 'database_server_id', 'sso_server_id', 'parent_id'],
+            'subscription_items' => ['subscription_id'],
+            'subscriptions'      => ['organization_id'],
+            'organizations'      => ['parent_organization_id', 'plan_id', 'primary_contact_id', 'account_test_id'],
+            'users'              => ['organization_id'],
+        ];
 
-        Schema::table('groups', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropIndex(['organization_id']);
-        });
+        foreach ($foreignKeys as $table => $columns) {
+            Schema::table($table, function (Blueprint $t) use ($columns) {
+                foreach ($columns as $col) {
+                    try {
+                        $t->dropForeign([$col]);
+                    } catch (\Throwable) {
+                        // FK was never added (e.g. skipped due to dirty data)
+                    }
+                }
+            });
+        }
 
-        Schema::table('app_implied_roles', function (Blueprint $table) {
-            $table->dropForeign(['primary_app_role_id']);
-            $table->dropForeign(['implied_app_role_id']);
-            $table->dropIndex(['primary_app_role_id']);
-            $table->dropIndex(['implied_app_role_id']);
-        });
+        $indexMap = [
+            'users'              => ['organization_id'],
+            'organizations'      => ['parent_organization_id', 'plan_id', 'primary_contact_id',
+                                     'account_test_id', 'primary_domain_id', 'base_domain_id'],
+            'app_instances'      => ['organization_id', 'application_id', 'version_id', 'plan_id',
+                                     'web_server_id', 'database_server_id', 'sso_server_id',
+                                     'parent_id', 'status'],
+            'applications'       => ['parent_app_id'],
+            'tasks'              => ['organization_id', 'application_id', 'version_id',
+                                     'app_instance_id', 'status'],
+            'app_versions'       => ['application_id', 'announcement_id'],
+            'plans'              => ['email_server_id'],
+            'new_user_code'      => ['organization_id'],
+            'email_forwarders'   => ['organization_id', 'domain_id'],
+            'additional_storage' => ['organization_id', 'app_instance_id'],
+            'app_roles'          => ['application_id'],
+            'org_backups'        => ['organization_id', 'scheduled_backup_id', 'app_instance_id',
+                                     'org_server_id', 'status'],
+            'backup_schedules'   => ['recurring_backup_id'],
+            'recurring_backups'  => ['server_id', 'organization_id', 'application_id'],
+            'org_domains'        => ['organization_id', 'app_instance_id', 'parent_domain_id',
+                                     'tld_id', 'status'],
+            'app_plans'          => ['application_id', 'web_server_id', 'database_server_id',
+                                     'sso_server_id', 'shared_app_id'],
+            'servers'            => ['app_instance_id', 'default_backup_server_id'],
+            'org_servers'        => ['organization_id', 'server_id', 'backup_server_id'],
+            'account_tests'      => ['organization_id', 'created_by_id'],
+            'suborg_users'       => ['organization_id'],
+            'org_subdomains'     => ['organization_id', 'app_instance_id', 'parent_domain_id'],
+            'app_implied_roles'  => ['primary_app_role_id', 'implied_app_role_id'],
+            'groups'             => ['organization_id'],
+            'group_members'      => ['group_id', 'user_id'],
+        ];
 
-        Schema::table('org_subdomains', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['app_instance_id']);
-            $table->dropForeign(['parent_domain_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['app_instance_id']);
-            $table->dropIndex(['parent_domain_id']);
-        });
-
-        Schema::table('suborg_users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropIndex(['organization_id']);
-        });
-
-        Schema::table('account_tests', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['created_by_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['created_by_id']);
-        });
-
-        Schema::table('org_servers', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['server_id']);
-            $table->dropForeign(['backup_server_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['server_id']);
-            $table->dropIndex(['backup_server_id']);
-        });
-
-        Schema::table('servers', function (Blueprint $table) {
-            $table->dropForeign(['app_instance_id']);
-            $table->dropForeign(['default_backup_server_id']);
-            $table->dropIndex(['app_instance_id']);
-            $table->dropIndex(['default_backup_server_id']);
-        });
-
-        Schema::table('app_plans', function (Blueprint $table) {
-            $table->dropForeign(['application_id']);
-            $table->dropForeign(['web_server_id']);
-            $table->dropForeign(['database_server_id']);
-            $table->dropForeign(['sso_server_id']);
-            $table->dropForeign(['shared_app_id']);
-            $table->dropIndex(['application_id']);
-            $table->dropIndex(['web_server_id']);
-            $table->dropIndex(['database_server_id']);
-            $table->dropIndex(['sso_server_id']);
-            $table->dropIndex(['shared_app_id']);
-        });
-
-        Schema::table('org_domains', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['app_instance_id']);
-            $table->dropForeign(['parent_domain_id']);
-            $table->dropForeign(['tld_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['app_instance_id']);
-            $table->dropIndex(['parent_domain_id']);
-            $table->dropIndex(['tld_id']);
-            $table->dropIndex(['status']);
-        });
-
-        Schema::table('recurring_backups', function (Blueprint $table) {
-            $table->dropForeign(['server_id']);
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['application_id']);
-            $table->dropIndex(['server_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['application_id']);
-        });
-
-        Schema::table('backup_schedules', function (Blueprint $table) {
-            $table->dropForeign(['recurring_backup_id']);
-            $table->dropIndex(['recurring_backup_id']);
-        });
-
-        Schema::table('org_backups', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['scheduled_backup_id']);
-            $table->dropForeign(['app_instance_id']);
-            $table->dropForeign(['org_server_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['scheduled_backup_id']);
-            $table->dropIndex(['app_instance_id']);
-            $table->dropIndex(['org_server_id']);
-            $table->dropIndex(['status']);
-        });
-
-        Schema::table('app_roles', function (Blueprint $table) {
-            $table->dropForeign(['application_id']);
-            $table->dropIndex(['application_id']);
-        });
-
-        Schema::table('additional_storage', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['app_instance_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['app_instance_id']);
-        });
-
-        Schema::table('email_forwarders', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['domain_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['domain_id']);
-        });
-
-        Schema::table('new_user_code', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropIndex(['organization_id']);
-        });
-
-        Schema::table('plans', function (Blueprint $table) {
-            $table->dropForeign(['email_server_id']);
-            $table->dropIndex(['email_server_id']);
-        });
-
-        Schema::table('app_versions', function (Blueprint $table) {
-            $table->dropForeign(['application_id']);
-            $table->dropForeign(['announcement_id']);
-            $table->dropIndex(['application_id']);
-            $table->dropIndex(['announcement_id']);
-        });
-
-        Schema::table('tasks', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['application_id']);
-            $table->dropForeign(['version_id']);
-            $table->dropForeign(['app_instance_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['application_id']);
-            $table->dropIndex(['version_id']);
-            $table->dropIndex(['app_instance_id']);
-            $table->dropIndex(['status']);
-        });
-
-        Schema::table('applications', function (Blueprint $table) {
-            $table->dropForeign(['parent_app_id']);
-            $table->dropIndex(['parent_app_id']);
-        });
-
-        Schema::table('app_instances', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['application_id']);
-            $table->dropForeign(['version_id']);
-            $table->dropForeign(['plan_id']);
-            $table->dropForeign(['web_server_id']);
-            $table->dropForeign(['database_server_id']);
-            $table->dropForeign(['sso_server_id']);
-            $table->dropForeign(['parent_id']);
-            $table->dropIndex(['organization_id']);
-            $table->dropIndex(['application_id']);
-            $table->dropIndex(['version_id']);
-            $table->dropIndex(['plan_id']);
-            $table->dropIndex(['web_server_id']);
-            $table->dropIndex(['database_server_id']);
-            $table->dropIndex(['sso_server_id']);
-            $table->dropIndex(['parent_id']);
-            $table->dropIndex(['status']);
-        });
-
-        Schema::table('subscription_items', function (Blueprint $table) {
-            $table->dropForeign(['subscription_id']);
-        });
-
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-        });
-
-        Schema::table('organizations', function (Blueprint $table) {
-            $table->dropForeign(['parent_organization_id']);
-            $table->dropForeign(['plan_id']);
-            $table->dropForeign(['primary_contact_id']);
-            $table->dropForeign(['account_test_id']);
-            $table->dropIndex(['parent_organization_id']);
-            $table->dropIndex(['plan_id']);
-            $table->dropIndex(['primary_contact_id']);
-            $table->dropIndex(['account_test_id']);
-            $table->dropIndex(['primary_domain_id']);
-            $table->dropIndex(['base_domain_id']);
-        });
-
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropIndex(['organization_id']);
-        });
+        foreach (array_reverse($indexMap) as $table => $columns) {
+            Schema::table($table, function (Blueprint $t) use ($columns) {
+                foreach ($columns as $col) {
+                    try {
+                        $t->dropIndex([$col]);
+                    } catch (\Throwable) {
+                        // index was never added or already dropped
+                    }
+                }
+            });
+        }
     }
 };
