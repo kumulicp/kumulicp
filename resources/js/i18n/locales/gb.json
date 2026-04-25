@@ -487,6 +487,7 @@
     "organizations": {
       "organizations": "Organizations",
       "organizationOverview": "Organization Overview",
+      "details": "Details",
       "name": "Name",
       "contactName": "Contact Name",
       "contactEmail": "Contact Email",
@@ -550,7 +551,11 @@
       "overridePricingMessage": "Override the registrars pricing.",
       "refreshList": "Refresh List",
       "registrationAllowed": "Registration Allowed",
+      "standardPrice": "Standard Price",
       "tlds": "TLDs",
+      "type": "Type",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "Are you sure you want to remove {name}? This action is permanent.",
       "updateDb": "Update DB",
       "user": "User",
       "whoisGuard": "WhoisGuard"
@@ -687,8 +692,11 @@
       "addToGroup": "Add to Group",
       "groups": "Groups",
       "note": "Note",
+      "other": "Other",
       "project": "Project",
       "removingFolder": "Yes, I'm removing the folder",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "Are you sure you want to remove {name}? This action is permanent.",
       "team": "Team",
       "updateGroup": "Update Group",
       "warning": "Warning"
