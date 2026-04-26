@@ -2,6 +2,7 @@
     "require": {
         "php": "^8.4",
         "api-ecosystem-for-laravel/dingo-api": "^4.2.0",
+        "darkaonline/l5-swagger": "^9.0",
         "asm89/stack-cors": "^2.0",
         "directorytree/ldaprecord": "^3.3.0",
         "directorytree/ldaprecord-laravel": "^3.1.2",

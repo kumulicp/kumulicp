@@ -16,12 +16,57 @@ use Illuminate\Support\Str;
 
 class Users extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/users",
+     *     summary="List users",
+     *     description="Returns a list of users belonging to the authenticated organization.",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="List of users",
+     *         @OA\JsonContent(type="array", @OA\Items(type="object"))
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated")
+     * )
+     */
     public function list()
     {
 
         return response()->json();
     }
 
+    /**
+     * @OA\Post(
+     *     path="/users",
+     *     summary="Create a user",
+     *     description="Creates a new user account within the authenticated organization and sends a welcome notification.",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"username","first_name","last_name","email","source"},
+     *             @OA\Property(property="username", type="string", description="Alphanumeric username. Must not already exist."),
+     *             @OA\Property(property="first_name", type="string", maxLength=100),
+     *             @OA\Property(property="last_name", type="string", maxLength=100),
+     *             @OA\Property(property="email", type="string", format="email"),
+     *             @OA\Property(property="phone", type="string", description="Optional phone number."),
+     *             @OA\Property(property="source", type="string", description="Slug of the application granting access. Must be a valid registered app.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="User created successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="response", type="string", example="success")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated"),
+     *     @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function store(Request $request)
     {
         /* Validate */
