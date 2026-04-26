@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\User;
 
 describe('Login page', function () {
     it('renders the login form', function () {
@@ -23,6 +23,6 @@ describe('Login page', function () {
             ->fill('email', $user->email)
             ->fill('password', 'password')
             ->click('button[type="submit"]')
-            ->assertUrlIs('/dashboard');
+            ->assertUrlIs('/');
     });
 });

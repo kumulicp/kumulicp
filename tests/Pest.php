@@ -1,5 +1,7 @@
 <?php
 
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -12,7 +14,7 @@
 */
 
 // uses(Tests\TestCase::class)->in('Feature');
-uses(Tests\TestCase::class)->in('Browser');
+uses(TestCase::class)->in('Browser');
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +33,7 @@ uses(Tests\TestCase::class)->in('Browser');
 */
 
 pest()->browser()
-    ->withTimeout(10_000);
+    ->timeout(10000);
 
 /*
 |--------------------------------------------------------------------------

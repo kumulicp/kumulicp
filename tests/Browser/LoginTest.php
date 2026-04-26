@@ -36,7 +36,7 @@ describe('Login', function () {
             ->fill('email', $user->email)
             ->fill('password', 'password')
             ->click('#submit')
-            ->assertUrlIs('/dashboard');
+            ->assertUrlIs('/');
     });
 
     it('navigates to the forgot password page via the link', function () {

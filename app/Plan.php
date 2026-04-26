@@ -14,6 +14,10 @@ class Plan extends Model
 
     private $organization;
 
+    protected $fillable = [
+        'name', 'app_plans', 'settings', 'is_default', 'payment_enabled', 'domain_enabled', 'email_enabled', 'archive', 'features',
+    ];
+
     protected $casts = [
         'app_plans' => 'array',
         'settings' => 'array',

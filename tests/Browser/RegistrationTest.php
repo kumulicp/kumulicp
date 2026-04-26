@@ -1,18 +1,20 @@
 <?php
 
 use App\Plan;
+use App\Support\Facades\Settings;
 use App\User;
 
 // Seed a default plan before each test so that can.register evaluates to true.
 // The registration form is gated behind Plan::where('is_default', 1)->count() > 0.
 beforeEach(function () {
     Plan::create([
-        'name'        => 'Test Plan',
+        'name' => 'Test Plan',
         'description' => 'Default plan for browser tests',
-        'org_type'    => 'nonprofit',
-        'is_default'  => true,
-        'archive'     => false,
+        'org_type' => 'nonprofit',
+        'is_default' => true,
+        'archive' => false,
     ]);
+    Settings::update('installed', true);
 });
 
 afterEach(function () {

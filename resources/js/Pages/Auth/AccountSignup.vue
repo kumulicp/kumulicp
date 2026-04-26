@@ -141,6 +141,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           v-model="form.terms_of_use"
           class="mb-0"
           immediateValidation
+          id="termsOfUse"
           :error="$page.props.errors.terms_of_use"
           :error-messages="$page.props.errors.terms_of_use"
         >
