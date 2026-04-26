@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <div class="user">
@@ -32,16 +30,16 @@ export default {
     const basePath = '/admin/service/domains'
     const tabs = [
       {
-        title: 'Domains',
+        title: this.$t('admin.domains.domains'),
         url: basePath
       },
       {
-        title: 'TLDs',
+        title: this.$t('admin.domains.tlds'),
         url: basePath + '/tlds'
       }
     ]
 
-    let value = 'Domains'
+    let value = this.$t('admin.domains.domains')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

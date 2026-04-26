@@ -2,13 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import UserLayout from './UserLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>User Permissions - Control Panel</title>
+    <title>{{ $t('organization.users.userGroups') }} - Control Panel</title>
   </Head>
   <div class="user-permissions">
     <div class="row">
@@ -26,12 +24,12 @@ const { t } = useI18n()
           </div>
           <div class="row">
             <div class="flex lg12 va-text-center mb-1">
-              <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">No Groups Available</h2>
+              <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">{{ $t('organization.groups.noGroupsAvailable') }}</h2>
             </div>
           </div>
           <div class="row">
             <div class="flex lg12 va-text-center mb-4">
-              <Link href="/groups"><va-button color="primary">Add groups here</va-button></Link>
+              <Link href="/groups"><va-button color="primary">{{ $t('organization.groups.addGroupsHere') }}</va-button></Link>
             </div>
           </div>
         </template>
@@ -42,7 +40,7 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th>Group Name</th>
+                <th>{{ $t('organization.groups.groupName') }}</th>
                 <th style="width: 200px"></th>
               </tr>
             </thead>
@@ -52,8 +50,8 @@ const { t } = useI18n()
                   {{ group.name }}
                 </td>
                 <td class="va-text-right">
-                  <Link v-if="user_groups.includes(group.slug)" :href="'/users/'+user.id+'/groups/'+group.slug+'/remove'"><va-button color="danger">Remove from group</va-button></Link>
-                  <Link v-else :href="'/users/'+user.id+'/groups/'+group.slug+'/add'"><va-button color="primary">Add to group</va-button></Link>
+                  <Link v-if="user_groups.includes(group.slug)" :href="'/users/'+user.id+'/groups/'+group.slug+'/remove'"><va-button color="danger">{{ $t('organization.groups.removeFromGroup') }}</va-button></Link>
+                  <Link v-else :href="'/users/'+user.id+'/groups/'+group.slug+'/add'"><va-button color="primary">{{ $t('organization.groups.addToGroup') }}</va-button></Link>
                 </td>
               </tr>
             </tbody>

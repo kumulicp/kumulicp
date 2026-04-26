@@ -35,27 +35,27 @@ export default {
     passwordRequirements () {
       return [
         {
-          name: 'Must contain uppercase letters',
+          name: this.$t('components.passwordChecker.uppercase'),
           predicate: this.password.toLowerCase() !== this.password
         },
         {
-          name: 'Must contain lowercase letters',
+          name: this.$t('components.passwordChecker.lowercase'),
           predicate: this.password.toUpperCase() !== this.password
         },
         {
-          name: 'Must contain numbers',
+          name: this.$t('components.passwordChecker.numbers'),
           predicate: /\d/.test(this.password)
         },
         {
-          name: 'Must contain symbols',
+          name: this.$t('components.passwordChecker.symbols'),
           predicate: /\W/.test(this.password)
         },
         {
-          name: 'Must be at least 8 characters long',
+          name: this.$t('components.passwordChecker.minLength'),
           predicate: this.password.length >= 8
         },
         {
-          name: 'Must match',
+          name: this.$t('components.passwordChecker.match'),
           predicate: this.password === this.passwordConfirmation
         }
       ]

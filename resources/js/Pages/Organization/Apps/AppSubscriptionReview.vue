@@ -5,25 +5,23 @@ import CreditCard from '@/components/CreditCard.vue'
 import PlanCard from '@/components/cards/PlanCard.vue'
 import PricingCard from '@/components/cards/PricingCard.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ app.label }} Subscription Overview - Control Panel</title>
+    <title>{{ app.label }} - Control Panel</title>
   </Head>
   <div class="discover-overview">
     <div class="row">
       <div class="flex xs12 lg9">
         <va-card class="mb-3">
-          <va-card-title>{{ app.label }} Plan Settings</va-card-title>
+          <va-card-title>{{ $t('organization.apps.planSettings', { label: app.label }) }}</va-card-title>
           <va-card-content>
             <credit-card v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" v-if="plan.payment_enabled" />
             <va-list-separator class="my-3" fit />
             <form @submit.prevent="form.put('/apps/'+app.id+'/plans/'+plan.id+'/select')">
               <app-customizations :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
-              <va-button type="submit">Change Plan</va-button>
+              <va-button type="submit">{{ $t('plan.change') }}</va-button>
             </form>
           </va-card-content>
         </va-card>

@@ -2,22 +2,19 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import EmailAccountsLayout from './EmailAccountsMain.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Email Accounts - Control Panel</title>
+    <title>{{ $t('organization.emailAccounts.emailAccounts') }} - Control Panel</title>
   </Head>
   <div class="web-domains-domains">
     <div class="row justify-center">
-      <va-button class="mb-3" v-if="can.add_email_accounts" @click="showAddEmailAccount = true">Create Email</va-button>
+      <va-button class="mb-3" v-if="can.add_email_accounts" @click="showAddEmailAccount = true">{{ $t('organization.emailAccounts.createEmail') }}</va-button>
     </div>
     <va-alert
       outline
-      >Please do not use this to create email accounts for people. We recommend creating a new user and giving them an
-      email account through their user account. Then they can change their own password.</va-alert
+      >{{ $t('organization.emailAccounts.createEmailWarning') }}</va-alert
     >
     <template v-if="accounts.length === 0">
       <div class="row m-5">
@@ -25,7 +22,7 @@ const { t } = useI18n()
           <va-icon name="fa-envelopes-bulk" style="color: var(--va-list-item-label-caption-color)" size="5rem" />
         </div>
         <div class="flex lg12 va-text-center mb-4">
-          <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)">No Email Accounts</h2>
+          <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)">{{ $t('organization.emailAccounts.noEmailAccounts') }}</h2>
         </div>
       </div>
     </template>
@@ -34,8 +31,8 @@ const { t } = useI18n()
         <thead>
           <tr>
             <th style="width: 1%"></th>
-            <th style="width: 10%">Name</th>
-            <th style="width: 90%">Email</th>
+            <th style="width: 10%">{{ $t('organization.emailAccounts.name') }}</th>
+            <th style="width: 90%">{{ $t('organization.emailAccounts.email') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -66,32 +63,32 @@ const { t } = useI18n()
     class="p-0"
   >
     <template #content="{ ok }">
-      <va-card-title class="m-0"> Remove {{ removeEmailAccount }}? </va-card-title>
+      <va-card-title class="m-0"> {{ $t('organization.emailAccounts.removeTitle', { email: removeEmailAccount }) }} </va-card-title>
       <va-card-content class="m-0">
-        Are you sure you want to remove {{ removeEmailAccount }}? This action is permanent.
+        {{ $t('organization.emailAccounts.removeConfirm', { email: removeEmailAccount }) }}
       </va-card-content>
       <va-card-actions align="right">
         <va-button
           color="backgroundSecondary"
           @click="ok"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </va-button>
-        <va-button color="danger" @click="remove.delete('/settings/email/accounts/'+removeEmailAccount); showRemoveEmailAccount = !showRemoveEmailAccount">Delete</va-button>
+        <va-button color="danger" @click="remove.delete('/settings/email/accounts/'+removeEmailAccount); showRemoveEmailAccount = !showRemoveEmailAccount">{{ $t('common.delete') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
   <va-modal v-model="showAddEmailAccount" hide-default-actions no-dismiss no-padding size="small">
     <template #content="{ cancel }">
       <form @submit.prevent="addEmailAccount()">
-        <va-card-title>Add Email Account</va-card-title>
+        <va-card-title>{{ $t('organization.emailAccounts.addEmailAccount') }}</va-card-title>
         <va-card-content>
             <va-input v-model="add.name"
               immediateValidation
               :error="$page.props.errors.name"
               :error-messages="$page.props.errors.name"
               class="mb-3"
-              label="Name"
+              :label="$t('organization.emailAccounts.name')"
             > </va-input>
 
             <va-input v-model="add.email"
@@ -99,7 +96,7 @@ const { t } = useI18n()
               :error="$page.props.errors.email"
               :error-messages="$page.props.errors.email"
               class="mb-3"
-              label="Email"
+              :label="$t('organization.emailAccounts.email')"
             >
               <template #append>
                 <va-select
@@ -124,17 +121,17 @@ const { t } = useI18n()
               :error-messages="$page.props.errors.password"
               class="mb-3"
               type="password"
-              label="Password"
+              :label="$t('organization.emailAccounts.password')"
             > </va-input>
 
             <va-input v-model="add.password_confirmation"
               immediateValidation
               type="password"
-              label="Confirm Password" />
+              :label="$t('organization.emailAccounts.confirmPassword')" />
           </va-card-content>
           <va-card-actions align="right">
-            <va-button color="backgroundSecondary" @click="cancel">Cancel</va-button>
-            <va-button type="submit" color="primary" :disabled="add.processing">Create</va-button>
+            <va-button color="backgroundSecondary" @click="cancel">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" color="primary" :disabled="add.processing">{{ $t('common.create') }}</va-button>
           </va-card-actions>
         </form>
     </template>
@@ -142,14 +139,14 @@ const { t } = useI18n()
   <va-modal v-model="showEditEmailAccount" hide-default-actions no-dismiss no-padding size="small">
     <template #content="{ cancel }">
       <form @submit.prevent="updateEmailAccount()">
-        <va-card-title>Edit {{ editEmailAccount.email }}</va-card-title>
+        <va-card-title>{{ $t('organization.emailAccounts.editTitle', { email: editEmailAccount.email }) }}</va-card-title>
         <va-card-content>
             <va-input v-model="edit.name"
               immediateValidation
               :error="$page.props.errors.name"
               :error-messages="$page.props.errors.name"
               class="mb-3"
-              label="Name"
+              :label="$t('organization.emailAccounts.name')"
             />
 
             <va-input v-model="edit.password"
@@ -158,17 +155,17 @@ const { t } = useI18n()
               :error-messages="$page.props.errors.password"
               class="mb-3"
               type="password"
-              label="Password"
+              :label="$t('organization.emailAccounts.password')"
             />
 
             <va-input v-model="edit.password_confirmation"
               immediateValidation
               type="password"
-              label="Confirm Password" />
+              :label="$t('organization.emailAccounts.confirmPassword')" />
           </va-card-content>
           <va-card-actions align="right">
-            <va-button color="backgroundSecondary" @click="cancel">Cancel</va-button>
-            <va-button type="submit" color="primary" :disabled="add.processing">Update</va-button>
+            <va-button color="backgroundSecondary" @click="cancel">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" color="primary" :disabled="add.processing">{{ $t('common.update') }}</va-button>
           </va-card-actions>
         </form>
     </template>
