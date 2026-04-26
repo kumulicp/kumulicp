@@ -25,16 +25,16 @@ export default {
     const basePath = '/admin/server/servers/' + server.id
     const tabs = [
       {
-        title: i18n.t('admin.servers.edit'),
+        title: this.$t('admin.servers.edit'),
         url: basePath
       },
       {
-        title: i18n.t('admin.servers.helmChartValues'),
+        title: this.$t('admin.servers.helmChartValues'),
         url: basePath + '/chart'
       }
     ]
 
-    let value = i18n.t('admin.servers.edit')
+    let value = this.$t('admin.servers.edit')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title
