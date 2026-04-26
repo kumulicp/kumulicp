@@ -5,10 +5,10 @@ import { router } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.logs.logs') }} - Control Panel</title>
+    <title>{{ $t('admin.logs.logs') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('admin.logs.logs') }}</va-card-title>
+    <va-card-title>{{ $t('admin.logs.logs') }}</va-card-title>
       <va-card-content>
         <va-scroll-container
             color="warning"
@@ -17,10 +17,10 @@ import { router } from '@inertiajs/vue3'
           <table class="va-table va-table--hoverable mt-3">
           <thead>
               <tr>
-              <th style="width: 10rem">{{ t('admin.logs.level') }}</th>
-              <th style="width: 15rem">{{ t('admin.logs.organization') }}</th>
-              <th>{{ t('admin.logs.message') }}</th>
-              <th style="width: 10rem">{{ t('admin.logs.time') }}</th>
+              <th style="width: 10rem">{{ $t('admin.logs.level') }}</th>
+              <th style="width: 15rem">{{ $t('admin.logs.organization') }}</th>
+              <th>{{ $t('admin.logs.message') }}</th>
+              <th style="width: 10rem">{{ $t('admin.logs.time') }}</th>
               </tr>
           </thead>
           <tbody>

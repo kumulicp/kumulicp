@@ -9,7 +9,7 @@ import { useForm } from '@inertiajs/vue3'
     <title>{{ $t('admin.roles.editRole') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ $t('form.edit') }} {{ role.name }}</va-card-title>
+    <va-card-title>{{ $t('common.edit') }} {{ role.name }}</va-card-title>
       <va-card-content>
         <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/roles/'+role.id)">
           <AdminSettings>
@@ -108,7 +108,7 @@ import { useForm } from '@inertiajs/vue3'
             />
           </template>
         </AdminSettings>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

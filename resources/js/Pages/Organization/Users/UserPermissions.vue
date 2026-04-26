@@ -140,7 +140,7 @@ import { useForm, Link } from '@inertiajs/vue3'
               </tr>
             </tbody>
           </table>
-          <va-button type="submit" id="submit" class="mb-2 mr-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+          <va-button type="submit" id="submit" class="mb-2 mr-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
           <va-button @click="resetPermissions" id="reset" class="mb-2" color="backgroundSecondary" :disabled="form.processing || !form.isDirty">{{ $t('form.reset') }}</va-button>
         </form>
       </div>
@@ -171,7 +171,7 @@ import { useForm, Link } from '@inertiajs/vue3'
             color="backgroundSecondary"
             @click="showConfirmAccessTypeChange = !showConfirmAccessTypeChange"
           >
-            {{ $t('modal.cancel') }}
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button
             @click="form.post('/users/'+user.id+'/permissions')"

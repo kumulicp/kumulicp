@@ -50,10 +50,10 @@ import { Link, useForm } from '@inertiajs/vue3'
           :message="$t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              {{ $t('modal.cancel') }}
+              {{ $t('common.cancel') }}
             </va-button>
             <va-button color="danger"
-              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('modal.delete') }}</va-button>
+              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('common.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

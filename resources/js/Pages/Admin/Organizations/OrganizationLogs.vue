@@ -6,7 +6,7 @@ import { router } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.organizations.logs') }} - Control Panel</title>
+    <title>{{ $t('admin.organizations.logs') }} - Control Panel</title>
   </Head>
   <va-scroll-container
     color="warning"
@@ -15,9 +15,9 @@ import { router } from '@inertiajs/vue3'
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>{{ t('admin.organizations.level') }}</th>
-          <th>{{ t('admin.organizations.message') }}</th>
-          <th>{{ t('admin.organizations.time') }}</th>
+          <th>{{ $t('admin.organizations.level') }}</th>
+          <th>{{ $t('admin.organizations.message') }}</th>
+          <th>{{ $t('admin.organizations.time') }}</th>
         </tr>
       </thead>
       <tbody>

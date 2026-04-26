@@ -38,7 +38,7 @@ import { Link } from '@inertiajs/vue3'
                       <p>{{ app.description }}</p>
                     </div>
                     <div class="w-full" style="display: grid; flex-direction: row; align-items: end; place-items: end;">
-                      <Link :href="'/discover/'+app.slug"><va-button class="px-2">{{ $t('form.view') }}</va-button></Link>
+                      <Link :href="'/discover/'+app.slug"><va-button class="px-2">{{ $t('common.view') }}</va-button></Link>
                     </div>
                   </div>
               </div>

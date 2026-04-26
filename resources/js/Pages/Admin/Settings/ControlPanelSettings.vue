@@ -88,7 +88,7 @@ import { useColors } from 'vuestic-ui'
       :disabled="form.processing"
       class="mr-2 my-2"
     >
-      {{ $t('form.update') }}
+      {{ $t('common.update') }}
     </va-button>
   </form>
 </template>

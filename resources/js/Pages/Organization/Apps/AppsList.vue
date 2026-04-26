@@ -81,7 +81,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                     color="danger"
                   :disabled="deactivated_statuses.includes(app.status)"
                   @click="deactivateApp(app)">
-                  {{ $t('modal.deactivate') }}
+                  {{ $t('plan.deactivate') }}
                   </va-button>
                 </td>
               <td class="xl:hidden va-text-right">
@@ -112,12 +112,12 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       </va-card-content>
       <va-card-actions align="right" class="">
         <va-button color="backgroundSecondary" @click="showDeactivateModal = false">
-          {{ $t('modal.cancel') }}
+          {{ $t('common.cancel') }}
         </va-button>
         <va-button id="deactivate" color="danger"
           :disabled="deactivateName !== appToDeactivate.name"
           @click="deactivate.delete('/apps/'+appToDeactivate.id); showDeactivateModal = !showDeactivateModal">
-            {{ $t('modal.deactivate') }}
+            {{ $t('plan.deactivate') }}
         </va-button>
       </va-card-actions>
     </template>

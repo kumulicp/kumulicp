@@ -6,23 +6,23 @@ import { useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.tests.editTest') }} - Control Panel</title>
+    <title>{{ $t('admin.tests.editTest') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('admin.tests.editTestTitle', { description: test.description }) }}</va-card-title>
+    <va-card-title>{{ $t('admin.tests.editTestTitle', { description: test.description }) }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button class="mb-3" @click="showRunTest = !showRunTest">{{ t('admin.tests.runTest') }}</va-button>
+        <va-button class="mb-3" @click="showRunTest = !showRunTest">{{ $t('admin.tests.runTest') }}</va-button>
         <va-modal v-model="showRunTest" no-outside-dismiss no-padding>
           <template #content="{ ok }">
             <form @submit.prevent="run.get('/admin/server/tests/'+test.id+'/run')">
-              <va-card-title>{{ t('admin.tests.runTest') }}</va-card-title>
+              <va-card-title>{{ $t('admin.tests.runTest') }}</va-card-title>
               <va-card-content>
-                {{ t('admin.tests.runTestConfirm') }}
+                {{ $t('admin.tests.runTestConfirm') }}
               </va-card-content>
               <va-card-actions align="right">
-                <va-button color="textInverted" :disabled="run.processing" @click="ok">{{ t('common.cancel') }}</va-button>
-                <va-button type="submit" class="mr-2 mb-2" :disabled="run.processing">{{ t('admin.tests.yesRun') }}</va-button>
+                <va-button color="textInverted" :disabled="run.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                <va-button type="submit" class="mr-2 mb-2" :disabled="run.processing">{{ $t('admin.tests.yesRun') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -61,7 +61,7 @@ import { useForm } from '@inertiajs/vue3'
           </template>
         </AdminSettings>
         <va-list-separator class="my-1" fit />
-        <h3 class="va-h3">{{ t('admin.tests.appSettings') }}</h3>
+        <h3 class="va-h3">{{ $t('admin.tests.appSettings') }}</h3>
         <AdminSettings v-for="(app, index) in apps" :key="index">
           <template #name>{{ app.name }}</template>
           <template #settings>
@@ -83,7 +83,7 @@ import { useForm } from '@inertiajs/vue3'
             />
           </template>
         </AdminSettings>
-        <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ t('common.update') }}</va-button>
+        <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

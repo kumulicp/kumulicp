@@ -185,7 +185,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                     </va-card-content>
                     <va-card-actions align="right">
                       <va-button color="textInverted" @click="ok">
-                        {{ $t('modal.cancel') }}
+                        {{ $t('common.cancel') }}
                       </va-button>
                       <va-button type="submit" id="updatePassword" :disabled="password_form.processing" class="mr-2 mb-2">
                         {{ $t('auth.changePassword') }}
@@ -198,7 +198,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           </va-list-item>
         </va-list>
 
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

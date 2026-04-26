@@ -27,8 +27,8 @@ import { Link, useForm, router } from '@inertiajs/vue3'
             :error-messages="$page.props.errors.tld" />
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
         </va-card-actions>
       </form>
     </template>
@@ -36,9 +36,9 @@ import { Link, useForm, router } from '@inertiajs/vue3'
   <table class="va-table va-table--hoverable mt-3">
     <thead>
       <tr>
-        <th>{{ t('admin.domains.tlds') }}</th>
-        <th>{{ t('admin.domains.standardPrice') }}</th>
-        <th>{{ t('admin.domains.registrationAllowed') }}</th>
+        <th>{{ $t('admin.domains.tlds') }}</th>
+        <th>{{ $t('admin.domains.standardPrice') }}</th>
+        <th>{{ $t('admin.domains.registrationAllowed') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -61,14 +61,14 @@ import { Link, useForm, router } from '@inertiajs/vue3'
     </tbody>
   </table>
   <va-pagination v-if="meta.total > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input @update:modelValue="changePage" />
-  <va-modal v-model="showRemoveTld" hide-default-actions :title="t('admin.domains.removeTitle', { name: removeTld.name })"
-    :message="t('admin.domains.removeMessage', { name: removeTld.name })">
+  <va-modal v-model="showRemoveTld" hide-default-actions :title="$t('admin.domains.removeTitle', { name: removeTld.name })"
+    :message="$t('admin.domains.removeMessage', { name: removeTld.name })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        {{ t('common.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button color="danger"
-        @click="remove.delete('/admin/service/domains/tlds/' + removeTld.id); showRemoveTld = !showRemoveTld">{{ t('common.delete') }}</va-button>
+        @click="remove.delete('/admin/service/domains/tlds/' + removeTld.id); showRemoveTld = !showRemoveTld">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>

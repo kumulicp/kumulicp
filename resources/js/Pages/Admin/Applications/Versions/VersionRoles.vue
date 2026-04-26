@@ -46,7 +46,7 @@ import draggable from 'vuedraggable'
           </template>
           </draggable>
         </va-list>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
       </div>
       <div class="flex xs12 lg4">

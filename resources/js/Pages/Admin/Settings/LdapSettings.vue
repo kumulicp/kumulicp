@@ -106,7 +106,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       :disabled="form.processing"
       class="mr-2 my-2"
     >
-      {{ $t('form.update') }}
+      {{ $t('common.update') }}
     </va-button>
   </form>
 </template>

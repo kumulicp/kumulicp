@@ -21,7 +21,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   immediateValidation
                   id="name"
                   required-mark
-                  :label="$t('form.name')"
+                  :label="$t('common.name')"
                   class="mb-3"
                   :error="$page.props.errors.name"
                   :error-messages="$page.props.errors.name" />
@@ -51,8 +51,8 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   :error-messages="$page.props.errors.description" />
               </va-card-content>
               <va-card-actions align="right" class="">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -66,7 +66,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>{{ $t('form.name') }}</th>
+            <th>{{ $t('common.name') }}</th>
             <th>{{ $t('admin.apps.status') }}</th>
           </tr>
         </thead>

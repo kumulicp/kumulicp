@@ -14,13 +14,13 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
     <title>{{ $t('organization.settings.editOrgTitle', { name: org.name }) }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ $t('form.edit') }} {{ org.name }}</va-card-title>
+    <va-card-title>{{ $t('common.edit') }} {{ org.name }}</va-card-title>
     <va-card-content>
       <form @submit.prevent="form.put('/settings/suborganizations/'+org.id)">
         <div class="row">
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.name"
-              :label="$t('form.name')"
+              :label="$t('common.name')"
               id="name"
               immediateValidation
               :error="$page.props.errors.name"
@@ -163,7 +163,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </template>
       <div class="row justify">
         <div class="flex flex-col">
-          <va-button type="submit" id="submit" class="mt-3">{{ $t('form.update') }}</va-button>
+          <va-button type="submit" id="submit" class="mt-3">{{ $t('common.update') }}</va-button>
         </div>
       </div>
     </form>

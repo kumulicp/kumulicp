@@ -39,8 +39,8 @@ import { Link, useForm } from '@inertiajs/vue3'
                 :error-messages="$page.props.errors.category" />
             </va-card-content>
             <va-card-actions align="right">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-              <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+              <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -65,7 +65,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         <table class="va-table va-table--hoverable mt-3">
           <thead>
             <tr>
-              <th style="width:20rem">{{ $t('form.name') }}</th>
+              <th style="width:20rem">{{ $t('common.name') }}</th>
               <th>{{ $t('organization.groups.category') }}</th>
               <th style="width:6rem"></th>
             </tr>
@@ -83,7 +83,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   color="danger"
                   :id="'delete'+group"
                   @click="showRemoveGroupModal(group)">
-                  {{ t('common.delete') }}
+                  {{ $t('common.delete') }}
                 </va-button>
               </td>
             </tr>
@@ -94,15 +94,15 @@ import { Link, useForm } from '@inertiajs/vue3'
       <va-pagination v-if="numberOfGroups > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input />
     </va-card-content>
   </va-card>
-  <va-modal v-model="showRemoveGroup" hide-default-actions :title="t('organization.groups.removeTitle', { name: removeGroup.name })"
-    :message="t('organization.groups.removeMessage', { name: removeGroup.name })">
+  <va-modal v-model="showRemoveGroup" hide-default-actions :title="$t('organization.groups.removeTitle', { name: removeGroup.name })"
+    :message="$t('organization.groups.removeMessage', { name: removeGroup.name })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        {{ t('common.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button color="danger"
         id="delete"
-        @click="remove.delete('/groups/'+removeGroup.name); showRemoveGroup = !showRemoveGroup">{{ t('common.delete') }}</va-button>
+        @click="remove.delete('/groups/'+removeGroup.name); showRemoveGroup = !showRemoveGroup">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
@@ -144,23 +144,23 @@ export default {
       groups,
       categoryOptions: [
         {
-          text: useI18n().t('organization.groups.department'),
+          text: this.$t('organization.groups.department'),
           value: 'departments'
         },
         {
-          text: useI18n().t('organization.groups.team'),
+          text: this.$t('organization.groups.team'),
           value: 'teams'
         },
         {
-          text: useI18n().t('organization.groups.project'),
+          text: this.$t('organization.groups.project'),
           value: 'projects'
         },
         {
-          text: useI18n().t('organization.groups.ministry'),
+          text: this.$t('organization.groups.ministry'),
           value: 'ministries'
         },
         {
-          text: useI18n().t('organization.groups.other'),
+          text: this.$t('organization.groups.other'),
           value: 'others'
         }
       ],

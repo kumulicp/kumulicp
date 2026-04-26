@@ -82,8 +82,8 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                 />
             </va-card-content>
             <va-card-actions align="right">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-              <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+              <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -117,10 +117,10 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       :message="$t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
       <template #footer="{ cancel }">
         <va-button color="backgroundSecondary" @click="cancel">
-          {{ $t('modal.cancel') }}
+          {{ $t('common.cancel') }}
         </va-button>
         <va-button color="danger"
-          @click="remove.delete('/admin/server/backup_scheduler/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('modal.delete') }}</va-button>
+          @click="remove.delete('/admin/server/backup_scheduler/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('common.delete') }}</va-button>
       </template>
     </va-modal>
 </template>

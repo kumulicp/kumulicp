@@ -6,21 +6,21 @@ import axios from 'axios'
 </script>
 <template>
   <Head>
-    <title>{{ organization.name }} {{ t('admin.tasks.tasks') }} - Control Panel</title>
+    <title>{{ organization.name }} {{ $t('admin.tasks.tasks') }} - Control Panel</title>
   </Head>
   <div class="row">
     <div class="flex flex-col md4">
       <div class="item">
         <VaSelect
           v-model="filterApp"
-          :label="t('admin.tasks.apps')"
+          :label="$t('admin.tasks.apps')"
           :options="apps"
           immediateValidation
           @update:modelValue="updateTaskList"
           clearable
           value-by="id"
           text-by="name"
-          :placeholder="t('admin.tasks.all')"
+          :placeholder="$t('admin.tasks.all')"
         />
       </div>
     </div>
@@ -28,19 +28,19 @@ import axios from 'axios'
       <div class="item">
         <VaSelect
           v-model="filterStatus"
-          :label="t('admin.tasks.status')"
+          :label="$t('admin.tasks.status')"
           :options="statuses"
           immediateValidation
           @update:modelValue="updateTaskList"
           clearable
-          :placeholder="t('admin.tasks.all')"
+          :placeholder="$t('admin.tasks.all')"
         />
       </div>
     </div>
     <div class="flex flex-col" style="flex-grow:1">
       <div class="item va-text-right">
         <VaSwitch v-model="liveMode"
-          :label="t('admin.tasks.liveUpdates')"
+          :label="$t('admin.tasks.liveUpdates')"
           @update:modelValue="changeLiveMode"
           class="mt-3"
         />
@@ -49,12 +49,12 @@ import axios from 'axios'
     <div class="flex flex-col">
       <div class="item va-text-right">
         <VaButtonDropdown
-          :label="t('admin.tasks.actions')"
+          :label="$t('admin.tasks.actions')"
           class="mt-3"
         >
-          <Link href="/admin/server/tasks/run_schedule"><div class="py-2">{{ t('admin.tasks.runScheduledTasks') }}</div></Link>
-          <Link href="/admin/server/tasks/restart_queue"><div class="py-2">{{ t('admin.tasks.restartQueue') }}</div></Link>
-          <Link href="/admin/server/tasks/dummy"><div class="py-2">{{ t('admin.tasks.addDummyTask') }}</div></Link>
+          <Link href="/admin/server/tasks/run_schedule"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
+          <Link href="/admin/server/tasks/restart_queue"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
+          <Link href="/admin/server/tasks/dummy"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
         </VaButtonDropdown>
       </div>
     </div>
@@ -77,7 +77,7 @@ import axios from 'axios'
         color="primary"
         class="ml-3"
         :disabled="liveMode"
-        :title="liveMode ? t('admin.tasks.disableLiveMode') : ''"
+        :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
         @click="restartTaskById(rowIndex)"
       />
       <VaButton
@@ -86,7 +86,7 @@ import axios from 'axios'
         color="danger"
         class="ml-3"
         :disabled="liveMode"
-        :title="liveMode ? t('admin.tasks.disableLiveMode') : ''"
+        :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
         @click="deleteTaskById(rowIndex)"
       />
       <VaButton
@@ -96,14 +96,14 @@ import axios from 'axios'
         color="primary"
         class="ml-3"
         :disabled="liveMode"
-        :title="liveMode ? t('admin.tasks.disableLiveMode') : ''"
+        :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
         @click="row.toggleRowDetails()"
       />
     </template>
     <template #expandableRow="{ rowData }">
       <div class="flex gap-2">
         <div class="pl-2">
-          <b>{{ t('admin.tasks.errorMessage') }}:</b> {{ rowData.error_message }}
+          <b>{{ $t('admin.tasks.errorMessage') }}:</b> {{ rowData.error_message }}
         </div>
       </div>
     </template>
@@ -151,11 +151,11 @@ export default {
         { key: 'actions', sortable: false }
       ],
       statuses: [
-        { text: useI18n().t('admin.tasks.all'), value: '' },
-        { text: useI18n().t('admin.tasks.failed'), value: 'failed' },
-        { text: useI18n().t('admin.tasks.pending'), value: 'pending' },
-        { text: useI18n().t('admin.tasks.inProgress'), value: 'in_progress' },
-        { text: useI18n().t('admin.tasks.completed'), value: 'complete' }
+        { text: this.$t('admin.tasks.all'), value: '' },
+        { text: this.$t('admin.tasks.failed'), value: 'failed' },
+        { text: this.$t('admin.tasks.pending'), value: 'pending' },
+        { text: this.$t('admin.tasks.inProgress'), value: 'in_progress' },
+        { text: this.$t('admin.tasks.completed'), value: 'complete' }
       ],
       interval: ''
     }

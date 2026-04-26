@@ -11,7 +11,7 @@ import { Link } from '@inertiajs/vue3'
   <table class="va-table va-table--hoverable mt-3">
     <thead>
       <tr>
-        <th>{{ $t('form.name') }}</th>
+        <th>{{ $t('common.name') }}</th>
         <th>{{ $t('admin.versions.version') }}</th>
         <th>{{ $t('admin.apps.domainName') }}</th>
         <th>{{ $t('admin.apps.status') }}</th>

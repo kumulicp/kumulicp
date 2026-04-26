@@ -36,11 +36,11 @@ export default {
       value: pathname,
       tabs: [
         {
-          title: this.$t('form.view'),
+          title: this.$t('common.view'),
           url: basePath
         },
         {
-          title: this.$t('form.edit'),
+          title: this.$t('common.edit'),
           url: basePath + '/edit'
         }
       ]

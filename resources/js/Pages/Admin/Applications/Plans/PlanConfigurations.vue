@@ -137,7 +137,7 @@ import { useForm } from '@inertiajs/vue3'
       </va-card-content>
     </va-card>
     <va-button v-if="! showAddNewConfigOptions" class="mr-2 mb-2" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ $t('admin.plans.addConfig') }}</va-button>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 

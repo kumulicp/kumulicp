@@ -6,31 +6,31 @@ import { Link, useForm } from '@inertiajs/vue3'
 
 <template>
   <Head>
-    <title>{{ t('admin.tests.tests') }} - Control Panel</title>
+    <title>{{ $t('admin.tests.tests') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('admin.tests.tests') }} </va-card-title>
+    <va-card-title>{{ $t('admin.tests.tests') }} </va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button @click="showAddTest = !showAddTest">{{ t('admin.tests.addTest') }}</va-button>
+        <va-button @click="showAddTest = !showAddTest">{{ $t('admin.tests.addTest') }}</va-button>
       </div>
         <va-modal v-model="showAddTest" no-outside-dismiss no-padding>
           <template #content>
             <form @submit.prevent="form.post('/admin/server/tests')">
-              <va-card-title>{{ t('admin.tests.addTest') }}</va-card-title>
+              <va-card-title>{{ $t('admin.tests.addTest') }}</va-card-title>
               <va-card-content>
                 <va-input v-model="form.description"
                   required-mark
                   immediateValidation
-                  :label="t('admin.tests.testDescription')"
+                  :label="$t('admin.tests.testDescription')"
                   class="mb-3"
-                  :messages="t('admin.tests.testDescriptionMessage')"
+                  :messages="$t('admin.tests.testDescriptionMessage')"
                   :error="$page.props.errors.description"
                   :error-messages="$page.props.errors.description" />
               </va-card-content>
               <va-card-actions align="right">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('common.cancel') }}</va-button>
-                <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -42,10 +42,10 @@ import { Link, useForm } from '@inertiajs/vue3'
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th style="width: 90%">{{ t('admin.tests.testPurpose') }}</th>
-                <th>{{ t('admin.tests.createdDate') }}</th>
-                <th>{{ t('admin.tests.status') }}</th>
-                <th>{{ t('admin.tests.remove') }}</th>
+                <th style="width: 90%">{{ $t('admin.tests.testPurpose') }}</th>
+                <th>{{ $t('admin.tests.createdDate') }}</th>
+                <th>{{ $t('admin.tests.status') }}</th>
+                <th>{{ $t('admin.tests.remove') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -73,14 +73,14 @@ import { Link, useForm } from '@inertiajs/vue3'
           :page-size="pageSize" />
     </va-card-content>
   </va-card>
-  <va-modal v-model="showRemoveTest" hide-default-actions :title="t('admin.tests.removeTitle', { name: showRemoveTest })"
-    :message="t('admin.tests.removeMessage', { name: removeTest.description })">
+  <va-modal v-model="showRemoveTest" hide-default-actions :title="$t('admin.tests.removeTitle', { name: showRemoveTest })"
+    :message="$t('admin.tests.removeMessage', { name: removeTest.description })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        {{ t('common.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button color="danger"
-        @click="remove.delete('/admin/server/tests/' + removeTest.id); showRemoveTest = !showRemoveTest">{{ t('common.delete') }}</va-button>
+        @click="remove.delete('/admin/server/tests/' + removeTest.id); showRemoveTest = !showRemoveTest">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>

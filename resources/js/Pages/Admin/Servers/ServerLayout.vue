@@ -20,7 +20,6 @@ import { Link } from '@inertiajs/vue3'
 
 export default {
   data () {
-    const i18n = useI18n()
     const server = this.$page.props.server
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/server/servers/' + server.id

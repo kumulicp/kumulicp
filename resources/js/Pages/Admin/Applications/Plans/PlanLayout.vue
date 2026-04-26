@@ -32,7 +32,7 @@ export default {
     const basePath = '/admin/apps/' + app.slug + '/plans/' + plan.id
     const tabs = [
       {
-        title: this.$t('form.view'),
+        title: this.$t('common.view'),
         url: basePath
       },
       {
@@ -49,7 +49,7 @@ export default {
       }
     ]
 
-    let value = this.$t('form.view')
+    let value = this.$t('common.view')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

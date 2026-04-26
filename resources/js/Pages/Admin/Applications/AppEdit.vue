@@ -37,7 +37,7 @@ import { useForm } from '@inertiajs/vue3'
         </div>
       </template>
       <template #footer="{ ok }">
-        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
         <va-button @click="toggle.post('/admin/apps/'+app.slug+'/'+app.toggle.state, {
             onSuccess: () => showEnableDisable = false
           })"
@@ -163,7 +163,7 @@ import { useForm } from '@inertiajs/vue3'
     <div class="mb-3">
       <tinymce-editor v-model:htmlContent="form.description" />
     </div>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 

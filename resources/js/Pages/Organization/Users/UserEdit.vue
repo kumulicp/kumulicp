@@ -134,7 +134,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <div v-if="form['additional_storage'][storage.id] != storage.quantity" class="subscription_warning"><b>{{ $t('organization.users.warningLabel') }}</b> {{ $t('organization.users.storageWarning', { name: storage.name }) }}</div>
         </div>
       </div>
-      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
     </form>
   </div>
 </template>

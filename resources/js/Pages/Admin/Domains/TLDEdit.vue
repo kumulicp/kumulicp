@@ -52,7 +52,7 @@ import { useForm } from '@inertiajs/vue3'
             </va-list-item-section>
           </va-list-item>
         </va-list>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

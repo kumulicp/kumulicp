@@ -446,7 +446,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         </va-input>
       </template>
     </AdminSettings>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 

@@ -70,7 +70,17 @@
     "add": "Add",
     "save": "Save",
     "submit": "Submit",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "name": "Name",
+    "yes": "Yes!",
+    "view": "View"
+  },
+  "modal": {
+    "ok": "Ok"
+  },
+  "form": {
+    "cleanYaml": "Clean up YAML",
+    "reset": "Reset"
   },
   "admin": {
     "announcement": {
@@ -397,9 +407,9 @@
       "deleteLater": "Later",
       "deleteStart": "Between",
       "deleteEnd": "And",
-      "update_modal": "This will update this apps settings, which may cause temporary downtime. Are you sure you want to continue?",
-      "upgrade_modal": "This will upgrade the server configurations for this app, which may cause temporary downtime. Are you sure you want to continue?",
-      "delete_modal": "This will permenantly delete this app. Are you sure you want to continue?",
+      "updateModal": "This will update this apps settings, which may cause temporary downtime. Are you sure you want to continue?",
+      "upgradeModal": "This will upgrade the server configurations for this app, which may cause temporary downtime. Are you sure you want to continue?",
+      "deleteModal": "This will permenantly delete this app. Are you sure you want to continue?",
       "name": "Name",
       "nameMessage": "Name that will appear to organizations",
       "category": "Category",
@@ -567,17 +577,6 @@
     "spanish": "Spanish",
     "simplified_chinese": "Simplified Chinese",
     "persian": "Persian"
-  },
-  "modal": {
-    "cancel": "Cancel",
-    "close": "Close",
-    "confirm": "Confirm",
-    "delete": "Delete",
-    "unsubscribe": "Unsubscribe",
-    "deactivate": "Deactivate",
-    "resubscribe": "Resubscribe",
-    "reactivate": "Reactivate",
-    "yes": "Yes!"
   },
   "vuestic": {
     "dropzone": "Upload Image",
@@ -1012,16 +1011,6 @@
     "link": {
       "readFullAnnouncement": "Read Full Announcement"
     }
-  },
-  "form": {
-    "update": "Update",
-    "remove": "Remove",
-    "submit": "Submit",
-    "edit": "Edit",
-    "view": "View",
-    "name": "Name",
-    "cancel": "Cancel",
-    "cleanYaml": "Clean up YAML"
   },
   "status": {
     "enabled": "Enabled",

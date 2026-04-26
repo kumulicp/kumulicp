@@ -89,7 +89,7 @@ import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
           :disabled="form.processing"
           class="mr-2 mb-2"
         >
-          {{ $t('form.update') }}
+          {{ $t('common.update') }}
         </va-button>
       </form>
     </va-card-content>

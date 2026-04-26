@@ -74,7 +74,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     <div class="row ml-1 mb-3">
       <div class="flex flex-col xs12">
         <div>
-          <va-button type="submit">{{ $t('form.update') }}</va-button>
+          <va-button type="submit">{{ $t('common.update') }}</va-button>
         </div>
       </div>
     </div>
@@ -150,13 +150,13 @@ import { Link, useForm } from '@inertiajs/vue3'
               class="mr-2"
               :title="$t('organization.webDomains.editName', { name: subdomain.name })"
               @click="showEditRecord(subdomain)">
-              {{ $t('form.edit') }}
+              {{ $t('common.edit') }}
             </va-button>
             <va-button v-if="subdomain.can.delete"
               color="danger"
               :title="$t('organization.webDomains.removeName', { name: subdomain.name })"
               @click="deleteSubdomain(subdomain)">
-              {{ $t('modal.delete') }}
+              {{ $t('common.delete') }}
             </va-button>
           </td>
         </tr>
@@ -226,8 +226,8 @@ import { Link, useForm } from '@inertiajs/vue3'
             />
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
-          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
         </va-card-actions>
       </form>
     </template>
@@ -301,8 +301,8 @@ import { Link, useForm } from '@inertiajs/vue3'
             />
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
-          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
         </va-card-actions>
       </form>
     </template>
@@ -311,10 +311,10 @@ import { Link, useForm } from '@inertiajs/vue3'
     :message="$t('organization.webDomains.removeSubdomainMessage', { name: subdomainToDelete.name })">
     <template #footer>
       <va-button color="backgroundSecondary" @click="showDeleteSubdomainModal = false">
-        {{ $t('form.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button id="delete" color="danger"
-        @click="remove.delete('/settings/domains/'+domain.name+'/subdomains/'+subdomainToDelete.id); showDeleteSubdomainModal = false">{{ $t('modal.delete') }}</va-button>
+        @click="remove.delete('/settings/domains/'+domain.name+'/subdomains/'+subdomainToDelete.id); showDeleteSubdomainModal = false">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 

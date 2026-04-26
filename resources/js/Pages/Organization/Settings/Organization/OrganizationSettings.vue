@@ -143,7 +143,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <div class="row justify">
         <div class="flex flex-col">
-          <va-button type="submit" id="submit" class="mt-3">{{ $t('form.update') }}</va-button>
+          <va-button type="submit" id="submit" class="mt-3">{{ $t('common.update') }}</va-button>
         </div>
       </div>
     </form>

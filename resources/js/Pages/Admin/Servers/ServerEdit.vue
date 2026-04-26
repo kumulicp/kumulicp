@@ -7,10 +7,10 @@ import { Link, useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.servers.server') }} - Control Panel</title>
+    <title>{{ $t('admin.servers.server') }} - Control Panel</title>
   </Head>
   <div class="row justify-center" v-if="server.status != 'active' && can.activate">
-    <Link :href="'/admin/server/servers/'+server.id+'/confirm'"><va-button>{{ t('admin.servers.confirmServerSettings') }}</va-button></Link>
+    <Link :href="'/admin/server/servers/'+server.id+'/confirm'"><va-button>{{ $t('admin.servers.confirmServerSettings') }}</va-button></Link>
   </div>
   <div v-else-if="server.status != 'active' && !can.activate">
     <va-alert
@@ -19,7 +19,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       outline
       class="mb-3"
     >
-      {{ t('admin.servers.runTestInstructions') }}
+      {{ $t('admin.servers.runTestInstructions') }}
     </va-alert>
   </div>
   <va-alert
@@ -34,7 +34,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         color="info"
       />
     </template>
-      <h5 class="va-h5">{{ t('admin.servers.setupInstructions') }}</h5>
+      <h5 class="va-h5">{{ $t('admin.servers.setupInstructions') }}</h5>
       <p v-for="(paragraph, index) in server.description.general" :key="index"
         class="py-1">
         {{ paragraph }}
@@ -45,7 +45,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     <va-list-item v-if="server.app_instance" class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.servers.appInstance') }}</h5>
+          <h5>{{ $t('admin.servers.appInstance') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -58,7 +58,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.servers.type') }}</h5>
+          <h5>{{ $t('admin.servers.type') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -69,7 +69,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.servers.interface') }}</h5>
+          <h5>{{ $t('admin.servers.interface') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -79,11 +79,11 @@ import { Link, useForm } from '@inertiajs/vue3'
   </va-list>
   <va-list-separator class="my-1" fit />
   <AdminSettings>
-    <template #name>{{ t('admin.servers.serverConnectionInfo') }}</template>
+    <template #name>{{ $t('admin.servers.serverConnectionInfo') }}</template>
     <template #description></template>
     <template #settings>
       <va-input v-model="form.name"
-        :label="t('admin.servers.serverName')"
+        :label="$t('admin.servers.serverName')"
         id="name"
         class="mb-2"
         immediateValidation
@@ -91,7 +91,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.name"
       />
       <va-input v-model="form.host"
-        :label="t('admin.servers.host')"
+        :label="$t('admin.servers.host')"
         :messages="server.description.host"
         id="host"
         class="mb-2"
@@ -100,7 +100,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.host"
       />
       <va-input v-model="form.address"
-        :label="t('admin.servers.address')"
+        :label="$t('admin.servers.address')"
         :messages="server.description.address"
         id="address"
         class="mb-2"
@@ -109,7 +109,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.address"
       />
       <va-input v-model="form.api_key"
-        :label="t('admin.servers.apiKey')"
+        :label="$t('admin.servers.apiKey')"
         :messages="server.description.api_key"
         id="apiKey"
         class="mb-2"
@@ -118,7 +118,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.api_key"
       />
       <va-input v-model="form.api_secret"
-        :label="t('admin.servers.apiSecret')"
+        :label="$t('admin.servers.apiSecret')"
         :messages="server.description.api_secret"
         id="apiSecret"
         class="mb-2"
@@ -127,7 +127,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.api_secret"
       />
       <va-input v-model="form.ip"
-        :label="t('admin.servers.ip')"
+        :label="$t('admin.servers.ip')"
         :messages="server.description.ip"
         id="ip"
         class="mb-2"
@@ -136,7 +136,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.ip"
       />
       <va-input v-model="form.internal_address"
-        :label="t('admin.servers.internalAddress')"
+        :label="$t('admin.servers.internalAddress')"
         :messages="server.description.internal_address"
         id="internalAddress"
         class="mb-2"
@@ -145,7 +145,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.internal_address"
       />
       <va-select v-model="form.default_backup_server"
-        :label="t('admin.servers.defaultBackupServer')"
+        :label="$t('admin.servers.defaultBackupServer')"
         id="defaultBackupServer"
         :options="backup_servers"
         immediateValidation
@@ -156,7 +156,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error-messages="$page.props.errors.default_backup_server"
       />
       <va-checkbox v-model="form.is_backup_server"
-        :label="t('admin.servers.isBackupServer')"
+        :label="$t('admin.servers.isBackupServer')"
         id="isBackupServer"
         class="mb-2"
         immediateValidation
@@ -167,7 +167,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   </AdminSettings>
   <va-list-separator class="my-1" fit />
   <AdminSettings>
-    <template #name>{{ t('admin.servers.settings') }}</template>
+    <template #name>{{ $t('admin.servers.settings') }}</template>
     <template #description>{{ server.description.settings}}</template>
     <template #settings>
       <template v-for="(setting, index) in settings" :key="index">
@@ -197,7 +197,7 @@ import { Link, useForm } from '@inertiajs/vue3'
           </div>
         </div>
       </template>
-      <va-button @click="addNewSetting()">{{ t('admin.servers.addSetting') }}</va-button>
+      <va-button @click="addNewSetting()">{{ $t('admin.servers.addSetting') }}</va-button>
     </template>
   </AdminSettings>
   <va-button type="submit"
@@ -205,7 +205,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     :disabled="form.processing"
     class="mr-2 mb-2"
   >
-    {{ t('common.update') }}
+    {{ $t('common.update') }}
   </va-button>
 </form>
 </template>
@@ -237,9 +237,9 @@ export default {
     return {
       settings,
       server_types: [
-        { value: 'web', text: useI18n().t('admin.servers.web') },
-        { value: 'database', text: useI18n().t('admin.servers.database') },
-        { value: 'email', text: useI18n().t('admin.servers.email') }
+        { value: 'web', text: this.$t('admin.servers.web') },
+        { value: 'database', text: this.$t('admin.servers.database') },
+        { value: 'email', text: this.$t('admin.servers.email') }
       ],
       form: useForm({
         name: this.server.name,

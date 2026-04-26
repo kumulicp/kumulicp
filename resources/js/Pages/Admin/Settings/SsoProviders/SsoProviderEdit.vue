@@ -31,7 +31,7 @@ import { useForm } from '@inertiajs/vue3'
               immediateValidation
               id="name"
               required-mark
-              :label="$t('form.name')"
+              :label="$t('common.name')"
               class="mb-3"
               :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.name"
@@ -92,7 +92,7 @@ import { useForm } from '@inertiajs/vue3'
               :error-messages="$page.props.errors.scopes" />
           </template>
         </AdminSettings>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

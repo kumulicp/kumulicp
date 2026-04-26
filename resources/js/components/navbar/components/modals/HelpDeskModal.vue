@@ -59,9 +59,9 @@ import { useToast } from 'vuestic-ui'
           </va-card-content>
           <va-card-actions align="right">
             <va-button color="textInverted" @click="ok">
-              {{ $t('modal.cancel') }}
+              {{ $t('common.cancel') }}
             </va-button>
-            <va-button type="submit" :disabled="processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+            <va-button type="submit" :disabled="processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>

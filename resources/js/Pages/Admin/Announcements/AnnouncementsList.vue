@@ -36,8 +36,8 @@ import { Link, useForm } from '@inertiajs/vue3'
                       />
                     </va-card-content>
                     <va-card-actions align="right" class="">
-                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-                      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
                     </va-card-actions>
                   </form>
                 </template>
@@ -61,7 +61,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                     <td class="va-text-center">
                       <va-button color="danger"
                         @click="showRemoveAnnouncementModal(announcement)">
-                        {{ $t('form.remove') }}
+                        {{ $t('common.remove') }}
                       </va-button>
                     </td>
                   </tr>
@@ -75,10 +75,10 @@ import { Link, useForm } from '@inertiajs/vue3'
           :message="$t('admin.announcement.removeMessage', { name: removeAnnouncement.title })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              {{ $t('modal.cancel') }}
+              {{ $t('common.cancel') }}
             </va-button>
             <va-button color="danger"
-              @click="remove.delete('/admin/service/announcements/' + removeAnnouncement.id); showRemoveAnnouncement = !showRemoveAnnouncement">{{ $t('modal.delete') }}</va-button>
+              @click="remove.delete('/admin/service/announcements/' + removeAnnouncement.id); showRemoveAnnouncement = !showRemoveAnnouncement">{{ $t('common.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

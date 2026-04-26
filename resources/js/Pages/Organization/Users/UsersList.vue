@@ -66,8 +66,8 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         :error-messages="$page.props.errors.phone_number" />
                     </va-card-content>
                     <va-card-actions align="right" class="">
-                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-                      <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                      <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
                     </va-card-actions>
                   </form>
                 </template>
@@ -80,7 +80,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               <table class="va-table va-table--hoverable mt-3">
                 <thead>
                   <tr>
-                    <th style="width:20rem">{{ $t('form.name') }}</th>
+                    <th style="width:20rem">{{ $t('common.name') }}</th>
                     <th>{{ $t('auth.email') }}</th>
                     <th style="width:10rem">{{ $t('organization.users.type') }}</th>
                     <th style="width:50rem"></th>
@@ -108,7 +108,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         @click="showRemoveUserModal(user.id)"
                         :title="user.can.delete ? $t('organization.users.deleteUserTitle', { name: user.name }) : $t('organization.users.cantDeleteUser')"
                         :disabled="! user.can.delete">
-                        {{ $t('modal.delete') }}
+                        {{ $t('common.delete') }}
                       </va-button>
                     </td>
                     <td class="xl:hidden va-text-right">
@@ -134,10 +134,10 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :message="$t('organization.users.removeUserMessage', { name: removeUser })">
           <template #footer>
             <va-button color="backgroundSecondary" @click="showRemoveUser = false">
-              {{ $t('modal.cancel') }}
+              {{ $t('common.cancel') }}
             </va-button>
             <va-button id="delete" color="danger"
-              @click="remove.delete('/users/' + removeUser); showRemoveUser = !showRemoveUser">{{ $t('modal.delete') }}</va-button>
+              @click="remove.delete('/users/' + removeUser); showRemoveUser = !showRemoveUser">{{ $t('common.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

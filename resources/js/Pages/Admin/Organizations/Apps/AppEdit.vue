@@ -83,7 +83,7 @@ import AppsLayout from './AppsLayout.vue'
             {{ $page.props.errors.settings }}
         </div>
         </div>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
     </form>
     <va-modal v-model="showUpdateAppModal"
     hide-default-actions
@@ -93,11 +93,11 @@ import AppsLayout from './AppsLayout.vue'
       <template #content="{ ok }">
         <va-card-title class="m-0">{{ $t('admin.apps.update') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-          {{ $t('admin.apps.update_modal') }}
+          {{ $t('admin.apps.updateModal') }}
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('modal.yes') }}</va-button></Link>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('common.yes') }}</va-button></Link>
         </va-card-actions>
       </template>
     </va-modal>
@@ -109,11 +109,11 @@ import AppsLayout from './AppsLayout.vue'
       <template #content="{ ok }">
         <va-card-title class="m-0">{{ $t('admin.apps.upgrade') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-            {{ $t('admin.apps.upgrade_modal') }}
+            {{ $t('admin.apps.upgradeModal') }}
         </va-card-content>
         <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-            <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+app.version.id"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('modal.yes') }}</va-button></Link>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+app.version.id"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('common.yes') }}</va-button></Link>
         </va-card-actions>
       </template>
     </va-modal>
@@ -125,7 +125,7 @@ import AppsLayout from './AppsLayout.vue'
       <template #content="{ ok }">
         <va-card-title class="m-0">{{ $t('admin.apps.delete') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-            {{ $t('admin.apps.delete_modal') }}
+            {{ $t('admin.apps.deleteModal') }}
 
             <div class="row mt-3">
               <div class="flex flex-col xs12">
@@ -149,8 +149,8 @@ import AppsLayout from './AppsLayout.vue'
             </div>
         </va-card-content>
         <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-            <va-button color="danger" type="submit" id="submit" class="mr-2" @click="deleteApp.delete('/admin/organizations/'+organization.id+'/apps/'+app.id)" :disabled="form.processing">{{ $t('modal.yes') }}</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button color="danger" type="submit" id="submit" class="mr-2" @click="deleteApp.delete('/admin/organizations/'+organization.id+'/apps/'+app.id)" :disabled="form.processing">{{ $t('common.yes') }}</va-button>
         </va-card-actions>
       </template>
     </va-modal>

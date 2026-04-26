@@ -153,8 +153,8 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         </div>
                     </va-card-content>
                     <va-card-actions align="right" class="">
-                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-                      <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                      <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
                     </va-card-actions>
                   </form>
                 </template>
@@ -168,7 +168,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               <table class="va-table va-table--hoverable mt-3">
                 <thead>
                   <tr>
-                    <th style="width:20rem">{{ $t('form.name') }}</th>
+                    <th style="width:20rem">{{ $t('common.name') }}</th>
                     <th>{{ $t('auth.email') }}</th>
                     <th style="width: 10rem"></th>
                   </tr>
@@ -186,7 +186,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         color="danger"
                         :id="'delete'+organization.id"
                         @click="showRemoveOrgModal(organization.id)">
-                        {{ $t('modal.delete') }}
+                        {{ $t('common.delete') }}
                       </va-button>
                     </td>
                   </tr>
@@ -199,10 +199,10 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               :message="$t('organization.settings.removeOrgMessage', { name: removeOrg })">
               <template #footer>
                 <va-button color="backgroundSecondary" @click="showRemoveOrg = false">
-                  {{ $t('modal.cancel') }}
+                  {{ $t('common.cancel') }}
                 </va-button>
                 <va-button id="delete" color="danger"
-                  @click="remove.delete('/settings/suborganizations/' + removeOrg); showRemoveOrg = !showRemoveOrg">{{ $t('modal.delete') }}</va-button>
+                  @click="remove.delete('/settings/suborganizations/' + removeOrg); showRemoveOrg = !showRemoveOrg">{{ $t('common.delete') }}</va-button>
               </template>
         </va-modal>
           </va-card-content>

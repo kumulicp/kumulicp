@@ -6,19 +6,19 @@ import { useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ organization.name }} {{ t('admin.backups.backups') }} - Control Panel</title>
+    <title>{{ organization.name }} {{ $t('admin.backups.backups') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <va-button class="" @click="showScheduleBackup = !showScheduleBackup">{{ t('admin.backups.scheduleBackup') }}</va-button>
+    <va-button class="" @click="showScheduleBackup = !showScheduleBackup">{{ $t('admin.backups.scheduleBackup') }}</va-button>
     <va-modal v-model="showScheduleBackup" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content>
         <form @submit.prevent="form.post('/admin/organizations/'+organization.id+'/backups', {onFinish: () => backupScheduled()})">
-          <va-card-title class="m-0"> {{ t('admin.backups.scheduleBackup') }} </va-card-title>
+          <va-card-title class="m-0"> {{ $t('admin.backups.scheduleBackup') }} </va-card-title>
           <va-card-content class="m-0">
               <va-date-input v-model="form.date"
                 required-mark
                 immediateValidation
-                :label="t('admin.backups.date')"
+                :label="$t('admin.backups.date')"
                 class="w-48 mb-3"
                 :error="$page.props.errors.date"
                 :error-messages="$page.props.errors.date"
@@ -28,7 +28,7 @@ import { useForm } from '@inertiajs/vue3'
                 class="w-28 mb-3"
                 required-mark
                 immediateValidation
-                :label="t('admin.backups.time')"
+                :label="$t('admin.backups.time')"
                 :error="$page.props.errors.time"
                 :error-messages="$page.props.errors.time"
                 @update:modelValue="updateDateTime()"
@@ -36,19 +36,19 @@ import { useForm } from '@inertiajs/vue3'
             <va-input type="number"
               v-model="form.keep_for"
               required-mark
-              :label="t('admin.backups.keepForDays')"
+              :label="$t('admin.backups.keepForDays')"
               class="mb-3"
               :error="$page.props.errors.keep_for"
               :error-messages="$page.props.errors.keep_for"
               >
               <template #appendInner>
-                {{ t('admin.backups.days') }}
+                {{ $t('admin.backups.days') }}
               </template>
             </va-input>
             <va-select
               v-model="form.backup_type"
               class="mb-3"
-              :label="t('admin.backups.backupType')"
+              :label="$t('admin.backups.backupType')"
               :options="backup_types"
               text-by="text"
               value-by="value"
@@ -59,7 +59,7 @@ import { useForm } from '@inertiajs/vue3'
             <va-select
               v-model="form.backup"
               class="mb-3"
-              :label="t('admin.backups.backup')"
+              :label="$t('admin.backups.backup')"
               :options="backup_options"
               text-by="text"
               value-by="value"
@@ -69,8 +69,8 @@ import { useForm } from '@inertiajs/vue3'
             />
           </va-card-content>
           <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('common.cancel') }}</va-button>
-            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>
@@ -83,12 +83,12 @@ import { useForm } from '@inertiajs/vue3'
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>{{ t('admin.backups.action') }}</th>
-          <th>{{ t('admin.backups.scheduledAt') }}</th>
-          <th>{{ t('admin.backups.name') }}</th>
-          <th>{{ t('admin.backups.type') }}</th>
-          <th>{{ t('admin.backups.status') }}</th>
-          <th>{{ t('admin.backups.completedAt') }}</th>
+          <th>{{ $t('admin.backups.action') }}</th>
+          <th>{{ $t('admin.backups.scheduledAt') }}</th>
+          <th>{{ $t('admin.backups.name') }}</th>
+          <th>{{ $t('admin.backups.type') }}</th>
+          <th>{{ $t('admin.backups.status') }}</th>
+          <th>{{ $t('admin.backups.completedAt') }}</th>
           <th></th>
         </tr>
       </thead>
@@ -115,26 +115,26 @@ import { useForm } from '@inertiajs/vue3'
 
   <va-modal v-model="showRestore" no-padding size="small" class="p-0">
     <template #content>
-      <va-card-title class="m-0"> {{ t('admin.backups.restoreBackup') }} </va-card-title>
+      <va-card-title class="m-0"> {{ $t('admin.backups.restoreBackup') }} </va-card-title>
       <va-card-content class="m-0">
-        {{ t('admin.backups.restoreConfirm', { org: organization.name, app: selected_backup.app.name, type: selected_backup.type, scheduled: selected_backup.scheduled_at }) }}
+        {{ $t('admin.backups.restoreConfirm', { org: organization.name, app: selected_backup.app.name, type: selected_backup.type, scheduled: selected_backup.scheduled_at }) }}
       </va-card-content>
       <va-card-actions align="right" class="">
-        <va-button color="textInverted" @click="showRestore = false">{{ t('common.cancel') }}</va-button>
-        <va-button :href="'/admin/organizations/'+organization.id+'/backups/'+selected_backup.id+'/restore'" class="mr-2 mb-2" @click="showRestore = false">{{ t('admin.backups.restore') }}</va-button>
+        <va-button color="textInverted" @click="showRestore = false">{{ $t('common.cancel') }}</va-button>
+        <va-button :href="'/admin/organizations/'+organization.id+'/backups/'+selected_backup.id+'/restore'" class="mr-2 mb-2" @click="showRestore = false">{{ $t('admin.backups.restore') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
 
   <va-modal v-model="showDelete" no-padding size="small" class="p-0">
     <template #content>
-      <va-card-title class="m-0"> {{ t('admin.backups.deleteScheduledBackup') }} </va-card-title>
+      <va-card-title class="m-0"> {{ $t('admin.backups.deleteScheduledBackup') }} </va-card-title>
       <va-card-content class="m-0">
-        {{ t('admin.backups.deleteConfirm', { org: organization.name, app: selected_backup.app.name, type: selected_backup.type, scheduled: selected_backup.scheduled_at }) }}
+        {{ $t('admin.backups.deleteConfirm', { org: organization.name, app: selected_backup.app.name, type: selected_backup.type, scheduled: selected_backup.scheduled_at }) }}
       </va-card-content>
       <va-card-actions align="right" class="">
-        <va-button color="textInverted" @click="showDelete = false">{{ t('common.cancel') }}</va-button>
-        <va-button class="mr-2 mb-2" @click="deleteBackup(selected_backup.id)">{{ t('common.delete') }}</va-button>
+        <va-button color="textInverted" @click="showDelete = false">{{ $t('common.cancel') }}</va-button>
+        <va-button class="mr-2 mb-2" @click="deleteBackup(selected_backup.id)">{{ $t('common.delete') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -167,8 +167,8 @@ export default {
         backup: ''
       }),
       backup_types: [
-        { text: useI18n().t('admin.backups.email'), value: 'email' },
-        { text: useI18n().t('admin.backups.appDatabase'), value: 'database' }
+        { text: this.$t('admin.backups.email'), value: 'email' },
+        { text: this.$t('admin.backups.appDatabase'), value: 'database' }
       ],
       selected_backup: '',
       showRestore: false,

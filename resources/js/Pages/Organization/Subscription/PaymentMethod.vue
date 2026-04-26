@@ -60,7 +60,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                             color="backgroundSecondary"
                             @click="showRemoveBillingManager = false"
                           >
-                            {{ $t('modal.cancel') }}
+                            {{ $t('common.cancel') }}
                           </va-button>
                           <va-button
                             id="remove"
@@ -124,7 +124,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                 color="backgroundSecondary"
                 @click="cancel"
               >
-                {{ $t('modal.cancel') }}
+                {{ $t('common.cancel') }}
               </va-button>
               <va-button
                 color="primary"

@@ -14,7 +14,7 @@
           <va-input v-model="name"
             immediateValidation
             class="mb-3"
-            :label="$t('form.name')" />
+            :label="$t('common.name')" />
 
           <va-input v-model="password"
             class="mb-3"

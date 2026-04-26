@@ -94,40 +94,40 @@ import { Link, useForm } from '@inertiajs/vue3'
         :message="$t('messages.unsubscribe', {plan: plan.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showUnsubscribeModal = false">
-            {{ $t('modal.cancel') }}
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ $t('modal.unsubscribe') }}</va-button>
+            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ $t('plan.unsubscribe') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showResubscribeModal" hide-default-actions :title="$t('organization.subscription.cancelUnsubscribeTitle')"
         :message="$t('messages.resubscribe', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showResubscribeModal = false">
-            {{ $t('modal.cancel') }}
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ $t('modal.resubscribe') }}</va-button>
+            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ $t('plan.resubscribe') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showDeactivateModal" hide-default-actions :title="$t('organization.subscription.deactivateAppTitle')"
         :message="$t('messages.deactivate', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showDeactivateModal = false">
-            {{ $t('modal.cancel') }}
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ $t('modal.deactivate') }}</va-button>
+            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ $t('plan.deactivate') }}</va-button>
         </template>
       </va-modal>
       <va-modal v-model="showReactivateModal" hide-default-actions :title="$t('organization.subscription.cancelDeactivatingTitle')"
         :message="$t('messages.reactivate', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showReactivateModal = false">
-            {{ $t('modal.cancel') }}
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ $t('modal.reactivate') }}</va-button>
+            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ $t('plan.reactivate') }}</va-button>
         </template>
       </va-modal>
     </div>

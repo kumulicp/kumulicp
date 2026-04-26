@@ -139,7 +139,7 @@ import { useForm, Link } from '@inertiajs/vue3'
                 :disabled="form.processing || !can.update_app"
               >
                 <template v-if="can.update_app">
-                  {{ $t('form.update') }}
+                  {{ $t('common.update') }}
                 </template>
                 <template v-else>
                   {{ $t('organization.apps.unableToUpdate') }}

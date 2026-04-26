@@ -25,7 +25,7 @@ import { useForm } from '@inertiajs/vue3'
               </div>
             </va-card-content>
             <va-card-actions align="right" class="">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
               <va-button type="submit" id="enableDisable" :disabled="form.processing" class="mr-2 mb-2">{{ version.toggle.label }}</va-button>
             </va-card-actions>
           </form>
@@ -190,7 +190,7 @@ import { useForm } from '@inertiajs/vue3'
                 />
           </template>
         </AdminSettings>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
       </form>
       </div>
     </div>

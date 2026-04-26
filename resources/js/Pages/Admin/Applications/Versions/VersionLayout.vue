@@ -26,7 +26,7 @@ export default {
     const basePath = '/admin/apps/' + app.slug + '/versions/' + version.version
     const tabs = [
       {
-        title: this.$t('form.edit'),
+        title: this.$t('common.edit'),
         url: basePath
       },
       {
@@ -35,7 +35,7 @@ export default {
       }
     ]
 
-    let value = this.$t('form.edit')
+    let value = this.$t('common.edit')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

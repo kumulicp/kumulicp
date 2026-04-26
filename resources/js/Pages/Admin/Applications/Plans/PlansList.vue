@@ -21,7 +21,7 @@ import draggable from 'vuedraggable'
             <va-card-content class="m-0">
               <va-input v-model="form.name"
                 id="name"
-                :label="$t('form.name')"
+                :label="$t('common.name')"
                 class="mb-3"
                 required-mark
                 immediateValidation
@@ -39,8 +39,8 @@ import draggable from 'vuedraggable'
                 />
             </va-card-content>
             <va-card-actions align="right" class="">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
-              <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+              <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>

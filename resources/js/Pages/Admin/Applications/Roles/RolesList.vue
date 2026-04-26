@@ -69,8 +69,8 @@ import { Link, useForm } from '@inertiajs/vue3'
             />
           </va-card-content>
           <va-card-actions align="right">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
-            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>

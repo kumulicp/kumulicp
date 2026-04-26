@@ -81,7 +81,7 @@ import { useForm } from '@inertiajs/vue3'
       </AdminSettings>
       <va-list-separator class="my-2" fit />
     </template>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 
