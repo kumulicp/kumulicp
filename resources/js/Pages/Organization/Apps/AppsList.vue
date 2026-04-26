@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm, router } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>Apps - Control Panel</title>
+    <title>{{ $t('organization.apps.appsTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Apps</va-card-title>
+    <va-card-title>{{ $t('organization.apps.appsTitle') }}</va-card-title>
     <va-card-content>
       <div v-if="$page.props.auth.status !== 'deactivated'" class="row justify-center">
-        <Link href="/discover"><va-button class="">Discover More</va-button></Link>
+        <Link href="/discover"><va-button class="">{{ $t('organization.apps.discoverMore') }}</va-button></Link>
       </div>
       <div class="va-table-responsive">
         <va-scroll-container
@@ -24,9 +22,9 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th style="width: 1%" class="va-text-center">Status</th>
-                <th>App</th>
-                <th v-if="multiple_orgs">Organization</th>
+                <th style="width: 1%" class="va-text-center">{{ $t('status.enabled') }}</th>
+                <th>{{ $t('admin.apps.appWord') }}</th>
+                <th v-if="multiple_orgs">{{ $t('organization.organization') }}</th>
                 <th v-if="$page.props.auth.status !== 'deactivated'" style="width: 30rem" class="va-text-right"></th>
                 <th v-if="$page.props.auth.status !== 'deactivated'" style="width: 1%" class="va-text-center hidden xl:table-cell"></th>
               </tr>
@@ -68,13 +66,13 @@ const { t } = useI18n()
                 <td class="va-text-right vertical-middle hidden xl:table-cell">
                   <template v-if="$page.props.auth.status !== 'deactivated' && !deactivated_statuses.includes(app.status)">
                     <a v-if="app.address && app.has_admin_address" :href="app.address" target="_blank">
-                      Visit Website
+                      {{ $t('organization.apps.visitWebsite') }}
                     </a>
                     <a v-else-if="app.address && ! app.has_admin_address" :href="app.address" target="_blank">
-                      Login to App
+                      {{ $t('organization.apps.loginToApp') }}
                     </a>
                     <a v-if="app.has_admin_address" :href="app.admin_address" class="ml-3" target="_blank">
-                      Login to App
+                      {{ $t('organization.apps.loginToApp') }}
                     </a>
                   </template>
                 </td>
@@ -83,18 +81,18 @@ const { t } = useI18n()
                     color="danger"
                   :disabled="deactivated_statuses.includes(app.status)"
                   @click="deactivateApp(app)">
-                  Deactivate
+                  {{ $t('modal.deactivate') }}
                   </va-button>
                 </td>
               <td class="xl:hidden va-text-right">
                 <va-button-dropdown
                   id="actions"
-                  label="Actions"
+                  :label="$t('organization.apps.actions')"
                 >
-                  <a v-if="app.address && app.has_admin_address" :href="app.address" target="_blank" class="mr-3"><div class="py-1">Visit Website</div></a>
-                  <a v-else-if="app.address && ! app.has_admin_address" :href="app.address" target="_blank" class="mr-3"><div class="py-1">Login to App</div></a>
-                  <a v-if="app.has_admin_address" :href="app.admin_address" target="_blank" class="mr-3"><div class="py-1">Login to App</div></a>
-                  <a href="#" @click="deactivateApp(app)"><div class="py-1" color="danger">Deactivate</div></a>
+                  <a v-if="app.address && app.has_admin_address" :href="app.address" target="_blank" class="mr-3"><div class="py-1">{{ $t('organization.apps.visitWebsite') }}</div></a>
+                  <a v-else-if="app.address && ! app.has_admin_address" :href="app.address" target="_blank" class="mr-3"><div class="py-1">{{ $t('organization.apps.loginToApp') }}</div></a>
+                  <a v-if="app.has_admin_address" :href="app.admin_address" target="_blank" class="mr-3"><div class="py-1">{{ $t('organization.apps.loginToApp') }}</div></a>
+                  <a href="#" @click="deactivateApp(app)"><div class="py-1" color="danger">{{ $t('modal.deactivate') }}</div></a>
                 </va-button-dropdown>
               </td>
               </tr>
@@ -106,15 +104,15 @@ const { t } = useI18n()
   </va-card>
   <va-modal v-model="showDeactivateModal" hide-default-actions>
     <template #content>
-      <va-card-title class="m-0"> Deactivate {{ appToDeactivate.name }} </va-card-title>
+      <va-card-title class="m-0"> {{ $t('organization.apps.deactivateTitle', { name: appToDeactivate.name }) }} </va-card-title>
       <va-card-content class="m-0">
-        <p class="va-p mb-2">{{ t('messages.deactivate', {app: appToDeactivate.name}) }}</p>
-        <p class="va-p mb-2 va-text-bold">{{ t('messages.typeToDeactivate', {app: appToDeactivate.name}) }}</p>
+        <p class="va-p mb-2">{{ $t('messages.deactivate', {app: appToDeactivate.name}) }}</p>
+        <p class="va-p mb-2 va-text-bold">{{ $t('messages.typeToDeactivate', {app: appToDeactivate.name}) }}</p>
         <va-input v-model="deactivateName" required-mark class="mt-3" />
       </va-card-content>
       <va-card-actions align="right" class="">
         <va-button color="backgroundSecondary" @click="showDeactivateModal = false">
-          Cancel
+          {{ $t('modal.cancel') }}
         </va-button>
         <va-button id="deactivate" color="danger"
           :disabled="deactivateName !== appToDeactivate.name"

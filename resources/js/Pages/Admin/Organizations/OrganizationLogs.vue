@@ -2,13 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import OrganizationLayout from './OrganizationLayout.vue'
 import { router } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Logs - Control Panel</title>
+    <title>{{ t('admin.organizations.logs') }} - Control Panel</title>
   </Head>
   <va-scroll-container
     color="warning"
@@ -17,9 +15,9 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>Level</th>
-          <th>Message</th>
-          <th>Time</th>
+          <th>{{ t('admin.organizations.level') }}</th>
+          <th>{{ t('admin.organizations.message') }}</th>
+          <th>{{ t('admin.organizations.time') }}</th>
         </tr>
       </thead>
       <tbody>

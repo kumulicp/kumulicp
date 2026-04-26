@@ -3,27 +3,25 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from '../AppsLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import draggable from 'vuedraggable'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Plans - Control Panel</title>
+    <title>{{ $t('admin.plans.plans') }} - Control Panel</title>
   </Head>
   <div class="row">
     <div class="flex flex-col xs12 va-text-center">
       <div>
-        <va-button id="addPlan" @click="showAddPlan = !showAddPlan">{{ t('admin.plans.addPlan') }}</va-button>
+        <va-button id="addPlan" @click="showAddPlan = !showAddPlan">{{ $t('admin.plans.addPlan') }}</va-button>
       </div>
       <va-modal v-model="showAddPlan" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
           <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/plans')">
-            <va-card-title class="m-0">{{ t('admin.plans.addPlan') }}</va-card-title>
+            <va-card-title class="m-0">{{ $t('admin.plans.addPlan') }}</va-card-title>
             <va-card-content class="m-0">
               <va-input v-model="form.name"
                 id="name"
-                :label="t('form.name')"
+                :label="$t('form.name')"
                 class="mb-3"
                 required-mark
                 immediateValidation
@@ -32,7 +30,7 @@ const { t } = useI18n()
                 />
               <va-input v-model="form.description"
                 id="description"
-                :label="t('admin.plans.description')"
+                :label="$t('admin.plans.description')"
                 class="mb-3"
                 required-mark
                 immediateValidation
@@ -41,8 +39,8 @@ const { t } = useI18n()
                 />
             </va-card-content>
             <va-card-actions align="right" class="">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('form.cancel') }}</va-button>
-              <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
+              <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -56,10 +54,10 @@ const { t } = useI18n()
       <table class="va-table va-table--hoverable my-3">
         <thead>
           <tr>
-            <th style="width: 50px">{{ t('admin.plans.default') }}</th>
-            <th>{{ t('admin.plans.name') }}</th>
-            <th>{{ t('admin.plans.description')}}</th>
-            <th>{{ t('admin.plans.activeSubscribers') }}</th>
+            <th style="width: 50px">{{ $t('admin.plans.default') }}</th>
+            <th>{{ $t('admin.plans.name') }}</th>
+            <th>{{ $t('admin.plans.description')}}</th>
+            <th>{{ $t('admin.plans.activeSubscribers') }}</th>
           </tr>
         </thead>
         <draggable v-model="order.plans" tag="tbody" item-key="id">
@@ -77,12 +75,12 @@ const { t } = useI18n()
     <div class="row">
       <div class="flex flex-col xs12">
         <p class="va-text-secondary">
-          {{ t('admin.plans.changeOrder') }}
+          {{ $t('admin.plans.changeOrder') }}
         </p>
       </div>
       <div class="flex flex-col xs12">
         <div>
-          <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('admin.plans.updateOrder') }}</va-button>
+          <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
         </div>
       </div>
     </div>
@@ -93,9 +91,9 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable my-3">
       <thead>
         <tr>
-          <th>{{ t('admin.plans.archivedPlan') }}</th>
-          <th>{{ t('admin.plans.description') }}</th>
-          <th>{{ t('admin.plans.activeSubscribers') }}</th>
+          <th>{{ $t('admin.plans.archivedPlan') }}</th>
+          <th>{{ $t('admin.plans.description') }}</th>
+          <th>{{ $t('admin.plans.activeSubscribers') }}</th>
         </tr>
       </thead>
       <tbody>

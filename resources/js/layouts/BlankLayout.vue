@@ -1,8 +1,6 @@
 <script setup>
 import { router, usePage } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 import { useToast } from 'vuestic-ui'
-const { t } = useI18n()
 
 const page = usePage()
 const toast = useToast()

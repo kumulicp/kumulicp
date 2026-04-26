@@ -3,17 +3,15 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import AppCustomizations from '@/components/App/AppCustomizations.vue'
 import AppSettings from '@/components/App/AppSettings.vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>App Settings - Control Panel</title>
+    <title>{{ $t('organization.apps.settingsTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ app.label }} Settings </va-card-title>
+    <va-card-title>{{ $t('organization.apps.labelSettings', { label: app.label }) }}</va-card-title>
     <va-card-content>
       <va-alert
         color="primary"
@@ -23,14 +21,14 @@ const { t } = useI18n()
         v-if="tasks.length > 0"
       >
         <div v-for="(task, index) in tasks" :key="index">
-          {{ task.description }} <a v-if="task.url" :href="task.url" class="ml-5">View docs for more info...</a>
+          {{ task.description }} <a v-if="task.url" :href="task.url" class="ml-5">{{ $t('organization.apps.viewDocs') }}</a>
         </div>
       </va-alert>
       <form @submit.prevent="form.put('/apps/'+app.id, {onSuccess: () => appUpdated()})">
         <div v-if="app.organization" class="row">
           <div class="flex flex-col xs12 lg6">
             <div class="va-title va-text-left text-color-primary">
-              Organization
+              {{ $t('organization.organization') }}
             </div>
             {{ app.organization.name }}
           </div>
@@ -40,8 +38,8 @@ const { t } = useI18n()
             <va-input
                 v-model="app.admin_password"
                 :type="isPasswordVisible ? 'text' : 'password'"
-                :label="useI18n().t('organization.apps.loginPassword')"
-                :messages="useI18n().t('organization.apps.recommendPasswordChange')"
+                :label="$t('organization.apps.loginPassword')"
+                :messages="$t('organization.apps.recommendPasswordChange')"
                 placeholder="#########"
                 immediateValidation
                 @click-append-inner="isPasswordVisible = !isPasswordVisible"
@@ -60,13 +58,13 @@ const { t } = useI18n()
         <div v-if="app.parent_app" class="row">
           <div class="flex flex-col xs12 lg6">
             <div class="va-title va-text-left text-color-primary">
-              Addon to
+              {{ $t('organization.apps.addonTo') }}
             </div>
             <Link :href="'/apps/'+app.parent_app.id+'/edit'" target="_blank">{{ app.parent_app.name }}</Link>
           </div>
           <div class="flex flex-col xs12 lg6">
             <div class="va-title va-text-left text-color-primary">
-              Domain
+              {{ $t('organization.apps.domainLabel') }}
             </div>
             <a :href="app.parent_app.address" target="_blank">{{ app.parent_app.domain }}</a>
           </div>
@@ -76,7 +74,7 @@ const { t } = useI18n()
           <div class="flex flex-col xs12 lg6">
             <va-input
               v-model="form.label"
-              label="Label"
+              :label="$t('organization.apps.appLabel')"
               immediateValidation
               :error="$page.props.errors.label"
               :error-messages="$page.props.errors.label"
@@ -87,7 +85,7 @@ const { t } = useI18n()
           <div v-if="domains.length > 0" class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.domain"
-              label="Domain"
+              :label="$t('organization.apps.domainLabel')"
               :options="domains"
               text-by="text"
               value-by="value"
@@ -99,14 +97,14 @@ const { t } = useI18n()
           </div>
           <div v-if="can.add_custom_subdomain && form.domain === 'connection'" class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.subdomain"
-              label="Subdomain"
+              :label="$t('organization.apps.subdomain')"
               v-if="parent_domains.length > 0"
               :messages="form.parent_domain ? form.subdomain+'.'+listedParentDomains[form.parent_domain] : ''"
               immediateValidation
               :error="$page.props.errors.subdomain"
               :error-messages="$page.props.errors.subdomain"
               class="mb-3"
-              placeholder="Type your subdomain"
+              :placeholder="$t('organization.apps.subdomainPlaceholder')"
             >
               <template #append>
                 <va-select
@@ -117,7 +115,7 @@ const { t } = useI18n()
                   immediateValidation
                   :error="$page.props.errors.parent_domain"
                   :error-messages="$page.props.errors.parent_domain"
-                  placeholder="Choose your primary domain"
+                  :placeholder="$t('organization.apps.choosePrimaryDomain')"
                 >
                   <template #prepend>
                     <div class="mx-1">.</div>
@@ -126,12 +124,12 @@ const { t } = useI18n()
               </template>
             </va-input>
             <p v-else class="text-color-danger">
-              Register, transfer or connect an exist domain to create a subdomain
+              {{ $t('organization.apps.noDomainForSubdomain') }}
             </p>
           </div>
         </div>
         <app-customizations v-if="Object.keys(customizations).length > 0" :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
-        <h5 v-if="settings.length > 0" class="va-h5">App Settings</h5>
+        <h5 v-if="settings.length > 0" class="va-h5">{{ $t('admin.apps.appSettings') }}</h5>
         <app-settings :settings="settings" :settings_form="form.configurations" @update:settings="updateSettings($event)" />
         <div class="row">
           <div class="flex flex-col xs12">
@@ -141,10 +139,10 @@ const { t } = useI18n()
                 :disabled="form.processing || !can.update_app"
               >
                 <template v-if="can.update_app">
-                  Update
+                  {{ $t('form.update') }}
                 </template>
                 <template v-else>
-                  Unable to update
+                  {{ $t('organization.apps.unableToUpdate') }}
                 </template>
               </va-button>
             </div>

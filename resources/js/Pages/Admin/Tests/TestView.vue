@@ -1,27 +1,25 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>View Test - Control Panel</title>
+    <title>{{ t('admin.tests.viewTest') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>View Test: {{ test.description }}</va-card-title>
+    <va-card-title>{{ t('admin.tests.viewTestTitle', { description: test.description }) }}</va-card-title>
       <va-card-content>
         <div class="row justify-center">
-          <Link :href="'/admin/server/tests/'+test.id+'/clear'" v-if="status_values.includes(form.status)"><va-button>Clear Tests Accounts</va-button></Link>
-          <Link :href="'/admin/server/tests/'+test.id+'/edit'" v-if="form.status == 'pending'"><va-button>Edit</va-button></Link>
+          <Link :href="'/admin/server/tests/'+test.id+'/clear'" v-if="status_values.includes(form.status)"><va-button>{{ t('admin.tests.clearTestsAccounts') }}</va-button></Link>
+          <Link :href="'/admin/server/tests/'+test.id+'/edit'" v-if="form.status == 'pending'"><va-button>{{ t('admin.tests.edit') }}</va-button></Link>
         </div>
         <form @submit.prevent="form.put('/admin/server/tests/'+test.id)">
         <va-list>
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Test Description</h5>
+                <h5>{{ t('admin.tests.testDescription') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -35,7 +33,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Number of Tests</h5>
+                <h5>{{ t('admin.tests.numberOfTests') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -47,7 +45,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Base Plan</h5>
+                <h5>{{ t('admin.tests.basePlan') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -57,7 +55,7 @@ const { t } = useI18n()
           <va-list-item v-if="test.apps.length > 0">
             <va-list-item-section label>
               <va-list-item-label>
-                <h3 class="va-h3">App Settings</h3>
+                <h3 class="va-h3">{{ t('admin.tests.appSettings') }}</h3>
               </va-list-item-label>
             </va-list-item-section>
           </va-list-item>
@@ -73,7 +71,7 @@ const { t } = useI18n()
               <va-list-item class="py-3">
                 <va-list-item-section label>
                   <va-list-item-label>
-                    <h5>Plan</h5>
+                    <h5>{{ t('admin.tests.plan') }}</h5>
                   </va-list-item-label>
                 </va-list-item-section>
                 <va-list-item-section>
@@ -85,7 +83,7 @@ const { t } = useI18n()
               <va-list-item class="py-3">
                 <va-list-item-section label>
                   <va-list-item-label>
-                    <h5>Version</h5>
+                    <h5>{{ t('admin.tests.version') }}</h5>
                   </va-list-item-label>
                 </va-list-item-section>
                 <va-list-item-section>
@@ -99,10 +97,10 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Status</h5>
+                <h5>{{ t('admin.tests.status') }}</h5>
               </va-list-item-label>
               <va-list-item-label v-if="status_values.includes(form.status)" caption>
-                Status has to be set manually. Once the test is done, come back and set the test to failed or complete
+                {{ t('admin.tests.statusCaption') }}
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -123,7 +121,7 @@ const { t } = useI18n()
           class="mr-2 mb-2"
           v-if="status_values.includes(form.status)"
         >
-          Update Status
+          {{ t('admin.tests.updateStatus') }}
         </va-button>
       </form>
     </va-card-content>
@@ -140,9 +138,9 @@ export default {
   data () {
     return {
       statuses: [
-        { value: 'in_progress', text: 'In Progress' },
-        { value: 'failed', text: 'Failed' },
-        { value: 'succeeded', text: 'Completed Successfully ' }
+        { value: 'in_progress', text: useI18n().t('admin.tests.inProgress') },
+        { value: 'failed', text: useI18n().t('admin.tests.failed') },
+        { value: 'succeeded', text: useI18n().t('admin.tests.completedSuccessfully') }
       ],
       status_values: ['in_progress', 'failed', 'succeeded'],
       showRunTest: false,

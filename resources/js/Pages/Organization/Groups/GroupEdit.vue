@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit {{ group.name }} Group - Control Panel</title>
+    <title>{{ $t('organization.groups.editGroup', { name: group.name }) }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Edit {{ group.name }} Group</va-card-title>
+    <va-card-title>{{ $t('organization.groups.editGroup', { name: group.name }) }}</va-card-title>
     <form @submit.prevent="form.put('/groups/'+group.slug)">
       <va-card-content>
         <div class="row">
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.name"
-              label="Group Name"
+              :label="$t('organization.groups.groupName')"
               id="name"
               immediateValidation
               :error="$page.props.errors.name"
@@ -25,7 +23,7 @@ const { t } = useI18n()
           </div>
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select v-model="form.category"
-              label="Category"
+              :label="$t('organization.groups.category')"
               id="category"
               immediateValidation
               :options="groupTypes"
@@ -40,7 +38,7 @@ const { t } = useI18n()
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.managers"
-              label="Managers"
+              :label="$t('organization.groups.managers')"
               id="managers"
               immediateValidation
               value-by="value"
@@ -55,7 +53,7 @@ const { t } = useI18n()
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.members"
-              label="Members"
+              :label="$t('organization.groups.members')"
               id="members"
               immediateValidation
               value-by="value"
@@ -110,13 +108,13 @@ const { t } = useI18n()
           no-dismiss
         >
           <template #header>
-            <h4 class="va-h4"><va-icon color="danger" name="fa-solid fa-triangle-exclamation" /> Deleting Nextcloud Team Folder</h4>
+            <h4 class="va-h4"><va-icon color="danger" name="fa-solid fa-triangle-exclamation" /> {{ $t('organization.groups.deletingNextcloudFolder') }}</h4>
           </template>
-          <p><span class="va-text-bold">Warning:</span> This will destroy any data you have this in folder. Are you absolutely certain you want to remove this Nextcloud Team Folder?</p>
-          <p><span class="va-text-bold">Note:</span>This action won't take affect until you click "Update Group"</p>
+          <p><span class="va-text-bold">{{ $t('organization.groups.warning') }}:</span> {{ $t('organization.groups.nextcloudWarningMessage') }}</p>
+          <p><span class="va-text-bold">{{ $t('organization.groups.note') }}:</span>{{ $t('organization.groups.nextcloudNoteMessage') }}</p>
           <template #footer>
-            <va-button @click="cancelRemoveGroupFolder">No! I want to keep it</va-button>
-            <va-button color="danger" @click="showNextcloudAlertModal = !showNextcloudAlertModal">Yes, I'm removing the folder</va-button>
+            <va-button @click="cancelRemoveGroupFolder">{{ $t('organization.groups.keepFolder') }}</va-button>
+            <va-button color="danger" @click="showNextcloudAlertModal = !showNextcloudAlertModal">{{ $t('organization.groups.removingFolder') }}</va-button>
           </template>
         </va-modal>
         <va-button type="submit"
@@ -124,7 +122,7 @@ const { t } = useI18n()
           :disabled="form.processing"
           class="mr-2 mb-2"
         >
-          Update Group
+          {{ $t('organization.groups.updateGroup') }}
         </va-button>
       </va-card-content>
     </form>
@@ -152,28 +150,6 @@ export default {
     return {
       memberData: [this.users[0], this.users],
       managerData: this.managers,
-      groupTypes: [
-        {
-          text: 'Department',
-          value: 'departments'
-        },
-        {
-          text: 'Team',
-          value: 'teams'
-        },
-        {
-          text: 'Project',
-          value: 'projects'
-        },
-        {
-          text: 'Ministry',
-          value: 'ministries'
-        },
-        {
-          text: 'Other',
-          value: 'others'
-        }
-      ],
       appExtensions,
       showNextcloudAlertModal: false,
       form: useForm({
@@ -183,7 +159,14 @@ export default {
         members: this.members,
         managers: this.managers,
         extensions: Object.assign({}, appExtensions)
-      })
+      }),
+      groupTypes: [
+        { text: this.$t('organization.groups.department'), value: 'departments' },
+        { text: this.$t('organization.groups.team'), value: 'teams' },
+        { text: this.$t('organization.groups.project'), value: 'projects' },
+        { text: this.$t('organization.groups.ministry'), value: 'ministries' },
+        { text: this.$t('other.other'), value: 'others' }
+      ]
     }
   },
   watch: {

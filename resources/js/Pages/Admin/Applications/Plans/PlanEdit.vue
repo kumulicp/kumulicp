@@ -3,17 +3,15 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.plans.editPlan') }} - Control Panel</title>
+    <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <Link v-if="!plan.archived" :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/archive'"><va-button id="createUser">{{ t('admin.plans.archivePlan') }}</va-button></Link>
-    <Link v-else :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ t('admin.plans.makePublic') }}</va-button></Link>
+    <Link v-if="!plan.archived" :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/archive'"><va-button id="createUser">{{ $t('admin.plans.archivePlan') }}</va-button></Link>
+    <Link v-else :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ $t('admin.plans.makePublic') }}</va-button></Link>
   </div>
   <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/plans/'+plan.id)">
     <AdminSettings>
@@ -22,7 +20,7 @@ const { t } = useI18n()
         <va-input v-model="form.name"
           id="name"
           class="my-2"
-          :label="t('admin.plans.name')"
+          :label="$t('admin.plans.name')"
           required-mark
           immediateValidation
           :error="$page.props.errors.name"
@@ -30,8 +28,8 @@ const { t } = useI18n()
           />
         <va-checkbox v-model="form.default"
           class="my-2"
-          :label="t('admin.plans.defaultPlan') "
-          :messages="t('admin.plans.defaultPlanCaption')"
+          :label="$t('admin.plans.defaultPlan') "
+          :messages="$t('admin.plans.defaultPlanCaption')"
           immediateValidation
           :error="$page.props.errors.default"
           :error-messages="$page.props.errors.default"
@@ -39,22 +37,22 @@ const { t } = useI18n()
         <va-input v-model="form.description"
           class="my-2"
           id="description"
-          :label="t('admin.plans.description')"
+          :label="$t('admin.plans.description')"
           immediateValidation
           :error="$page.props.errors.description"
           :error-messages="$page.props.errors.description"
           />
         <va-checkbox v-model="form.payment_enabled"
           class="my-2"
-          :label="t('admin.plans.enablePayment')"
+          :label="$t('admin.plans.enablePayment')"
           immediateValidation
           :error="$page.props.errors.payment_enabled"
           :error-messages="$page.props.errors.payment_enabled"
         />
         <va-checkbox v-model="form.admin_access"
           class="my-2"
-          :label="t('admin.plans.adminAccess')"
-          :messages="t('admin.plans.adminAccessCaption')"
+          :label="$t('admin.plans.adminAccess')"
+          :messages="$t('admin.plans.adminAccessCaption')"
           immediateValidation
           :error="$page.props.errors.admin_access"
           :error-messages="$page.props.errors.admin_access"
@@ -64,15 +62,15 @@ const { t } = useI18n()
           class="my-2"
           min="0"
           v-model="form.expires_after"
-          :label="t('admin.plans.expiresAfter')"
-          :messages="t('admin.plans.expiresAfterCaption')"
+          :label="$t('admin.plans.expiresAfter')"
+          :messages="$t('admin.plans.expiresAfterCaption')"
           id="expiresAfter"
           immediateValidation
           :error="$page.props.errors.expires_after"
           :error-messages="$page.props.errors.expires_after"
         >
           <template #appendInner>
-            {{ t('admin.plans.days') }}
+            {{ $t('admin.plans.days') }}
           </template>
         </va-input>
         <va-input
@@ -81,21 +79,21 @@ const { t } = useI18n()
           min="0"
           v-model="form.trial_for"
           id="trialFor"
-            :label="t('admin.plans.trialPeriodFor')"
-            :messages="t('admin.plans.trialPeriodForCaption')"
+            :label="$t('admin.plans.trialPeriodFor')"
+            :messages="$t('admin.plans.trialPeriodForCaption')"
           immediateValidation
           :error="$page.props.errors.trial_for"
           :error-messages="$page.props.errors.trial_for"
         >
           <template #appendInner>
-            {{ t('admin.plans.days') }}
+            {{ $t('admin.plans.days') }}
           </template>
         </va-input>
         <va-checkbox
           v-model="form.domain_enabled"
           class="my-2"
-          :label="t('admin.plans.enableDomains')"
-          :messages="t('admin.plans.enableDomainsCaption')"
+          :label="$t('admin.plans.enableDomains')"
+          :messages="$t('admin.plans.enableDomainsCaption')"
           immediateValidation
           :error="$page.props.errors.domain_enabled"
           :error-messages="$page.props.errors.domain_enabled"
@@ -106,7 +104,7 @@ const { t } = useI18n()
           min="0"
           v-model="form.domain_max"
           id="domainMax"
-          :label="t('admin.plans.maxDomains')"
+          :label="$t('admin.plans.maxDomains')"
           immediateValidation
           :error="$page.props.errors.domain_max"
           :error-messages="$page.props.errors.domain_max"
@@ -115,13 +113,13 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('admin.plans.serverSettings') }}</template>
+      <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>
         <va-select
           v-model="form.server_type"
           class="my-2"
-          :label="t('admin.plans.serverType')"
-          :messages="t('admin.plans.serverTypeCaption')"
+          :label="$t('admin.plans.serverType')"
+          :messages="$t('admin.plans.serverTypeCaption')"
           immediateValidation
           clearable
           value-by="value"
@@ -135,8 +133,8 @@ const { t } = useI18n()
             v-if="app.can.shareable"
             v-model="form.shared_app"
             class="my-2"
-            :label="t('admin.plans.sharedApp')"
-            :messages="t('admin.plans.sharedAppCaption')"
+            :label="$t('admin.plans.sharedApp')"
+            :messages="$t('admin.plans.sharedAppCaption')"
             immediateValidation
             value-by="id"
             text-by="name"
@@ -149,7 +147,7 @@ const { t } = useI18n()
           <va-select
             v-model="form.web_server"
             class="my-2"
-            :label="t('admin.plans.webServer')"
+            :label="$t('admin.plans.webServer')"
             immediateValidation
             clearable
             value-by="value"
@@ -161,7 +159,7 @@ const { t } = useI18n()
           <va-select
             v-model="form.database_server"
             class="my-2"
-            :label="t('admin.plans.databaseServer')"
+            :label="$t('admin.plans.databaseServer')"
             immediateValidation
             clearable
             value-by="value"
@@ -174,7 +172,7 @@ const { t } = useI18n()
             v-if="app.can.sso"
             v-model="form.sso_server"
             class="my-2"
-            :label="t('admin.plans.ssoServer')"
+            :label="$t('admin.plans.ssoServer')"
             immediateValidation
             clearable
             value-by="value"
@@ -188,14 +186,14 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>Displayed Features</template>
-      <template #description>Show additional features</template>
+      <template #name>{{ $t('admin.plans.displayedFeatures') }}</template>
+      <template #description>{{ $t('admin.plans.displayedFeaturesDescription') }}</template>
       <template #settings>
         <template v-for="(feature, index) in plan.features" :key="index">
           <div class="row">
             <div class="flex flex-col lg4">
               <va-input v-model="form.displayed_features[index]['name']"
-                :label="t('admin.plans.name')"
+                :label="$t('admin.plans.name')"
                 immediateValidation
                 :error="$page.props.errors.displayed_features"
                 :error-messages="$page.props.errors.displayed_features"
@@ -203,7 +201,7 @@ const { t } = useI18n()
             </div>
             <div class="flex flex-col lg7">
               <va-input v-model="form.displayed_features[index]['description']"
-                :label="t('admin.plans.description')"
+                :label="$t('admin.plans.description')"
                 immediateValidation
                 :error="$page.props.errors.displayed_features"
                 :error-messages="$page.props.errors.displayed_features"
@@ -216,199 +214,199 @@ const { t } = useI18n()
             </div>
           </div>
         </template>
-        <va-button @click="addNewFeature()">Add Feature</va-button>
+        <va-button @click="addNewFeature()">{{ $t('admin.plans.addFeature') }}</va-button>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('admin.plans.baseOptions') }}</template>
+      <template #name>{{ $t('admin.plans.baseOptions') }}</template>
       <template #settings>
         <va-input
           type="number"
           class="my-2"
           v-model="form.base.price"
-          :label="t('admin.plans.price')"
-          :messages="t('admin.plans.basePriceCaption')"
+          :label="$t('admin.plans.price')"
+          :messages="$t('admin.plans.basePriceCaption')"
           immediateValidation
           id="basePrice"
           min="0"
           step=".01"
         >
           <template #prependInner>
-            {{ t('admin.plans.currencySymbol') }}
+            {{ $t('admin.plans.currencySymbol') }}
           </template>
         </va-input>
         <va-input
           id="baseStripeId"
           class="my-2"
-          :label="t('admin.plans.productID')"
-          :messages="t('admin.plans.productIDCaption')"
+          :label="$t('admin.plans.productID')"
+          :messages="$t('admin.plans.productIDCaption')"
           immediateValidation
           v-model="form.base.price_id" />
         <va-input v-model="form.base.storage"
-          :label="t('admin.plans.baseStorage')"
-          :messages="t('admin.plans.baseStorageCaption')"
+          :label="$t('admin.plans.baseStorage')"
+          :messages="$t('admin.plans.baseStorageCaption')"
           id="baseStorage"
           immediateValidation
           type="number"
           min="0"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('admin.plans.standardUsers') }}</template>
+      <template #name>{{ $t('admin.plans.standardUsers') }}</template>
       <template #settings>
         <va-input
           type="number"
           class="my-2"
           v-model="form.standard.price"
-          :label="t('admin.plans.price')"
-          :messages="t('admin.plans.standardUserPriceCaption')"
+          :label="$t('admin.plans.price')"
+          :messages="$t('admin.plans.standardUserPriceCaption')"
           immediateValidation
           id="standardPrice"
           min="0"
           step=".01"
         >
           <template #prependInner>
-            {{ t('admin.plans.currencySymbol') }}
+            {{ $t('admin.plans.currencySymbol') }}
           </template>
         </va-input>
         <va-input
           type="number"
           class="my-2"
           v-model="form.standard.max"
-          :label="t('admin.plans.maxUsers')"
-          :messages="t('admin.plans.maxUsersCaption')"
+          :label="$t('admin.plans.maxUsers')"
+          :messages="$t('admin.plans.maxUsersCaption')"
           immediateValidation
           id="standardMax"
         >
           <template #appendInner>
-            {{ t('admin.plans.users') }}
+            {{ $t('admin.plans.users') }}
           </template>
         </va-input>
         <va-input
           v-model="form.standard.price_id"
           class="my-2"
-          :label="t('admin.plans.productID')"
-          :messages="t('admin.plans.productIDCaption')"
+          :label="$t('admin.plans.productID')"
+          :messages="$t('admin.plans.productIDCaption')"
           immediateValidation
           id="standardStripeId" />
         <va-input
           v-if="app.can.additional_user_storage"
           v-model="form.standard.storage"
           class="my-2"
-          :label="t('admin.plans.standardUserStorage')"
-          :messages="t('admin.plans.standardUserStorageCaption')"
+          :label="$t('admin.plans.standardUserStorage')"
+          :messages="$t('admin.plans.standardUserStorageCaption')"
           id="standardStorage"
           immediateValidation
           type="number"
           min="0"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('admin.plans.basicUsers') }}</template>
+      <template #name>{{ $t('admin.plans.basicUsers') }}</template>
       <template #settings>
         <va-input
           v-model="form.basic.name"
           class="my-2"
-          :label="t('admin.plans.name')"
-          :messages="t('admin.plans.basicUserNameCaption')"
+          :label="$t('admin.plans.name')"
+          :messages="$t('admin.plans.basicUserNameCaption')"
           immediateValidation
           id="basicName" />
         <va-input
           type="number"
           class="my-2"
           v-model="form.basic.price"
-          :label="t('admin.plans.price')"
-          :messages="t('admin.plans.basicUserPriceCaption')"
+          :label="$t('admin.plans.price')"
+          :messages="$t('admin.plans.basicUserPriceCaption')"
           immediateValidation
           id="basicPrice"
           min="0"
           step=".01"
         >
           <template #prependInner>
-            {{ t('admin.plans.currencySymbol') }}
+            {{ $t('admin.plans.currencySymbol') }}
           </template>
         </va-input>
         <va-input
           type="number"
           class="my-2"
           v-model="form.basic.max"
-          :label="t('admin.plans.maxUsers')"
-          :messages="t('admin.plans.maxBasicUsersCaption')"
+          :label="$t('admin.plans.maxUsers')"
+          :messages="$t('admin.plans.maxBasicUsersCaption')"
           immediateValidation
           id="basicMax"
         >
           <template #appendInner>
-            {{ t('admin.plans.users') }}
+            {{ $t('admin.plans.users') }}
           </template>
         </va-input>
         <va-input
           v-model="form.basic.price_id"
           class="my-2"
-          :label="t('admin.plans.productID')"
-          :messages="t('admin.plans.productIDCaption')"
+          :label="$t('admin.plans.productID')"
+          :messages="$t('admin.plans.productIDCaption')"
           immediateValidation
           id="basicStripeId" />
         <va-input
           v-if="app.can.additional_user_storage"
           v-model="form.basic.storage"
           class="my-2"
-          :label="t('admin.plans.baseStorage')"
-          :messages="t('admin.plans.basicUserStorageCaption')"
+          :label="$t('admin.plans.baseStorage')"
+          :messages="$t('admin.plans.basicUserStorageCaption')"
           id="basicStorage"
           immediateValidation
           type="number"
           min="0"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
         <va-input
           v-model="form.basic.amount"
           class="my-2"
-          :label="t('admin.plans.usersPerPrice')+' '+form.basic.price"
-          :messages="t('admin.plans.usersPerPriceCaption')"
+          :label="$t('admin.plans.usersPerPrice')+' '+form.basic.price"
+          :messages="$t('admin.plans.usersPerPriceCaption')"
           id="basicAmount"
           immediateValidation
           type="number"
           min="0"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
       </template>
     </AdminSettings>
     <va-list-separator v-if="app.can.additional_storage" class="my-1" fit />
     <AdminSettings v-if="app.can.additional_user_storage">
-      <template #name>{{ t('admin.plans.additionalStorage') }}</template>
+      <template #name>{{ $t('admin.plans.additionalStorage') }}</template>
       <template #settings>
         <va-input
           type="number"
           class="my-2"
           v-model="form.storage.price"
-          :label="t('admin.plans.price')"
-          :messages="t('admin.plans.additionalStoragePriceCaption')"
+          :label="$t('admin.plans.price')"
+          :messages="$t('admin.plans.additionalStoragePriceCaption')"
           id="storagePrice"
           immediateValidation
           min="0"
           step=".01"
         >
           <template #prependInner>
-            {{ t('admin.plans.currencySymbol') }}
+            {{ $t('admin.plans.currencySymbol') }}
           </template>
         </va-input>
         <va-input
@@ -416,39 +414,39 @@ const { t } = useI18n()
           class="my-2"
           min="0"
           v-model="form.storage.max"
-          :label="t('admin.plans.maxAdditionalStorage')"
-          :messages="t('admin.plans.maxAdditionalStorageCaption')"
+          :label="$t('admin.plans.maxAdditionalStorage')"
+          :messages="$t('admin.plans.maxAdditionalStorageCaption')"
           immediateValidation
           id="storageMax"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
         <va-input
           v-model="form.storage.price_id"
           class="my-2"
-          :label="t('admin.plans.productID')"
-          :messages="t('admin.plans.productIDCaption')"
+          :label="$t('admin.plans.productID')"
+          :messages="$t('admin.plans.productIDCaption')"
           immediateValidation
           id="storageStripeId" />
         <va-input
           v-model="form.storage.amount"
           class="my-2"
-          :label="t('admin.plans.quantity')"
-          :messages="t('admin.plans.additionalStorageQuantityCaption')"
+          :label="$t('admin.plans.quantity')"
+          :messages="$t('admin.plans.additionalStorageQuantityCaption')"
           id="storageAmount"
           immediateValidation
           type="number"
           min="0"
         >
           <template #appendInner>
-            {{ t('admin.plans.gb') }}
+            {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
       </template>
     </AdminSettings>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
   </form>
 </template>
 
@@ -470,17 +468,17 @@ export default {
     return {
       features: this.plan.features,
       feature_options: [
-        { text: useI18n().t('status.disabled'), value: 'disabled' },
-        { text: useI18n().t('status.enabled'), value: 'enabled' },
-        { text: useI18n().t('status.optional'), value: 'optional' }
+        { text: this.$t('status.disabled'), value: 'disabled' },
+        { text: this.$t('status.enabled'), value: 'enabled' },
+        { text: this.$t('status.optional'), value: 'optional' }
       ],
       featurePaymentTypes: [
-        { text: useI18n().t('admin.plans.perUser'), value: 'user' },
-        { text: useI18n().t('admin.plans.addToBill'), value: 'addon' }
+        { text: this.$t('admin.plans.perUser'), value: 'user' },
+        { text: this.$t('admin.plans.addToBill'), value: 'addon' }
       ],
       serverTypes: [
-        { text: useI18n().t('admin.plans.serverTypeSeparate'), value: 'separate' },
-        { text: useI18n().t('admin.plans.serverTypeShared'), value: 'shared' }
+        { text: this.$t('admin.plans.serverTypeSeparate'), value: 'separate' },
+        { text: this.$t('admin.plans.serverTypeShared'), value: 'shared' }
       ],
       form: useForm({
         name: this.plan.name,

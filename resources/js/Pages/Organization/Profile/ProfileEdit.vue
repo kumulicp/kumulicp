@@ -4,26 +4,24 @@ import PasswordChecker from '@/components/FormInputs/PasswordChecker.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const phoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNumber)
 </script>
 <template>
   <Head>
-    <title>Profile - Control Panel</title>
+    <title>{{ $t('organization.profile.profile') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Edit Profile</va-card-title>
+    <va-card-title>{{ $t('organization.profile.editProfile') }}</va-card-title>
     <va-card-content>
       <form @submit.prevent="form.post('/profile')">
         <va-list>
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Username:</h5>
+                <h5>{{ $t('auth.username') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -37,7 +35,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>First Name:</h5>
+                <h5>{{ $t('organization.users.firstName') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -57,7 +55,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Last Name:</h5>
+                <h5>{{ $t('organization.users.lastName') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -77,7 +75,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Phone Number:</h5>
+                <h5>{{ $t('organization.users.phoneNumber') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -98,7 +96,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Personal Email:</h5>
+                <h5>{{ $t('organization.users.personalEmail') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -119,7 +117,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             <va-list-item class="pb-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Organizational Email:</h5>
+                  <h5>{{ $t('organization.users.organizationalEmail') }}:</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -134,12 +132,12 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Password:</h5>
+                <h5>{{ $t('auth.password') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
               <va-button color="danger" immediateValidation id="changePassword" @click="showChangePasswordModal = !showChangePasswordModal">
-                Change Password
+                {{ $t('auth.changePassword') }}
               </va-button>
               <va-modal
                 v-model="showChangePasswordModal"
@@ -151,14 +149,14 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                     onFinish: () => password_form.reset(),
                     onSuccess: () => { password_form.reset(); showChangePasswordModal = !showChangePasswordModal }
                   })">
-                    <va-card-title>Change Password</va-card-title>
+                    <va-card-title>{{ $t('auth.changePassword') }}</va-card-title>
                     <va-card-content>
                       <va-input v-model="password_form.current_password"
                         id="currentPassword"
                         type="password"
                         required-mark
                         immediateValidation
-                        label="Current Password"
+                        :label="$t('auth.currentPassword')"
                         class="mb-3"
                         :error="$page.props.errors.current_password"
                         :error-messages="$page.props.errors.current_password"
@@ -168,7 +166,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         type="password"
                         required-mark
                         immediateValidation
-                        label="New Password"
+                        :label="$t('auth.newPassword')"
                         class="mb-3"
                         :error="$page.props.errors.password"
                         :error-messages="$page.props.errors.password"
@@ -178,7 +176,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         type="password"
                         required-mark
                         immediateValidation
-                        label="Confirm New Password"
+                        :label="$t('auth.confirmNewPassword')"
                         class="mb-3"
                         :error="$page.props.errors.password_confirmation"
                         :error-messages="$page.props.errors.password_confirmation"
@@ -187,10 +185,10 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                     </va-card-content>
                     <va-card-actions align="right">
                       <va-button color="textInverted" @click="ok">
-                        Cancel
+                        {{ $t('modal.cancel') }}
                       </va-button>
                       <va-button type="submit" id="updatePassword" :disabled="password_form.processing" class="mr-2 mb-2">
-                        Change Password
+                        {{ $t('auth.changePassword') }}
                       </va-button>
                     </va-card-actions>
                   </form>
@@ -200,7 +198,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           </va-list-item>
         </va-list>
 
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">Submit</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

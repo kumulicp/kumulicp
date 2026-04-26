@@ -1,8 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-carousel
@@ -28,24 +26,24 @@ export default {
       value: 0,
       items: [
         {
-          title: 'Welcome!',
-          description: 'Welcome to the Control Panel<br /> You are currently on our 1 month trial',
+          title: this.$t('auth.welcomeGreeting'),
+          description: this.$t('organization.dashboard.trialWelcome'),
           link: ''
         },
         {
-          title: 'Apps',
-          description: 'We have many apps to offer',
+          title: this.$t('admin.apps.appWord'),
+          description: this.$t('organization.dashboard.trialApps'),
           link: {
-            label: 'Discover apps',
+            label: this.$t('organization.dashboard.discoverApps'),
             url: '/discover'
           }
         },
         {
-          title: 'Plans',
-          description: 'Once you\'re done trialling our apps, upgrade your plan to gain the full range of benefits and features',
+          title: this.$t('organization.dashboard.plans'),
+          description: this.$t('organization.dashboard.trialPlans'),
           link: {
             url: '/subscription/options',
-            label: 'Upgrade plan'
+            label: this.$t('organization.dashboard.upgradePlan')
           }
         },
         {

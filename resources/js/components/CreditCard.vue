@@ -21,14 +21,14 @@ import { Stripe } from '@vue-stripe/vue-stripe'
             <va-list-item-label v-if="payment_method.brand" lines="2">
               {{ payment_method.brand }} ****{{ payment_method.last4 }}
               <br />
-              Expires {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>
             <va-list-item-label v-if="payment_method.brand">
               <va-icon
                 name="fa-trash"
-                title="Delete Credit Card"
+                :title="$t('payment.deleteCreditCard')"
                 color="danger"
                 class="clickable-icon"
                 @click="showDeletePaymentMethodModal = true"
@@ -36,17 +36,17 @@ import { Stripe } from '@vue-stripe/vue-stripe'
               <va-modal
                 v-model="showDeletePaymentMethodModal"
                 hide-default-actions
-                title="Delete Payment Method"
-                message="If you are subscribed to a paid plan, this will also cancel that plan unless you add a new payment method before your next payment date or change your subscription to a free plan. If you want to remain subscribed, we recommend just updating your current payment method. Are you sure you want to to delete this payment method?"
+                :title="$t('payment.deletePaymentMethod')"
+                :message="$t('payment.deletePaymentMethodMessage')"
               >
                 <template #footer="{ cancel }">
                   <va-button
                     color="backgroundSecondary"
                     @click="cancel"
                   >
-                    Cancel
+                    {{ $t('modal.cancel') }}
                   </va-button>
-                  <Link href="/subscription/payment/method/delete"><va-button color="danger">Delete</va-button></Link>
+                  <Link href="/subscription/payment/method/delete"><va-button color="danger">{{ $t('modal.delete') }}</va-button></Link>
                 </template>
               </va-modal>
             </va-list-item-label>
@@ -59,8 +59,8 @@ import { Stripe } from '@vue-stripe/vue-stripe'
       <div class="row">
         <div class="flex flex-col xs12">
           <div class="item">
-            <i v-if="hasDefaultPaymentMethod">Is this the right payment info? If not, update it below.</i>
-            <i v-else>Please add payment information to proceed.</i>
+            <i v-if="hasDefaultPaymentMethod">{{ $t('payment.updatePaymentMethodMessage') }}</i>
+            <i v-else>{{ $t('payment.addPaymentMethodMessage') }}</i>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
           <div class="row">
             <!-- Stripe Elements Placeholder -->
             <div class="flex flex-col xs6 mr-1">
-              <div class="va-title text-color-primary">Card Number</div>
+              <div class="va-title text-color-primary">{{ $t('payment.cardNumber') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -83,7 +83,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
               </div>
             </div>
             <div class="flex flex-col xs3 mr-1">
-              <div class="va-title text-color-primary">Expiry</div>
+              <div class="va-title text-color-primary">{{ $t('payment.expiry') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -97,7 +97,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
               </div>
             </div>
             <div class="flex flex-col xs2">
-              <div class="va-title text-color-primary">CVC</div>
+              <div class="va-title text-color-primary">{{ $t('payment.cvc') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -119,8 +119,8 @@ import { Stripe } from '@vue-stripe/vue-stripe'
           id="updateCreditCard"
           :disabled="stripe_processing"
           >
-          <template v-if="hasDefaultPaymentMethod">Update Payment Method</template>
-          <template v-else>Add Payment Method</template>
+          <template v-if="hasDefaultPaymentMethod">{{ $t('payment.updatePaymentMethod') }}</template>
+          <template v-else>{{ $t('payment.addPaymentMethod') }}</template>
         </va-button>
       </div>
     </template>
@@ -128,7 +128,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
       <div class="flex flex-col xs12 va-text-center">
         <div>
           <va-icon name="fa-thumbs-up" color="success" class="mr-2" />
-          Update Payment Method Successfully
+          {{ $t('payment.updatePaymentMethodSuccess') }}
         </div>
       </div>
     </div>
