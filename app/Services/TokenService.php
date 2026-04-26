@@ -60,6 +60,16 @@ class TokenService
     }
 
     /**
+     * Return the unique category prefixes (e.g. ['user', 'plan']) that appear
+     * in $content. Callers use this to load only the models they actually need.
+     */
+    public function neededCategories(string $content): array
+    {
+        preg_match_all('/\{\{([a-z_]+)\.[a-z_]+\}\}/', $content, $matches);
+        return array_unique($matches[1]);
+    }
+
+    /**
      * Resolve all {{token.key}} occurrences in $content using live model data.
      * Any token without a matching context value is left as-is.
      */

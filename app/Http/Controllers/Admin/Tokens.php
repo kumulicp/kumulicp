@@ -4,14 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Application;
 use App\Http\Controllers\Controller;
-use App\Organization;
-use App\Plan;
 use App\Services\TokenService;
-use App\User;
 use Illuminate\Http\Request;
 
 class Tokens extends Controller
 {
+    // Default content shown in the demo editor on first load.
+    // Kept here so the backend can scan it and load only the needed context.
+    private const DEMO_DEFAULT_CONTENT =
+        '<p>Hello <strong>{{user.name}}</strong>,</p>' .
+        '<p>Welcome to <strong>{{org.name}}</strong>! ' .
+        'Your account is currently on the <strong>{{plan.name}}</strong> plan.</p>' .
+        '<p>You are using <strong>{{app.name}}</strong> (version {{app.version}}).</p>' .
+        '<p>If you have questions, please contact us at {{org.contact_email}}.</p>';
+
     public function __construct(private TokenService $tokens) {}
 
     /**
@@ -23,84 +29,81 @@ class Tokens extends Controller
     }
 
     /**
-     * Resolve tokens in the given content string using sample context data.
-     * The request may optionally supply explicit override values per token key.
+     * Resolve tokens in the given content using live context data.
+     * Only loads models for categories that actually appear in the content.
      */
     public function preview(Request $request)
     {
         $request->validate([
             'content' => 'required|string',
-            'context' => 'nullable|array',
         ]);
 
         $content = $request->input('content');
-        $overrides = $request->input('context', []);
+        $needed = $this->tokens->neededCategories($content);
+        $context = $this->contextForCategories($needed);
 
-        // Build a real context from the authenticated user's environment when possible
-        $context = $this->buildPreviewContext($overrides);
-
-        $resolved = $this->tokens->resolve($content, $context);
-
-        return response()->json(['resolved' => $resolved]);
+        return response()->json([
+            'resolved' => $this->tokens->resolve($content, $context),
+        ]);
     }
 
     /**
-     * Demo page — renders the Inertia token editor demo.
+     * Demo page — only loads context data for categories used in the default content.
      */
     public function demo()
     {
-        $registry = $this->tokens->registry();
-
-        $sampleContext = [
-            'user.name' => auth()->user()?->name ?? 'Jane Smith',
-            'user.email' => auth()->user()?->email ?? 'jane@example.com',
-            'user.username' => auth()->user()?->username ?? 'janesmith',
-            'org.name' => auth()->user()?->organization?->name ?? 'Acme Corp',
-            'org.slug' => auth()->user()?->organization?->slug ?? 'acme-corp',
-            'org.contact_email' => auth()->user()?->organization?->contact_email ?? 'hello@acme.com',
-            'org.city' => auth()->user()?->organization?->city ?? 'New York',
-            'org.country' => auth()->user()?->organization?->country ?? 'US',
-            'org.status' => auth()->user()?->organization?->status ?? 'active',
-        ];
-
-        // Enrich with plan and first app if available
-        $org = auth()->user()?->organization;
-        if ($org?->plan) {
-            $sampleContext['plan.name'] = $org->plan->name;
-            $sampleContext['plan.description'] = $org->plan->description ?? '';
-        } else {
-            $sampleContext['plan.name'] = 'Professional';
-            $sampleContext['plan.description'] = 'Full-featured plan';
-        }
-
-        $firstApp = Application::first();
-        if ($firstApp) {
-            $sampleContext['app.name'] = $firstApp->name;
-            $sampleContext['app.slug'] = $firstApp->slug;
-            $sampleContext['app.description'] = $firstApp->description ?? '';
-            $sampleContext['app.category'] = $firstApp->category ?? '';
-            $sampleContext['app.version'] = optional($firstApp->active_version())->version ?? '1.0.0';
-        } else {
-            $sampleContext['app.name'] = 'My Application';
-            $sampleContext['app.slug'] = 'my-application';
-            $sampleContext['app.description'] = 'A great application';
-            $sampleContext['app.category'] = 'Productivity';
-            $sampleContext['app.version'] = '1.0.0';
-        }
+        $needed = $this->tokens->neededCategories(self::DEMO_DEFAULT_CONTENT);
 
         return inertia()->render('Admin/Tokens/TokenEditorDemo', [
-            'registry' => $registry,
-            'sampleContext' => $sampleContext,
+            'registry' => $this->tokens->registry(),
+            'sampleContext' => $this->contextForCategories($needed),
+            'defaultContent' => self::DEMO_DEFAULT_CONTENT,
             'breadcrumbs' => [
                 ['label' => 'Token Editor Demo'],
             ],
         ]);
     }
 
-    private function buildPreviewContext(array $overrides): array
+    /**
+     * Build a flat key→value map by loading only the models whose category
+     * prefix appears in $categories. No unnecessary DB queries are made.
+     */
+    private function contextForCategories(array $categories): array
     {
-        // This method allows future extension to load real models from override IDs.
-        // For now, the frontend supplies flat key→value overrides resolved on the client.
-        return [];
+        $ctx = [];
+
+        if (in_array('user', $categories)) {
+            $user = auth()->user();
+            $ctx['user.name'] = $user?->name ?? 'Jane Smith';
+            $ctx['user.email'] = $user?->email ?? 'jane@example.com';
+            $ctx['user.username'] = $user?->username ?? 'janesmith';
+        }
+
+        if (in_array('org', $categories)) {
+            $org = auth()->user()?->organization;
+            $ctx['org.name'] = $org?->name ?? 'Acme Corp';
+            $ctx['org.slug'] = $org?->slug ?? 'acme-corp';
+            $ctx['org.contact_email'] = $org?->contact_email ?? 'hello@acme.com';
+            $ctx['org.city'] = $org?->city ?? 'New York';
+            $ctx['org.country'] = $org?->country ?? 'US';
+            $ctx['org.status'] = $org?->status ?? 'active';
+        }
+
+        if (in_array('plan', $categories)) {
+            $plan = auth()->user()?->organization?->plan;
+            $ctx['plan.name'] = $plan?->name ?? 'Professional';
+            $ctx['plan.description'] = $plan?->description ?? 'Full-featured plan';
+        }
+
+        if (in_array('app', $categories)) {
+            $app = Application::first();
+            $ctx['app.name'] = $app?->name ?? 'My Application';
+            $ctx['app.slug'] = $app?->slug ?? 'my-application';
+            $ctx['app.description'] = $app?->description ?? 'A great application';
+            $ctx['app.category'] = $app?->category ?? 'Productivity';
+            $ctx['app.version'] = optional($app?->active_version())->version ?? '1.0.0';
+        }
+
+        return $ctx;
     }
 }

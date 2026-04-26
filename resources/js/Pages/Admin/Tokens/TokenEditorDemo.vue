@@ -10,19 +10,15 @@ import { flatTokenLabels } from '@/tokens/tokenRegistry'
 const page = usePage<{
   registry: TokenRegistry
   sampleContext: Record<string, string>
+  defaultContent: string
   breadcrumbs: { label: string; url?: string }[]
 }>()
 
 const registry = computed(() => page.props.registry)
 
-// Editor content — pre-seeded with a sample using several tokens
-const editorContent = ref(
-  '<p>Hello <strong>{{user.name}}</strong>,</p>' +
-    '<p>Welcome to <strong>{{org.name}}</strong>! ' +
-    'Your account is currently on the <strong>{{plan.name}}</strong> plan.</p>' +
-    '<p>You are using <strong>{{app.name}}</strong> (version {{app.version}}).</p>' +
-    '<p>If you have questions, please contact us at {{org.contact_email}}.</p>',
-)
+// Editor content seeded from the backend (kept in sync with DEMO_DEFAULT_CONTENT
+// so the server only loads context for the categories that are actually used)
+const editorContent = ref(page.props.defaultContent)
 
 // Context values — editable by the user to simulate token resolution
 const context = ref<Record<string, string>>({ ...page.props.sampleContext })
