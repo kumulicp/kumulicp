@@ -187,6 +187,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::resource('server/tests', 'Admin\AccountTests');
         Route::get('server/tests/{test}/clear', 'Admin\AccountTests@clear');
         Route::get('server/tests/{test}/run', 'Admin\AccountTests@run');
+
+        Route::prefix('tokens')->group(function () {
+            Route::get('registry', 'Admin\Tokens@registry')->name('admin.tokens.registry');
+            Route::post('preview', 'Admin\Tokens@preview')->name('admin.tokens.preview');
+            Route::get('demo', 'Admin\Tokens@demo')->name('admin.tokens.demo');
+        });
     });
 
     Route::resources([
