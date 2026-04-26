@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit TLD - Control Panel</title>
+    <title>{{ $t('admin.domains.editTld') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Edit .{{ tld.name }} TLD</va-card-title>
+    <va-card-title>{{ $t('admin.domains.editTldTitle', { name: tld.name }) }}</va-card-title>
       <va-card-content>
       <form @submit.prevent="form.put('/admin/service/domains/tlds/'+tld.id)">
         <va-list>
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Custom Price</h5>
+                <h5>{{ $t('admin.domains.customPrice') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -26,7 +24,7 @@ const { t } = useI18n()
                   type="number"
                   min="0"
                   step="0.01"
-                  messages="Override the registrars pricing."
+                  :messages="$t('admin.domains.overridePricingMessage')"
                   :error="$page.props.errors.standard_price"
                   :error-messages="$page.props.errors.standard_price"
                 >
@@ -41,7 +39,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Registration Allowed</h5>
+                <h5>{{ $t('admin.domains.registrationAllowed') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -54,7 +52,7 @@ const { t } = useI18n()
             </va-list-item-section>
           </va-list-item>
         </va-list>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">Update</va-button>
+        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

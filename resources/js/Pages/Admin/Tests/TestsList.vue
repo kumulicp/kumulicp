@@ -1,38 +1,36 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>Tests - Control Panel</title>
+    <title>{{ t('admin.tests.tests') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Tests </va-card-title>
+    <va-card-title>{{ t('admin.tests.tests') }} </va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button @click="showAddTest = !showAddTest">Add Test</va-button>
+        <va-button @click="showAddTest = !showAddTest">{{ t('admin.tests.addTest') }}</va-button>
       </div>
         <va-modal v-model="showAddTest" no-outside-dismiss no-padding>
           <template #content>
             <form @submit.prevent="form.post('/admin/server/tests')">
-              <va-card-title>Add Test</va-card-title>
+              <va-card-title>{{ t('admin.tests.addTest') }}</va-card-title>
               <va-card-content>
                 <va-input v-model="form.description"
                   required-mark
                   immediateValidation
-                  label="Test Description"
+                  :label="t('admin.tests.testDescription')"
                   class="mb-3"
-                  messages="Explain the purpose of this test"
+                  :messages="t('admin.tests.testDescriptionMessage')"
                   :error="$page.props.errors.description"
                   :error-messages="$page.props.errors.description" />
               </va-card-content>
               <va-card-actions align="right">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
-                <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">Submit</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('common.cancel') }}</va-button>
+                <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -44,10 +42,10 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th style="width: 90%">Test Purpose</th>
-                <th>Created Date</th>
-                <th>Status</th>
-                <th>Remove</th>
+                <th style="width: 90%">{{ t('admin.tests.testPurpose') }}</th>
+                <th>{{ t('admin.tests.createdDate') }}</th>
+                <th>{{ t('admin.tests.status') }}</th>
+                <th>{{ t('admin.tests.remove') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -75,14 +73,14 @@ const { t } = useI18n()
           :page-size="pageSize" />
     </va-card-content>
   </va-card>
-  <va-modal v-model="showRemoveTest" hide-default-actions :title="'Remove ' + showRemoveTest + '?'"
-    :message="'Are you sure you want to remove '+ removeTest.description +'? This action is permanent.'">
+  <va-modal v-model="showRemoveTest" hide-default-actions :title="t('admin.tests.removeTitle', { name: showRemoveTest })"
+    :message="t('admin.tests.removeMessage', { name: removeTest.description })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        Cancel
+        {{ t('common.cancel') }}
       </va-button>
       <va-button color="danger"
-        @click="remove.delete('/admin/server/tests/' + removeTest.id); showRemoveTest = !showRemoveTest">Delete</va-button>
+        @click="remove.delete('/admin/server/tests/' + removeTest.id); showRemoveTest = !showRemoveTest">{{ t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>

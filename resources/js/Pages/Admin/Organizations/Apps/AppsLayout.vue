@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <div class="user">
@@ -32,27 +30,20 @@ export default {
     const app = this.$page.props.app
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id + '/apps/' + app.id
-    const tabs = [
-      {
-        title: useI18n().t('View'),
-        url: basePath
-      },
-      {
-        title: useI18n().t('Edit'),
-        url: basePath + '/edit'
-      }
-    ]
-
-    let value = 'View'
-    Object.values(tabs).forEach((tab) => {
-      if (tab.url === pathname) {
-        value = tab.title
-      }
-    })
 
     return {
-      tabs,
-      value
+      pathname,
+      value: pathname,
+      tabs: [
+        {
+          title: this.$t('form.view'),
+          url: basePath
+        },
+        {
+          title: this.$t('form.edit'),
+          url: basePath + '/edit'
+        }
+      ]
     }
   }
 }

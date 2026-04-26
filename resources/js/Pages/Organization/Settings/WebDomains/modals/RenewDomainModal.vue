@@ -1,24 +1,22 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-modal
     v-model="show"
-    :title="'Renew '+domain.name"
+    :title="$t('organization.webDomains.renewTitle', { name: domain.name })"
     hide-default-actions
   >
     <template #default>
       <va-alert v-if="form.processing" color="primary" icon="info" class="mb-4" border="left">
-        Please be patient as we submit your renewal. This will only take a few seconds.
+        {{ $t('organization.webDomains.renewProcessing') }}
       </va-alert>
-      If you are sure you want to renew {{ domain.name }}, please select how many years you want to renew for.
+      {{ $t('organization.webDomains.renewConfirm', { name: domain.name }) }}
       <va-select
         v-model="form.years"
         :options="domain.renewal_price"
-        label="Years"
+        :label="$t('organization.webDomains.years')"
         text-by="text"
         value-by="year"
         :error="$page.props.errors.years"
@@ -35,7 +33,7 @@ const { t } = useI18n()
         @click="show = !show"
         :disabled="form.processing"
       >
-        Cancel
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button
         @click="form.post('/settings/domains/'+domain.name+'/renew', {
@@ -43,7 +41,7 @@ const { t } = useI18n()
         })"
         :disabled="form.processing"
       >
-        Renew
+        {{ $t('organization.webDomains.renew') }}
       </va-button>
     </template>
   </va-modal>

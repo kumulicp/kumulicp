@@ -5,19 +5,17 @@ import AppSettings from '@/components/App/AppSettings.vue'
 import CreditCard from '@/components/CreditCard.vue'
 import PlanCard from '@/components/cards/PlanCard.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>App Plan Overview - Control Panel</title>
+    <title>{{ $t('organization.discover.appPlanOverview') }} - Control Panel</title>
   </Head>
   <div class="discover-overview">
     <div class="row">
       <div class="flex xs12 lg9">
         <va-card class="mb-3">
-          <va-card-title>{{ app.name }} Settings</va-card-title>
+          <va-card-title>{{ $t('organization.apps.labelSettings', { label: app.name }) }}</va-card-title>
           <va-card-content>
             <template v-if="plan.payment_enabled && !hasDefaultPaymentMethod">
               <credit-card v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" />
@@ -33,7 +31,7 @@ const { t } = useI18n()
                       color="primary"
                       class="mb-6"
                     >
-                      This will be automatically activated along with {{ app.name }}.
+                      {{ $t('organization.discover.autoActivatedWith', { name: app.name }) }}
                     </VaAlert>
                   </div>
                   <div v-else-if="parent_apps.length == 1" class="mb-3">
@@ -43,11 +41,11 @@ const { t } = useI18n()
                       color="primary"
                       class="mb-6"
                     >
-                      This will be an add-on to your {{ parent_apps[0]['text'] }} app.
+                      {{ $t('organization.discover.addonTo', { name: parent_apps[0]['text'] }) }}
                     </VaAlert>
                   </div>
                   <va-select v-else-if="parent_apps.length > 1"
-                    label="Add to App"
+                    :label="$t('organization.discover.addToApp')"
                     class="mb-3"
                     v-model="form.parent_app"
                     :options="parent_apps"
@@ -61,8 +59,8 @@ const { t } = useI18n()
               <div class="row">
                 <div class="flex flex-col xs12 lg6 mb-2">
                   <va-input v-model="form.label"
-                    label="Label"
-                    messages="Helps identify this app from others. Useful if you have multiple websites for example."
+                    :label="$t('organization.apps.appLabel')"
+                    :messages="$t('organization.discover.labelMessage')"
                     id="label"
                     style="height:auto"
                     immediateValidation
@@ -73,11 +71,11 @@ const { t } = useI18n()
                 <div class="flex flex-col xs12 lg6 mb-2">
                   <va-select  v-model="form.organization"
                     v-if="organizations.length > 1"
-                    label="Organization"
+                    :label="$t('organization.organization')"
                     class="mb-3"
                     id="organization"
                     :options="organizations"
-                    messages="There are multiple suborganizations you can assign this app to. Please select one."
+                    :messages="$t('organization.discover.multipleOrgsMessage')"
                     value-by="id"
                     text-by="name"
                     immediateValidation
@@ -88,7 +86,7 @@ const { t } = useI18n()
               <div class="row">
                 <div v-if="domains.length > 1" class="flex flex-col xs12 lg6 mb-2">
                   <va-select v-model="form.domain"
-                    label="Domain"
+                    :label="$t('organization.apps.domainLabel')"
                     :options="sortedDomains.sort((a,b) => a.value - b.value)"
                     text-by="text"
                     value-by="value"
@@ -101,12 +99,12 @@ const { t } = useI18n()
                 <div v-if="form.domain === 'new'" class="flex flex-col xs12 lg6 mb-2">
                   <va-input
                     v-model="form.subdomain"
-                    label="Add Subdomain"
+                    :label="$t('organization.discover.addSubdomain')"
                     :messages="form.subdomain+'.'+listedParentDomains[form.parent_domain]"
                     immediateValidation
                     :error="$page.props.errors.subdomain"
                     :error-messages="$page.props.errors.subdomain"
-                    placeholder="Type your subdomain"
+                    :placeholder="$t('organization.apps.subdomainPlaceholder')"
                   >
                     <template #append>
                       <va-select
@@ -116,7 +114,7 @@ const { t } = useI18n()
                         value-by="value"
                         :error="$page.props.errors.parent_domain"
                         :error-messages="$page.props.errors.parent_domain"
-                        placeholder="Choose your primary domain"
+                        :placeholder="$t('organization.apps.choosePrimaryDomain')"
                         auto-select-first-option
                         immediateValidation
                       >
@@ -128,9 +126,9 @@ const { t } = useI18n()
                   </va-input>
                 </div>
               </div>
-              <h3 v-if="Object.keys(customizations).length > 0" class="va-h3 mb-3">Customizations</h3>
+              <h3 v-if="Object.keys(customizations).length > 0" class="va-h3 mb-3">{{ $t('organization.discover.customizations') }}</h3>
               <app-customizations :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
-              <h5 v-if="settings.length > 0" class="va-h5">App Settings</h5>
+              <h5 v-if="settings.length > 0" class="va-h5">{{ $t('organization.apps.settingsTitle') }}</h5>
               <app-settings class="mb-3" :settings="settings" :settings_form="form.configurations" @update:settings="updateSettings($event)" />
               <template v-if="domains.length === 0 && parent_apps.length === 0 && (!plan.payment_enabled || hasDefaultPaymentMethod) && customizations.length === 0 && organizations.length <= 1">
                 <div class="row m-5">
@@ -138,11 +136,11 @@ const { t } = useI18n()
                     <va-icon name="fa-thumbs-up" style="color: var(--va-list-item-label-caption-color)"  size="5rem" />
                   </div>
                   <div class="flex lg12 va-text-center mb-4">
-                    <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)" >There's nothing left to do except activate!</h2>
+                    <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)" >{{ $t('organization.discover.nothingLeftActivate') }}</h2>
                   </div>
                 </div>
               </template>
-              <va-button :disabled="plan.payment_enabled && ! hasDefaultPaymentMethod" type="submit">Activate</va-button>
+              <va-button :disabled="plan.payment_enabled && ! hasDefaultPaymentMethod" type="submit">{{ $t('organization.discover.activate') }}</va-button>
             </form>
           </va-card-content>
         </va-card>

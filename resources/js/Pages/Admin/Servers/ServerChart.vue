@@ -2,13 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import ServerLayout from './ServerLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Server - Values - Control Panel</title>
+    <title>{{ t('admin.servers.serverValues') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/server/servers/'+server.id)">
     <v-ace-editor
@@ -21,7 +19,7 @@ const { t } = useI18n()
     :disabled="form.processing"
     class="mr-2 mb-2"
     >
-    Update
+    {{ t('common.update') }}
     </va-button>
 </form>
 </template>

@@ -4,9 +4,7 @@ import StateDropdown from '@/components/FormInputs/StateDropdown.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const orgPhoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), orgPhoneNumber)
@@ -16,18 +14,18 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
 </script>
 <template>
   <Head>
-    <title>Organization - Control Panel</title>
+    <title>{{ $t('organization.organization') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Settings</va-card-title>
+    <va-card-title>{{ $t('settings.settings') }}</va-card-title>
     <va-card-content class="m-0">
       <form @submit.prevent="form.put('/settings/organization')">
-      <h6 class="va-h6 mb-2">About</h6>
+      <h6 class="va-h6 mb-2">{{ $t('organization.settings.about') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.name"
             id="name"
-            label="Organization Name"
+            :label="$t('organization.settings.organizationName')"
             immediateValidation
             :error="$page.props.errors.name"
             :error-messages="$page.props.errors.name"
@@ -39,7 +37,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.org_email"
-            label="Organization Email"
+            :label="$t('organization.settings.organizationEmail')"
             id="orgEmail"
             immediateValidation
             :error="$page.props.errors.org_email"
@@ -48,7 +46,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.org_phone_number"
-              label="Organization Phone Number"
+              :label="$t('organization.settings.organizationPhoneNumber')"
               id="orgPhoneNumber"
               immediateValidation
               ref="orgPhoneNumber"
@@ -59,11 +57,11 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               />
         </div>
       </div>
-      <h6 class="va-h6 my-3">Billing Address</h6>
+      <h6 class="va-h6 my-3">{{ $t('organization.settings.billingAddress') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.street"
-            label="Street"
+            :label="$t('organization.street')"
             id="street"
             immediateValidation
             :error="$page.props.errors.street"
@@ -72,7 +70,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.zipcode"
-            label="Zip/Postal code"
+            :label="$t('organization.zipcode')"
             id="zipcode"
             immediateValidation
             :error="$page.props.errors.zipcode"
@@ -83,7 +81,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.city"
-            label="City"
+            :label="$t('organization.city')"
             id="city"
             immediateValidation
             :error="$page.props.errors.city"
@@ -91,21 +89,21 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
-          <state-dropdown label="State\Province" class="va-input" id="province" :country="form.country" v-model:state="form.state" />
+          <state-dropdown :label="$t('organization.state')" class="va-input" id="province" :country="form.country" v-model:state="form.state" />
         </div>
       </div>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
-          <country-dropdown label="Country" required class="va-input" id="country" v-model:country="form.country" />
+          <country-dropdown :label="$t('organization.country')" required class="va-input" id="country" v-model:country="form.country" />
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
         </div>
       </div>
-      <h6 class="va-h6 my-3">Billing Contact Info</h6>
+      <h6 class="va-h6 my-3">{{ $t('organization.settings.billingContactInfo') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.user_first_name"
-            label="First Name"
+            :label="$t('organization.users.firstName')"
             id="user_first_name"
             immediateValidation
             :error="$page.props.errors.user_first_name"
@@ -114,7 +112,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.user_last_name"
-            label="Last Name"
+            :label="$t('organization.users.lastName')"
             id="user_last_name"
             immediateValidation
             :error="$page.props.errors.user_last_name"
@@ -125,7 +123,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.user_phone_number"
-            label="Phone Number"
+            :label="$t('organization.users.phoneNumber')"
             id="user_phone_number"
             immediateValidation
             ref="phoneNumber"
@@ -135,7 +133,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.user_email"
-            label="Email"
+            :label="$t('auth.email')"
             id="user_email"
             immediateValidation
             :error="$page.props.errors.user_email"
@@ -145,7 +143,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <div class="row justify">
         <div class="flex flex-col">
-          <va-button type="submit" id="submit" class="mt-3">Update</va-button>
+          <va-button type="submit" id="submit" class="mt-3">{{ $t('form.update') }}</va-button>
         </div>
       </div>
     </form>

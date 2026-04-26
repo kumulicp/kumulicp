@@ -2,25 +2,23 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>App Settings - Control Panel</title>
+    <title>{{ t('admin.sharedApps.appSettings') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ app.label }} Settings </va-card-title>
+    <va-card-title>{{ t('admin.sharedApps.appLabelSettings', { label: app.label }) }} </va-card-title>
     <va-card-content>
       <form @submit.prevent="form.put('/admin/service/shared-apps/'+app.id, {onSuccess: () => appUpdated()})">
         <AdminSettings>
-          <template #name>About App</template>
+          <template #name>{{ t('admin.sharedApps.aboutApp') }}</template>
           <template #settings>
             <va-select
               v-model="form.domain"
-              label="Domain"
+              :label="t('admin.sharedApps.domain')"
               :options="domains"
               text-by="name"
               value-by="id"
@@ -32,13 +30,13 @@ const { t } = useI18n()
             />
             <template v-if="form.domain == 'new'">
               <va-input v-model="form.subdomain"
-                label="Subdomain"
+                :label="t('admin.sharedApps.subdomain')"
                 v-if="parent_domains.length > 0"
                 immediateValidation
                 :error="$page.props.errors.subdomain"
                 :error-messages="$page.props.errors.subdomain"
                 class="mb-3"
-                placeholder="Type your subdomain"
+                :placeholder="t('admin.sharedApps.subdomainPlaceholder')"
               >
                 <template #append>
                   <va-select
@@ -49,7 +47,7 @@ const { t } = useI18n()
                     immediateValidation
                     :error="$page.props.errors.parent_domain"
                     :error-messages="$page.props.errors.parent_domain"
-                    placeholder="Choose your primary domain"
+                    :placeholder="t('admin.sharedApps.primaryDomainPlaceholder')"
                   >
                     <template #prepend>
                       <div class="mx-1">.</div>
@@ -58,12 +56,12 @@ const { t } = useI18n()
                 </template>
               </va-input>
               <p v-else class="text-color-danger">
-                Register, transfer or connect an exist domain to create a subdomain
+                {{ t('admin.sharedApps.noDomainsWarning') }}
               </p>
             </template>
             <va-select
               v-model="form.version"
-              label="Version"
+              :label="t('admin.sharedApps.version')"
               :options="versions"
               text-by="name"
               value-by="id"
@@ -75,7 +73,7 @@ const { t } = useI18n()
             />
             <va-select
               v-model="form.plan"
-              label="Plan"
+              :label="t('admin.sharedApps.plan')"
               :options="plans"
               text-by="name"
               value-by="id"
@@ -94,7 +92,7 @@ const { t } = useI18n()
                 id="submit"
                 :disabled="form.processing"
               >
-                Update
+                {{ t('common.update') }}
               </va-button>
             </div>
           </div>
