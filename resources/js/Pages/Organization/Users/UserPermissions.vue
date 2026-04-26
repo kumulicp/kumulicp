@@ -2,25 +2,30 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import UserLayout from './UserLayout.vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>User Permissions - Control Panel</title>
+    <title>{{ $t('organization.users.userPermissions') }} - Control Panel</title>
   </Head>
   <va-modal v-model="showAppPermissionsModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content>
-      <va-card-title class="m-0"> Update {{ appPermissions.name }} </va-card-title>
-      <va-card-content class="m-0">
+      <va-card-title class="m-0"> {{ $t('organization.users.updateApp', { name: appPermissions.name }) }} </va-card-title>
+      <va-card-content class="m-0"><!--
+        <va-switch v-if="typeof appPermissions.allow === 'boolean'"
+          v-model="appAccessType[appPermissions.id]"
+          label="control panel"
+          true-value="standard"
+          false-value="none"
+          @update:modelValue="updateRoleOptions(appPermissions)"
+          />-->
         <va-select
             v-if="plan.type === 'app' && filteredPermissions[appPermissions.id]['full'] === true"
             :id="'roles-'+appPermissions.id"
             v-model="appAccessTypeFiltered[appPermissions.id]"
             class="my-2"
-            :label="appPermissions.name+' Access Type'"
-            messages="Filter app roles based on the access type you want for this user"
+            :label="$t('organization.users.appAccessTypeLabel', { name: appPermissions.name })"
+            :messages="$t('organization.users.filterAppRoles')"
             :options="appPermissions.access_types"
             immediateValidation
             text-by="text"
@@ -49,7 +54,7 @@ const { t } = useI18n()
             <va-switch
               v-model="form['permission'][appPermissions.id][category.id]"
               :label="category.name+' '+category['roles'][1]['text']"
-              :messages="category.roles[1]['disabled'] ? 'Max users reach' : ''"
+              :messages="category.roles[1]['disabled'] ? $t('organization.users.maxUsersReached') : ''"
               class="my-2"
               immediateValidation
               :true-value="category.roles[1]['value']"
@@ -61,7 +66,7 @@ const { t } = useI18n()
         </template>
       </va-card-content>
       <va-card-actions align="right" class="">
-        <va-button @click="updateAccessType(); showAppPermissionsModal = false" id="submit" class="mr-2 mb-2">OK</va-button>
+        <va-button @click="updateAccessType(); showAppPermissionsModal = false" id="submit" class="mr-2 mb-2">{{ $t('modal.ok') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -75,10 +80,10 @@ const { t } = useI18n()
               <va-icon name="fa-box" style="color: var(--va-list-item-label-caption-color)"  size="5rem" />
             </div>
             <div class="flex flex-col lg12 va-text-center">
-              <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)">No apps have been activated</h2>
+              <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)">{{ $t('organization.users.noAppsActivated') }}</h2>
             </div>
             <div class="flex flex-col lg12 va-text-center mb-4">
-              <Link href="/discover"><va-button color="primary">Discover Apps Here</va-button></Link>
+              <Link href="/discover"><va-button color="primary">{{ $t('organization.users.discoverAppsHere') }}</va-button></Link>
             </div>
           </div>
         </template>
@@ -86,10 +91,10 @@ const { t } = useI18n()
           <va-select
             v-if="plan.type === 'package' && user.can.change_access_type"
             id="planType"
-            label="User Access Type"
+            :label="$t('organization.users.userAccessType')"
             v-model="form.user.access_type"
             class="my-2"
-            messages="Filter app roles based on the access type you want for this user"
+            :messages="$t('organization.users.filterAppRoles')"
             :options="access_types"
             immediateValidation
             text-by="text"
@@ -102,21 +107,21 @@ const { t } = useI18n()
             outline
             class="mb-4"
           >
-            You are an admin. Only another admin can remove your admin permission
+            {{ $t('organization.users.adminWarning') }}
           </va-alert>
           <table class="va-table va-table--striped mb-2">
             <thead>
               <tr>
-                <th style="width: 15rem">App</th>
-                <th v-if="plan.type === 'app'">Access Type</th>
-                <th>Permissions</th>
+                <th style="width: 15rem">{{ $t('admin.apps.appWord') }}</th>
+                <th v-if="plan.type === 'app'">{{ $t('organization.users.accessType') }}</th>
+                <th>{{ $t('organization.users.permissions') }}</th>
                 <th style="width: 15rem"></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(permission, index) in filteredPermissions" :key="index">
                 <td>
-                  {{ permission.name }} <a href="#" @click="showDescription(permission)"><va-icon name="fa-circle-info" title="Role Descriptions" /></a>
+                  {{ permission.name }} <a href="#" @click="showDescription(permission)"><va-icon name="fa-circle-info" :title="$t('organization.users.roleDescriptions')" /></a>
                 </td>
                 <template v-if="plan.type === 'app'">
                   <td>{{ accessTypes[appAccessType[permission.id]] }}</td>
@@ -128,15 +133,15 @@ const { t } = useI18n()
                     </template>
                   </template>
                 </td>
-                <td v-else><va-chip outline class="mr-1">No Access</va-chip></td>
+                <td v-else><va-chip outline class="mr-1">{{ $t('organization.users.noAccess') }}</va-chip></td>
                 <td>
-                  <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && permission.categories && permission.categories.length > 0)" href="#" @click="showAppPermissions(permission)"><va-icon name="fa-lock" title="Update Permissions" /> Update Permissions</a>
+                  <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && permission.categories && permission.categories.length > 0)" href="#" @click="showAppPermissions(permission)"><va-icon name="fa-lock" :title="$t('organization.users.updatePermissions')" /> {{ $t('organization.users.updatePermissions') }}</a>
                 </td>
               </tr>
             </tbody>
           </table>
-          <va-button type="submit" id="submit" class="mb-2 mr-2" :disabled="form.processing">Submit</va-button>
-          <va-button @click="resetPermissions" id="reset" class="mb-2" color="backgroundSecondary" :disabled="form.processing || !form.isDirty">Reset</va-button>
+          <va-button type="submit" id="submit" class="mb-2 mr-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
+          <va-button @click="resetPermissions" id="reset" class="mb-2" color="backgroundSecondary" :disabled="form.processing || !form.isDirty">{{ $t('form.reset') }}</va-button>
         </form>
       </div>
     </div>
@@ -144,10 +149,10 @@ const { t } = useI18n()
   <va-modal v-model="showConfirmAccessTypeChange" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content>
       <form @submit.prevent="form.post('/users')">
-        <va-card-title class="m-0">Confirm Permission Changes</va-card-title>
+        <va-card-title class="m-0">{{ $t('organization.users.confirmPermissionChanges') }}</va-card-title>
         <va-card-content class="m-0">
           <template v-if="accessTypeChanges.length > 0">
-            <b>This user's access has changed</b>
+            <b>{{ $t('organization.users.accessChanged') }}</b>
             <div class="mt-2 mb-3">
               <ul class="va-unordered">
                 <li v-for="(change, index) in accessTypeChanges" :key="index">
@@ -155,10 +160,10 @@ const { t } = useI18n()
                 </li>
               </ul>
             </div>
-            <va-icon name="fa-warning" color="warning" class="mr-2" /> Note: this may affect your subscription price
+            <va-icon name="fa-warning" color="warning" class="mr-2" /> {{ $t('organization.users.subscriptionPriceNote') }}
           </template>
           <template v-else>
-            Your subscription won't be affected. Are you sure you want to update this user's permissions?
+            {{ $t('organization.users.subscriptionNotAffected') }}
           </template>
         </va-card-content>
         <va-card-actions align="right" class="">
@@ -166,13 +171,13 @@ const { t } = useI18n()
             color="backgroundSecondary"
             @click="showConfirmAccessTypeChange = !showConfirmAccessTypeChange"
           >
-            Cancel
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button
             @click="form.post('/users/'+user.id+'/permissions')"
             :disabled="form.processing"
           >
-            Yes, Update Permissions
+            {{ $t('organization.users.yesUpdatePermissions') }}
           </va-button>
         </va-card-actions>
       </form>
@@ -181,7 +186,7 @@ const { t } = useI18n()
   <va-modal v-model="showDescriptionModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content>
       <form @submit.prevent="form.post('/users')">
-        <va-card-title class="m-0">Description of {{ appDescription.name }} roles</va-card-title>
+        <va-card-title class="m-0">{{ $t('organization.users.descriptionOfRoles', { name: appDescription.name }) }}</va-card-title>
         <va-card-content class="m-0">
           <template v-for="(category, index) in appDescription.categories" :key="index">
             <template v-for="(role, index) in category.roles" :key="index">
@@ -197,7 +202,7 @@ const { t } = useI18n()
             color="primary"
             @click="showDescriptionModal = !showDescriptionModal"
           >
-            Sounds good!
+            {{ $t('modal.soundsGood') }}
           </va-button>
         </va-card-actions>
       </form>
@@ -295,7 +300,7 @@ export default {
   methods: {
     getMessage (app) {
       if (!app.edit) {
-        return 'You have reached the max users for this app'
+        return this.$t('organization.users.maxUsersForApp')
       }
     },
     updatePermissions () {
@@ -342,7 +347,7 @@ export default {
           }
 
           if (this.permissions[id].access_type !== appAccessType) {
-            this.accessTypeChanges.push(this.accessTypes[appAccessType] + ' access for ' + this.permissions[id].name)
+            this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType], name: this.permissions[id].name }))
           }
           this.appAccessType[app.id] = appAccessType
         }
@@ -350,17 +355,17 @@ export default {
         const confirmedAccessType = this.confirmAccessType()
         if (this.user.access_type !== confirmedAccessType) {
           if (this.user.access_type === 'standard' && confirmedAccessType === 'basic') {
-            this.accessTypeChanges.push('This user is being downgraded to a ' + this.accessTypes[confirmedAccessType])
+            this.accessTypeChanges.push(this.$t('organization.users.userDowngradedTo', { type: this.accessTypes[confirmedAccessType] }))
           } else if ((this.user.access_type === 'basic' || confirmedAccessType === 'none' || confirmedAccessType === 'minimal') && confirmedAccessType === 'standard') {
-            this.accessTypeChanges.push('This user is being upgraded to an ' + this.accessTypes[confirmedAccessType])
+            this.accessTypeChanges.push(this.$t('organization.users.userUpgradedTo', { type: this.accessTypes[confirmedAccessType] }))
           } else if ((this.user.access_type === 'standard' || this.user.access_type === 'basic') && confirmedAccessType === 'minimal') {
-            this.accessTypeChanges.push('This user is being downgrade to ' + this.accessTypes[confirmedAccessType])
+            this.accessTypeChanges.push(this.$t('organization.users.userDowngradedToMinimal', { type: this.accessTypes[confirmedAccessType] }))
           } else if (this.user.access_type !== 'none' && confirmedAccessType === 'none') {
-            this.accessTypeChanges.push('This user is being disabled')
+            this.accessTypeChanges.push(this.$t('organization.users.userDisabled'))
           } else if (this.user.access_type === 'none' && confirmedAccessType !== 'none') {
-            this.accessTypeChanges.push('This user is being enabled to a ' + this.accessTypes[confirmedAccessType])
+            this.accessTypeChanges.push(this.$t('organization.users.userEnabledTo', { type: this.accessTypes[confirmedAccessType] }))
           } else if (this.user.access_type === 'minimal' && confirmedAccessType !== 'none') {
-            this.accessTypeChanges.push('This user is being upgraded to a ' + this.accessTypes[confirmedAccessType])
+            this.accessTypeChanges.push(this.$t('organization.users.userUpgradedTo', { type: this.accessTypes[confirmedAccessType] }))
           }
         }
       }
@@ -408,7 +413,7 @@ export default {
         }
         if (!(availableRoleNames.includes(this.form.permission[app.id][category.id]))) {
           this.form.permission[app.id][category.id] = 'none'
-          this.errors[app.id][category.id] = "This user's access type as been downgrade and role must be changed"
+          this.errors[app.id][category.id] = this.$t('organization.users.accessDowngradedError')
         }
         if (availableRoleNames.length === 2 && !this.initialLoad) {
           this.form.permission[app.id][category.id] = availableRoleNames[1]
@@ -446,7 +451,7 @@ export default {
             // Remove role if it no longer exists after filtering roles
             if (!(availableRoleNames.includes(this.form.permission[app.id][category.id]))) {
               this.form.permission[app.id][category.id] = 'none'
-              this.errors[app.id][category.id] = "This user's access type as been changed and role must be changed"
+              this.errors[app.id][category.id] = this.$t('organization.users.accessChangedError')
             }
 
             newCategory.roles = filteredRoles

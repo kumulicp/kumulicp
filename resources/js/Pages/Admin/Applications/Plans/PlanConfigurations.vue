@@ -3,20 +3,18 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.plans.editPlan') }} - Control Panel</title>
+    <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/apps/'+app.slug+'/plans/'+plan.id+'/configurations')">
     <va-list>
       <va-list-item class="py-3">
         <va-list-item-section label>
           <va-list-item-label>
-            <h3 class="va-h3">{{ t('admin.plans.configurations') }}</h3>
+            <h3 class="va-h3">{{ $t('admin.plans.configurations') }}</h3>
           </va-list-item-label>
         </va-list-item-section>
       </va-list-item>
@@ -27,7 +25,7 @@ const { t } = useI18n()
               <h5>{{ config.name }}</h5>
             </va-list-item-label>
             <va-list-item-label caption :lines="2">
-              <b>{{ t('admin.plans.persistentSetting') }}:</b> {{ config.persistent }}
+              <b>{{ $t('admin.plans.persistentSetting') }}:</b> {{ config.persistent }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>
@@ -70,7 +68,7 @@ const { t } = useI18n()
                 immediateValidation
                 type="password"
                 class="pb-1"
-                :placeholder="t('admin.plans.leavePasswordBlank')"
+                :placeholder="$t('admin.plans.leavePasswordBlank')"
                 />
               <va-select
                 v-if="config.type == 'enum'"
@@ -91,31 +89,31 @@ const { t } = useI18n()
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section v-if="config.additional" icon>
-                <va-button color="backgroundSecondary" @click="removeConfig(index)" :title="'Remove Config'"><va-icon name="fa-x" color="danger" /></va-button>
+                <va-button color="backgroundSecondary" @click="removeConfig(index)" :title="$t('admin.plans.removeConfig')"><va-icon name="fa-x" color="danger" /></va-button>
           </va-list-item-section>
         </va-list-item>
       <va-list-separator class="my-1" fit v-if="(index+1) != configs.length" />
       </template>
     </va-list>
-    <div class="row mb-3 ml-1">{{ t('admin.plans.persistentSettingsNotice') }}</div>
+    <div class="row mb-3 ml-1">{{ $t('admin.plans.persistentSettingsNotice') }}</div>
     <va-card v-if="showAddNewConfigOptions" stripe stripe-color="success" class="mb-2">
       <va-card-title>
-        {{ t()}}
+        {{ $t('admin.plans.addConfig') }}
       </va-card-title>
       <va-card-content>
         <div class="row">
           <div class="flex flex-col lg3">
             <va-input
               v-model="newConfig.name"
-              :label="t('admin.plans.name')"
-              :messages="t('admin.plans.newNameMessage')"
+              :label="$t('admin.plans.name')"
+              :messages="$t('admin.plans.newNameMessage')"
               />
           </div>
           <div class="flex flex-col lg3">
             <va-select
               v-model="newConfig.type"
               :options="configTypes"
-              :label="t('admin.plans.configType')"
+              :label="$t('admin.plans.configType')"
               value-by="value"
               text-by="text"
               searchable
@@ -124,22 +122,22 @@ const { t } = useI18n()
           <div class="flex flex-col lg3">
             <va-checkbox
               v-model="newConfig.persistentSetting"
-              :label="t('admin.plans.persistentSetting')"
-              :messages="t('admin.plans.persistentSettingMessage')"
+              :label="$t('admin.plans.persistentSetting')"
+              :messages="$t('admin.plans.persistentSettingMessage')"
               immediateValidation
               />
           </div>
           <div class="flex flex-col lg3">
             <div>
-              <va-button color="secondary" @click="addNewConfig()">{{ t('admin.plans.addConfig') }}</va-button>
-              <va-button class="ml-3" color="backgroundSecondary" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ t('admin.plans.hide') }}</va-button>
+              <va-button color="secondary" @click="addNewConfig()">{{ $t('admin.plans.addConfig') }}</va-button>
+              <va-button class="ml-3" color="backgroundSecondary" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ $t('admin.plans.hide') }}</va-button>
             </div>
           </div>
         </div>
       </va-card-content>
     </va-card>
-    <va-button v-if="! showAddNewConfigOptions" class="mr-2 mb-2" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ t('admin.plans.addConfig') }}</va-button>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
+    <va-button v-if="! showAddNewConfigOptions" class="mr-2 mb-2" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ $t('admin.plans.addConfig') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 
@@ -165,13 +163,13 @@ export default {
     return {
       configList: this.configs,
       feature_options: [
-        { text: useI18n().t('status.disabled'), value: 'disabled' },
-        { text: useI18n().t('status.enabled'), value: 'enabled' },
-        { text: useI18n().t('status.optional'), value: 'optional' }
+        { text: this.$t('status.disabled'), value: 'disabled' },
+        { text: this.$t('status.enabled'), value: 'enabled' },
+        { text: this.$t('status.optional'), value: 'optional' }
       ],
       featurePaymentTypes: [
-        { text: useI18n().t('admin.plans.perUser'), value: 'user' },
-        { text: useI18n().t('admin.plans.addToBill'), value: 'addon' }
+        { text: this.$t('admin.plans.perUser'), value: 'user' },
+        { text: this.$t('admin.plans.addToBill'), value: 'addon' }
       ],
       form: useForm({
         configurations: configs,
@@ -184,11 +182,11 @@ export default {
       },
       showAddNewConfigOptions: false,
       configTypes: [
-        { text: useI18n().t('admin.plans.configTypes.string'), value: 'string' },
-        { text: useI18n().t('admin.plans.configTypes.int'), value: 'int' },
-        { text: useI18n().t('admin.plans.configTypes.bool'), value: 'bool' },
-        { text: useI18n().t('admin.plans.configTypes.password'), value: 'password' },
-        { text: useI18n().t('admin.plans.configTypes.textarea'), value: 'textarea' }
+        { text: this.$t('admin.plans.configTypes.string'), value: 'string' },
+        { text: this.$t('admin.plans.configTypes.int'), value: 'int' },
+        { text: this.$t('admin.plans.configTypes.bool'), value: 'bool' },
+        { text: this.$t('admin.plans.configTypes.password'), value: 'password' },
+        { text: this.$t('admin.plans.configTypes.textarea'), value: 'textarea' }
       ]
     }
   },

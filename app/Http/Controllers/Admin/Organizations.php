@@ -32,7 +32,7 @@ class Organizations extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                 ],
             ],
         ]);
@@ -78,7 +78,7 @@ class Organizations extends Controller
             'subscription_stats' => $subscription->compileCostStats(),
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -86,7 +86,7 @@ class Organizations extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Details',
+                    'label' => __('admin.organizations.details'),
                 ],
             ],
         ]);
@@ -115,7 +115,7 @@ class Organizations extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -123,7 +123,7 @@ class Organizations extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Logs',
+                    'label' => __('admin.logs.logs'),
                 ],
             ],
         ]);
@@ -146,7 +146,7 @@ class Organizations extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -154,7 +154,7 @@ class Organizations extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Tasks',
+                    'label' => __('admin.tasks.tasks'),
                 ],
             ],
         ]);
@@ -167,7 +167,7 @@ class Organizations extends Controller
             $organization->reactivate();
         }
 
-        return redirect('/admin/organizations/'.$organizationid)->with('success', 'Organization reactivated!');
+        return redirect('/admin/organizations/'.$organizationid)->with('success', __('admin.organizations.reactivated'));
     }
 
     public function deactivate($organizationid)
@@ -177,7 +177,7 @@ class Organizations extends Controller
             $organization->deactivate();
         }
 
-        return redirect('/admin/organizations/'.$organizationid)->with('success', 'Organization deactivated');
+        return redirect('/admin/organizations/'.$organizationid)->with('success', __('admin.organizations.deactivated'));
     }
 
     public function destroy(Organization $organization)
@@ -197,6 +197,6 @@ class Organizations extends Controller
         $subscription = (new SubscriptionService($organization))->all();
         Action::execute(new SubscriptionUpdate($organization, $subscription), background: true);
 
-        return redirect("/admin/organizations/{$organization->id}")->with('success', 'Subscription is being updated');
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.subscription_updating'));
     }
 }

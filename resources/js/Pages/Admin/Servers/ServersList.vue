@@ -2,31 +2,29 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import axios from 'axios'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>Servers - Control Panel</title>
+    <title>{{ $t('admin.servers.servers') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Servers</va-card-title>
+    <va-card-title>{{ $t('admin.servers.servers') }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button id="addServer" @click="showAddServer = !showAddServer">Add Server</va-button>
+        <va-button id="addServer" @click="showAddServer = !showAddServer">{{ $t('admin.servers.addServer') }}</va-button>
       </div>
         <va-modal v-model="showAddServer" no-outside-dismiss no-padding>
           <template #content="{ ok }">
             <form @submit.prevent="form.post('/admin/server/servers')">
-              <va-card-title>Add Server</va-card-title>
+              <va-card-title>{{ $t('admin.servers.addServer') }}</va-card-title>
               <va-card-content>
                 <va-input v-model="form.name"
                   id="name"
                   required-mark
                   immediateValidation
-                  label="Server Name"
+                  :label="$t('admin.servers.serverName')"
                   class="mb-3"
                   :error="$page.props.errors.name"
                   :error-messages="$page.props.errors.name"
@@ -38,7 +36,7 @@ const { t } = useI18n()
                   immediateValidation
                   value-by="value"
                   text-by="text"
-                  label="Type"
+                  :label="$t('admin.servers.type')"
                   class="mb-3"
                   @update:modelValue="form.interface = ''"
                   :error="$page.props.errors.type"
@@ -49,7 +47,7 @@ const { t } = useI18n()
                   :options="interfaces[form.type]"
                   required-mark
                   immediateValidation
-                  label="Server Interface"
+                  :label="$t('admin.servers.serverInterface')"
                   class="mb-3"
                   :error="$page.props.errors.interface"
                   :error-messages="$page.props.errors.interface"
@@ -59,7 +57,7 @@ const { t } = useI18n()
                   :options="locations"
                   required-mark
                   immediateValidation
-                  label="Server Location"
+                  :label="$t('admin.servers.serverLocation')"
                   class="mb-3"
                   value-by="value"
                   text-by="text"
@@ -71,7 +69,7 @@ const { t } = useI18n()
                   :options="applications"
                   required-mark
                   immediateValidation
-                  label="Application"
+                  :label="$t('admin.servers.application')"
                   class="mb-3"
                   value-by="value"
                   text-by="text"
@@ -84,7 +82,7 @@ const { t } = useI18n()
                   :options="plans"
                   required-mark
                   immediateValidation
-                  label="Plan"
+                  :label="$t('admin.servers.plan')"
                   class="mb-3"
                   value-by="value"
                   text-by="text"
@@ -93,8 +91,8 @@ const { t } = useI18n()
                 />
               </va-card-content>
               <va-card-actions align="right">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
-                <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">Submit</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -106,11 +104,11 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th style="width: 50%">Name</th>
-                <th>Type</th>
-                <th>Host</th>
-                <th>Status</th>
-                <th>Remove</th>
+                <th style="width: 50%">{{ $t('admin.servers.name') }}</th>
+                <th>{{ $t('admin.servers.type') }}</th>
+                <th>{{ $t('admin.servers.host') }}</th>
+                <th>{{ $t('admin.servers.status') }}</th>
+                <th>{{ $t('admin.servers.remove') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -140,15 +138,15 @@ const { t } = useI18n()
           :page-size="pageSize" />
     </va-card-content>
   </va-card>
-  <va-modal v-model="showRemoveServer" hide-default-actions :title="'Remove ' + removeServer.name + '?'"
-    :message="'Are you sure you want to remove '+ removeServer.name +'? This action is permanent.'">
+  <va-modal v-model="showRemoveServer" hide-default-actions :title="$t('admin.servers.removeTitle', { name: removeServer.name })"
+    :message="$t('admin.servers.removeMessage', { name: removeServer.name })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        Cancel
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button color="danger"
         id="delete"
-        @click="remove.delete('/admin/server/servers/' + removeServer.id); showRemoveServer = !showRemoveServer">Delete</va-button>
+        @click="remove.delete('/admin/server/servers/' + removeServer.id); showRemoveServer = !showRemoveServer">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
@@ -170,14 +168,14 @@ export default {
       showRemoveServer: false,
       removeServer: '',
       server_types: [
-        { value: 'web', text: 'Web' },
-        { value: 'database', text: 'Database' },
-        { value: 'email', text: 'Email' },
-        { value: 'sso', text: 'SSO' }
+        { value: 'web', text: this.$t('admin.servers.web') },
+        { value: 'database', text: this.$t('admin.servers.database') },
+        { value: 'email', text: this.$t('admin.servers.email') },
+        { value: 'sso', text: this.$t('admin.servers.sso') }
       ],
       locations: [
-        { value: 'external', text: 'External' },
-        { value: 'internal', text: 'Internal' }
+        { value: 'external', text: this.$t('admin.servers.external') },
+        { value: 'internal', text: this.$t('admin.servers.internal') }
       ],
       plans: [],
       form: useForm({

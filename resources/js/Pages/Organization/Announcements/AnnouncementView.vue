@@ -1,15 +1,13 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Announcement: {{ announcement.title }} - Control Panel</title>
+    <title>{{ $t('organization.announcement.pageTitle', { title: announcement.title }) }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Announcement: {{ announcement.title }}</va-card-title>
+    <va-card-title>{{ $t('organization.announcement.pageTitle', { title: announcement.title }) }}</va-card-title>
     <va-card-content>
       <div class="mb-3">{{ announcement.date }}</div>
       <div id="announcement" style="overflow-x: auto; overflow-y: hidden" v-html="announcement.content"></div>

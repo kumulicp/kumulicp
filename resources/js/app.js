@@ -42,6 +42,11 @@ createInertiaApp({
   setup ({ el, App, props, plugin }) {
     const VueApp = createApp({ render: () => h(App, props) })
 
+    const language = props.initialPage.props.language
+    if (language) {
+      i18n.global.locale.value = language
+    }
+
     VueApp.use(plugin)
       .use(i18n)
       .use(stores)

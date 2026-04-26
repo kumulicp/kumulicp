@@ -25,7 +25,7 @@ class LdapSettings extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Server Settings',
+                    'label' => __('admin.settings.control_panel_settings'),
                 ],
             ],
         ]);
@@ -59,6 +59,6 @@ class LdapSettings extends Controller
         Settings::update('ldap_access_type', $validated['access_type']);
         Settings::update('ldap_password', $validated['password']);
 
-        return redirect('admin/settings/ldap')->with('success', 'Settings have been updated!');
+        return redirect('admin/settings/ldap')->with('success', __('admin.settings.updated'));
     }
 }
