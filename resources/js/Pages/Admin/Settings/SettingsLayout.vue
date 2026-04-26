@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <div class="plan">
@@ -32,24 +30,24 @@ export default {
     const basePath = '/admin/settings'
     const tabs = [
       {
-        title: useI18n().t('settings.controlPanel'),
+        title: this.$t('settings.controlPanel'),
         url: basePath
       },
       {
-        title: useI18n().t('settings.invoice'),
+        title: this.$t('settings.invoice'),
         url: basePath + '/invoice'
       },
       {
-        title: useI18n().t('settings.ldap'),
+        title: this.$t('settings.ldap'),
         url: basePath + '/ldap'
       },
       {
-        title: useI18n().t('settings.ssoProviders'),
+        title: this.$t('settings.ssoProviders'),
         url: basePath + '/sso-providers'
       }
     ]
 
-    let value = useI18n().t('settings.controlPanel')
+    let value = this.$t('settings.controlPanel')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

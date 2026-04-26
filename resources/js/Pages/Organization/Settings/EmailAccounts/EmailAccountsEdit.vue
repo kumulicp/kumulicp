@@ -1,9 +1,12 @@
+<script setup lang="ts">
+
+</script>
 <template>
   <Head>
-    <title>Edit Email Accounts - Control Panel</title>
+    <title>{{ $t('organization.email.editEmailAccounts') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Change Password</va-card-title>
+    <va-card-title>{{ $t('auth.changePassword') }}</va-card-title>
 
     <va-card-content>
       <div class="row mt-3">
@@ -11,24 +14,24 @@
           <va-input v-model="name"
             immediateValidation
             class="mb-3"
-            label="Name" />
+            :label="$t('common.name')" />
 
           <va-input v-model="password"
             class="mb-3"
             type="password"
-            label="Password"
+            :label="$t('auth.password')"
             immediateValidation />
 
           <va-input v-model="confirmPassword"
             class="mb-3"
             type="password"
             immediateValidation
-            label="Confirm Password" />
+            :label="$t('auth.confirmPassword')" />
         </div>
       </div>
 
       <div class="row justify-end">
-        <va-button class="mb-3">Change Password</va-button>
+        <va-button class="mb-3">{{ $t('auth.changePassword') }}</va-button>
       </div>
     </va-card-content>
   </va-card>

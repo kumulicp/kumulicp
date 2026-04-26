@@ -5,25 +5,23 @@ import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const phoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNumber)
 </script>
 <template>
   <Head>
-    <title>Edit Server Settings - Control Panel</title>
+    <title>{{ $t('settings.editServerSettings') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/settings/invoice')">
     <AdminSettings>
-        <template #name>Invoice Info</template>
+        <template #name>{{ $t('settings.invoiceInfo') }}</template>
         <template #settings>
           <va-input v-model="form.invoice_vendor_name"
             id="invoiceVendorName"
             class="mb-3"
-            :label="t('settings.vendorName')"
+            :label="$t('settings.vendorName')"
             immediateValidation
             mark-required
             :error="$page.props.errors.invoice_vendor_name"
@@ -32,7 +30,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_product"
             id="invoiceVendorProduct"
             class="mb-3"
-            :label="t('settings.productName')"
+            :label="$t('settings.productName')"
             immediateValidation
             :error="$page.props.errors.invoice_vendor_product"
             :error-messages="$page.props.errors.invoice_vendor_product"
@@ -40,7 +38,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_street"
             id="invoiceVendorStreet"
             class="mb-3"
-            :label="t('settings.vendorStreet')"
+            :label="$t('settings.vendorStreet')"
             immediateValidation
             :error="$page.props.errors.invoice_vendor_street"
             :error-messages="$page.props.errors.invoice_vendor_street"
@@ -48,7 +46,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_location"
             id="invoiceVendorLocation"
             class="mb-3"
-            :label="t('settings.vendorLocation')"
+            :label="$t('settings.vendorLocation')"
             immediateValidation
             :error="$page.props.errors.invoice_vendor_location"
             :error-messages="$page.props.errors.invoice_vendor_location"
@@ -56,7 +54,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_phone_number"
             id="invoiceVendorPhoneNumber"
             class="mb-3"
-            :label="t('settings.vendorPhoneNumber')"
+            :label="$t('settings.vendorPhoneNumber')"
             immediateValidation
             type="tel"
             placeholder="+1 (###) ### ####"
@@ -68,7 +66,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             id="invoiceVendorEmail"
             type="email"
             class="mb-3"
-            :label="t('settings.vendorEmail')"
+            :label="$t('settings.vendorEmail')"
             immediateValidation
             :error="$page.props.errors.invoice_vendor_email"
             :error-messages="$page.props.errors.invoice_vendor_email"
@@ -76,7 +74,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_url"
             id="invoiceVendorUrl"
             class="mb-3"
-            :label="t('settings.vendorWebside')"
+            :label="$t('settings.vendorWebside')"
             immediateValidation
             type="url"
             placeholder="https://example.com"
@@ -86,7 +84,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-input v-model="form.invoice_vendor_vat"
             id="invoiceVendorVat"
             class="mb-3"
-            :label="t('settings.vendorVAT')"
+            :label="$t('settings.vendorVAT')"
             immediateValidation
             :error="$page.props.errors.invoice_vendor_vat"
             :error-messages="$page.props.errors.invoice_vendor_vat"
@@ -98,7 +96,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
     :disabled="form.processing"
     class="mr-2 my-2"
   >
-    {{ t('form.update') }}
+    {{ $t('common.update') }}
   </va-button>
 </form>
 </template>

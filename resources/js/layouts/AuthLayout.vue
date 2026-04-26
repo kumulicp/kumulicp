@@ -1,10 +1,8 @@
 <script setup>
 import VuesticLogo from '../components/VuesticLogo.vue'
 import { Link, usePage } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 import { useToast } from 'vuestic-ui'
 
-const { t } = useI18n()
 </script>
 <template>
   <div class="auth-layout row align-content-center">
@@ -20,8 +18,8 @@ const { t } = useI18n()
           <va-card-content>
             <va-tabs v-model="selectTabIndex" center>
               <template #tabs>
-                <Link id="login" href="/login"><va-tab key="/login" name="/login">{{ t('auth.login') }}</va-tab></Link>
-                <Link id="register" href="/register"><va-tab key="/register" name="/register">{{ t('auth.sign_up') }}</va-tab></Link>
+                <Link id="login" href="/login"><va-tab key="/login" name="/login">{{ $t('auth.login') }}</va-tab></Link>
+                <Link id="register" href="/register"><va-tab key="/register" name="/register">{{ $t('auth.sign_up') }}</va-tab></Link>
               </template>
             </va-tabs>
 

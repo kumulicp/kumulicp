@@ -24,7 +24,7 @@ class Settings extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Server Settings',
+                    'label' => __('admin.settings.control_panel_settings'),
                 ],
             ],
         ]);
@@ -53,6 +53,6 @@ class Settings extends Controller
         SettingsFacade::update('support_email', Arr::get($validated, 'support_email'));
         SettingsFacade::update('error_email', Arr::get($validated, 'error_email'));
 
-        return redirect('admin/settings')->with('success', 'Settings have been updated!');
+        return redirect('admin/settings')->with('success', __('admin.settings.updated'));
     }
 }

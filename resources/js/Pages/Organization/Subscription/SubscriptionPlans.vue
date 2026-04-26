@@ -2,19 +2,17 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import PricingCard from '@/components/cards/PricingCard.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>Plans - Control Panel</title>
+    <title>{{ $t('organization.subscription.plansTitle') }} - Control Panel</title>
   </Head>
   <div class="row">
     <div class="flex flex-col xs12 lg8">
       <va-card class="mb-4 pb-2">
-        <va-card-title>Plans</va-card-title>
+        <va-card-title>{{ $t('organization.subscription.plansTitle') }}</va-card-title>
         <va-card-content>
           <div class="va-title text-align-center text-color-primary">
             {{ organization.name }}
@@ -22,9 +20,9 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th>Base/App Name</th>
-                <th>Plan</th>
-                <th>Status</th>
+                <th>{{ $t('organization.subscription.baseAppName') }}</th>
+                <th>{{ $t('organization.subscription.plan') }}</th>
+                <th>{{ $t('admin.apps.status') }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -37,7 +35,7 @@ const { t } = useI18n()
                   {{ plan.entity.name }}
                 </td>
                 <td class="vertical-middle">
-                  {{ plan.name }} <span v-if="plan.status === 'retired'">(Retired)</span>
+                  {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
                 </td>
                 <td class="vertical-middle">
                   {{ plan.status }}
@@ -74,7 +72,7 @@ const { t } = useI18n()
                     {{ plan.entity.name }}
                   </td>
                   <td class="vertical-middle">
-                    {{ plan.name }} <span v-if="plan.status === 'retired'">(Retired)</span>
+                    {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
                   </td>
                   <td class="vertical-middle">
                     {{ plan.status }}
@@ -92,44 +90,44 @@ const { t } = useI18n()
           </template>
         </va-card-content>
       </va-card>
-      <va-modal v-model="showUnsubscribeModal" hide-default-actions title="Cancel subscription?"
+      <va-modal v-model="showUnsubscribeModal" hide-default-actions :title="$t('organization.subscription.cancelSubscriptionTitle')"
         :message="$t('messages.unsubscribe', {plan: plan.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showUnsubscribeModal = false">
-            Cancel
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ $t('modal.unsubscribe') }}</va-button>
+            @click="cancel.delete('/subscription/'+selectedOrganization.id); showUnsubscribeModal = !showUnsubscribeModal">{{ $t('plan.unsubscribe') }}</va-button>
         </template>
       </va-modal>
-      <va-modal v-model="showResubscribeModal" hide-default-actions title="Cancel Unsubscribe?"
+      <va-modal v-model="showResubscribeModal" hide-default-actions :title="$t('organization.subscription.cancelUnsubscribeTitle')"
         :message="$t('messages.resubscribe', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showResubscribeModal = false">
-            Cancel
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ $t('modal.resubscribe') }}</va-button>
+            @click="cancel.post('/subscription/'+selectedOrganization.id+'/resubscribe'); showResubscribeModal = !showResubscribeModal">{{ $t('plan.resubscribe') }}</va-button>
         </template>
       </va-modal>
-      <va-modal v-model="showDeactivateModal" hide-default-actions title="Deactivate App?"
+      <va-modal v-model="showDeactivateModal" hide-default-actions :title="$t('organization.subscription.deactivateAppTitle')"
         :message="$t('messages.deactivate', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showDeactivateModal = false">
-            Cancel
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="danger"
-            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ $t('modal.deactivate') }}</va-button>
+            @click="cancel.delete('/apps/'+plan.entity.id); showDeactivateModal = !showDeactivateModal">{{ $t('plan.deactivate') }}</va-button>
         </template>
       </va-modal>
-      <va-modal v-model="showReactivateModal" hide-default-actions title="Cancel Deactivating App?"
+      <va-modal v-model="showReactivateModal" hide-default-actions :title="$t('organization.subscription.cancelDeactivatingTitle')"
         :message="$t('messages.reactivate', {app: plan.entity.name})">
         <template #footer>
           <va-button color="backgroundSecondary" @click="showReactivateModal = false">
-            Cancel
+            {{ $t('common.cancel') }}
           </va-button>
           <va-button id="delete" color="success"
-            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ $t('modal.reactivate') }}</va-button>
+            @click="cancel.post('/apps/'+plan.entity.id+'/reactivate'); showReactivateModal = !showReactivateModal">{{ $t('plan.reactivate') }}</va-button>
         </template>
       </va-modal>
     </div>

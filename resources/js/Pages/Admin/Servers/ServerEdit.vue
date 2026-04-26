@@ -3,16 +3,14 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import ServerLayout from './ServerLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Server - Control Panel</title>
+    <title>{{ $t('admin.servers.server') }} - Control Panel</title>
   </Head>
   <div class="row justify-center" v-if="server.status != 'active' && can.activate">
-    <Link :href="'/admin/server/servers/'+server.id+'/confirm'"><va-button>Confirm Server Settings</va-button></Link>
+    <Link :href="'/admin/server/servers/'+server.id+'/confirm'"><va-button>{{ $t('admin.servers.confirmServerSettings') }}</va-button></Link>
   </div>
   <div v-else-if="server.status != 'active' && !can.activate">
     <va-alert
@@ -21,7 +19,7 @@ const { t } = useI18n()
       outline
       class="mb-3"
     >
-      Before you can enable and use this server, you must successfully run a test. Instructions available here.
+      {{ $t('admin.servers.runTestInstructions') }}
     </va-alert>
   </div>
   <va-alert
@@ -36,7 +34,7 @@ const { t } = useI18n()
         color="info"
       />
     </template>
-      <h5 class="va-h5">Setup Instructions</h5>
+      <h5 class="va-h5">{{ $t('admin.servers.setupInstructions') }}</h5>
       <p v-for="(paragraph, index) in server.description.general" :key="index"
         class="py-1">
         {{ paragraph }}
@@ -47,7 +45,7 @@ const { t } = useI18n()
     <va-list-item v-if="server.app_instance" class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>App Instance</h5>
+          <h5>{{ $t('admin.servers.appInstance') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -60,7 +58,7 @@ const { t } = useI18n()
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>Type</h5>
+          <h5>{{ $t('admin.servers.type') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -71,7 +69,7 @@ const { t } = useI18n()
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>Interface</h5>
+          <h5>{{ $t('admin.servers.interface') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -81,11 +79,11 @@ const { t } = useI18n()
   </va-list>
   <va-list-separator class="my-1" fit />
   <AdminSettings>
-    <template #name>Server Connection Info</template>
+    <template #name>{{ $t('admin.servers.serverConnectionInfo') }}</template>
     <template #description></template>
     <template #settings>
       <va-input v-model="form.name"
-        label="Server Name"
+        :label="$t('admin.servers.serverName')"
         id="name"
         class="mb-2"
         immediateValidation
@@ -93,7 +91,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.name"
       />
       <va-input v-model="form.host"
-        label="Host"
+        :label="$t('admin.servers.host')"
         :messages="server.description.host"
         id="host"
         class="mb-2"
@@ -102,7 +100,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.host"
       />
       <va-input v-model="form.address"
-        label="Address"
+        :label="$t('admin.servers.address')"
         :messages="server.description.address"
         id="address"
         class="mb-2"
@@ -111,7 +109,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.address"
       />
       <va-input v-model="form.api_key"
-        label="API Key"
+        :label="$t('admin.servers.apiKey')"
         :messages="server.description.api_key"
         id="apiKey"
         class="mb-2"
@@ -120,7 +118,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.api_key"
       />
       <va-input v-model="form.api_secret"
-        label="API Secret"
+        :label="$t('admin.servers.apiSecret')"
         :messages="server.description.api_secret"
         id="apiSecret"
         class="mb-2"
@@ -129,7 +127,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.api_secret"
       />
       <va-input v-model="form.ip"
-        label="IP"
+        :label="$t('admin.servers.ip')"
         :messages="server.description.ip"
         id="ip"
         class="mb-2"
@@ -138,7 +136,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.ip"
       />
       <va-input v-model="form.internal_address"
-        label="Internal Address"
+        :label="$t('admin.servers.internalAddress')"
         :messages="server.description.internal_address"
         id="internalAddress"
         class="mb-2"
@@ -147,7 +145,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.internal_address"
       />
       <va-select v-model="form.default_backup_server"
-        label="Default Backup Server"
+        :label="$t('admin.servers.defaultBackupServer')"
         id="defaultBackupServer"
         :options="backup_servers"
         immediateValidation
@@ -158,7 +156,7 @@ const { t } = useI18n()
         :error-messages="$page.props.errors.default_backup_server"
       />
       <va-checkbox v-model="form.is_backup_server"
-        label="Is Backup Server"
+        :label="$t('admin.servers.isBackupServer')"
         id="isBackupServer"
         class="mb-2"
         immediateValidation
@@ -169,14 +167,14 @@ const { t } = useI18n()
   </AdminSettings>
   <va-list-separator class="my-1" fit />
   <AdminSettings>
-    <template #name>Settings</template>
+    <template #name>{{ $t('admin.servers.settings') }}</template>
     <template #description>{{ server.description.settings}}</template>
     <template #settings>
       <template v-for="(setting, index) in settings" :key="index">
         <div class="row">
           <div class="flex flex-col lg4">
             <va-input v-model="settings[index]['name']"
-              :label="t('admin.plans.name')"
+              :label="$t('admin.plans.name')"
               immediateValidation
               @change="updateSettings()"
               :error="$page.props.errors.settings"
@@ -185,7 +183,7 @@ const { t } = useI18n()
           </div>
           <div class="flex flex-col lg7">
             <va-input v-model="settings[index]['value']"
-              :label="t('admin.plans.value')"
+              :label="$t('admin.plans.value')"
               immediateValidation
               @change="updateSettings()"
               :error="$page.props.errors.settings"
@@ -199,7 +197,7 @@ const { t } = useI18n()
           </div>
         </div>
       </template>
-      <va-button @click="addNewSetting()">Add Setting</va-button>
+      <va-button @click="addNewSetting()">{{ $t('admin.servers.addSetting') }}</va-button>
     </template>
   </AdminSettings>
   <va-button type="submit"
@@ -207,7 +205,7 @@ const { t } = useI18n()
     :disabled="form.processing"
     class="mr-2 mb-2"
   >
-    Update
+    {{ $t('common.update') }}
   </va-button>
 </form>
 </template>
@@ -239,9 +237,9 @@ export default {
     return {
       settings,
       server_types: [
-        { value: 'web', text: 'Web' },
-        { value: 'database', text: 'Database' },
-        { value: 'email', text: 'Email' }
+        { value: 'web', text: this.$t('admin.servers.web') },
+        { value: 'database', text: this.$t('admin.servers.database') },
+        { value: 'email', text: this.$t('admin.servers.email') }
       ],
       form: useForm({
         name: this.server.name,

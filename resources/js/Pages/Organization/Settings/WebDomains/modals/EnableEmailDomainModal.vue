@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-modal
@@ -13,16 +11,16 @@ const { t } = useI18n()
      class="p-0"
   >
     <template #content="{ ok }">
-      <va-card-title class="m-0"> Enable Email Accounts </va-card-title>
+      <va-card-title class="m-0"> {{ $t('organization.webDomains.enableEmailAccounts') }} </va-card-title>
       <va-card-content class="m-0">
-        Enabling email accounts for {{ domain.name }} allows you add email accounts with @{{ domain.name }} at the end. Are you sure you want to enable this feature?
+        {{ $t('organization.webDomains.enableEmailConfirm', { name: domain.name }) }}
       </va-card-content>
       <va-card-actions align="right">
         <va-button
           color="backgroundSecondary"
           @click="ok"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </va-button>
         <va-button
           @click="form.post('/settings/domains/'+domain.name+'/enable_email', {
@@ -30,7 +28,7 @@ const { t } = useI18n()
           })"
           :disabled="form.processing"
         >
-          Enable Email Accounts
+          {{ $t('organization.webDomains.enableEmailAccounts') }}
         </va-button>
       </va-card-actions>
     </template>

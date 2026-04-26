@@ -4,28 +4,25 @@ import CountryDropdown from '@/components/FormInputs/CountryDropdown.vue'
 import StateDropdown from '@/components/FormInputs/StateDropdown.vue'
 import { useForm } from '@inertiajs/vue3'
 import { countries } from '@/data/country_phone_codes.json'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <head>
-    <title>{{ domain.name }} Registration - Control Panel</title>
+    <title>{{ domain.name }} {{ $t('organization.webDomains.registration') }} - Control Panel</title>
   </head>
   <va-card class="mb-4">
-    <va-card-title>Registration Info</va-card-title>
+    <va-card-title>{{ $t('organization.webDomains.registrationInfo') }}</va-card-title>
     <va-card-content>
       <div class="row">
         <div class="flex lg8">
           <form @submit.prevent="form.post('/settings/domains/register/'+domain.name)">
-            <h5 class="h5">Selected Domain Name: <span class="va-text-secondary va-text-bold ml-2">{{ domain.name }}</span></h5>
+            <h5 class="h5">{{ $t('organization.webDomains.selectedDomainName') }}: <span class="va-text-secondary va-text-bold ml-2">{{ domain.name }}</span></h5>
             <va-alert class="mb-3">
               <template #icon>
                 <va-icon name="info" />
               </template>
-              <strong>Review the information below.</strong>
-              This information has been auto-populated with your Organization settings. It will be used to
-              register your domain name. Ensure the information below is still accurate.</va-alert
+              <strong>{{ $t('organization.webDomains.reviewInfoBelow') }}</strong>
+              {{ $t('organization.webDomains.autoPopulatedInfo') }}</va-alert
             >
 
             <va-select
@@ -34,16 +31,16 @@ const { t } = useI18n()
               :options="years"
               immediateValidation
               class="mb-3"
-              label="Years"
+              :label="$t('organization.webDomains.years')"
               :error="!!errors.years"
               :error-messages="$page.props.errors.years"
-              messages="Number of years to register your domain for before having to renew"
+              :messages="$t('organization.webDomains.yearsMessage')"
             />
 
             <va-input
               v-model="form.organization_name"
               class="mb-3"
-              label="Organization Name"
+              :label="$t('organization.webDomains.organizationName')"
               immediateValidation
               :error="$page.props.errors.organization_name"
               :error-messages="$page.props.errors.organization_name"
@@ -53,17 +50,17 @@ const { t } = useI18n()
               v-model="form.email_address"
               class="mb-3"
               type="email"
-              label="Organization Email"
+              :label="$t('organization.webDomains.organizationEmail')"
               immediateValidation
               :error="$page.props.errors.email_address"
               :error-messages="$page.props.errors.email_address"
-              messages="This must be a valid email address you can access. Verification is required after you register or else you risk losing your domain."
+              :messages="$t('organization.webDomains.organizationEmailMessage')"
             />
 
             <va-input
               v-model="form.first_name"
               class="mb-3"
-              label="Registrant First Name"
+              :label="$t('organization.webDomains.registrantFirstName')"
               immediateValidation
               :error="$page.props.errors.first_name"
               :error-messages="$page.props.errors.first_name"
@@ -72,7 +69,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.last_name"
               class="mb-3"
-              label="Registrant Last Name"
+              :label="$t('organization.webDomains.registrantLastName')"
               immediateValidation
               :error="$page.props.errors.last_name"
               :error-messages="$page.props.errors.last_name"
@@ -82,7 +79,7 @@ const { t } = useI18n()
               v-model="form.phone"
               class="mb-3"
               placeholder="(###) ### ####"
-              label="Phone Number"
+              :label="$t('organization.webDomains.phoneNumber')"
               immediateValidation
               :error="$page.props.errors.phone"
               :error-messages="$page.props.errors.phone"
@@ -103,7 +100,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.address_1"
               class="mb-3"
-              label="Address Line 1"
+              :label="$t('organization.webDomains.addressLine1')"
               immediateValidation
               :error="$page.props.errors.address_1"
               :error-messages="$page.props.errors.address_1"
@@ -112,7 +109,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.address_2"
               class="mb-3"
-              label="Address Line 2"
+              :label="$t('organization.webDomains.addressLine2')"
               immediateValidation
               :error="$page.props.errors.address_2"
               :error-messages="$page.props.errors.address_2"
@@ -121,7 +118,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.city"
               class="mb-3"
-              label="City"
+              :label="$t('organization.webDomains.city')"
               immediateValidation
               :error="$page.props.errors.cira_language"
               :error-messages="$page.props.errors.cira_language"
@@ -130,7 +127,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.postal_code"
               class="mb-3"
-              label="Zip/Postal Code"
+              :label="$t('organization.webDomains.zipPostalCode')"
               immediateValidation
               :error="$page.props.errors.postal_code"
               :error-messages="$page.props.errors.postal_code"
@@ -145,7 +142,7 @@ const { t } = useI18n()
                 text-by="text"
                 value-by="value"
                 class="mb-3"
-                label="CIRA Legal Type"
+                :label="$t('organization.webDomains.ciraLegalType')"
                 immediateValidation
                 :error="$page.props.errors.cira_legal_type"
                 :error-messages="$page.props.errors.cira_legal_type"
@@ -156,20 +153,14 @@ const { t } = useI18n()
                 text-by="text"
                 value-by="value"
                 class="mb-3"
-                label="Language"
+                :label="$t('organization.webDomains.language')"
                 immediateValidation
                 :error="$page.props.errors.cira_language"
                 :error-messages="$page.props.errors.cira_language"
               />
-                <p class="mb-2">
-                  By registering this domain you confirm that you have read, understood and agree to the terms and conditions of CIRA’s <a href="https://cira.ca/policy/legal-agreement/registrant-agreement" target="_blank">Registrant Agreement</a>, including the requirements for applying for, holding and maintaining a domain. You also agree that CIRA may, from time to time and at its discretion, amend any or all of the terms and conditions of the Registrant Agreement, as CIRA deems appropriate, by posting a notice of the changes on the CIRA website and/or by sending a notice to the Registrant. Changes may include CIRA’s Canadian Presence Requirements.
-              </p>
-              <p class="mb-2">
-                  You also confirm that you meet all the requirements of the Registrant Agreement to be a Registrant, to apply for the registration of and to hold and maintain a Domain Name Registration, including without limitation <a href="https://www.cira.ca/assets/Documents/Legal/Registrants/CPR.pdf" target="_blank">CIRA's Canadian Presence Requirements for Registrants</a>.
-              </p>
-              <p class="mb-2">
-                  You also understand that CIRA will collect, use and disclose your personal information, as set out in <a href="https://www.cira.ca/assets/Documents/Legal/Registrants/privacy.pdf" target="_blank">CIRA's Privacy Policy</a>.
-              </p>
+                <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement1')"></p>
+              <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement2')"></p>
+              <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement3')"></p>
             </div>
             <div class="auth-layout__options d-flex align-center mb-4">
               <va-checkbox
@@ -180,9 +171,7 @@ const { t } = useI18n()
                 :error-messages="$page.props.errors.accept_terms"
               >
                 <template #label>
-                  <div class="ml-2">
-                    This service is provided in partnership with Namecheap. By checking this box, you agree to the <a href="https://www.namecheap.com/legal/domains/registration-agreement/" target="_blank">terms and conditions</a> of Namecheap.
-                  </div>
+                  <div class="ml-2" v-html="$t('organization.webDomains.namecheapTerms')"></div>
                 </template>
               </va-checkbox>
             </div>
@@ -191,7 +180,7 @@ const { t } = useI18n()
               :disabled="form.processing"
               class="my-0"
             >
-              Register
+              {{ $t('organization.webDomains.register') }}
             </va-button>
           </form>
         </div>
@@ -200,11 +189,11 @@ const { t } = useI18n()
             <div class="row text-center pricing">
               <div class="flex lg12">
                 <div>
-                  <div class="va-title">Total Price</div>
+                  <div class="va-title">{{ $t('organization.webDomains.totalPrice') }}</div>
                   <h1 v-if="!is_premium" class="va-h3">{{ price }}</h1>
                   <h1 v-else class="va-h1">${{ registration_price }}</h1>
-                  <p v-if="is_premium" class="va-text-bold va-text-secondary">Premium Domain</p>
-                  <p>*All prices in USD</p>
+                  <p v-if="is_premium" class="va-text-bold va-text-secondary">{{ $t('organization.webDomains.premiumDomain') }}</p>
+                  <p>{{ $t('organization.webDomains.pricesInUsd') }}</p>
                 </div>
               </div>
             </div>
