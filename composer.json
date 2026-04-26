@@ -24,9 +24,11 @@
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.14",
+        "barryvdh/laravel-ide-helper": "^3.7",
         "dompdf/dompdf": "^3.0.0",
         "fakerphp/faker": "^1.24",
         "laracasts/cypress": "^3.0",
+        "laravel/boost": "^2.4",
         "laravel/breeze": "^2.0",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.52",

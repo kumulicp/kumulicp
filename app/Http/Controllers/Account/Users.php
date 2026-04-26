@@ -314,7 +314,7 @@ class Users extends Controller
                 'last_name' => $user->attribute('last_name'),
                 'phone_number' => $user->attribute('phone_number'),
                 'personal_email' => $user->attribute('email'),
-                'org_emails' => $user->attribute('org_email'),
+                'org_email' => $user->attribute('org_email'),
                 'additional_storage' => $user_storage,
                 'organization' => $user->organization()->id,
                 'can' => [
@@ -424,7 +424,7 @@ class Users extends Controller
         event(new DeletingUser($user));
         $user->delete();
 
-        Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::refresh()));
+        Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::refresh()), background: true);
         event(new UserDeleted($organization));
 
         return redirect('/users')->with('success', __('organization.user.removed', ['user' => $userid]));

@@ -128,7 +128,7 @@ class Permissions extends Controller
 
         $app_roles = [];
         foreach (OrganizationFacade::apps() as $app_instance) {
-            FastCache::clear($app_instance->organization);
+            FastCache::clear(organization: $app_instance->organization);
 
             if ($app_instance->status === 'deactivated') {
                 continue;

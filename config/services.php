@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -30,4 +29,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'matrix' => [
+        'homeserver' => env('MATRIX_HOMESERVER'),
+        'access_token' => env('MATRIX_ACCESS_TOKEN'),
+        'room_id' => env('MATRIX_ROOM_ID'),
+    ],
 ];

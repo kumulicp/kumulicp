@@ -253,7 +253,7 @@ export default {
     })
     const accessTypes = {}
 
-    for (const accessType of Object.entries(this.access_types)) {
+    for (const accessType of Object.values(this.access_types)) {
       accessTypes[accessType.value] = accessType.text
     }
 
@@ -429,7 +429,7 @@ export default {
     updateAllRoleOptions () {
       const apps = JSON.parse(JSON.stringify(this.permissions))
       const filteredApps = {}
-      for (const app of Object.entries(apps)) {
+      for (const app of Object.values(apps)) {
         const newApp = app
 
         const filteredCategories = []
@@ -468,7 +468,7 @@ export default {
     },
     confirmAccessType () {
       const appAccessTypes = []
-      for (const app of Object.entries(this.permissions)) {
+      for (const app of Object.values(this.permissions)) {
         Object.values(this.form.permission[app.id]).forEach((role) => {
           appAccessTypes.push(this.roleAccessTypes[app.id][role])
         })

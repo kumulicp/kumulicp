@@ -17,10 +17,7 @@ class Chart
         public Organization $organization,
         public AppInstance $app_instance,
     ) {
-        $this->name = $this->app_instance->name.'-'.$this->app_instance->id;
-        if (property_exists($this, 'chart_name')) {
-            $this->name .= '-'.$this->chart_name;
-        }
+        $this->name = $this->app_instance->name;
     }
 
     public function namespace()
