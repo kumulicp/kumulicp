@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-card class="mb-4">
@@ -27,32 +25,32 @@ export default {
     const basePath = '/admin/organizations/' + organization.id
     const tabs = [
       {
-        title: 'Details',
+        title: this.$t('admin.organizations.details'),
         url: basePath
       },
       {
-        title: 'Apps',
+        title: this.$t('admin.apps.appsTitle'),
         url: basePath + '/apps'
       },
       {
-        title: 'Logs',
+        title: this.$t('admin.organizations.logs'),
         url: basePath + '/logs'
       },
       {
-        title: 'Tasks',
+        title: this.$t('admin.tasks.tasks'),
         url: basePath + '/tasks'
       },
       {
-        title: 'Backups',
+        title: this.$t('admin.backups.backups'),
         url: basePath + '/backups'
       },
       {
-        title: 'Domains',
+        title: this.$t('admin.domains.domains'),
         url: basePath + '/domains'
       }
     ]
 
-    let value = 'View'
+    let value = this.$t('admin.organizations.details')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

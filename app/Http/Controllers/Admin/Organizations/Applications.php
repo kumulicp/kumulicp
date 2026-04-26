@@ -37,7 +37,7 @@ class Applications extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -45,7 +45,7 @@ class Applications extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
             ],
         ]);
@@ -75,7 +75,7 @@ class Applications extends Controller
             ],
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -83,7 +83,7 @@ class Applications extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                     'url' => '/admin/organizations/'.$organization->id.'/apps',
                 ],
                 [
@@ -127,7 +127,7 @@ class Applications extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -135,7 +135,7 @@ class Applications extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                     'url' => '/admin/organizations/'.$organization->id.'/apps',
                 ],
                 [
@@ -154,21 +154,21 @@ class Applications extends Controller
         $app->settings = json_decode($validated['settings'], true);
         $app->save();
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', 'Settings updated');
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
     }
 
     public function update_settings(Organization $organization, AppInstance $app)
     {
         $task = Action::execute(new ApplicationUpdate($app));
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', $app->application->name.' is being updated');
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.updating', ['app' => $app->label]));
     }
 
     public function run(Organization $organization, AppInstance $app, $action)
     {
         $task = $action->createTask($app);
 
-        return redirect(route('organizations.app', ['organization_id' => $organization->id, 'app' => $app->id]))->with('success', $action->name.' for '.$app->application->name.' was successfully started');
+        return redirect(route('organizations.app', ['organization_id' => $organization->id, 'app' => $app->id]))->with('success', __('admin.organizations.apps.run_job', ['job' => $action->name, 'app' => $app->application->name]));
     }
 
     public function activate(Organization $organization, $app, $version) {}
@@ -177,7 +177,7 @@ class Applications extends Controller
     {
         // TODO: Add check that version is compatible, current or more recent
         if ($version->application_id != $app->application_id) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', 'The version you selected does not exist! Please try again.');
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.version_exists'));
         }
 
         $notify = true;
@@ -188,7 +188,7 @@ class Applications extends Controller
 
         Action::execute(new ApplicationUpgrade($app, $version, null, $notify));
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', $app->application->name.' is being updated');
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.upgrade', ['app' => $app->label]));
 
     }
 
@@ -205,6 +205,6 @@ class Applications extends Controller
 
         $task = Action::execute(new ApplicationDelete($app, start_time: $start, end_time: $end));
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', $app->application->name.' is being deleted');
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.deleting', ['app' => $app->label]));
     }
 }

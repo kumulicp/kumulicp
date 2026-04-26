@@ -30,7 +30,7 @@ class Domains extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Organizations',
+                    'label' => __('admin.organizations.organizations'),
                     'url' => '/admin/organizations',
                 ],
                 [
@@ -38,7 +38,7 @@ class Domains extends Controller
                     'url' => '/admin/organizations/'.$organization->id,
                 ],
                 [
-                    'label' => 'Domains',
+                    'label' => __('admin.organizations.domains'),
                 ],
             ],
         ]);

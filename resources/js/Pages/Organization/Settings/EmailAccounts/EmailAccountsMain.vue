@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Email Accounts - Control Panel</title>
+    <title>{{ $t('organization.emailAccounts.emailAccounts') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Email Accounts</va-card-title>
+    <va-card-title>{{ $t('organization.emailAccounts.emailAccounts') }}</va-card-title>
     <va-card-content>
       <va-tabs v-model="value" hide-slider>
         <template #tabs>
@@ -27,15 +25,15 @@ export default {
     const pathname = (new URL(window.location.href)).pathname
     const tabs = [
       {
-        title: 'Accounts',
+        title: this.$t('organization.emailAccounts.accounts'),
         url: '/settings/email/accounts'
       },
       {
-        title: 'Forwarders',
+        title: this.$t('organization.emailAccounts.forwarders'),
         url: '/settings/email/forwarders'
       }
     ]
-    let value = 'Accounts'
+    let value = this.$t('organization.emailAccounts.accounts')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

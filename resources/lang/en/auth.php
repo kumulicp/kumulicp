@@ -19,5 +19,6 @@ return [
     'password_updated' => 'Your password has been updated.',
     'no_user_exists' => 'User doesn\'t exist',
     'sso_failed' => 'The user doesn\'t exist or doesn\'t have permission to login',
+    'username' => 'Username',
 
 ];

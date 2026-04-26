@@ -30,10 +30,10 @@ class Tlds extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/service/domains',
-                    'label' => 'Domains',
+                    'label' => __('admin.domains.domains'),
                 ],
                 [
-                    'label' => 'TLDs',
+                    'label' => __('admin.domains.tlds.tlds'),
                 ],
             ],
         ]);
@@ -76,7 +76,7 @@ class Tlds extends Controller
 
         }
 
-        return redirect('/admin/service/domains/tlds')->with('success', 'Your TLDs have been updated');
+        return redirect('/admin/service/domains/tlds')->with('success', __('admin.domains.tlds.mass_updated'));
     }
 
     public function store(Request $request)
@@ -92,7 +92,7 @@ class Tlds extends Controller
         $tld->name = $validated['tld'];
         $tld->save();
 
-        return redirect('/admin/service/domains/tlds/'.$tld->id)->with('success', $tld->name.' was added successfully');
+        return redirect('/admin/service/domains/tlds/'.$tld->id)->with('success', __('admin.domains.tlds.added', ['tld' => $tld->name]));
     }
 
     public function show(Tld $tld)
@@ -107,11 +107,11 @@ class Tlds extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/service/domains',
-                    'label' => 'Domains',
+                    'label' => __('admin.domains.domains'),
                 ],
                 [
                     'url' => '/admin/service/domains/tlds',
-                    'label' => 'TLDs',
+                    'label' => __('admin.domains.tlds.tdls'),
                 ],
                 [
                     'label' => $tld->name,
@@ -132,7 +132,7 @@ class Tlds extends Controller
         $tld->registration_disabled = ! $validated['registration_allowed'];
         $tld->save();
 
-        return redirect('/admin/service/domains/tlds')->with('success', $tld->name.' was updated successfully.');
+        return redirect('/admin/service/domains/tlds')->with('success', __('admin.domains.tlds.updated', ['tld' => $tld->name]));
 
     }
 
@@ -140,6 +140,6 @@ class Tlds extends Controller
     {
         $tld = Tld::where('id', $id)->delete();
 
-        return redirect('/admin/service/domains/tlds/')->with('success', 'TLD delete successfully');
+        return redirect('/admin/service/domains/tlds/')->with('success', __('admin.domains.tld.deleted'));
     }
 }

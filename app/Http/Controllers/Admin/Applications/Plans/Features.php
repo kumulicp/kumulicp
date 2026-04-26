@@ -42,7 +42,7 @@ class Features extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -50,7 +50,7 @@ class Features extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => 'Plans',
+                    'label' => __('admin.applications.plans.plans'),
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
@@ -68,6 +68,6 @@ class Features extends Controller
 
         ApplicationFacade::plan($plan)->updateFeatures($request->features);
 
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/features")->with('success', 'Plan: '.$plan->name.' features updated!');
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/features")->with('success', __('admin.applications.plans.features_updated', ['plan' => $plan->name]));
     }
 }
