@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './AppsLayout.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.apps.viewApp') }} - Control Panel</title>
+    <title>{{ $t('admin.apps.viewApp') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
     <div class="row">

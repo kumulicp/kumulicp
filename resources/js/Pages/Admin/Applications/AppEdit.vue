@@ -4,28 +4,25 @@ import AppsLayout from './AppsLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.apps.editPageTitle') }} - Control Panel</title>
+    <title>{{ $t('admin.apps.editPageTitle') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
     <va-button class="" @click="showEnableDisable = !showEnableDisable">{{ app.toggle.label }}</va-button>
   </div>
   <va-modal v-model="showEnableDisable"
-    :title="app.toggle.label+' '+t('admin.apps.appWord')"
+    :title="app.toggle.label+' '+$t('admin.apps.appWord')"
     hide-default-actions
     >
     <template #default>
         <div v-if="app.toggle.state == 'disable'">
-          {{ t('admin.apps.disableWarning') }}
+          {{ $t('admin.apps.disableWarning') }}
         </div>
         <div v-if="app.toggle.state == 'enable'">
           <div v-if="!app.default_version.id">
-            <p class="mb-3">{{ t('admin.apps.noDefaultVersion') }}</p>
+            <p class="mb-3">{{ $t('admin.apps.noDefaultVersion') }}</p>
             <va-select v-model="toggle.version"
               :options="app.versions"
               value-by="id"
@@ -36,11 +33,11 @@ const { t } = useI18n()
               :error-messages="$page.props.errors.version"
             />
           </div>
-          {{ t('admin.apps.enableWarning') }}
+          {{ $t('admin.apps.enableWarning') }}
         </div>
       </template>
       <template #footer="{ ok }">
-        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
+        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
         <va-button @click="toggle.post('/admin/apps/'+app.slug+'/'+app.toggle.state, {
             onSuccess: () => showEnableDisable = false
           })"
@@ -49,11 +46,11 @@ const { t } = useI18n()
   </va-modal>
   <form @submit.prevent="form.post('/admin/apps/'+app.slug)">
     <AdminSettings>
-      <template #name>{{ t('admin.apps.aboutApp') }}</template>
+      <template #name>{{ $t('admin.apps.aboutApp') }}</template>
       <template #settings>
         <va-input v-model="form.name"
-          :label="t('admin.apps.name')"
-          :messages="t('admin.apps.nameMessage')"
+          :label="$t('admin.apps.name')"
+          :messages="$t('admin.apps.nameMessage')"
           class="my-2"
           id="name"
           required-mark
@@ -62,8 +59,8 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.name"
           />
         <va-input v-model="form.category"
-          :label="t('admin.apps.category')"
-          :messages="t('admin.apps.categoryMessage')"
+          :label="$t('admin.apps.category')"
+          :messages="$t('admin.apps.categoryMessage')"
           id="category"
           class="my-2"
           required-mark
@@ -73,8 +70,8 @@ const { t } = useI18n()
           />
         <VaFileUpload
           v-model="form.image"
-          :label="t('admin.apps.image')"
-          :messages="t('admin.apps.imageMessage')"
+          :label="$t('admin.apps.image')"
+          :messages="$t('admin.apps.imageMessage')"
           immediateValidation
           type="single"
           class="my-2"
@@ -85,8 +82,8 @@ const { t } = useI18n()
         />
         <va-textarea
           v-model="form.short_description"
-          :label="t('admin.apps.shortDescription')"
-          :messages="t('admin.apps.shortDescriptionMessage')"
+          :label="$t('admin.apps.shortDescription')"
+          :messages="$t('admin.apps.shortDescriptionMessage')"
           immediateValidation
           id="shortDescription"
           class="my-2 full-width"
@@ -101,26 +98,26 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('admin.apps.settings') }}</template>
+      <template #name>{{ $t('admin.apps.settings') }}</template>
       <template #settings>
         <va-checkbox v-model="form.primary_domain_allowed"
-          :label="t('admin.apps.primaryDomainAllowed')"
-          :messages="t('admin.apps.primaryDomainAllowedMessage')"
+          :label="$t('admin.apps.primaryDomainAllowed')"
+          :messages="$t('admin.apps.primaryDomainAllowedMessage')"
           class="my-2"
           immediateValidation
           :error="$page.props.errors.primary_domain_allowed"
           :error-messages="$page.props.errors.primary_domain_allowed"
           />
         <va-checkbox v-model="form.can_update_domain"
-          :label="t('admin.apps.canUpdateDomain')"
-          :messages="t('admin.apps.canUpdateDomainMessage')"
+          :label="$t('admin.apps.canUpdateDomain')"
+          :messages="$t('admin.apps.canUpdateDomainMessage')"
           immediateValidation
           :error="$page.props.errors.can_update_domain"
           :error-messages="$page.props.errors.can_update_domain"
           />
         <va-select v-model="form.domain_option"
-          :label="t('admin.apps.domainTypeAllowed')"
-          :messages="t('admin.apps.domainTypeAllowedMessage')"
+          :label="$t('admin.apps.domainTypeAllowed')"
+          :messages="$t('admin.apps.domainTypeAllowedMessage')"
           class="my-2"
           immediateValidation
           :options="domain_options"
@@ -131,23 +128,23 @@ const { t } = useI18n()
           />
         <va-select
           v-model="form.parent_app"
-          :label="t('admin.apps.parentApp')"
-          :messages="t('admin.apps.parentAppMessage')"
+          :label="$t('admin.apps.parentApp')"
+          :messages="$t('admin.apps.parentAppMessage')"
           immediateValidation
           id="parentApp"
           class="my-2"
           :options="apps"
           text-by="text"
           value-by="value"
-          :placeholder="t('admin.versions.none')"
+          :placeholder="$t('admin.versions.none')"
           clearable
           :error="$page.props.errors.parent_app"
           :error-messages="$page.props.errors.parent_app"
         />
         <va-select
           v-model="form.access_type"
-          :label="t('admin.apps.accessType')"
-          :messages="t('admin.apps.accessTypeMessage')"
+          :label="$t('admin.apps.accessType')"
+          :messages="$t('admin.apps.accessTypeMessage')"
           immediateValidation
           id="accessType"
           class="my-2"
@@ -159,14 +156,14 @@ const { t } = useI18n()
         />
       </template>
     </AdminSettings>
-    <h4 class="va-h4">{{ t('admin.apps.description') }}</h4>
+    <h4 class="va-h4">{{ $t('admin.apps.description') }}</h4>
     <div>
       {{ errors.description }}
     </div>
     <div class="mb-3">
       <tinymce-editor v-model:htmlContent="form.description" />
     </div>
-    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
+    <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
   </form>
 </template>
 
@@ -198,26 +195,20 @@ export default {
       }),
       toggle: useForm({
         version: ''
-      })
-    }
-  },
-  computed: {
-    access_types () {
-      return [
-        { value: 'minimal', text: this.$t('admin.apps.accessTypeMinimal') },
-        { value: 'basic', text: this.$t('admin.apps.accessTypeBasic') },
-        { value: 'standard', text: this.$t('admin.apps.accessTypeStandard') }
-      ]
-    },
-    domain_options () {
-      return [
-        { value: 'none', text: this.$t('admin.apps.domainOptionNone') },
-        { value: 'all', text: this.$t('admin.apps.domainOptionAll') },
-        { value: 'subdomains', text: this.$t('admin.apps.domainOptionSubdomains') },
-        { value: 'primary', text: this.$t('admin.apps.domainOptionPrimary') },
-        { value: 'base', text: this.$t('admin.apps.domainOptionBase') },
-        { value: 'parent', text: this.$t('admin.apps.domainOptionParent') }
-      ]
+      }),
+      access_types: [
+          { value: 'minimal', text: this.$t('admin.apps.accessTypeMinimal') },
+          { value: 'basic', text: this.$t('admin.apps.accessTypeBasic') },
+          { value: 'standard', text: this.$t('admin.apps.accessTypeStandard') }
+      ],
+      domain_options: [
+          { value: 'none', text: this.$t('admin.apps.domainOptionNone') },
+          { value: 'all', text: this.$t('admin.apps.domainOptionAll') },
+          { value: 'subdomains', text: this.$t('admin.apps.domainOptionSubdomains') },
+          { value: 'primary', text: this.$t('admin.apps.domainOptionPrimary') },
+          { value: 'base', text: this.$t('admin.apps.domainOptionBase') },
+          { value: 'parent', text: this.$t('admin.apps.domainOptionParent') }
+        ]
     }
   }
 }

@@ -2,9 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
@@ -32,17 +30,17 @@ const { t } = useI18n()
       </div>
       <form @submit.prevent="form.put('/admin/server/tests/'+test.id)">
         <AdminSettings>
-          <template #name>{{ t('admin.tests.settings') }}</template>
+          <template #name>{{ $t('admin.tests.settings') }}</template>
           <template #settings>
             <va-input v-model="form.description"
-              :label="t('admin.tests.description')"
+              :label="$t('admin.tests.description')"
               class="mb-2"
               immediateValidation
               :error="$page.props.errors.description"
               :error-messages="$page.props.errors.description"
             />
             <va-input v-model="form.test_number"
-              :label="t('admin.tests.number')"
+              :label="$t('admin.tests.number')"
               class="mb-2"
               type="number"
               immediateValidation
@@ -51,7 +49,7 @@ const { t } = useI18n()
               :error-messages="$page.props.errors.test_number"
             />
             <va-select v-model="form.base_plan"
-              :label="t('admin.plans.basePlan')"
+              :label="$t('admin.plans.basePlan')"
               class="mb-2"
               :options="base_plans"
               immediateValidation
@@ -68,7 +66,7 @@ const { t } = useI18n()
           <template #name>{{ app.name }}</template>
           <template #settings>
             <va-select v-model="form['apps'][app.slug]['plan']"
-              :label="t('admin.plans.plan')"
+              :label="$t('admin.plans.plan')"
               class="mb-2"
               :options="app.plans"
               immediateValidation
@@ -76,7 +74,7 @@ const { t } = useI18n()
               text-by="name"
             />
             <va-select v-model="form['apps'][app.slug]['version']"
-              :label="t('admin.versions.version')"
+              :label="$t('admin.versions.version')"
               class="mb-2"
               :options="app.versions"
               immediateValidation

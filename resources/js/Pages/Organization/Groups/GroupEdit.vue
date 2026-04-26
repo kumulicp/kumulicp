@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.groups.editGroup', { name: group.name }) }} - Control Panel</title>
+    <title>{{ $t('organization.groups.editGroup', { name: group.name }) }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('organization.groups.editGroup', { name: group.name }) }}</va-card-title>
+    <va-card-title>{{ $t('organization.groups.editGroup', { name: group.name }) }}</va-card-title>
     <form @submit.prevent="form.put('/groups/'+group.slug)">
       <va-card-content>
         <div class="row">
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.name"
-              :label="t('organization.groups.groupName')"
+              :label="$t('organization.groups.groupName')"
               id="name"
               immediateValidation
               :error="$page.props.errors.name"
@@ -25,7 +23,7 @@ const { t } = useI18n()
           </div>
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select v-model="form.category"
-              :label="t('organization.groups.category')"
+              :label="$t('organization.groups.category')"
               id="category"
               immediateValidation
               :options="groupTypes"
@@ -40,7 +38,7 @@ const { t } = useI18n()
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.managers"
-              :label="t('organization.groups.managers')"
+              :label="$t('organization.groups.managers')"
               id="managers"
               immediateValidation
               value-by="value"
@@ -55,7 +53,7 @@ const { t } = useI18n()
           <div class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.members"
-              :label="t('organization.groups.members')"
+              :label="$t('organization.groups.members')"
               id="members"
               immediateValidation
               value-by="value"
@@ -110,13 +108,13 @@ const { t } = useI18n()
           no-dismiss
         >
           <template #header>
-            <h4 class="va-h4"><va-icon color="danger" name="fa-solid fa-triangle-exclamation" /> {{ t('organization.groups.deletingNextcloudFolder') }}</h4>
+            <h4 class="va-h4"><va-icon color="danger" name="fa-solid fa-triangle-exclamation" /> {{ $t('organization.groups.deletingNextcloudFolder') }}</h4>
           </template>
-          <p><span class="va-text-bold">{{ t('organization.groups.warning') }}:</span> {{ t('organization.groups.nextcloudWarningMessage') }}</p>
-          <p><span class="va-text-bold">{{ t('organization.groups.note') }}:</span>{{ t('organization.groups.nextcloudNoteMessage') }}</p>
+          <p><span class="va-text-bold">{{ $t('organization.groups.warning') }}:</span> {{ $t('organization.groups.nextcloudWarningMessage') }}</p>
+          <p><span class="va-text-bold">{{ $t('organization.groups.note') }}:</span>{{ $t('organization.groups.nextcloudNoteMessage') }}</p>
           <template #footer>
-            <va-button @click="cancelRemoveGroupFolder">{{ t('organization.groups.keepFolder') }}</va-button>
-            <va-button color="danger" @click="showNextcloudAlertModal = !showNextcloudAlertModal">{{ t('organization.groups.removingFolder') }}</va-button>
+            <va-button @click="cancelRemoveGroupFolder">{{ $t('organization.groups.keepFolder') }}</va-button>
+            <va-button color="danger" @click="showNextcloudAlertModal = !showNextcloudAlertModal">{{ $t('organization.groups.removingFolder') }}</va-button>
           </template>
         </va-modal>
         <va-button type="submit"
@@ -124,7 +122,7 @@ const { t } = useI18n()
           :disabled="form.processing"
           class="mr-2 mb-2"
         >
-          {{ t('organization.groups.updateGroup') }}
+          {{ $t('organization.groups.updateGroup') }}
         </va-button>
       </va-card-content>
     </form>
@@ -161,12 +159,8 @@ export default {
         members: this.members,
         managers: this.managers,
         extensions: Object.assign({}, appExtensions)
-      })
-    }
-  },
-  computed: {
-    groupTypes () {
-      return [
+      }),
+      groupTypes: [
         { text: this.$t('organization.groups.department'), value: 'departments' },
         { text: this.$t('organization.groups.team'), value: 'teams' },
         { text: this.$t('organization.groups.project'), value: 'projects' },

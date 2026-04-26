@@ -2,9 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '../SettingsLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 </script>
 <template>
@@ -73,7 +71,7 @@ const { t } = useI18n()
         Cancel
       </va-button>
       <va-button id="delete" color="danger"
-        @click="remove.delete('/admin/settings/sso-providers/' + removeProvider); showRemoveProvider = !showRemoveProvider">{{ t('modal.delete') }}</va-button>
+        @click="remove.delete('/admin/settings/sso-providers/' + removeProvider); showRemoveProvider = !showRemoveProvider">{{ $t('modal.delete') }}</va-button>
     </template>
   </va-modal>
 </template>

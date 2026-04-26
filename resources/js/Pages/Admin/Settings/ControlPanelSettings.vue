@@ -5,20 +5,18 @@ import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
 import { useForm } from '@inertiajs/vue3'
 import { useColors } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('settings.editServerSettings') }} - Control Panel</title>
+    <title>{{ $t('settings.editServerSettings') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/settings')">
     <AdminSettings>
-      <template #name>{{ t('settings.general') }}</template>
+      <template #name>{{ $t('settings.general') }}</template>
       <template #settings>
         <va-input v-model="form.base_domain"
-          :label="t('settings.baseDomain')"
+          :label="$t('settings.baseDomain')"
           id="baseDomain"
           class="mb-3"
           immediateValidation
@@ -26,7 +24,7 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.base_domain"
         />
         <va-input v-model="form.terms_url"
-          :label="t('settings.termsUrl')"
+          :label="$t('settings.termsUrl')"
           id="termsUrl"
           class="mb-3"
           immediateValidation
@@ -34,7 +32,7 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.terms_url"
         />
         <va-input v-model="form.docs_url"
-          :label="t('settings.docsUrl')"
+          :label="$t('settings.docsUrl')"
           id="docsUrl"
           class="mb-3"
           immediateValidation
@@ -42,7 +40,7 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.docs_url"
         />
         <va-input v-model="form.support_email"
-          :label="t('settings.supportEmail')"
+          :label="$t('settings.supportEmail')"
           id="supportEmail"
           class="mb-3"
           immediateValidation
@@ -50,7 +48,7 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.support_email"
         />
         <va-input v-model="form.error_email"
-          :label="t('settings.errorEmail')"
+          :label="$t('settings.errorEmail')"
           id="errorEmail"
           class="mb-3"
           immediateValidation
@@ -61,10 +59,10 @@ const { t } = useI18n()
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
-      <template #name>{{ t('settings.theme') }}</template>
+      <template #name>{{ $t('settings.theme') }}</template>
       <template #settings>
         <va-color-input v-model="form.primary_color"
-          :label="t('settings.primaryColor')"
+          :label="$t('settings.primaryColor')"
           id="baseDomain"
           class="mb-3"
           immediateValidation
@@ -73,7 +71,7 @@ const { t } = useI18n()
           :error-messages="$page.props.errors.primary_color"
         />
         <va-color-input v-model="form.secondary_color"
-          :label="t('settings.secondaryColor')"
+          :label="$t('settings.secondaryColor')"
           id="baseDomain"
           class="mb-3"
           immediateValidation
@@ -83,14 +81,14 @@ const { t } = useI18n()
         />
       </template>
     </AdminSettings>
-    <h6 class="va-h6 my-3">{{ t('settings.welcomePage') }}</h6>
+    <h6 class="va-h6 my-3">{{ $t('settings.welcomePage') }}</h6>
     <tinymce-editor v-model:htmlContent="form.welcome_page" />
     <va-button type="submit"
       id="submit"
       :disabled="form.processing"
       class="mr-2 my-2"
     >
-      {{ t('form.update') }}
+      {{ $t('form.update') }}
     </va-button>
   </form>
 </template>

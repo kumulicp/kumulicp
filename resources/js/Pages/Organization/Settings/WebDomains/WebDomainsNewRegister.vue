@@ -4,27 +4,25 @@ import CountryDropdown from '@/components/FormInputs/CountryDropdown.vue'
 import StateDropdown from '@/components/FormInputs/StateDropdown.vue'
 import { useForm } from '@inertiajs/vue3'
 import { countries } from '@/data/country_phone_codes.json'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <head>
-    <title>{{ domain.name }} {{ t('organization.webDomains.registration') }} - Control Panel</title>
+    <title>{{ domain.name }} {{ $t('organization.webDomains.registration') }} - Control Panel</title>
   </head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('organization.webDomains.registrationInfo') }}</va-card-title>
+    <va-card-title>{{ $t('organization.webDomains.registrationInfo') }}</va-card-title>
     <va-card-content>
       <div class="row">
         <div class="flex lg8">
           <form @submit.prevent="form.post('/settings/domains/register/'+domain.name)">
-            <h5 class="h5">{{ t('organization.webDomains.selectedDomainName') }}: <span class="va-text-secondary va-text-bold ml-2">{{ domain.name }}</span></h5>
+            <h5 class="h5">{{ $t('organization.webDomains.selectedDomainName') }}: <span class="va-text-secondary va-text-bold ml-2">{{ domain.name }}</span></h5>
             <va-alert class="mb-3">
               <template #icon>
                 <va-icon name="info" />
               </template>
-              <strong>{{ t('organization.webDomains.reviewInfoBelow') }}</strong>
-              {{ t('organization.webDomains.autoPopulatedInfo') }}</va-alert
+              <strong>{{ $t('organization.webDomains.reviewInfoBelow') }}</strong>
+              {{ $t('organization.webDomains.autoPopulatedInfo') }}</va-alert
             >
 
             <va-select
@@ -33,16 +31,16 @@ const { t } = useI18n()
               :options="years"
               immediateValidation
               class="mb-3"
-              :label="t('organization.webDomains.years')"
+              :label="$t('organization.webDomains.years')"
               :error="!!errors.years"
               :error-messages="$page.props.errors.years"
-              :messages="t('organization.webDomains.yearsMessage')"
+              :messages="$t('organization.webDomains.yearsMessage')"
             />
 
             <va-input
               v-model="form.organization_name"
               class="mb-3"
-              :label="t('organization.webDomains.organizationName')"
+              :label="$t('organization.webDomains.organizationName')"
               immediateValidation
               :error="$page.props.errors.organization_name"
               :error-messages="$page.props.errors.organization_name"
@@ -52,17 +50,17 @@ const { t } = useI18n()
               v-model="form.email_address"
               class="mb-3"
               type="email"
-              :label="t('organization.webDomains.organizationEmail')"
+              :label="$t('organization.webDomains.organizationEmail')"
               immediateValidation
               :error="$page.props.errors.email_address"
               :error-messages="$page.props.errors.email_address"
-              :messages="t('organization.webDomains.organizationEmailMessage')"
+              :messages="$t('organization.webDomains.organizationEmailMessage')"
             />
 
             <va-input
               v-model="form.first_name"
               class="mb-3"
-              :label="t('organization.webDomains.registrantFirstName')"
+              :label="$t('organization.webDomains.registrantFirstName')"
               immediateValidation
               :error="$page.props.errors.first_name"
               :error-messages="$page.props.errors.first_name"
@@ -71,7 +69,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.last_name"
               class="mb-3"
-              :label="t('organization.webDomains.registrantLastName')"
+              :label="$t('organization.webDomains.registrantLastName')"
               immediateValidation
               :error="$page.props.errors.last_name"
               :error-messages="$page.props.errors.last_name"
@@ -81,7 +79,7 @@ const { t } = useI18n()
               v-model="form.phone"
               class="mb-3"
               placeholder="(###) ### ####"
-              :label="t('organization.webDomains.phoneNumber')"
+              :label="$t('organization.webDomains.phoneNumber')"
               immediateValidation
               :error="$page.props.errors.phone"
               :error-messages="$page.props.errors.phone"
@@ -102,7 +100,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.address_1"
               class="mb-3"
-              :label="t('organization.webDomains.addressLine1')"
+              :label="$t('organization.webDomains.addressLine1')"
               immediateValidation
               :error="$page.props.errors.address_1"
               :error-messages="$page.props.errors.address_1"
@@ -111,7 +109,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.address_2"
               class="mb-3"
-              :label="t('organization.webDomains.addressLine2')"
+              :label="$t('organization.webDomains.addressLine2')"
               immediateValidation
               :error="$page.props.errors.address_2"
               :error-messages="$page.props.errors.address_2"
@@ -120,7 +118,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.city"
               class="mb-3"
-              :label="t('organization.webDomains.city')"
+              :label="$t('organization.webDomains.city')"
               immediateValidation
               :error="$page.props.errors.cira_language"
               :error-messages="$page.props.errors.cira_language"
@@ -129,7 +127,7 @@ const { t } = useI18n()
             <va-input
               v-model="form.postal_code"
               class="mb-3"
-              :label="t('organization.webDomains.zipPostalCode')"
+              :label="$t('organization.webDomains.zipPostalCode')"
               immediateValidation
               :error="$page.props.errors.postal_code"
               :error-messages="$page.props.errors.postal_code"
@@ -144,7 +142,7 @@ const { t } = useI18n()
                 text-by="text"
                 value-by="value"
                 class="mb-3"
-                :label="t('organization.webDomains.ciraLegalType')"
+                :label="$t('organization.webDomains.ciraLegalType')"
                 immediateValidation
                 :error="$page.props.errors.cira_legal_type"
                 :error-messages="$page.props.errors.cira_legal_type"
@@ -155,14 +153,14 @@ const { t } = useI18n()
                 text-by="text"
                 value-by="value"
                 class="mb-3"
-                :label="t('organization.webDomains.language')"
+                :label="$t('organization.webDomains.language')"
                 immediateValidation
                 :error="$page.props.errors.cira_language"
                 :error-messages="$page.props.errors.cira_language"
               />
-                <p class="mb-2" v-html="t('organization.webDomains.ciraAgreement1')"></p>
-              <p class="mb-2" v-html="t('organization.webDomains.ciraAgreement2')"></p>
-              <p class="mb-2" v-html="t('organization.webDomains.ciraAgreement3')"></p>
+                <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement1')"></p>
+              <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement2')"></p>
+              <p class="mb-2" v-html="$t('organization.webDomains.ciraAgreement3')"></p>
             </div>
             <div class="auth-layout__options d-flex align-center mb-4">
               <va-checkbox
@@ -173,7 +171,7 @@ const { t } = useI18n()
                 :error-messages="$page.props.errors.accept_terms"
               >
                 <template #label>
-                  <div class="ml-2" v-html="t('organization.webDomains.namecheapTerms')"></div>
+                  <div class="ml-2" v-html="$t('organization.webDomains.namecheapTerms')"></div>
                 </template>
               </va-checkbox>
             </div>
@@ -182,7 +180,7 @@ const { t } = useI18n()
               :disabled="form.processing"
               class="my-0"
             >
-              {{ t('organization.webDomains.register') }}
+              {{ $t('organization.webDomains.register') }}
             </va-button>
           </form>
         </div>
@@ -191,11 +189,11 @@ const { t } = useI18n()
             <div class="row text-center pricing">
               <div class="flex lg12">
                 <div>
-                  <div class="va-title">{{ t('organization.webDomains.totalPrice') }}</div>
+                  <div class="va-title">{{ $t('organization.webDomains.totalPrice') }}</div>
                   <h1 v-if="!is_premium" class="va-h3">{{ price }}</h1>
                   <h1 v-else class="va-h1">${{ registration_price }}</h1>
-                  <p v-if="is_premium" class="va-text-bold va-text-secondary">{{ t('organization.webDomains.premiumDomain') }}</p>
-                  <p>{{ t('organization.webDomains.pricesInUsd') }}</p>
+                  <p v-if="is_premium" class="va-text-bold va-text-secondary">{{ $t('organization.webDomains.premiumDomain') }}</p>
+                  <p>{{ $t('organization.webDomains.pricesInUsd') }}</p>
                 </div>
               </div>
             </div>

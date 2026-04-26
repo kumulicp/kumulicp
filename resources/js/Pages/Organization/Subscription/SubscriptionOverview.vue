@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('organization.subscription.planOverview') }} - Control Panel</title>
+    <title>{{ $t('organization.subscription.planOverview') }} - Control Panel</title>
   </Head>
   <va-card>
-    <va-card-title>{{ t('organization.subscription.upcomingInvoice') }}</va-card-title>
+    <va-card-title>{{ $t('organization.subscription.upcomingInvoice') }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
         <div class="flex lg3 xs12">
@@ -20,7 +18,7 @@ const { t } = useI18n()
               <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.due_date }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              {{ t('organization.subscription.dueDate') }}
+              {{ $t('organization.subscription.dueDate') }}
             </div>
           </div>
         </div>
@@ -31,7 +29,7 @@ const { t } = useI18n()
             <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.amount_due }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              {{ t('organization.subscription.amountDue') }}
+              {{ $t('organization.subscription.amountDue') }}
             </div>
           </div>
         </div>
@@ -42,14 +40,14 @@ const { t } = useI18n()
               <h1 class="va-h1 my-0 py-0">{{ upcoming_invoice.status }}</h1>
             </div>
             <div class="flex flex-col xs12 va-text-center va-text-bold">
-              {{ t('organization.subscription.subscriptionStatus') }}
+              {{ $t('organization.subscription.subscriptionStatus') }}
             </div>
           </div>
         </div>
       </div>
       <div class="row va-text-center payment_note">
         <div class="flex flex-col xs12">
-          {{ t('organization.subscription.paymentNote') }}
+          {{ $t('organization.subscription.paymentNote') }}
         </div>
       </div>
     </va-card-content>
@@ -57,14 +55,14 @@ const { t } = useI18n()
   <div class="row">
     <div class="flex lg6 xs12">
       <va-card class="mb-4">
-        <va-card-title>{{ t('organization.subscription.organizationSummary') }}</va-card-title>
+        <va-card-title>{{ $t('organization.subscription.organizationSummary') }}</va-card-title>
         <va-card-content>
           <table class="va-table va-table--striped mb-3">
             <thead>
               <tr>
-                <th>{{ t('organization.organization') }}</th>
-                <th>{{ t('organization.subscription.billed') }}</th>
-                <th style="20rem">{{ t('organization.subscription.total') }}</th>
+                <th>{{ $t('organization.organization') }}</th>
+                <th>{{ $t('organization.subscription.billed') }}</th>
+                <th style="20rem">{{ $t('organization.subscription.total') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -81,7 +79,7 @@ const { t } = useI18n()
     </div>
     <div class="flex sm12 lg6 xs12">
       <va-card class="mb-4">
-        <va-card-title>{{ t('organization.subscription.pastInvoices') }}</va-card-title>
+        <va-card-title>{{ $t('organization.subscription.pastInvoices') }}</va-card-title>
         <va-card-content>
           <va-list>
             <va-list-item

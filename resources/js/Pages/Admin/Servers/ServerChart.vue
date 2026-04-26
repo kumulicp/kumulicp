@@ -2,9 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import ServerLayout from './ServerLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>

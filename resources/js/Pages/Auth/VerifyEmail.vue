@@ -2,14 +2,12 @@
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import VuesticLogo from '@/components/VuesticLogo.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('auth.verifyEmailTitle') }} - Control Panel</title>
+    <title>{{ $t('auth.verifyEmailTitle') }} - Control Panel</title>
   </Head>
   <div class="auth-layout row align-content-center">
     <div class="flex xs12 pa-3 justify-center">
@@ -31,13 +29,13 @@ const { t } = useI18n()
                     name="info"
                   />
                 </template>
-                {{ t('auth.verificationEmailSent') }}
+                {{ $t('auth.verificationEmailSent') }}
               </va-alert>
-              <h4 class="va-h4"> {{ t('auth.helloUser', { name: user.name }) }}</h4>
-              <p class="mb-3">{{ t('auth.emailNotVerified') }}</p>
+              <h4 class="va-h4"> {{ $t('auth.helloUser', { name: user.name }) }}</h4>
+              <p class="mb-3">{{ $t('auth.emailNotVerified') }}</p>
               <div class="va-text-center">
                 <va-button class="text-align-center" @click="form.post('/email/resend')">
-                    {{ t('auth.resendEmail') }}
+                    {{ $t('auth.resendEmail') }}
                 </va-button>
               </div>
             </div>

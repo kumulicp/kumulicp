@@ -21,7 +21,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
             <va-list-item-label v-if="payment_method.brand" lines="2">
               {{ payment_method.brand }} ****{{ payment_method.last4 }}
               <br />
-              {{ t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>
@@ -44,9 +44,9 @@ import { Stripe } from '@vue-stripe/vue-stripe'
                     color="backgroundSecondary"
                     @click="cancel"
                   >
-                    {{ t('modal.cancel') }}
+                    {{ $t('modal.cancel') }}
                   </va-button>
-                  <Link href="/subscription/payment/method/delete"><va-button color="danger">{{ t('modal.delete') }}</va-button></Link>
+                  <Link href="/subscription/payment/method/delete"><va-button color="danger">{{ $t('modal.delete') }}</va-button></Link>
                 </template>
               </va-modal>
             </va-list-item-label>
@@ -59,8 +59,8 @@ import { Stripe } from '@vue-stripe/vue-stripe'
       <div class="row">
         <div class="flex flex-col xs12">
           <div class="item">
-            <i v-if="hasDefaultPaymentMethod">{{ t('payment.updatePaymentMethodMessage') }}</i>
-            <i v-else>{{ t('payment.addPaymentMethodMessage') }}</i>
+            <i v-if="hasDefaultPaymentMethod">{{ $t('payment.updatePaymentMethodMessage') }}</i>
+            <i v-else>{{ $t('payment.addPaymentMethodMessage') }}</i>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
           <div class="row">
             <!-- Stripe Elements Placeholder -->
             <div class="flex flex-col xs6 mr-1">
-              <div class="va-title text-color-primary">{{ t('payment.cardNumber') }}</div>
+              <div class="va-title text-color-primary">{{ $t('payment.cardNumber') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -83,7 +83,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
               </div>
             </div>
             <div class="flex flex-col xs3 mr-1">
-              <div class="va-title text-color-primary">{{ t('payment.expiry') }}</div>
+              <div class="va-title text-color-primary">{{ $t('payment.expiry') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -97,7 +97,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
               </div>
             </div>
             <div class="flex flex-col xs2">
-              <div class="va-title text-color-primary">{{ t('payment.cvc') }}</div>
+              <div class="va-title text-color-primary">{{ $t('payment.cvc') }}</div>
               <div class="va-input-wrapper va-input-wrapper--focused va-input">
                 <fieldset class="va-input-wrapper__fieldset va-input-wrapper__size-keeper">
                   <div class="va-input-wrapper__container">
@@ -119,8 +119,8 @@ import { Stripe } from '@vue-stripe/vue-stripe'
           id="updateCreditCard"
           :disabled="stripe_processing"
           >
-          <template v-if="hasDefaultPaymentMethod">{{ t('payment.updatePaymentMethod') }}</template>
-          <template v-else>{{ t('payment.addPaymentMethod') }}</template>
+          <template v-if="hasDefaultPaymentMethod">{{ $t('payment.updatePaymentMethod') }}</template>
+          <template v-else>{{ $t('payment.addPaymentMethod') }}</template>
         </va-button>
       </div>
     </template>
@@ -128,7 +128,7 @@ import { Stripe } from '@vue-stripe/vue-stripe'
       <div class="flex flex-col xs12 va-text-center">
         <div>
           <va-icon name="fa-thumbs-up" color="success" class="mr-2" />
-          {{ t('payment.updatePaymentMethodSuccess') }}
+          {{ $t('payment.updatePaymentMethodSuccess') }}
         </div>
       </div>
     </div>

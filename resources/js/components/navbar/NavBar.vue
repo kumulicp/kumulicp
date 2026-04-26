@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue'
 import { useColors } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 import VuesticLogo from '@/components/VuesticLogo.vue'
 import VaIconMenuCollapsed from '@/components/icons/VaIconMenuCollapsed.vue'
 import AppNavbarActions from './components/AppNavbarActions.vue'
@@ -10,7 +9,6 @@ import HelpDeskModal from './components/modals/HelpDeskModal.vue'
 
 const { getColors } = useColors()
 const colors = computed(() => getColors())
-const { t } = useI18n()
 </script>
 <template>
   <VaNavbar shadowed>
@@ -29,7 +27,7 @@ const { t } = useI18n()
     <va-navbar-item class="navbar-item-slot">
       <div class="app-navbar-center">
         <span class="app-navbar-center__text mr-2"
-          >{{ t('navbar.welcomeToControlPanel') }}</span
+          >{{ $t('navbar.welcomeToControlPanel') }}</span
         >
       </div>
     </va-navbar-item>

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 const formatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD'
@@ -13,7 +11,7 @@ const formatter = new Intl.NumberFormat('en-US', {
 </script>
 <template>
   <va-card class="mb-4 pb-2">
-    <va-card-title>{{ t('pricing.pricing') }}</va-card-title>
+    <va-card-title>{{ $t('pricing.pricing') }}</va-card-title>
     <va-card-content>
       <va-list v-for="(price, index) in prices" :key="index">
         <va-list-label>{{ price.name }}</va-list-label>
@@ -39,7 +37,7 @@ const formatter = new Intl.NumberFormat('en-US', {
         <va-list-item>
           <va-list-item-section>
             <va-list-item-label>
-              <b>{{ t('pricing.total') }}</b>
+              <b>{{ $t('pricing.total') }}</b>
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>
@@ -51,7 +49,7 @@ const formatter = new Intl.NumberFormat('en-US', {
       </va-list>
       <div v-if="perApp" class="row mt-2">
         <div class="flex flex-col xs12" style="color: var(--va-secondary); font-weight: bold">
-          {{ t('pricing.perAppMessage') }}
+          {{ $t('pricing.perAppMessage') }}
         </div>
       </div>
     </va-card-content>

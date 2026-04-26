@@ -1,29 +1,27 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm, router } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.apps.appsTitle') }} - Control Panel</title>
+    <title>{{ $t('admin.apps.appsTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('admin.apps.appsTitle') }}</va-card-title>
+    <va-card-title>{{ $t('admin.apps.appsTitle') }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button id="createApp" class="" @click="showAddApp = !showAddApp">{{ t('admin.apps.addApp') }}</va-button>
+        <va-button id="createApp" class="" @click="showAddApp = !showAddApp">{{ $t('admin.apps.addApp') }}</va-button>
         <va-modal v-model="showAddApp" no-outside-dismiss no-padding size="small" class="p-0">
           <template #content="{ ok }">
             <form @submit.prevent="form.post('/admin/apps')">
-              <va-card-title class="m-0">{{ t('admin.apps.addApp') }}</va-card-title>
+              <va-card-title class="m-0">{{ $t('admin.apps.addApp') }}</va-card-title>
               <va-card-content class="m-0">
                 <va-input v-model="form.name"
                   immediateValidation
                   id="name"
                   required-mark
-                  :label="t('form.name')"
+                  :label="$t('form.name')"
                   class="mb-3"
                   :error="$page.props.errors.name"
                   :error-messages="$page.props.errors.name" />
@@ -31,7 +29,7 @@ const { t } = useI18n()
                   immediateValidation
                   id="slug"
                   required-mark
-                  :label="t('organization.slug')"
+                  :label="$t('organization.slug')"
                   class="mb-3"
                   :error="$page.props.errors.slug"
                   :error-messages="$page.props.errors.slug" />
@@ -39,7 +37,7 @@ const { t } = useI18n()
                   id="category"
                   required-mark
                   immediateValidation
-                  :label="t('admin.apps.category')"
+                  :label="$t('admin.apps.category')"
                   class="mb-3"
                   :error="$page.props.errors.category"
                   :error-messages="$page.props.errors.category" />
@@ -47,14 +45,14 @@ const { t } = useI18n()
                   id="description"
                   required-mark
                   immediateValidation
-                  :label="t('admin.apps.description')"
+                  :label="$t('admin.apps.description')"
                   class="mb-3"
                   :error="$page.props.errors.description"
                   :error-messages="$page.props.errors.description" />
               </va-card-content>
               <va-card-actions align="right" class="">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -68,8 +66,8 @@ const { t } = useI18n()
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>{{ t('form.name') }}</th>
-            <th>{{ t('admin.apps.status') }}</th>
+            <th>{{ $t('form.name') }}</th>
+            <th>{{ $t('admin.apps.status') }}</th>
           </tr>
         </thead>
         <tbody>

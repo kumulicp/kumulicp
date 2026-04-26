@@ -1,14 +1,12 @@
 <script setup>
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('auth.resetPassword') }} - Control Panel</title>
+    <title>{{ $t('auth.resetPassword') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.post('/password/reset', {
         onFinish: () => form.reset('password', 'password_confirmation'),
@@ -18,7 +16,7 @@ const { t } = useI18n()
       v-model="form.email"
       class="mb-3"
       type="email"
-      :label="t('auth.email')"
+      :label="$t('auth.email')"
       immediateValidation
       :error="$page.props.errors.email"
       :error-messages="$page.props.errors.email"
@@ -28,7 +26,7 @@ const { t } = useI18n()
       v-model="form.password"
       class="mb-3"
       type="password"
-      :label="t('auth.password')"
+      :label="$t('auth.password')"
       immediateValidation
       :error="$page.props.errors.password"
       :error-messages="$page.props.errors.password"
@@ -38,7 +36,7 @@ const { t } = useI18n()
       v-model="form.password_confirmation"
       class="mb-3"
       type="password"
-      :label="t('auth.confirmPassword')"
+      :label="$t('auth.confirmPassword')"
       immediateValidation
       :error="$page.props.errors.password_confirmation"
       :error-messages="$page.props.errors.password_confirmation"
@@ -49,7 +47,7 @@ const { t } = useI18n()
         class="my-0"
         :disabled="form.processing"
       >
-        {{ t('auth.resetPassword') }}
+        {{ $t('auth.resetPassword') }}
       </va-button>
     </div>
   </form>

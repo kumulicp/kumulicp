@@ -2,13 +2,11 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.announcement.pageTitle') }} - Control Panel</title>
+    <title>{{ $t('admin.announcement.pageTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
     <va-card-title>{{ announcement.title }}</va-card-title>
@@ -18,7 +16,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ t('admin.announcement.title') }}</h5>
+                <h5>{{ $t('admin.announcement.title') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -37,7 +35,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ t('admin.announcement.relevantApps') }}</h5>
+                <h5>{{ $t('admin.announcement.relevantApps') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -59,7 +57,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ t('admin.announcement.summary') }}</h5>
+                <h5>{{ $t('admin.announcement.summary') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -76,7 +74,7 @@ const { t } = useI18n()
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ t('admin.announcement.description') }}</h5>
+                <h5>{{ $t('admin.announcement.description') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -91,7 +89,7 @@ const { t } = useI18n()
           :disabled="form.processing"
           class="mr-2 mb-2"
         >
-          {{ t('form.update') }}
+          {{ $t('form.update') }}
         </va-button>
       </form>
     </va-card-content>

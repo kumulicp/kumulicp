@@ -1,23 +1,21 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('admin.announcement.title') }} - Control Panel</title>
+    <title>{{ $t('admin.announcement.title') }} - Control Panel</title>
   </Head>
   <div class="announcements-list">
     <div class="row">
       <div class="flex flex-col xs12 lg12">
         <va-card class="mb-4">
-          <va-card-title>{{ t('admin.announcement.title') }}</va-card-title>
+          <va-card-title>{{ $t('admin.announcement.title') }}</va-card-title>
           <va-card-content>
             <div class="row justify-center">
-              <va-button id="addAnnouncement" @click="showAddAnnouncement = !showAddAnnouncement">{{ t('admin.announcement.addAnnouncement') }}</va-button>
+              <va-button id="addAnnouncement" @click="showAddAnnouncement = !showAddAnnouncement">{{ $t('admin.announcement.addAnnouncement') }}</va-button>
             </div>
               <va-modal v-model="showAddAnnouncement"
                 hide-default-actions
@@ -25,21 +23,21 @@ const { t } = useI18n()
                 class="p-0"
                 >
                 <template #content="{ ok }">
-                  <va-card-title class="m-0">{{ t('admin.announcement.addAnnouncement') }}</va-card-title>
+                  <va-card-title class="m-0">{{ $t('admin.announcement.addAnnouncement') }}</va-card-title>
                   <form @submit.prevent="form.post('/admin/service/announcements')">
                     <va-card-content class="m-0 p-0">
                       <va-input v-model="form.title"
                         id="title"
                         required-mark
                         immediateValidation
-                        :label="t('admin.announcement.titleLabel')"
+                        :label="$t('admin.announcement.titleLabel')"
                         :error="$page.props.errors.title"
                         :error-messages="$page.props.errors.title"
                       />
                     </va-card-content>
                     <va-card-actions align="right" class="">
-                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-                      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+                      <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+                      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
                     </va-card-actions>
                   </form>
                 </template>
@@ -47,8 +45,8 @@ const { t } = useI18n()
               <table class="va-table va-table--hoverable mt-3">
                 <thead>
                   <tr>
-                    <th style="width: 20%">{{ t('admin.announcement.title') }}</th>
-                    <th>{{ t('admin.announcement.summary') }}</th>
+                    <th style="width: 20%">{{ $t('admin.announcement.title') }}</th>
+                    <th>{{ $t('admin.announcement.summary') }}</th>
                     <th style="width: 10px"></th>
                   </tr>
                 </thead>
@@ -63,7 +61,7 @@ const { t } = useI18n()
                     <td class="va-text-center">
                       <va-button color="danger"
                         @click="showRemoveAnnouncementModal(announcement)">
-                        {{ t('form.remove') }}
+                        {{ $t('form.remove') }}
                       </va-button>
                     </td>
                   </tr>
@@ -73,14 +71,14 @@ const { t } = useI18n()
                 :page-size="pageSize" />
           </va-card-content>
         </va-card>
-        <va-modal v-model="showRemoveAnnouncement" hide-default-actions :title="t('admin.announcement.removeTitle', { name: removeAnnouncement.title })"
-          :message="t('admin.announcement.removeMessage', { name: removeAnnouncement.title })">
+        <va-modal v-model="showRemoveAnnouncement" hide-default-actions :title="$t('admin.announcement.removeTitle', { name: removeAnnouncement.title })"
+          :message="$t('admin.announcement.removeMessage', { name: removeAnnouncement.title })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              {{ t('modal.cancel') }}
+              {{ $t('modal.cancel') }}
             </va-button>
             <va-button color="danger"
-              @click="remove.delete('/admin/service/announcements/' + removeAnnouncement.id); showRemoveAnnouncement = !showRemoveAnnouncement">{{ t('modal.delete') }}</va-button>
+              @click="remove.delete('/admin/service/announcements/' + removeAnnouncement.id); showRemoveAnnouncement = !showRemoveAnnouncement">{{ $t('modal.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

@@ -2,19 +2,17 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.apps.pageTitleShort') }} - Control Panel</title>
+    <title>{{ $t('admin.apps.pageTitleShort') }} - Control Panel</title>
   </Head>
   <va-list>
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.apps.apiPassword') }}</h5>
+          <h5>{{ $t('admin.apps.apiPassword') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -43,7 +41,7 @@ const { t } = useI18n()
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.versions.version') }}</h5>
+          <h5>{{ $t('admin.versions.version') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>
@@ -57,7 +55,7 @@ const { t } = useI18n()
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
-          <h5>{{ t('admin.plans.plan') }}</h5>
+          <h5>{{ $t('admin.plans.plan') }}</h5>
         </va-list-item-label>
       </va-list-item-section>
       <va-list-item-section>

@@ -1,30 +1,28 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('admin.backups.backups') }} - Control Panel</title>
+    <title>{{ $t('admin.backups.backups') }} - Control Panel</title>
   </Head>
   <div class="backups-list">
     <div class="row">
       <div class="flex flex-col xs12 lg12">
         <va-card class="mb-4">
-          <va-card-title>{{ t('admin.backups.scheduledBackups') }}</va-card-title>
+          <va-card-title>{{ $t('admin.backups.scheduledBackups') }}</va-card-title>
           <va-card-content>
             <table class="va-table va-table--hoverable mt-3">
               <thead>
                 <tr>
-                  <th>{{ t('organization.organization') }}</th>
-                  <th>{{ t('admin.apps.appWord') }}</th>
-                  <th>{{ t('admin.backups.type') }}</th>
-                  <th>{{ t('admin.backups.scheduledAt') }}</th>
-                  <th>{{ t('admin.backups.completedAt') }}</th>
-                  <th>{{ t('admin.apps.status') }}</th>
+                  <th>{{ $t('organization.organization') }}</th>
+                  <th>{{ $t('admin.apps.appWord') }}</th>
+                  <th>{{ $t('admin.backups.type') }}</th>
+                  <th>{{ $t('admin.backups.scheduledAt') }}</th>
+                  <th>{{ $t('admin.backups.completedAt') }}</th>
+                  <th>{{ $t('admin.apps.status') }}</th>
                   <th style="width:50px"></th>
                 </tr>
               </thead>
@@ -48,14 +46,14 @@ const { t } = useI18n()
             <va-pagination v-if="backups.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="backups.length" boundary-numbers :page-size="pageSize" />
           </va-card-content>
         </va-card>
-        <va-modal v-model="showRemoveBackup" hide-default-actions :title="t('admin.backups.removeTitle', { name: removeBackup.name })"
-          :message="t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
+        <va-modal v-model="showRemoveBackup" hide-default-actions :title="$t('admin.backups.removeTitle', { name: removeBackup.name })"
+          :message="$t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
           <template #footer="{ cancel }">
             <va-button color="backgroundSecondary" @click="cancel">
-              {{ t('modal.cancel') }}
+              {{ $t('modal.cancel') }}
             </va-button>
             <va-button color="danger"
-              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ t('modal.delete') }}</va-button>
+              @click="remove.delete('/admin/organizations/'+removeBackup.organization.id+'/backups/'+removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('modal.delete') }}</va-button>
           </template>
         </va-modal>
       </div>

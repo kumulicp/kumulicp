@@ -5,9 +5,7 @@ import Navbar from '@/components/navbar/NavBar.vue'
 import Sidebar from '@/components/sidebar/SideBar.vue'
 import { useBreakpoint, useToast, useColors } from 'vuestic-ui'
 import { router, usePage } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const breakpoints = useBreakpoint()
 
@@ -123,7 +121,7 @@ onResize()
           <template #icon>
             <va-icon name="info" />
           </template>
-          {{ t('messages.status.deactivating') }}
+          {{ $t('messages.status.deactivating') }}
         </va-alert>
         <va-alert
           color="danger"
@@ -134,7 +132,7 @@ onResize()
           <template #icon>
             <va-icon color="danger" name="info" />
           </template>
-          {{ t('messages.status.deactivated') }}
+          {{ $t('messages.status.deactivated') }}
         </va-alert>
         <div class="row justify-center" v-if="$page.props.step < 3">
           <div class="flex flex-col md12 lg8">
@@ -166,7 +164,7 @@ onResize()
           {{ $page.props.auth.organization.name }}
         </template>
         <template #center>
-          {{ t('navbar.controlPanel') }}
+          {{ $t('navbar.controlPanel') }}
         </template>
       </VaNavbar>
     </template>

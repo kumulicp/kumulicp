@@ -3,7 +3,7 @@
     <div ref="editor"></div>
 
     <div class="toolbar">
-      <button @click.prevent="applyChanges">{{ t('form.cleanYaml') }}</button>
+      <button @click.prevent="applyChanges">{{ $t('form.cleanYaml') }}</button>
       <span v-if="applyError" class="error">
         {{ applyError }}
       </span>
@@ -20,9 +20,7 @@ import { defaultKeymap, indentWithTab } from '@codemirror/commands'
 import { yaml as yamlLanguage } from '@codemirror/lang-yaml'
 import { linter, lintGutter } from '@codemirror/lint'
 import { parseDocument, stringify } from 'yaml'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 /* -------------------------- */
 

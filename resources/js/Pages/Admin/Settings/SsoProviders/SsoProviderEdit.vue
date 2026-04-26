@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('settings.sso.editSsoProvider') }} - Control Panel</title>
+    <title>{{ $t('settings.sso.editSsoProvider') }} - Control Panel</title>
   </Head>
   <va-card>
-    <va-card-title>{{ t('settings.sso.editSsoProvider') }}</va-card-title>
+    <va-card-title>{{ $t('settings.sso.editSsoProvider') }}</va-card-title>
     <va-card-content>
       <div class="row">
           <div class="flex xs12">
@@ -25,7 +23,7 @@ const { t } = useI18n()
               immediateValidation
               id="enabled"
               required-mark
-              :label="t('status.enabled')"
+              :label="$t('status.enabled')"
               class="mb-3"
               :error="$page.props.errors.enabled"
               :error-messages="$page.props.errors.enabled" />
@@ -33,68 +31,68 @@ const { t } = useI18n()
               immediateValidation
               id="name"
               required-mark
-              :label="t('form.name')"
+              :label="$t('form.name')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.name"
               :error-messages="$page.props.errors.name" />
             <va-input v-model="form.label"
               immediateValidation
               id="label"
               required-mark
-              :label="t('settings.sso.label')"
+              :label="$t('settings.sso.label')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.label"
               :error-messages="$page.props.errors.label" />
             <va-input v-model="form.client_id"
               immediateValidation
               id="client_id"
               required-mark
-              :label="t('settings.sso.clientId')"
+              :label="$t('settings.sso.clientId')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.client_id"
               :error-messages="$page.props.errors.client_id" />
             <va-input v-model="form.client_secret"
               immediateValidation
               id="client_secret"
               required-mark
-              :label="t('settings.sso.clientSecret')"
+              :label="$t('settings.sso.clientSecret')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.client_secret"
               :error-messages="$page.props.errors.client_secret" />
             <va-input v-model="form.base_url"
               immediateValidation
               id="base_url"
               required-mark
-              :label="t('settings.sso.baseUrl')"
+              :label="$t('settings.sso.baseUrl')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.base_url"
               :error-messages="$page.props.errors.base_url" />
             <va-input v-model="form.redirect_url"
               immediateValidation
               id="redirect_url"
               required-mark
-              :label="t('settings.sso.redirectUrl')"
+              :label="$t('settings.sso.redirectUrl')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.redirect_url"
               :error-messages="$page.props.errors.redirect_url" />
             <va-input v-model="form.scopes"
               immediateValidation
               id="scopes"
               required-mark
-              :label="t('settings.sso.scopes')"
+              :label="$t('settings.sso.scopes')"
               class="mb-3"
-              :messages="t('settings.sso.publicFacingLabel')"
+              :messages="$t('settings.sso.publicFacingLabel')"
               :error="$page.props.errors.scopes"
               :error-messages="$page.props.errors.scopes" />
           </template>
         </AdminSettings>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

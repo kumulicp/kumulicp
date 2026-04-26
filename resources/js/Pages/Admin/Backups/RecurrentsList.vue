@@ -2,28 +2,26 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import BackupsLayout from './BackupsLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('admin.backups.backups') }} - Control Panel</title>
+    <title>{{ $t('admin.backups.backups') }} - Control Panel</title>
   </Head>
     <div class="row justify-center">
-      <va-button @click="showAddBackup = !showAddBackup">{{ t('admin.backups.addRecurringBackups') }}</va-button>
+      <va-button @click="showAddBackup = !showAddBackup">{{ $t('admin.backups.addRecurringBackups') }}</va-button>
       <va-modal v-model="showAddBackup" no-outside-dismiss no-padding>
         <template #content="{ ok }">
           <form @submit.prevent="form.post('/admin/server/backup_scheduler/recurring', { onComlete: showAddBackup = false })" resetOnSuccess>
-            <va-card-title>{{ t('admin.backups.addBackup') }}</va-card-title>
+            <va-card-title>{{ $t('admin.backups.addBackup') }}</va-card-title>
             <va-card-content>
               <va-select v-model="form.recurrence"
                 :options="recurrences"
                 class="mb-3"
                 required-mark
                 immediateValidation
-                :label="t('admin.backups.recurrence')"
+                :label="$t('admin.backups.recurrence')"
                 value-by="value"
                 text-by="text"
                 :error-messages="$page.props.errors.recurrence"
@@ -33,7 +31,7 @@ const { t } = useI18n()
                 class="mb-3"
                 required-mark
                 immediateValidation
-                :label="t('admin.backups.time')"
+                :label="$t('admin.backups.time')"
                 :error="$page.props.errors.time"
                 :error-messages="$page.props.errors.time"
                 />
@@ -43,7 +41,7 @@ const { t } = useI18n()
                 type="number"
                 max="120"
                 min="1"
-                :label="t('admin.backups.keep')"
+                :label="$t('admin.backups.keep')"
                 class="mb-3"
                 :error="$page.props.errors.keep_for"
                 :error-messages="$page.props.errors.keep_for"
@@ -65,7 +63,7 @@ const { t } = useI18n()
                 class="mb-3"
                 required-mark
                 immediateValidation
-                :label="t('admin.backups.server')"
+                :label="$t('admin.backups.server')"
                 value-by="id"
                 text-by="name"
                 :error-messages="$page.props.errors.server"
@@ -75,7 +73,7 @@ const { t } = useI18n()
                 :options="organizations"
                 class="mb-3"
                 immediateValidation
-                :label="t('admin.backups.organizations')"
+                :label="$t('admin.backups.organizations')"
                 value-by="id"
                 text-by="name"
                 :error-messages="$page.props.errors.organization"
@@ -84,7 +82,7 @@ const { t } = useI18n()
               <va-select v-model="form.application"
                 :options="applications"
                 class="mb-3"
-                :label="t('admin.backups.application')"
+                :label="$t('admin.backups.application')"
                 immediateValidation
                 value-by="id"
                 text-by="name"
@@ -93,8 +91,8 @@ const { t } = useI18n()
                 />
             </va-card-content>
             <va-card-actions align="right">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-              <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+              <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -107,14 +105,14 @@ const { t } = useI18n()
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>{{ t('admin.backups.recurrence') }}</th>
-            <th>{{ t('admin.backups.deleteAfter') }}</th>
-            <th>{{ t('organization.organization') }}</th>
-            <th>{{ t('admin.backups.application') }}</th>
-            <th>{{ t('admin.backups.server') }}</th>
-            <th>{{ t('admin.backups.time') }}</th>
-            <th>{{ t('admin.backups.type') }}</th>
-            <th>{{ t('admin.backups.lastScheduledAt') }}</th>
+            <th>{{ $t('admin.backups.recurrence') }}</th>
+            <th>{{ $t('admin.backups.deleteAfter') }}</th>
+            <th>{{ $t('organization.organization') }}</th>
+            <th>{{ $t('admin.backups.application') }}</th>
+            <th>{{ $t('admin.backups.server') }}</th>
+            <th>{{ $t('admin.backups.time') }}</th>
+            <th>{{ $t('admin.backups.type') }}</th>
+            <th>{{ $t('admin.backups.lastScheduledAt') }}</th>
             <th style="width:50px"></th>
           </tr>
         </thead>
@@ -144,14 +142,14 @@ const { t } = useI18n()
     </va-scroll-container>
     <va-pagination v-if="backups.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="backups.length" boundary-numbers
       :page-size="pageSize" />
-    <va-modal v-model="showRemoveBackup" hide-default-actions :title="t('admin.backups.removeTitle', { name: removeBackup.name })"
-      :message="t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
+    <va-modal v-model="showRemoveBackup" hide-default-actions :title="$t('admin.backups.removeTitle', { name: removeBackup.name })"
+      :message="$t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">
       <template #footer="{ cancel }">
         <va-button color="backgroundSecondary" @click="cancel">
-          {{ t('modal.cancel') }}
+          {{ $t('modal.cancel') }}
         </va-button>
         <va-button color="danger"
-          @click="remove.delete('/admin/server/backup_scheduler/' + removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ t('modal.delete') }}</va-button>
+          @click="remove.delete('/admin/server/backup_scheduler/' + removeBackup.id); showRemoveBackup = !showRemoveBackup">{{ $t('modal.delete') }}</va-button>
       </template>
     </va-modal>
 </template>
@@ -185,28 +183,22 @@ export default {
         server: '',
         application: ''
       }),
-      remove: useForm({})
+      remove: useForm({}),
+      recurrences: [
+        { value: 'daily', text: this.$t('admin.backups.daily') },
+        { value: 'monthly', text: this.$t('admin.backups.monthly') }
+      ],
+      intervals: [
+        { value: 'backups', text: this.$t('admin.backups.backupsInterval') },
+        { value: 'days', text: this.$t('admin.backups.daysInterval') },
+        { value: 'months', text: this.$t('admin.backups.monthsInterval') }
+      ]
     }
   },
   methods: {
     showRemoveBackupModal (backup) {
       this.showRemoveBackup = true
       this.removeBackup = backup
-    }
-  },
-  computed: {
-    recurrences () {
-      return [
-        { value: 'daily', text: this.$t('admin.backups.daily') },
-        { value: 'monthly', text: this.$t('admin.backups.monthly') }
-      ]
-    },
-    intervals () {
-      return [
-        { value: 'backups', text: this.$t('admin.backups.backupsInterval') },
-        { value: 'days', text: this.$t('admin.backups.daysInterval') },
-        { value: 'months', text: this.$t('admin.backups.monthsInterval') }
-      ]
     }
   }
 }

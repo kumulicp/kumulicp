@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <div class="user">
@@ -33,24 +31,24 @@ export default {
     const basePath = '/users/' + user.id
     const tabs = [
       {
-        title: useI18n().t('form.view'),
+        title: this.$t('form.view'),
         url: basePath
       },
       {
-        title: useI18n().t('organization.profile.profile'),
+        title: this.$t('organization.profile.profile'),
         url: basePath + '/edit'
       },
       {
-        title: useI18n().t('organization.groups.groups'),
+        title: this.$t('organization.groups.groups'),
         url: basePath + '/groups'
       },
       {
-        title: useI18n().t('organization.users.permissions'),
+        title: this.$t('organization.users.permissions'),
         url: basePath + '/permissions'
       }
     ]
 
-    let value = useI18n().t('form.view')
+    let value = this.$t('form.view')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

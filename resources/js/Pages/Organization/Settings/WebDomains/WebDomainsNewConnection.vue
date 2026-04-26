@@ -1,24 +1,22 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.webDomains.connectExisting') }} - Control Panel</title>
+    <title>{{ $t('organization.webDomains.connectExisting') }} - Control Panel</title>
   </Head>
   <div class="web-domains-new-register">
     <div class="row">
       <div class="flex xs12">
         <va-card>
           <form @submit.prevent="form.post('/settings/domains/connect')">
-            <va-card-title>{{ t('organization.webDomains.connectYourDomain') }}</va-card-title>
+            <va-card-title>{{ $t('organization.webDomains.connectYourDomain') }}</va-card-title>
             <va-card-content>
               <div class="row justify-center">
                 <va-input
-                  :label="t('organization.webDomains.domainName')"
+                  :label="$t('organization.webDomains.domainName')"
                   v-model="form.domain_name"
                   immediateValidation
                   autofocus
@@ -30,7 +28,7 @@ const { t } = useI18n()
               </div>
               <div class="row justify-center">
                 <div>
-                  <va-button type="submit" id="submit" class="mb-3">{{ t('organization.webDomains.connectDomain') }}</va-button>
+                  <va-button type="submit" id="submit" class="mb-3">{{ $t('organization.webDomains.connectDomain') }}</va-button>
                 </div>
               </div>
             </va-card-content>

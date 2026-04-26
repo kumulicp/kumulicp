@@ -1,8 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
@@ -17,7 +15,7 @@ const { t } = useI18n()
           <p v-else class="mb-3">{{ description }}</p>
           <Link href="/">
             <va-button>
-                {{ t('errors.goHome') }}
+                {{ $t('errors.goHome') }}
             </va-button>
           </Link>
         </div>

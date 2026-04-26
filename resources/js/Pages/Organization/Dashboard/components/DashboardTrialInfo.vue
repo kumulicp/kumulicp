@@ -1,8 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-carousel
@@ -25,12 +23,8 @@ const { t } = useI18n()
 export default {
   data () {
     return {
-      value: 0
-    }
-  },
-  computed: {
-    items () {
-      return [
+      value: 0,
+      items: [
         {
           title: this.$t('auth.welcomeGreeting'),
           description: this.$t('organization.dashboard.trialWelcome'),

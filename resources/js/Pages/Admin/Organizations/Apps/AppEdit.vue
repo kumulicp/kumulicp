@@ -2,19 +2,17 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('admin.apps.pageTitle') }}</title>
+    <title>{{ $t('admin.apps.pageTitle') }}</title>
   </Head>
     <div class="row justify-center">
         <VaButtonGroup>
-        <va-button @click="showUpdateAppModal = true">{{ t('admin.apps.update') }}</va-button>
-        <va-button @click="showUpgradeAppModal = true">{{ t('admin.apps.upgrade') }}</va-button>
-        <va-button color="danger" @click="showDeleteAppModal = true">{{ t('admin.apps.delete') }}</va-button>
+        <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
+        <va-button @click="showUpgradeAppModal = true">{{ $t('admin.apps.upgrade') }}</va-button>
+        <va-button color="danger" @click="showDeleteAppModal = true">{{ $t('admin.apps.delete') }}</va-button>
         </VaButtonGroup>
     </div>
     <va-scroll-container
@@ -24,7 +22,7 @@ const { t } = useI18n()
         <table class="va-table va-table--hoverable mt-3">
         <thead>
             <tr>
-            <th>{{ t('admin.versions.version') }}</th>
+            <th>{{ $t('admin.versions.version') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -43,7 +41,7 @@ const { t } = useI18n()
         <va-list-item class="py-3">
         <va-list-item-section label>
             <va-list-item-label>
-            <h5>{{ t('admin.apps.apiPassword') }}</h5>
+            <h5>{{ $t('admin.apps.apiPassword') }}</h5>
             </va-list-item-label>
         </va-list-item-section>
         <va-list-item-section>
@@ -73,7 +71,7 @@ const { t } = useI18n()
         <va-textarea
             v-model="form.settings"
             class="flex flex-col sm12"
-            :label="t('admin.apps.jsonSettings')"
+            :label="$t('admin.apps.jsonSettings')"
             rows="50"
             placeholder="{}"
             min-rows="30"
@@ -85,7 +83,7 @@ const { t } = useI18n()
             {{ $page.props.errors.settings }}
         </div>
         </div>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.update') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.update') }}</va-button>
     </form>
     <va-modal v-model="showUpdateAppModal"
     hide-default-actions
@@ -93,13 +91,13 @@ const { t } = useI18n()
     class="p-0"
     >
       <template #content="{ ok }">
-        <va-card-title class="m-0">{{ t('admin.apps.update') }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('admin.apps.update') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-          {{ t('admin.apps.update_modal') }}
+          {{ $t('admin.apps.update_modal') }}
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ t('modal.yes') }}</va-button></Link>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('modal.yes') }}</va-button></Link>
         </va-card-actions>
       </template>
     </va-modal>
@@ -109,13 +107,13 @@ const { t } = useI18n()
     class="p-0"
     >
       <template #content="{ ok }">
-        <va-card-title class="m-0">{{ t('admin.apps.upgrade') }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('admin.apps.upgrade') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-            {{ t('admin.apps.upgrade_modal') }}
+            {{ $t('admin.apps.upgrade_modal') }}
         </va-card-content>
         <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-            <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+app.version.id"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ t('modal.yes') }}</va-button></Link>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+            <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+app.version.id"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('modal.yes') }}</va-button></Link>
         </va-card-actions>
       </template>
     </va-modal>
@@ -125,34 +123,34 @@ const { t } = useI18n()
     class="p-0"
     >
       <template #content="{ ok }">
-        <va-card-title class="m-0">{{ t('admin.apps.delete') }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('admin.apps.delete') }}</va-card-title>
         <va-card-content class="m-0 p-0">
-            {{ t('admin.apps.delete_modal') }}
+            {{ $t('admin.apps.delete_modal') }}
 
             <div class="row mt-3">
               <div class="flex flex-col xs12">
-                {{ t('admin.apps.deleteNowOrLater') }}
+                {{ $t('admin.apps.deleteNowOrLater') }}
               </div>
             </div>
             <va-radio v-model="deleteApp.when" :options="deleteWhen" value-by="value" />
             <div v-if="deleteApp.when === 'later'" class="row mt-3">
               <div class="flex flex-col xs6 pr-2">
                 <va-input v-model="deleteApp.start_time"
-                  :label="t('admin.apps.deleteStart')"
+                  :label="$t('admin.apps.deleteStart')"
                   type="time"
                   />
               </div>
               <div class="flex flex-col xs6 pl-2">
                 <va-input v-model="deleteApp.end_time"
-                  :label="t('admin.apps.deleteEnd')"
+                  :label="$t('admin.apps.deleteEnd')"
                   type="time"
                   />
               </div>
             </div>
         </va-card-content>
         <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-            <va-button color="danger" type="submit" id="submit" class="mr-2" @click="deleteApp.delete('/admin/organizations/'+organization.id+'/apps/'+app.id)" :disabled="form.processing">{{ t('modal.yes') }}</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+            <va-button color="danger" type="submit" id="submit" class="mr-2" @click="deleteApp.delete('/admin/organizations/'+organization.id+'/apps/'+app.id)" :disabled="form.processing">{{ $t('modal.yes') }}</va-button>
         </va-card-actions>
       </template>
     </va-modal>
@@ -185,12 +183,8 @@ export default {
         when: 'later',
         start_time: '',
         end_time: ''
-      })
-    }
-  },
-  computed: {
-    deleteWhen () {
-      return [
+      }),
+      deleteWhen: [
         {
           text: this.$t('admin.apps.deleteNow'),
           value: 'now'

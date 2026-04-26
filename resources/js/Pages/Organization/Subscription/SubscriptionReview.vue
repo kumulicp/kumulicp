@@ -4,18 +4,16 @@ import CreditCard from '@/components/CreditCard.vue'
 import PlanCard from '@/components/cards/PlanCard.vue'
 import PricingCard from '@/components/cards/PricingCard.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.subscription.planReview') }} - Control Panel</title>
+    <title>{{ $t('organization.subscription.planReview') }} - Control Panel</title>
   </Head>
   <div class="row">
     <div class="flex flex-col xs12 lg8">
       <va-card clas="h-fit">
-        <va-card-title>{{ t('organization.subscription.options') }}</va-card-title>
+        <va-card-title>{{ $t('organization.subscription.options') }}</va-card-title>
         <va-card-content>
           <credit-card v-if="plan.payment_enabled" v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" />
           <template v-else>
@@ -26,11 +24,11 @@ const { t } = useI18n()
                 </div>
               </div>
               <div class="flex flex-col xs12 va-text-center mb-4">
-                <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)" >{{ t('organization.subscription.nothingLeft') }}</h2>
+                <h2 class="va-h2" style="color: var(--va-list-item-label-caption-color)" >{{ $t('organization.subscription.nothingLeft') }}</h2>
               </div>
             </div>
           </template>
-          <va-button v-if="!plan.payment_enabled || hasDefaultPaymentMethod" @click="form.post('/subscription/'+organization.id+'/plans/'+plan.id)">{{ t('organization.subscription.subscribe') }}</va-button>
+          <va-button v-if="!plan.payment_enabled || hasDefaultPaymentMethod" @click="form.post('/subscription/'+organization.id+'/plans/'+plan.id)">{{ $t('organization.subscription.subscribe') }}</va-button>
         </va-card-content>
       </va-card>
     </div>

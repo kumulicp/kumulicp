@@ -4,13 +4,11 @@ import DashboardTrialInfo from './components/DashboardTrialInfo.vue'
 import DashboardInfoBlock from './components/DashboardInfoBlock.vue'
 import DashboardFoldersOverview from './components/DashboardFoldersOverview.vue'
 import DashboardAnnouncements from './components/DashboardAnnouncements.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.dashboard.title') }} - Control Panel</title>
+    <title>{{ $t('organization.dashboard.title') }} - Control Panel</title>
   </Head>
   <div class="dashboard">
     <DashboardTrialInfo v-if="trial_plan" />

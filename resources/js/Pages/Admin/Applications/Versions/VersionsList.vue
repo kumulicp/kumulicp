@@ -2,24 +2,22 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from '../AppsLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ app.name }} - {{ t('admin.versions.versions') }} - Control Panel</title>
+    <title>{{ app.name }} - {{ $t('admin.versions.versions') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <va-button id="addVersion" @click="showAddVersion = !showAddVersion">{{ t('admin.versions.addVersion') }}</va-button>
+    <va-button id="addVersion" @click="showAddVersion = !showAddVersion">{{ $t('admin.versions.addVersion') }}</va-button>
     <va-modal v-model="showAddVersion" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
         <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions')">
-          <va-card-title class="m-0">{{ t('admin.versions.addVersion') }}</va-card-title>
+          <va-card-title class="m-0">{{ $t('admin.versions.addVersion') }}</va-card-title>
           <va-card-content class="m-0">
             <va-input v-model="form.version"
               id="name"
-              :label="t('admin.versions.name')"
+              :label="$t('admin.versions.name')"
               class="mb-3"
               required-mark
               immediateValidation
@@ -28,7 +26,7 @@ const { t } = useI18n()
               />
 
             <div class="mt-2 va-input-label va-input-wrapper__label va-input-wrapper__label--outer" style="color: var(--va-primary);">
-              {{ t('admin.versions.copyValuesFrom') }}
+              {{ $t('admin.versions.copyValuesFrom') }}
             </div>
             <va-radio v-model="form.copy_from"
               :options="copyFrom"
@@ -38,7 +36,7 @@ const { t } = useI18n()
               v-if="form.copy_from === 'previous_version'"
               id="copyVersion"
               :options="versions"
-              :label="t('admin.versions.copyVersion')"
+              :label="$t('admin.versions.copyVersion')"
               class="my-2"
               value-by="id"
               text-by="version"
@@ -49,8 +47,8 @@ const { t } = useI18n()
               />
           </va-card-content>
           <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('form.cancel') }}</va-button>
-            <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
+            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('form.cancel') }}</va-button>
+            <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
           </va-card-actions>
         </form>
       </template>
@@ -66,10 +64,10 @@ const { t } = useI18n()
           <table class="va-table va-table--hoverable mt-3">
             <thead>
               <tr>
-                <th style="width: 50px">{{ t('status.enabled') }}</th>
-                <th width="70%">{{ t('admin.versions.name') }}</th>
-                <th>{{ t('status.updatedAt') }}</th>
-                <th>{{ t('status.createdAt') }}</th>
+                <th style="width: 50px">{{ $t('status.enabled') }}</th>
+                <th width="70%">{{ $t('admin.versions.name') }}</th>
+                <th>{{ $t('status.updatedAt') }}</th>
+                <th>{{ $t('status.createdAt') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -103,15 +101,15 @@ export default {
     return {
       copyFrom: [
         {
-          text: useI18n().t('admin.versions.recommendations'),
+          text: this.$t('admin.versions.recommendations'),
           value: 'recommendations'
         },
         {
-          text: useI18n().t('admin.versions.previousVersion'),
+          text: this.$t('admin.versions.previousVersion'),
           value: 'previous_version'
         },
         {
-          text: useI18n().t('admin.versions.none'),
+          text: this.$t('admin.versions.none'),
           value: 'none'
         }
       ],

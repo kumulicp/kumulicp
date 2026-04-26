@@ -4,16 +4,14 @@ import UserLayout from './UserLayout.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const phoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNumber)
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.users.editUser') }} - Control Panel</title>
+    <title>{{ $t('organization.users.editUser') }} - Control Panel</title>
   </Head>
   <div class="user-profile">
     <div class="row">
@@ -25,7 +23,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.id"
-            :label="t('auth.username')"
+            :label="$t('auth.username')"
             id="userName"
             readonly
             />
@@ -33,7 +31,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         <div v-if="organizations.length > 1" class="flex flex-col xs12 lg6 mb-2">
           <va-select
             v-model="form.organization"
-            :label="t('organization.organization')"
+            :label="$t('organization.organization')"
             :options="organizations"
             text-by="name"
             value-by="id"
@@ -47,7 +45,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.first_name"
-            :label="t('organization.users.firstName')"
+            :label="$t('organization.users.firstName')"
             id="firstName"
             required-mark
             immediateValidation
@@ -57,7 +55,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.last_name"
-            :label="t('organization.users.lastName')"
+            :label="$t('organization.users.lastName')"
             id="lastName"
             required-mark
             immediateValidation
@@ -69,7 +67,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.personal_email"
-            :label="t('organization.users.personalEmail')"
+            :label="$t('organization.users.personalEmail')"
             id="personalEmail"
             required-mark
             immediateValidation
@@ -79,7 +77,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.phone_number"
-            :label="t('organization.users.phoneNumber')"
+            :label="$t('organization.users.phoneNumber')"
             id="phoneNumber"
             immediateValidation
             placeholder="(###) ###-####"
@@ -91,7 +89,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <div v-if="user.org_emails || user.can.add_email_account" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
-          <h5>{{ t('organization.users.organizationalEmail') }}</h5>
+          <h5>{{ $t('organization.users.organizationalEmail') }}</h5>
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <template v-for="(org_email, index) in user.org_emails" :key="index">
@@ -104,7 +102,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               <div class="flex flex-col xs1">
                 <a :href="'/users/'+user.id+'/remove/accountemail/'+org_email" class="ml-3">
                   <va-icon name="entypo-cancel"
-                    :title="t('organization.users.deleteEmail')"
+                    :title="$t('organization.users.deleteEmail')"
                     color="danger"
                     />
                 </a>
@@ -115,7 +113,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             <template v-for="(domain, index) in email_domains" :key="index">
               <a :href="'/users/'+user.id+'/create/accountemail/'+domain.id">
                 <div class="py-5">
-                  {{ t('organization.users.addEmailAccount', { domain: domain.name }) }}
+                  {{ $t('organization.users.addEmailAccount', { domain: domain.name }) }}
                 </div>
               </a>
             </template>
@@ -124,7 +122,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <div v-for="(storage, index) in user.additional_storage" :key="index" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
-          <h5>{{ t('organization.users.appStorage', { app: storage.app_name }) }}</h5>
+          <h5>{{ $t('organization.users.appStorage', { app: storage.app_name }) }}</h5>
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-select
@@ -135,10 +133,10 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             value-by="value"
             placement="auto"
             />
-          <div v-if="form['additional_storage'][storage.id] != storage.quantity" class="subscription_warning"><b>{{ t('organization.users.warningLabel') }}</b> {{ t('organization.users.storageWarning', { name: storage.name }) }}</div>
+          <div v-if="form['additional_storage'][storage.id] != storage.quantity" class="subscription_warning"><b>{{ $t('organization.users.warningLabel') }}</b> {{ $t('organization.users.storageWarning', { name: storage.name }) }}</div>
         </div>
       </div>
-      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
     </form>
   </div>
 </template>

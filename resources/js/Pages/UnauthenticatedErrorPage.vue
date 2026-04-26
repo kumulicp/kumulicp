@@ -1,9 +1,7 @@
 <script setup>
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
@@ -18,7 +16,7 @@ const { t } = useI18n()
           <p v-else>{{ description }}</p>
           <Link href="/">
             <va-button>
-                {{ t('errors.goHome') }}
+                {{ $t('errors.goHome') }}
             </va-button>
           </Link>
         </div>

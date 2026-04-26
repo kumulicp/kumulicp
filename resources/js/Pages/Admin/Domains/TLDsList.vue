@@ -2,35 +2,33 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import DomainsLayout from './DomainsLayout.vue'
 import { Link, useForm, router } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('admin.domains.tlds') }} - Control Panel</title>
+    <title>{{ $t('admin.domains.tlds') }} - Control Panel</title>
   </Head>
   <div class="row justify-center">
-    <va-button @click="showAddTldModal = ! showAddTldModal">{{ t('admin.domains.addTld') }}</va-button><Link :href="'/admin/service/domains/tlds/refresh'" class="ml-2"><va-button>{{ t('admin.domains.refreshList') }}</va-button></Link>
+    <va-button @click="showAddTldModal = ! showAddTldModal">{{ $t('admin.domains.addTld') }}</va-button><Link :href="'/admin/service/domains/tlds/refresh'" class="ml-2"><va-button>{{ $t('admin.domains.refreshList') }}</va-button></Link>
   </div>
   <va-modal v-model="showAddTldModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content="{ ok }">
       <form @submit.prevent="form.post('/admin/service/domains/tlds')">
-        <va-card-title class="m-0">{{ t('admin.domains.addTld') }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('admin.domains.addTld') }}</va-card-title>
         <va-card-content class="m-0">
           <va-input v-model="form.tld"
             immediateValidation
             id="tld"
             required-mark
-            :label="t('admin.domains.tlds')"
+            :label="$t('admin.domains.tlds')"
             class="mb-3"
             :error="$page.props.errors.tld"
             :error-messages="$page.props.errors.tld" />
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
+          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+          <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('form.submit') }}</va-button>
         </va-card-actions>
       </form>
     </template>

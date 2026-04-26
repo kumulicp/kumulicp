@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-card class="mb-4">
@@ -27,19 +25,14 @@ export default {
     const basePath = '/admin/apps/' + app.slug
 
     return {
-      basePath,
       pathname,
-      value: pathname
-    }
-  },
-  computed: {
-    tabs () {
-      return [
-        { title: this.$t('form.view'), url: this.basePath },
-        { title: this.$t('form.edit'), url: this.basePath + '/edit' },
-        { title: this.$t('admin.versions.versions'), url: this.basePath + '/versions' },
-        { title: this.$t('admin.plans.plan'), url: this.basePath + '/plans' },
-        { title: this.$t('admin.roles.details'), url: this.basePath + '/roles' }
+      value: pathname,
+      tabs: [
+        { title: this.$t('form.view'), url: basePath },
+        { title: this.$t('form.edit'), url: basePath + '/edit' },
+        { title: this.$t('admin.versions.versions'), url: basePath + '/versions' },
+        { title: this.$t('admin.plans.plan'), url: basePath + '/plans' },
+        { title: this.$t('admin.roles.details'), url: basePath + '/roles' }
       ]
     }
   }

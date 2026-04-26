@@ -1,13 +1,11 @@
 <script setup>
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('auth.recoverPassword') }} - Control Panel</title>
+    <title>{{ $t('auth.recoverPassword') }} - Control Panel</title>
   </Head>
   <form class="login" @submit.prevent="form.post('/password/email', {
         onSuccess: () => email_sent = emailSentMessage,
@@ -16,7 +14,7 @@ const { t } = useI18n()
       v-model="form.email"
       class="mb-3"
       type="email"
-      :label="t('auth.email')"
+      :label="$t('auth.email')"
       immediateValidation
       :success="email_sent"
       :messages="email_sent"
@@ -29,7 +27,7 @@ const { t } = useI18n()
         class="my-0"
         :disabled="form.processing"
       >
-        {{ t('auth.resetPassword') }}
+        {{ $t('auth.resetPassword') }}
       </va-button>
     </div>
   </form>

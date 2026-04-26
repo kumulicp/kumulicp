@@ -5,23 +5,21 @@ import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 
 const phoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNumber)
 </script>
 <template>
   <Head>
-    <title>{{ t('settings.editServerSettings') }} - Control Panel</title>
+    <title>{{ $t('settings.editServerSettings') }} - Control Panel</title>
   </Head>
   <form @submit.prevent="form.put('/admin/settings/ldap')">
     <AdminSettings>
-      <template #name>{{ t('settings.ldapAttributes') }}</template>
+      <template #name>{{ $t('settings.ldapAttributes') }}</template>
       <template #settings>
         <va-input v-model="form.name"
-          :label="t('settings.ldapFullName')"
+          :label="$t('settings.ldapFullName')"
           class="mb-3"
           id="fullName"
           placeholder="displayName"
@@ -30,7 +28,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.name"
           />
         <va-input v-model="form.first_name"
-          :label="t('user.firstName')"
+          :label="$t('user.firstName')"
           class="mb-3"
           id="firstName"
           placeholder="givenName"
@@ -39,7 +37,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.first_name"
           />
         <va-input v-model="form.last_name"
-          :label="t('user.lastName')"
+          :label="$t('user.lastName')"
           class="mb-3"
           id="lastName"
           placeholder="sn"
@@ -48,7 +46,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.last_name"
           />
         <va-input v-model="form.phone_number"
-          :label="t('user.phoneNumber')"
+          :label="$t('user.phoneNumber')"
           class="mb-3"
           id="phoneNumber"
           placeholder="telephoneNumber"
@@ -57,7 +55,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.phone_number"
           />
         <va-input v-model="form.username"
-          :label="t('user.username')"
+          :label="$t('user.username')"
           class="mb-3"
           id="username"
           placeholder="uid"
@@ -66,7 +64,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.username"
           />
         <va-input v-model="form.personal_email"
-          :label="t('settings.ldapPersonalEmail')"
+          :label="$t('settings.ldapPersonalEmail')"
           class="mb-3"
           id="personalEmail"
           placeholder="mail"
@@ -75,7 +73,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.personal_email"
           />
         <va-input v-model="form.org_email"
-          :label="t('settings.ldapOrganizationEmail')"
+          :label="$t('settings.ldapOrganizationEmail')"
           class="mb-3"
           id="orgEmail"
           placeholder="mail"
@@ -84,7 +82,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.org_email"
           />
         <va-input v-model="form.access_type"
-          :label="t('admin.plans.accessType')"
+          :label="$t('admin.plans.accessType')"
           class="mb-3"
           id="accessType"
           placeholder="employeeType"
@@ -93,7 +91,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error-messages="$page.props.errors.access_type"
           />
         <va-input v-model="form.password"
-          :label="t('user.password')"
+          :label="$t('user.password')"
           class="mb-3"
           id="password"
           placeholder="userPassword"
@@ -108,7 +106,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       :disabled="form.processing"
       class="mr-2 my-2"
     >
-      {{ t('form.update') }}
+      {{ $t('form.update') }}
     </va-button>
   </form>
 </template>

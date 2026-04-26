@@ -3,9 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import ServerLayout from './ServerLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
@@ -176,7 +174,7 @@ const { t } = useI18n()
         <div class="row">
           <div class="flex flex-col lg4">
             <va-input v-model="settings[index]['name']"
-              :label="t('admin.plans.name')"
+              :label="$t('admin.plans.name')"
               immediateValidation
               @change="updateSettings()"
               :error="$page.props.errors.settings"
@@ -185,7 +183,7 @@ const { t } = useI18n()
           </div>
           <div class="flex flex-col lg7">
             <va-input v-model="settings[index]['value']"
-              :label="t('admin.plans.value')"
+              :label="$t('admin.plans.value')"
               immediateValidation
               @change="updateSettings()"
               :error="$page.props.errors.settings"

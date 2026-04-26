@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.subscription.paymentMethod') }} - Control Panel</title>
+    <title>{{ $t('organization.subscription.paymentMethod') }} - Control Panel</title>
   </Head>
   <div class="organization">
     <div class="row row-equal">
       <div class="flex flex-col xs12 lg6">
         <va-card>
-          <va-card-title>{{ t('organization.subscription.paymentMethod') }}</va-card-title>
+          <va-card-title>{{ $t('organization.subscription.paymentMethod') }}</va-card-title>
           <va-card-content>
 <!--             <component :is="creditCard" :hasDefaultPaymentMethod="hasDefaultPaymentMethod" /> -->
             <div id="paymentMethodWidget"></div>
@@ -22,14 +20,14 @@ const { t } = useI18n()
       </div>
       <div class="flex flex-col xs12 lg6">
         <va-card>
-          <va-card-title>{{ t('organization.subscription.billingManagers') }}</va-card-title>
+          <va-card-title>{{ $t('organization.subscription.billingManagers') }}</va-card-title>
           <va-card-content style="padding-bottom: 50px">
             <div class="row justify-center">
               <va-button
                 id="addBillingManager"
                 @click="showAddBillingManager = true"
               >
-                {{ t('organization.subscription.addBillingManager') }}
+                {{ $t('organization.subscription.addBillingManager') }}
               </va-button>
             </div>
             <va-list v-if="managers.length > 0" class="mb-4">
@@ -43,7 +41,7 @@ const { t } = useI18n()
                     <va-icon
                       name="entypo-cancel"
                       :id="'remove'+manager.id"
-                      :title="t('organization.subscription.removeBillingManagerName', { name: manager.name })"
+                      :title="$t('organization.subscription.removeBillingManagerName', { name: manager.name })"
                       color="danger"
                       class="clickable-icon"
                       @click="removeBillingManager(manager)"
@@ -53,16 +51,16 @@ const { t } = useI18n()
                       no-padding
                     >
                       <template #content>
-                        <va-card-title> {{ t('organization.subscription.removeBillingManager') }} </va-card-title>
+                        <va-card-title> {{ $t('organization.subscription.removeBillingManager') }} </va-card-title>
                         <va-card-content>
-                          {{ t('organization.subscription.confirmRemoveBillingManager', { name: removeForm.billing_manager.name }) }}
+                          {{ $t('organization.subscription.confirmRemoveBillingManager', { name: removeForm.billing_manager.name }) }}
                         </va-card-content>
                         <va-card-actions align="right">
                           <va-button
                             color="backgroundSecondary"
                             @click="showRemoveBillingManager = false"
                           >
-                            {{ t('modal.cancel') }}
+                            {{ $t('modal.cancel') }}
                           </va-button>
                           <va-button
                             id="remove"
@@ -73,7 +71,7 @@ const { t } = useI18n()
                               onSuccess: () => { showRemoveBillingManager = false },
                             })"
                           >
-                            {{ t('organization.subscription.removeBillingManager') }}
+                            {{ $t('organization.subscription.removeBillingManager') }}
                           </va-button>
                         </va-card-actions>
                       </template>
@@ -90,14 +88,14 @@ const { t } = useI18n()
                   <va-icon name="fa-user" style="color: var(--va-list-item-label-caption-color)"  size="5rem" />
                 </div>
                 <div class="flex xs12 va-text-center mb-4">
-                  <h3 class="va-h3 mb-3" style="color: var(--va-list-item-label-caption-color)">{{ t('organization.subscription.noBillingManagers') }}</h3>
+                  <h3 class="va-h3 mb-3" style="color: var(--va-list-item-label-caption-color)">{{ $t('organization.subscription.noBillingManagers') }}</h3>
                 </div>
               </div>
             </template>
             <va-card-actions
               style="position: absolute; bottom: 0; color: var(--va-secondary)"
             >
-              {{ t('organization.subscription.billingManagersNote') }}
+              {{ $t('organization.subscription.billingManagersNote') }}
             </va-card-actions>
           </va-card-content>
         </va-card>
@@ -106,12 +104,12 @@ const { t } = useI18n()
           no-padding
         >
           <template #content="{ cancel }">
-            <va-card-title> {{ t('organization.subscription.addBillingManager') }} </va-card-title>
+            <va-card-title> {{ $t('organization.subscription.addBillingManager') }} </va-card-title>
             <va-card-content>
               <va-select
                 v-model="addForm.user_id"
                 id="billingManager"
-                :label="t('organization.subscription.user')"
+                :label="$t('organization.subscription.user')"
                 text-by="text"
                 value-by="value"
                 searchable
@@ -126,7 +124,7 @@ const { t } = useI18n()
                 color="backgroundSecondary"
                 @click="cancel"
               >
-                {{ t('modal.cancel') }}
+                {{ $t('modal.cancel') }}
               </va-button>
               <va-button
                 color="primary"
@@ -137,7 +135,7 @@ const { t } = useI18n()
                   onSuccess: () => { showAddBillingManager = false },
                 })"
               >
-                {{ t('organization.subscription.addBillingManager') }}
+                {{ $t('organization.subscription.addBillingManager') }}
               </va-button>
             </va-card-actions>
           </template>

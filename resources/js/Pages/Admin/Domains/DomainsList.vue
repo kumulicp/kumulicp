@@ -2,14 +2,12 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './DomainsLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('admin.domains.domains') }} - Control Panel</title>
+    <title>{{ $t('admin.domains.domains') }} - Control Panel</title>
   </Head>
   <VaScrollContainer
     color="primary"
@@ -18,17 +16,17 @@ const { t } = useI18n()
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>{{ t('admin.domains.id') }}</th>
-          <th>{{ t('admin.domains.domainName') }}</th>
-          <th>{{ t('admin.domains.user') }}</th>
-          <th>{{ t('admin.domains.created') }}</th>
-          <th>{{ t('admin.domains.expires') }}</th>
-          <th>{{ t('admin.domains.isExpired') }}</th>
-          <th>{{ t('admin.domains.isLocked') }}</th>
-          <th>{{ t('admin.domains.autoRenew') }}</th>
-          <th>{{ t('admin.domains.whoisGuard') }}</th>
-          <th>{{ t('admin.domains.isPremium') }}</th>
-          <th>{{ t('admin.domains.isNamecheapDns') }}</th>
+          <th>{{ $t('admin.domains.id') }}</th>
+          <th>{{ $t('admin.domains.domainName') }}</th>
+          <th>{{ $t('admin.domains.user') }}</th>
+          <th>{{ $t('admin.domains.created') }}</th>
+          <th>{{ $t('admin.domains.expires') }}</th>
+          <th>{{ $t('admin.domains.isExpired') }}</th>
+          <th>{{ $t('admin.domains.isLocked') }}</th>
+          <th>{{ $t('admin.domains.autoRenew') }}</th>
+          <th>{{ $t('admin.domains.whoisGuard') }}</th>
+          <th>{{ $t('admin.domains.isPremium') }}</th>
+          <th>{{ $t('admin.domains.isNamecheapDns') }}</th>
           <th></th>
         </tr>
       </thead>
@@ -68,7 +66,7 @@ const { t } = useI18n()
             {{ domain.is_our_dns }}
           </td>
           <td class="va-text-center">
-            <Link :href="'/admin/service/domains/'+domain.name">{{ t('admin.domains.updateDb') }}</Link>
+            <Link :href="'/admin/service/domains/'+domain.name">{{ $t('admin.domains.updateDb') }}</Link>
           </td>
         </tr>
       </tbody>

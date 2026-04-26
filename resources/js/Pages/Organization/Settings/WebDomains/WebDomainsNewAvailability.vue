@@ -2,21 +2,19 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import axios from 'axios'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.webDomains.domainRegistration') }} - Control Panel</title>
+    <title>{{ $t('organization.webDomains.domainRegistration') }} - Control Panel</title>
   </Head>
   <div class="web-domains-new-register">
     <div class="row">
       <div class="flex xs12">
         <va-card>
-          <va-card-title>{{ t('organization.webDomains.webDomainSetup') }}</va-card-title>
+          <va-card-title>{{ $t('organization.webDomains.webDomainSetup') }}</va-card-title>
           <va-card-content>
-            <va-alert v-if="showAlert" color="danger" class="mb-6" icon="info">{{ t('organization.webDomains.availabilityError') }}</va-alert>
+            <va-alert v-if="showAlert" color="danger" class="mb-6" icon="info">{{ $t('organization.webDomains.availabilityError') }}</va-alert>
 
             <div class="row justify-center">
               <div class="flex xs6">
@@ -31,12 +29,12 @@ const { t } = useI18n()
                       :success="domain_available"
                     >
                       <template #append>
-                        <va-button color="info" type="submit">{{ t('organization.webDomains.checkAvailability') }}</va-button>
+                        <va-button color="info" type="submit">{{ $t('organization.webDomains.checkAvailability') }}</va-button>
                       </template>
                     </va-input>
                   </va-button-group>
                   <div class="row justify-end mb-3">
-                    <p>{{ t('organization.webDomains.unsupportedTlds') }} <Link href="/settings/domains/connect">{{ t('organization.webDomains.hereLink') }}</Link>.</p>
+                    <p>{{ $t('organization.webDomains.unsupportedTlds') }} <Link href="/settings/domains/connect">{{ $t('organization.webDomains.hereLink') }}</Link>.</p>
                   </div>
                 </form>
               </div>
@@ -61,16 +59,16 @@ const { t } = useI18n()
                   </div>
 
                   <div class="row justify-center">
-                    <p class="va-h5 text-center-aligned">{{ t('organization.webDomains.forFirstYear') }}</p>
+                    <p class="va-h5 text-center-aligned">{{ $t('organization.webDomains.forFirstYear') }}</p>
                   </div>
                   <div class="row justify-center">
-                    <p class="text-center-aligned">{{ t('organization.webDomains.pricesInUsd') }}</p>
+                    <p class="text-center-aligned">{{ $t('organization.webDomains.pricesInUsd') }}</p>
                   </div>
                 </div>
               </div>
             </div>
             <div v-if="domain_available" class="row justify-center mb-3">
-              <va-button @click="form.post('/settings/domains/availability')" size="large">{{ t('organization.webDomains.checkoutDomain') }}</va-button>
+              <va-button @click="form.post('/settings/domains/availability')" size="large">{{ $t('organization.webDomains.checkoutDomain') }}</va-button>
             </div>
             <template v-else-if="error">
               <div class="row justify-center mb-3">

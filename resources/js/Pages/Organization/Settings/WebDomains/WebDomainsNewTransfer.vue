@@ -2,19 +2,17 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
 import axios from 'axios'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.webDomains.domainTransfer') }} - Control Panel</title>
+    <title>{{ $t('organization.webDomains.domainTransfer') }} - Control Panel</title>
   </Head>
   <div class="web-domains-new-transfer">
     <div class="row">
       <div class="flex xs12">
         <va-card>
-          <va-card-title>{{ t('organization.webDomains.transferDomain') }}</va-card-title>
+          <va-card-title>{{ $t('organization.webDomains.transferDomain') }}</va-card-title>
           <va-card-content>
             <form @submit.prevent="transfer">
               <div class="row">
@@ -23,7 +21,7 @@ const { t } = useI18n()
                     v-model="form.domain_name"
                     placeholder="example.com"
                     class="mb-3"
-                    :label="t('organization.webDomains.domainName')"
+                    :label="$t('organization.webDomains.domainName')"
                     immediateValidation
                     :error="$page.props.errors.domain_name"
                     :error-messages="$page.props.errors.domain_name"
@@ -35,7 +33,7 @@ const { t } = useI18n()
                     :error="$page.props.errors.epp_code"
                     :error-messages="$page.props.errors.epp_code"
                     class="mb-3"
-                    :label="t('organization.webDomains.authEppCode')"
+                    :label="$t('organization.webDomains.authEppCode')"
                     immediateValidation
                     @change="getPrice"
                   />
@@ -44,19 +42,19 @@ const { t } = useI18n()
                 <div class="flex xs12 md3 mb-4">
                   <div>
                     <div class="row justify-center">
-                      <h5 class="mb-3">{{ t('organization.webDomains.transferPrice') }}</h5>
+                      <h5 class="mb-3">{{ $t('organization.webDomains.transferPrice') }}</h5>
                     </div>
                     <div class="row justify-center">
                       <h5 class="va-h3 mb-3">{{ transfer_price }}</h5>
                     </div>
                     <div class="row justify-center">
-                      <p class="mb-3">{{ t('organization.webDomains.pricesInUsd') }}</p>
+                      <p class="mb-3">{{ $t('organization.webDomains.pricesInUsd') }}</p>
                     </div>
                   </div>
                 </div>
                 <div class="flex xs12">
                   <div class="row justify-center">
-                    <va-button type="submit" :disabled="!domain_success" class="mb-3">{{ t('organization.webDomains.transferDomain') }}</va-button>
+                    <va-button type="submit" :disabled="!domain_success" class="mb-3">{{ $t('organization.webDomains.transferDomain') }}</va-button>
                   </div>
                 </div>
               </div>

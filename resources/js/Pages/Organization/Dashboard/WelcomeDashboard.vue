@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('auth.welcomeGreeting') }} - Control Panel</title>
+    <title>{{ $t('auth.welcomeGreeting') }} - Control Panel</title>
   </Head>
   <div class="welcome">
     <div class="row">

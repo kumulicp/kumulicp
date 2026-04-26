@@ -1,21 +1,19 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-modal
     v-model="show"
-    :title="t('organization.webDomains.reactivateTitle', { name: domain.name })"
+    :title="$t('organization.webDomains.reactivateTitle', { name: domain.name })"
     hide-default-actions
   >
     <template #default>
-      {{ t('organization.webDomains.reactivateConfirm', { name: domain.name }) }}
+      {{ $t('organization.webDomains.reactivateConfirm', { name: domain.name }) }}
       <va-input
         v-model="form.years"
         type="number"
-        :label="t('organization.webDomains.years')"
+        :label="$t('organization.webDomains.years')"
         immediateValidation
         :error="$page.props.errors.years"
         :error-messages="$page.props.errors.years"
@@ -30,13 +28,13 @@ const { t } = useI18n()
           color="backgroundSecondary"
           @click="show = !show"
         >
-          {{ t('common.cancel') }}
+          {{ $t('common.cancel') }}
         </va-button>
         <va-button
           @click="form.post('/settings/domains/'+domain.name+'/reactivate')"
           :disabled="form.processing"
         >
-          {{ t('organization.webDomains.reactivate') }}
+          {{ $t('organization.webDomains.reactivate') }}
         </va-button>
       </va-card-actions>
     </template>

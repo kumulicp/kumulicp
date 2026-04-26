@@ -2,24 +2,22 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import EmailAccountsLayout from './EmailAccountsMain.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>{{ t('organization.emailAccounts.emailForwarders') }} - Control Panel</title>
+    <title>{{ $t('organization.emailAccounts.emailForwarders') }} - Control Panel</title>
   </Head>
   <div class="email-forwarders">
     <div class="row justify-end">
-      <va-button v-model="showAddEmailForwarder" class="mb-3" @click="showAddEmailForwarder = !showAddEmailForwarder">{{ t('organization.emailAccounts.addForwarder') }}</va-button>
+      <va-button v-model="showAddEmailForwarder" class="mb-3" @click="showAddEmailForwarder = !showAddEmailForwarder">{{ $t('organization.emailAccounts.addForwarder') }}</va-button>
     </div>
     <div class="table-wrapper">
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>{{ t('organization.emailAccounts.forwarderEmail') }}</th>
-            <th>{{ t('organization.emailAccounts.destinationEmail') }}</th>
+            <th>{{ $t('organization.emailAccounts.forwarderEmail') }}</th>
+            <th>{{ $t('organization.emailAccounts.destinationEmail') }}</th>
             <th></th>
           </tr>
         </thead>
@@ -43,11 +41,11 @@ const { t } = useI18n()
 
   <va-modal v-model="showAddEmailForwarder" no-padding no-dismiss>
     <template #content>
-      <va-card-title>{{ t('organization.emailAccounts.addForwarderDestination') }}</va-card-title>
+      <va-card-title>{{ $t('organization.emailAccounts.addForwarderDestination') }}</va-card-title>
       <va-card-content>
         <form @submit.prevent="addEmailForwarder">
           <p class="mb-3">
-            {{ t('organization.emailAccounts.forwardersDesc') }}
+            {{ $t('organization.emailAccounts.forwardersDesc') }}
           </p>
           <va-select v-model="add.forwarder"
             immediateValidation
@@ -57,15 +55,15 @@ const { t } = useI18n()
             value-by="value"
             :error="$page.props.errors.forwarder"
             :error-messages="$page.props.errors.forwarder"
-            :label="t('organization.emailAccounts.forwarderEmailAddress')"
-            :placeholder="t('organization.emailAccounts.forwarderEmailPlaceholder')" />
+            :label="$t('organization.emailAccounts.forwarderEmailAddress')"
+            :placeholder="$t('organization.emailAccounts.forwarderEmailPlaceholder')" />
           <va-input v-model="add.new_forwarder"
             immediateValidation
             v-if="add.forwarder == 'new'"
             :error="$page.props.errors.new_forwarder"
             :error-messages="$page.props.errors.new_forwarder"
             class="mb-3"
-            :label="t('organization.emailAccounts.email')">
+            :label="$t('organization.emailAccounts.email')">
             <template #append>
               <va-chip v-if="domains.length == 1" shadow class="mb-2 mr-2" color="primary">@</va-chip>
               <va-select v-model="add.domain"
@@ -74,7 +72,7 @@ const { t } = useI18n()
                 :options="domains"
                 text-by="text"
                 value-by="value"
-                :label="t('organization.emailAccounts.domain')"
+                :label="$t('organization.emailAccounts.domain')"
                 :error="$page.props.errors.domain"
                 :error-messages="$page.props.errors.domain">
                 <template #prepend>
@@ -87,27 +85,27 @@ const { t } = useI18n()
             immediateValidation
             class="mb-3"
             type="email"
-            :label="t('organization.emailAccounts.destinationEmailAddress')"
-            :messages="t('organization.emailAccounts.destinationMessage')"
+            :label="$t('organization.emailAccounts.destinationEmailAddress')"
+            :messages="$t('organization.emailAccounts.destinationMessage')"
             placeholder="bob@email.com"
             :error="$page.props.errors.destination"
             :error-messages="$page.props.errors.destination" />
           <div class="row justify-end">
-            <va-button color="backgroundSecondary" class="mr-3">{{ t('common.cancel') }}</va-button>
-            <va-button type="submit" :disabled="add.processing">{{ t('organization.emailAccounts.addForwarder') }}</va-button>
+            <va-button color="backgroundSecondary" class="mr-3">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" :disabled="add.processing">{{ $t('organization.emailAccounts.addForwarder') }}</va-button>
           </div>
         </form>
       </va-card-content>
     </template>
   </va-modal>
-  <va-modal v-model="showRemoveEmailForwarder" hide-default-actions :title="t('organization.emailAccounts.removeForwarderTitle', { email: removeEmailForwarder })"
-    :message="t('organization.emailAccounts.removeForwarderMessage', { email: removeEmailForwarder })">
+  <va-modal v-model="showRemoveEmailForwarder" hide-default-actions :title="$t('organization.emailAccounts.removeForwarderTitle', { email: removeEmailForwarder })"
+    :message="$t('organization.emailAccounts.removeForwarderMessage', { email: removeEmailForwarder })">
     <template #footer>
       <va-button color="backgroundSecondary" @click="showRemoveEmailForwarder = !showRemoveEmailForwarder">
-        {{ t('common.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button color="danger"
-        @click="remove.delete('/settings/email/forwarder/'+removeEmailForwarder); showRemoveEmailForwarder = !showRemoveEmailForwarder">{{ t('common.delete') }}</va-button>
+        @click="remove.delete('/settings/email/forwarder/'+removeEmailForwarder); showRemoveEmailForwarder = !showRemoveEmailForwarder">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
@@ -135,7 +133,7 @@ export default {
     })
 
     emailForwarders[num] = {
-      text: useI18n().t('organization.emailAccounts.createNewEmail'),
+      text: this.$t('organization.emailAccounts.createNewEmail'),
       value: 'new'
     }
 

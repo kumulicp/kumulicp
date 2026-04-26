@@ -1,32 +1,30 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-modal
     v-model="show"
-    :title="t('organization.webDomains.removeDomain')"
+    :title="$t('organization.webDomains.removeDomain')"
     hide-default-actions
   >
     <template #default>
-      <p v-if="primary_app">{{ t('organization.webDomains.removeDomainRedirectWarning', { name: domain.name, app: primary_app.name }) }}</p>
-      <p>{{ t('organization.webDomains.removeDomainConfirm') }}</p>
+      <p v-if="primary_app">{{ $t('organization.webDomains.removeDomainRedirectWarning', { name: domain.name, app: primary_app.name }) }}</p>
+      <p>{{ $t('organization.webDomains.removeDomainConfirm') }}</p>
     </template>
     <template #footer>
       <va-button
         color="backgroundSecondary"
         @click="show = false"
       >
-        {{ t('common.cancel') }}
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button
         color="danger"
         id="remove"
         @click="form.post('/settings/domains/'+domain.name+'/remove'); show = false"
       >
-        {{ t('organization.webDomains.removeDomain') }}
+        {{ $t('organization.webDomains.removeDomain') }}
       </va-button>
     </template>
   </va-modal>

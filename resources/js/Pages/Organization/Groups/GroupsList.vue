@@ -1,30 +1,28 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>{{ t('organization.groups.groups') }} - Control Panel</title>
+    <title>{{ $t('organization.groups.groups') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ t('organization.groups.groups') }} </va-card-title>
+    <va-card-title>{{ $t('organization.groups.groups') }} </va-card-title>
     <va-card-content>
       <div v-if="$page.props.auth.status !== 'deactivated'" class="row justify-center">
-        <va-button id="addGroup" @click="showAddGroup = !showAddGroup">{{ t('organization.groups.createGroup') }}</va-button>
+        <va-button id="addGroup" @click="showAddGroup = !showAddGroup">{{ $t('organization.groups.createGroup') }}</va-button>
       </div>
       <va-modal v-model="showAddGroup" no-outside-dismiss no-padding>
         <template #content="{ ok }">
           <form @submit.prevent="save()">
-            <va-card-title>{{ t('organization.groups.addGroup') }}</va-card-title>
+            <va-card-title>{{ $t('organization.groups.addGroup') }}</va-card-title>
             <va-card-content>
               <va-input v-model="form.name"
                 id="name"
                 immediateValidation
-                required-mark :label="t('organization.groups.groupName')"
+                required-mark :label="$t('organization.groups.groupName')"
                 class="mb-3"
                 :error="$page.props.errors.name"
                 :error-messages="$page.props.errors.name" />
@@ -32,7 +30,7 @@ const { t } = useI18n()
                 id="category"
                 required-mark
                 immediateValidation
-                :label="t('organization.groups.groupType')"
+                :label="$t('organization.groups.groupType')"
                 :options="categoryOptions"
                 text-by="text"
                 value-by="value"
@@ -41,8 +39,8 @@ const { t } = useI18n()
                 :error-messages="$page.props.errors.category" />
             </va-card-content>
             <va-card-actions align="right">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('modal.cancel') }}</va-button>
-              <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('modal.cancel') }}</va-button>
+              <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('form.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -55,7 +53,7 @@ const { t } = useI18n()
         </div>
         <div class="row">
           <div class="flex lg12 va-text-center mb-1">
-            <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">{{ t('organization.groups.noGroups') }}</h2>
+            <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">{{ $t('organization.groups.noGroups') }}</h2>
           </div>
         </div>
       </template>
@@ -67,8 +65,8 @@ const { t } = useI18n()
         <table class="va-table va-table--hoverable mt-3">
           <thead>
             <tr>
-              <th style="width:20rem">{{ t('form.name') }}</th>
-              <th>{{ t('organization.groups.category') }}</th>
+              <th style="width:20rem">{{ $t('form.name') }}</th>
+              <th>{{ $t('organization.groups.category') }}</th>
               <th style="width:6rem"></th>
             </tr>
           </thead>
