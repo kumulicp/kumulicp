@@ -20,37 +20,38 @@ import { Link } from '@inertiajs/vue3'
 
 export default {
   data () {
+    const i18n = useI18n()
     const organization = this.$page.props.organization
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id
     const tabs = [
       {
-        title: 'Details',
+        title: i18n.t('admin.organizations.details'),
         url: basePath
       },
       {
-        title: 'Apps',
+        title: i18n.t('admin.apps.apps'),
         url: basePath + '/apps'
       },
       {
-        title: 'Logs',
+        title: i18n.t('admin.organizations.logs'),
         url: basePath + '/logs'
       },
       {
-        title: 'Tasks',
+        title: i18n.t('admin.tasks.tasks'),
         url: basePath + '/tasks'
       },
       {
-        title: 'Backups',
+        title: i18n.t('admin.backups.backups'),
         url: basePath + '/backups'
       },
       {
-        title: 'Domains',
+        title: i18n.t('admin.domains.domains'),
         url: basePath + '/domains'
       }
     ]
 
-    let value = 'View'
+    let value = i18n.t('admin.organizations.details')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

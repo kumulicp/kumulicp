@@ -5,10 +5,10 @@ import { Link } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>Organizations - Control Panel</title>
+    <title>{{ t('admin.organizations.organizations') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Organizations</va-card-title>
+    <va-card-title>{{ t('admin.organizations.organizations') }}</va-card-title>
     <va-card-content>
       <VaScrollContainer
         color="primary"
@@ -17,15 +17,15 @@ import { Link } from '@inertiajs/vue3'
         <table class="va-table va-table--hoverable mt-3">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Contact Name</th>
-              <th>Contact Email</th>
-              <th>Status</th>
+              <th>{{ t('admin.organizations.name') }}</th>
+              <th>{{ t('admin.organizations.contactName') }}</th>
+              <th>{{ t('admin.organizations.contactEmail') }}</th>
+              <th>{{ t('admin.organizations.status') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="organization in organizations.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="organization.name" style="min-height:300px;">
-              <td><Link :href="'/admin/organizations/'+organization.id">{{ organization.name }}</Link> <span v-if="organization.is_suborg" class="secondary">(Suborganization)</span></td>
+              <td><Link :href="'/admin/organizations/'+organization.id">{{ organization.name }}</Link> <span v-if="organization.is_suborg" class="secondary">({{ t('admin.organizations.suborganization') }})</span></td>
               <td>{{ organization.contact_name}}</td>
               <td><Link :href="'mailto:'+organization.contact_email">{{ organization.contact_email}}</Link></td>
               <td>{{ organization.status }}</td>

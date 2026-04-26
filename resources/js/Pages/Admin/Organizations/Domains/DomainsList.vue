@@ -6,7 +6,7 @@ import { useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>{{ organization.name }} Domains - Control Panel</title>
+    <title>{{ organization.name }} {{ t('admin.domains.domains') }} - Control Panel</title>
   </Head>
   <va-scroll-container
       color="warning"
@@ -15,10 +15,10 @@ import { useForm } from '@inertiajs/vue3'
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th>Domaind Name</th>
-          <th>App</th>
-          <th>Type</th>
-          <th>Status</th>
+          <th>{{ t('admin.domains.domainName') }}</th>
+          <th>{{ t('admin.apps.appWord') }}</th>
+          <th>{{ t('admin.domains.type') }}</th>
+          <th>{{ t('admin.apps.status') }}</th>
         </tr>
       </thead>
       <tbody>

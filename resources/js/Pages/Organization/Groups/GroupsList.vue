@@ -83,7 +83,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   color="danger"
                   :id="'delete'+group"
                   @click="showRemoveGroupModal(group)">
-                  Delete
+                  {{ t('common.delete') }}
                 </va-button>
               </td>
             </tr>
@@ -94,15 +94,15 @@ import { Link, useForm } from '@inertiajs/vue3'
       <va-pagination v-if="numberOfGroups > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input />
     </va-card-content>
   </va-card>
-  <va-modal v-model="showRemoveGroup" hide-default-actions :title="'Remove '+removeGroup.name+'?'"
-    :message="'Are you sure you want to remove '+removeGroup.name + '? This action is permanent.'">
+  <va-modal v-model="showRemoveGroup" hide-default-actions :title="t('organization.groups.removeTitle', { name: removeGroup.name })"
+    :message="t('organization.groups.removeMessage', { name: removeGroup.name })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        Cancel
+        {{ t('common.cancel') }}
       </va-button>
       <va-button color="danger"
         id="delete"
-        @click="remove.delete('/groups/'+removeGroup.name); showRemoveGroup = !showRemoveGroup">Delete</va-button>
+        @click="remove.delete('/groups/'+removeGroup.name); showRemoveGroup = !showRemoveGroup">{{ t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
@@ -143,23 +143,23 @@ export default {
       groups,
       categoryOptions: [
         {
-          text: 'Department',
+          text: useI18n().t('organization.groups.department'),
           value: 'departments'
         },
         {
-          text: 'Team',
+          text: useI18n().t('organization.groups.team'),
           value: 'teams'
         },
         {
-          text: 'Project',
+          text: useI18n().t('organization.groups.project'),
           value: 'projects'
         },
         {
-          text: 'Ministry',
+          text: useI18n().t('organization.groups.ministry'),
           value: 'ministries'
         },
         {
-          text: 'Other',
+          text: useI18n().t('organization.groups.other'),
           value: 'others'
         }
       ],

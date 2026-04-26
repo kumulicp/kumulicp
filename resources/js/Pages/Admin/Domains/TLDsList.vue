@@ -36,9 +36,9 @@ import { Link, useForm, router } from '@inertiajs/vue3'
   <table class="va-table va-table--hoverable mt-3">
     <thead>
       <tr>
-        <th>TLD</th>
-        <th>Standard Price</th>
-        <th>Registration Allowed?</th>
+        <th>{{ t('admin.domains.tlds') }}</th>
+        <th>{{ t('admin.domains.standardPrice') }}</th>
+        <th>{{ t('admin.domains.registrationAllowed') }}</th>
         <th></th>
       </tr>
     </thead>
@@ -61,14 +61,14 @@ import { Link, useForm, router } from '@inertiajs/vue3'
     </tbody>
   </table>
   <va-pagination v-if="meta.total > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input @update:modelValue="changePage" />
-  <va-modal v-model="showRemoveTld" hide-default-actions :title="'Remove ' + removeTld.name + '?'"
-    :message="'Are you sure you want to remove '+ removeTld.name +'? This action is permanent.'">
+  <va-modal v-model="showRemoveTld" hide-default-actions :title="t('admin.domains.removeTitle', { name: removeTld.name })"
+    :message="t('admin.domains.removeMessage', { name: removeTld.name })">
     <template #footer="{ cancel }">
       <va-button color="backgroundSecondary" @click="cancel">
-        Cancel
+        {{ t('common.cancel') }}
       </va-button>
       <va-button color="danger"
-        @click="remove.delete('/admin/service/domains/tlds/' + removeTld.id); showRemoveTld = !showRemoveTld">Delete</va-button>
+        @click="remove.delete('/admin/service/domains/tlds/' + removeTld.id); showRemoveTld = !showRemoveTld">{{ t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>

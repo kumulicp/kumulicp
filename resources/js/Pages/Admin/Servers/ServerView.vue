@@ -5,20 +5,20 @@ import { Link } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>Server - Control Panel</title>
+    <title>{{ t('admin.servers.server') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ server.name }} Server</va-card-title>
+    <va-card-title>{{ t('admin.servers.serverTitle', { name: server.name }) }}</va-card-title>
       <va-card-content>
         <div class="row justify-center">
-          <Link :href="'/admin/server/servers/'+server.id+'/set_default'" v-if="!server.default && server.status == 'active'"><va-button>Set Default Server</va-button></Link>
-          <Link :href="'/admin/server/servers/'+server.id+'/edit'"><va-button>Edit Server</va-button></Link>
+          <Link :href="'/admin/server/servers/'+server.id+'/set_default'" v-if="!server.default && server.status == 'active'"><va-button>{{ t('admin.servers.setDefaultServer') }}</va-button></Link>
+          <Link :href="'/admin/server/servers/'+server.id+'/edit'"><va-button>{{ t('admin.servers.editServer') }}</va-button></Link>
         </div>
         <va-list>
           <va-list-item v-if="server.app_instance" class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>App Instance</h5>
+                <h5>{{ t('admin.servers.appInstance') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -31,7 +31,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Server Name</h5>
+                <h5>{{ t('admin.servers.serverName') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -45,7 +45,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Host</h5>
+                <h5>{{ t('admin.servers.host') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -57,7 +57,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Address</h5>
+                <h5>{{ t('admin.servers.address') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -69,7 +69,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>API Key</h5>
+                <h5>{{ t('admin.servers.apiKey') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -81,7 +81,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>API Secret</h5>
+                <h5>{{ t('admin.servers.apiSecret') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -93,7 +93,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>IP</h5>
+                <h5>{{ t('admin.servers.ip') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -105,7 +105,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Internal Address</h5>
+                <h5>{{ t('admin.servers.internalAddress') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -118,7 +118,7 @@ import { Link } from '@inertiajs/vue3'
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Default Web Server</h5>
+                  <h5>{{ t('admin.servers.defaultWebServer') }}</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -132,7 +132,7 @@ import { Link } from '@inertiajs/vue3'
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Default Database Server</h5>
+                  <h5>{{ t('admin.servers.defaultDatabaseServer') }}</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -146,7 +146,7 @@ import { Link } from '@inertiajs/vue3'
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>Default Email Server</h5>
+                  <h5>{{ t('admin.servers.defaultEmailServer') }}</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
@@ -159,7 +159,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Type</h5>
+                <h5>{{ t('admin.servers.type') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -171,7 +171,7 @@ import { Link } from '@inertiajs/vue3'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>Settings</h5>
+                <h5>{{ t('admin.servers.settings') }}</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>

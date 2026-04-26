@@ -5,20 +5,20 @@ import { Link, useForm, router } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
-    <title>Apps - Control Panel</title>
+    <title>{{ t('admin.sharedApps.apps') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>Shared Apps</va-card-title>
+    <va-card-title>{{ t('admin.sharedApps.sharedApps') }}</va-card-title>
     <va-card-content v-if="enabled">
       <div class="row justify-center">
-        <va-button id="createApp" class="" @click="showAddApp = !showAddApp">Add App</va-button>
+        <va-button id="createApp" class="" @click="showAddApp = !showAddApp">{{ t('admin.sharedApps.addApp') }}</va-button>
         <va-modal v-model="showAddApp" no-outside-dismiss no-padding size="small" class="p-0">
           <template #content="{ ok }">
             <form @submit.prevent="form.post('/admin/service/shared-apps')">
-              <va-card-title class="m-0"> Add App </va-card-title>
+              <va-card-title class="m-0"> {{ t('admin.sharedApps.addApp') }} </va-card-title>
               <va-card-content class="m-0">
                 <va-select v-model="form.app"
-                  label="Available Apps"
+                  :label="t('admin.sharedApps.availableApps')"
                   :options="available_apps"
                   id="app"
                   value-by="id"
@@ -30,7 +30,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   :error-messages="$page.props.errors.app"
                 />
                 <va-select v-if="form.app" v-model="form.plan"
-                  label="Plan"
+                  :label="t('admin.sharedApps.plan')"
                   :options="plans[form.app]"
                   id="plan"
                   value-by="id"
@@ -44,7 +44,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   id="label"
                   required-mark
                   immediateValidation
-                  label="Label"
+                  :label="t('admin.sharedApps.label')"
                   class="mb-3"
                   :error="$page.props.errors.label"
                   :error-messages="$page.props.errors.label" />
@@ -52,14 +52,14 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   id="activate"
                   required-mark
                   immediateValidation
-                  label="Activate"
+                  :label="t('admin.sharedApps.activate')"
                   class="mb-3"
                   :error="$page.props.errors.activate"
                   :error-messages="$page.props.errors.activate" />
               </va-card-content>
               <va-card-actions align="right" class="">
-                <va-button color="textInverted" :disabled="form.processing" @click="ok">Cancel</va-button>
-                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">Submit</va-button>
+                <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('common.cancel') }}</va-button>
+                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ t('form.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -73,8 +73,8 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       <table class="va-table va-table--hoverable mt-3">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Status</th>
+            <th>{{ t('admin.sharedApps.name') }}</th>
+            <th>{{ t('admin.sharedApps.status') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -95,12 +95,12 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       </div>
       <div class="row">
         <div class="flex lg12 va-text-center mb-1">
-          <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">Shared apps requires some setup. Do you want to enable this?</h2>
+          <h2 class="va-h2 mb-3 sm12" style="color: var(--va-list-item-label-caption-color)">{{ t('admin.sharedApps.setupPrompt') }}</h2>
         </div>
       </div>
       <div class="row">
         <div class="flex lg12 va-text-center mb-1">
-          <Link href="/admin/service/shared-apps/activate"><va-button>Enable Shared Apps</va-button></Link>
+          <Link href="/admin/service/shared-apps/activate"><va-button>{{ t('admin.sharedApps.enableSharedApps') }}</va-button></Link>
         </div>
       </div>
     </va-card-content>
