@@ -158,16 +158,7 @@ class AppInstance extends Model
 
     public function getOverride($setting, $default = null)
     {
-        $setting = 'override.'.$setting;
-        if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
-        }
-
-        return Arr::get($this->settings, $setting);
+        return $this->setting('override.'.$setting, $default);
     }
 
     public function setOverrideIfEmpty($setting, $default)
