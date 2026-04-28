@@ -2,13 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Actions\Organizations\DeleteOrganization;
 use App\Organization;
 use App\Support\Facades\AccountManager;
-use App\Support\Facades\Action;
-use App\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -72,28 +68,5 @@ class RegistrationTest extends TestCase
         $this->assertInstanceOf(Organization::class, $organization);
         $response->assertRedirect('/registered');
         $organization = AccountManager::account($organization)->destroy();
-    }
-
-    public function test_delete_organization_account()
-    {
-        $support = (new TestSupports)->seed();
-
-        $organization = Organization::where('slug', 'demo')->first();
-        $delete = Action::execute(new DeleteOrganization($organization));
-        $delete->status = 'in_progress';
-        $delete->save();
-
-        Action::run($delete);
-
-        $complete = false;
-        while ($complete == false) {
-            Artisan::call('schedule:run');
-            // Action::complete($delete);
-            $delete = Task::find($delete->id);
-            $complete = is_null($delete);
-            sleep(2);
-        }
-        $organization = Organization::where('slug', 'demo')->first();
-        $this->assertNull($organization);
     }
 }

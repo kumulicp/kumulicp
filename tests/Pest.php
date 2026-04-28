@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -12,7 +15,12 @@
 */
 
 // uses(Tests\TestCase::class)->in('Feature');
-uses(Tests\TestCase::class)->in('Browser');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
+
+pest()->beforeEach(function () {
+        Artisan::call('db:seed DemoSeeder');
+    })
+    ->in('Browser');
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +39,7 @@ uses(Tests\TestCase::class)->in('Browser');
 */
 
 pest()->browser()
-    ->withTimeout(10_000);
+    ->timeout(10000);
 
 /*
 |--------------------------------------------------------------------------
