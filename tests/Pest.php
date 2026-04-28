@@ -12,6 +12,26 @@
 */
 
 // uses(Tests\TestCase::class)->in('Feature');
+uses(Tests\TestCase::class)->in('Browser');
+
+/*
+|--------------------------------------------------------------------------
+| Browser Testing
+|--------------------------------------------------------------------------
+|
+| Tests in tests/Browser/ run against a real Chromium browser via
+| Playwright. Install browser binaries once with:
+|
+|   npx playwright install
+|
+| Then run browser tests with:
+|
+|   vendor/bin/pest --testsuite=Browser
+|
+*/
+
+pest()->browser()
+    ->withTimeout(10_000);
 
 /*
 |--------------------------------------------------------------------------
