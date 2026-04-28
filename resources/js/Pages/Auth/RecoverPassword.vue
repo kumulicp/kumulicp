@@ -29,7 +29,7 @@ const { t } = useI18n()
         class="my-0"
         :disabled="form.processing"
       >
-        {{ t('auth.reset_password') }}
+        {{ t('auth.resetPassword') }}
       </va-button>
     </div>
   </form>

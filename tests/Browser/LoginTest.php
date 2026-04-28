@@ -13,8 +13,8 @@ describe('Login', function () {
 
     it('shows a credential error for invalid email and password', function () {
         visit('/login')
-            ->fill('email', 'nobody@example.com')
-            ->fill('password', 'wrong-password')
+            ->fill('input[type=email]', 'nobody@example.com')
+            ->fill('input[type=password]', 'wrong-password')
             ->click('#submit')
             ->assertSee('These credentials do not match our records');
     });
@@ -23,30 +23,28 @@ describe('Login', function () {
         $user = User::factory()->create();
 
         visit('/login')
-            ->fill('email', $user->email)
-            ->fill('password', 'wrong-password')
+            ->fill('input[type=email]', $user->email)
+            ->fill('input[type=password]', 'wrong-password')
             ->click('#submit')
             ->assertSee('These credentials do not match our records');
     });
 
     it('logs in and redirects to the dashboard with valid credentials', function () {
-        $user = User::factory()->create();
-
         visit('/login')
-            ->fill('email', $user->email)
-            ->fill('password', 'password')
+            ->fill('input[type=email]', 'demo@example.com')
+            ->fill('input[type=password]', 'demouser')
             ->click('#submit')
-            ->assertUrlIs('/');
+            ->assertPathIs('/');
     });
 
     it('navigates to the forgot password page via the link', function () {
         visit('/login')
             ->click('a[href="/password/reset"]')
-            ->assertUrlIs('/password/reset');
+            ->assertPathIs('/password/reset');
     });
 
     it('redirects to login when accessing the dashboard while unauthenticated', function () {
-        visit('/dashboard')
-            ->assertUrlIs('/login');
+        visit('/')
+            ->assertPathIs('/login');
     });
 });

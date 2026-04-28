@@ -6,7 +6,7 @@ describe('Forgot Password', function () {
     it('renders the password recovery form', function () {
         visit('/password/reset')
             ->assertSee('Email')
-            ->assertSee('Reset Password');
+            ->assertSee('Reset password');
     });
 
     it('shows a validation error when email field is empty', function () {
@@ -34,6 +34,6 @@ describe('Forgot Password', function () {
     it('navigates back to login via the login tab', function () {
         visit('/password/reset')
             ->click('#login')
-            ->assertUrlIs('/login');
+            ->assertPathIs('/login');
     });
 });

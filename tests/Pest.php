@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /*
@@ -14,7 +15,12 @@ use Tests\TestCase;
 */
 
 // uses(Tests\TestCase::class)->in('Feature');
-uses(TestCase::class)->in('Browser');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
+
+pest()->beforeEach(function () {
+        Artisan::call('db:seed DemoSeeder');
+    })
+    ->in('Browser');
 
 /*
 |--------------------------------------------------------------------------
