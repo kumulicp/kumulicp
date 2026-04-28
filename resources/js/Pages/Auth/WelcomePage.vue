@@ -2,14 +2,12 @@
 import BlankLayout from '@/layouts/BlankLayout.vue'
 import VuesticLogo from '../../components/VuesticLogo.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 
 <template>
   <Head>
-    <title>Welcome! - Control Panel</title>
+    <title>{{ $t('auth.welcomeTitle') }} - Control Panel</title>
   </Head>
   <div class="auth-layout row align-content-center">
     <div class="flex xs12 pa-3 justify-center">
@@ -21,12 +19,15 @@ const { t } = useI18n()
     <div class="flex xs12 pa-3">
       <div class="d-flex justify-center">
         <va-card class="auth-layout__card">
-          <va-card-title>Welcome!</va-card-title>
+          <va-card-title>{{ $t('auth.welcomeGreeting') }}</va-card-title>
           <va-card-content>
             <h5 class="va-h5">{{ user.name }},</h5>
-            <p>Your password was successfully updated!</p>
-            <p class="va-p mb-3">We aim to be a one-stop-shop for all the online apps your organization might need to run smoothly</p>
-            <p class="va-p mb-3">You've been given access to the <span v-if="user.apps.length"> app </span><span v-else> apps </span> below. You can use the username you were assigned and password you just set to access any app.</p>
+            <p>{{ $t('auth.passwordUpdated') }}</p>
+            <p class="va-p mb-3">{{ $t('auth.oneStopShop') }}</p>
+            <p class="va-p mb-3">
+              <template v-if="user.apps.length">{{ $t('auth.accessGivenSingle') }}</template>
+              <template v-else>{{ $t('auth.accessGivenMultiple') }}</template>
+            </p>
 
             <va-list>
               <template v-if="user.can.admin">
@@ -41,21 +42,21 @@ const { t } = useI18n()
 
                   <va-list-item-section>
                     <va-list-item-label>
-                      Control Panel
+                      {{ $t('auth.controlPanelLabel') }}
                     </va-list-item-label>
 
                     <va-list-item-label caption :lines="3">
-                      The Control Panel is the central hub of our product. From here you can manage your apps, subscription, users and user groups and more!
+                      {{ $t('auth.controlPanelDescription') }}
                     </va-list-item-label>
                   </va-list-item-section>
 
                   <va-list-item-section icon>
-                    <Link href="/">Login</Link>
+                    <Link href="/">{{ $t('auth.login') }}</Link>
                   </va-list-item-section>
                 </va-list-item>
               </template>
               <va-list-label>
-                Your Apps
+                {{ $t('auth.yourApps') }}
               </va-list-label>
 
               <template v-if="user.apps.length > 0">
@@ -81,12 +82,12 @@ const { t } = useI18n()
                   </va-list-item-section>
 
                   <va-list-item-section icon>
-                    <a :href="app.address" target="_blank">Login</a>
+                    <a :href="app.address" target="_blank">{{ $t('auth.login') }}</a>
                   </va-list-item-section>
                 </va-list-item>
               </template>
               <template v-else>
-                You currently don't have access to any applications. If you believe you should, please contact your organization admins to give you access.
+                {{ $t('auth.noAppsAccess') }}
               </template>
             </va-list>
           </va-card-content>

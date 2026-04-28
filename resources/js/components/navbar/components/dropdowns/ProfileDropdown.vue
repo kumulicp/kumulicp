@@ -1,10 +1,7 @@
 <script setup lang="ts">
-// import { useI18n } from 'vue-i18n'
 import { Link, useForm } from '@inertiajs/vue3'
 import { useColors } from 'vuestic-ui'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 const { colors } = useColors()
 </script>
 
@@ -21,28 +18,28 @@ const { colors } = useColors()
         <va-list-item>
           <Link href="/profile" class="profile-dropdown__item">
             <div class="profile-item">
-              {{ t('user.profile') }}
+              {{ $t('user.profile') }}
             </div>
           </Link>
         </va-list-item>
         <va-list-item v-if="$page.props.auth.can.admin && !isAdmin">
           <a href="/admin/organizations" class="profile-dropdown__item">
             <div class="profile-item">
-              System Admin
+              {{ $t('navbar.systemAdmin') }}
             </div>
           </a>
         </va-list-item>
         <va-list-item v-if="$page.props.auth.can.admin && isAdmin">
           <a href="/" class="profile-dropdown__item">
             <div class="profile-item">
-              Your Dashboard
+              {{ $t('navbar.yourDashboard') }}
             </div>
           </a>
         </va-list-item>
         <va-list-item>
           <Link href="" class="profile-dropdown__item" @click.prevent="logout.post('/logout')">
             <div class="profile-item">
-              {{ t('user.logout') }}
+              {{ $t('user.logout') }}
             </div>
           </Link>
         </va-list-item>

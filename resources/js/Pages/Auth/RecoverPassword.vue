@@ -1,22 +1,20 @@
 <script setup>
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Recover Password - Control Panel</title>
+    <title>{{ $t('auth.recoverPassword') }} - Control Panel</title>
   </Head>
   <form class="login" @submit.prevent="form.post('/password/email', {
-        onSuccess: () => email_sent = 'Check your email for a link to reset your password.',
+        onSuccess: () => email_sent = emailSentMessage,
     })">
     <va-input
       v-model="form.email"
       class="mb-3"
       type="email"
-      label="Email"
+      :label="$t('auth.email')"
       immediateValidation
       :success="email_sent"
       :messages="email_sent"
@@ -29,7 +27,7 @@ const { t } = useI18n()
         class="my-0"
         :disabled="form.processing"
       >
-        {{ t('auth.resetPassword') }}
+        {{ $t('auth.resetPassword') }}
       </va-button>
     </div>
   </form>
@@ -49,6 +47,11 @@ export default {
         password: '',
         keep_logged_in: false
       })
+    }
+  },
+  computed: {
+    emailSentMessage () {
+      return this.$t('auth.checkEmailForReset')
     }
   }
 }

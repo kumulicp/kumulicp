@@ -1,12 +1,13 @@
 <script setup>
 import axios from 'axios'
+
 </script>
 
 <template>
   <va-select
     v-model:model-value="selected_country"
     id="country"
-    :label="label ? 'Country' : false"
+    :label="label ? $t('organization.country') : false"
     searchable
     :options="countries"
     :error="$page.props.errors.country"

@@ -1,2 +1,2 @@
-Username: {{ $user['username'] }} <br />
-Set your new password <a href="{{ env('APP_URL') }}/public/setpassword/{{ $code }}">here</a>
+{{ __('auth.username') }}: {{ $user['username'] }} <br />
+<a href="{{ env('APP_URL') }}/public/setpassword/{{ $code }}">{{ __('passwords.set_new') }}</a>

@@ -79,7 +79,7 @@ class WordpressChart extends HelmChart
                 'accessModes' => $app_instance->configuration('persistence-accessModes', true),
                 'storageClass' => $app_instance->configuration('persistence-storageClass', true),
                 'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'existingClaim' => $app_instance->getOverride('pvc.override') ? $app_instance->getOverride('pvc.name') : '',
+                'existingClaim' => $app_instance->getOverride('pvc.name') ?? '',
             ],
             'resources' => [
                 'requests' => [

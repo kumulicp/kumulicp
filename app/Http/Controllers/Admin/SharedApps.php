@@ -43,7 +43,7 @@ class SharedApps extends Controller
                     'id' => $app->id,
                     'name' => $app->name,
                     'label' => $app->label,
-                    'status' => $app->enabled ? 'Enabled' : 'Disabled',
+                    'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
             'plans' => $plans,
@@ -60,7 +60,7 @@ class SharedApps extends Controller
             ] : [],
             'breadcrumbs' => [
                 [
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
             ],
         ]);
@@ -137,7 +137,7 @@ class SharedApps extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/service/shared-apps',
-                    'label' => 'Shared Apps',
+                    'label' => __('admin.shared_apps.shared_apps'),
                 ],
                 [
                     'label' => $shared_app->label,
@@ -195,7 +195,7 @@ class SharedApps extends Controller
             Action::execute(new UpdateDnsRecords($shared_app->organization, $new_subdomain->domain));
         }
 
-        return redirect("/admin/service/shared-apps/{$shared_app->id}")->with('success', $shared_app->name.' has been updated!');
+        return redirect("/admin/service/shared-apps/{$shared_app->id}")->with('success', __('admin.shared_apps.updated', ['app' => $shared_app->name]));
     }
 
     public function activate()
@@ -205,10 +205,10 @@ class SharedApps extends Controller
         if (! $shared) {
             $shared = new Organization;
             $shared->slug = 'shared';
-            $shared->name = 'Shared Apps';
+            $shared->name = __('admin.shared_apps.shared_apps');
             $shared->type = 'shared';
             $shared->secretpw = Str::password(20, true, true, false, false);
-            $shared->description = 'Contains apps that any organization can sign up to use';
+            $shared->description = __('admin.shared_apps.shared_apps_description');
             $shared->status = 'active';
             $shared->save();
         }
@@ -218,6 +218,6 @@ class SharedApps extends Controller
         $superaccount = Organization::where('type', 'superaccount')->first();
         $plan = (new SubscriptionService($shared))->all()->updateBase($superaccount->plan);
 
-        return redirect('/admin/service/shared-apps')->with('success', __('messages.shared_apps_enabled'));
+        return redirect('/admin/service/shared-apps')->with('success', __('admin.shared_apps.enabled'));
     }
 }

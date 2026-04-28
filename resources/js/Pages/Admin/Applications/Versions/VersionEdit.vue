@@ -3,13 +3,11 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import VersionLayout from './VersionLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <Head>
-    <title>Edit Version - Control Panel</title>
+    <title>{{ $t('admin.versions.editVersion') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
     <div class="row justify-center">
@@ -17,17 +15,17 @@ const { t } = useI18n()
       <va-modal v-model="showEnableDisable" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
           <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.version+'/'+version.toggle.state)">
-            <va-card-title class="m-0"> {{ version.toggle.label }} Version </va-card-title>
+            <va-card-title class="m-0"> {{ version.toggle.label }} {{ $t('admin.versions.version') }} </va-card-title>
             <va-card-content class="m-0">
               <div v-if="version.toggle.state == 'disable'">
-                {{ t('admin.versions.disablingVersionWarning') }}
+                {{ $t('admin.versions.disablingVersionWarning') }}
               </div>
               <div v-if="version.toggle.state == 'enable'">
-                {{ t('admin.versions.enablingVersionWarning') }}
+                {{ $t('admin.versions.enablingVersionWarning') }}
               </div>
             </va-card-content>
             <va-card-actions align="right" class="">
-              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ t('form.cancel') }}</va-button>
+              <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
               <va-button type="submit" id="enableDisable" :disabled="form.processing" class="mr-2 mb-2">{{ version.toggle.label }}</va-button>
             </va-card-actions>
           </form>
@@ -40,7 +38,7 @@ const { t } = useI18n()
         class="lg12"
       >
         <va-collapse
-          :header="t('admin.versions.recommendations')"
+          :header="$t('admin.versions.recommendations')"
         >
           <template #content>
             <div v-for="(recommendation, index) in recommendations" :key="index">
@@ -54,10 +52,10 @@ const { t } = useI18n()
       <div class="flex xs12 lg12">
       <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.version)">
         <AdminSettings v-if="can.helm_chart">
-          <template #name>{{ t('admin.versions.helmChart') }}</template>
+          <template #name>{{ $t('admin.versions.helmChart') }}</template>
           <template #settings>
                 <va-input v-model="form.version"
-                  :label="t('admin.versions.version')"
+                  :label="$t('admin.versions.version')"
                   id="version"
                   class="my-2"
                   required-mark
@@ -66,7 +64,7 @@ const { t } = useI18n()
                   :error-messages="$page.props.errors.version"
                   />
                 <va-input v-model="form.chart_version"
-                  :label="t('admin.versions.helmChartVersion')"
+                  :label="$t('admin.versions.helmChartVersion')"
                   id="chartVersion"
                   class="my-2"
                   immediateValidation
@@ -74,7 +72,7 @@ const { t } = useI18n()
                   :error-messages="$page.props.errors.chart_version"
                   />
                 <va-input v-model="form.chart_name"
-                  :label="t('admin.versions.helmChartName')"
+                  :label="$t('admin.versions.helmChartName')"
                   id="chartVersion"
                   class="my-2"
                   immediateValidation
@@ -82,7 +80,7 @@ const { t } = useI18n()
                   :error-messages="$page.props.errors.chart_name"
                   />
                 <va-input v-model="form.helm_repo_name"
-                  :label="t('admin.versions.helmChartRepo')"
+                  :label="$t('admin.versions.helmChartRepo')"
                   id="helmRepoName"
                   class="my-2"
                   immediateValidation
@@ -90,7 +88,7 @@ const { t } = useI18n()
                   :error-messages="$page.props.errors.helm_repo_name"
                   />
                 <va-input v-model="form.image_registry"
-                  :label="t('admin.versions.containerImageRegistry')"
+                  :label="$t('admin.versions.containerImageRegistry')"
                   id="imageRegistry"
                   class="my-2"
                   immediateValidation
@@ -98,7 +96,7 @@ const { t } = useI18n()
                   :error-messages="$page.props.errors.image_registry"
                   />
                 <va-input v-model="form.image_repo_name"
-                  :label="t('admin.versions.containerImageRepo')"
+                  :label="$t('admin.versions.containerImageRepo')"
                   id="imageRepoName"
                   class="my-2"
                   immediateValidation
@@ -109,11 +107,11 @@ const { t } = useI18n()
         </AdminSettings>
         <va-list-separator v-if="can.helm_chart" class="my-1" fit />
         <AdminSettings>
-          <template #name>{{ t('admin.announcement.title') }}</template>
+          <template #name>{{ $t('admin.announcement.title') }}</template>
           <template #settings>
                 <va-select
                   v-model="form.announcement_location"
-                  :label="t('admin.versions.announcementLocation')"
+                  :label="$t('admin.versions.announcementLocation')"
                   id="announcementLocation"
                   class="my-2"
                   immediateValidation
@@ -126,7 +124,7 @@ const { t } = useI18n()
                 <va-select
                   v-if="form.announcement_location == 'local'"
                   v-model="form.announcement_id"
-                  :label="t('admin.versions.announcementName')"
+                  :label="$t('admin.versions.announcementName')"
                   id="announcementId"
                   class="my-2"
                   immediateValidation
@@ -139,7 +137,7 @@ const { t } = useI18n()
                 <va-input
                   v-if="form.announcement_location == 'remote'"
                   v-model="form.announcement_url"
-                  :label="t('admin.versions.announcementUrl')"
+                  :label="$t('admin.versions.announcementUrl')"
                   id="announcementUrl"
                   class="my-2"
                   immediateValidation
@@ -150,10 +148,10 @@ const { t } = useI18n()
         </AdminSettings>
         <va-list-separator class="my-1" fit />
         <AdminSettings>
-          <template #name>{{ t('admin.apps.appSettings') }}</template>
+          <template #name>{{ $t('admin.apps.appSettings') }}</template>
           <template #settings>
                 <va-input v-model="form.admin_path"
-                  :label="t('admin.versions.adminPath')"
+                  :label="$t('admin.versions.adminPath')"
                   id="adminPath"
                   class="my-2"
                   immediateValidation
@@ -162,7 +160,7 @@ const { t } = useI18n()
                   />
                 <va-select
                   v-model="form.default_admin_roles"
-                  :label="t('admin.versions.defaultAdminRoles')"
+                  :label="$t('admin.versions.defaultAdminRoles')"
                   id="defaultAdminRoles"
                   class="my-2"
                   immediateValidation
@@ -177,7 +175,7 @@ const { t } = useI18n()
                 />
                 <va-select
                   v-model="form.default_user_roles"
-                  :label="t('admin.versions.defaultUserRoles')"
+                  :label="$t('admin.versions.defaultUserRoles')"
                   id="defaultUserRoles"
                   class="my-2"
                   immediateValidation
@@ -192,7 +190,7 @@ const { t } = useI18n()
                 />
           </template>
         </AdminSettings>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ t('form.submit') }}</va-button>
+        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
       </form>
       </div>
     </div>
@@ -216,9 +214,9 @@ export default {
   data () {
     return {
       announcement_locations: [
-        { value: 'none', text: useI18n().t('admin.versions.noNotifications') },
-        { value: 'local', text: useI18n().t('admin.versions.local') },
-        { value: 'remote', text: useI18n().t('admin.versions.remote') }
+        { value: 'none', text: this.$t('admin.versions.noNotifications') },
+        { value: 'local', text: this.$t('admin.versions.local') },
+        { value: 'remote', text: this.$t('admin.versions.remote') }
       ],
       showEnableDisable: false,
       showRecommendations: false,

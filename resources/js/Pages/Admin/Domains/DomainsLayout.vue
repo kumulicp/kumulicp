@@ -1,27 +1,19 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
-  <div class="user">
-    <div class="row">
-      <div class="flex xs12 lg12">
-        <va-card class="mb-4">
-          <va-card-content>
-            <va-tabs v-model="value" hide-slider>
-              <template #tabs>
-                <Link v-for="(tab, index) in tabs" :href="tab.url" :key="index"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
-              </template>
-            </va-tabs>
-            <va-separator />
-            <slot></slot>
-          </va-card-content>
-        </va-card>
-      </div>
-    </div>
-  </div>
+  <va-card class="mb-4">
+    <va-card-content>
+      <va-tabs v-model="value" hide-slider>
+        <template #tabs>
+          <Link v-for="(tab, index) in tabs" :href="tab.url" :key="index"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
+        </template>
+      </va-tabs>
+      <va-separator />
+      <slot></slot>
+    </va-card-content>
+  </va-card>
 </template>
 
 <script lang="ts">
@@ -32,16 +24,16 @@ export default {
     const basePath = '/admin/service/domains'
     const tabs = [
       {
-        title: 'Domains',
+        title: this.$t('admin.domains.domains'),
         url: basePath
       },
       {
-        title: 'TLDs',
+        title: this.$t('admin.domains.tlds'),
         url: basePath + '/tlds'
       }
     ]
 
-    let value = 'Domains'
+    let value = this.$t('admin.domains.domains')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title
