@@ -1,26 +1,16 @@
 {
-    "repositories": [
-        {
-            "type": "composer",
-            "url": "",
-            "options": {
-                "ssl": {
-                    "verify_peer": true
-                }
-            }
-        }
-    ],
     "require": {
         "php": "^8.4",
         "api-ecosystem-for-laravel/dingo-api": "^4.2.0",
-        "composer/installers": "^2.0",
         "asm89/stack-cors": "^2.0",
+        "composer/installers": "^2.0",
         "directorytree/ldaprecord": "^3.3.0",
         "directorytree/ldaprecord-laravel": "^3.1.2",
         "doctrine/dbal": "^4.4.3",
         "firebase/php-jwt": "^7.0",
         "guzzlehttp/guzzle": "^7.3",
         "inertiajs/inertia-laravel": "^2.0",
+        "kumulicp/kumuli": "^0.3.4",
         "laravel/cashier": "^15.4",
         "laravel/framework": "^11.26",
         "laravel/socialite": "^5.16",
@@ -47,7 +37,7 @@
         "laravel/telescope": "^5.17",
         "mockery/mockery": "^1.3.1",
         "nunomaduro/collision": "^8.3",
-        "pestphp/pest": "^2.0",
+        "pestphp/pest": "^4.0",
         "spatie/laravel-ignition": "^2.0"
     },
     "config": {
@@ -69,7 +59,7 @@
         },
         "installer-paths": {
             "modules/{$name}/": [
-                "type:laravel-module"
+                "type:laravel-library"
             ]
         }
     },

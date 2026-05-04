@@ -4,6 +4,9 @@
 # environment config
 .env
 
+#composer auth
+auth.json
+
 # cache required to run
 /storage/framework/cache/*
 /storage/framework/views/*
