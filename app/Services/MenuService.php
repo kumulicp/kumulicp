@@ -124,6 +124,14 @@ class MenuService
                         'external' => false,
                         'order' => 600,
                     ],
+                    [
+                        'name' => __('labels.modules'),
+                        'url' => '/admin/packages',
+                        'icon' => 'fa-download',
+                        'perm' => $admin,
+                        'external' => false,
+                        'order' => 600,
+                    ],
                 ],
             ],
             'settings' => [
