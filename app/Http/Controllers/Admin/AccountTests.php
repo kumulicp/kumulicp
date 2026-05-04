@@ -30,7 +30,7 @@ class AccountTests extends Controller
             }),
             'breadcrumbs' => [
                 [
-                    'label' => 'Tests',
+                    'label' => __('admin.tests.tests'),
                 ],
             ],
         ]);
@@ -105,7 +105,7 @@ class AccountTests extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/server/tests',
-                    'label' => 'Tests',
+                    'label' => __('admin.tests.tests'),
                 ],
                 [
                     'label' => $test->description,
@@ -159,7 +159,7 @@ class AccountTests extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/server/tests',
-                    'label' => 'Tests',
+                    'label' => __('admin.tests.tests'),
                 ],
                 [
                     'label' => $test->description,
@@ -190,14 +190,14 @@ class AccountTests extends Controller
         }
         $test->save();
 
-        return redirect('/admin/server/tests/'.$test->id)->with('success', 'Test status updated');
+        return redirect('/admin/server/tests/'.$test->id)->with('success', __('admin.tests.updated'));
     }
 
     public function destroy(AccountTest $test)
     {
         $test->delete();
 
-        return redirect('/admin/server/tests')->with('success', 'Test successfully deleted!');
+        return redirect('/admin/server/tests')->with('success', __('admin.tests.deleted'));
     }
 
     public function run(AccountTest $test)
@@ -206,7 +206,7 @@ class AccountTests extends Controller
         $test->status = 'in_progress';
         $test->save();
 
-        return redirect('/admin/server/tests/'.$test->id)->with('success', 'Test(s) are now running');
+        return redirect('/admin/server/tests/'.$test->id)->with('success', __('admin.tests.running'));
     }
 
     public function clear(AccountTest $test)
@@ -216,6 +216,6 @@ class AccountTests extends Controller
         $test->status = 'clearing';
         $test->save();
 
-        return redirect('/admin/server/tests')->with('success', 'Test accounts are being removed. This takes a long time so grab a coffee');
+        return redirect('/admin/server/tests')->with('success', __('admin.tests.clearing'));
     }
 }

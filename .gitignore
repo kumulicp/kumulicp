@@ -51,3 +51,7 @@ docker
 .mcp.json
 CLAUDE.md
 boost.json
+
+# Playwright browser test artifacts
+tests/Browser/Screenshots
+tests/Browser/Videos

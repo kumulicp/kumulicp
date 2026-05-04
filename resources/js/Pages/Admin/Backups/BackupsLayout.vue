@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-card class="mb-4">
@@ -26,16 +24,16 @@ export default {
     const basePath = '/admin/server/backup_scheduler'
     const tabs = [
       {
-        title: 'Past/Upcoming',
+        title: this.$t('admin.backups.pastUpcoming'),
         url: basePath
       },
       {
-        title: 'Recurring Settings',
+        title: this.$t('admin.backups.recurringSettings'),
         url: basePath + '/recurring'
       }
     ]
 
-    let value = 'View'
+    let value = this.$t('admin.backups.pastUpcoming')
     Object.values(tabs).forEach((tab) => {
       if (tab.url === pathname) {
         value = tab.title

@@ -1,28 +1,26 @@
 <script setup lang="ts">
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
 
-const { t } = useI18n()
 
 const contactPhoneNumber = ref()
 useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactPhoneNumber)
 </script>
 <template>
   <Head>
-    <title>Signup - Control Panel</title>
+    <title>{{ $t('auth.signupTitle') }} - Control Panel</title>
   </Head>
     <template v-if="can.register">
     <form @submit.prevent="form.post('/register')">
 
-      <h5 class="mb-3">User Info</h5>
+      <h5 class="mb-3">{{ $t('auth.userInfo') }}</h5>
       <va-input
         v-model="form.username"
         id="username"
         class="mb-3"
-        :label="t('auth.username')"
+        :label="$t('auth.username')"
         immediateValidation
         :error="$page.props.errors.username"
         :error-messages="$page.props.errors.username"
@@ -33,7 +31,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="contactEmail"
         class="mb-3"
         type="email"
-        :label="t('auth.email')"
+        :label="$t('auth.email')"
         immediateValidation
         :error="$page.props.errors.contact_email"
         :error-messages="$page.props.errors.contact_email"
@@ -44,7 +42,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="password"
         class="mb-3"
         type="password"
-        :label="t('auth.password')"
+        :label="$t('auth.password')"
         immediateValidation
         :error="$page.props.errors.password"
         :error-messages="$page.props.errors.password"
@@ -55,7 +53,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="passwordConfirmation"
         class="mb-3"
         type="password"
-        :label="t('auth.confirmPassword')"
+        :label="$t('auth.confirmPassword')"
         immediateValidation
         :error="$page.props.errors.password_confirmation"
         :error-messages="$page.props.errors.password_confirmation"
@@ -67,7 +65,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         v-model="form.contact_first_name"
         id="contactFirstName"
         class="mb-3"
-        :label="t('user.firstName')"
+        :label="$t('user.firstName')"
         immediateValidation
         :error="$page.props.errors.contact_first_name"
         :error-messages="$page.props.errors.contact_first_name"
@@ -77,7 +75,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         v-model="form.contact_last_name"
         id="contactLastName"
         class="mb-3"
-        :label="t('user.lastName')"
+        :label="$t('user.lastName')"
         immediateValidation
         :error="$page.props.errors.contact_last_name"
         :error-messages="$page.props.errors.contact_last_name"
@@ -88,7 +86,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="contactPhoneNumber"
         ref="contactPhoneNumber"
         class="mb-3"
-        :label="t('user.phoneNumber')"
+        :label="$t('user.phoneNumber')"
         immediateValidation
         :error="$page.props.errors.contact_phone_number"
         :error-messages="$page.props.errors.contact_phone_number"
@@ -104,7 +102,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         text-by="name"
         value-by="value"
         immediateValidation
-        :label="t('auth.orgType')"
+        :label="$t('auth.orgType')"
         :error="$page.props.errors.type"
         :error-messages="$page.props.errors.type"
       />
@@ -114,7 +112,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         v-if="form.type && form.type !== 'none'"
         id="name"
         class="mb-3"
-        :label="t('auth.orgName')"
+        :label="$t('auth.orgName')"
         immediateValidation
         :error="$page.props.errors.name"
         :error-messages="$page.props.errors.name"
@@ -125,11 +123,11 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
         id="subdomain"
         maxlength="30"
         class="mb-3"
-        label="Subdomain name"
+        :label="$t('auth.subdomainName')"
         immediateValidation
         :error="$page.props.errors.subdomain"
         :error-messages="$page.props.errors.subdomain"
-        :messages="t('auth.subdomainMessage', { domain: orgURL })"
+        :messages="$t('auth.subdomainMessage', { domain: orgURL })"
       >
         <template #appendInner>
           .{{ base_domain }}
@@ -141,6 +139,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           v-model="form.terms_of_use"
           class="mb-0"
           immediateValidation
+          id="termsOfUse"
           :error="$page.props.errors.terms_of_use"
           :error-messages="$page.props.errors.terms_of_use"
         >
@@ -148,8 +147,8 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           </template>
         </va-checkbox>
             <span class="ml-2">
-              I agree to
-              <a :href="terms_url" target="blank" class="va-link">{{ t('auth.terms') }}</a>
+              {{ $t('auth.agree') }}
+              <a :href="terms_url" target="blank" class="va-link">{{ $t('auth.terms') }}</a>
             </span>
       </div>
 
@@ -159,14 +158,14 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), contactP
           :disabled="form.processing"
           class="my-0"
         >
-          Register
+          {{ $t('auth.register') }}
         </va-button>
       </div>
     </form>
   </template>
   <template v-else>
-    <h1 class="va-h1 va-text-center">{{ t('auth.registrationError1') }}</h1>
-    <h6 class="va-h6 va-text-center">{{ t('auth.registrationError2') }}</h6>
+    <h1 class="va-h1 va-text-center">{{ $t('auth.registrationError1') }}</h1>
+    <h6 class="va-h6 va-text-center">{{ $t('auth.registrationError2') }}</h6>
   </template>
 </template>
 

@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -12,6 +15,31 @@
 */
 
 // uses(Tests\TestCase::class)->in('Feature');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
+
+pest()->beforeEach(function () {
+        Artisan::call('db:seed DemoSeeder');
+    })
+    ->in('Browser');
+
+/*
+|--------------------------------------------------------------------------
+| Browser Testing
+|--------------------------------------------------------------------------
+|
+| Tests in tests/Browser/ run against a real Chromium browser via
+| Playwright. Install browser binaries once with:
+|
+|   npx playwright install
+|
+| Then run browser tests with:
+|
+|   vendor/bin/pest --testsuite=Browser
+|
+*/
+
+pest()->browser()
+    ->timeout(10000);
 
 /*
 |--------------------------------------------------------------------------

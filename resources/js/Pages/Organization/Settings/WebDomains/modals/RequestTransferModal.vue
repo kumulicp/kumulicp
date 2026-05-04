@@ -1,36 +1,34 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
 </script>
 <template>
   <va-modal
     v-model="show"
-    title="Request Transfer"
+    :title="$t('organization.webDomains.requestTransfer')"
     hide-default-actions
   >
     <template #default>
-      <p>By requesting a domain transfer, you would like to use another domain registrar and are able to manage your domain and DNS settings yourself. Reasons you might want to do this include:</p>
+      <p>{{ $t('organization.webDomains.requestTransferDesc') }}</p>
       <ul class="va-unordered">
-          <li>Wanting to discontinue use of the Control Panel</li>
-          <li>Needing more control over your DNS settings than this Control Panel is currently able to offer</li>
+          <li>{{ $t('organization.webDomains.requestTransferReason1') }}</li>
+          <li>{{ $t('organization.webDomains.requestTransferReason2') }}</li>
       </ul>
-      <p><b>Warning:</b> By transfering domains, we are no longer able to automatically update the DNS settings accordingly. If there is any change in our servers requiring DNS record updates, you'll have to follow those announcements and be able to update your DNS records accordingly.</p>
-      <p>To find out what DNS host records you need to have, please visit <a href="/docs/controlpanel/register-custom-domain" target="_blank">our documentation</a></p>
+      <p><b>{{ $t('organization.webDomains.warning') }}:</b> {{ $t('organization.webDomains.requestTransferWarning') }}</p>
+      <p v-html="$t('organization.webDomains.requestTransferDocs')"></p>
     </template>
     <template #footer>
       <va-button
         color="backgroundSecondary"
         @click="show = !show"
       >
-        Cancel
+        {{ $t('common.cancel') }}
       </va-button>
       <va-button
         @click="form.post('/settings/domains/'+domain.name+'/request_transfer')"
         :disabled="form.processing"
       >
-        Request Transfer
+        {{ $t('organization.webDomains.requestTransfer') }}
       </va-button>
     </template>
   </va-modal>

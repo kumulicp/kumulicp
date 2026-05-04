@@ -37,7 +37,7 @@ class Announcements extends Controller
             ]),
             'breadcrumbs' => [
                 [
-                    'label' => 'Announcements',
+                    'label' => __('admin.announcements.announcements'),
                 ],
             ],
         ]);
@@ -55,7 +55,7 @@ class Announcements extends Controller
         $announcement->description = $validatedData['title'];
         $announcement->save();
 
-        return redirect('/admin/service/announcements/'.$announcement->id.'/edit');
+        return redirect('/admin/service/announcements/'.$announcement->id.'/edit')->with('success', __('admin.announcements.created'));
     }
 
     public function edit($id)
@@ -81,7 +81,7 @@ class Announcements extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/service/announcements',
-                    'label' => 'Announcements',
+                    'label' => __('admin.announcements.announcements'),
                 ],
                 [
                     'label' => $announcement->title,
@@ -108,7 +108,7 @@ class Announcements extends Controller
         $announcement->description = $validatedData['description'];
         $announcement->update();
 
-        return back()->with('success', 'Your announcement has been updated in the database and shown to the relevant organizations');
+        return back()->with('success', __('admin.announcements.updated'));
     }
 
     public function destroy(Request $request, $id)
@@ -116,7 +116,7 @@ class Announcements extends Controller
         $announcement = Announcement::where('id', $id)->first();
         $announcement->delete();
 
-        return redirect('/admin/service/announcements')->with('success', 'Your announcement has been deleted');
+        return redirect('/admin/service/announcements')->with('success', __('admin.announcements.deleted'));
     }
 
     public function archive() {}
@@ -136,6 +136,6 @@ class Announcements extends Controller
             }
         }
 
-        return redirect('/admin/server/announcements')->with('success', 'Announcement, '.$announcement->name.' has been emailed to users successfully');
+        return redirect('/admin/server/announcements')->with('success', __('admin.announcements.emailed'));
     }
 }

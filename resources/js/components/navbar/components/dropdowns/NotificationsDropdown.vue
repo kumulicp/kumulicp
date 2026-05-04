@@ -58,14 +58,14 @@ import axios from 'axios'
                 :round="false"
                 @click="clearAll()"
               >
-                Clear all
+                {{ $t('navbar.clearAll') }}
               </va-button>
             </div>
           </va-list-item-section>
         </va-list-item>
       </va-list>
       <p v-else-if="countNotifications == 0" class="va-text-center pv-3">
-        No notifications
+        {{ $t('navbar.noNotifications') }}
       </p>
     </va-dropdown-content>
   </va-dropdown>

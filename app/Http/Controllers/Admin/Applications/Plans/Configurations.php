@@ -30,7 +30,7 @@ class Configurations extends Controller
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
-                    'label' => 'Apps',
+                    'label' => __('admin.applications.apps'),
                 ],
                 [
                     'label' => $app->name,
@@ -38,7 +38,7 @@ class Configurations extends Controller
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => 'Plans',
+                    'label' => __('admin.applications.plans.plans'),
                 ],
                 [
                     'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
@@ -79,6 +79,6 @@ class Configurations extends Controller
         ]);
         $plan->save();
 
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/configurations")->with('success', 'Plan: '.$plan->name.' configurations updated!');
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/configurations")->with('success', __('admin.applications.plans.configurations_updated', ['plan' => $plan->name]));
     }
 }

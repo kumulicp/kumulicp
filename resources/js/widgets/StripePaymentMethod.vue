@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
+
 import { StripeElements, StripeElement, useStripe } from "@vue-stripe/vue-stripe"
 </script>
 <template>
@@ -21,7 +22,7 @@ import { StripeElements, StripeElement, useStripe } from "@vue-stripe/vue-stripe
             <va-list-item-label v-if="paymentMethod.brand" lines="2">
               {{ paymentMethod.brand }} ****{{ paymentMethod.last4 }}
               <br />
-              Expires {{ paymentMethod.exp_month }}/{{ paymentMethod.exp_year }}
+              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>
