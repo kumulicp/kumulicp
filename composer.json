@@ -10,7 +10,6 @@
         "firebase/php-jwt": "^7.0",
         "guzzlehttp/guzzle": "^7.3",
         "inertiajs/inertia-laravel": "^2.0",
-        "kumulicp/kumuli": "^0.3.4",
         "laravel/cashier": "^15.4",
         "laravel/framework": "^11.26",
         "laravel/socialite": "^5.16",
