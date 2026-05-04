@@ -8,12 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // users → organizations (cascade: users are destroyed with their org)
-        Schema::table('users', function (Blueprint $table) {
-            $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
         // organizations self-ref + plan + primary_contact + account_test
         // primary_domain_id / base_domain_id are NOT NULL and reference org_domains which in turn
         // references organizations, making a cascade loop impossible — indexes only for those two.
@@ -24,23 +18,6 @@ return new class extends Migration
             $table->index('account_test_id');
             $table->index('primary_domain_id');
             $table->index('base_domain_id');
-
-            $table->foreign('parent_organization_id')->references('id')->on('organizations')->nullOnDelete();
-            $table->foreign('plan_id')->references('id')->on('plans')->nullOnDelete();
-            $table->foreign('primary_contact_id')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('account_test_id')->references('id')->on('account_tests')->nullOnDelete();
-        });
-
-        // subscriptions — organization_id already covered by the composite index added in the
-        // original migration so no separate index is needed
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-        });
-
-        // subscription_items — subscription_id is the leading column of the existing unique
-        // composite (subscription_id, stripe_price), so the FK can reuse that index
-        Schema::table('subscription_items', function (Blueprint $table) {
-            $table->foreign('subscription_id')->references('id')->on('subscriptions')->cascadeOnDelete();
         });
 
         // app_instances
@@ -53,22 +30,11 @@ return new class extends Migration
             $table->index('database_server_id');
             $table->index('sso_server_id');
             $table->index('parent_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->restrictOnDelete();
-            $table->foreign('version_id')->references('id')->on('app_versions')->restrictOnDelete();
-            $table->foreign('plan_id')->references('id')->on('app_plans')->nullOnDelete();
-            $table->foreign('web_server_id')->references('id')->on('org_servers')->restrictOnDelete();
-            $table->foreign('database_server_id')->references('id')->on('org_servers')->nullOnDelete();
-            $table->foreign('sso_server_id')->references('id')->on('org_servers')->nullOnDelete();
-            $table->foreign('parent_id')->references('id')->on('app_instances')->nullOnDelete();
         });
 
         // applications — self-referential parent hierarchy
         Schema::table('applications', function (Blueprint $table) {
             $table->index('parent_app_id');
-            $table->foreign('parent_app_id')->references('id')->on('applications')->nullOnDelete();
         });
 
         // tasks
@@ -77,57 +43,39 @@ return new class extends Migration
             $table->index('application_id');
             $table->index('version_id');
             $table->index('app_instance_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->nullOnDelete();
-            $table->foreign('version_id')->references('id')->on('app_versions')->nullOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
         });
 
         // app_versions
         Schema::table('app_versions', function (Blueprint $table) {
             $table->index('application_id');
             $table->index('announcement_id');
-
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
-            $table->foreign('announcement_id')->references('id')->on('announcements')->nullOnDelete();
         });
 
         // plans
         Schema::table('plans', function (Blueprint $table) {
             $table->index('email_server_id');
-            $table->foreign('email_server_id')->references('id')->on('servers')->nullOnDelete();
         });
 
         // new_user_code
         Schema::table('new_user_code', function (Blueprint $table) {
             $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
         });
 
         // email_forwarders
         Schema::table('email_forwarders', function (Blueprint $table) {
             $table->index('organization_id');
             $table->index('domain_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('domain_id')->references('id')->on('org_domains')->cascadeOnDelete();
         });
 
         // additional_storage
         Schema::table('additional_storage', function (Blueprint $table) {
             $table->index('organization_id');
             $table->index('app_instance_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
         });
 
         // app_roles
         Schema::table('app_roles', function (Blueprint $table) {
             $table->index('application_id');
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
         });
 
         // org_backups
@@ -136,18 +84,11 @@ return new class extends Migration
             $table->index('scheduled_backup_id');
             $table->index('app_instance_id');
             $table->index('org_server_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('scheduled_backup_id')->references('id')->on('backup_schedules')->nullOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('org_server_id')->references('id')->on('org_servers')->nullOnDelete();
         });
 
         // backup_schedules
         Schema::table('backup_schedules', function (Blueprint $table) {
             $table->index('recurring_backup_id');
-            $table->foreign('recurring_backup_id')->references('id')->on('recurring_backups')->cascadeOnDelete();
         });
 
         // recurring_backups
@@ -155,10 +96,6 @@ return new class extends Migration
             $table->index('server_id');
             $table->index('organization_id');
             $table->index('application_id');
-
-            $table->foreign('server_id')->references('id')->on('servers')->restrictOnDelete();
-            $table->foreign('organization_id')->references('id')->on('organizations')->nullOnDelete();
-            $table->foreign('application_id')->references('id')->on('applications')->nullOnDelete();
         });
 
         // org_domains — organization_id cascades so domains are cleaned up with the org;
@@ -169,12 +106,6 @@ return new class extends Migration
             $table->index('app_instance_id');
             $table->index('parent_domain_id');
             $table->index('tld_id');
-            $table->index('status');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('parent_domain_id')->references('id')->on('org_domains')->nullOnDelete();
-            $table->foreign('tld_id')->references('id')->on('tlds')->nullOnDelete();
         });
 
         // app_plans — web/db/sso server columns reference servers directly (not org_servers)
@@ -184,12 +115,6 @@ return new class extends Migration
             $table->index('database_server_id');
             $table->index('sso_server_id');
             $table->index('shared_app_id');
-
-            $table->foreign('application_id')->references('id')->on('applications')->cascadeOnDelete();
-            $table->foreign('web_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('database_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('sso_server_id')->references('id')->on('servers')->nullOnDelete();
-            $table->foreign('shared_app_id')->references('id')->on('app_instances')->nullOnDelete();
         });
 
         // servers — app_instance_id is restrict so you cannot delete the control-panel
@@ -197,9 +122,6 @@ return new class extends Migration
         Schema::table('servers', function (Blueprint $table) {
             $table->index('app_instance_id');
             $table->index('default_backup_server_id');
-
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->restrictOnDelete();
-            $table->foreign('default_backup_server_id')->references('id')->on('servers')->nullOnDelete();
         });
 
         // org_servers
@@ -207,25 +129,17 @@ return new class extends Migration
             $table->index('organization_id');
             $table->index('server_id');
             $table->index('backup_server_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('server_id')->references('id')->on('servers')->restrictOnDelete();
-            $table->foreign('backup_server_id')->references('id')->on('org_servers')->nullOnDelete();
         });
 
         // account_tests
         Schema::table('account_tests', function (Blueprint $table) {
             $table->index('organization_id');
             $table->index('created_by_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('created_by_id')->references('id')->on('users')->restrictOnDelete();
         });
 
         // suborg_users
         Schema::table('suborg_users', function (Blueprint $table) {
             $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
         });
 
         // org_subdomains
@@ -233,42 +147,29 @@ return new class extends Migration
             $table->index('organization_id');
             $table->index('app_instance_id');
             $table->index('parent_domain_id');
-
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
-            $table->foreign('app_instance_id')->references('id')->on('app_instances')->nullOnDelete();
-            $table->foreign('parent_domain_id')->references('id')->on('org_domains')->nullOnDelete();
         });
 
         // app_implied_roles — both sides cascade so removing a role cleans up all its implications
         Schema::table('app_implied_roles', function (Blueprint $table) {
             $table->index('primary_app_role_id');
             $table->index('implied_app_role_id');
-
-            $table->foreign('primary_app_role_id')->references('id')->on('app_roles')->cascadeOnDelete();
-            $table->foreign('implied_app_role_id')->references('id')->on('app_roles')->cascadeOnDelete();
         });
 
         // groups
         Schema::table('groups', function (Blueprint $table) {
             $table->index('organization_id');
-            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
         });
 
         // group_members
         Schema::table('group_members', function (Blueprint $table) {
             $table->index('group_id');
             $table->index('user_id');
-
-            $table->foreign('group_id')->references('id')->on('groups')->cascadeOnDelete();
-            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 
     public function down(): void
     {
         Schema::table('group_members', function (Blueprint $table) {
-            $table->dropForeign(['group_id']);
-            $table->dropForeign(['user_id']);
             $table->dropIndex(['group_id']);
             $table->dropIndex(['user_id']);
         });
