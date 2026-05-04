@@ -3,6 +3,7 @@
         "php": "^8.4",
         "api-ecosystem-for-laravel/dingo-api": "^4.2.0",
         "asm89/stack-cors": "^2.0",
+        "composer/installers": "^2.0",
         "directorytree/ldaprecord": "^3.3.0",
         "directorytree/ldaprecord-laravel": "^3.1.2",
         "doctrine/dbal": "^4.4.3",
@@ -44,6 +45,7 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
+            "composer/installers": true,
             "composer/package-versions-deprecated": false,
             "pestphp/pest-plugin": true,
             "wikimedia/composer-merge-plugin": true
@@ -53,6 +55,11 @@
         "laravel": {
             "dont-discover": [
                 "laravel/telescope"
+            ]
+        },
+        "installer-paths": {
+            "modules/{$name}/": [
+                "type:laravel-library"
             ]
         }
     },
