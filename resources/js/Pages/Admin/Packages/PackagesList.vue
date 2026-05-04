@@ -1,84 +1,131 @@
-<script setup lang="ts">
+<script lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { router, useForm } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { defineComponent } from 'vue'
 
-const props = defineProps<{
-  packages: Array<{
-    name: string
-    description: string
-    latest: string | null
-    type: string
-    installed: boolean
-    enabled: boolean
-    version: string | null
-    source: string
-  }>
-}>()
-
-const search      = ref('')
-const filterState = ref('all')
-const showInstall = ref(false)
-
-const installForm = useForm({
-  package: '',
-  version: '',
-})
-
-const filtered = computed(() => {
-  return props.packages.filter(pkg => {
-    const matchSearch =
-      !search.value ||
-      pkg.name.toLowerCase().includes(search.value.toLowerCase()) ||
-      (pkg.description || '').toLowerCase().includes(search.value.toLowerCase())
-
-    const matchState =
-      filterState.value === 'all' ||
-      (filterState.value === 'installed' && pkg.installed) ||
-      (filterState.value === 'available' && !pkg.installed) ||
-      (filterState.value === 'enabled' && pkg.enabled) ||
-      (filterState.value === 'disabled' && pkg.installed && !pkg.enabled)
-
-    return matchSearch && matchState
-  })
-})
-
-function openInstall(packageName?: string) {
-  installForm.reset()
-  installForm.package = packageName ?? ''
-  showInstall.value = true
+interface Package {
+  name: string
+  label: string
+  description: string
+  latest: string | null
+  type: string
+  installed: boolean
+  enabled: boolean
+  version: string | null
+  updateAvailable: boolean
+  source: string
 }
 
-function submitInstall() {
-  installForm.post('/admin/packages/download', {
-    onSuccess: () => {
-      showInstall.value = false
-      installForm.reset()
+export default defineComponent({
+  layout: (h: any, page: any) => h(AppLayout, [page]),
+
+  props: {
+    packages: {
+      type: Array as () => Package[],
+      required: true,
     },
-  })
-}
+  },
 
-function confirmDelete(pkg: { name: string }) {
-  if (!confirm(`Remove "${pkg.name}"? This will run composer remove and delete the module directory.`)) return
-  const [vendor, name] = pkg.name.split('/')
-  router.delete(`/admin/packages/${vendor}/${name}`)
-}
+  setup() {
+    const uploadForm = useForm({ module: null as File | null })
+    return { uploadForm }
+  },
 
-function toggleModule(pkg: { name: string; enabled: boolean }) {
-  const [vendor, name] = pkg.name.split('/')
-  const action = pkg.enabled ? 'disable' : 'enable'
-  router.post(`/admin/packages/${vendor}/${name}/${action}`)
-}
+  data() {
+    return {
+      search: '',
+      filterState: 'all',
+      showUpload: false,
+      showInstallConfirm: false,
+      pendingInstallPkg: null as Package | null,
+      showDeleteConfirm: false,
+      pendingDeletePkg: null as Package | null,
+    }
+  },
 
-function statusColor(pkg: { installed: boolean; enabled: boolean }) {
-  if (!pkg.installed) return 'secondary'
-  return pkg.enabled ? 'success' : 'warning'
-}
+  computed: {
+    filtered(): Package[] {
+      return this.packages.filter((pkg) => {
+        const matchSearch =
+          !this.search ||
+          pkg.name.toLowerCase().includes(this.search.toLowerCase()) ||
+          (pkg.description || '').toLowerCase().includes(this.search.toLowerCase())
 
-function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
-  if (!pkg.installed) return 'Available'
-  return pkg.enabled ? 'Enabled' : 'Disabled'
-}
+        const matchState =
+          this.filterState === 'all' ||
+          (this.filterState === 'installed' && pkg.installed) ||
+          (this.filterState === 'available' && !pkg.installed) ||
+          (this.filterState === 'enabled' && pkg.enabled) ||
+          (this.filterState === 'disabled' && pkg.installed && !pkg.enabled)
+
+        return matchSearch && matchState
+      })
+    },
+  },
+
+  methods: {
+    openUpload() {
+      this.uploadForm.reset()
+      this.showUpload = true
+    },
+
+    submitUpload() {
+      this.uploadForm.post('/admin/packages/upload', {
+        onSuccess: () => {
+          this.showUpload = false
+          this.uploadForm.reset()
+        },
+      })
+    },
+
+    confirmInstall(pkg: Package) {
+      this.pendingInstallPkg = pkg
+      this.showInstallConfirm = true
+    },
+
+    executeInstall() {
+      if (!this.pendingInstallPkg) return
+      const [vendor, name] = this.pendingInstallPkg.name.split('/')
+      router.post(`/admin/packages/${vendor}/${name}/install`)
+      this.showInstallConfirm = false
+      this.pendingInstallPkg = null
+    },
+
+    confirmDelete(pkg: Package) {
+      this.pendingDeletePkg = pkg
+      this.showDeleteConfirm = true
+    },
+
+    executeDelete() {
+      if (!this.pendingDeletePkg) return
+      const [vendor, name] = this.pendingDeletePkg.name.split('/')
+      router.delete(`/admin/packages/${vendor}/${name}`)
+      this.showDeleteConfirm = false
+      this.pendingDeletePkg = null
+    },
+
+    toggleModule(pkg: Package) {
+      const [vendor, name] = pkg.name.split('/')
+      const action = pkg.enabled ? 'disable' : 'enable'
+      router.post(`/admin/packages/${vendor}/${name}/${action}`)
+    },
+
+    upgradePackage(pkg: Package) {
+      const [vendor, name] = pkg.name.split('/')
+      router.post(`/admin/packages/${vendor}/${name}/upgrade`)
+    },
+
+    statusColor(pkg: Package): string {
+      if (!pkg.installed) return 'secondary'
+      return pkg.enabled ? 'success' : 'warning'
+    },
+
+    statusLabel(pkg: Package): string {
+      if (!pkg.installed) return 'Available'
+      return pkg.enabled ? 'Enabled' : 'Disabled'
+    },
+  },
+})
 </script>
 
 <template>
@@ -123,8 +170,8 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
         </div>
 
         <div class="flex flex-col md3 items-end">
-          <va-button icon="fa-download" @click="openInstall()">
-            Install Package
+          <va-button icon="fa-file-zipper" @click="openUpload">
+            Install from ZIP
           </va-button>
         </div>
       </div>
@@ -149,10 +196,10 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
             </tr>
             <tr v-for="pkg in filtered" :key="pkg.name">
               <td>
-                <a
-                  :href="'/admin/packages/' + pkg.name.replace('/', '/')"
-                  class="font-mono font-semibold text-primary hover:underline"
-                >{{ pkg.name }}</a>
+                <a :href="'/admin/packages/' + pkg.name" class="hover:underline">
+                  <span class="block font-semibold text-primary">{{ pkg.label }}</span>
+                  <span class="block font-mono text-xs text-gray-400">{{ pkg.name }}</span>
+                </a>
                 <div v-if="pkg.source === 'local'" class="text-xs text-gray-400">local only</div>
               </td>
               <td class="text-sm text-gray-600 max-w-xs truncate">
@@ -161,6 +208,9 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
               <td class="font-mono text-sm">
                 <span v-if="pkg.installed">{{ pkg.version ?? '?' }}</span>
                 <span v-else class="text-gray-400">{{ pkg.latest ?? '—' }}</span>
+                <div v-if="pkg.updateAvailable" class="text-xs text-warning mt-0.5">
+                  {{ pkg.latest }} available
+                </div>
               </td>
               <td>
                 <va-badge
@@ -175,9 +225,8 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
                   preset="plain"
                   icon="fa-download"
                   color="primary"
-                  size="small"
                   title="Install"
-                  @click="openInstall(pkg.name)"
+                  @click="confirmInstall(pkg)"
                 />
 
                 <!-- Enable / Disable toggle -->
@@ -186,9 +235,18 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
                   preset="plain"
                   :icon="pkg.enabled ? 'fa-toggle-on' : 'fa-toggle-off'"
                   :color="pkg.enabled ? 'success' : 'warning'"
-                  size="small"
                   :title="pkg.enabled ? 'Disable' : 'Enable'"
                   @click="toggleModule(pkg)"
+                />
+
+                <!-- Upgrade -->
+                <va-button
+                  v-if="pkg.updateAvailable"
+                  preset="plain"
+                  icon="fa-circle-up"
+                  color="warning"
+                  title="Upgrade"
+                  @click="upgradePackage(pkg)"
                 />
 
                 <!-- Info -->
@@ -196,7 +254,6 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
                   preset="plain"
                   icon="fa-circle-info"
                   color="secondary"
-                  size="small"
                   title="View info"
                   :href="'/admin/packages/' + pkg.name"
                   tag="a"
@@ -208,7 +265,6 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
                   preset="plain"
                   icon="delete"
                   color="danger"
-                  size="small"
                   title="Remove"
                   @click="confirmDelete(pkg)"
                 />
@@ -224,50 +280,67 @@ function statusLabel(pkg: { installed: boolean; enabled: boolean }) {
     </va-card-content>
   </va-card>
 
-  <!-- Install Modal -->
-  <va-modal v-model="showInstall" no-outside-dismiss no-padding size="small">
+  <!-- Upload ZIP Modal -->
+  <va-modal v-model="showUpload" no-outside-dismiss no-padding size="small">
     <template #content="{ ok }">
-      <form @submit.prevent="submitInstall">
-        <va-card-title>Install Package</va-card-title>
+      <form @submit.prevent="submitUpload">
+        <va-card-title>Install from ZIP</va-card-title>
         <va-card-content>
-          <va-input
-            v-model="installForm.package"
-            label="Package name"
-            placeholder="vendor/package-name"
-            required-mark
-            class="mb-3 w-full"
-            :error="!!$page.props.errors.package"
-            :error-messages="$page.props.errors.package"
-          />
-          <va-input
-            v-model="installForm.version"
-            label="Version constraint (optional)"
-            placeholder="e.g. ^1.0 or 1.2.3"
-            class="mb-1 w-full"
-          />
-          <p class="text-xs text-gray-400 mt-1">
-            Leave blank to install the latest stable release.
+          <p class="text-sm text-gray-500 mb-3">
+            Select a <span class="font-mono">.zip</span> file containing a valid nwidart/laravel-modules module.
           </p>
+          <va-file-upload
+            v-model="uploadForm.module"
+            file-types="zip"
+            type="single"
+            dropzone
+            :error="!!uploadForm.errors.module"
+            :error-messages="uploadForm.errors.module"
+            class="w-full"
+          />
         </va-card-content>
         <va-card-actions align="right">
-          <va-button
-            color="textInverted"
-            :disabled="installForm.processing"
-            @click="ok"
-          >Cancel</va-button>
+          <va-button color="textInverted" :disabled="uploadForm.processing" @click="ok">Cancel</va-button>
           <va-button
             type="submit"
-            :disabled="installForm.processing || !installForm.package"
-            :loading="installForm.processing"
+            icon="fa-file-zipper"
+            :disabled="uploadForm.processing || !uploadForm.module"
+            :loading="uploadForm.processing"
           >Install</va-button>
         </va-card-actions>
       </form>
     </template>
   </va-modal>
-</template>
 
-<script lang="ts">
-export default {
-  layout: (h: any, page: any) => h(AppLayout, [page]),
-}
-</script>
+  <!-- Delete Confirmation Modal -->
+  <va-modal v-model="showDeleteConfirm" no-padding size="small">
+    <template #content="{ ok }">
+      <va-card-title>Remove Package</va-card-title>
+      <va-card-content>
+        <p>Remove <strong class="font-mono">{{ pendingDeletePkg?.name }}</strong>?</p>
+        <p class="text-sm text-gray-500 mt-1">This will run composer remove and delete the module directory.</p>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button color="textInverted" @click="ok">Cancel</va-button>
+        <va-button color="danger" @click="executeDelete">Remove</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
+
+  <!-- Install Confirmation Modal -->
+  <va-modal v-model="showInstallConfirm" no-padding size="small">
+    <template #content="{ ok }">
+      <va-card-title>Install Package</va-card-title>
+      <va-card-content>
+        <p>Install <strong class="font-mono">{{ pendingInstallPkg?.name }}</strong>?</p>
+        <p v-if="pendingInstallPkg?.latest" class="text-sm text-gray-500 mt-1">
+          Latest version: <span class="font-mono">{{ pendingInstallPkg.latest }}</span>
+        </p>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button color="textInverted" @click="ok">Cancel</va-button>
+        <va-button icon="fa-download" @click="executeInstall">Install</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
+</template>

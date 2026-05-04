@@ -49,8 +49,8 @@ class PackageManagerService
 
             $packages = [];
             foreach ($package_names as $package_name) {
-                $metaData = json_decode((string) $this->http->get('p2/'.$package_name.'.json')->getBody(), true);
-                $versions = $metaData['packages'][$package_name] ?? [];
+                $meta_data = json_decode((string) $this->http->get('p2/'.$package_name.'.json')->getBody(), true);
+                $versions = $meta_data['packages'][$package_name] ?? [];
 
                 if (empty($versions)) {
                     continue;

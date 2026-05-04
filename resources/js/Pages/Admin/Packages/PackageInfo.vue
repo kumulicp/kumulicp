@@ -1,65 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { router } from '@inertiajs/vue3'
-import { ref } from 'vue'
-
-const props = defineProps<{
-  package: {
-    name: string
-    vendor: string
-    package: string
-    description: string
-    versions: string[]
-    latest: string | null
-    type: string
-    keywords: string[]
-    homepage: string
-    authors: Array<{ name?: string; email?: string; homepage?: string }>
-    require: Record<string, string>
-    license: string[]
-    installed: boolean
-    enabled: boolean
-    version: string | null
-    path: string | null
-    module_name: string
-  }
-}>()
-
-const selectedVersion = ref<string>(props.package.latest ?? '')
-const busy = ref(false)
-
-function install() {
-  busy.value = true
-  router.post(
-    '/admin/packages/download',
-    { package: props.package.name, version: selectedVersion.value || undefined },
-    { onFinish: () => (busy.value = false) }
-  )
-}
-
-function confirmDelete() {
-  if (!confirm(`Remove "${props.package.name}"? This will run composer remove and delete the module directory.`)) return
-  busy.value = true
-  router.delete(
-    `/admin/packages/${props.package.vendor}/${props.package.package}`,
-    { onFinish: () => (busy.value = false) }
-  )
-}
-
-function toggleModule() {
-  const action = props.package.enabled ? 'disable' : 'enable'
-  busy.value = true
-  router.post(
-    `/admin/packages/${props.package.vendor}/${props.package.package}/${action}`,
-    {},
-    { onFinish: () => (busy.value = false) }
-  )
-}
+import { defineComponent } from 'vue'
 </script>
 
 <template>
   <Head>
-    <title>{{ package.name }} - Package Manager</title>
+    <title>{{ package.label }} - Package Manager</title>
   </Head>
 
   <!-- Header Card -->
@@ -68,13 +15,17 @@ function toggleModule() {
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div class="flex items-center gap-3 mb-1">
-            <h2 class="text-xl font-bold font-mono">{{ package.name }}</h2>
+            <div>
+              <h2 class="text-xl font-bold">{{ package.label }}</h2>
+              <span class="font-mono text-xs text-gray-400">{{ package.name }}</span>
+            </div>
             <va-badge
               v-if="package.installed"
               :color="package.enabled ? 'success' : 'warning'"
               :text="package.enabled ? 'Enabled' : 'Disabled'"
             />
             <va-badge v-else color="secondary" text="Not installed" />
+            <va-badge v-if="package.updateAvailable" color="warning" text="Update available" />
           </div>
           <p class="text-gray-500 text-sm">{{ package.description || 'No description provided.' }}</p>
           <div v-if="package.keywords.length" class="flex flex-wrap gap-1 mt-2">
@@ -89,22 +40,24 @@ function toggleModule() {
 
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-2">
-          <!-- Install with version selector -->
-          <template v-if="!package.installed">
-            <va-select
-              v-if="package.versions.length"
-              v-model="selectedVersion"
-              :options="package.versions"
-              placeholder="Latest"
-              class="w-36"
-            />
-            <va-button
-              icon="fa-download"
-              :loading="busy"
-              :disabled="busy"
-              @click="install"
-            >Install</va-button>
-          </template>
+          <!-- Install -->
+          <va-button
+            v-if="!package.installed"
+            icon="fa-download"
+            :loading="busy"
+            :disabled="busy"
+            @click="install"
+          >Install</va-button>
+
+          <!-- Upgrade -->
+          <va-button
+            v-if="package.updateAvailable"
+            icon="fa-circle-up"
+            color="warning"
+            :loading="busy"
+            :disabled="busy"
+            @click="upgrade"
+          >Upgrade to {{ package.latest }}</va-button>
 
           <!-- Enable / Disable -->
           <va-button
@@ -126,14 +79,6 @@ function toggleModule() {
             :disabled="busy"
             @click="confirmDelete"
           >Remove</va-button>
-
-          <!-- Back -->
-          <va-button
-            preset="plain"
-            icon="fa-arrow-left"
-            href="/admin/packages"
-            tag="a"
-          >Back</va-button>
         </div>
       </div>
     </va-card-content>
@@ -141,7 +86,7 @@ function toggleModule() {
 
   <div class="row gap-4">
     <!-- Details Column -->
-    <div class="flex flex-col md8">
+    <div class="flex flex-col md12">
       <!-- Metadata -->
       <va-card class="mb-4">
         <va-card-title>Package Details</va-card-title>
@@ -187,34 +132,25 @@ function toggleModule() {
             </tbody>
           </table>
         </va-card-content>
-      </va-card>
-
-      <!-- Requirements -->
-      <va-card v-if="Object.keys(package.require).length" class="mb-4">
-        <va-card-title>Requirements</va-card-title>
-        <va-card-content>
-          <table class="va-table w-full">
-            <thead>
-              <tr>
-                <th>Package</th>
-                <th>Constraint</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(constraint, dep) in package.require" :key="dep">
-                <td class="font-mono text-sm">{{ dep }}</td>
-                <td class="font-mono text-sm text-gray-500">{{ constraint }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </va-card-content>
-      </va-card>
-    </div>
-
-    <!-- Sidebar Column -->
-    <div class="flex flex-col md4">
-      <!-- Authors -->
-      <va-card v-if="package.authors.length" class="mb-4">
+        <template v-if="Object.keys(package.require).length">
+          <va-card-title>Requirements</va-card-title>
+          <va-card-content>
+            <table class="va-table w-full">
+              <thead>
+                <tr>
+                  <th>Package</th>
+                  <th>Constraint</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(constraint, dep) in package.require" :key="dep">
+                  <td class="font-mono text-sm">{{ dep }}</td>
+                  <td class="font-mono text-sm text-gray-500">{{ constraint }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </va-card-content>
+        </template>
         <va-card-title>Authors</va-card-title>
         <va-card-content>
           <div
@@ -233,27 +169,112 @@ function toggleModule() {
           </div>
         </va-card-content>
       </va-card>
-
-      <!-- Available Versions -->
-      <va-card v-if="package.versions.length" class="mb-4">
-        <va-card-title>Available Versions</va-card-title>
-        <va-card-content>
-          <div class="flex flex-wrap gap-1">
-            <va-chip
-              v-for="v in package.versions"
-              :key="v"
-              size="small"
-              :color="v === package.latest ? 'primary' : 'secondary'"
-            >{{ v }}</va-chip>
-          </div>
-        </va-card-content>
-      </va-card>
     </div>
   </div>
+
+  <!-- Delete Confirmation Modal -->
+  <va-modal v-model="showDeleteConfirm" no-padding size="small">
+    <template #content="{ ok }">
+      <va-card-title>Remove Package</va-card-title>
+      <va-card-content>
+        <p>Remove <strong class="font-mono">{{ package.name }}</strong>?</p>
+        <p class="text-sm text-gray-500 mt-1">This will run composer remove and delete the module directory.</p>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button color="textInverted" @click="ok">Cancel</va-button>
+        <va-button color="danger" :loading="busy" @click="executeDelete">Remove</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
 </template>
 
 <script lang="ts">
-export default {
-  layout: (h: any, page: any) => h(AppLayout, [page]),
+
+interface Author {
+  name?: string
+  email?: string
+  homepage?: string
 }
+
+interface Package {
+  name: string
+  label: string
+  vendor: string
+  package: string
+  description: string
+  latest: string | null
+  type: string
+  keywords: string[]
+  homepage: string
+  authors: Author[]
+  require: Record<string, string>
+  license: string[]
+  installed: boolean
+  enabled: boolean
+  version: string | null
+  updateAvailable: boolean
+  path: string | null
+  module_name: string
+}
+
+export default defineComponent({
+  layout: (h: any, page: any) => h(AppLayout, [page]),
+
+  props: {
+    package: {
+      type: Object as () => Package,
+      required: true,
+    },
+  },
+
+  data() {
+    return {
+      busy: false,
+      showDeleteConfirm: false,
+    }
+  },
+
+  methods: {
+    install() {
+      this.busy = true
+      router.post(
+        `/admin/packages/${this.package.vendor}/${this.package.package}/install`,
+        {},
+        { onFinish: () => (this.busy = false) }
+      )
+    },
+
+    upgrade() {
+      this.busy = true
+      router.post(
+        `/admin/packages/${this.package.vendor}/${this.package.package}/upgrade`,
+        {},
+        { onFinish: () => (this.busy = false) }
+      )
+    },
+
+    confirmDelete() {
+      this.showDeleteConfirm = true
+    },
+
+    executeDelete() {
+      this.showDeleteConfirm = false
+      this.busy = true
+      router.delete(
+        `/admin/packages/${this.package.vendor}/${this.package.package}`,
+        { onFinish: () => (this.busy = false) }
+      )
+    },
+
+    toggleModule() {
+      const action = this.package.enabled ? 'disable' : 'enable'
+      this.busy = true
+      router.post(
+        `/admin/packages/${this.package.vendor}/${this.package.package}/${action}`,
+        {},
+        { onFinish: () => (this.busy = false) }
+      )
+    },
+  },
+})
 </script>
