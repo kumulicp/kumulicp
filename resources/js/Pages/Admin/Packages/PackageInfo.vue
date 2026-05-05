@@ -6,7 +6,7 @@ import { defineComponent } from 'vue'
 
 <template>
   <Head>
-    <title>{{ package.label }} - Package Manager</title>
+    <title>{{ package.label }} - {{ $t('admin.packages.packageManager') }} - Control Panel</title>
   </Head>
 
   <!-- Header Card -->
@@ -22,12 +22,12 @@ import { defineComponent } from 'vue'
             <va-badge
               v-if="package.installed"
               :color="package.enabled ? 'success' : 'warning'"
-              :text="package.enabled ? 'Enabled' : 'Disabled'"
+              :text="package.enabled ? $t('admin.packages.filterEnabled') : $t('admin.packages.filterDisabled')"
             />
-            <va-badge v-else color="secondary" text="Not installed" />
-            <va-badge v-if="package.updateAvailable" color="warning" text="Update available" />
+            <va-badge v-else color="secondary" :text="$t('admin.packages.notInstalled')" />
+            <va-badge v-if="package.updateAvailable" color="warning" :text="$t('admin.packages.updateAvailable')" />
           </div>
-          <p class="text-gray-500 text-sm">{{ package.description || 'No description provided.' }}</p>
+          <p class="text-gray-500 text-sm">{{ package.description || $t('admin.packages.noDescription') }}</p>
           <div v-if="package.keywords.length" class="flex flex-wrap gap-1 mt-2">
             <va-chip
               v-for="kw in package.keywords"
@@ -47,7 +47,7 @@ import { defineComponent } from 'vue'
             :loading="busy"
             :disabled="busy"
             @click="install"
-          >Install</va-button>
+          >{{ $t('admin.packages.install') }}</va-button>
 
           <!-- Upgrade -->
           <va-button
@@ -57,7 +57,7 @@ import { defineComponent } from 'vue'
             :loading="busy"
             :disabled="busy"
             @click="upgrade"
-          >Upgrade to {{ package.latest }}</va-button>
+          >{{ $t('admin.packages.upgradeToVersion', { version: package.latest }) }}</va-button>
 
           <!-- Enable / Disable -->
           <va-button
@@ -67,7 +67,7 @@ import { defineComponent } from 'vue'
             :loading="busy"
             :disabled="busy"
             @click="toggleModule"
-          >{{ package.enabled ? 'Disable' : 'Enable' }}</va-button>
+          >{{ package.enabled ? $t('admin.packages.disable') : $t('admin.packages.enable') }}</va-button>
 
           <!-- Remove -->
           <va-button
@@ -78,7 +78,7 @@ import { defineComponent } from 'vue'
             :loading="busy"
             :disabled="busy"
             @click="confirmDelete"
-          >Remove</va-button>
+          >{{ $t('common.remove') }}</va-button>
         </div>
       </div>
     </va-card-content>
@@ -89,32 +89,32 @@ import { defineComponent } from 'vue'
     <div class="flex flex-col md12">
       <!-- Metadata -->
       <va-card class="mb-4">
-        <va-card-title>Package Details</va-card-title>
+        <va-card-title>{{ $t('admin.packages.packageDetails') }}</va-card-title>
         <va-card-content>
           <table class="va-table w-full">
             <tbody>
               <tr>
-                <td class="font-semibold text-gray-500 w-40">Package</td>
+                <td class="font-semibold text-gray-500 w-40">{{ $t('admin.packages.package') }}</td>
                 <td class="font-mono">{{ package.name }}</td>
               </tr>
               <tr>
-                <td class="font-semibold text-gray-500">Type</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.type') }}</td>
                 <td>{{ package.type }}</td>
               </tr>
               <tr>
-                <td class="font-semibold text-gray-500">Latest version</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.latestVersion') }}</td>
                 <td class="font-mono">{{ package.latest ?? '—' }}</td>
               </tr>
               <tr v-if="package.installed">
-                <td class="font-semibold text-gray-500">Installed version</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.installedVersion') }}</td>
                 <td class="font-mono">{{ package.version ?? '?' }}</td>
               </tr>
               <tr v-if="package.license.length">
-                <td class="font-semibold text-gray-500">License</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.license') }}</td>
                 <td>{{ package.license.join(', ') }}</td>
               </tr>
               <tr v-if="package.homepage">
-                <td class="font-semibold text-gray-500">Homepage</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.homepage') }}</td>
                 <td>
                   <a :href="package.homepage" target="_blank" class="text-primary hover:underline break-all">
                     {{ package.homepage }}
@@ -122,24 +122,24 @@ import { defineComponent } from 'vue'
                 </td>
               </tr>
               <tr v-if="package.installed && package.path">
-                <td class="font-semibold text-gray-500">Module path</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.modulePath') }}</td>
                 <td class="font-mono text-sm break-all">{{ package.path }}</td>
               </tr>
               <tr v-if="package.installed">
-                <td class="font-semibold text-gray-500">Module name</td>
+                <td class="font-semibold text-gray-500">{{ $t('admin.packages.moduleName') }}</td>
                 <td class="font-mono">{{ package.module_name }}</td>
               </tr>
             </tbody>
           </table>
         </va-card-content>
         <template v-if="Object.keys(package.require).length">
-          <va-card-title>Requirements</va-card-title>
+          <va-card-title>{{ $t('admin.packages.requirements') }}</va-card-title>
           <va-card-content>
             <table class="va-table w-full">
               <thead>
                 <tr>
-                  <th>Package</th>
-                  <th>Constraint</th>
+                  <th>{{ $t('admin.packages.package') }}</th>
+                  <th>{{ $t('admin.packages.constraint') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -151,7 +151,7 @@ import { defineComponent } from 'vue'
             </table>
           </va-card-content>
         </template>
-        <va-card-title>Authors</va-card-title>
+        <va-card-title>{{ $t('admin.packages.authors') }}</va-card-title>
         <va-card-content>
           <div
             v-for="author in package.authors"
@@ -175,14 +175,14 @@ import { defineComponent } from 'vue'
   <!-- Delete Confirmation Modal -->
   <va-modal v-model="showDeleteConfirm" no-padding size="small">
     <template #content="{ ok }">
-      <va-card-title>Remove Package</va-card-title>
+      <va-card-title>{{ $t('admin.packages.removePackageTitle') }}</va-card-title>
       <va-card-content>
-        <p>Remove <strong class="font-mono">{{ package.name }}</strong>?</p>
-        <p class="text-sm text-gray-500 mt-1">This will run composer remove and delete the module directory.</p>
+        <p>{{ $t('admin.packages.removePackageConfirm', { name: package.name }) }}</p>
+        <p class="text-sm text-gray-500 mt-1">{{ $t('admin.packages.removePackageMessage') }}</p>
       </va-card-content>
       <va-card-actions align="right">
-        <va-button color="textInverted" @click="ok">Cancel</va-button>
-        <va-button color="danger" :loading="busy" @click="executeDelete">Remove</va-button>
+        <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+        <va-button color="danger" :loading="busy" @click="executeDelete">{{ $t('common.remove') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>

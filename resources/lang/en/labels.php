@@ -67,4 +67,5 @@ return [
     'none_org_type' => 'Individual',
     'enabled' => 'Enabled',
     'disabled' => 'Disabled',
+    'package_manager' => 'Plugin Manager',
 ];

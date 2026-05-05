@@ -20,7 +20,7 @@ class Packages extends Controller
 
         return inertia()->render('Admin/Packages/PackagesList', [
             'packages' => $packages,
-            'breadcrumbs' => [['label' => 'Package Manager']],
+            'breadcrumbs' => [['label' => __('labels.package_manager')]],
         ]);
     }
 
@@ -35,7 +35,7 @@ class Packages extends Controller
             'package' => $info,
             'breadcrumbs' => [
                 [
-                    'label' => 'Package Manager',
+                    'label' => __('labels.package_manager'),
                     'url' => '/admin/packages',
                 ],
                 [
@@ -61,7 +61,7 @@ class Packages extends Controller
         );
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Package '{$request->package}' installed successfully.");
+            return redirect()->back()->with('success', __('admin.packages.installed', ['package' => $request->package]));
         }
 
         return redirect()->back()->with('error', $result['error'] ?: $result['output']);
@@ -79,7 +79,7 @@ class Packages extends Controller
         $result = $this->manager->installFromZip($request->file('module'));
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Module '{$result['module']}' installed successfully.");
+            return redirect()->back()->with('success', __('admin.packages.module_installed', ['module' => $result['module']]));
         }
 
         return redirect()->back()->withErrors(['module' => $result['error']]);
@@ -93,7 +93,7 @@ class Packages extends Controller
         $result = $this->manager->install("{$vendor}/{$package}");
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Package '{$vendor}/{$package}' installed successfully.");
+            return redirect()->back()->with('success', __('admin.packages.installed', ['package' => "{$vendor}/{$package}"]));
         }
 
         return redirect()->back()->with('error', $result['error'] ?: $result['output']);
@@ -107,7 +107,7 @@ class Packages extends Controller
         $result = $this->manager->uninstall("{$vendor}/{$package}");
 
         if ($result['success']) {
-            return redirect('/admin/packages')->with('success', "Package '{$vendor}/{$package}' removed successfully.");
+            return redirect('/admin/packages')->with('success', __('admin.packages.removed', ['package' => "{$vendor}/{$package}"]));
         }
 
         return redirect()->back()->with('error', $result['error'] ?: $result['output']);
@@ -121,7 +121,7 @@ class Packages extends Controller
         $result = $this->manager->upgrade("{$vendor}/{$package}");
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Package '{$vendor}/{$package}' upgraded successfully.");
+            return redirect()->back()->with('success', __('admin.packages.upgraded', ['package' => "{$vendor}/{$package}"]));
         }
 
         return redirect()->back()->with('error', $result['error'] ?: $result['output']);
@@ -136,7 +136,7 @@ class Packages extends Controller
         $result = $this->manager->enable($moduleName);
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Module '{$moduleName}' enabled.");
+            return redirect()->back()->with('success', __('admin.packages.enabled', ['module' => $moduleName]));
         }
 
         return redirect()->back()->with('error', $result['error']);
@@ -151,7 +151,7 @@ class Packages extends Controller
         $result = $this->manager->disable($moduleName);
 
         if ($result['success']) {
-            return redirect()->back()->with('success', "Module '{$moduleName}' disabled.");
+            return redirect()->back()->with('success', __('admin.packages.disabled', ['module' => $moduleName]));
         }
 
         return redirect()->back()->with('error', $result['error']);
