@@ -12,3 +12,7 @@ a:hover {
     color: #000;
     font-weight: bold;
 }
+
+.va-table {
+    width: 100%;
+}
