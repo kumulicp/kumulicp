@@ -1,16 +1,4 @@
 {
-    "repositories": [
-        {
-            "name": "packistry",
-            "type": "composer",
-            "url": "https://packistry.kumuli.dev/r/kumuli",
-            "options": {
-                "ssl": {
-                    "verify_peer": true
-                }
-            }
-        }
-    ],
     "require": {
         "php": "^8.4",
         "api-ecosystem-for-laravel/dingo-api": "^4.2.0",
