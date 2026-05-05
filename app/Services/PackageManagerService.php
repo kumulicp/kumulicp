@@ -293,7 +293,7 @@ class PackageManagerService
         try {
             $zip = new ZipArchive;
             if ($zip->open($file->getRealPath()) !== true) {
-                return ['success' => false, 'error' => 'Could not open zip archive.'];
+                return ['success' => false, 'error' => __('admin.packages.error_zip_open')];
             }
 
             $zip->extractTo($tmpDir);
@@ -302,7 +302,7 @@ class PackageManagerService
             // Determine the module root inside the zip (first top-level directory)
             $entries = File::directories($tmpDir);
             if (empty($entries)) {
-                return ['success' => false, 'error' => 'Zip must contain a single top-level module directory.'];
+                return ['success' => false, 'error' => __('admin.packages.error_zip_no_dir')];
             }
 
             $moduleRoot = $entries[0];
@@ -343,19 +343,19 @@ class PackageManagerService
         // module.json — required, must be valid JSON with name/alias/providers
         $moduleJsonPath = "{$path}/module.json";
         if (! File::exists($moduleJsonPath)) {
-            $errors[] = 'Missing module.json.';
+            $errors[] = __('admin.packages.error_missing_module_json');
         } else {
             $moduleJson = json_decode(File::get($moduleJsonPath), true);
             if (! is_array($moduleJson)) {
-                $errors[] = 'module.json contains invalid JSON.';
+                $errors[] = __('admin.packages.error_invalid_module_json');
             } else {
                 foreach (['name', 'alias', 'providers'] as $field) {
                     if (empty($moduleJson[$field])) {
-                        $errors[] = "module.json is missing required field: '{$field}'.";
+                        $errors[] = __('admin.packages.error_module_json_missing_field', ['field' => $field]);
                     }
                 }
                 if (! empty($moduleJson['providers']) && ! is_array($moduleJson['providers'])) {
-                    $errors[] = "module.json 'providers' must be an array.";
+                    $errors[] = __('admin.packages.error_module_json_providers_array');
                 }
             }
         }
@@ -363,26 +363,26 @@ class PackageManagerService
         // composer.json — required, must have a valid name field
         $composer_json_path = "{$path}/composer.json";
         if (! File::exists($composer_json_path)) {
-            $errors[] = 'Missing composer.json.';
+            $errors[] = __('admin.packages.error_missing_composer_json');
         } else {
             $composer_json = json_decode(File::get($composer_json_path), true);
             if (! is_array($composer_json)) {
-                $errors[] = 'composer.json contains invalid JSON.';
+                $errors[] = __('admin.packages.error_invalid_composer_json');
             } elseif (empty($composer_json['name']) || ! str_contains($composer_json['name'], '/')) {
-                $errors[] = "composer.json 'name' must be in vendor/package format.";
+                $errors[] = __('admin.packages.error_composer_json_name');
             }
         }
 
         // Providers directory — must exist and contain at least one PHP file
         $providers_path = "{$path}/Providers";
         if (! File::isDirectory($providers_path) || empty(File::files($providers_path))) {
-            $errors[] = 'Missing Providers directory or no provider files found.';
+            $errors[] = __('admin.packages.error_missing_providers');
         }
 
         // Routes directory — should exist (web.php or api.php)
         $routes_path = "{$path}/Routes";
         if (! File::isDirectory($routes_path)) {
-            $errors[] = 'Missing Routes directory.';
+            $errors[] = __('admin.packages.error_missing_routes');
         }
 
         return $errors;
@@ -395,7 +395,7 @@ class PackageManagerService
     {
         $module = Module::find($moduleName);
         if (! $module) {
-            return ['success' => false, 'error' => "Module '{$moduleName}' not found."];
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $moduleName])];
         }
 
         Artisan::call('module:enable', ['module' => $moduleName]);
@@ -411,7 +411,7 @@ class PackageManagerService
     {
         $module = Module::find($moduleName);
         if (! $module) {
-            return ['success' => false, 'error' => "Module '{$moduleName}' not found."];
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $moduleName])];
         }
 
         Artisan::call('module:disable', ['module' => $moduleName]);

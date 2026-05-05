@@ -121,8 +121,8 @@ export default defineComponent({
     },
 
     statusLabel(pkg: Package): string {
-      if (!pkg.installed) return 'Available'
-      return pkg.enabled ? 'Enabled' : 'Disabled'
+      if (!pkg.installed) return this.$t('admin.packages.filterAvailable')
+      return pkg.enabled ? this.$t('admin.packages.filterEnabled') : this.$t('admin.packages.filterDisabled')
     },
   },
 })
@@ -130,12 +130,12 @@ export default defineComponent({
 
 <template>
   <Head>
-    <title>Package Manager - Control Panel</title>
+    <title>{{ $t('admin.packages.packageManager') }} - Control Panel</title>
   </Head>
 
   <va-card class="mb-4">
     <va-card-title>
-      <span>Package Manager</span>
+      <span>{{ $t('admin.packages.packageManager') }}</span>
     </va-card-title>
 
     <va-card-content>
@@ -144,7 +144,7 @@ export default defineComponent({
         <div class="flex flex-col md6">
           <va-input
             v-model="search"
-            placeholder="Search packages…"
+            :placeholder="$t('admin.packages.searchPlaceholder')"
             clearable
           >
             <template #prepend>
@@ -156,13 +156,13 @@ export default defineComponent({
         <div class="flex flex-col md3">
           <va-select
             v-model="filterState"
-            label="Filter"
+            :label="$t('admin.packages.filter')"
             :options="[
-              { text: 'All', value: 'all' },
-              { text: 'Installed', value: 'installed' },
-              { text: 'Available', value: 'available' },
-              { text: 'Enabled', value: 'enabled' },
-              { text: 'Disabled', value: 'disabled' },
+              { text: $t('admin.packages.filterAll'), value: 'all' },
+              { text: $t('admin.packages.filterInstalled'), value: 'installed' },
+              { text: $t('admin.packages.filterAvailable'), value: 'available' },
+              { text: $t('admin.packages.filterEnabled'), value: 'enabled' },
+              { text: $t('admin.packages.filterDisabled'), value: 'disabled' },
             ]"
             text-by="text"
             value-by="value"
@@ -171,7 +171,7 @@ export default defineComponent({
 
         <div class="flex flex-col md3 items-end">
           <va-button icon="fa-file-zipper" @click="openUpload">
-            Install from ZIP
+            {{ $t('admin.packages.installFromZip') }}
           </va-button>
         </div>
       </div>
@@ -181,17 +181,17 @@ export default defineComponent({
         <table class="va-table va-table--hoverable w-full">
           <thead>
             <tr>
-              <th>Package</th>
-              <th>Description</th>
-              <th>Version</th>
-              <th>Status</th>
-              <th class="text-right">Actions</th>
+              <th>{{ $t('admin.packages.package') }}</th>
+              <th>{{ $t('admin.packages.description') }}</th>
+              <th>{{ $t('admin.packages.version') }}</th>
+              <th>{{ $t('admin.packages.status') }}</th>
+              <th class="text-right">{{ $t('admin.packages.actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="filtered.length === 0">
               <td colspan="5" class="text-center py-6 text-gray-400">
-                No packages found.
+                {{ $t('admin.packages.noPackagesFound') }}
               </td>
             </tr>
             <tr v-for="pkg in filtered" :key="pkg.name">
@@ -200,7 +200,7 @@ export default defineComponent({
                   <span class="block font-semibold text-primary">{{ pkg.label }}</span>
                   <span class="block font-mono text-xs text-gray-400">{{ pkg.name }}</span>
                 </a>
-                <div v-if="pkg.source === 'local'" class="text-xs text-gray-400">local only</div>
+                <div v-if="pkg.source === 'local'" class="text-xs text-gray-400">{{ $t('admin.packages.localOnly') }}</div>
               </td>
               <td class="text-sm text-gray-600 max-w-xs truncate">
                 {{ pkg.description || '—' }}
@@ -209,7 +209,7 @@ export default defineComponent({
                 <span v-if="pkg.installed">{{ pkg.version ?? '?' }}</span>
                 <span v-else class="text-gray-400">{{ pkg.latest ?? '—' }}</span>
                 <div v-if="pkg.updateAvailable" class="text-xs text-warning mt-0.5">
-                  {{ pkg.latest }} available
+                  {{ $t('admin.packages.latestAvailable', { version: pkg.latest }) }}
                 </div>
               </td>
               <td>
@@ -225,7 +225,7 @@ export default defineComponent({
                   preset="plain"
                   icon="fa-download"
                   color="primary"
-                  title="Install"
+                  :title="$t('admin.packages.install')"
                   @click="confirmInstall(pkg)"
                 />
 
@@ -235,7 +235,7 @@ export default defineComponent({
                   preset="plain"
                   :icon="pkg.enabled ? 'fa-toggle-on' : 'fa-toggle-off'"
                   :color="pkg.enabled ? 'success' : 'warning'"
-                  :title="pkg.enabled ? 'Disable' : 'Enable'"
+                  :title="pkg.enabled ? $t('admin.packages.disable') : $t('admin.packages.enable')"
                   @click="toggleModule(pkg)"
                 />
 
@@ -245,7 +245,7 @@ export default defineComponent({
                   preset="plain"
                   icon="fa-circle-up"
                   color="warning"
-                  title="Upgrade"
+                  :title="$t('admin.packages.upgrade')"
                   @click="upgradePackage(pkg)"
                 />
 
@@ -254,7 +254,7 @@ export default defineComponent({
                   preset="plain"
                   icon="fa-circle-info"
                   color="secondary"
-                  title="View info"
+                  :title="$t('admin.packages.viewInfo')"
                   :href="'/admin/packages/' + pkg.name"
                   tag="a"
                 />
@@ -265,7 +265,7 @@ export default defineComponent({
                   preset="plain"
                   icon="delete"
                   color="danger"
-                  title="Remove"
+                  :title="$t('common.remove')"
                   @click="confirmDelete(pkg)"
                 />
               </td>
@@ -275,7 +275,7 @@ export default defineComponent({
       </va-scroll-container>
 
       <div class="mt-3 text-sm text-gray-400">
-        {{ filtered.length }} package{{ filtered.length !== 1 ? 's' : '' }} shown
+        {{ $t(filtered.length !== 1 ? 'admin.packages.packagesShown' : 'admin.packages.packageShown', { count: filtered.length }) }}
       </div>
     </va-card-content>
   </va-card>
@@ -284,10 +284,10 @@ export default defineComponent({
   <va-modal v-model="showUpload" no-outside-dismiss no-padding size="small">
     <template #content="{ ok }">
       <form @submit.prevent="submitUpload">
-        <va-card-title>Install from ZIP</va-card-title>
+        <va-card-title>{{ $t('admin.packages.installFromZip') }}</va-card-title>
         <va-card-content>
           <p class="text-sm text-gray-500 mb-3">
-            Select a <span class="font-mono">.zip</span> file containing a valid nwidart/laravel-modules module.
+            {{ $t('admin.packages.zipInstructions') }}
           </p>
           <va-file-upload
             v-model="uploadForm.module"
@@ -300,13 +300,13 @@ export default defineComponent({
           />
         </va-card-content>
         <va-card-actions align="right">
-          <va-button color="textInverted" :disabled="uploadForm.processing" @click="ok">Cancel</va-button>
+          <va-button color="textInverted" :disabled="uploadForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
           <va-button
             type="submit"
             icon="fa-file-zipper"
             :disabled="uploadForm.processing || !uploadForm.module"
             :loading="uploadForm.processing"
-          >Install</va-button>
+          >{{ $t('admin.packages.install') }}</va-button>
         </va-card-actions>
       </form>
     </template>
@@ -315,14 +315,14 @@ export default defineComponent({
   <!-- Delete Confirmation Modal -->
   <va-modal v-model="showDeleteConfirm" no-padding size="small">
     <template #content="{ ok }">
-      <va-card-title>Remove Package</va-card-title>
+      <va-card-title>{{ $t('admin.packages.removePackageTitle') }}</va-card-title>
       <va-card-content>
-        <p>Remove <strong class="font-mono">{{ pendingDeletePkg?.name }}</strong>?</p>
-        <p class="text-sm text-gray-500 mt-1">This will run composer remove and delete the module directory.</p>
+        <p>{{ $t('admin.packages.removePackageConfirm', { name: pendingDeletePkg?.name }) }}</p>
+        <p class="text-sm text-gray-500 mt-1">{{ $t('admin.packages.removePackageMessage') }}</p>
       </va-card-content>
       <va-card-actions align="right">
-        <va-button color="textInverted" @click="ok">Cancel</va-button>
-        <va-button color="danger" @click="executeDelete">Remove</va-button>
+        <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+        <va-button color="danger" @click="executeDelete">{{ $t('common.remove') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -330,16 +330,16 @@ export default defineComponent({
   <!-- Install Confirmation Modal -->
   <va-modal v-model="showInstallConfirm" no-padding size="small">
     <template #content="{ ok }">
-      <va-card-title>Install Package</va-card-title>
+      <va-card-title>{{ $t('admin.packages.installPackageTitle') }}</va-card-title>
       <va-card-content>
-        <p>Install <strong class="font-mono">{{ pendingInstallPkg?.name }}</strong>?</p>
+        <p>{{ $t('admin.packages.installPackageConfirm', { name: pendingInstallPkg?.name }) }}</p>
         <p v-if="pendingInstallPkg?.latest" class="text-sm text-gray-500 mt-1">
-          Latest version: <span class="font-mono">{{ pendingInstallPkg.latest }}</span>
+          {{ $t('admin.packages.latestVersionLabel') }} <span class="font-mono">{{ pendingInstallPkg.latest }}</span>
         </p>
       </va-card-content>
       <va-card-actions align="right">
-        <va-button color="textInverted" @click="ok">Cancel</va-button>
-        <va-button icon="fa-download" @click="executeInstall">Install</va-button>
+        <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+        <va-button icon="fa-download" @click="executeInstall">{{ $t('admin.packages.install') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
