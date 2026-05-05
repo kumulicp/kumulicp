@@ -239,7 +239,6 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         EventServiceProvider::class,
         // App\Providers\RouteServiceProvider::class,
-        TelescopeServiceProvider::class,
 
         /*
          * Custom Service Providers...
