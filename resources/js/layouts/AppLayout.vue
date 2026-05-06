@@ -152,6 +152,7 @@ onResize()
           <va-breadcrumbs-item v-for="(breadcrumb, index) in $page.props.breadcrumbs" :label="breadcrumb.label"
             :href="breadcrumb.url"
             :key="index"
+            @click.prevent="breadcrumb.url && router.visit(breadcrumb.url)"
             />
         </va-breadcrumbs>
         <slot></slot>
