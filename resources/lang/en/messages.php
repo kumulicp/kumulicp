@@ -174,6 +174,14 @@ return [
             'permissions_removed' => 'Your :role permission have been revoked in :app',
             'go_to' => 'Go To :app',
         ],
+        'org_registration' => [
+            'subject' => 'Complete your registration with :org',
+            'greeting' => 'Hello!',
+            'line1' => 'You\'ve requested to register with :org. Click the button below to verify your email and complete your registration.',
+            'action' => 'Verify Email & Continue',
+            'line2' => 'If you did not request this, you can safely ignore this email.',
+            'expiry' => 'This link will expire in 1 hour.',
+        ],
     ],
     'api' => [
         'nextcloud' => [
@@ -250,6 +258,9 @@ return [
                 ],
             ],
         ],
+    ],
+    'org_registration' => [
+        'token_invalid' => 'This registration link is invalid or has expired. Please request a new one.',
     ],
     'extensions' => [
         'nextcloud' => [

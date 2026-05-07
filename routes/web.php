@@ -361,6 +361,14 @@ Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
     Route::post('setpassword/{code}/save', 'Pub\ChangePassword@store')->name('public.password.store');
     Route::post('{account}/{email}', 'Pub\ChangePassword@update')->name('public.password.update');
     Route::get('/users/done/{code}', 'Pub\ChangePassword@done')->name('public.changepassword.done');
+
+    Route::prefix('org/{organization:slug}')->group(function () {
+        Route::get('register', 'Pub\Register@show')->name('public.org.register');
+        Route::post('register', 'Pub\Register@submit')->name('public.org.register.submit');
+        Route::get('register/pending', 'Pub\Register@pending')->name('public.org.register.pending');
+        Route::get('register/verify/{token}', 'Pub\Register@verify')->name('public.org.register.verify');
+        Route::post('register/verify/{token}', 'Pub\Register@complete')->name('public.org.register.complete');
+    });
 });
 
 Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['auth']], function () {

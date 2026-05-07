@@ -58,7 +58,19 @@
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "orgUserRegisterTitle": "Join {org}",
+    "orgUserRegisterHeading": "Join {org}",
+    "orgUserRegisterSubheading": "Enter your email address to get started. We'll send you a verification link.",
+    "orgUserRegisterContinue": "Continue",
+    "orgRegisterPendingTitle": "Check Your Email",
+    "orgRegisterPendingHeading": "Check Your Email",
+    "orgRegisterPendingLine1": "We've sent a verification link to your email address. Click the link to complete your registration with {org}.",
+    "orgRegisterPendingLine2": "The link will expire in 1 hour. If you don't see the email, check your spam folder.",
+    "orgRegisterPendingTryAgain": "Try a different email",
+    "orgRegisterCompleteTitle": "Complete Registration - {org}",
+    "orgRegisterCompleteHeading": "Complete Your Registration with {org}",
+    "orgRegisterCompleteSubmit": "Create Account"
   },
   "common": {
     "cancel": "Cancel",
