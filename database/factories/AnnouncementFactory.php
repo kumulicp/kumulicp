@@ -19,7 +19,6 @@ class AnnouncementFactory extends Factory
             'short_description' => $this->faker->sentence(10),
             'description' => '<p>'.$this->faker->paragraph().'</p>',
             'affected_apps' => null,
-            'tags' => null,
         ];
     }
 }

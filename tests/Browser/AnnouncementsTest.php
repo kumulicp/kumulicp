@@ -1,36 +1,29 @@
 <?php
 
 use App\Announcement;
+use App\User;
 
 describe('Announcements - Admin Management', function () {
+    beforeEach(function () {
+        $this->actingAs(User::find(1));
+    });
+
     it('shows the announcements list page', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements')
+        visit('/admin/service/announcements')
             ->assertSee('Announcements')
             ->assertSee('Add Announcement');
     });
 
     it('adds a new announcement via the modal', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements')
+        visit('/admin/service/announcements')
             ->click('#addAnnouncement')
-            ->fill('#title', 'New Feature Release')
+            ->fill('#title input', 'New Feature Release')
             ->click('#submit')
             ->assertSee('New Feature Release');
     });
 
     it('shows a validation error when creating an announcement without a title', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements')
+        visit('/admin/service/announcements')
             ->click('#addAnnouncement')
             ->click('#submit')
             ->assertSee('The title field is required');
@@ -43,46 +36,34 @@ describe('Announcements - Admin Management', function () {
             'description' => '<p>Original content</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements/'.$announcement->id.'/edit')
+        visit('/admin/service/announcements/'.$announcement->id.'/edit')
             ->assertSee('Original Title')
-            ->fill('#title', 'Updated Announcement Title')
-            ->fill('#shortDescription', 'Updated summary text')
+            ->fill('#title input', 'Updated Announcement Title')
+            ->fill('#shortDescription input', 'Updated summary text')
             ->click('#submit')
             ->assertSee('Updated Announcement Title');
     });
 
     it('shows the announcement on the list after creation', function () {
-        $announcement = Announcement::create([
+        Announcement::create([
             'title' => 'Listed Announcement',
             'short_description' => 'Visible on list',
             'description' => '<p>Content</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements')
+        visit('/admin/service/announcements')
             ->assertSee('Listed Announcement')
             ->assertSee('Visible on list');
     });
 
     it('removes an announcement after confirming deletion', function () {
-        $announcement = Announcement::create([
+        Announcement::create([
             'title' => 'Announcement To Delete',
             'short_description' => 'Will be removed',
             'description' => '<p>Content</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/admin/service/announcements')
+        visit('/admin/service/announcements')
             ->assertSee('Announcement To Delete')
             ->click('button:has-text("Remove")')
             ->click('button:has-text("Delete")')
@@ -92,6 +73,10 @@ describe('Announcements - Admin Management', function () {
 });
 
 describe('Announcements - Dashboard Display', function () {
+    beforeEach(function () {
+        $this->actingAs(User::find(1));
+    });
+
     it('shows announcements on the organization dashboard', function () {
         Announcement::create([
             'title' => 'Dashboard Announcement',
@@ -99,28 +84,20 @@ describe('Announcements - Dashboard Display', function () {
             'description' => '<p>Dashboard content</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/')
+        visit('/')
             ->assertSee('Dashboard Announcement');
     });
 
     it('shows only the five most recent announcements on the dashboard', function () {
         foreach (range(1, 6) as $i) {
-            Announcement::create([
+            Announcement::factory()->create([
                 'title' => "Announcement {$i}",
                 'short_description' => "Summary {$i}",
-                'description' => '<p>Content</p>',
+                'created_at' => now()->addMinutes($i),
             ]);
         }
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/')
+        visit('/')
             ->assertSee('Announcement 2')
             ->assertSee('Announcement 6')
             ->assertDontSee('Announcement 1');
@@ -133,12 +110,9 @@ describe('Announcements - Dashboard Display', function () {
             'description' => '<p>Full announcement content here</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/')
+        visit('/')
             ->assertSee('Full Read Announcement')
+            ->click('Full Read Announcement')
             ->click('a[href="/announcements/'.$announcement->id.'"]')
             ->assertPathIs('/announcements/'.$announcement->id)
             ->assertSee('Full Read Announcement')
@@ -152,15 +126,13 @@ describe('Announcements - Dashboard Display', function () {
             'description' => '<p>This is the full announcement body</p>',
         ]);
 
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->visit('/announcements/'.$announcement->id)
+        visit('/announcements/'.$announcement->id)
             ->assertSee('Detailed Announcement')
             ->assertSee('This is the full announcement body');
     });
+});
 
+describe('Announcements - Unauthenticated Access', function () {
     it('redirects to login when viewing an announcement while unauthenticated', function () {
         $announcement = Announcement::create([
             'title' => 'Protected Announcement',

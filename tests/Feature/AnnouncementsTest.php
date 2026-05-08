@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Announcement;
+use App\Organization;
+use App\Support\Facades\AccountManager;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
@@ -17,6 +19,27 @@ class AnnouncementsTest extends TestCase
         (new TestSupports)->seed();
 
         return User::find(1);
+    }
+
+    private function nonAdminUser(): User
+    {
+        (new TestSupports)->seed();
+
+        $userInterface = AccountManager::users(Organization::find(1))->add([
+            'username' => 'testnonAdmin',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'name' => 'Test User',
+            'email' => 'testnonadmin@example.com',
+            'password' => 'password',
+            'phone_number' => '1234567890',
+        ]);
+        $userInterface->permissions()->addControlPanelAccess();
+        $user = $userInterface->databaseUser();
+        $user->email_verified_at = now();
+        $user->save();
+
+        return $user;
     }
 
     // Auth: unauthenticated requests are redirected to login
@@ -63,18 +86,15 @@ class AnnouncementsTest extends TestCase
 
     public function test_non_admin_cannot_access_admin_announcements_index()
     {
-        (new TestSupports)->seed();
-        $user = User::factory()->create();
+        $user = $this->nonAdminUser();
 
         $response = $this->actingAs($user)->get('/admin/service/announcements');
-
         $response->assertForbidden();
     }
 
     public function test_non_admin_cannot_create_announcement()
     {
-        (new TestSupports)->seed();
-        $user = User::factory()->create();
+        $user = $this->nonAdminUser();
 
         $response = $this->actingAs($user)->post('/admin/service/announcements', [
             'title' => 'Test Announcement',
@@ -85,8 +105,7 @@ class AnnouncementsTest extends TestCase
 
     public function test_non_admin_cannot_update_announcement()
     {
-        (new TestSupports)->seed();
-        $user = User::factory()->create();
+        $user = $this->nonAdminUser();
         $announcement = Announcement::factory()->create();
 
         $response = $this->actingAs($user)->put('/admin/service/announcements/'.$announcement->id, [
@@ -100,8 +119,7 @@ class AnnouncementsTest extends TestCase
 
     public function test_non_admin_cannot_delete_announcement()
     {
-        (new TestSupports)->seed();
-        $user = User::factory()->create();
+        $user = $this->nonAdminUser();
         $announcement = Announcement::factory()->create();
 
         $response = $this->actingAs($user)->delete('/admin/service/announcements/'.$announcement->id);
