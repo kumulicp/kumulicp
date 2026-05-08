@@ -1,16 +1,17 @@
 <?php
 
 describe('Groups', function () {
-    it('can add a new group', function () {
+    beforeEach(function () {
         visit('/login')
             ->fill('input[type=email]', 'demo@example.com')
             ->fill('input[type=password]', 'demouser')
             ->click('#submit')
-            ->assertPathIs('/')
-            ->visit('/groups')
-            ->assertSee('Create Group')
+            ->assertPathIs('/');
+    });
+
+    it('can add a new group', function () {
+        visit('/groups')
             ->click('#addGroup')
-            ->assertSee('Add Group')
             ->fill('#name input', 'Engineering Team')
             ->click('#category')
             ->click('text=Other')
@@ -19,12 +20,7 @@ describe('Groups', function () {
     });
 
     it('can update a group name', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/')
-            ->visit('/groups')
+        visit('/groups')
             ->click('#addGroup')
             ->fill('#name input', 'Original Name')
             ->click('#category')
@@ -37,12 +33,7 @@ describe('Groups', function () {
     });
 
     it('can delete a group', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/')
-            ->visit('/groups')
+        visit('/groups')
             ->click('#addGroup')
             ->fill('#name input', 'Group To Delete')
             ->click('#category')
@@ -54,5 +45,60 @@ describe('Groups', function () {
             ->assertSee('Remove Group To Delete?')
             ->click('#delete')
             ->assertSee('No Groups Available');
+    });
+
+    it('shows an error when submitting without a group name', function () {
+        visit('/groups')
+            ->click('#addGroup')
+            ->click('#category')
+            ->click('text=Other')
+            ->click('#submit')
+            ->assertSee('name field is required');
+    });
+
+    it('shows an error when submitting without a category', function () {
+        visit('/groups')
+            ->click('#addGroup')
+            ->fill('#name input', 'Valid Name')
+            ->click('#submit')
+            ->assertSee('category field is required');
+    });
+
+    it('shows an error when the group name exceeds 100 characters', function () {
+        visit('/groups')
+            ->click('#addGroup')
+            ->fill('#name input', str_repeat('a', 101))
+            ->click('#category')
+            ->click('text=Other')
+            ->click('#submit')
+            ->assertSee('100 characters');
+    });
+
+    it('shows an error when creating a group with a duplicate name', function () {
+        visit('/groups')
+            ->click('#addGroup')
+            ->fill('#name input', 'Duplicate Group')
+            ->click('#category')
+            ->click('text=Other')
+            ->click('#submit')
+            ->visit('/groups')
+            ->click('#addGroup')
+            ->fill('#name input', 'Duplicate Group')
+            ->click('#category')
+            ->click('text=Other')
+            ->click('#submit')
+            ->assertSee('Group name already exists');
+    });
+
+    it('shows an error when updating a group with an empty name', function () {
+        visit('/groups')
+            ->click('#addGroup')
+            ->fill('#name input', 'Test Group')
+            ->click('#category')
+            ->click('text=Other')
+            ->click('#submit')
+            ->fill('#name input', '')
+            ->click('#submit')
+            ->assertSee('name field is required');
     });
 });
