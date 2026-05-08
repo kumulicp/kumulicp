@@ -1,12 +1,11 @@
 <?php
 
+use App\User;
+
 describe('Profile Update', function () {
     beforeEach(function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/');
+        $user = User::where('email', 'demo@example.com')->first();
+        $this->actingAs($user);
     });
 
     it('renders the profile edit page with all fields', function () {
@@ -20,9 +19,9 @@ describe('Profile Update', function () {
 
     it('displays the current user data pre-filled in the form', function () {
         visit('/profile')
-            ->assertSee('Demo')
-            ->assertSee('User')
-            ->assertSee('demo@example.com');
+            ->assertValue('#firstName input', 'Demo')
+            ->assertValue('#lastName input', 'User')
+            ->assertValue('#personalEmail input', 'demo@example.com');
     });
 
     it('successfully updates first name and last name', function () {
@@ -57,6 +56,17 @@ describe('Profile Update', function () {
             ->assertSee('Current Password')
             ->assertSee('New Password')
             ->assertSee('Confirm New Password');
+    });
+
+    it('successfully changes the password', function () {
+        visit('/profile')
+            ->click('#changePassword')
+            ->fill('#currentPassword input', 'demouser')
+            ->fill('#password input', 'NewStr0ng@Pass1')
+            ->fill('#passwordConfirmation input', 'NewStr0ng@Pass1')
+            ->click('#updatePassword')
+            ->assertPathIs('/profile')
+            ->assertSee('Password updated!');
     });
 
 });
