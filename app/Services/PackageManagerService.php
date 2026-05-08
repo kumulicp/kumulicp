@@ -478,7 +478,7 @@ class PackageManagerService
         $composer = json_decode(File::get(base_path('composer.json')), true);
 
         foreach ($composer['repositories'] ?? [] as $repo) {
-            if (($repo['name'] ?? '') === 'packistry') {
+            if (($repo['name'] ?? '') === 'kumulicp') {
                 return $repo['url'] ?? '';
             }
         }
