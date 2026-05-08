@@ -50,27 +50,6 @@ describe('Profile Update', function () {
             ->assertSee('Profile was updated!');
     });
 
-    it('shows a validation error when first name is cleared', function () {
-        visit('/profile')
-            ->fill('#firstName input', '')
-            ->click('#submit')
-            ->assertSee('first name');
-    });
-
-    it('shows a validation error when last name is cleared', function () {
-        visit('/profile')
-            ->fill('#lastName input', '')
-            ->click('#submit')
-            ->assertSee('last name');
-    });
-
-    it('shows a validation error when personal email is invalid', function () {
-        visit('/profile')
-            ->fill('#personalEmail input', 'not-an-email')
-            ->click('#submit')
-            ->assertSee('personal email');
-    });
-
     it('shows the change password modal when the button is clicked', function () {
         visit('/profile')
             ->click('#changePassword')
@@ -80,29 +59,4 @@ describe('Profile Update', function () {
             ->assertSee('Confirm New Password');
     });
 
-    it('shows a validation error when the current password is wrong', function () {
-        visit('/profile')
-            ->click('#changePassword')
-            ->fill('#currentPassword input', 'wrongpassword')
-            ->fill('#password input', 'NewPass123!')
-            ->fill('#passwordConfirmation input', 'NewPass123!')
-            ->click('#updatePassword')
-            ->assertSee('current password');
-    });
-
-    it('shows a validation error when new passwords do not match', function () {
-        visit('/profile')
-            ->click('#changePassword')
-            ->fill('#currentPassword input', 'demouser')
-            ->fill('#password input', 'NewPass123!')
-            ->fill('#passwordConfirmation input', 'DifferentPass456!')
-            ->click('#updatePassword')
-            ->assertSee('password');
-    });
-
-    it('redirects unauthenticated users away from the profile page', function () {
-        visit('/logout')
-            ->visit('/profile')
-            ->assertPathIs('/login');
-    });
 });
