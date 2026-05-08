@@ -7,7 +7,7 @@ describe('Login', function () {
         visit('/login')
             ->assertSee('Email')
             ->assertSee('Password')
-            ->assertSee('Keep Logged In')
+            ->assertSee('Keep me logged in')
             ->assertSee('Forgot');
     });
 
