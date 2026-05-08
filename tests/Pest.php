@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Artisan;
+use Tests\Support\TestSupports;
 use Tests\TestCase;
 
 /*
@@ -18,7 +19,7 @@ use Tests\TestCase;
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
 
 pest()->beforeEach(function () {
-        Artisan::call('db:seed DemoSeeder');
+    (new TestSupports())->seed();
     })
     ->in('Browser');
 
