@@ -27,7 +27,7 @@ class HomeController extends Controller
         $o = Organization::account()->slug;
         $date = new Carbon;
         $converter = new ByteConversion;
-        $announcements = Announcement::orderBy('created_at', 'desc')->limit(5)->get();
+        $announcements = Announcement::latest()->limit(5)->get();
 
         $folder_groups = null;
         $nextcloud = Organization::appByName('nextcloud');
