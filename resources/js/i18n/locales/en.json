@@ -73,7 +73,8 @@
     "confirm": "Confirm",
     "name": "Name",
     "yes": "Yes!",
-    "view": "View"
+    "view": "View",
+    "soundsGood": "Sounds Good!"
   },
   "modal": {
     "ok": "Ok"

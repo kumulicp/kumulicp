@@ -172,7 +172,7 @@ class DemoSeeder extends Seeder
                 'org_type' => 'business',
                 'features' => '[{"name":"Price","description":"Free"},{"name":"Storage","description":"?"}]',
                 'app_plans' => '{"nextcloud": {"max": "1", "plans": [1]}, "wordpress": {"max": "1", "plans": [3]}}',
-                'settings' => '{"base": {"price": null, "storage": null, "price_id": null}, "suborganizations": {"enabled": false}, "basic": {"max": null, "name": null, "price": null, "amount": null, "storage": null, "price_id": null}, "email": {"max": null, "price": null, "storage": null, "price_id": null}, "storage": {"max": null, "price": null, "amount": null, "price_id": null}, "standard": {"max": null, "price": null, "storage": null, "price_id": null}, "application": {"max": null, "price": null, "price_id": null}}',
+                'settings' => '{"base": {"price": null, "storage": null, "price_id": null}, "suborganizations": {"enabled": false}, "basic": {"max": null, "name": "Volunteer", "price": null, "amount": null, "storage": null, "price_id": null}, "email": {"max": null, "price": null, "storage": null, "price_id": null}, "storage": {"max": null, "price": null, "amount": null, "price_id": null}, "standard": {"max": null, "price": null, "storage": null, "price_id": null}, "application": {"max": null, "price": null, "price_id": null}}',
             ],
             [
                 'id' => 2,
