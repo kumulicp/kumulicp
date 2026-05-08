@@ -90,7 +90,7 @@ class Versions extends Controller
         $app_version->admin_path = $admin_path;
         $app_version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
     }
 
     public function edit(Application $app, AppVersion $version)
