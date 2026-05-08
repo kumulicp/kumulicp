@@ -1,7 +1,7 @@
 // This is a temporary location for this until I have a proper repo setup
     "repositories": [
         {
-            "name": "kumulicp-repo",
+            "name": "kumulicp",
             "type": "composer",
             "url": "",
             "options": {
