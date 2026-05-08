@@ -159,6 +159,7 @@ return [
         'announcements' => 'Announcements',
         'created' => 'Announcement created',
         'updated' => 'Announcement updated',
+        'deleted' => 'Announcement deleted',
         'emailed' => 'Announcement emailed to users successfully',
     ],
     'logs' => [

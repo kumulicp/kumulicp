@@ -2,11 +2,22 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Announcement extends Model
 {
+    use HasFactory;
+
     protected $table = 'announcements';
+
+    protected $fillable = [
+        'title',
+        'short_description',
+        'description',
+        'tags',
+        'affected_apps',
+    ];
 
     protected $casts = [
         'tags' => 'array',
