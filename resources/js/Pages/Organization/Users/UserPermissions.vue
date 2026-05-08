@@ -11,62 +11,64 @@ import { useForm, Link } from '@inertiajs/vue3'
   <va-modal v-model="showAppPermissionsModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content>
       <va-card-title class="m-0"> {{ $t('organization.users.updateApp', { name: appPermissions.name }) }} </va-card-title>
-      <va-card-content class="m-0"><!--
-        <va-switch v-if="typeof appPermissions.allow === 'boolean'"
-          v-model="appAccessType[appPermissions.id]"
-          label="control panel"
-          true-value="standard"
-          false-value="none"
-          @update:modelValue="updateRoleOptions(appPermissions)"
-          />-->
-        <va-select
-            v-if="plan.type === 'app' && filteredPermissions[appPermissions.id]['full'] === true"
-            :id="'roles-'+appPermissions.id"
-            v-model="appAccessTypeFiltered[appPermissions.id]"
-            class="my-2"
-            :label="$t('organization.users.appAccessTypeLabel', { name: appPermissions.name })"
-            :messages="$t('organization.users.filterAppRoles')"
-            :options="appPermissions.access_types"
-            immediateValidation
-            text-by="text"
-            value-by="value"
-            @update:modelValue="updateRoleOptions(appPermissions)"
-          />
-        <template v-for="(category, index) in filteredPermissions[appPermissions.id]['categories']" :key="index">
-          <va-select
-            :label="category.name"
-            v-if="category.roles.length > 2"
-            :id="'roles-'+appPermissions.id"
-            v-model="form['permission'][appPermissions.id][category.id]"
-            class="my-2"
-            :options="category.roles"
-            :placeholder="category.active_role"
-            :messages="getMessage(appPermissions)"
-            text-by="text"
-            value-by="value"
-            disabled-by="disabled"
-            immediateValidation
-            :error="errors[appPermissions.id][index]"
-            :error-messages="errors[appPermissions.id][index]"
-            @click="updateSelectedCategory(appPermissions.id, category.id)"
-          />
-          <div v-else>
-            <va-switch
-              v-model="form['permission'][appPermissions.id][category.id]"
-              :label="category.name+' '+category['roles'][1]['text']"
-              :messages="category.roles[1]['disabled'] ? $t('organization.users.maxUsersReached') : ''"
+      <va-card-content class="m-0">
+        <template v-if="plan.type === 'app' && appPermissions.id && permissions[appPermissions.id] && appPermissions.access_types">
+          <template v-for="accessType in appPermissions.access_types" :key="accessType.value">
+            <template v-if="accessType.value !== 'none' && getRolesForAccessType(appPermissions.id, accessType.value).length > 0">
+              <h6 class="va-h6 mt-3 mb-1">{{ accessType.text }}</h6>
+              <template v-for="item in getRolesForAccessType(appPermissions.id, accessType.value)" :key="item.category.id + '-' + item.role.value">
+                <va-switch
+                  :id="'switch-' + item.category.id + '-' + item.role.value"
+                  v-model="localPermissions[item.category.id]"
+                  :label="item.category.name + ' ' + item.role.text"
+                  class="my-1 ml-1"
+                  :true-value="item.role.value"
+                  false-value="none"
+                  :disabled="item.role.disabled"
+                  :messages="item.role.disabled ? $t('organization.users.maxUsersReached') : ''"
+                />
+              </template>
+            </template>
+          </template>
+        </template>
+        <template v-else>
+          <template v-for="(category, index) in filteredPermissions[appPermissions.id] && filteredPermissions[appPermissions.id]['categories']" :key="index">
+            <va-select
+              :label="category.name"
+              v-if="category.roles.length > 2"
+              :id="'roles-'+appPermissions.id"
+              v-model="localPermissions[category.id]"
               class="my-2"
+              :options="category.roles"
+              :placeholder="category.active_role"
+              :messages="getMessage(appPermissions)"
+              text-by="text"
+              value-by="value"
+              disabled-by="disabled"
               immediateValidation
-              :true-value="category.roles[1]['value']"
-              false-value="none"
-              :disabled="category.roles[1]['disabled']"
-              @click="permissionsChanged = true"
+              :error="errors[appPermissions.id][index]"
+              :error-messages="errors[appPermissions.id][index]"
+              @click="updateSelectedCategory(appPermissions.id, category.id)"
             />
-          </div>
+            <div v-else>
+              <va-switch
+                :id="'switch-' + category.id + '-' + category.roles[1]['value']"
+                v-model="localPermissions[category.id]"
+                :label="category.name+' '+category['roles'][1]['text']"
+                :messages="category.roles[1]['disabled'] ? $t('organization.users.maxUsersReached') : ''"
+                class="my-2"
+                immediateValidation
+                :true-value="category.roles[1]['value']"
+                false-value="none"
+                :disabled="category.roles[1]['disabled']"
+                @click="permissionsChanged = true"
+              />
+            </div>
+          </template>
         </template>
       </va-card-content>
       <va-card-actions align="right" class="">
-        <va-button @click="updateAccessType(); showAppPermissionsModal = false" id="submit" class="mr-2 mb-2">{{ $t('modal.ok') }}</va-button>
+        <va-button @click="updateAccessType(); showAppPermissionsModal = false" id="modal-ok" class="mr-2 mb-2">{{ $t('modal.ok') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -119,23 +121,23 @@ import { useForm, Link } from '@inertiajs/vue3'
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(permission, index) in filteredPermissions" :key="index">
+              <tr v-for="(app, index) in filteredPermissions" :key="index">
                 <td>
-                  {{ permission.name }} <a href="#" @click="showDescription(permission)"><va-icon name="fa-circle-info" :title="$t('organization.users.roleDescriptions')" /></a>
+                  {{ app.name }} <a href="#" @click="showDescription(app)"><va-icon name="fa-circle-info" :title="$t('organization.users.roleDescriptions')" /></a>
                 </td>
                 <template v-if="plan.type === 'app'">
-                  <td>{{ accessTypes[appAccessType[permission.id]] }}</td>
+                  <td>{{ accessTypes[appAccessType[app.id]] }}</td>
                 </template>
-                <td v-if="permission.categories && permission.categories.length > 0">
-                  <template v-for="(category, index) in permission.categories" :key="index">
-                    <template v-if="form['permission'][permission.id][category.id] !== 'none'">
-                      <va-chip outline class="mr-1" :title="allAppDescriptions[permission.id][category.id]">{{ roleNames[form['permission'][permission.id][category.id]] }}</va-chip>
+                <td v-if="appAccessTypeFiltered[app.id] !== 'none'">
+                  <template v-for="(category, index) in app.categories" :key="index">
+                    <template v-if="form['permission'][app.id][category.id] !== 'none'">
+                      <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[form['permission'][app.id][category.id]] }}</va-chip>
                     </template>
                   </template>
                 </td>
                 <td v-else><va-chip outline class="mr-1">{{ $t('organization.users.noAccess') }}</va-chip></td>
                 <td>
-                  <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && permission.categories && permission.categories.length > 0)" href="#" @click="showAppPermissions(permission)"><va-icon name="fa-lock" :title="$t('organization.users.updatePermissions')" /> {{ $t('organization.users.updatePermissions') }}</a>
+                  <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && app.categories && app.categories.length > 0)" :id="'open-permissions-' + app.id" href="#" @click="showAppPermissions(app)"><va-icon name="fa-lock" :title="$t('organization.users.updatePermissions')" /> {{ $t('organization.users.updatePermissions') }}</a>
                 </td>
               </tr>
             </tbody>
@@ -176,6 +178,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           <va-button
             @click="form.post('/users/'+user.id+'/permissions')"
             :disabled="form.processing"
+            id="modal-confirm"
           >
             {{ $t('organization.users.yesUpdatePermissions') }}
           </va-button>
@@ -200,9 +203,10 @@ import { useForm, Link } from '@inertiajs/vue3'
         <va-card-actions align="right">
           <va-button
             color="primary"
+            id="modal-soundsGood"
             @click="showDescriptionModal = !showDescriptionModal"
           >
-            {{ $t('modal.soundsGood') }}
+            {{ $t('common.soundsGood') }}
           </va-button>
         </va-card-actions>
       </form>
@@ -230,6 +234,7 @@ export default {
     const appAccessTypeFiltered = {}
     const roleNames = {}
     const allAppDescriptions = {}
+
     Object.values(this.permissions).forEach((permission) => {
       permissions[permission.id] = {}
       allAppDescriptions[permission.id] = {}
@@ -283,6 +288,7 @@ export default {
       appDescription: [],
       appPermissions: {},
       showAppPermissionsModal: false,
+      localPermissions: {},
       allAppDescriptions
     }
   },
@@ -315,7 +321,8 @@ export default {
       this.selected_app = app
       this.selected_category = category
     },
-    updateAccessType () {
+    updateAccessType() {
+      Object.assign(this.form.permission[this.appPermissions.id], this.localPermissions)
       this.checkAccessType()
     },
     checkAccessType () {
@@ -350,6 +357,7 @@ export default {
             this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType], name: this.permissions[id].name }))
           }
           this.appAccessType[app.id] = appAccessType
+          this.appAccessTypeFiltered[app.id] = appAccessType
         }
       } else if (this.plan.type === 'package') {
         const confirmedAccessType = this.confirmAccessType()
@@ -369,62 +377,6 @@ export default {
           }
         }
       }
-    },
-    updateRoleOptions (app) {
-      if (!(app.id in this.permissions) || !('categories' in this.permissions[app.id])) {
-        return
-      }
-      const categories = JSON.parse(JSON.stringify(this.permissions[app.id].categories))
-      const filteredCategories = []
-      let standardUsers = 0
-      let basicUsers = 0
-      let minimalUsers = 0
-
-      for (const category of categories) {
-        const newCategory = category
-        this.errors[app.id][category.id] = null
-        const filteredRoles = []
-        const availableRoleNames = []
-        // Will simplify UI if only 1 of each
-        for (const role of category.roles) {
-          if (role.access_type === 'standard') {
-            standardUsers++
-          }
-          if (role.access_type === 'basic') {
-            basicUsers++
-          }
-          if (role.access_type === 'minimal') {
-            minimalUsers++
-          }
-        }
-        if (standardUsers <= 1 && basicUsers <= 1 && minimalUsers <= 1) {
-          this.appAccessTypeFiltered[app.id] = 'standard'
-          this.filteredPermissions[app.id].full = false
-        } else {
-          this.filteredPermissions[app.id].full = true
-        }
-        for (const role of category.roles) {
-          if (this.appAccessTypeFiltered[app.id] === 'standard' ||
-              (this.appAccessTypeFiltered[app.id] === 'basic' && (role.access_type === 'basic' || role.access_type === 'minimal' || role.access_type === 'none')) ||
-              (this.appAccessTypeFiltered[app.id] === 'minimal' && (role.access_type === 'minimal' || role.access_type === 'none'))) {
-            filteredRoles.push(role)
-            availableRoleNames.push(role.value)
-          }
-        }
-        if (!(availableRoleNames.includes(this.form.permission[app.id][category.id]))) {
-          this.form.permission[app.id][category.id] = 'none'
-          this.errors[app.id][category.id] = this.$t('organization.users.accessDowngradedError')
-        }
-        if (availableRoleNames.length === 2 && !this.initialLoad) {
-          this.form.permission[app.id][category.id] = availableRoleNames[1]
-        }
-        newCategory.roles = filteredRoles
-        if (filteredRoles.length > 1) {
-          filteredCategories.push(newCategory)
-        }
-      }
-
-      this.filteredPermissions[app.id].categories = filteredCategories
     },
     updateAllRoleOptions () {
       const apps = JSON.parse(JSON.stringify(this.permissions))
@@ -484,16 +436,29 @@ export default {
         return 'none'
       }
     },
+    getRolesForAccessType (appId, accessTypeValue) {
+      if (!this.permissions[appId]) return []
+      const result = []
+      for (const category of Object.values(this.permissions[appId].categories)) {
+        for (const role of category.roles) {
+          if (role.access_type === accessTypeValue) {
+            result.push({ category, role })
+          }
+        }
+      }
+      return result
+    },
     showDescription (app) {
       this.appDescription = app
       this.showDescriptionModal = true
     },
     showAppPermissions (app) {
       this.appPermissions = app
+      this.localPermissions = JSON.parse(JSON.stringify(this.form.permission[app.id] ?? {}))
       this.showAppPermissionsModal = true
     },
     resetPermissions () {
-      this.filteredPermissions = this.permissions
+      this.filteredPermissions = JSON.parse(JSON.stringify(this.permissions))
       this.form.reset()
       this.form.user.access_type = this.currentAccessType
     }
