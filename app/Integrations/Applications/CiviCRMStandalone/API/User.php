@@ -30,6 +30,8 @@ class User extends CiviCRMStandalone
     {
         $path = $this->basePath().'/ajax/api4/User/create';
 
+        $this->action_description = __('messages.api.civicrm.users.create_user', ['name' => $username]);
+
         $this->json()->post($path, [
             'values' => [
                 'name' => $username,
