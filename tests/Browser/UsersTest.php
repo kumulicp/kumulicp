@@ -1,12 +1,20 @@
 <?php
 
+use App\Support\Facades\AccountManager;
+use App\User;
+
 describe('Users', function () {
     beforeEach(function () {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/');
+        $this->actingAs(User::find(1));
+    });
+
+    afterEach(function () {
+        foreach (['testuser', 'editme', 'deleteme'] as $username) {
+            $user = AccountManager::users()->find($username);
+            if ($user) {
+                $user->delete();
+            }
+        }
     });
 
     it('adds a new user', function () {
@@ -31,6 +39,9 @@ describe('Users', function () {
             ->click('#submit');
 
         visit('/users/editme/edit')
+            ->assertValue('#firstName input', 'Edit')
+            ->assertValue('#lastName input', 'Me')
+            ->assertValue('#personalEmail input', 'editme@example.com')
             ->fill('#firstName input', 'Updated')
             ->fill('#lastName input', 'Name')
             ->click('#submit')
