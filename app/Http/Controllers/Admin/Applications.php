@@ -232,7 +232,7 @@ class Applications extends Controller
             $app->enabled = 1;
             $app->save();
 
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.enabled'));
+            return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.enabled', ['app' => $app->name]));
         } else {
             return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.applications.denied.enable'));
         }
