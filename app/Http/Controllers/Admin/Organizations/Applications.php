@@ -130,6 +130,14 @@ class Applications extends Controller
             ->sort(fn ($a, $b) => version_compare($a->name, $b->name))
             ->values();
 
+        $orgServers = $organization->servers()->with('server')->get()->map(function ($orgServer) {
+            return [
+                'id' => $orgServer->id,
+                'name' => $orgServer->server->name,
+                'type' => $orgServer->server->type,
+            ];
+        });
+
         return inertia()->render('Admin/Organizations/Apps/AppEdit', [
             'organization' => [
                 'id' => $organization->id,
@@ -151,6 +159,9 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
                 'managed_externally' => $external,
+                'database_server_id' => $app->database_server_id,
+                'web_server_id' => $app->web_server_id,
+                'sso_server_id' => $app->sso_server_id,
             ],
             'domain' => [
                 'id' => $app->primary_domain_id ?? 0,
@@ -161,6 +172,7 @@ class Applications extends Controller
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),
             ],
+            'org_servers' => $orgServers,
             'versions' => $versions->map(function ($version) {
                 return [
                     'id' => $version->id,
@@ -225,9 +237,15 @@ class Applications extends Controller
 
         $validated = $request->validate([
             'settings' => 'required|json',
+            'database_server_id' => 'nullable|exists:org_servers,id',
+            'web_server_id' => 'nullable|exists:org_servers,id',
+            'sso_server_id' => 'nullable|exists:org_servers,id',
         ]);
 
         $app->settings = json_decode($validated['settings'], true);
+        $app->database_server_id = $validated['database_server_id'] ?? null;
+        $app->web_server_id = $validated['web_server_id'] ?? null;
+        $app->sso_server_id = $validated['sso_server_id'] ?? null;
         $app->save();
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
