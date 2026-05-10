@@ -17,8 +17,11 @@
   </testsuites>
   <php>
     <server name="APP_ENV" value="testing"/>
+    <server name="APP_KEY" value="base64:48Yd9R8NhGF/mAJ5W7DrweLLBB0nM3LmMEF4yMf6Ch4="/>
     <server name="BCRYPT_ROUNDS" value="4"/>
     <server name="CACHE_DRIVER" value="array"/>
+    <server name="DB_CONNECTION" value="sqlite"/>
+    <server name="DB_DATABASE" value=":memory:"/>
     <server name="MAIL_MAILER" value="array"/>
     <server name="QUEUE_CONNECTION" value="sync"/>
     <server name="SESSION_DRIVER" value="array"/>

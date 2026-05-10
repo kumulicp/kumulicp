@@ -46,7 +46,7 @@ class ApplicationServiceTest extends TestCase
         $this->assertFalse(Application::processConfigurations($app, $app_plan, [])['fake-config']);
         $this->assertTrue(Application::processConfigurations($app, $app_plan, ['fake-config' => true])['fake-config']);
 
-        $this->assertEquals(1, count(Application::configurations($app)));
+        $this->assertEquals(4, count(Application::configurations($app)));
         $this->assertIsArray(Application::profile($app)->configuration('fake-config'));
 
         $this->assertEquals('boolean', Arr::get(Application::validateConfigurations($app), 'configurations.fake-config'));
