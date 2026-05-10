@@ -113,6 +113,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     });
                 });
                 Route::get('domains', 'Admin\Organizations\Domains@index')->name('organizations.domains.index');
+                Route::get('servers', 'Admin\Organizations\OrgServers@index')->name('organizations.servers.index');
+                Route::put('servers/{orgServer}', 'Admin\Organizations\OrgServers@update')->name('organizations.servers.update');
             });
         });
 
