@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from '../AppsLayout.vue'
-import { Link, useForm } from '@inertiajs/vue3'
+import { Link, useForm, router } from '@inertiajs/vue3'
 import draggable from 'vuedraggable'
 
 </script>
@@ -13,6 +13,12 @@ import draggable from 'vuedraggable'
     <div class="flex flex-col xs12 va-text-center">
       <div>
         <va-button id="addPlan" @click="showAddPlan = !showAddPlan">{{ $t('admin.plans.addPlan') }}</va-button>
+        <va-button
+          v-if="selectedPlans.length > 0"
+          class="ml-2"
+          color="secondary"
+          @click="bulkEdit"
+        >{{ $t('admin.plans.bulkEdit') }} ({{ selectedPlans.length }})</va-button>
       </div>
       <va-modal v-model="showAddPlan" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
@@ -54,6 +60,7 @@ import draggable from 'vuedraggable'
       <table class="va-table va-table--hoverable my-3">
         <thead>
           <tr>
+            <th style="width: 40px"></th>
             <th style="width: 50px">{{ $t('admin.plans.default') }}</th>
             <th>{{ $t('admin.plans.name') }}</th>
             <th>{{ $t('admin.plans.description')}}</th>
@@ -63,6 +70,12 @@ import draggable from 'vuedraggable'
         <draggable v-model="order.plans" tag="tbody" item-key="id">
           <template  #item="{ element }">
             <tr style="min-height:300px;">
+              <td>
+                <va-checkbox
+                  :model-value="selectedPlans.includes(element.id)"
+                  @update:model-value="togglePlan(element.id)"
+                />
+              </td>
               <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
               <td><Link :href="'/admin/apps/'+app.slug+'/plans/'+element.id">{{ element.name }}</Link></td>
               <td>{{ element.description }}</td>
@@ -123,6 +136,7 @@ export default {
       showAddPlan: false,
       curPageValue: 1,
       pageSize: 10,
+      selectedPlans: [],
       form: useForm({
         name: '',
         description: ''
@@ -130,6 +144,21 @@ export default {
       order: useForm({
         plans: this.plans
       })
+    }
+  },
+  methods: {
+    togglePlan (id) {
+      const idx = this.selectedPlans.indexOf(id)
+      if (idx === -1) {
+        this.selectedPlans.push(id)
+      } else {
+        this.selectedPlans.splice(idx, 1)
+      }
+    },
+    bulkEdit () {
+      if (this.selectedPlans.length === 0) return
+      const params = this.selectedPlans.map(id => `plans[]=${id}`).join('&')
+      router.visit(`/admin/apps/${this.app.slug}/plans/bulk-edit/edit?${params}`)
     }
   }
 }
