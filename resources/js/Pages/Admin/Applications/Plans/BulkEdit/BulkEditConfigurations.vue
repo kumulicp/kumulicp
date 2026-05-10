@@ -130,7 +130,7 @@ import { useForm } from '@inertiajs/vue3'
           </div>
           <div class="flex flex-col lg3">
             <div>
-              <va-button color="secondary" @click="addNewConfig">{{ $t('admin.plans.addConfig') }}</va-button>
+              <va-button id="confirmAddConfig" color="secondary" @click="addNewConfig">{{ $t('admin.plans.addConfig') }}</va-button>
               <va-button class="ml-3" color="backgroundSecondary" @click="showAddNewConfigOptions = false">{{ $t('admin.plans.hide') }}</va-button>
             </div>
           </div>
@@ -138,7 +138,7 @@ import { useForm } from '@inertiajs/vue3'
       </va-card-content>
     </va-card>
 
-    <va-button v-if="!showAddNewConfigOptions" class="mr-2 mb-2" @click="showAddNewConfigOptions = true">{{ $t('admin.plans.addConfig') }}</va-button>
+    <va-button v-if="!showAddNewConfigOptions" id="addNewConfigButton" class="mr-2 mb-2" @click="showAddNewConfigOptions = true">{{ $t('admin.plans.addConfig') }}</va-button>
     <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>

@@ -15,6 +15,7 @@ import draggable from 'vuedraggable'
         <va-button id="addPlan" @click="showAddPlan = !showAddPlan">{{ $t('admin.plans.addPlan') }}</va-button>
         <va-button
           v-if="selectedPlans.length > 0"
+          id="bulkEditButton"
           class="ml-2"
           color="secondary"
           @click="bulkEdit"
@@ -72,6 +73,7 @@ import draggable from 'vuedraggable'
             <tr style="min-height:300px;">
               <td>
                 <va-checkbox
+                  :id="'plan-checkbox-'+element.id"
                   :model-value="selectedPlans.includes(element.id)"
                   @update:model-value="togglePlan(element.id)"
                 />

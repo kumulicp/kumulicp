@@ -27,6 +27,7 @@ import { useForm } from '@inertiajs/vue3'
             <td class="setting-label">{{ $t('admin.plans.name') }} <span class="va-text-danger">*</span></td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-name'"
                 v-model="form.plans[plan.id].name"
                 :error="!!$page.props.errors[`plans.${plan.id}.name`]"
                 :error-messages="$page.props.errors[`plans.${plan.id}.name`]"
@@ -38,6 +39,7 @@ import { useForm } from '@inertiajs/vue3'
             <td class="setting-label">{{ $t('admin.plans.description') }} <span class="va-text-danger">*</span></td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-description'"
                 v-model="form.plans[plan.id].description"
                 :error="!!$page.props.errors[`plans.${plan.id}.description`]"
                 :error-messages="$page.props.errors[`plans.${plan.id}.description`]"
@@ -48,25 +50,26 @@ import { useForm } from '@inertiajs/vue3'
           <tr>
             <td class="setting-label">{{ $t('admin.plans.defaultPlan') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-checkbox v-model="form.plans[plan.id].default" immediateValidation />
+              <va-checkbox :id="'plan-'+plan.id+'-default'" v-model="form.plans[plan.id].default" immediateValidation />
             </td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.enablePayment') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-checkbox v-model="form.plans[plan.id].payment_enabled" immediateValidation />
+              <va-checkbox :id="'plan-'+plan.id+'-payment-enabled'" v-model="form.plans[plan.id].payment_enabled" immediateValidation />
             </td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.adminAccess') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-checkbox v-model="form.plans[plan.id].admin_access" immediateValidation />
+              <va-checkbox :id="'plan-'+plan.id+'-admin-access'" v-model="form.plans[plan.id].admin_access" immediateValidation />
             </td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.expiresAfter') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-expires-after'"
                 v-model="form.plans[plan.id].expires_after"
                 type="number"
                 min="0"
@@ -80,6 +83,7 @@ import { useForm } from '@inertiajs/vue3'
             <td class="setting-label">{{ $t('admin.plans.trialPeriodFor') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-trial-for'"
                 v-model="form.plans[plan.id].trial_for"
                 type="number"
                 min="0"
@@ -92,13 +96,14 @@ import { useForm } from '@inertiajs/vue3'
           <tr>
             <td class="setting-label">{{ $t('admin.plans.enableDomains') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-checkbox v-model="form.plans[plan.id].domain_enabled" immediateValidation />
+              <va-checkbox :id="'plan-'+plan.id+'-domain-enabled'" v-model="form.plans[plan.id].domain_enabled" immediateValidation />
             </td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.maxDomains') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-domain-max'"
                 v-model="form.plans[plan.id].domain_max"
                 type="number"
                 min="0"
@@ -194,6 +199,7 @@ import { useForm } from '@inertiajs/vue3'
             <td class="setting-label">{{ $t('admin.plans.price') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-base-price'"
                 v-model="form.plans[plan.id].base.price"
                 type="number"
                 min="0"
@@ -207,13 +213,14 @@ import { useForm } from '@inertiajs/vue3'
           <tr>
             <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-input v-model="form.plans[plan.id].base.price_id" immediateValidation />
+              <va-input :id="'plan-'+plan.id+'-base-price-id'" v-model="form.plans[plan.id].base.price_id" immediateValidation />
             </td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.baseStorage') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-input
+                :id="'plan-'+plan.id+'-base-storage'"
                 v-model="form.plans[plan.id].base.storage"
                 type="number"
                 min="0"
