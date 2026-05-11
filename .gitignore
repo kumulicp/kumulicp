@@ -55,3 +55,4 @@ boost.json
 # Playwright browser test artifacts
 tests/Browser/Screenshots
 tests/Browser/Videos
+test-results/
