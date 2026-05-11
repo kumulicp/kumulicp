@@ -15,6 +15,7 @@
         "laravel/socialite": "^5.16",
         "laravel/tinker": "^2.10",
         "laravel/ui": "^4.0",
+        "mews/purifier": "^3.4",
         "nwidart/laravel-modules": "^11.1",
         "socialiteproviders/manager": "^4.9",
         "spatie/laravel-backup": "^9.2",

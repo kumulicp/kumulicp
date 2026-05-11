@@ -95,7 +95,7 @@ export default {
         },
         {
           text: this.$t('navbar.featureRequest'),
-          value: 'feauture'
+          value: 'feature'
         }
       ]
     }
