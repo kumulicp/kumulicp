@@ -49,7 +49,6 @@ docker
 /.vscode
 /.claude
 .mcp.json
-CLAUDE.md
 boost.json
 
 # Playwright browser test artifacts
