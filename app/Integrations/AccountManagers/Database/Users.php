@@ -7,13 +7,13 @@ use App\Mail\CustomInvoice;
 use App\Mail\SubscriptionBilling;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
-use App\User;
+use App\User as UserModel;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Models\Role;
 
-class UsersInterface
+class Users
 {
     private $users = [];
 
@@ -29,7 +29,7 @@ class UsersInterface
         $users = [];
 
         foreach ($this->organization->users as $user) {
-            $users[] = new UserInterface($user);
+            $users[] = new User($user);
         }
 
         return $users;
@@ -37,8 +37,8 @@ class UsersInterface
 
     public function add($input)
     {
-        if (! $user = User::where('username', $input['username'])->first()) {
-            $user = new User;
+        if (! $user = UserModel::where('username', $input['username'])->first()) {
+            $user = new UserModel;
             $user->organization_id = $this->organization->id;
             $user->username = $input['username'];
             $user->name = $input['first_name'].' '.$input['last_name'];
@@ -63,14 +63,14 @@ class UsersInterface
 
     public function find(string $username)
     {
-        if ($user = User::where('username', $username)->first()) {
-            return new UserInterface($user);
+        if ($user = UserModel::where('username', $username)->first()) {
+            return new User($user);
         }
     }
 
     public function findEmail(string $user_email)
     {
-        $user = User::where('email', $user_email)->first();
+        $user = UserModel::where('email', $user_email)->first();
 
         if ($user) {
             return $this->get($user);
@@ -84,7 +84,7 @@ class UsersInterface
         $admins = [];
 
         foreach ($this->organization->users()->role('organization_admin')->get() as $admin) {
-            $admins[] = new UserInterface($admin);
+            $admins[] = new User($admin);
         }
 
         return $admins;
@@ -95,7 +95,7 @@ class UsersInterface
         $billing_managers = [];
 
         foreach ($this->organization->users()->role('billing_manager')->get() as $billing_manager) {
-            $billing_managers[] = new UserInterface($billing_manager);
+            $billing_managers[] = new User($billing_manager);
         }
 
         return collect($billing_managers)->map(function ($manager) {
@@ -154,9 +154,9 @@ class UsersInterface
         }
     }
 
-    public function get(User $user)
+    public function get(UserModel $user)
     {
-        return new UserInterface($user);
+        return new User($user);
     }
 
     public function getUserList()
@@ -174,12 +174,12 @@ class UsersInterface
         $users = collect();
 
         foreach ($this->organization->users as $user) {
-            $users->push(new UserInterface($user));
+            $users->push(new User($user));
         }
 
         foreach ($this->organization->suborganizations as $suborg) {
             foreach ($suborg->users as $user) {
-                $users->push(new UserInterface($user));
+                $users->push(new User($user));
             }
         }
 
@@ -189,18 +189,18 @@ class UsersInterface
     public function paginate(int $items_per_page)
     {
         if (! $this->organization->parent_organization_id) {
-            $users = User::in(Dn::create($this->organization, 'users'));
-        } else {
-            $users = User::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
+            return UserModel::where('organization_id', $this->organization->id)->paginate($items_per_page);
         }
 
-        return $users->orderBy()->paginate($items_per_page);
+        return UserModel::where('organization_id', $this->organization->id)
+            ->whereIn('username', $this->getUserList())
+            ->paginate($items_per_page);
     }
 
     public function map($users)
     {
         return $users->map(function ($user, $value) {
-            return new UserInterface($user);
+            return new User($user);
         });
     }
 }

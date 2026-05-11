@@ -8,9 +8,9 @@ use App\Contracts\AccountManager\PermissionsContract;
 use App\Ldap\Actions\Dn;
 use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
-use App\Ldap\Models\Group;
+use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
-use App\Ldap\Models\User;
+use App\Ldap\Models\User as LdapUser;
 use App\Organization;
 use App\Support\AccountManager\PermissionsManager;
 use App\Support\AccountManager\UserManager;
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use LdapRecord\Models\Attributes\DistinguishedName;
 
-class PermissionsInterface extends PermissionsManager implements PermissionsContract
+class Permissions extends PermissionsManager implements PermissionsContract
 {
     private $roles = [];
 
@@ -31,7 +31,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
     {
         $this->organization = $user->organization();
         if (isset($user->user) && is_a(EmailUser::class, $user->user)) {
-            $user = User::find($user->getDn());
+            $user = LdapUser::find($user->getDn());
         }
 
         $this->user = $user;
@@ -56,7 +56,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
     public function appPermissions(AppInstance $app_instance)
     {
         $app_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
-        $permissions = Group::find($app_dn);
+        $permissions = LdapGroup::find($app_dn);
 
         if ($permissions) {
             if (count($permissions->descendants()->get()) > 0) {
@@ -73,6 +73,20 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
     {
         $app_name = LdapSupport::getAppInstanceID($app_instance);
         $version = $app_instance->version;
+
+        // If no roles given, automatically use default user roles
+        if (count($roles) == 0) {
+            $user_groups = $version->defaultUserRoles();
+
+            foreach ($user_groups as $group) {
+                $group = LdapGroup::find(Dn::create($app_instance->organization, 'applications', [$group->app_slug($app_instance), $app_name]));
+
+                if ($group) {
+                    $roles[] = $group->appRole();
+                }
+            }
+        }
+
 
         $app_roles = $app_instance->application->roles;
 
@@ -259,7 +273,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
 
     public function hasControlPanelAdminAccess()
     {
-        $admin = Group::find(Dn::create('server', 'controlPanelAccess', 'admin'));
+        $admin = LdapGroup::find(Dn::create('server', 'controlPanelAccess', 'admin'));
 
         return $this->user->groups()->exists($admin);
     }
@@ -270,7 +284,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
         $this->addControlPanelAccess($user);
 
         // Add user to admin group
-        $admin_group = Group::find($admin_group);
+        $admin_group = LdapGroup::find($admin_group);
 
         $admin_group->members()->attach($this->user->get());
 
@@ -285,7 +299,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
 
     public function removeControlPanelAdminAccess()
     {
-        $organization = Group::find(Dn::create('server', 'controlPanelAccess', 'admin'));
+        $organization = LdapGroup::find(Dn::create('server', 'controlPanelAccess', 'admin'));
         $organization->members()->detach($this->user->get());
 
         // Update user type; used by plan settings to determine which users will add to the price

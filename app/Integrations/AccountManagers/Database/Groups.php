@@ -2,10 +2,10 @@
 
 namespace App\Integrations\AccountManagers\Database;
 
-use App\Group;
+use App\Group as GroupModel;
 use App\Support\Facades\Organization;
 
-class GroupsInterface
+class Groups
 {
     private $organization;
 
@@ -16,10 +16,10 @@ class GroupsInterface
 
     public function add(array $data)
     {
-        $group = Group::where('name', $data['name'])->first();
+        $group = GroupModel::where('name', $data['name'])->first();
 
         if (! $group) {
-            $group = new Group;
+            $group = new GroupModel;
             $group->organization_id = $this->organization->id;
             $group->slug = $data['name'];
             $group->name = $data['name'];
@@ -27,14 +27,14 @@ class GroupsInterface
             $group->save();
         }
 
-        return new GroupInterface($group);
+        return new Group($group);
     }
 
     public function find(string $group_name, ?string $category = null)
     {
         $group = $this->organization->groups()->where('slug', $group_name)->first();
 
-        return $group ? new GroupInterface($group) : null;
+        return $group ? new Group($group) : null;
     }
 
     public function all()
@@ -91,8 +91,8 @@ class GroupsInterface
         ];
     }
 
-    public function get(Group $group)
+    public function get(GroupModel $group)
     {
-        return new GroupInterface($group);
+        return new Group($group);
     }
 }

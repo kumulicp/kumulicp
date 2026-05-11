@@ -6,8 +6,8 @@ use App\AppInstance;
 use App\AppRole;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\EmailUser;
-use App\Ldap\Models\Group;
-use App\Ldap\Models\User;
+use App\Ldap\Models\Group as LdapGroup;
+use App\Ldap\Models\User as LdapUser;
 use App\Organization;
 use App\SuborgUser;
 use App\Support\AccountManager\UserManager;
@@ -16,7 +16,7 @@ use App\User as DbUser;
 use LdapRecord\Container;
 use LdapRecord\Models\OpenLDAP\Entry;
 
-class UserInterface extends UserManager
+class User extends UserManager
 {
     private $permissions;
 
@@ -24,11 +24,11 @@ class UserInterface extends UserManager
 
     private $user;
 
-    public function __construct(User|EmailUser $user)
+    public function __construct(LdapUser|EmailUser $user)
     {
         $this->organization = $user->organization();
         if (is_a(EmailUser::class, $user)) {
-            $user = User::find($user->getDn());
+            $user = LdapUser::find($user->getDn());
         }
 
         $this->user = $user;
@@ -62,7 +62,7 @@ class UserInterface extends UserManager
 
     public function permissions()
     {
-        return new PermissionsInterface($this);
+        return new Permissions($this);
     }
 
     public function isPassword(string $password)
@@ -152,24 +152,24 @@ class UserInterface extends UserManager
 
     public function addToGroup($groupid)
     {
-        $group = Group::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
+        $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
 
         if ($group && ! $this->user->groups()->exists($group)) {
             $this->user->groups()->attach($group);
         }
 
-        return new GroupInterface($group);
+        return new Group($group);
     }
 
     public function removeFromGroup($groupid)
     {
-        $group = Group::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
+        $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
 
         if ($group && $this->user->groups()->exists($group)) {
             $this->user->groups()->detach($group);
         }
 
-        return new GroupInterface($group);
+        return new Group($group);
     }
 
     public function hasAppRole(AppInstance $app_instance, AppRole $role)
@@ -195,7 +195,7 @@ class UserInterface extends UserManager
         $applications = Entry::in(Dn::create($organization, 'applications'))->get();
 
         foreach ($applications as $groups) {
-            $group = Group::find($groups);
+            $group = LdapGroup::find($groups);
 
             if ($group) {
                 if ($this->user->groups()->exists($group)) {

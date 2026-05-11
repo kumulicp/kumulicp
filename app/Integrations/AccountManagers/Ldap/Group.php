@@ -3,17 +3,18 @@
 namespace App\Integrations\AccountManagers\Ldap;
 
 use App\Ldap\Actions\Dn;
-use App\Ldap\Models\Group;
+use App\AppInstance;
+use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\Organization;
 
-class GroupInterface extends GroupManager
+class Group extends GroupManager
 {
     private $organization;
 
-    public function __construct(private Group $group)
+    public function __construct(private LdapGroup $group)
     {
         $this->organization = Organization::account();
     }

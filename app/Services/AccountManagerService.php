@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Integrations\AccountManagers\Ldap\AccountManagerInterface;
+use App\Integrations\AccountManagers\Ldap\AccountManager as LdapAccountManager;
 use App\Organization;
 
 class AccountManagerService
 {
     private $interfaces = [
-        'ldap' => AccountManagerInterface::class,
-        'db' => \App\Integrations\AccountManagers\Database\AccountManagerInterface::class,
+        'ldap' => LdapAccountManager::class,
+        'db' => \App\Integrations\AccountManagers\Database\AccountManager::class,
     ];
 
     private $driver;

@@ -2,17 +2,18 @@
 
 namespace App\Integrations\AccountManagers\Database;
 
-use App\Group;
+use App\AppInstance;
+use App\Group as GroupModel;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\Organization;
-use App\User;
+use App\User as UserModel;
 
-class GroupInterface extends GroupManager
+class Group extends GroupManager
 {
     private $organization;
 
-    public function __construct(private Group $group)
+    public function __construct(private GroupModel $group)
     {
         $this->organization = Organization::account();
     }
@@ -60,7 +61,7 @@ class GroupInterface extends GroupManager
         $members = $this->group->members()->get();
         $this->group->members()->detach($members);
         foreach ($managers as $manager) {
-            $user = User::where('username', $manager)->first();
+            $user = UserModel::where('username', $manager)->first();
             if ($user) {
                 if ($member = $this->group->members()->where('user_id', $user->id)->first()) {
                     if ($member->pivot->role === 'member') {
@@ -77,7 +78,7 @@ class GroupInterface extends GroupManager
     public function updateMembers(array $members)
     {
         foreach ($members as $member) {
-            $user = User::where('username', $member)->first();
+            $user = UserModel::where('username', $member)->first();
             $member = $this->group->members()->where('user_id', $user->id)->first();
             if ($user && ! $member) {
                 $this->group->members()->attach($user, ['role' => 'member']);
@@ -93,23 +94,12 @@ class GroupInterface extends GroupManager
 
     public function updateCategory($category)
     {
-        $organization = Organization::account();
         if ($category == $this->categoryName()) {
             return;
         }
 
-        $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$category, 'groups']));
-
-        if (! $group_category_ou) {
-            $group_category_ou = new OrganizationalUnit;
-            $group_category_ou->ou = $category;
-            $group_category_ou->setDn(Dn::create($organization, [$category, 'groups']));
-            $group_category_ou->save();
-        }
-
-        if ($new_category = OrganizationalUnit::find(Dn::create($this->organization, [$category, 'groups']))) {
-            $this->group->move($group_category_ou);
-        }
+        $this->group->category = $category;
+        $this->group->save();
     }
 
     public function updateQuota(AppInstance $app_instance, $quantity)

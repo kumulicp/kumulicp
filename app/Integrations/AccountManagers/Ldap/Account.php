@@ -7,7 +7,7 @@ use App\Ldap\Actions\Dn;
 use App\Organization;
 use LdapRecord\Models\OpenLDAP\Entry;
 
-class AccountInterface implements AccountContract
+class Account implements AccountContract
 {
     private string $organization_id;
 
@@ -20,12 +20,12 @@ class AccountInterface implements AccountContract
 
     public function users()
     {
-        return new UsersInterface($this->organization);
+        return new Users($this->organization);
     }
 
     public function groups()
     {
-        return new GroupsInterface;
+        return new Groups;
     }
 
     public function destroy()

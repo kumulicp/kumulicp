@@ -4,19 +4,19 @@ namespace App\Integrations\AccountManagers\Database;
 
 use App\AppInstance;
 use App\AppRole;
-use App\Group;
+use App\Group as GroupModel;
 use App\Organization;
 use App\Support\AccountManager\UserManager;
-use App\User;
+use App\User as UserModel;
 use Illuminate\Support\Facades\Hash;
 
-class UserInterface extends UserManager
+class User extends UserManager
 {
     private $permissions;
 
     private $organization;
 
-    public function __construct(private User $user)
+    public function __construct(private UserModel $user)
     {
         $this->organization = $user->organization;
     }
@@ -52,7 +52,7 @@ class UserInterface extends UserManager
 
     public function permissions()
     {
-        return new PermissionsInterface($this);
+        return new Permissions($this);
     }
 
     public function isPassword(string $password)
@@ -113,26 +113,26 @@ class UserInterface extends UserManager
 
     public function addToGroup(string $groupid)
     {
-        $group = Group::where('slug', $groupid)->first();
+        $group = GroupModel::where('slug', $groupid)->first();
 
         if ($group) {
             $this->user->groups()->attach($group);
             $this->user->save();
         }
 
-        return new GroupInterface($group);
+        return new Group($group);
     }
 
     public function removeFromGroup($groupid)
     {
-        $group = Group::where('slug', $groupid)->first();
+        $group = GroupModel::where('slug', $groupid)->first();
 
         if ($group) {
             $this->user->groups()->detach($group);
             $this->user->save();
         }
 
-        return new GroupInterface($group);
+        return new Group($group);
     }
 
     public function hasAppRole(AppInstance $app_instance, AppRole $role)

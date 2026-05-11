@@ -10,11 +10,11 @@ use App\Ldap\Models\Organization;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Ldap\Models\User;
 
-class AccountManagerInterface implements AccountManagerContract
+class AccountManager implements AccountManagerContract
 {
     public function accounts()
     {
-        return new AccountsInterface;
+        return new Accounts;
     }
 
     public function initiate()
@@ -47,13 +47,11 @@ class AccountManagerInterface implements AccountManagerContract
         }
     }
 
-    // Return username
     public function checkUsername(string $username)
     {
         return User::where('cn', $username)->first()?->getFirstAttribute('cn');
     }
 
-    // Return username
     public function checkEmail(string $email)
     {
         return User::where('mail', $email)->first()?->getFirstAttribute('cn');

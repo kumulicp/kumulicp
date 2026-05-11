@@ -6,23 +6,23 @@ use App\Organization;
 use App\User;
 use Spatie\Permission\Models\Role;
 
-class AccountsInterface
+class Accounts
 {
     public function create(Organization $organization) {}
 
     public function account(Organization $organization)
     {
-        return new AccountInterface($organization);
+        return new Account($organization);
     }
 
     public function users(?Organization $organization = null)
     {
-        return new UsersInterface($organization);
+        return new Users($organization);
     }
 
     public function groups()
     {
-        return new GroupsInterface;
+        return new Groups;
     }
 
     public function seeder($name)

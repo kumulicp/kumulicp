@@ -3,11 +3,11 @@
 namespace App\Integrations\AccountManagers\Ldap;
 
 use App\Ldap\Actions\Dn;
-use App\Ldap\Models\Group;
+use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Support\Facades\Organization;
 
-class GroupsInterface
+class Groups
 {
     public function add($data)
     {
@@ -31,7 +31,7 @@ class GroupsInterface
             $group_ou->save();
         }
 
-        $group = new Group;
+        $group = new LdapGroup;
         $group->setAttribute('cn', $data['name']);
         $group->setAttribute('description', $data['name']);
         $group->setAttribute('member', Dn::create($organization));
@@ -45,9 +45,9 @@ class GroupsInterface
     {
         $organization = Organization::account();
         if ($category) {
-            $group = Group::find(Dn::create($organization, [$category, 'groups'], $validatedData['name']));
+            $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $validatedData['name']));
         } else {
-            $group = Group::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
+            $group = LdapGroup::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
         }
 
         if ($group) {
@@ -77,11 +77,11 @@ class GroupsInterface
     {
         $organization = Organization::account();
         if ($category) {
-            return Group::in(Dn::create($organization, [$category, 'groups']))->get()->map(function ($group) {
+            return LdapGroup::in(Dn::create($organization, [$category, 'groups']))->get()->map(function ($group) {
                 return $this->get($group);
             });
         } else {
-            return Group::in(Dn::create($organization, 'groups'))->get()->map(function ($group) {
+            return LdapGroup::in(Dn::create($organization, 'groups'))->get()->map(function ($group) {
                 return $this->get($group);
             });
         }
@@ -91,9 +91,9 @@ class GroupsInterface
     {
         $organization = Organization::account();
         if ($category) {
-            return Group::in(Dn::create($organization, [$category, 'groups']))->get()->count();
+            return LdapGroup::in(Dn::create($organization, [$category, 'groups']))->get()->count();
         } else {
-            return Group::in(Dn::create($organization, 'groups'))->get()->count();
+            return LdapGroup::in(Dn::create($organization, 'groups'))->get()->count();
         }
     }
 
@@ -123,8 +123,8 @@ class GroupsInterface
         ];
     }
 
-    public function get(Group $group)
+    public function get(LdapGroup $group)
     {
-        return new GroupInterface($group);
+        return new Group($group);
     }
 }

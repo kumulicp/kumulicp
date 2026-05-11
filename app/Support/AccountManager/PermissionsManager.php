@@ -7,7 +7,6 @@ use App\AppRole;
 use App\Support\Facades\Application;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
-use App\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -361,111 +360,6 @@ class PermissionsManager
         || array_key_exists('modified', $this->changes)
         || array_key_exists('removed', $this->changes)
         || array_key_exists('access', $this->changes);
-    }
-
-    public function hasControlPanelAccess()
-    {
-        return $this->user->is_allowed;
-    }
-
-    public function addControlPanelAccess(?User &$user = null, ?\App\Organization $organization = null, bool $verified = false)
-    {
-        $this->user->assignRole('organization_admin');
-        $this->user->is_allowed = true;
-        $this->user->save();
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
-        if ($organization) {
-            $user = $this->user->get();
-            $user->organization()->associate($organization);
-            if ($verified) {
-                $user->email_verified_at = now();
-            }
-            $user->save();
-        }
-
-
-        Arr::set($this->changes, 'access.control_panel', [
-            'access' => true,
-            'application' => env('APP_NAME'),
-        ]);
-
-        return $this;
-    }
-
-    public function removeControlPanelAccess()
-    {
-        $this->user->removeRole('organization_admin');
-        $this->user->is_allowed = false;
-        $this->user->save();
-
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
-
-        Arr::set($this->changes, 'access.control_panel', [
-            'access' => false,
-            'application' => env('APP_NAME'),
-        ]);
-
-        return $this;
-    }
-
-    public function addBillingManagerAccess()
-    {
-        $this->user->assignRole('billing_manager');
-
-        Arr::set($this->changes, 'access.control_panel', [
-            'access' => true,
-            'application' => env('APP_NAME'),
-        ]);
-
-        return $this;
-    }
-
-    public function removeBillingManagerAccess()
-    {
-        $this->user->removeRole('billing_manager');
-
-        Arr::set($this->changes, 'access.control_panel', [
-            'access' => false,
-            'application' => env('APP_NAME'),
-        ]);
-
-        return $this;
-    }
-
-    public function hasControlPanelAdminAccess()
-    {
-        return $this->user->hasRole('control_panel_admin');
-    }
-
-    public function addControlPanelAdminAccess(?User &$user = null)
-    {
-        $this->user->assignRole('control_panel_admin');
-        $user = $this->user->get();
-        $user->email_verified_at = now();
-        $user->save();
-
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
-
-        Arr::set($this->changes, 'access.control_panel_admin', [
-            'access' => true,
-            'application' => env('APP_NAME').' '.__('labels.admin'),
-        ]);
-    }
-
-    public function removeControlPanelAdminAccess()
-    {
-        $this->user->removeRole('control_panel_admin');
-
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
-
-        Arr::set($this->changes, 'access.control_panel_admin', [
-            'access' => false,
-            'application' => env('APP_NAME').' '.__('labels.admin'),
-        ]);
     }
 
     public function changes()
