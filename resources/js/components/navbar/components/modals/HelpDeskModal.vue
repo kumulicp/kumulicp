@@ -1,7 +1,11 @@
 <script setup>
 import axios from 'axios'
+import { defineAsyncComponent } from 'vue'
 import { useToast } from 'vuestic-ui'
 
+const HelpDeskTinymceEditor = defineAsyncComponent(() =>
+  import('./HelpDeskTinymceEditor.vue')
+)
 </script>
 <template>
   <div>
@@ -34,16 +38,10 @@ import { useToast } from 'vuestic-ui'
               required-mark
               maxlength="100"
               />
-            <va-textarea v-model="form.body"
-              :label="$t('navbar.description')"
+            <HelpDeskTinymceEditor
+              v-if="showHelpDesk"
+              v-model="form.body"
               class="mb-3"
-              :messages="$t('navbar.descriptionMessage')"
-              :error="$page.props.errors.body"
-              :error-messages="$page.props.errors.body"
-              required-mark
-              min-rows="5"
-              max-rows="15"
-              style="min-width: 100%"
               />
             <va-select
               v-model="form.request"
@@ -97,7 +95,7 @@ export default {
         },
         {
           text: this.$t('navbar.featureRequest'),
-          value: 'feauture'
+          value: 'feature'
         }
       ]
     }
