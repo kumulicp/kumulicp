@@ -130,13 +130,12 @@ class Applications extends Controller
             ->sort(fn ($a, $b) => version_compare($a->name, $b->name))
             ->values();
 
-        $orgServers = $organization->servers()->with('server')->get()->map(function ($orgServer) {
-            return [
+        $orgServers = $organization->servers()->with('server')->get()
+            ->groupBy(fn ($orgServer) => $orgServer->server->type)
+            ->map(fn ($servers) => $servers->map(fn ($orgServer) => [
                 'id' => $orgServer->id,
                 'name' => $orgServer->server->name,
-                'type' => $orgServer->server->type,
-            ];
-        });
+            ])->values());
 
         return inertia()->render('Admin/Organizations/Apps/AppEdit', [
             'organization' => [

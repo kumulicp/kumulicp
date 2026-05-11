@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
+import AdminSettings from '@/components/AdminSettings.vue'
 import AppsLayout from './AppsLayout.vue'
 import AppDomainFields from '@/components/AppDomainFields.vue'
 import ChangeSummary from '@/components/updates/ChangeSummary.vue'
@@ -90,12 +91,15 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </va-list-item>
     </va-list>
     <form @submit.prevent="form.put('/admin/organizations/'+organization.id+'/apps/'+app.id)">
-        <div class="row mt-3">
+
+      <AdminSettings>
+        <template #name></template>
+        <template #settings>
           <va-select
             v-model="form.database_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.databaseServer')"
-            :options="org_servers"
+            :options="org_servers.database ?? []"
             text-by="name"
             value-by="id"
             clearable
@@ -106,7 +110,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             v-model="form.web_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.appServer')"
-            :options="org_servers"
+            :options="org_servers.web ?? []"
             text-by="name"
             value-by="id"
             clearable
@@ -117,32 +121,33 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             v-model="form.sso_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.ssoServer')"
-            :options="org_servers"
+            :options="org_servers.sso ?? []"
             text-by="name"
             value-by="id"
             clearable
             :error="!!$page.props.errors.sso_server_id"
             :error-messages="$page.props.errors.sso_server_id"
           />
-        </div>
-        <va-list-separator class="my-3" fit />
-        <div class="row mt-3">
-        <va-textarea
-            v-model="form.settings"
-            class="flex flex-col sm12"
-            :label="$t('admin.apps.jsonSettings')"
-            rows="50"
-            placeholder="{}"
-            min-rows="30"
-            max-rows="50"
-            :error="$page.props.errors.settings"
-            :error-messages="$page.props.errors.settings"
-            />
-        <div v-if="$page.props.errors.settings">
-            {{ $page.props.errors.settings }}
-        </div>
-        </div>
-        <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
+        </template>
+      </AdminSettings>
+      <va-list-separator class="my-3" fit />
+      <div class="row mt-3">
+      <va-textarea
+          v-model="form.settings"
+          class="flex flex-col sm12"
+          :label="$t('admin.apps.jsonSettings')"
+          rows="50"
+          placeholder="{}"
+          min-rows="30"
+          max-rows="50"
+          :error="$page.props.errors.settings"
+          :error-messages="$page.props.errors.settings"
+          />
+      <div v-if="$page.props.errors.settings">
+          {{ $page.props.errors.settings }}
+      </div>
+      </div>
+      <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
     </form>
     </template>
     <va-modal v-model="showDomainModal"
