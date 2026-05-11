@@ -10,6 +10,9 @@
     <testsuite name="Browser">
       <directory suffix="Test.php">./tests/Browser</directory>
     </testsuite>
+    <testsuite name="AccountManagerLdap">
+      <directory suffix="Test.php">./tests/Feature/AccountManager</directory>
+    </testsuite>
     <testsuite name="Modules">
       <directory suffix="Test.php">./Modules/*/Tests/Feature</directory>
       <directory suffix="Test.php">./Modules/*/Tests/Unit</directory>
