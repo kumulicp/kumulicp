@@ -32,6 +32,7 @@ class NextcloudActivationTest extends TestCase
     {
         parent::setUp();
         $this->setupFakeServerInterfaces();
+        $this->fakeNotificationsAndMail();
     }
 
     protected function tearDown(): void

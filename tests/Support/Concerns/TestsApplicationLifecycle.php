@@ -12,6 +12,8 @@ use App\AppPlan;
 use App\Organization;
 use App\Support\Facades\Action;
 use App\Task;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Shared lifecycle assertions for Application* action tests.
@@ -56,6 +58,12 @@ trait TestsApplicationLifecycle
     protected int $lifecycleMaxIterations = 30;
 
     protected int $lifecycleSleepSeconds = 0;
+
+    protected function fakeNotificationsAndMail(): void
+    {
+        Notification::fake();
+        Mail::fake();
+    }
 
     protected function pollUntilDone(Task &$task, callable $completeCallback): void
     {

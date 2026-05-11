@@ -19,6 +19,7 @@ uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {
     $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
 });
 
 afterEach(function () {

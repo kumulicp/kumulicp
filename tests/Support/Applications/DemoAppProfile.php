@@ -3,7 +3,6 @@
 namespace Tests\Support\Applications;
 
 use App\Integrations\Applications\AppProfile;
-use App\Integrations\Applications\Wordpress\WordpressRancherJobs;
 use Tests\Support\Applications\Features\DisabledFeature;
 use Tests\Support\Applications\Features\EnabledFeature;
 use Tests\Support\Applications\Features\OptionalFeature;
@@ -16,7 +15,7 @@ class DemoAppProfile extends AppProfile
 
     protected $helm_chart = DemoHelmChart::class;
 
-    protected $jobs = WordpressRancherJobs::class;
+    protected $jobs = DemoJobs::class;
 
     protected $role_groups = [
         'demo_group' => [

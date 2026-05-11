@@ -19,7 +19,6 @@ use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Subscription;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Permission\Models\Role;
 use Tests\Support\Applications\DemoAppProfile;
 
 class TestSupports
@@ -65,9 +64,6 @@ class TestSupports
     public function seed()
     {
         Artisan::call('db:seed DemoSeeder');
-        Role::create(['name' => 'control_panel_admin']);
-        Role::create(['name' => 'organization_admin']);
-        Role::create(['name' => 'billing_manager']);
     }
 
     public function addUsers()
