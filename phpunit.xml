@@ -13,6 +13,18 @@
     <testsuite name="AccountManagerLdap">
       <directory suffix="Test.php">./tests/Feature/AccountManager</directory>
     </testsuite>
+    <testsuite name="ApplicationsIntegration">
+      <directory suffix="Test.php">./tests/Feature/Applications</directory>
+    </testsuite>
+    <testsuite name="RegistrarIntegration">
+      <directory suffix="Test.php">./tests/Feature/Registrars</directory>
+    </testsuite>
+    <testsuite name="ServerManagerIntegration">
+      <directory suffix="Test.php">./tests/Feature/ServerManagers</directory>
+    </testsuite>
+    <testsuite name="SSOIntegration">
+      <directory suffix="Test.php">./tests/Feature/SSO</directory>
+    </testsuite>
     <testsuite name="Modules">
       <directory suffix="Test.php">./Modules/*/Tests/Feature</directory>
       <directory suffix="Test.php">./Modules/*/Tests/Unit</directory>

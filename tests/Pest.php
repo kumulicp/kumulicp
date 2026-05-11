@@ -2,7 +2,12 @@
 
 use App\Services\AccountManagerService;
 use App\Support\Facades\AccountManager;
+use App\Support\Facades\Domain;
+use App\Support\Facades\ServerInterface;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Support\Registrars\FakeRegistrar;
+use Tests\Support\ServerManagers\FakeServerManagerProfile;
+use Tests\Support\SSO\FakeSSOProfile;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -20,6 +25,10 @@ use Tests\TestCase;
 // uses(Tests\TestCase::class)->in('Feature');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/AccountManager');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Applications');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Registrars');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/ServerManagers');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/SSO');
 
 pest()->beforeEach(function () {
     (new TestSupports())->seed();
@@ -111,6 +120,87 @@ function skipUnlessDriver(string $driver, string $required): void
 {
     if ($driver !== $required) {
         test()->markTestSkipped("Requires '{$required}' account manager driver");
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Server Interface Helpers
+|--------------------------------------------------------------------------
+|
+| Tests that run Application* actions (activate, update, upgrade, delete)
+| should call setupFakeServerInterfaces() before seeding. This replaces the
+| Rancher and Authentik profile classes in ServerInterfaceService with
+| in-memory fakes so no real K8s cluster or SSO server is required.
+|
+| Real-driver tests skip unless SERVER_MANAGER=rancher / SSO_DRIVER=authentik.
+|
+*/
+
+dataset('server_manager_drivers', ['fake', 'rancher']);
+dataset('sso_drivers', ['fake', 'authentik']);
+
+/**
+ * Swap ServerInterfaceService profile lookups to use in-memory fakes.
+ * Must be called before any action that calls $app_instance->connect().
+ */
+function setupFakeServerInterfaces(): void
+{
+    app('server_interfaces')->register('web', 'rancher', FakeServerManagerProfile::class);
+    app('server_interfaces')->register('sso', 'authentik', FakeSSOProfile::class);
+}
+
+/**
+ * Skip unless SERVER_MANAGER env var matches $required (e.g. 'rancher').
+ */
+function skipUnlessServerManager(string $driver, string $required): void
+{
+    if ($driver !== $required) {
+        test()->markTestSkipped("Requires '{$required}' server manager");
+    }
+}
+
+/**
+ * Skip unless SSO_DRIVER env var matches $required (e.g. 'authentik').
+ */
+function skipUnlessSSO(string $driver, string $required): void
+{
+    if ($driver !== $required) {
+        test()->markTestSkipped("Requires '{$required}' SSO driver");
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Registrar Helpers
+|--------------------------------------------------------------------------
+|
+| Tests under tests/Feature/Registrars/ run against both the 'fake' and
+| 'namecheap' registrar drivers. The 'namecheap' iteration skips unless
+| REGISTRAR_DRIVER=namecheap is set.
+|
+*/
+
+dataset('registrar_drivers', ['fake', 'namecheap']);
+
+/**
+ * Register a fake or real registrar driver with DomainService.
+ * Must be called before any Domain::registrar() call.
+ */
+function setupRegistrarDriver(string $driver): void
+{
+    if ($driver === 'fake') {
+        Domain::register('fake', FakeRegistrar::class);
+    }
+}
+
+/**
+ * Skip unless REGISTRAR_DRIVER env var matches $required (e.g. 'namecheap').
+ */
+function skipUnlessRegistrar(string $driver, string $required): void
+{
+    if ($driver !== $required) {
+        test()->markTestSkipped("Requires '{$required}' registrar driver");
     }
 }
 

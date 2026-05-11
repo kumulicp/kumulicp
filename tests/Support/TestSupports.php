@@ -782,6 +782,46 @@ class TestSupports
         $this->wordpress_2 = $app_plan;
     }
 
+    /**
+     * Register DemoApp and return the Application + a ready AppPlan.
+     * Does NOT create an AppInstance — use this before running ApplicationActivate.
+     *
+     * @return array{app: \App\Application, plan: AppPlan}
+     */
+    public function prepareDemoApp(?int $webServerId = 1): array
+    {
+        AppFacade::register(new DemoAppProfile);
+
+        $app = AppFacade::initialize('demo_app');
+
+        AppFacade::roles($app);
+
+        $roles = [];
+        foreach ($app->roles()->get() as $role) {
+            $roles[] = $role->id;
+        }
+
+        $version = AppVersion::factory()->create([
+            'application_id' => $app->id,
+        ]);
+        $version->roles = ['order' => $roles];
+        $version->save();
+
+        $plan = AppPlan::factory()->create([
+            'application_id' => $app->id,
+            'web_server_id' => $webServerId,
+            'settings' => [
+                'base' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'basic' => ['max' => 0, 'name' => null, 'price' => 0, 'amount' => 0, 'storage' => 0, 'price_id' => null],
+                'storage' => ['max' => 0, 'price' => 0, 'amount' => 0, 'price_id' => null],
+                'standard' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'configurations' => [],
+            ],
+        ]);
+
+        return ['app' => $app, 'plan' => $plan];
+    }
+
     public function activateDemoApp()
     {
         AppFacade::register(new DemoAppProfile);
