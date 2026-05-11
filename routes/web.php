@@ -39,6 +39,15 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     Route::get('create', 'Admin\Applications\Plans@create')->name('app.plans.create');
                     Route::post('', 'Admin\Applications\Plans@store')->name('app.plans.store');
                     Route::post('update_order', 'Admin\Applications\Plans@updateOrder')->name('app.plans.update_order');
+                    Route::prefix('bulk-edit')->group(function () {
+                        Route::get('', 'Admin\Applications\Plans\BulkEdit@view')->name('app.plans.bulk.view');
+                        Route::get('edit', 'Admin\Applications\Plans\BulkEdit@edit')->name('app.plans.bulk.edit');
+                        Route::post('edit', 'Admin\Applications\Plans\BulkEdit@update')->name('app.plans.bulk.update');
+                        Route::get('features', 'Admin\Applications\Plans\BulkEdit@editFeatures')->name('app.plans.bulk.features');
+                        Route::put('features', 'Admin\Applications\Plans\BulkEdit@updateFeatures')->name('app.plans.bulk.features.update');
+                        Route::get('configurations', 'Admin\Applications\Plans\BulkEdit@editConfigurations')->name('app.plans.bulk.configurations');
+                        Route::put('configurations', 'Admin\Applications\Plans\BulkEdit@updateConfigurations')->name('app.plans.bulk.configurations.update');
+                    });
                     Route::prefix('{plan}')->group(function () {
                         Route::get('', 'Admin\Applications\Plans@show')->name('app.plans.show');
                         Route::get('edit', 'Admin\Applications\Plans@edit')->name('app.plans.edit');
