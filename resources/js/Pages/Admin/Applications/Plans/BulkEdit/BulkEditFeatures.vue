@@ -131,7 +131,7 @@ export default {
     const plansMap: Record<number, any> = {}
     for (const plan of this.plans) {
       const planFeatures: Record<string, any> = {}
-      for (const feature of this.features) {
+      for (const feature of Object.values(this.features)) {
         const existing = plan.settings?.features?.[feature.value] ?? {}
         const settingsMap: Record<string, any> = {}
         if (feature.settings?.length) {

@@ -430,8 +430,8 @@ import { useForm } from '@inertiajs/vue3'
                     immediateValidation
                   />
                 </div>
-                <div class="flex xs1 content-center">
-                  <va-icon name="fa-x" color="danger" style="cursor:pointer" @click="removeFeature(plan.id, index)" />
+                <div class="flex xs1 content-center"  @click="removeFeature(plan.id, index)">
+                  <va-icon name="fa-x" color="danger" style="cursor:pointer" />
                 </div>
               </div>
             </template>

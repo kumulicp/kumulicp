@@ -16,9 +16,9 @@ class BulkEdit extends Controller
 {
     private function getPlans(Request $request, Application $app)
     {
-        $planIds = $request->input('plans', []);
+        $plan_ids = $request->input('plans', []);
 
-        return AppPlan::whereIn('id', $planIds)
+        return AppPlan::whereIn('id', $plan_ids)
             ->where('application_id', $app->id)
             ->where('archive', 0)
             ->get();
@@ -96,28 +96,32 @@ class BulkEdit extends Controller
     {
         $plans = $this->getPlans($request, $app);
         $features = ApplicationFacade::profile($app->slug)->features();
-        $planIds = $plans->pluck('id')->toArray();
+        $plan_ids = $plans->pluck('id')->toArray();
 
-        $formattedPlans = $plans->map(fn ($plan) => $this->formatPlan($plan))->values();
+        $formatted_plans = $plans->map(function ($plan) {
+            return $this->formatPlan($plan);
+        })->values();
 
-        $firstPlanConfigs = [];
+        $first_plan_configs = [];
         if ($plans->isNotEmpty()) {
             $configs = ApplicationFacade::configurations($app, $plans->first(), true);
-            $additionalConfigs = $plans->first()->additionalConfigs();
-            $firstPlanConfigs = array_merge($configs, $additionalConfigs);
+            $additional_configs = $plans->first()->additionalConfigs();
+            $first_plan_configs = array_merge($configs, $additional_configs);
         }
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditView', array_merge($this->getServerData(), [
             'app' => $this->getAppData($app),
-            'plans' => $formattedPlans,
-            'plan_ids' => $planIds,
-            'features' => $features->map(fn ($f) => [
-                'label' => $f->label,
-                'value' => $f->name,
-                'description' => $f->description,
-                'settings' => $f->admin_settings(),
-            ]),
-            'configs' => $firstPlanConfigs,
+            'plans' => $formatted_plans,
+            'plan_ids' => $plan_ids,
+            'features' => $features->map(function ($feature) {
+                return [
+                    'label' => $feature->label,
+                    'value' => $feature->name,
+                    'description' => $feature->description,
+                    'settings' => $feature->admin_settings(),
+                ];
+            }),
+            'configs' => $first_plan_configs,
             'breadcrumbs' => $this->breadcrumbs($app),
         ]));
     }
@@ -125,21 +129,21 @@ class BulkEdit extends Controller
     public function edit(Request $request, Application $app)
     {
         $plans = $this->getPlans($request, $app);
-        $planIds = $plans->pluck('id')->toArray();
-        $formattedPlans = $plans->map(fn ($plan) => $this->formatPlan($plan))->values();
+        $plan_ids = $plans->pluck('id')->toArray();
+        $formatted_plans = $plans->map(fn ($plan) => $this->formatPlan($plan))->values();
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditSettings', array_merge($this->getServerData(), [
             'app' => $this->getAppData($app),
-            'plans' => $formattedPlans,
-            'plan_ids' => $planIds,
+            'plans' => $formatted_plans,
+            'plan_ids' => $plan_ids,
             'breadcrumbs' => $this->breadcrumbs($app),
         ]));
     }
 
     public function update(Request $request, Application $app)
     {
-        $planIds = $request->input('plan_ids', []);
-        $plans = AppPlan::whereIn('id', $planIds)->where('application_id', $app->id)->get();
+        $plan_ids = $request->input('plan_ids', []);
+        $plans = AppPlan::whereIn('id', $plan_ids)->where('application_id', $app->id)->get();
 
         $request->validate([
             'plan_ids' => 'array',
@@ -229,9 +233,9 @@ class BulkEdit extends Controller
 
         Cache::flush();
 
-        $queryString = http_build_query(['plans' => $planIds]);
+        $query_string = http_build_query(['plans' => $plan_ids]);
 
-        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/edit?{$queryString}")
+        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/edit?{$query_string}")
             ->with('success', __('admin.applications.plans.bulk_updated'));
     }
 
@@ -239,9 +243,9 @@ class BulkEdit extends Controller
     {
         $plans = $this->getPlans($request, $app);
         $features = ApplicationFacade::profile($app->slug)->features();
-        $planIds = $plans->pluck('id')->toArray();
+        $plan_ids = $plans->pluck('id')->toArray();
 
-        $formattedPlans = $plans->map(function ($plan) {
+        $formatted_plans = $plans->map(function ($plan) {
             $settings = $plan->settings;
             $plan_features = ApplicationFacade::plan($plan)->features()->all();
             $settings['features'] = $plan_features;
@@ -255,24 +259,26 @@ class BulkEdit extends Controller
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditFeatures', [
             'app' => $this->getAppData($app),
-            'plans' => $formattedPlans,
-            'plan_ids' => $planIds,
-            'features' => $features->map(fn ($f) => [
-                'label' => $f->label,
-                'type' => $f->type,
-                'input' => $f->input,
-                'value' => $f->name,
-                'description' => $f->description,
-                'settings' => $f->admin_settings(),
-            ]),
+            'plans' => $formatted_plans,
+            'plan_ids' => $plan_ids,
+            'features' => $features->map(function ($feature) {
+                return [
+                    'label' => $feature->label,
+                    'type' => $feature->type,
+                    'input' => $feature->input,
+                    'value' => $feature->name,
+                    'description' => $feature->description,
+                    'settings' => $feature->admin_settings(),
+                ];
+            }),
             'breadcrumbs' => $this->breadcrumbs($app),
         ]);
     }
 
     public function updateFeatures(Request $request, Application $app)
     {
-        $planIds = $request->input('plan_ids', []);
-        $plans = AppPlan::whereIn('id', $planIds)->where('application_id', $app->id)->get();
+        $plan_ids = $request->input('plan_ids', []);
+        $plans = AppPlan::whereIn('id', $plan_ids)->where('application_id', $app->id)->get();
 
         $request->validate([
             'plan_ids' => 'array',
@@ -280,52 +286,52 @@ class BulkEdit extends Controller
         ]);
 
         foreach ($plans as $plan) {
-            $planFeatures = $request->input("plans.{$plan->id}.features");
-            if ($planFeatures !== null) {
-                ApplicationFacade::plan($plan)->updateFeatures($planFeatures);
+            $plan_features = $request->input("plans.{$plan->id}.features");
+            if ($plan_features !== null) {
+                ApplicationFacade::plan($plan)->updateFeatures($plan_features);
             }
         }
 
-        $queryString = http_build_query(['plans' => $planIds]);
+        $query_string = http_build_query(['plans' => $plan_ids]);
 
-        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/features?{$queryString}")
+        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/features?{$query_string}")
             ->with('success', __('admin.applications.plans.features_updated', ['plan' => 'all plans']));
     }
 
     public function editConfigurations(Request $request, Application $app)
     {
         $plans = $this->getPlans($request, $app);
-        $planIds = $plans->pluck('id')->toArray();
+        $plan_ids = $plans->pluck('id')->toArray();
 
-        $formattedPlans = $plans->map(function ($plan) use ($app) {
+        $formatted_plans = $plans->map(function ($plan) use ($app) {
             $configs = ApplicationFacade::configurations($app, $plan, true);
-            $additionalConfigs = $plan->additionalConfigs();
+            $additional_configs = $plan->additionalConfigs();
 
             return [
                 'id' => $plan->id,
                 'name' => $plan->name,
-                'configs' => array_merge($configs, $additionalConfigs),
+                'configs' => array_merge($configs, $additional_configs),
             ];
         })->values();
 
         // Use first plan's config keys as the schema for table rows
-        $configSchema = $formattedPlans->first()['configs'] ?? [];
+        $config_schema = $formatted_plans->first()['configs'] ?? [];
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditConfigurations', [
             'app' => $this->getAppData($app),
-            'plans' => $formattedPlans,
-            'plan_ids' => $planIds,
-            'config_schema' => $configSchema,
+            'plans' => $formatted_plans,
+            'plan_ids' => $plan_ids,
+            'config_schema' => $config_schema,
             'breadcrumbs' => $this->breadcrumbs($app),
         ]);
     }
 
     public function updateConfigurations(Request $request, Application $app)
     {
-        $planIds = $request->input('plan_ids', []);
-        $plans = AppPlan::whereIn('id', $planIds)->where('application_id', $app->id)->get();
+        $plan_ids = $request->input('plan_ids', []);
+        $plans = AppPlan::whereIn('id', $plan_ids)->where('application_id', $app->id)->get();
 
-        $validateConfigurations = ApplicationFacade::validateConfigurations($app);
+        $validate_configurations = ApplicationFacade::validateConfigurations($app);
 
         $validationTypes = [
             'string' => 'nullable|string',
@@ -336,20 +342,20 @@ class BulkEdit extends Controller
         ];
 
         foreach ($plans as $plan) {
-            $planData = $request->input("plans.{$plan->id}", []);
-            if (empty($planData)) {
+            $plan_data = $request->input("plans.{$plan->id}", []);
+            if (empty($plan_data)) {
                 continue;
             }
 
-            $configurations = Arr::get($planData, 'configurations', []);
-            $additionalConfigsInput = Arr::get($planData, 'additionalConfigs', []);
+            $configurations = Arr::get($plan_data, 'configurations', []);
+            $additional_configs_input = Arr::get($plan_data, 'additionalConfigs', []);
 
-            $additionalConfigs = [];
-            $mergedAdditionalConfigs = array_merge($additionalConfigsInput, $plan->additionalConfigs());
+            $additional_configs = [];
+            $merged_additional_configs = array_merge($additional_configs_input, $plan->additionalConfigs());
 
-            foreach ($mergedAdditionalConfigs as $config) {
+            foreach ($merged_additional_configs as $config) {
                 if (array_key_exists($config['type'], $validationTypes) && Arr::has($configurations, $config['name'])) {
-                    $additionalConfigs[$config['name']] = $config;
+                    $additional_configs[$config['name']] = $config;
                 }
             }
 
@@ -357,16 +363,16 @@ class BulkEdit extends Controller
                 'configurations' => ! empty($configurations)
                     ? ApplicationFacade::processConfigurations($app, $plan, $configurations)
                     : [],
-                'additionalConfigs' => $additionalConfigs,
+                'additionalConfigs' => $additional_configs,
             ]);
             $plan->save();
         }
 
         Cache::flush();
 
-        $queryString = http_build_query(['plans' => $planIds]);
+        $query_string = http_build_query(['plans' => $plan_ids]);
 
-        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/configurations?{$queryString}")
+        return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/configurations?{$query_string}")
             ->with('success', __('admin.applications.plans.configurations_updated', ['plan' => 'all plans']));
     }
 }
