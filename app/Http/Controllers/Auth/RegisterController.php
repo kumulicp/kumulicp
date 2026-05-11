@@ -70,7 +70,7 @@ class RegisterController extends Controller
     public function showRegistrationForm()
     {
         if (! $default_plan = Plan::where('is_default', 1)->count() > 0) {
-            Log::critical(__('auth.denied.no_plans'));
+            Log::critical(__('auth.no_plans'));
         }
 
         $org_types = Plan::whereNot('org_type', '')->where('archive', 0)->groupBy('org_type')->get()->map(function ($plan) {
