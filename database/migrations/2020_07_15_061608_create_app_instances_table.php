@@ -20,7 +20,7 @@ class CreateAppInstancesTable extends Migration
             $table->unsignedBigInteger('version_id');
             $table->unsignedBigInteger('primary_domain_id')->nullable();
             $table->unsignedBigInteger('plan_id')->nullable();
-            $table->unsignedBigInteger('web_server_id');
+            $table->unsignedBigInteger('web_server_id')->nullable()->default(null);
             $table->unsignedBigInteger('database_server_id')->nullable();
             $table->unsignedBigInteger('sso_server_id')->nullable();
             $table->integer('server_domain_id')->nullable();

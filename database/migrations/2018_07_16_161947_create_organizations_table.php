@@ -16,8 +16,8 @@ class CreateOrganizationsTable extends Migration
         Schema::create('organizations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('parent_organization_id')->nullable();
-            $table->unsignedBigInteger('primary_domain_id');
-            $table->unsignedBigInteger('base_domain_id');
+            $table->unsignedBigInteger('primary_domain_id')->nullable()->default(null);
+            $table->unsignedBigInteger('base_domain_id')->nullable()->default(null);
             $table->unsignedBigInteger('plan_id')->nullable();
             $table->unsignedBigInteger('primary_contact_id')->nullable();
             $table->unsignedBigInteger('account_test_id')->nullable();
