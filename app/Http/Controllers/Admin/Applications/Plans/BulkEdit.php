@@ -48,10 +48,18 @@ class BulkEdit extends Controller
         $sso_servers = Server::where('type', 'sso')->get();
 
         return [
-            'web_servers' => $web_servers->map(fn ($s) => ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')']),
-            'database_servers' => $database_servers->map(fn ($s) => ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')']),
-            'sso_servers' => $sso_servers->map(fn ($s) => ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')']),
-            'shared_apps' => Organization::where('type', 'shared')->first()?->app_instances->map(fn ($a) => ['id' => $a->id, 'name' => $a->label]),
+            'web_servers' => $web_servers->map(function ($s) {
+                return ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')'];
+            }),
+            'database_servers' => $database_servers->map(function ($s) {
+                return ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')'];
+            }),
+            'sso_servers' => $sso_servers->map(function ($s) {
+                return ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')'];
+            }),
+            'shared_apps' => Organization::where('type', 'shared')->first()?->app_instances->map(function ($a) {
+                return ['id' => $a->id, 'name' => $a->label];
+            }),
         ];
     }
 
@@ -130,7 +138,9 @@ class BulkEdit extends Controller
     {
         $plans = $this->getPlans($request, $app);
         $plan_ids = $plans->pluck('id')->toArray();
-        $formatted_plans = $plans->map(fn ($plan) => $this->formatPlan($plan))->values();
+        $formatted_plans = $plans->map(function ($plan) {
+            return $this->formatPlan($plan);
+        })->values();
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditSettings', array_merge($this->getServerData(), [
             'app' => $this->getAppData($app),
