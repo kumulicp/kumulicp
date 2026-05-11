@@ -362,6 +362,7 @@ class PermissionsManager
         || array_key_exists('access', $this->changes);
     }
 
+
     public function changes()
     {
         return [

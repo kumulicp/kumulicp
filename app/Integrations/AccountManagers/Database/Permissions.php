@@ -71,16 +71,18 @@ class Permissions extends PermissionsManager implements PermissionsContract
     {
         $this->user->assignRole('organization_admin');
         $this->user->is_allowed = true;
+        $this->user->save();
+
+        $this->updateUserAccessType();
+
         if ($organization) {
             $user = $this->user->get();
             $user->organization()->associate($organization);
             if ($verified) {
                 $user->email_verified_at = now();
             }
+            $user->save();
         }
-        $user->save();
-
-        $this->updateUserAccessType();
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => true,
