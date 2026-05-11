@@ -234,6 +234,9 @@
     },
     "plans": {
       "plan": "Plan",
+      "bulkEdit": "Bulk Edit",
+      "generalSettings": "General Settings",
+      "setting": "Setting",
       "basePlan": "Base Plan",
       "addPlan": "Add Plan",
       "editPlan": "Edit Plan",
