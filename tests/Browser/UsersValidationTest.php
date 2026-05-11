@@ -9,150 +9,137 @@ describe('Users validation', function () {
             ->assertPathIs('/');
     });
 
-    describe('creating a user', function () {
-        it('rejects a missing username', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('username field is required');
-        });
+    it('rejects invalid data when creating a user', function () {
+        // Missing username
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('username field is required');
 
-        it('rejects a username with uppercase letters', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'TestUser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users');
-        });
+        // Uppercase username
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'TestUser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users');
 
-        it('rejects a username with special characters', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'test-user!')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('only contain letters and numbers');
-        });
+        // Special characters in username
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'test-user!')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('only contain letters and numbers');
 
-        it('rejects a duplicate username', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'demo')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('User already exists');
-        });
+        // Duplicate username
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'demo')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('User already exists');
 
-        it('rejects a missing first name', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'testuser')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('first name field is required');
-        });
+        // Missing first name
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'testuser')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('first name field is required');
 
-        it('rejects a missing last name', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'testuser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#personalEmail input', 'test@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('last name field is required');
-        });
+        // Missing last name
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'testuser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#personalEmail input', 'test@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('last name field is required');
 
-        it('rejects a missing email', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'testuser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('personal email field is required');
-        });
+        // Missing email
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'testuser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('personal email field is required');
 
-        it('rejects a malformed email address', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'testuser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'not-an-email')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('must be a valid email address');
-        });
+        // Malformed email
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'testuser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'not-an-email')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('must be a valid email address');
 
-        it('rejects an email already used by another user', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'testuser')
-                ->fill('#firstName input', 'Test')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'demo@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users')
-                ->assertSee('already being used by another user');
-        });
+        // Email already taken
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'testuser')
+            ->fill('#firstName input', 'Test')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'demo@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users')
+            ->assertSee('already being used by another user');
     });
 
-    describe('updating a user', function () {
-        it('rejects a missing first name', function () {
-            visit('/users/demo/edit')
-                ->fill('#firstName input', '')
-                ->click('#submit')
-                ->assertPathIs('/users/demo/edit')
-                ->assertSee('first name field is required');
-        });
+    it('rejects invalid data when updating a user', function () {
+        // Missing first name
+        visit('/users/demo/edit')
+            ->fill('#firstName input', '')
+            ->click('#submit')
+            ->assertPathIs('/users/demo/edit')
+            ->assertSee('first name field is required');
 
-        it('rejects a missing last name', function () {
-            visit('/users/demo/edit')
-                ->fill('#lastName input', '')
-                ->click('#submit')
-                ->assertPathIs('/users/demo/edit')
-                ->assertSee('last name field is required');
-        });
+        // Missing last name
+        visit('/users/demo/edit')
+            ->fill('#lastName input', '')
+            ->click('#submit')
+            ->assertPathIs('/users/demo/edit')
+            ->assertSee('last name field is required');
 
-        it('rejects a malformed email address', function () {
-            visit('/users/demo/edit')
-                ->fill('#personalEmail input', 'not-an-email')
-                ->click('#submit')
-                ->assertPathIs('/users/demo/edit')
-                ->assertSee('must be a valid email address');
-        });
+        // Malformed email
+        visit('/users/demo/edit')
+            ->fill('#personalEmail input', 'not-an-email')
+            ->click('#submit')
+            ->assertPathIs('/users/demo/edit')
+            ->assertSee('must be a valid email address');
 
-        it('rejects an email already used by another user', function () {
-            visit('/users')
-                ->click('#createUser')
-                ->fill('#username input', 'otherusr')
-                ->fill('#firstName input', 'Other')
-                ->fill('#lastName input', 'User')
-                ->fill('#personalEmail input', 'other@example.com')
-                ->click('#submit');
+        // Email already used by another user
+        visit('/users')
+            ->click('#createUser')
+            ->fill('#username input', 'otherusr')
+            ->fill('#firstName input', 'Other')
+            ->fill('#lastName input', 'User')
+            ->fill('#personalEmail input', 'other@example.com')
+            ->click('#submit');
 
-            visit('/users/demo/edit')
-                ->fill('#personalEmail input', 'other@example.com')
-                ->click('#submit')
-                ->assertPathIs('/users/demo/edit')
-                ->assertSee('already being used by another user');
-        });
+        visit('/users/demo/edit')
+            ->fill('#personalEmail input', 'other@example.com')
+            ->click('#submit')
+            ->assertPathIs('/users/demo/edit')
+            ->assertSee('already being used by another user');
     });
 });
