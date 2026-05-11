@@ -20,6 +20,8 @@ class OrganizationFactory extends Factory
     public function definition()
     {
         return [
+            'primary_domain_id' => 0,
+            'base_domain_id' => 0,
             'name' => fake()->word(),
             'slug' => Str::lower(Str::random(5)),
             'description' => fake()->sentence(),
@@ -36,6 +38,7 @@ class OrganizationFactory extends Factory
             'contact_last_name' => fake()->lastName,
             'contact_phone_number' => fake()->phoneNumber(),
             'contact_email' => fake()->email(),
+            'settings' => '{}',
             'status' => 'active',
         ];
     }

@@ -4,7 +4,9 @@ namespace Tests\Support\Applications;
 
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\Wordpress\WordpressRancherJobs;
-use App\Integrations\ServerManagers\Rancher\Charts\WordpressChart;
+use Tests\Support\Applications\Features\DisabledFeature;
+use Tests\Support\Applications\Features\EnabledFeature;
+use Tests\Support\Applications\Features\OptionalFeature;
 
 class DemoAppProfile extends AppProfile
 {
@@ -12,7 +14,7 @@ class DemoAppProfile extends AppProfile
 
     protected $activation_type = 'chart';
 
-    protected $helm_chart = WordpressChart::class;
+    protected $helm_chart = DemoHelmChart::class;
 
     protected $jobs = WordpressRancherJobs::class;
 
@@ -49,6 +51,12 @@ class DemoAppProfile extends AppProfile
         ],
     ];
 
+    protected $features = [
+        'enabled-feature' => EnabledFeature::class,
+        'optional-feature' => OptionalFeature::class,
+        'disabled-feature' => DisabledFeature::class,
+    ];
+
     protected $configurations = [
         'fake-config' => [
             'name' => 'fake-config',
@@ -56,6 +64,27 @@ class DemoAppProfile extends AppProfile
             'persistent' => false,
             'default' => false,
             'validations' => 'boolean',
+        ],
+        'persistent-value' => [
+            'name' => 'persistent-value',
+            'type' => 'string',
+            'persistent' => true,
+            'default' => 'default-persistent',
+            'validations' => 'nullable|string',
+        ],
+        'non-persistent-value' => [
+            'name' => 'non-persistent-value',
+            'type' => 'string',
+            'persistent' => false,
+            'default' => 'default-non-persistent',
+            'validations' => 'nullable|string',
+        ],
+        'override-value' => [
+            'name' => 'override-value',
+            'type' => 'string',
+            'persistent' => false,
+            'default' => 'default-override',
+            'validations' => 'nullable|string',
         ],
     ];
 }
