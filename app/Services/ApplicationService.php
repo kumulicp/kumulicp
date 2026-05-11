@@ -95,6 +95,8 @@ class ApplicationService
                         $app_role->slug = $role_info['id'];
                         $app_role->category = $group_info['label'];
                         $app_role->description = Arr::get($role_info, 'description', '');
+                        $app_role->ignore_role = false;
+                        $app_role->required_features = [];
                         $app_role->status = 'enabled';
                         $app_role->save();
                     }
@@ -271,6 +273,8 @@ class ApplicationService
             $application = new Application;
             $application->slug = $app_name;
             $application->name = Str::headline($app_name);
+            $application->short_description = '';
+            $application->description = '';
             $application->enabled = false;
             $application->save();
 
