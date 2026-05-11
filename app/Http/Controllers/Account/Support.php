@@ -25,7 +25,7 @@ class Support extends Controller
         if ($support_email) {
             try {
                 Mail::mailer('errors')->to($support_email)
-                    ->send(new SupportTicket(title: $validatedData['subject'], body: $validatedData['body'], request: $validatedData['request']));
+                    ->send(new SupportTicket(title: $validatedData['subject'], body: clean($validatedData['body'], 'help_desk'), request: $validatedData['request']));
 
                 return response()->json([
                     'success' => 'success',
