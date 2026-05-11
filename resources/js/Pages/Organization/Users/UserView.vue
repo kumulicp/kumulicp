@@ -150,7 +150,7 @@ export default {
   },
   data () {
     const groups = []
-    for (const group of Object.entries(this.user.groups)) {
+    for (const group of this.user.groups) {
       groups.push(group.name)
     }
     return {

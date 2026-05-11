@@ -61,9 +61,9 @@ class TestSupports
             }
         }
         Artisan::call('db:seed DemoSeeder');
-        Role::create(['name' => 'control_panel_admin']);
-        Role::create(['name' => 'organization_admin']);
-        Role::create(['name' => 'billing_manager']);
+        Role::firstOrCreate(['name' => 'control_panel_admin']);
+        Role::firstOrCreate(['name' => 'organization_admin']);
+        Role::firstOrCreate(['name' => 'billing_manager']);
     }
 
     public function addUsers()
