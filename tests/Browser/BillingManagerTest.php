@@ -46,9 +46,9 @@ describe('Billing Manager', function () {
 
         $page->assertSee('Add Billing Manager');
 
-        // va-select renders a searchable input inside the #billingManager wrapper
-        $page->fill('#billingManager input', 'test user1');
-        $page->click('.va-select-option');
+        // Open the va-select dropdown, then click the option directly
+        $page->click('#billingManager');
+        $page->click('text=test user1');
 
         $page->click('#add');
 
@@ -69,6 +69,6 @@ describe('Billing Manager', function () {
 
         $page->click('#remove');
 
-        $page->assertDontSee('test user1');
+        $page->assertSee('No Billing Managers');
     });
 });
