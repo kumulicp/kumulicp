@@ -93,13 +93,14 @@ class ApplicationUpgrade extends Action
         $app_instance = Application::instance($task->app_instance);
         $server = $app_instance->connect('web');
 
-        if ($app_instance->setting('expand_storage') == true && $task->update_at < now()->subMinutes(5)) {
-            $app_instance->updateSetting('expand_storage', false);
+        if ($app_instance->setting('expand_storage')) {
+            if ($task->update_at < now()->subMinutes(5)) {
+                $app_instance->updateSetting('expand_storage', false);
+    
+                // Run another update to restore app
+                $server->update();
+            }
 
-            // Run another update to restore app
-            $server->update();
-            sleep(5);
-        } elseif ($app_instance->setting('expand_storage') == true && $task->update_at >= now()->subMinutes(5)) {
             return;
         }
 
