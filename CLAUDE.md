@@ -131,7 +131,8 @@ php artisan test --testsuite=AccountManagerLdap
 
 ## Key Rules
 
-1. **Always call `setupAccountManagerDriver()` before `seed()`** — `seed()` checks the driver to clean up LDAP orgs first.
-2. **Always restore in `tearDown()`** when using the PHPUnit class style — the Pest helpers handle this automatically via `RefreshDatabase`.
-3. **LDAP-only operations** (app permissions, `addControlPanelAccess`, `addBillingManagerAccess`, etc.) must start with `skipUnlessDriver($driver, 'ldap')` or `$this->skipIfNotLdap()`.
-4. **New account manager tests go in `tests/Feature/AccountManager/`** to be picked up by the `AccountManagerLdap` suite.
+1. **Always call `setupAccountManagerDriver()` before `seed()`** — the driver env var must be set before seeding so the correct backend is used.
+2. **LDAP is cleaned up in teardown, not setup** — `TestSupports::cleanLdap()` deletes the `demo` and `testing` LDAP orgs after each test so no traces are left behind. Pest tests in `Feature/AccountManager/` get this automatically via a scoped `afterEach`. PHPUnit class-style tests get it via `restoreAccountManagerDriver()` (called in `tearDown()`). Do not add setup-time LDAP cleanup.
+3. **Always call `restoreAccountManagerDriver()` in `tearDown()`** when using the PHPUnit class style — this triggers `cleanLdap()` and resets the driver singleton for subsequent tests.
+4. **LDAP-only operations** (app permissions, `addControlPanelAccess`, `addBillingManagerAccess`, etc.) must start with `skipUnlessDriver($driver, 'ldap')` or `$this->skipIfNotLdap()`.
+5. **New account manager tests go in `tests/Feature/AccountManager/`** to be picked up by the `AccountManagerLdap` suite.

@@ -4,6 +4,7 @@ namespace Tests\Support\Concerns;
 
 use App\Services\AccountManagerService;
 use App\Support\Facades\AccountManager;
+use Tests\Support\TestSupports;
 
 trait TestsWithAccountManagerDrivers
 {
@@ -23,6 +24,7 @@ trait TestsWithAccountManagerDrivers
 
     protected function restoreAccountManagerDriver(): void
     {
+        (new TestSupports)->cleanLdap();
         putenv("ACCOUNTMANAGER_DRIVER={$this->originalDriver}");
         app()->instance('account_manager', new AccountManagerService());
         AccountManager::clearResolvedInstances();

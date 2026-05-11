@@ -48,18 +48,22 @@ class TestSupports
 
     public $wordpress_2;
 
-    public function seed()
+    public function cleanLdap(): void
     {
-        if (env('ACCOUNTMANAGER_DRIVER') === 'ldap') {
-            $org = LdapOrganization::find(Dn::create('demo'));
-            if ($org) {
-                $org->delete($recursive = true);
-            }
-            $org = LdapOrganization::find(Dn::create('testing'));
+        if (env('ACCOUNTMANAGER_DRIVER') !== 'ldap') {
+            return;
+        }
+
+        foreach (['demo', 'testing'] as $slug) {
+            $org = LdapOrganization::find(Dn::create($slug));
             if ($org) {
                 $org->delete($recursive = true);
             }
         }
+    }
+
+    public function seed()
+    {
         Artisan::call('db:seed DemoSeeder');
         Role::create(['name' => 'control_panel_admin']);
         Role::create(['name' => 'organization_admin']);

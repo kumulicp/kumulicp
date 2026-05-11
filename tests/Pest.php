@@ -26,6 +26,11 @@ pest()->beforeEach(function () {
     })
     ->in('Browser');
 
+pest()->afterEach(function () {
+    (new TestSupports())->cleanLdap();
+    })
+    ->in('Feature/AccountManager');
+
 /*
 |--------------------------------------------------------------------------
 | Browser Testing
