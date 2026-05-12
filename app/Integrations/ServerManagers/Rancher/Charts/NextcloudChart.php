@@ -40,7 +40,7 @@ class NextcloudChart extends HelmChart
             'replicaCount' => $this->replicaCount(),
             'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-nextcloud-'.$app_instance->id),
             'image' => [
-                'pullPolicy' => 'IfNotPresent',
+                'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
                 'registry' => $version->setting('image_registry'),
                 'repository' => $version->setting('image_repo_name'),
                 'tag' => $version->name,
