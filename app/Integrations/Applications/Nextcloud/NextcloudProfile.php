@@ -463,12 +463,26 @@ class NextcloudProfile extends AppProfile
             'persistent' => false,
             'validations' => 'nullable|string',
         ],
+        'image-pullPolicy' => [
+            'name' => 'image-pullPolicy',
+            'type' => 'string',
+            'default' => 'IfNotPresent',
+            'persistent' => false,
+            'validations' => 'in:IfNotPresent,Always,Never',
+        ],
         'imaginary-enabled' => [
             'name' => 'imaginary-enabled',
             'type' => 'bool',
             'default' => false,
             'persistent' => false,
             'validations' => 'nullable|boolean',
+        ],
+        'imaginary-replicaCount' => [
+            'name' => 'imaginary-replicaCount',
+            'type' => 'int',
+            'default' => 1,
+            'persistent' => false,
+            'validations' => 'nullable|integer',
         ],
         'nextcloud-php-memory-limit' => [
             'name' => 'nextcloud-php-memory-limit',

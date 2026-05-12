@@ -44,18 +44,6 @@ class WordpressChart extends HelmChart
             ],
             'replicaCount' => $this->replicaCount(),
             'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-'.$this->chartName()),
-            'podSecurityContext' => [
-                'fsGroup' => 0,
-            ],
-            'containerPorts' => [
-                'http' => 80,
-                'https' => 433,
-            ],
-            'containerSecurityContext' => [
-                'enabled' => false,
-                'runAsUser' => 0,
-                'runAsNonRoot' => false,
-            ],
             'externalDatabase' => [
                 'enabled' => $database_server ? true : false,
                 'database' => $app_instance->databasename,
@@ -75,7 +63,6 @@ class WordpressChart extends HelmChart
             'mariadb' => $app_instance->configuration('mariadb', true),
             'persistence' => [
                 'size' => $this->appStorage().'Gi',
-                'accessMode' => $app_instance->configuration('persistence-accessMode', true),
                 'accessModes' => $app_instance->configuration('persistence-accessModes', true),
                 'storageClass' => $app_instance->configuration('persistence-storageClass', true),
                 'enabled' => $app_instance->configuration('persistence-enabled', true),
@@ -92,37 +79,14 @@ class WordpressChart extends HelmChart
                 ],
             ],
             'extraEnvVars' => $this->extraEnv(),
-            // 'extraEnvVarsSecret' => 'wordpress-env-secret',
-            'service' => [
-                // 'sessionAffinity' => '',
-                'type' => 'ClusterIP',
-                'ports' => [
-                    'http' => 8080,
-                    'https' => 8433,
-                ],
-            ],
             'image' => [
                 'registry' => $version->setting('image_registry'),
-                'debug' => $app_instance->configuration('image-debug'),
                 'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
                 'repository' => $version->setting('image_repo_name'),
                 'tag' => $version->name,
             ],
             'updateStrategy' => [
-                'rollingUpdate' => $app_instance->configuration('updateStrategy-rollingUpdate'),
                 'type' => $app_instance->configuration('updateStrategy-type'),
-            ],
-            'customReadinessProbe' => [
-                'failureThreshold' => $app_instance->configuration('customReadinessProbe-failureThreshold'),
-                'httpGet' => [
-                    'path' => '/wp-login.php',
-                    'port' => 'http',
-                    'scheme' => 'HTTP',
-                ],
-                'initialDelaySeconds' => $app_instance->configuration('customReadinessProbe-initialDelaySeconds'),
-                'periodSeconds' => $app_instance->configuration('customReadinessProbe-periodSeconds'),
-                'successThreshold' => $app_instance->configuration('customReadinessProbe-successThreshold'),
-                'timeoutSeconds' => $app_instance->configuration('customReadinessProbe-timeoutSeconds'),
             ],
             'sidecars' => $this->sidecars(),
             'wordpressBlogName' => $organization->name,

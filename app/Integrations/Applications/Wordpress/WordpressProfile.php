@@ -79,13 +79,6 @@ class WordpressProfile extends AppProfile
     ];
 
     protected $configurations = [
-        'image-debug' => [
-            'name' => 'image-debug',
-            'type' => 'bool',
-            'persistent' => false,
-            'default' => false,
-            'validations' => 'boolean',
-        ],
         'image-pullPolicy' => [
             'name' => 'image-pullPolicy',
             'type' => 'string',
@@ -130,20 +123,6 @@ class WordpressProfile extends AppProfile
             'validations' => 'nullable',
             'default' => '',
         ],
-        'persistence-accessMode' => [
-            'name' => 'persistence-accessMode',
-            'type' => 'string',
-            'default' => 'ReadWriteOnce',
-            'persistent' => true,
-            'validations' => 'in:ReadWriteOnce,ReadWriteMany|nullable',
-        ],
-        'updateStrategy-rollingUpdate' => [
-            'name' => 'updateStrategy-rollingupdate',
-            'type' => 'string',
-            'default' => null,
-            'persistent' => false,
-            'validations' => 'nullable|string',
-        ],
         'updateStrategy-type' => [
             'name' => 'updateStrategy-type',
             'type' => 'string',
@@ -173,7 +152,7 @@ class WordpressProfile extends AppProfile
             'validations' => 'nullable|integer',
         ],
         'customReadinessProbe-successThreshold' => [
-            'name' => 'customReadinessProbe-failureThreshold',
+            'name' => 'customReadinessProbe-successThreshold',
             'type' => 'int',
             'default' => 1,
             'persistent' => false,
