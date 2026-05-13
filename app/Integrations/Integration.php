@@ -206,6 +206,11 @@ class Integration
         }
     }
 
+    public function parseResponse(mixed $response)
+    {
+        return $response;
+    }
+
     public function ignoreErrorCode($code)
     {
         if ($key = array_search($code, $this->error_codes)) {
