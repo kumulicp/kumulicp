@@ -37,6 +37,14 @@ class ProcessPermissions extends Action
 
         $user = new User($task->app_instance);
 
+        $roles = [];
+
+        foreach (Arr::get($permissions, $task->app_instance->id, []) as $permission) {
+            if ($permission) {
+                $roles[] = $permission;
+            }
+        }
+
         try {
             $user->find($username);
         } catch (ConnectionFailedException $e) {
@@ -49,7 +57,7 @@ class ProcessPermissions extends Action
 
         if (! $user->exists()) {
             try {
-                $user->create($username);
+                $user->create($username, $roles);
             } catch (ConnectionFailedException $e) {
                 $task->error_message = $e->getMessage();
                 $task->error_code = 'connection_failed';
@@ -66,32 +74,16 @@ class ProcessPermissions extends Action
 
                 return;
             }
-        }
+        } else {
+            try {
+                $user->updateRoles($roles);
+            } catch (ConnectionFailedException $e) {
+                $task->error_message = $e->getMessage();
+                $task->error_code = 'connection_failed';
+                $task->restart();
 
-        $roles = [];
-
-        foreach (Arr::get($permissions, $task->app_instance->id, []) as $permission) {
-            if ($permission) {
-                $roles[] = $permission;
+                return;
             }
-        }
-
-        foreach ($task->app_instance->children as $child) {
-            foreach (Arr::get($permissions, $child->id, []) as $permission) {
-                if ($permission) {
-                    $roles[] = $permission;
-                }
-            }
-        }
-
-        try {
-            $user->updateRoles($roles);
-        } catch (ConnectionFailedException $e) {
-            $task->error_message = $e->getMessage();
-            $task->error_code = 'connection_failed';
-            $task->restart();
-
-            return;
         }
 
         if ($user->hasError()) {

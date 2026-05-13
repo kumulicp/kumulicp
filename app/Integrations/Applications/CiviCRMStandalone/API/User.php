@@ -12,10 +12,10 @@ class User extends CiviCRMStandalone
     {
         $path = $this->basePath().'/ajax/api4/User/get';
 
-        $this->json()->post($path, [
-            'where' => [['name', '=', $username]],
-            'select' => ['id', 'name', 'roles'],
-        ]);
+        $this->form()->post($path, $this->data([
+            'where' => [['username', '=', $username]],
+            'select' => ['id', 'name', 'username', 'roles:name'],
+        ]));
 
         $response = $this->response_content();
 
@@ -26,17 +26,19 @@ class User extends CiviCRMStandalone
         return $this;
     }
 
-    public function create(string $username): static
+    public function create(string $username, array $roles): static
     {
         $path = $this->basePath().'/ajax/api4/User/create';
 
         $this->action_description = __('messages.api.civicrm.users.create_user', ['name' => $username]);
 
-        $this->json()->post($path, [
+        $this->form()->post($path, $this->data([
             'values' => [
-                'name' => $username,
+                'username' => $username,
+                'is_active' => true,
+                'roles:name' => $roles,
             ],
-        ]);
+        ]));
 
         $response = $this->response_content();
 
@@ -53,18 +55,14 @@ class User extends CiviCRMStandalone
             return $this;
         }
 
-        $path = $this->basePath().'/ajax/api4/User/save';
+        $path = $this->basePath().'/ajax/api4/User/update';
 
         $this->action_description = __('messages.api.civicrm.users.update_roles', ['roles' => implode(', ', $roles) ?: 'none']);
 
-        $this->json()->post($path, [
-            'records' => [
-                [
-                    'id' => $this->user['id'],
-                    'roles' => $roles,
-                ],
-            ],
-        ]);
+        $this->form()->post($path, $this->data([
+          'values' => ['roles:name' => $roles],
+          'where' => [['username', '=', $this->user['username']]],
+        ]));
 
         return $this;
     }
@@ -72,5 +70,10 @@ class User extends CiviCRMStandalone
     public function exists(): bool
     {
         return $this->user !== null;
+    }
+
+    private function data(array $data)
+    {
+        return ['params' => json_encode($data)];
     }
 }
