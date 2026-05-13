@@ -36,7 +36,7 @@ import { useForm } from '@inertiajs/vue3'
                 />
               <va-input v-model="form.category"
                 :label="$t('admin.roles.category')"
-                :messages="[t('admin.roles.categoryCaption1'), $t('admin.roles.categoryCaption2')]"
+                :messages="[$t('admin.roles.categoryCaption1'), $t('admin.roles.categoryCaption2')]"
                 class="mb-2"
                 immediateValidation
                 :error="$page.props.errors.category"

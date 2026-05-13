@@ -16,7 +16,7 @@ class CiviCRMStandalone extends Application
     public function headers()
     {
         return [
-            'X-Civi-Auth' => 'Basic '.base64_encode('support:'.$this->app_instance->parent->api_password()),
+            'X-Civi-Auth' => 'Basic '.base64_encode('admin:'.$this->app_instance->api_password()),
             'X-Requested-With' => 'XMLHttpRequest',
         ];
 
