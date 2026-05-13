@@ -86,6 +86,22 @@ class CiviCRMStandaloneChart extends HelmChart
             'updateStrategy' => [
                 'type' => $app_instance->configuration('updateStrategy-type'),
             ],
+            'cronjob' => [
+                'enabled' => $app_instance->configuration('cronjob-enabled'),
+                'sidecar' => [
+                    'image' => $app_instance->configuration('cronjob-image'),
+                    'resources' => [
+                        'limits' => [
+                            'cpu' => $app_instance->configuration('cronjob-resources-limits-cpu'),
+                            'memory' => $app_instance->configuration('cronjob-resources-limits-memory'),
+                        ],
+                        'requests' => [
+                            'cpu' => $app_instance->configuration('cronjob-resources-requests-cpu'),
+                            'memory' => $app_instance->configuration('cronjob-resources-requests-memory'),
+                        ],
+                    ],
+                ],
+            ],
             'sidecars' => Application::profile('civicrm-standalone')->sidecars(),
             'civicrmEmail' => $app_instance->configuration('civicrm-email'),
             'civicrmPassword' => $app_instance->api_password(),
