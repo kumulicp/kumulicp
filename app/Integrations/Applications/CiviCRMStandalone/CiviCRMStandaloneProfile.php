@@ -17,6 +17,15 @@ class CiviCRMStandaloneProfile extends AppProfile
 
     protected $jobs = CiviCRMRancherJobs::class;
 
+    protected $recommendations = [
+        'image_repo' => 'images/civicrm-standalone',
+        'image_version' => '6.14.0',
+        'image_registry' => 'docker.io',
+        'helm_chart_repo' => 'repo.kumuli.dev',
+        'helm_chart_name' => 'civicrm-standalone',
+        'helm_chart_version' => '0.4.0',
+    ];
+
     protected $role_groups = [
         'civicrm' => [
             'id' => 'civicrm',

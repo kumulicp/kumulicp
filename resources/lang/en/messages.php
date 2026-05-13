@@ -204,6 +204,12 @@ return [
         'wordpress' => [
             'update_user_roles' => 'Update User Roles (:roles)',
         ],
+        'civicrm' => [
+            'users' => [
+                'update_roles' => 'Update user roles (:roles)',
+                'create_user' => 'Create user :name',
+            ],
+        ],
         'rancher' => [
             'log' => [
                 'app_created' => ':app created for :organization',
