@@ -63,8 +63,9 @@ class EmailLoggingHandler extends AbstractProcessingHandler
             'all' => json_encode($record),
         ];
 
-        $error_email = Settings::get('error_email');
+        if ($error_email = Settings::get('error_email')) {
+            Mail::mailer('errors')->to($error_email)->send(new CriticalError($data));
+        }
 
-        Mail::mailer('errors')->to($error_email)->send(new CriticalError($data));
     }
 }
