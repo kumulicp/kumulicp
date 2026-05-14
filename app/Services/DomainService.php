@@ -42,6 +42,7 @@ class DomainService
     {
         $org_domain = new OrgDomain;
         $org_domain->organization_id = $organization->id;
+        $org_domain->host = '@';
         $org_domain->name = $name;
         $org_domain->source = $source;
         $org_domain->status = $status;
@@ -63,6 +64,7 @@ class DomainService
         $subdomain->host = '@';
         $subdomain->name = $name;
         $subdomain->type = $type === 'connection' ? 'app' : 'custom';
+        $subdomain->status = 'active';
         $subdomain->save();
 
         return $this->registrar($org_domain);

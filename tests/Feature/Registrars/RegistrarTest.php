@@ -15,7 +15,6 @@ use Tests\Support\TestSupports;
  * To run against the real Namecheap sandbox:
  *   REGISTRAR_DRIVER=namecheap php artisan test --testsuite=RegistrarIntegration
  */
-
 beforeEach(function () {
     $support = new TestSupports;
     $support->seed();
@@ -36,7 +35,7 @@ it('returns pricing for a TLD', function (string $driver) {
     skipUnlessRegistrar($driver, 'fake');
     setupRegistrarDriver($driver);
 
-    $tld = Tld::firstOrCreate(['name' => 'com']);
+    $tld = Tld::firstOrCreate(['name' => 'com'], ['default_driver' => 'namecheap']);
     $pricing = Domain::registrar($driver)->pricing($tld, 'example.com');
 
     expect($pricing->registrationPrice(1))->toBeFloat()->toBeGreaterThan(0)
@@ -57,7 +56,7 @@ it('registers a domain', function (string $driver) {
     setupRegistrarDriver($driver);
 
     $user = User::find(1);
-    $tld = Tld::firstOrCreate(['name' => 'com']);
+    $tld = Tld::firstOrCreate(['name' => 'com'], ['default_driver' => 'namecheap']);
 
     $org_domain = OrgDomain::factory()->create([
         'name' => 'test-'.uniqid().'.com',
@@ -81,7 +80,7 @@ it('transfers a domain', function (string $driver) {
     setupRegistrarDriver($driver);
 
     $user = User::find(1);
-    $tld = Tld::firstOrCreate(['name' => 'com']);
+    $tld = Tld::firstOrCreate(['name' => 'com'], ['default_driver' => 'namecheap']);
 
     $org_domain = OrgDomain::factory()->create([
         'name' => 'transfer-'.uniqid().'.com',

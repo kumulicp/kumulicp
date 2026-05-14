@@ -17,6 +17,13 @@ use App\OrgServer;
  */
 class FakeServerManager implements AppInterface, OrganizationInterface
 {
+    private static array $deleted_instances = [];
+
+    public static function reset(): void
+    {
+        self::$deleted_instances = [];
+    }
+
     public function __construct(
         private OrgServer $server,
         private ?AppInstance $app_instance = null,
@@ -34,6 +41,10 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function isActive(): bool
     {
+        if ($this->app_instance && in_array($this->app_instance->id, self::$deleted_instances)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -49,6 +60,10 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function delete(): bool
     {
+        if ($this->app_instance) {
+            self::$deleted_instances[] = $this->app_instance->id;
+        }
+
         return true;
     }
 

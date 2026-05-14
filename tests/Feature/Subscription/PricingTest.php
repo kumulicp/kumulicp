@@ -85,36 +85,15 @@ class PricingTest extends SubscriptionTestCase
         Organization::setOrganization($this->user->organization);
         $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
 
-        $this->followingRedirects();
-        $this->post('/users/testing1/permissions', [
-            'permission' => [
-                1 => 'none',
-                2 => ['none'],
-                $this->demoApp->id => ['demo_role'],
-                'control_panel' => false,
-                'control_panel_admin' => false,
-            ],
-        ]);
-        $this->put('/users/testing1', [
-            'first_name' => 'test',
-            'last_name' => 'user1',
-            'personal_email' => 'test1@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 1],
-        ]);
+        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+        $this->setAdditionalStorage('testing1', $this->demoApp->id, 1);
 
         $app_pricing = Subscription::app_instance($this->demoApp);
         $this->assertEquals(2.00, $app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price']);
         $this->assertEquals(4, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
 
         $this->grantPermission('testing2', $this->demoApp->id, ['demo_role']);
-        $this->put('/users/testing2', [
-            'first_name' => 'test',
-            'last_name' => 'user2',
-            'personal_email' => 'test2@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 1],
-        ]);
+        $this->setAdditionalStorage('testing2', $this->demoApp->id, 1);
 
         $this->assertEquals(4, AccountManager::users()->find('testing2')->appStorage($this->demoApp));
         $this->assertEquals(4.00, $app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price']);

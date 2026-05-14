@@ -17,13 +17,7 @@ class AppStorageTest extends SubscriptionTestCase
         $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
         $this->assertEquals(4, Application::instance($this->demoApp)->storage()->calculateTotalAppStorage());
 
-        $this->put('/users/testing1', [
-            'first_name' => 'test',
-            'last_name' => 'user1',
-            'personal_email' => 'test1@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 2],
-        ]);
+        $this->setAdditionalStorage('testing1', $this->demoApp->id, 2);
 
         $this->assertEquals(8, Application::instance($this->demoApp)->storage()->calculateTotalAppStorage());
         $this->assertEquals(8, Application::instance($this->demoApp)->storage()->totalAppStorage());

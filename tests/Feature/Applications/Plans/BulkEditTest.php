@@ -531,8 +531,8 @@ class BulkEditTest extends TestCase
         );
 
         $response->assertRedirectContains('/plans/bulk-edit/edit');
-        $response->assertRedirectContains('plans%5B%5D='.$plan1->id);
-        $response->assertRedirectContains('plans%5B%5D='.$plan2->id);
+        $response->assertRedirectContains('plans[]='.$plan1->id);
+        $response->assertRedirectContains('plans[]='.$plan2->id);
     }
 
     // -------------------------------------------------------------------------
@@ -638,8 +638,8 @@ class BulkEditTest extends TestCase
         );
 
         $response->assertRedirectContains('/plans/bulk-edit/features');
-        $response->assertRedirectContains('plans%5B%5D='.$plan1->id);
-        $response->assertRedirectContains('plans%5B%5D='.$plan2->id);
+        $response->assertRedirectContains('plans[]='.$plan1->id);
+        $response->assertRedirectContains('plans[]='.$plan2->id);
     }
 
     // -------------------------------------------------------------------------
@@ -761,7 +761,7 @@ class BulkEditTest extends TestCase
         );
 
         $response->assertRedirectContains('/plans/bulk-edit/configurations');
-        $response->assertRedirectContains('plans%5B%5D='.$plan1->id);
-        $response->assertRedirectContains('plans%5B%5D='.$plan2->id);
+        $response->assertRedirectContains('plans[]='.$plan1->id);
+        $response->assertRedirectContains('plans[]='.$plan2->id);
     }
 }

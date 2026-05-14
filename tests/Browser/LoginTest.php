@@ -47,4 +47,11 @@ describe('Login', function () {
         visit('/')
             ->assertPathIs('/login');
     });
+
+    it('can check the keep me logged in checkbox', function () {
+        $page = visit('/login');
+        $page->assertNotChecked('#remember');
+        $page->script("document.querySelector('#remember').closest('.va-checkbox__input-container').click()");
+        $page->assertChecked('#remember');
+    });
 });

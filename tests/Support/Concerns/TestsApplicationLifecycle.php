@@ -55,7 +55,7 @@ use Illuminate\Support\Facades\Notification;
  */
 trait TestsApplicationLifecycle
 {
-    protected int $lifecycleMaxIterations = 30;
+    protected int $lifecycleMaxIterations = 5;
 
     protected int $lifecycleSleepSeconds = 0;
 
@@ -70,15 +70,20 @@ trait TestsApplicationLifecycle
         $iterations = 0;
         while ($iterations < $this->lifecycleMaxIterations) {
             $completeCallback($task);
-            $task->refresh();
+            $fresh = $task->fresh();
+            if ($fresh !== null) {
+                $task = $fresh;
+            }
             if (in_array($task->status, ['complete', 'failed'])) {
-                break;
+                return;
             }
             if ($this->lifecycleSleepSeconds > 0) {
                 sleep($this->lifecycleSleepSeconds);
             }
             $iterations++;
         }
+
+        $this->fail("Task {$task->id} did not complete after {$this->lifecycleMaxIterations} polls (status: {$task->status}).");
     }
 
     protected function runActivate(AppPlan $plan, Organization $org, Application $app): AppInstance
@@ -86,7 +91,6 @@ trait TestsApplicationLifecycle
         $task = Action::execute(new ApplicationActivate(organization: $org, app: $app, plan: $plan));
         $task->status = 'in_progress';
         $task->save();
-
         Action::run($task);
 
         $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
@@ -134,7 +138,6 @@ trait TestsApplicationLifecycle
 
         $this->pollUntilDone($task, function (Task &$t) {
             Action::complete($t);
-            $t->refresh();
             // ApplicationDelete marks itself done by deleting the Task record
             if (is_null(Task::find($t->id))) {
                 $t->status = 'complete';

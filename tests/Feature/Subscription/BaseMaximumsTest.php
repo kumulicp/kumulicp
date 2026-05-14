@@ -33,36 +33,14 @@ class BaseMaximumsTest extends SubscriptionTestCase
         $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
 
         $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $edit1 = $this->put('/users/testing1', [
-            'first_name' => 'test',
-            'last_name' => 'user1',
-            'personal_email' => 'test1@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 1],
-        ]);
-
-        $edit1->assertSessionDoesntHaveErrors();
+        $this->setAdditionalStorage('testing1', $this->demoApp->id, 1);
         $this->assertEquals(4, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
 
         $this->grantPermission('testing2', $this->demoApp->id, ['demo_role']);
-        $this->put('/users/testing2', [
-            'first_name' => 'test',
-            'last_name' => 'user2',
-            'personal_email' => 'test2@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 1],
-        ]);
-
+        $this->setAdditionalStorage('testing2', $this->demoApp->id, 1);
         $this->assertEquals(4, AccountManager::users()->find('testing2')->appStorage($this->demoApp));
 
-        $this->put('/users/testing2', [
-            'first_name' => 'test',
-            'last_name' => 'user2',
-            'personal_email' => 'test2@example.com',
-            'organization' => $this->user->organization->id,
-            'additional_storage' => [$this->demoApp->id => 100],
-        ]);
-
+        $this->setAdditionalStorage('testing2', $this->demoApp->id, 100);
         $this->assertEquals(4, AccountManager::users()->find('testing2')->appStorage($this->demoApp));
     }
 

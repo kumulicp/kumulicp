@@ -69,8 +69,8 @@ import draggable from 'vuedraggable'
           </tr>
         </thead>
         <draggable v-model="order.plans" tag="tbody" item-key="id">
-          <template  #item="{ element }">
-            <tr style="min-height:300px;">
+          <template #item="{ element }">
+            <tr>
               <td>
                 <va-checkbox
                   :id="'plan-checkbox-'+element.id"
@@ -133,7 +133,7 @@ export default {
     archived: Object,
     errors: Object
   },
-  data () {
+  data() {
     return {
       showAddPlan: false,
       curPageValue: 1,

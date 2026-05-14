@@ -441,7 +441,7 @@ import { useForm } from '@inertiajs/vue3'
       </div>
     </div>
 
-    <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
+    <va-button id="submit" type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
 

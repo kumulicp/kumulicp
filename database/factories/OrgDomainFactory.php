@@ -18,6 +18,7 @@ class OrgDomainFactory extends Factory
     public function definition()
     {
         return [
+            'host' => fake()->domainName(),
             'name' => fake()->domainName(),
             'organization_name' => fake()->name(),
             'first_name' => fake()->firstName(),

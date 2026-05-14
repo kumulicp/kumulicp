@@ -220,6 +220,7 @@ class ApplicationActivate extends Action
 
             $subscription = (new SubscriptionService($task->organization))->all();
             ActionFacade::execute(new SubscriptionUpdate($task->organization, $subscription), background: true);
+
             $task->complete();
 
             $task->organization->notifyAdmins(new ApplicationActivated($task));

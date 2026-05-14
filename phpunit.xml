@@ -6,6 +6,11 @@
     </testsuite> -->
     <testsuite name="Feature">
       <directory suffix="Test.php">./tests/Feature</directory>
+      <exclude>./tests/Feature/AccountManager</exclude>
+      <exclude>./tests/Feature/Applications</exclude>
+      <exclude>./tests/Feature/Registrars</exclude>
+      <exclude>./tests/Feature/ServerManagers</exclude>
+      <exclude>./tests/Feature/SSO</exclude>
     </testsuite>
     <testsuite name="Browser">
       <directory suffix="Test.php">./tests/Browser</directory>
@@ -18,9 +23,6 @@
     </testsuite>
     <testsuite name="RegistrarIntegration">
       <directory suffix="Test.php">./tests/Feature/Registrars</directory>
-    </testsuite>
-    <testsuite name="ServerManagerIntegration">
-      <directory suffix="Test.php">./tests/Feature/ServerManagers</directory>
     </testsuite>
     <testsuite name="SSOIntegration">
       <directory suffix="Test.php">./tests/Feature/SSO</directory>

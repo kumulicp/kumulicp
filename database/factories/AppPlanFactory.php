@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Application;
 use App\AppPlan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,6 +19,7 @@ class AppPlanFactory extends Factory
     public function definition()
     {
         return [
+            'application_id' => Application::factory(),
             'name' => fake()->word(),
             'description' => fake()->sentence(),
             'features' => '[{"name":"Price","description":"Free"}]',
