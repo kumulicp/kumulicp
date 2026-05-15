@@ -34,7 +34,7 @@ class UpdateAppLdapGroups implements ShouldQueue
      */
     public function handle(AppInstanceSubscriptionChanged $event)
     {
-        if (env('ACCOUNTMANAGER_DRIVER') !== 'ldap') {
+        if (config('account_manager.driver') !== 'ldap') {
             return;
         }
 

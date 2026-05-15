@@ -2,18 +2,25 @@
 
 Tests that touch users, groups, email accounts, or permissions must run against both the `db` and `ldap` account manager drivers without duplicating test code.
 
-## The Two Patterns
+## Where tests live
 
-### Pest style (preferred for new tests)
+| Directory | Suite | Notes |
+|---|---|---|
+| `tests/Feature/AccountManager/` | `AccountManagerLdap` | Auth, groups, and any test needing dual-driver coverage |
+| `tests/Feature/AccountManager/Subscription/` | `AccountManagerLdap` | Subscription tests that require LDAP (pricing, roles, storage limits) |
+| `tests/Feature/Subscription/` | `Feature` | Subscription tests that only need the db driver |
+| `tests/Feature/Auth/` | `AccountManagerLdap` | Login and registration tests |
 
-All tests under `tests/Feature/AccountManager/` automatically get `TestCase` and `RefreshDatabase`.
+All files under `tests/Feature/AccountManager/` automatically get `TestCase`, `RefreshDatabase`, and LDAP cleanup via a scoped `afterEach`.
+
+## Pattern
 
 ```php
 use Tests\Support\TestSupports;
 
-// Runs twice: once with 'db', once with 'ldap'.
-// The 'ldap' iteration auto-skips if LDAP is unreachable.
+// Runs twice: once with 'db' (skips), once with 'ldap'.
 it('creates a group', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
     setupAccountManagerDriver($driver); // must come before seed()
     $support = new TestSupports;
     $support->seed();
@@ -22,74 +29,46 @@ it('creates a group', function (string $driver) {
     // assertions...
 })->with('account_manager_drivers');
 
-// LDAP-only operation — 'db' iteration emits a clean skip, not a failure.
-it('updates app permissions', function (string $driver) {
-    skipUnlessDriver($driver, 'ldap');
+// Runs twice: once with 'db', once with 'ldap' — both iterations pass.
+it('authenticates users via login screen', function (string $driver) {
     setupAccountManagerDriver($driver);
-    $support = new TestSupports;
-    $support->seed();
-    $support->populate();
+    (new TestSupports)->seed();
 
-    // assertions...
+    $response = $this->post('/login', ['email' => 'demo@example.com', 'password' => 'demouser']);
+
+    $response->assertRedirect(RouteServiceProvider::HOME);
+    $this->assertAuthenticated();
 })->with('account_manager_drivers');
 ```
 
 **Global helpers** (defined in `tests/Pest.php`):
 - `setupAccountManagerDriver(string $driver)` — swaps the `account_manager` singleton. Always call before `seed()` because `seed()` reads the driver env var to handle LDAP teardown.
-- `skipUnlessDriver(string $driver, string $required)` — marks the test skipped when `$driver !== $required`.
+- `skipUnlessDriver(string $required, ?string $driver = null)` — marks the test skipped when the active driver isn't `$required`. Omit `$driver` to read from the env var (useful in non-parameterized tests); pass `$driver` explicitly when using `->with('account_manager_drivers')`.
 - Dataset `'account_manager_drivers'` — resolves to `['db', 'ldap']`.
 
-### PHPUnit class style (for migrating existing tests)
+## Subscription tests with full setup
 
-Use the `TestsWithAccountManagerDrivers` trait and a `@dataProvider`.
+Subscription tests that need LDAP inline their own setup so `setupAccountManagerDriver` can run before `seed()`:
 
 ```php
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\Support\Concerns\TestsWithAccountManagerDrivers;
-use Tests\Support\TestSupports;
-use Tests\TestCase;
+it('enforces a limit', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    setupAccountManagerDriver($driver);
+    $support = new TestSupports;
+    $support->seed();
+    $support->activateDemoApp();
+    $support->createDemoAppPlans();
+    $support->createBase2Plan();
+    $support->addUsers();
+    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $this->actingAs($admin);
+    $demoApp = $support->demo_app->instances()->first();
 
-class GroupsTest extends TestCase
-{
-    use RefreshDatabase;
-    use TestsWithAccountManagerDrivers;
-
-    protected function tearDown(): void
-    {
-        $this->restoreAccountManagerDriver();
-        parent::tearDown();
-    }
-
-    /** @dataProvider accountManagerDriverProvider */
-    public function test_groups(string $driver): void
-    {
-        $this->setupAccountManagerDriver($driver); // before seed()
-        $support = new TestSupports;
-        $support->seed();
-        $support->addUsers();
-
-        // assertions...
-    }
-
-    /** @dataProvider accountManagerDriverProvider */
-    public function test_updates_app_permissions(string $driver): void
-    {
-        $this->skipIfNotLdap(); // skip 'db' iteration cleanly
-        $this->setupAccountManagerDriver($driver);
-        $support = new TestSupports;
-        $support->seed();
-
-        // assertions...
-    }
-}
+    // assertions using $support, $admin, $demoApp...
+})->with('account_manager_drivers');
 ```
 
-**Trait methods** (defined in `tests/Support/Concerns/TestsWithAccountManagerDrivers.php`):
-- `setupAccountManagerDriver(string $driver)` — swaps driver + rebinds singleton.
-- `restoreAccountManagerDriver()` — call in `tearDown()` to reset the driver for subsequent tests.
-- `skipIfNotLdap()` — shorthand for `skipIfNotDriver('ldap')`.
-- `skipIfNotDriver(string $required)` — generic version.
-- `accountManagerDriverProvider(): array` — returns `[['db'], ['ldap']]` for use as `@dataProvider`.
+Subscription tests that only use the db driver stay in `tests/Feature/Subscription/` and use the global `beforeEach` via `$this->support`, `$this->user`, `$this->demoApp`.
 
 ## Running Tests
 
@@ -132,7 +111,7 @@ php artisan test --testsuite=AccountManagerLdap
 ## Key Rules
 
 1. **Always call `setupAccountManagerDriver()` before `seed()`** — the driver env var must be set before seeding so the correct backend is used.
-2. **LDAP is cleaned up in teardown, not setup** — `TestSupports::cleanLdap()` deletes the `demo` and `testing` LDAP orgs after each test so no traces are left behind. Pest tests in `Feature/AccountManager/` get this automatically via a scoped `afterEach`. PHPUnit class-style tests get it via `restoreAccountManagerDriver()` (called in `tearDown()`). Do not add setup-time LDAP cleanup.
-3. **Always call `restoreAccountManagerDriver()` in `tearDown()`** when using the PHPUnit class style — this triggers `cleanLdap()` and resets the driver singleton for subsequent tests.
-4. **LDAP-only operations** (app permissions, `addControlPanelAccess`, `addBillingManagerAccess`, etc.) must start with `skipUnlessDriver($driver, 'ldap')` or `$this->skipIfNotLdap()`.
-5. **New account manager tests go in `tests/Feature/AccountManager/`** to be picked up by the `AccountManagerLdap` suite.
+2. **LDAP is cleaned up in teardown, not setup** — `TestSupports::cleanLdap()` deletes the `demo` and `testing` LDAP orgs after each test so no traces are left behind. This happens automatically via a scoped `afterEach` in `Feature/AccountManager/`. Do not add setup-time LDAP cleanup.
+3. **LDAP-only operations** must start with `skipUnlessDriver('ldap', $driver)` and use `->with('account_manager_drivers')` — the `db` iteration emits a clean skip rather than a failure.
+4. **Do not use `beforeEach` to skip based on driver** — the old pattern of `if (env('ACCOUNTMANAGER_DRIVER') !== 'ldap') { $this->markTestSkipped(...); }` in `beforeEach` is replaced by `skipUnlessDriver('ldap', $driver)` + `->with('account_manager_drivers')`.
+5. **New account manager tests go in `tests/Feature/AccountManager/`** — picked up automatically by the `AccountManagerLdap` suite.

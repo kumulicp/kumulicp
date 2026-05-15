@@ -7,6 +7,7 @@
     <testsuite name="Feature">
       <directory suffix="Test.php">./tests/Feature</directory>
       <exclude>./tests/Feature/AccountManager</exclude>
+      <exclude>./tests/Feature/Auth</exclude>
       <exclude>./tests/Feature/Applications</exclude>
       <exclude>./tests/Feature/Registrars</exclude>
       <exclude>./tests/Feature/ServerManagers</exclude>
@@ -17,6 +18,7 @@
     </testsuite>
     <testsuite name="AccountManagerLdap">
       <directory suffix="Test.php">./tests/Feature/AccountManager</directory>
+      <directory suffix="Test.php">./tests/Feature/Auth</directory>
     </testsuite>
     <testsuite name="ApplicationsIntegration">
       <directory suffix="Test.php">./tests/Feature/Applications</directory>

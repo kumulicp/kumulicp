@@ -2,14 +2,11 @@
 
 use App\Support\Facades\AccountManager;
 use App\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
-use Tests\TestCase;
 
-uses(TestCase::class, RefreshDatabase::class);
-
-it('creates, edits, and deletes a group', function () {
-    skipUnlessDriver('ldap');
+it('creates, edits, and deletes a group', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    setupAccountManagerDriver($driver);
     $support = new TestSupports;
     $support->seed();
     $support->activateDemoApp();
@@ -36,6 +33,7 @@ it('creates, edits, and deletes a group', function () {
         'managers' => ['demo', 'testing1'],
         'members' => ['testing2'],
     ]);
+
     $edit->assertValid(['original_name', 'name', 'category', 'managers', 'members']);
 
     $group = AccountManager::accounts($user->organization)->groups()->find($new_name);
@@ -51,4 +49,4 @@ it('creates, edits, and deletes a group', function () {
     $this->delete('/groups/'.$new_name);
 
     expect(AccountManager::accounts($user->organization)->groups()->find($new_name))->toBeNull();
-});
+})->with('account_manager_drivers');

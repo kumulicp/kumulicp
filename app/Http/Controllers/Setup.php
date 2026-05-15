@@ -32,7 +32,7 @@ class Setup extends Controller
         // Run system checks
         $disabled = explode(',', ini_get('disable_functions'));
 
-        if (env('ACCOUNTMANAGER_DRIVER') === 'ldap' || env('LOGIN_PROVIDER') === 'ldap') {
+        if (config('account_manager.driver') === 'ldap' || env('LOGIN_PROVIDER') === 'ldap') {
             $checks[__('setup.extension', ['extension' => 'ldap'])] = extension_loaded('ldap');
         }
         $checks[__('setup.extension', ['extension' => 'intl'])] = extension_loaded('intl');

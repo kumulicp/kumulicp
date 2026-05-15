@@ -15,6 +15,7 @@ auth.json
 /storage/debugbar
 /storage/app/addons/*
 /storage/app/apps/*
+/storage/app/purifier/*
 
 # handled by composer
 /vendor

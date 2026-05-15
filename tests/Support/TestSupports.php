@@ -54,7 +54,7 @@ class TestSupports
 
     public function cleanLdap(): void
     {
-        if (env('ACCOUNTMANAGER_DRIVER') !== 'ldap') {
+        if (config('account_manager.driver') !== 'ldap') {
             return;
         }
 

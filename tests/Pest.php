@@ -5,6 +5,9 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Domain;
 use App\Support\Facades\ServerInterface;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Tests\Support\Registrars\FakeRegistrar;
 use Tests\Support\ServerManagers\FakeServerManagerProfile;
 use Tests\Support\SSO\FakeSSOProfile;
@@ -43,7 +46,7 @@ pest()->beforeEach(function () {
 pest()->afterEach(function () {
     (new TestSupports())->cleanLdap();
     })
-    ->in('Feature/AccountManager');
+    ->in('Feature/AccountManager', 'Feature/Auth');
 
 pest()->beforeEach(function () {
     $this->support = new TestSupports;
@@ -132,9 +135,9 @@ dataset('account_manager_drivers', ['db', 'ldap']);
 function setupAccountManagerDriver(string $driver): void
 {
     $provider = $driver === 'ldap' ? 'ldap' : 'users';
-    putenv("ACCOUNTMANAGER_DRIVER={$driver}");
-    putenv("PROVIDER={$provider}");
-
+    Config::set('account_manager.driver', $driver);
+    Config::set('auth.guards.web.provider', $provider);
+    Auth::forgetGuards();
     app()->instance('account_manager', new AccountManagerService());
     AccountManager::clearResolvedInstances();
 }
@@ -145,7 +148,7 @@ function setupAccountManagerDriver(string $driver): void
  */
 function skipUnlessDriver(string $required, ?string $driver = null): void
 {
-    $driver ??= env('ACCOUNTMANAGER_DRIVER');
+    $driver ??= config('account_manager.driver');
 
     if ($driver !== $required) {
         test()->markTestSkipped("Requires '{$required}' account manager driver");

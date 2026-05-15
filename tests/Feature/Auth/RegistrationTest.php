@@ -40,7 +40,8 @@ it('renders registration screen', function () {
     $response->assertStatus(200);
 });
 
-it('registers new organization account', function () {
+it('registers new organization account', function (string $driver) {
+    setupAccountManagerDriver($driver);
     (new TestSupports)->seed();
 
     $this->withoutExceptionHandling();
@@ -80,7 +81,7 @@ it('registers new organization account', function () {
     expect($organization)->toBeInstanceOf(Organization::class);
     $response->assertRedirect('/registered');
     AccountManager::account($organization)->destroy();
-});
+})->with('account_manager_drivers');
 
 it('rejects username that is too short', function () {
     (new TestSupports)->seed();

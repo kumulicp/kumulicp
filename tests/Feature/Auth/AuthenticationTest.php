@@ -15,7 +15,8 @@ it('renders login screen', function () {
     $response->assertStatus(200);
 });
 
-it('authenticates users via login screen', function () {
+it('authenticates users via login screen', function (string $driver) {
+    setupAccountManagerDriver($driver);
     (new TestSupports)->seed();
 
     $response = $this->post('/login', [
@@ -25,9 +26,10 @@ it('authenticates users via login screen', function () {
 
     $response->assertRedirect(RouteServiceProvider::HOME);
     $this->assertAuthenticated();
-});
+})->with('account_manager_drivers');
 
-it('rejects invalid password on login', function () {
+it('rejects invalid password on login', function (string $driver) {
+    setupAccountManagerDriver($driver);
     (new TestSupports)->seed();
 
     $this->post('/login', [
@@ -36,4 +38,4 @@ it('rejects invalid password on login', function () {
     ]);
 
     $this->assertGuest();
-});
+})->with('account_manager_drivers');
