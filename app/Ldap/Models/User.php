@@ -44,6 +44,11 @@ class User extends Entry implements Authenticatable
 
     protected string $guidKey = 'entryUUID';
 
+    public function getKey(): mixed
+    {
+        return $this->getFirstAttribute('cn');
+    }
+
     public function authIdentifier()
     {
         return $this->getObjectGuid();

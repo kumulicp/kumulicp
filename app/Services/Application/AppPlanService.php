@@ -61,6 +61,8 @@ class AppPlanService
     {
         $plan_changed = false;
 
+        $plan_settings = [];
+
         foreach ($features as $name => $feature) {
             if (is_string($feature)) {
                 $status = $feature == 'on' ? 'enabled' : 'disabled';

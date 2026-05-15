@@ -187,8 +187,6 @@ export default {
           vueState.brand_image = data.brand_image
           vueState.paymentMethod = data.defaultPaymentMethod.card
           vueState.clientSecret = data.intent.client_secret
-
-          console.log(data.hasDefaultPaymentMethod)
         }).then(() => {
           this.mountStripe()
         }).catch(function (error) {

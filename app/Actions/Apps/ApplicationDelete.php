@@ -21,7 +21,7 @@ class ApplicationDelete extends Action
     public function __construct(AppInstance $app_instance, ?Prerequisites $prerequisites = null, ?string $start_time = null, ?string $end_time = null)
     {
         $this->organization = $app_instance->organization;
-        $this->app_instance = $app_instance;
+        $this->app_instance = Application::instance($app_instance);
 
         $this->app_instance->status = 'deleting';
         $this->app_instance->save();

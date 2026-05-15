@@ -21,6 +21,7 @@ class PlanFactory extends Factory
         return [
             'name' => fake()->word(),
             'description' => Str::random(50),
+            'org_type' => 'business',
             'app_plans' => [
                 'nextcloud' => ['max' => '1', 'plans' => 'enabled'],
                 'wordpress' => ['max' => '1', 'plans' => 'enabled'],

@@ -372,17 +372,18 @@ class PermissionsManager
     {
         $this->user->assignRole('organization_admin');
         $this->user->is_allowed = true;
+        $this->user->save();
+        // Update user type; used by plan settings to determine which users will add to the price
+        $this->updateUserAccessType();
         if ($organization) {
             $user = $this->user->get();
             $user->organization()->associate($organization);
             if ($verified) {
                 $user->email_verified_at = now();
             }
+            $user->save();
         }
-        $user->save();
 
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => true,
@@ -423,7 +424,7 @@ class PermissionsManager
 
     public function removeBillingManagerAccess()
     {
-        $this->user->assignRole('billing_manager');
+        $this->user->removeRole('billing_manager');
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => false,
