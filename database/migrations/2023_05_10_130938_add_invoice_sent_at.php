@@ -14,7 +14,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dateTime('invoice_sent_at', $precision = 0);
+            $table->dateTime('invoice_sent_at', $precision = 0)->nullable();
         });
     }
 

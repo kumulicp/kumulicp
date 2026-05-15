@@ -69,7 +69,7 @@ class ApplicationUpdate extends Action
                 $task->complete();
                 $task->groupNotified();
 
-                event(new AppInstanceUpdated($app_instance));
+                event(new AppInstanceUpdated($app_instance->app_instance));
             }
         }
     }

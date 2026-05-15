@@ -43,8 +43,8 @@ class HomeController extends Controller
                         'unit' => 'GB',
                     ];
                 }
-            } catch (\Throwable $e) {
-                report($e);
+            } catch (\Throwable) {
+                //
             }
         }
 

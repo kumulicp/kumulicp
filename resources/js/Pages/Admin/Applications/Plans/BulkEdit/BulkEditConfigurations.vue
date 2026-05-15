@@ -105,6 +105,7 @@ import { useForm } from '@inertiajs/vue3'
         <div class="row">
           <div class="flex flex-col lg3">
             <va-input
+              id="new-config-name"
               v-model="newConfig.name"
               :label="$t('admin.plans.name')"
               :messages="$t('admin.plans.newNameMessage')"

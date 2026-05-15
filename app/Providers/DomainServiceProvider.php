@@ -158,13 +158,11 @@ class DomainServiceProvider extends ServiceProvider
         Gate::define('enable-email-domain', function (User $user, OrgDomain $domain) {
             $base_subscription = Subscription::base($user->organization);
 
-            return $user->organization->status !== 'deactivated'
-                && $domain->email_status === 'disabled'
-                && $user->organization->status !== 'deactivated'
+            return dd($user->organization->status !== 'deactivated'
                 && $base_subscription->emailEnabled()
                 && $domain->status == 'active'
                 && $domain->email_enabled == false
-                && in_array($domain->type, ['managed', 'connection']);
+                && in_array($domain->type, ['managed', 'connection']));
         });
 
         Gate::define('disable-email-domain', function (User $user, OrgDomain $domain) {

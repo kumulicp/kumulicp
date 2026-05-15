@@ -85,8 +85,9 @@ class AppVersion extends Model
                 }
             });
             $version_roles = $this->roles;
-            $order = implode(',', $version_roles['order']);
-            $roles->orderByRaw('field(id,'.$order.')');
+            $ids = array_map('intval', $version_roles['order']);
+            $cases = implode(' ', array_map(fn ($id, $i) => "WHEN {$id} THEN {$i}", $ids, array_keys($ids)));
+            $roles->orderByRaw("CASE id {$cases} ELSE 9999 END");
             $roles->groupBy('category');
             $categories = $roles->get();
 
@@ -118,8 +119,9 @@ class AppVersion extends Model
         });
 
         $version_roles = $this->roles;
-        $order = implode(',', $version_roles['order']);
-        $roles->orderByRaw('field(id,'.$order.')');
+        $ids = array_map('intval', $version_roles['order']);
+        $cases = implode(' ', array_map(fn ($id, $i) => "WHEN {$id} THEN {$i}", $ids, array_keys($ids)));
+        $roles->orderByRaw("CASE id {$cases} ELSE 9999 END");
 
         return $roles->get();
     }

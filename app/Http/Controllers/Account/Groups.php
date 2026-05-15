@@ -133,6 +133,7 @@ class Groups extends Controller
         $group->updateCategory($validatedData['category']);
         $group->save();
 
+
         $active_apps = $organization->active_apps();
 
         $task = null;

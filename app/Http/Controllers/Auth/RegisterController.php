@@ -137,6 +137,12 @@ class RegisterController extends Controller
             $organization->contact_first_name = $data['contact_first_name'];
             $organization->contact_last_name = $data['contact_last_name'];
             $organization->contact_email = $data['contact_email'];
+            $organization->contact_phone_number = $data['contact_phone_number'];
+            $organization->street = '';
+            $organization->zipcode = '';
+            $organization->city = '';
+            $organization->state = '';
+            $organization->country = '';
             $organization->secretpw = Str::password(20, true, true, false, false);
             $organization->type = $data['type'];
             $organization->settings = [

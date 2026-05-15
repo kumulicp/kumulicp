@@ -11,7 +11,8 @@ class TaskHelpers
 
     public function groupTasks($filters = [])
     {
-        $tasks = Task::selectRaw('tasks.*, IFNULL(action_slug,UUID()) as unq_group')
+        $uuidExpr = DB::getDriverName() === 'sqlite' ? 'lower(hex(randomblob(16)))' : 'UUID()';
+        $tasks = Task::selectRaw("tasks.*, IFNULL(action_slug,{$uuidExpr}) as unq_group")
             ->where($filters)
             ->whereNot('status', 'complete')
             ->orderBy('updated_at', 'desc')

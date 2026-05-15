@@ -52,6 +52,7 @@ class Announcements extends Controller
 
         $announcement = new Announcement;
         $announcement->title = $validatedData['title'];
+        $announcement->short_description = '';
         $announcement->description = $validatedData['title'];
         $announcement->save();
 
