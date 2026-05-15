@@ -15,6 +15,8 @@ use App\Organization;
 use App\Support\AccountManager\PermissionsManager;
 use App\Support\AccountManager\UserManager;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use LdapRecord\Models\Attributes\DistinguishedName;
 
 class PermissionsInterface extends PermissionsManager implements PermissionsContract
@@ -71,19 +73,6 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
     {
         $app_name = LdapSupport::getAppInstanceID($app_instance);
         $version = $app_instance->version;
-
-        // If no roles given, automatically use default user roles
-        if (count($roles) == 0) {
-            $user_groups = $version->defaultUserRoles();
-
-            foreach ($user_groups as $group) {
-                $group = Group::find(Dn::create($app_instance->organization, 'applications', [$group->app_slug($app_instance), $app_name]));
-
-                if ($group) {
-                    $roles[] = $group->appRole();
-                }
-            }
-        }
 
         $app_roles = $app_instance->application->roles;
 
@@ -193,6 +182,7 @@ class PermissionsInterface extends PermissionsManager implements PermissionsCont
                 $user->username = $this->user->getFirstAttribute('cn');
                 $user->first_name = $this->user->getFirstAttribute('givenName');
                 $user->last_name = $this->user->getFirstAttribute('sn');
+                $user->password = Hash::make(Str::random(32));
             }
         }
         if ($verified) {

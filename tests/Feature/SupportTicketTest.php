@@ -11,7 +11,7 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     (new TestSupports)->seed();
-    $this->user = User::find(1);
+    $this->user = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($this->user);
 
     app('settings')->update('support_email', 'support@example.com');

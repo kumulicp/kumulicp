@@ -36,7 +36,7 @@ class NextcloudEnvVars extends EnvVar
             'PHP_OPCACHE_MEMORY_CONSUMPTION' => (string) $app_instance->configuration('nextcloud-php-opcache-memory-consumption'),
         ];
 
-        $ldap_settings = env('ACCOUNTMANAGER_DRIVER') === 'ldap' ? [
+        $ldap_settings = config('account_manager.driver') === 'ldap' ? [
             'USE_LDAP' => 'true',
             'LDAP_HOST' => env('LDAP_HOST'),
             'LDAP_PORT' => env('LDAP_PORT'),

@@ -30,6 +30,7 @@ class Subdomains extends Controller
         $subdomain->host = $validated['host'] === '' ? '*' : $validated['host'];
         $subdomain->name = in_array($validated['host'], ['@', '*', '']) ? $domain->name : $validated['host'].'.'.$domain->name;
         $subdomain->type = $validated['type'];
+        $subdomain->status = 'active';
         if ($validated['type'] !== 'app') {
             $subdomain->value = $validated['value'];
         }

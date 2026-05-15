@@ -10,6 +10,8 @@ class PlanFeaturesService
 {
     private $features = [];
 
+    private $application;
+
     public function __construct(private AppPlan $plan)
     {
         $this->application = $this->plan->application;
@@ -27,9 +29,11 @@ class PlanFeaturesService
             $this->features[$name]['payment_type'] = $this->plan->featureValue("$name.payment_type");
             $this->features[$name]['settings'] = $this->plan->featureValue("$name.settings");
 
-            foreach ($feature->admin_settings() as $setting_name => $admin_setting) {
-                if (! Arr::has($this->features[$name]['settings'], $setting_name)) {
-                    $this->features[$name]['settings'][$setting_name] = '';
+            if (method_exists($feature, 'admin_settings')) {
+                foreach ($feature->admin_settings() as $setting_name => $admin_setting) {
+                    if (! Arr::has($this->features[$name]['settings'], $setting_name)) {
+                        $this->features[$name]['settings'][$setting_name] = '';
+                    }
                 }
             }
         }

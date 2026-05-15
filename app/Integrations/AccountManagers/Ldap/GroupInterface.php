@@ -84,6 +84,7 @@ class GroupInterface extends GroupManager
         });
 
         // Convert member names to DN
+        $members_dns = [];
         foreach ($members as $member) {
             $members_dns[] = Dn::create($this->organization, 'users', $member);
         }
