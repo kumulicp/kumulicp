@@ -112,7 +112,7 @@ class TestSupports
                 'basic' => ['max' => 1, 'name' => 'Base 1', 'price' => 1, 'amount' => 1, 'storage' => 1, 'price_id' => 'stripe_basic'],
                 'email' => ['max' => 1, 'price' => 1, 'storage' => 1, 'price_id' => 'stripe_email'],
                 'storage' => ['max' => 1, 'price' => 1, 'amount' => 1, 'price_id' => 'stripe_storage'],
-                'standard' => ['max' => 1, 'price' => 1, 'storage' => 1, 'price_id' => 'stripe_standard'],
+                'standard' => ['max' => 10, 'price' => 1, 'storage' => 1, 'price_id' => 'stripe_standard'],
                 'application' => ['max' => 1, 'price' => 1, 'price_id' => 'stripe_application'],
                 'domains' => ['connect' => true, 'register' => false, 'transfer' => false],
             ],
