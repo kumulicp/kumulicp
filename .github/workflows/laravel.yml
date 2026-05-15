@@ -8,13 +8,26 @@ on:
 
 jobs:
   laravel-tests:
-
     runs-on: ubuntu-latest
-
+    services:
+      ldap:
+        image: osixia/openldap:1.5.0
+        ports:
+          - 389:389
+        env:
+          LDAP_ORGANISATION: Demo
+          LDAP_DOMAIN: example.com
+          LDAP_ADMIN_PASSWORD: admin
+        options: >-
+          --health-cmd "ldapsearch -x -H ldap://localhost -b dc=example,dc=com -D 'cn=admin,dc=example,dc=com' -w admin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
       with:
         php-version: '8.4'
+        ini-values: memory_limit=512M
     - uses: actions/checkout@v4
     - name: Copy .env
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
@@ -34,8 +47,20 @@ jobs:
       run: |
         mkdir -p database
         touch database/database.sqlite
-    - name: Execute tests (Unit and Feature tests) via PHPUnit/Pest
+    - name: Execute Feature tests
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
-      run: php artisan test
+      run: php artisan test --testsuite=Feature
+    - name: Execute AccountManagerLdap tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+        ACCOUNTMANAGER_DRIVER: ldap
+        PROVIDER: ldap
+        LDAP_HOST: localhost
+        LDAP_PORT: 389
+        LDAP_USERNAME: "cn=admin,dc=example,dc=com"
+        LDAP_PASSWORD: admin
+        LDAP_BASE_DN: "dc=example,dc=com"
+      run: php artisan test --testsuite=AccountManagerLdap
