@@ -1,37 +1,22 @@
 <?php
 
-namespace Tests\Feature\Nextcloud;
-
 use App\AppInstance;
 use App\Integrations\Applications\Nextcloud\API\Apps;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
-use Tests\TestCase;
 
-class AppsTest extends TestCase
-{
-    use RefreshDatabase;
+it('enables, disables, and finds nextcloud apps via API', function () {
+    $support = new TestSupports;
+    $support->seed();
+    $nextcloud = AppInstance::where('name', 'nextcloud')->first();
 
-    public function test_nextcloud_apps_api()
-    {
-        $support = new TestSupports;
-        $support->seed();
-        $nextcloud = AppInstance::where('name', 'nextcloud')->first();
+    $apps = new Apps($nextcloud);
 
-        // https://demo-nextcloud.example.com/ocs/v1.php/cloud/apps/contacts
+    $apps->enable('contacts');
+    expect($apps->isEnabled('contacts'))->toBeTrue();
 
-        $apps = new Apps($nextcloud);
+    $apps->disable('contacts');
+    expect($apps->isEnabled('contacts'))->toBeFalse();
 
-        // Enable
-        $enable = $apps->enable('contacts');
-        $this->assertTrue($apps->isEnabled('contacts'));
-
-        // Disable
-        $disable = $apps->disable('contacts');
-        $this->assertFalse($apps->isEnabled('contacts'));
-
-        // Find
-        $find = $apps->find('contacts');
-        $this->assertEquals('contacts', $apps->data->id);
-    }
-}
+    $apps->find('contacts');
+    expect($apps->data->id)->toBe('contacts');
+});

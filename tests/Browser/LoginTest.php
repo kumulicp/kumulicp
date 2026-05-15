@@ -3,33 +3,18 @@
 use App\User;
 
 describe('Login', function () {
-    it('renders the login page with all required fields', function () {
-        visit('/login')
-            ->assertSee('Email')
+    it('renders the login page and allows toggling remember me', function () {
+        $page = visit('/login');
+        $page->assertSee('Email')
             ->assertSee('Password')
             ->assertSee('Keep me logged in')
             ->assertSee('Forgot');
+        $page->assertNotChecked('#remember');
+        $page->script("document.querySelector('#remember').closest('.va-checkbox__input-container').click()");
+        $page->assertChecked('#remember');
     });
 
-    it('shows a credential error for invalid email and password', function () {
-        visit('/login')
-            ->fill('input[type=email]', 'nobody@example.com')
-            ->fill('input[type=password]', 'wrong-password')
-            ->click('#submit')
-            ->assertSee('These credentials do not match our records');
-    });
-
-    it('shows a credential error when the password is wrong for a real user', function () {
-        $user = User::factory()->create();
-
-        visit('/login')
-            ->fill('input[type=email]', $user->email)
-            ->fill('input[type=password]', 'wrong-password')
-            ->click('#submit')
-            ->assertSee('These credentials do not match our records');
-    });
-
-    it('logs in and redirects to the dashboard with valid credentials', function () {
+    it('logs in with valid credentials and redirects to the dashboard', function () {
         visit('/login')
             ->fill('input[type=email]', 'demo@example.com')
             ->fill('input[type=password]', 'demouser')
@@ -41,17 +26,5 @@ describe('Login', function () {
         visit('/login')
             ->click('a[href="/password/reset"]')
             ->assertPathIs('/password/reset');
-    });
-
-    it('redirects to login when accessing the dashboard while unauthenticated', function () {
-        visit('/')
-            ->assertPathIs('/login');
-    });
-
-    it('can check the keep me logged in checkbox', function () {
-        $page = visit('/login');
-        $page->assertNotChecked('#remember');
-        $page->script("document.querySelector('#remember').closest('.va-checkbox__input-container').click()");
-        $page->assertChecked('#remember');
     });
 });

@@ -18,7 +18,7 @@ use Tests\Support\TestSupports;
 beforeEach(function () {
     $support = new TestSupports;
     $support->seed();
-    $this->actingAs(User::find(1));
+    $this->actingAs(User::where('username', 'demo')->firstOrFail());
 });
 
 it('checks domain availability', function (string $driver) {
@@ -55,7 +55,7 @@ it('registers a domain', function (string $driver) {
     skipUnlessRegistrar($driver, 'fake');
     setupRegistrarDriver($driver);
 
-    $user = User::find(1);
+    $user = User::where('username', 'demo')->firstOrFail();
     $tld = Tld::firstOrCreate(['name' => 'com'], ['default_driver' => 'namecheap']);
 
     $org_domain = OrgDomain::factory()->create([
@@ -79,7 +79,7 @@ it('transfers a domain', function (string $driver) {
     skipUnlessRegistrar($driver, 'fake');
     setupRegistrarDriver($driver);
 
-    $user = User::find(1);
+    $user = User::where('username', 'demo')->firstOrFail();
     $tld = Tld::firstOrCreate(['name' => 'com'], ['default_driver' => 'namecheap']);
 
     $org_domain = OrgDomain::factory()->create([
@@ -105,7 +105,7 @@ it('transfers a domain', function (string $driver) {
 it('registers a real domain via Namecheap', function (string $driver) {
     skipUnlessRegistrar($driver, 'namecheap');
 
-    $user = User::find(1);
+    $user = User::where('username', 'demo')->firstOrFail();
     $tld_refresh = test()->get('/admin/service/domains/tlds/refresh');
 
     $check_domain = [];
@@ -137,7 +137,7 @@ it('registers a real domain via Namecheap', function (string $driver) {
 it('transfers a real domain via Namecheap', function (string $driver) {
     skipUnlessRegistrar($driver, 'namecheap');
 
-    $user = User::find(1);
+    $user = User::where('username', 'demo')->firstOrFail();
     $tld_refresh = test()->get('/admin/service/domains/tlds/refresh');
 
     $check_domain = [];

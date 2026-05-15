@@ -58,7 +58,7 @@ function createDemoPlans(Application $app): array
 
 describe('Plans List - Bulk Edit Selection', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
         $this->demoApp = Application::where('slug', 'demo_app')->first();
         [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
@@ -116,7 +116,7 @@ describe('Plans List - Bulk Edit Selection', function () {
 
 describe('Bulk Edit - Settings Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
         $this->demoApp = Application::where('slug', 'demo_app')->first();
         [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
@@ -197,7 +197,7 @@ describe('Bulk Edit - Settings Tab', function () {
 
 describe('Bulk Edit - View Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
         $this->demoApp = Application::where('slug', 'demo_app')->first();
         [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
@@ -230,7 +230,7 @@ describe('Bulk Edit - View Tab', function () {
 
 describe('Bulk Edit - Configurations Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
         $this->demoApp = Application::where('slug', 'demo_app')->first();
         [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);

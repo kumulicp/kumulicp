@@ -1,86 +1,80 @@
 <?php
 
-namespace Tests\Feature\Subscription;
-
 use App\Support\Facades\AccountManager;
 
-class BaseMaximumsTest extends SubscriptionTestCase
-{
-    public function test_max_standard_users_reached()
-    {
-        $this->withoutExceptionHandling();
-        $this->followingRedirects();
+it('enforces max standard user limit', function () {
+    skipUnlessDriver('ldap');
+    $this->withoutExceptionHandling();
+    $this->followingRedirects();
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
 
-        $this->assertFalse(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp));
-        $this->assertFalse(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp));
+    expect(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp))->toBeFalse();
+    expect(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp))->toBeFalse();
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $this->grantPermission('testing2', $this->demoApp->id, ['demo_role']);
+    grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+    grantPermission('testing2', $this->demoApp->id, ['demo_role']);
 
-        $this->assertTrue(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp));
-        $this->assertFalse(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp));
+    expect(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp))->toBeTrue();
+    expect(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp))->toBeFalse();
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
 
-        $this->grantPermission('testing2', $this->demoApp->id, ['demo_role']);
-        $this->assertTrue(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp));
-    }
+    grantPermission('testing2', $this->demoApp->id, ['demo_role']);
+    expect(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp))->toBeTrue();
+});
 
-    public function test_max_additional_storage_reached()
-    {
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
+it('enforces max additional storage limit', function () {
+    skipUnlessDriver('ldap');
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $this->setAdditionalStorage('testing1', $this->demoApp->id, 1);
-        $this->assertEquals(4, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
+    grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+    setAdditionalStorage('testing1', $this->demoApp->id, 1);
+    expect(AccountManager::users()->find('testing1')->appStorage($this->demoApp))->toBe(4);
 
-        $this->grantPermission('testing2', $this->demoApp->id, ['demo_role']);
-        $this->setAdditionalStorage('testing2', $this->demoApp->id, 1);
-        $this->assertEquals(4, AccountManager::users()->find('testing2')->appStorage($this->demoApp));
+    grantPermission('testing2', $this->demoApp->id, ['demo_role']);
+    setAdditionalStorage('testing2', $this->demoApp->id, 1);
+    expect(AccountManager::users()->find('testing2')->appStorage($this->demoApp))->toBe(4);
 
-        $this->setAdditionalStorage('testing2', $this->demoApp->id, 100);
-        $this->assertEquals(4, AccountManager::users()->find('testing2')->appStorage($this->demoApp));
-    }
+    setAdditionalStorage('testing2', $this->demoApp->id, 100);
+    expect(AccountManager::users()->find('testing2')->appStorage($this->demoApp))->toBe(4);
+});
 
-    public function test_max_basic_users_reached()
-    {
-        $this->withoutExceptionHandling();
-        $this->followingRedirects();
+it('enforces max basic user limit', function () {
+    skipUnlessDriver('ldap');
+    $this->withoutExceptionHandling();
+    $this->followingRedirects();
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['basic_demo_role']);
-        $this->grantPermission('testing2', $this->demoApp->id, ['basic_demo_role']);
+    grantPermission('testing1', $this->demoApp->id, ['basic_demo_role']);
+    grantPermission('testing2', $this->demoApp->id, ['basic_demo_role']);
 
-        $this->assertTrue(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp));
-        $this->assertEquals('basic', AccountManager::users()->find('testing1')->appUserAccessType($this->demoApp));
-        $this->assertFalse(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp));
-        $this->assertEquals('none', AccountManager::users()->find('testing2')->appUserAccessType($this->demoApp));
+    expect(AccountManager::users()->find('testing1')->canAccessApp($this->demoApp))->toBeTrue();
+    expect(AccountManager::users()->find('testing1')->appUserAccessType($this->demoApp))->toBe('basic');
+    expect(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp))->toBeFalse();
+    expect(AccountManager::users()->find('testing2')->appUserAccessType($this->demoApp))->toBe('none');
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
 
-        $this->grantPermission('testing2', $this->demoApp->id, ['basic_demo_role']);
-        $this->assertTrue(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp));
-        $this->assertEquals('basic', AccountManager::users()->find('testing2')->appUserAccessType($this->demoApp));
-    }
+    grantPermission('testing2', $this->demoApp->id, ['basic_demo_role']);
+    expect(AccountManager::users()->find('testing2')->canAccessApp($this->demoApp))->toBeTrue();
+    expect(AccountManager::users()->find('testing2')->appUserAccessType($this->demoApp))->toBe('basic');
+});
 
-    public function test_max_domains_reached()
-    {
-        $this->followingRedirects();
-        $this->user->organization->domains()->delete();
+it('enforces max domains limit', function () {
+    $this->followingRedirects();
+    $this->user->organization->domains()->delete();
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_2, $this->support->demo_app_2, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_2, $this->support->demo_app_2, $this->demoApp);
 
-        $domain1 = $this->post('/settings/domains/connect', ['domain_name' => 'example1.com']);
-        $domain1->assertSee('example1.com');
+    $domain1 = $this->post('/settings/domains/connect', ['domain_name' => 'example1.com']);
+    $domain1->assertSee('example1.com');
 
-        $this->followingRedirects();
-        $domain2 = $this->post('/settings/domains/connect', ['domain_name' => 'example2.com']);
-        $domain2->assertSee('example2.com');
+    $this->followingRedirects();
+    $domain2 = $this->post('/settings/domains/connect', ['domain_name' => 'example2.com']);
+    $domain2->assertSee('example2.com');
 
-        $domain3 = $this->post('/settings/domains/connect', ['domain_name' => 'example3.com']);
-        $domain3->assertStatus(403);
-    }
-}
+    $domain3 = $this->post('/settings/domains/connect', ['domain_name' => 'example3.com']);
+    $domain3->assertStatus(403);
+});

@@ -1,44 +1,39 @@
 <?php
 
-namespace Tests\Feature\Subscription;
-
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Application;
 
-class AppStorageTest extends SubscriptionTestCase
-{
-    public function test_app_instance_storage_calculation()
-    {
-        $this->support->setSubscription($this->user->organization, $this->support->base_2, $this->support->demo_app_2, $this->demoApp);
+it('calculates total app instance storage', function () {
+    skipUnlessDriver('ldap');
+    $this->support->setSubscription($this->user->organization, $this->support->base_2, $this->support->demo_app_2, $this->demoApp);
 
-        Application::roles($this->support->demo_app);
-        $this->assertEquals(2, Application::instance($this->demoApp)->storage()->calculateTotalAppStorage());
+    Application::roles($this->support->demo_app);
+    expect(Application::instance($this->demoApp)->storage()->calculateTotalAppStorage())->toBe(2);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $this->assertEquals(4, Application::instance($this->demoApp)->storage()->calculateTotalAppStorage());
+    grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+    expect(Application::instance($this->demoApp)->storage()->calculateTotalAppStorage())->toBe(4);
 
-        $this->setAdditionalStorage('testing1', $this->demoApp->id, 2);
+    setAdditionalStorage('testing1', $this->demoApp->id, 2);
 
-        $this->assertEquals(8, Application::instance($this->demoApp)->storage()->calculateTotalAppStorage());
-        $this->assertEquals(8, Application::instance($this->demoApp)->storage()->totalAppStorage());
-    }
+    expect(Application::instance($this->demoApp)->storage()->calculateTotalAppStorage())->toBe(8);
+    expect(Application::instance($this->demoApp)->storage()->totalAppStorage())->toBe(8);
+});
 
-    public function test_app_standard_basic_user_storage()
-    {
-        $this->withoutExceptionHandling();
+it('calculates standard and basic user storage', function () {
+    skipUnlessDriver('ldap');
+    $this->withoutExceptionHandling();
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_1, $this->demoApp);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $this->assertEquals(1, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
+    grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+    expect(AccountManager::users()->find('testing1')->appStorage($this->demoApp))->toBe(1);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['basic_demo_role']);
-        $this->assertEquals(0.5, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
+    grantPermission('testing1', $this->demoApp->id, ['basic_demo_role']);
+    expect(AccountManager::users()->find('testing1')->appStorage($this->demoApp))->toBe(0.5);
 
-        $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
-        $this->assertEquals(1, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
+    $this->support->setSubscription($this->user->organization, $this->support->base_1, $this->support->demo_app_2, $this->demoApp);
+    expect(AccountManager::users()->find('testing1')->appStorage($this->demoApp))->toBe(1);
 
-        $this->grantPermission('testing1', $this->demoApp->id, ['demo_role']);
-        $this->assertEquals(2, AccountManager::users()->find('testing1')->appStorage($this->demoApp));
-    }
-}
+    grantPermission('testing1', $this->demoApp->id, ['demo_role']);
+    expect(AccountManager::users()->find('testing1')->appStorage($this->demoApp))->toBe(2);
+});

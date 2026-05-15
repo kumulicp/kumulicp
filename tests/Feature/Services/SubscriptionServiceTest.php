@@ -1,84 +1,51 @@
 <?php
 
-namespace Tests\Feature\Services;
-
-use App\AppInstance;
-use App\AppPlan;
 use App\Organization;
-use App\Plan;
 use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\Organization\BasePlanService;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
-use Tests\TestCase;
 
-class SubscriptionServiceTest extends TestCase
-{
-    use RefreshDatabase;
+it('manages subscriptions via service', function () {
+    $support = new TestSupports;
+    $support->seed();
+    $support->activateDemoApp();
+    $support->createBase2Plan();
+    $support->createBaseWithSpecificPlans();
 
-    public function test_subscription_service()
-    {
-        $support = new TestSupports;
-        $support->seed();
-        $support->populate();
-        $support->disableApps();
+    $organization = Organization::find(1);
+    OrganizationFacade::setOrganization($organization);
+    $demo_app_instance = $support->demo_app->instances()->where('organization_id', $organization->id)->first();
+    Subscription::all();
+    Subscription::updateBase($support->base_1);
 
-        $organization = Organization::find(1);
-        OrganizationFacade::setOrganization($organization);
-        $demo_app_instance = $support->demo_app->instances()->where('organization_id', $organization->id)->first();
-        Subscription::all();
-        Subscription::updateBase($support->base_1);
-        /* Test domain/email enabled functions */
-        $this->assertEquals(0, count(Subscription::paidSubscriptions()));
-        $this->assertFalse(Subscription::domainsEnabled());
-        $this->assertFalse(Subscription::emailEnabled());
-        Subscription::updateBase($support->base_1);
+    expect(count(Subscription::paidSubscriptions()))->toBe(0);
+    expect(Subscription::domainsEnabled())->toBeFalse();
+    expect(Subscription::emailEnabled())->toBeFalse();
+    Subscription::updateBase($support->base_1);
 
-        $this->assertInstanceOf(BasePlanService::class, Subscription::base());
+    expect(Subscription::base())->toBeInstanceOf(BasePlanService::class);
+    expect(Subscription::app_instance($demo_app_instance))->toBeInstanceOf(AppInstancePlanService::class);
 
-        $this->assertInstanceOf(AppInstancePlanService::class, Subscription::app_instance($demo_app_instance));
+    Subscription::updateBase($support->base_2);
+    expect(Subscription::domainsEnabled())->toBeTrue();
+    expect(Subscription::emailEnabled())->toBeTrue();
 
-        Subscription::updateBase($support->base_2);
-        $this->assertTrue(Subscription::domainsEnabled());
-        $this->assertTrue(Subscription::emailEnabled());
-
-        $paid_plans = Subscription::paidSubscriptions();
-        $this->assertEquals(1, count($paid_plans));
-        foreach ($paid_plans as $plan) {
-            $this->assertTrue($plan->payment_enabled);
-        }
-
-        /* Test update also updates app_instances subscriptions */
-        Subscription::updateBase($support->base_with_specific_app_plans);
-        $demo_app_instance->refresh();
-        $this->assertEquals($demo_app_instance->plan->id, Subscription::app_instance($demo_app_instance)->id);
-
-        Subscription::refresh();
-        $app_plans = Subscription::appInstancePlans();
-        $this->assertEquals(1, count($app_plans));
-        foreach ($app_plans as $plan) {
-            $this->assertInstanceOf(AppInstancePlanService::class, $plan);
-        }/*
-
-
-        Subscription::updateApp(AppPlan $plan, AppInstance $app_instance);
-        Subscription::refresh();
-        Subscription::compileAllStripePricing();
-
-        Subscription::compileAllSubscriptionInfo();
-
-        Subscription::compileAllStats();
-
-        Subscription::compileCostStats();
-
-        Subscription::get();
-
-        Subscription::appInstanceSubscription($nextcloud, $subscription_support->demo_app);
-
-        Subscription::dryBaseChange(Plan $plan);
-
-        Subscription::dryAppChange($nextcloud, AppPlan $plan);*/
+    $paid_plans = Subscription::paidSubscriptions();
+    expect(count($paid_plans))->toBe(1);
+    foreach ($paid_plans as $plan) {
+        expect($plan->payment_enabled)->toBeTrue();
     }
-}
+
+    Subscription::updateBase($support->base_with_specific_app_plans);
+    $demo_app_instance->refresh();
+    expect($demo_app_instance->plan->id)->toBe(Subscription::app_instance($demo_app_instance)->id);
+
+    Subscription::refresh();
+    $app_plans = Subscription::appInstancePlans();
+    expect(count($app_plans))->toBe(1);
+    foreach ($app_plans as $plan) {
+        expect($plan)->toBeInstanceOf(AppInstancePlanService::class);
+    }
+});
