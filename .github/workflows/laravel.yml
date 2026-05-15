@@ -9,6 +9,8 @@ on:
 jobs:
   laravel-tests:
     runs-on: ubuntu-latest
+    env:
+      TELESCOPE_ENABLED: false
     services:
       ldap:
         image: osixia/openldap:1.5.0

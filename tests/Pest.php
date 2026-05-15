@@ -251,7 +251,7 @@ function grantPermission(string $username, int $appId, array $roles): void
 {
     $organization = \App\User::where('username', 'demo')->firstOrFail()->organization;
     $user = \App\Support\Facades\AccountManager::users()->find($username);
-    app(\App\Services\UserPermissionsService::class)->updatePermissions(
+    (new \App\Services\UserPermissionsService)->updatePermissions(
         user: $user,
         user_id: $username,
         organization: $organization,
