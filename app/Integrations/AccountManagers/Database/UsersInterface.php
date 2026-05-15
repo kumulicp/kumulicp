@@ -98,7 +98,13 @@ class UsersInterface
             $billing_managers[] = new UserInterface($billing_manager);
         }
 
-        return $billing_managers;
+        return collect($billing_managers)->map(function ($manager) {
+            return [
+                'id' => $manager->username,
+                'name' => $manager->name,
+                'email' => $manager->email,
+            ];
+        });
     }
 
     public function standardUsers()

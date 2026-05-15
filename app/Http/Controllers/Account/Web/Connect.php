@@ -12,7 +12,7 @@ class Connect extends Controller
 {
     public function setup()
     {
-        $this->authorize('add-domains');
+        $this->authorize('connect-domains');
 
         $organization = auth()->user()->organization;
 
@@ -21,7 +21,7 @@ class Connect extends Controller
 
     public function add(Request $request)
     {
-        $this->authorize('add-domains');
+        $this->authorize('connect-domains');
 
         /* Validate */
         $validated = $request->validate([

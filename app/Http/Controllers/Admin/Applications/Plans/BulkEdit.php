@@ -243,7 +243,7 @@ class BulkEdit extends Controller
 
         Cache::flush();
 
-        $query_string = http_build_query(['plans' => $plan_ids]);
+        $query_string = implode('&', array_map(fn ($id) => 'plans[]='.$id, $plan_ids));
 
         return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/edit?{$query_string}")
             ->with('success', __('admin.applications.plans.bulk_updated'));
@@ -302,7 +302,7 @@ class BulkEdit extends Controller
             }
         }
 
-        $query_string = http_build_query(['plans' => $plan_ids]);
+        $query_string = implode('&', array_map(fn ($id) => 'plans[]='.$id, $plan_ids));
 
         return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/features?{$query_string}")
             ->with('success', __('admin.applications.plans.features_updated', ['plan' => 'all plans']));
@@ -380,7 +380,7 @@ class BulkEdit extends Controller
 
         Cache::flush();
 
-        $query_string = http_build_query(['plans' => $plan_ids]);
+        $query_string = implode('&', array_map(fn ($id) => 'plans[]='.$id, $plan_ids));
 
         return redirect("/admin/apps/{$app->slug}/plans/bulk-edit/configurations?{$query_string}")
             ->with('success', __('admin.applications.plans.configurations_updated', ['plan' => 'all plans']));

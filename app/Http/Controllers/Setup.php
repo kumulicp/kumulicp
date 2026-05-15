@@ -32,7 +32,7 @@ class Setup extends Controller
         // Run system checks
         $disabled = explode(',', ini_get('disable_functions'));
 
-        if (env('ACCOUNTMANAGER_DRIVER') === 'ldap' || env('LOGIN_PROVIDER') === 'ldap') {
+        if (config('account_manager.driver') === 'ldap' || env('LOGIN_PROVIDER') === 'ldap') {
             $checks[__('setup.extension', ['extension' => 'ldap'])] = extension_loaded('ldap');
         }
         $checks[__('setup.extension', ['extension' => 'intl'])] = extension_loaded('intl');
@@ -84,7 +84,9 @@ class Setup extends Controller
         $plan = new Plan;
         $plan->name = __('setup.plan.name');
         $plan->description = __('setup.plan.description');
-        $plan->app_plans = json_decode('{"nextcloud": {"max": "1", "plans": "enabled"}, "wordpress": {"max": "1", "plans": "enabled"}}', true);
+        $plan->org_type = 'business';
+        $plan->type = 'app';
+        $plan->app_plans = json_decode('{}', true);
         $plan->settings = json_decode('{"base": {"price": null, "storage": null, "price_id": null}, "basic": {"max": null, "name": null, "price": null, "amount": null, "storage": null, "price_id": null}, "email": {"max": null, "price": null, "storage": null, "price_id": null}, "storage": {"max": null, "price": null, "amount": null, "price_id": null}, "standard": {"max": null, "price": null, "storage": null, "price_id": null}, "application": {"max": null, "price": null, "price_id": null}, "suborganizations": {"enabled": false}}', true);
         $plan->archive = 1;
         $plan->save();

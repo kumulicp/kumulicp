@@ -38,7 +38,7 @@ class AddLdapGroups implements ShouldQueue
      */
     public function handle()
     {
-        if (env('ACCOUNTMANAGER_DRIVER') !== 'ldap') {
+        if (config('account_manager.driver') !== 'ldap') {
             return;
         }
 

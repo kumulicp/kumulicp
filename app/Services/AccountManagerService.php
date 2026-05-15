@@ -16,7 +16,7 @@ class AccountManagerService
 
     public function __construct()
     {
-        $this->driver = env('ACCOUNTMANAGER_DRIVER', 'db');
+        $this->driver = config('account_manager.driver', 'db');
     }
 
     public function interface()
