@@ -6,9 +6,28 @@
     </testsuite> -->
     <testsuite name="Feature">
       <directory suffix="Test.php">./tests/Feature</directory>
+      <exclude>./tests/Feature/AccountManager</exclude>
+      <exclude>./tests/Feature/Auth</exclude>
+      <exclude>./tests/Feature/Applications</exclude>
+      <exclude>./tests/Feature/Registrars</exclude>
+      <exclude>./tests/Feature/ServerManagers</exclude>
+      <exclude>./tests/Feature/SSO</exclude>
     </testsuite>
     <testsuite name="Browser">
       <directory suffix="Test.php">./tests/Browser</directory>
+    </testsuite>
+    <testsuite name="AccountManagerLdap">
+      <directory suffix="Test.php">./tests/Feature/AccountManager</directory>
+      <directory suffix="Test.php">./tests/Feature/Auth</directory>
+    </testsuite>
+    <testsuite name="ApplicationsIntegration">
+      <directory suffix="Test.php">./tests/Feature/Applications</directory>
+    </testsuite>
+    <testsuite name="RegistrarIntegration">
+      <directory suffix="Test.php">./tests/Feature/Registrars</directory>
+    </testsuite>
+    <testsuite name="SSOIntegration">
+      <directory suffix="Test.php">./tests/Feature/SSO</directory>
     </testsuite>
     <testsuite name="Modules">
       <directory suffix="Test.php">./Modules/*/Tests/Feature</directory>
@@ -23,6 +42,7 @@
     <server name="DB_CONNECTION" value="sqlite"/>
     <server name="DB_DATABASE" value=":memory:"/>
     <server name="MAIL_MAILER" value="array"/>
+    <server name="MAIL_FROM_ADDRESS" value="test@example.com"/>
     <server name="QUEUE_CONNECTION" value="sync"/>
     <server name="SESSION_DRIVER" value="array"/>
     <server name="TELESCOPE_ENABLED" value="false"/>

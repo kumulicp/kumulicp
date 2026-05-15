@@ -41,7 +41,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3'
     />
 
     <div class="auth-layout__options d-flex align-center justify-space-between">
-      <va-checkbox v-model="form.remember" class="mb-0" :label="$t('auth.keepLoggedIn')" />
+      <va-checkbox id="remember" v-model="form.remember" class="mb-0" :label="$t('auth.keepLoggedIn')" />
       <Link href="/password/reset">
         {{ $t('auth.forgotPassword') }}
       </Link>

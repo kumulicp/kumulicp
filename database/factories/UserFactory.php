@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Organization;
 use App\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -19,6 +20,7 @@ class UserFactory extends Factory
     public function definition()
     {
         return [
+            'organization_id' => Organization::factory(),
             'username' => fake()->word(),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),

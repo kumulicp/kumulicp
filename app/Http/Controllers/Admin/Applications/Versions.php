@@ -238,7 +238,9 @@ class Versions extends Controller
         $available_roles = [];
 
         if ($version_roles && array_key_exists('order', $version_roles) && count($version_roles['order']) > 0) {
-            $available_roles = $app->roles()->orderByRaw('field(id,'.implode(',', $version_roles['order']).')')->get();
+            $ids = array_map('intval', $version_roles['order']);
+            $cases = implode(' ', array_map(fn ($id, $i) => "WHEN {$id} THEN {$i}", $ids, array_keys($ids)));
+            $available_roles = $app->roles()->orderByRaw("CASE id {$cases} ELSE 9999 END")->get();
         } else {
             $available_roles = $app->roles()->get();
         }

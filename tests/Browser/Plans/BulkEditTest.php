@@ -58,10 +58,10 @@ function createDemoPlans(Application $app): array
 
 describe('Plans List - Bulk Edit Selection', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
-        $this->app   = Application::where('slug', 'demo_app')->first();
-        [$this->plan1, $this->plan2] = createDemoPlans($this->app);
+        $this->demoApp = Application::where('slug', 'demo_app')->first();
+        [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
     });
 
     it('shows a checkbox for each non-archived plan', function () {
@@ -79,32 +79,32 @@ describe('Plans List - Bulk Edit Selection', function () {
     });
 
     it('shows Bulk Edit (1) after selecting one plan', function () {
-        visit('/admin/apps/demo_app/plans')
-            ->click('#plan-checkbox-'.$this->plan1->id.' input')
-            ->assertSee('Bulk Edit (1)');
+        $page = visit('/admin/apps/demo_app/plans');
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        $page->assertSee('Bulk Edit (1)');
     });
 
     it('shows Bulk Edit (2) after selecting two plans', function () {
-        visit('/admin/apps/demo_app/plans')
-            ->click('#plan-checkbox-'.$this->plan1->id.' input')
-            ->click('#plan-checkbox-'.$this->plan2->id.' input')
-            ->assertSee('Bulk Edit (2)');
+        $page = visit('/admin/apps/demo_app/plans');
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
+        $page->assertSee('Bulk Edit (2)');
     });
 
     it('decrements the count when a plan is deselected', function () {
-        visit('/admin/apps/demo_app/plans')
-            ->click('#plan-checkbox-'.$this->plan1->id.' input')
-            ->click('#plan-checkbox-'.$this->plan2->id.' input')
-            ->assertSee('Bulk Edit (2)')
-            ->click('#plan-checkbox-'.$this->plan1->id.' input')
-            ->assertSee('Bulk Edit (1)');
+        $page = visit('/admin/apps/demo_app/plans');
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
+        $page->assertSee('Bulk Edit (2)');
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        $page->assertSee('Bulk Edit (1)');
     });
 
     it('clicking the bulk edit button navigates to the bulk edit settings page', function () {
-        visit('/admin/apps/demo_app/plans')
-            ->click('#plan-checkbox-'.$this->plan1->id.' input')
-            ->click('#plan-checkbox-'.$this->plan2->id.' input')
-            ->click('#bulkEditButton')
+        $page = visit('/admin/apps/demo_app/plans');
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
+        $page->click('#bulkEditButton')
             ->assertSee('Alpha Plan')
             ->assertSee('Beta Plan');
     });
@@ -116,10 +116,10 @@ describe('Plans List - Bulk Edit Selection', function () {
 
 describe('Bulk Edit - Settings Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
-        $this->app = Application::where('slug', 'demo_app')->first();
-        [$this->plan1, $this->plan2] = createDemoPlans($this->app);
+        $this->demoApp = Application::where('slug', 'demo_app')->first();
+        [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
         $this->url = '/admin/apps/demo_app/plans/bulk-edit/edit'
             .'?plans[]='.$this->plan1->id
             .'&plans[]='.$this->plan2->id;
@@ -172,15 +172,15 @@ describe('Bulk Edit - Settings Tab', function () {
     it('payment enabled checkbox reflects the stored boolean for each plan', function () {
         // plan1 has payment_enabled = false, plan2 has payment_enabled = true
         visit($this->url)
-            ->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled input')
-            ->assertChecked('#plan-'.$this->plan2->id.'-payment-enabled input');
+            ->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled')
+            ->assertChecked('#plan-'.$this->plan2->id.'-payment-enabled');
     });
 
     it('toggling a checkbox changes its checked state', function () {
-        visit($this->url)
-            ->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled input')
-            ->click('#plan-'.$this->plan1->id.'-payment-enabled input')
-            ->assertChecked('#plan-'.$this->plan1->id.'-payment-enabled input');
+        $page = visit($this->url);
+        $page->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled');
+        $page->script("document.querySelector('#plan-{$this->plan1->id}-payment-enabled').closest('.va-checkbox__input-container').click()");
+        $page->assertChecked('#plan-'.$this->plan1->id.'-payment-enabled');
     });
 
     it('saving updated values redirects back to the settings tab', function () {
@@ -197,10 +197,10 @@ describe('Bulk Edit - Settings Tab', function () {
 
 describe('Bulk Edit - View Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
-        $this->app = Application::where('slug', 'demo_app')->first();
-        [$this->plan1, $this->plan2] = createDemoPlans($this->app);
+        $this->demoApp = Application::where('slug', 'demo_app')->first();
+        [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
         $this->url = '/admin/apps/demo_app/plans/bulk-edit'
             .'?plans[]='.$this->plan1->id
             .'&plans[]='.$this->plan2->id;
@@ -230,10 +230,10 @@ describe('Bulk Edit - View Tab', function () {
 
 describe('Bulk Edit - Configurations Tab', function () {
     beforeEach(function () {
-        $this->actingAs(User::find(1));
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
-        $this->app = Application::where('slug', 'demo_app')->first();
-        [$this->plan1, $this->plan2] = createDemoPlans($this->app);
+        $this->demoApp = Application::where('slug', 'demo_app')->first();
+        [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
         $this->url = '/admin/apps/demo_app/plans/bulk-edit/configurations'
             .'?plans[]='.$this->plan1->id
             .'&plans[]='.$this->plan2->id;
@@ -247,7 +247,7 @@ describe('Bulk Edit - Configurations Tab', function () {
 
     it('shows the Add Config button', function () {
         visit($this->url)
-            ->assertSee('Add Config');
+            ->assertSee('Add new configuration');
     });
 
     it('clicking Add Config reveals the config form', function () {

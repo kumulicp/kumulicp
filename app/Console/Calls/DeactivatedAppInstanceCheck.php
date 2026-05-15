@@ -10,7 +10,7 @@ class DeactivatedAppInstanceCheck
 {
     public function __invoke()
     {
-        $apps = AppInstance::whereNot('status', 'deactivated')->whereRaw('deactivate_at < CURRENT_DATE()')->get();
+        $apps = AppInstance::whereNot('status', 'deactivated')->whereDate('deactivate_at', '<', now())->get();
 
         foreach ($apps as $app) {
             Action::execute(new ApplicationDelete($app));

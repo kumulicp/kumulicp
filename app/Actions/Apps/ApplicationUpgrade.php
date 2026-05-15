@@ -33,6 +33,7 @@ class ApplicationUpgrade extends Action
         $application = $version->application;
 
         $this->description = __('actions.upgrading_app', ['app' => $application->name]);
+        $app_instance = Application::instance($app_instance);
         $app_instance->version_id = $version->id;
         $app_instance->status = 'updating';
         $app_instance->save();
@@ -96,7 +97,7 @@ class ApplicationUpgrade extends Action
         if ($app_instance->setting('expand_storage')) {
             if ($task->updated_at < now()->subMinutes(5)) {
                 $app_instance->updateSetting('expand_storage', false);
-    
+
                 // Run another update to restore app
                 $server->update();
             }

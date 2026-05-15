@@ -8,13 +8,14 @@
 auth.json
 
 # cache required to run
-/storage/framework/cache/*
+# /storage/framework/cache/*
 /storage/framework/views/*
 /storage/framework/sessions/*
 /storage/logs/*
 /storage/debugbar
 /storage/app/addons/*
 /storage/app/apps/*
+/storage/app/purifier/*
 
 # handled by composer
 /vendor
@@ -49,7 +50,6 @@ docker
 /.vscode
 /.claude
 .mcp.json
-CLAUDE.md
 boost.json
 
 # Playwright browser test artifacts

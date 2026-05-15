@@ -9,6 +9,10 @@ class NewUserCode extends Model
 {
     protected $table = 'new_user_code';
 
+    protected $attributes = [
+        'activated' => false,
+    ];
+
     public function organization()
     {
         return $this->belongsTo('App\Organization', 'organization_id');
