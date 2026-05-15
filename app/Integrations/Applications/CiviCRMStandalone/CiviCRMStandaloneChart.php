@@ -45,23 +45,14 @@ class CiviCRMStandaloneChart extends HelmChart
             ],
             'replicaCount' => $this->replicaCount(),
             'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $this->chartName()),
-            'containerSecurityContext' => [
-                'enabled' => false,
-                'runAsUser' => 0,
-                'runAsNonRoot' => false,
-            ],
             'externalDatabase' => [
-                'enabled' => $database_server ? true : false,
                 'database' => $app_instance->databasename,
                 'host' => $database_server ? $database_server->internal_address : '',
                 'password' => $organization->secretpw,
                 'user' => $app_instance->databasename,
             ],
             'ingress' => [
-                'annotations' => $app_instance->configuration('ingress-tls') ? [
-                    'cert-manager.io/cluster-issuer' => $app_instance->configuration('ingress-annotation-cluster_issuer'),
-                    'traefik.ingress.kubernetes.io/router.middlewares' => $app_instance->configuration('ingress-annotation-traefik_middlewares'),
-                ] : [],
+                'annotations' => $app_instance->configuration('ingress-annotations'),
                 'enabled' => ($this->appEnabled() && $app_instance->configuration('ingress-enabled')), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
                 'hostname' => $app_instance->domain(),
                 'tls' => $app_instance->configuration('ingress-tls'),
@@ -70,8 +61,7 @@ class CiviCRMStandaloneChart extends HelmChart
             'mariadb' => $app_instance->configuration('mariadb', true),
             'persistence' => [
                 'size' => $this->appStorage().'Gi',
-                'accessMode' => $app_instance->configuration('persistence-accessMode', true),
-                // 'accessModes' => $app_instance->configuration('persistence-accessModes', true),
+                'accessModes' => [$app_instance->configuration('persistence-accessModes', true)],
                 'storageClass' => $app_instance->configuration('persistence-storageClass', true),
                 'enabled' => $app_instance->configuration('persistence-enabled', true),
                 'existingClaim' => $app_instance->getOverride('pvc.override') ? $app_instance->getOverride('pvc.name') : '',
@@ -87,37 +77,30 @@ class CiviCRMStandaloneChart extends HelmChart
                 ],
             ],
             'extraEnvVars' => $this->extraEnv(),
-            // 'extraEnvVarsSecret' => 'civicrm-env-secret',
-            'service' => [
-                // 'sessionAffinity' => '',
-                'type' => 'ClusterIP',
-                'ports' => [
-                    'http' => 8080,
-                    'https' => 8433,
-                ],
-            ],
             'image' => [
                 'registry' => $version->setting('image_registry'),
-                'debug' => $app_instance->configuration('image-debug'),
                 'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
                 'repository' => $version->setting('image_repo_name'),
                 'tag' => $version->name,
             ],
             'updateStrategy' => [
-                'rollingUpdate' => $app_instance->configuration('updateStrategy-rollingUpdate'),
                 'type' => $app_instance->configuration('updateStrategy-type'),
             ],
-            'customReadinessProbe' => [
-                'failureThreshold' => $app_instance->configuration('customReadinessProbe-failureThreshold'),
-                'httpGet' => [
-                    'path' => '/',
-                    'port' => 'http',
-                    'scheme' => 'HTTP',
+            'cronjob' => [
+                'enabled' => $app_instance->configuration('cronjob-enabled'),
+                'sidecar' => [
+                    'image' => $app_instance->configuration('cronjob-image'),
+                    'resources' => [
+                        'limits' => [
+                            'cpu' => $app_instance->configuration('cronjob-resources-limits-cpu'),
+                            'memory' => $app_instance->configuration('cronjob-resources-limits-memory'),
+                        ],
+                        'requests' => [
+                            'cpu' => $app_instance->configuration('cronjob-resources-requests-cpu'),
+                            'memory' => $app_instance->configuration('cronjob-resources-requests-memory'),
+                        ],
+                    ],
                 ],
-                'initialDelaySeconds' => $app_instance->configuration('customReadinessProbe-initialDelaySeconds'),
-                'periodSeconds' => $app_instance->configuration('customReadinessProbe-periodSeconds'),
-                'successThreshold' => $app_instance->configuration('customReadinessProbe-successThreshold'),
-                'timeoutSeconds' => $app_instance->configuration('customReadinessProbe-timeoutSeconds'),
             ],
             'sidecars' => Application::profile('civicrm-standalone')->sidecars(),
             'civicrmEmail' => $app_instance->configuration('civicrm-email'),

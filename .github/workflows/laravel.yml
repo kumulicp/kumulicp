@@ -30,7 +30,7 @@ jobs:
         ini-values: memory_limit=512M
     - uses: actions/checkout@v4
     - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      run: php -r "file_exists('.env') || copy('.env.sample', '.env');"
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
     - name: Install Node Dependencies

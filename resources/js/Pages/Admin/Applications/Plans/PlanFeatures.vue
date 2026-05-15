@@ -50,7 +50,7 @@ import { useForm } from '@inertiajs/vue3'
           <va-input
             v-model="form['features'][feature.value]['price']"
             type="number"
-            :label="this.$t('admin.plans.price')"
+            :label="$t('admin.plans.price')"
             immediateValidation
             min="0"
             step=".01"
@@ -62,7 +62,7 @@ import { useForm } from '@inertiajs/vue3'
           </va-input>
           <va-input
             v-model="form['features'][feature.value]['price_id']"
-            :label="this.$t('admin.plans.productID')"
+            :label="$t('admin.plans.productID')"
             immediateValidation
             class="pb-2"
           />
@@ -72,7 +72,7 @@ import { useForm } from '@inertiajs/vue3'
             clearable
             value-by="value"
             text-by="text"
-            :label="this.$t('admin.plans.howFeatureIsBilled')"
+            :label="$t('admin.plans.howFeatureIsBilled')"
             :options="featurePaymentTypes"
             :error="$page.props.errors.payment_type"
             :error-messages="$page.props.errors.payment_type"

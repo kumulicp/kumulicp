@@ -17,6 +17,15 @@ class CiviCRMStandaloneProfile extends AppProfile
 
     protected $jobs = CiviCRMRancherJobs::class;
 
+    protected $recommendations = [
+        'image_repo' => 'images/civicrm-standalone',
+        'image_version' => '6.14.0',
+        'image_registry' => 'docker.io',
+        'helm_chart_repo' => 'repo.kumuli.dev',
+        'helm_chart_name' => 'civicrm-standalone',
+        'helm_chart_version' => '0.4.0',
+    ];
+
     protected $role_groups = [
         'civicrm' => [
             'id' => 'civicrm',
@@ -94,8 +103,8 @@ class CiviCRMStandaloneProfile extends AppProfile
             'validations' => 'nullable',
             'default' => '',
         ],
-        'persistence-accessMode' => [
-            'name' => 'persistence-accessMode',
+        'persistence-accessModes' => [
+            'name' => 'persistence-accessModes',
             'type' => 'string',
             'default' => 'ReadWriteOnce',
             'persistent' => true,
@@ -136,12 +145,19 @@ class CiviCRMStandaloneProfile extends AppProfile
             'persistent' => false,
             'validations' => '',
         ],
-        'civicrm-strategy-type' => [
-            'name' => 'civicrm-strategy-type',
+        'updateStrategy-type' => [
+            'name' => 'updateStrategy-type',
             'type' => 'string',
             'default' => 'RollingUpdate',
             'persistent' => false,
             'validations' => 'in:RollingUpdate,Recreate',
+        ],
+        'image-pullPolicy' => [
+            'name' => 'image-pullPolicy',
+            'type' => 'string',
+            'default' => 'IfNotPresent',
+            'persistent' => false,
+            'validations' => 'in:IfNotPresent,Always,Never',
         ],
         'hpa-cputhreshold' => [
             'name' => 'hpa-cputhreshold',
@@ -178,24 +194,17 @@ class CiviCRMStandaloneProfile extends AppProfile
             'persistent' => false,
             'validations' => 'boolean',
         ],
-        'metrics-enabled' => [
-            'name' => 'metrics-enabled',
-            'type' => 'bool',
-            'default' => false,
-            'persistent' => false,
-            'validations' => 'boolean',
-        ],
-        'metrics-https' => [
-            'name' => 'metrics-https',
-            'type' => 'bool',
-            'default' => false,
-            'persistent' => false,
-            'validations' => 'boolean',
-        ],
         'civicrm-username' => [
             'name' => 'civicrm-username',
             'type' => 'string',
             'default' => 'admin',
+            'persistent' => true,
+            'validations' => 'nullable|string',
+        ],
+        'civicrm-email' => [
+            'name' => 'civicrm-email',
+            'type' => 'string',
+            'default' => '',
             'persistent' => true,
             'validations' => 'nullable|string',
         ],
@@ -276,19 +285,15 @@ class CiviCRMStandaloneProfile extends AppProfile
             'persistent' => false,
             'validations' => 'boolean',
         ],
-        'ingress-annotation-cluster_issuer' => [
-            'name' => 'ingress-annotation-cluster_issuer',
-            'type' => 'string',
-            'default' => 'letsencrypt-production',
+        'ingress-annotations' => [
+            'name' => 'ingress-annotations',
+            'type' => 'yaml',
             'persistent' => false,
-            'validations' => 'nullable|string',
-        ],
-        'ingress-annotation-router_middlewares' => [
-            'name' => 'ingress-annotation-router_middlewares',
-            'type' => 'string',
-            'default' => 'https-redirect@kubernetescrd',
-            'persistent' => false,
-            'validations' => 'nullable|string',
+            'validations' => 'array',
+            'default' => [
+                'cert-manager.io/cluster-issuer' => 'letsencrypt-production',
+                'traefik.ingress.kubernetes.io/router.middlewares' => 'https-redirect@kubernetescrd',
+            ],
         ],
         'mariadb' => [
             'name' => 'mariadb',
@@ -298,20 +303,15 @@ class CiviCRMStandaloneProfile extends AppProfile
             'default' => [
                 'enabled' => false,
                 'auth' => [
-                    'password' => 'password',
-                    'rootPassword' => 'root_password',
-                ],
-                'primary' => [
-                    'persistence' => [
-                        'enabled' => false,
-                        'size' => '4Gi',
-                        'storageClass' => '',
-                    ],
+                    'rootPassword' => '',
+                    'database' => 'civicrm',
+                    'username' => 'civicrm',
+                    'password' => 'civicrmPassword',
                 ],
             ],
         ],
-        'civicrm-plugins' => [
-            'name' => 'civicrm-plugins',
+        'civicrm-extensions' => [
+            'name' => 'civicrm-extensions',
             'type' => 'string',
             'default' => '',
             'persistent' => false,
@@ -337,6 +337,13 @@ class CiviCRMStandaloneProfile extends AppProfile
             'default' => '128',
             'persistent' => false,
             'validations' => 'required|integer',
+        ],
+        'cronjob-enabled' => [
+            'name' => 'cronjob-enabled',
+            'type' => 'bool',
+            'default' => false,
+            'persistent' => false,
+            'validations' => 'required|boolean',
         ],
         'cronjob-image' => [
             'name' => 'cronjob-image',
