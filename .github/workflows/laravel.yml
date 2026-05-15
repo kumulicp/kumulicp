@@ -52,12 +52,6 @@ jobs:
     - name: Configure LDAP memberOf overlay
       run: |
         LDAP_CONTAINER=$(docker ps --filter "ancestor=osixia/openldap:1.5.0" --format "{{.ID}}")
-        cat > /tmp/memberof-module.ldif <<'LDIF'
-        dn: cn=module{0},cn=config
-        changetype: modify
-        add: olcModuleLoad
-        olcModuleLoad: memberof
-        LDIF
         cat > /tmp/memberof-overlay.ldif <<'LDIF'
         dn: olcOverlay=memberof,olcDatabase={1}mdb,cn=config
         changetype: add
@@ -68,9 +62,7 @@ jobs:
         olcMemberOfMemberAD: member
         olcMemberOfMemberOfAD: memberOf
         LDIF
-        docker cp /tmp/memberof-module.ldif "$LDAP_CONTAINER":/tmp/memberof-module.ldif
         docker cp /tmp/memberof-overlay.ldif "$LDAP_CONTAINER":/tmp/memberof-overlay.ldif
-        docker exec "$LDAP_CONTAINER" ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/memberof-module.ldif
         docker exec "$LDAP_CONTAINER" ldapadd -Y EXTERNAL -H ldapi:/// -f /tmp/memberof-overlay.ldif
     - name: Execute Feature tests
       env:
