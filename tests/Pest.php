@@ -40,6 +40,7 @@ uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in(
 
 pest()->beforeEach(function () {
     (new TestSupports())->seed();
+    setupFakeServerInterfaces();
     })
     ->in('Browser');
 
