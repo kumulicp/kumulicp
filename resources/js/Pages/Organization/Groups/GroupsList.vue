@@ -115,33 +115,12 @@ export default {
     errors: Object
   },
   data () {
-    const categories = {}
-    const groups = []
-    let numberOfGroups = 0
-    for (const [key, category] of Object.entries(this.categories)) {
-      category.current_page = 1
-      category.value = category.ou
-      category.text = category.name
-      categories[key] = category
-      for (const group of Object.values(category.groups)) {
-        groups.push({
-          slug: group.slug,
-          name: group.name,
-          category: category.name
-        })
-      }
-      numberOfGroups = numberOfGroups + category.groups.length
-    }
-
     return {
       curPageValue: 1,
       pageSize: 10,
-      pages: Math.ceil(numberOfGroups / 10),
       showAddGroup: false,
       showRemoveGroup: false,
       removeGroup: '',
-      numberOfGroups,
-      groups,
       categoryOptions: [
         {
           text: this.$t('organization.groups.department'),
@@ -164,7 +143,6 @@ export default {
           value: 'others'
         }
       ],
-      listCategories: categories,
       form: useForm({
         name: '',
         category: ''
@@ -173,6 +151,25 @@ export default {
     }
   },
   computed: {
+    groups () {
+      const groups = []
+      for (const category of Object.values(this.categories)) {
+        for (const group of Object.values(category.groups)) {
+          groups.push({
+            slug: group.slug,
+            name: group.name,
+            category: category.name
+          })
+        }
+      }
+      return groups
+    },
+    numberOfGroups () {
+      return this.groups.length
+    },
+    pages () {
+      return Math.ceil(this.numberOfGroups / this.pageSize)
+    },
     initialListValue () {
       return (this.curPageValue - 1) * this.pageSize
     }
