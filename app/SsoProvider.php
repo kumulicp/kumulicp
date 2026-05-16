@@ -24,6 +24,7 @@ class SsoProvider extends Model
 {
     protected $fillable = [
         'name',
+        'label',
         'display_name',
         'driver',
         'client_id',
