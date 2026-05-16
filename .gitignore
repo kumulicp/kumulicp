@@ -48,7 +48,6 @@ docker
 
 # IDE settings
 /.vscode
-/.claude
 .mcp.json
 boost.json
 
