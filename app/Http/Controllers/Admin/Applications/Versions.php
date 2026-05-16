@@ -135,7 +135,7 @@ class Versions extends Controller
                     'text' => $announcement->title,
                 ];
             }) : [],
-            'roles' => $roles ? $roles->map(function ($role) {
+            'groups' => $roles ? $roles->map(function ($role) {
                 return [
                     'text' => $role->label,
                     'value' => $role->id,
