@@ -13,6 +13,7 @@ use App\Ldap\Models\Organization as LdapOrganization;
 use App\Organization;
 use App\Plan;
 use App\Services\SubscriptionService;
+use App\Tld;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as AppFacade;
@@ -443,5 +444,44 @@ class TestSupports
             $app_2->organization_id = 10;
             $app_2->save();
         }
+    }
+
+    public function createRegistrarPlan(): Plan
+    {
+        return Plan::factory()->create([
+            'type' => 'package',
+            'payment_enabled' => false,
+            'domain_enabled' => true,
+            'domain_max' => 5,
+            'settings' => [
+                'base' => ['price' => 0, 'storage' => 0, 'price_id' => null, 'minimal_label' => 'minimal'],
+                'basic' => ['max' => 5, 'name' => 'Registrar Plan', 'price' => 0, 'amount' => 1, 'storage' => 0, 'price_id' => null],
+                'email' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'storage' => ['max' => 0, 'price' => 0, 'amount' => 0, 'price_id' => null],
+                'standard' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'application' => ['max' => 0, 'price' => 0, 'price_id' => null],
+                'domains' => ['connect' => true, 'register' => true, 'transfer' => true],
+            ],
+        ]);
+    }
+
+    public function createRegistrarTld(string $tld_name = 'com'): Tld
+    {
+        return Tld::firstOrCreate(
+            ['name' => $tld_name],
+            [
+                'default_driver' => 'fake',
+                'is_api_registerable' => true,
+                'is_api_transferable' => true,
+                'is_api_renewable' => true,
+                'standard_price' => 9.99,
+                'min_register_years' => 1,
+                'max_register_years' => 10,
+                'min_transfer_years' => 1,
+                'max_transfer_years' => 10,
+                'min_renew_years' => 1,
+                'max_renew_years' => 10,
+            ]
+        );
     }
 }

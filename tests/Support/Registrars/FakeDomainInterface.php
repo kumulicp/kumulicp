@@ -17,7 +17,7 @@ class FakeDomainInterface implements RegistrarDomainContract
             'domain_name' => $this->domain->name,
             'owner_name' => 'Fake Owner',
             'is_owner' => true,
-            'is_premium' => false,
+            'is_premium' => str_contains($this->domain->name, 'premium'),
             'created_date' => now()->toDateString(),
             'expired_date' => now()->addYear()->toDateString(),
             'whois_guard' => [
@@ -58,7 +58,7 @@ class FakeDomainInterface implements RegistrarDomainContract
 
     public function pricing(): FakePricingInterface
     {
-        return new FakePricingInterface;
+        return new FakePricingInterface(str_contains($this->domain->name, 'premium'));
     }
 
     public function extendedAttributes(array $attributes): ?array

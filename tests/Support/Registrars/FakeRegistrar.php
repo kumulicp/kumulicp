@@ -9,17 +9,12 @@ use App\Tld;
 /**
  * In-memory stand-in for RegistrarInterface (Namecheap).
  *
- * Registered via Domain::register('fake', self::class) so that tests can
- * call Domain::registrar('fake') and receive this fake without making any
- * real HTTP calls to the Namecheap API.
+ * check() behaviour is driven by the domain name so it works in both
+ * feature tests (same process) and browser tests (shared in-process server):
  *
- * Usage in Pest:
- *   setupRegistrarDriver('fake');
- *   $registrar = Domain::registrar('fake');
- *
- * Usage in PHPUnit:
- *   use Tests\Support\Concerns\TestsWithRegistrarDrivers;
- *   $this->setupRegistrarDriver('fake');
+ *   - name contains "unavailable"  → available: false
+ *   - name contains "premium"      → available: true, is_premium_name: true
+ *   - anything else                → available: true, standard domain
  */
 class FakeRegistrar implements RegistrarContract
 {
@@ -89,6 +84,30 @@ class FakeRegistrar implements RegistrarContract
 
     public function check(string $domain_name): array
     {
+        if (str_contains($domain_name, 'unavailable')) {
+            return [
+                'available' => false,
+                'is_premium_name' => false,
+                'ican_fee' => 0.18,
+                'premium_registration_price' => 0.0,
+                'premium_renewal_price' => 0.0,
+                'premium_restore_price' => 0.0,
+                'premium_transfer_price' => 0.0,
+            ];
+        }
+
+        if (str_contains($domain_name, 'premium')) {
+            return [
+                'available' => true,
+                'is_premium_name' => true,
+                'ican_fee' => 0.18,
+                'premium_registration_price' => 99.99,
+                'premium_renewal_price' => 89.99,
+                'premium_restore_price' => 49.99,
+                'premium_transfer_price' => 79.99,
+            ];
+        }
+
         return [
             'available' => true,
             'is_premium_name' => false,
@@ -102,7 +121,7 @@ class FakeRegistrar implements RegistrarContract
 
     public function pricing(Tld $tld, $domain_name): object
     {
-        return new FakePricingInterface;
+        return new FakePricingInterface(str_contains($domain_name, 'premium'));
     }
 
     public function tldList(): array
