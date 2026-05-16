@@ -46,6 +46,8 @@
     <server name="QUEUE_CONNECTION" value="sync"/>
     <server name="SESSION_DRIVER" value="array"/>
     <server name="TELESCOPE_ENABLED" value="false"/>
+    <server name="NEXTCLOUD_ADMIN_PASSWORD" value="testpassword"/>
+    <server name="WORDPRESS_ADMIN_PASSWORD" value="testpassword"/>
   </php>
   <source>
     <include>
