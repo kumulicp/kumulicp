@@ -26,6 +26,9 @@ class CreateRecurringBackupsTable extends Migration
             $table->string('status')->default('inactive');
             $table->datetime('last_scheduled_at')->nullable();
             $table->timestamps();
+            $table->index('server_id');
+            $table->index('organization_id');
+            $table->index('application_id');
         });
     }
 

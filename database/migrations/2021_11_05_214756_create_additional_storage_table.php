@@ -22,6 +22,8 @@ class CreateAdditionalStorageTable extends Migration
             $table->string('application')->nullable();
             $table->integer('quantity')->default(0);
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('app_instance_id');
         });
     }
 

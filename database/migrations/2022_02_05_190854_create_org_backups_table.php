@@ -31,6 +31,10 @@ class CreateOrgBackupsTable extends Migration
             $table->dateTime('delete_at')->nullable();
             $table->dateTime('deleted_at')->nullable();
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('scheduled_backup_id');
+            $table->index('app_instance_id');
+            $table->index('org_server_id');
         });
     }
 

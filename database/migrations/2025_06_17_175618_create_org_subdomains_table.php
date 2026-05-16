@@ -26,6 +26,9 @@ class CreateOrgSubDomainsTable extends Migration
             $table->json('settings')->nullable();
             $table->string('status');
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('app_instance_id');
+            $table->index('parent_domain_id');
         });
     }
 

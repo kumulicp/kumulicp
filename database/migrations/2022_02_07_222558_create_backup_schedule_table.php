@@ -18,6 +18,7 @@ class CreateBackupScheduleTable extends Migration
             $table->unsignedBigInteger('recurring_backup_id')->nullable();
             $table->datetime('scheduled_at');
             $table->timestamps();
+            $table->index('recurring_backup_id');
         });
     }
 

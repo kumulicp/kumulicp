@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::table('app_instances', function (Blueprint $table) {
             $table->unsignedBigInteger('parent_id')->nullable();
+            $table->index('parent_id');
         });
     }
 
@@ -25,6 +26,9 @@ return new class extends Migration
      */
     public function down()
     {
-        //
+        Schema::table('app_instances', function (Blueprint $table) {
+            $table->dropIndex(['parent_id']);
+            $table->dropColumn('parent_id');
+        });
     }
 };

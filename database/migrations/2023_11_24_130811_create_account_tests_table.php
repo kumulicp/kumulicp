@@ -22,6 +22,8 @@ return new class extends Migration
             $table->json('settings');
             $table->string('status');
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('created_by_id');
         });
     }
 

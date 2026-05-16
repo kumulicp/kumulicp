@@ -18,6 +18,8 @@ class CreateAppImpliedRolesTable extends Migration
             $table->unsignedBigInteger('primary_app_role_id');
             $table->unsignedBigInteger('implied_app_role_id');
             $table->timestamps();
+            $table->index('primary_app_role_id');
+            $table->index('implied_app_role_id');
         });
     }
 

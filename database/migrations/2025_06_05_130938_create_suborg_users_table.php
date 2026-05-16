@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('organization_id');
             $table->string('username', 100);
             $table->timestamps();
+            $table->index('organization_id');
         });
     }
 

@@ -24,6 +24,7 @@ class CreateAppVersions extends Migration
             $table->json('settings')->nullable();
             $table->string('status');
             $table->timestamps();
+            $table->index('application_id');
         });
     }
 
