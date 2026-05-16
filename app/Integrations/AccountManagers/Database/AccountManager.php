@@ -6,11 +6,11 @@ use App\Contracts\AccountManager\AccountManagerContract;
 use App\User;
 use Spatie\Permission\Models\Role;
 
-class AccountManagerInterface implements AccountManagerContract
+class AccountManager implements AccountManagerContract
 {
     public function accounts()
     {
-        return new AccountsInterface;
+        return new Accounts;
     }
 
     public function initiate()
@@ -20,13 +20,11 @@ class AccountManagerInterface implements AccountManagerContract
         Role::create(['name' => 'billing_manager']);
     }
 
-    // Return username
     public function checkUsername(string $username)
     {
         return User::where('username', $username)->first()?->username;
     }
 
-    // Return username
     public function checkEmail(string $email)
     {
         return User::where('email', $email)->first()?->username;

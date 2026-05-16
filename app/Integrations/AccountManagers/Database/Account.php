@@ -5,7 +5,7 @@ namespace App\Integrations\AccountManagers\Database;
 use App\Contracts\AccountManager\AccountContract;
 use App\Organization;
 
-class AccountInterface implements AccountContract
+class Account implements AccountContract
 {
     public function __construct(private Organization $organization) {}
 
@@ -13,12 +13,12 @@ class AccountInterface implements AccountContract
 
     public function users()
     {
-        return new UsersInterface($this->organization);
+        return new Users($this->organization);
     }
 
     public function groups()
     {
-        return new GroupsInterface;
+        return new Groups;
     }
 
     public function destroy() {}

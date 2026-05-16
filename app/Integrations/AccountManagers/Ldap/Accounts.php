@@ -10,7 +10,7 @@ use App\Ldap\Models\Organization as LdapOrganization;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Organization;
 
-class AccountsInterface
+class Accounts
 {
     public function create(Organization $organization)
     {
@@ -67,17 +67,17 @@ class AccountsInterface
 
     public function account(Organization $organization)
     {
-        return new AccountInterface($organization);
+        return new Account($organization);
     }
 
     public function users(?Organization $organization = null)
     {
-        return new UsersInterface($organization);
+        return new Users($organization);
     }
 
     public function groups()
     {
-        return new GroupsInterface;
+        return new Groups;
     }
 
     public function seeder($name)

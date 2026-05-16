@@ -6,7 +6,7 @@ use App\AppInstance;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group;
 use App\Ldap\Models\OrganizationalUnit;
-use App\Ldap\Models\User;
+use App\Ldap\Models\User as LdapUser;
 use App\Mail\CustomInvoice;
 use App\Mail\SubscriptionBilling;
 use App\Services\AppInstanceService;
@@ -14,7 +14,7 @@ use App\Support\Facades\Organization;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Mail;
 
-class UsersInterface
+class Users
 {
     private $users = [];
 
@@ -27,11 +27,11 @@ class UsersInterface
 
     public function all()
     {
-        $get_users = User::in(Dn::create($this->organization, 'users'))->get();
+        $get_users = LdapUser::in(Dn::create($this->organization, 'users'))->get();
         $users = collect([]);
 
         foreach ($get_users as $user) {
-            $users->push(new UserInterface($user));
+            $users->push(new User($user));
         }
 
         return $users;
@@ -42,8 +42,8 @@ class UsersInterface
         $cn = $input['username'];
         $user_dn = Dn::create($this->organization, 'users', $cn);
 
-        if (! $user = User::find($user_dn)) {
-            $user = new User;
+        if (! $user = LdapUser::find($user_dn)) {
+            $user = new LdapUser;
             $user->setAttribute('cn', $cn);
             $user->setAttribute('displayName', $input['first_name'].' '.$input['last_name']);
             $user->setAttribute('givenname', $input['first_name']);
@@ -60,7 +60,7 @@ class UsersInterface
             $user->save();
         }
 
-        $user = User::find($user->getDn());
+        $user = LdapUser::find($user->getDn());
 
         $user_interface = $this->get($user);
 
@@ -69,14 +69,14 @@ class UsersInterface
 
     public function find(string $username)
     {
-        if ($user = User::find(Dn::create($this->organization, 'users', $username))) {
-            return new UserInterface($user);
+        if ($user = LdapUser::find(Dn::create($this->organization, 'users', $username))) {
+            return new User($user);
         }
     }
 
     public function findEmail($user_email)
     {
-        $user = User::where('mail', '=', $user_email)->first();
+        $user = LdapUser::where('mail', '=', $user_email)->first();
 
         if ($user) {
             return $this->get($user);
@@ -94,7 +94,7 @@ class UsersInterface
             $users = OrganizationalUnit::find(Dn::create($this->organization, 'users'));
 
             foreach ($admins->getAttribute('member') as $admin) {
-                $admin = User::find($admin);
+                $admin = LdapUser::find($admin);
                 if ($admin && $admin->isChildOf($users)) {
                     $n[] = $this->get($admin);
                 }
@@ -126,26 +126,26 @@ class UsersInterface
     public function standardUsers()
     {
         if (! $this->organization->parent_organization_id) {
-            $users = User::in(Dn::create($this->organization, 'users'))->where('employeeType', 'standard')->get();
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->where('employeeType', 'standard')->get();
         } else {
-            $users = User::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList())->where('employeeType', 'standard')->get();
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList())->where('employeeType', 'standard')->get();
         }
 
         return $users->map(function ($user, $value) {
-            return new UserInterface($user);
+            return new User($user);
         });
     }
 
     public function basicUsers()
     {
         if (! $this->organization->parent_organization_id) {
-            $users = User::in(Dn::create($this->organization, 'users'))->where('employeeType', 'basic')->get();
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->where('employeeType', 'basic')->get();
         } else {
-            $users = User::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList())->where('employeeType', 'basic')->get();
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList())->where('employeeType', 'basic')->get();
         }
 
         return $users->map(function ($user, $value) {
-            return new UserInterface($user);
+            return new User($user);
         });
     }
 
@@ -167,7 +167,7 @@ class UsersInterface
                         if (! $members->contains(function ($value, $key) use ($member) {
                             return $value == $member;
                         })) {
-                            $members->push(new UserInterface($member));
+                            $members->push(new User($member));
                         }
                     }
                 }
@@ -266,9 +266,9 @@ class UsersInterface
         }
     }
 
-    public function get(User $user)
+    public function get(LdapUser $user)
     {
-        return new UserInterface($user);
+        return new User($user);
     }
 
     public function getUserList()
@@ -284,22 +284,22 @@ class UsersInterface
     public function collect()
     {
         if (! $this->organization->parent_organization_id) {
-            $users = User::in(Dn::create($this->organization, 'users'));
+            $users = LdapUser::in(Dn::create($this->organization, 'users'));
         } else {
-            $users = User::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
         }
 
         return $users->orderBy('givenName')->get()->map(function ($user, $value) {
-            return new UserInterface($user);
+            return new User($user);
         });
     }
 
     public function paginate(int $items_per_page)
     {
         if (! $this->organization->parent_organization_id) {
-            $users = User::in(Dn::create($this->organization, 'users'));
+            $users = LdapUser::in(Dn::create($this->organization, 'users'));
         } else {
-            $users = User::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
+            $users = LdapUser::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
         }
 
         return $users->orderBy()->paginate($items_per_page);
@@ -308,7 +308,7 @@ class UsersInterface
     public function map($users)
     {
         return $users->map(function ($user, $value) {
-            return new UserInterface($user);
+            return new User($user);
         });
     }
 }
