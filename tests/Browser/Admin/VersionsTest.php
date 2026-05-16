@@ -19,11 +19,12 @@ describe('Admin Versions', function () {
 
         // Source version to copy from
         $this->sourceVersion = AppVersion::factory()->create([
-            'application_id' => $this->demoApp->id,
-            'name'           => '1.0',
-            'admin_path'     => '/source-admin',
-            'settings'       => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
-            'roles'          => ['order' => $roles],
+            'application_id'        => $this->demoApp->id,
+            'name'                  => '1.0',
+            'admin_path'            => '/source-admin',
+            'announcement_location' => 'none',
+            'settings'              => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
+            'roles'                 => ['order' => $roles],
         ]);
 
         $this->allRoles = $roles;
@@ -91,7 +92,7 @@ describe('Admin Versions', function () {
             ->click('text=Previous Version')
             ->assertVisible('#copyVersion')
             ->click('#copyVersion')
-            ->click("text={$this->sourceVersion->name}")
+            ->click("[role=option]:has-text(\"{$this->sourceVersion->name}\")")
             ->click('#submit')
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/2.0");
 
@@ -162,7 +163,7 @@ describe('Admin Versions', function () {
             window.__orderCorrect = first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false;
         ");
 
-        $result = $page->script("return window.__orderCorrect;");
+        $result = $page->script("window.__orderCorrect");
         expect($result)->toBeTrue();
     });
 
@@ -228,9 +229,10 @@ describe('Admin Versions', function () {
         $roles = $this->demoApp->roles()->pluck('id')->toArray();
 
         $version = AppVersion::factory()->create([
-            'application_id' => $this->demoApp->id,
-            'name'           => '1.0',
-            'roles'          => ['order' => $roles],
+            'application_id'        => $this->demoApp->id,
+            'name'                  => '2.0',
+            'announcement_location' => 'none',
+            'roles'                 => ['order' => $roles],
         ]);
 
         visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
@@ -241,5 +243,40 @@ describe('Admin Versions', function () {
 
         $version->refresh();
         expect($version->admin_path)->toBe('/updated-admin');
+    });
+
+    it('shows announcement url input for remote, announcement select for local, and nothing for none', function () {
+        $roles = $this->demoApp->roles()->pluck('id')->toArray();
+
+        $version = AppVersion::factory()->create([
+            'application_id'        => $this->demoApp->id,
+            'name'                  => '2.0',
+            'announcement_location' => 'none',
+            'roles'                 => ['order' => $roles],
+        ]);
+
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
+
+        // Default is none — neither extra input should be present
+        $page->assertNotPresent('#announcementUrl');
+        $page->assertNotPresent('#announcementId');
+
+        // Switch to remote — URL input should appear, announcement select should not
+        $page->click('#announcementLocation');
+        $page->click('[role=option]:has-text("Remote")');
+        $page->assertPresent('#announcementUrl');
+        $page->assertNotPresent('#announcementId');
+
+        // Switch to local — announcement select should appear, URL input should not
+        $page->click('#announcementLocation');
+        $page->click('[role=option]:has-text("Local")');
+        $page->assertPresent('#announcementId');
+        $page->assertNotPresent('#announcementUrl');
+
+        // Switch back to none — neither should be present
+        $page->click('#announcementLocation');
+        $page->click('[role=option]:has-text("Don\'t send announcement notification")');
+        $page->assertNotPresent('#announcementUrl');
+        $page->assertNotPresent('#announcementId');
     });
 });
