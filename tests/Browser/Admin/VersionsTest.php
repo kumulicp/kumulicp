@@ -92,7 +92,7 @@ describe('Admin Versions', function () {
             ->click('text=Previous Version')
             ->assertVisible('#copyVersion')
             ->click('#copyVersion')
-            ->click("[role=option]:has-text(\"{$this->sourceVersion->name}\")")
+            ->click("[role=option]:text-is(\"{$this->sourceVersion->name}\")")
             ->click('#submit')
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/2.0");
 
@@ -226,23 +226,33 @@ describe('Admin Versions', function () {
     // ─── Update version ───────────────────────────────────────────────────────
 
     it('updates version settings via the edit form', function () {
-        $roles = $this->demoApp->roles()->pluck('id')->toArray();
+        $appRoles = $this->demoApp->roles()->get();
+        $adminRole = $appRoles->first();
+        $userRole = $appRoles->skip(1)->first();
 
         $version = AppVersion::factory()->create([
             'application_id'        => $this->demoApp->id,
             'name'                  => '2.0',
             'announcement_location' => 'none',
-            'roles'                 => ['order' => $roles],
+            'roles'                 => ['order' => $appRoles->pluck('id')->toArray()],
         ]);
 
         visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
             ->fill('#adminPath input', '/updated-admin')
+            ->click('#defaultAdminRoles')
+            ->click("[role=option]:text-is(\"{$adminRole->label}\")")
+            ->keys('#defaultAdminRoles', 'Escape')
+            ->click('#defaultUserRoles')
+            ->click("[role=option]:text-is(\"{$userRole->label}\")")
+            ->keys('#defaultUserRoles', 'Escape')
             ->click('#submit')
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
 
         $version->refresh();
         expect($version->admin_path)->toBe('/updated-admin');
+        expect($version->roles['default_admin_groups'])->toContain($adminRole->id);
+        expect($version->roles['default_user_groups'])->toContain($userRole->id);
     });
 
     it('shows announcement url input for remote, announcement select for local, and nothing for none', function () {
@@ -263,19 +273,19 @@ describe('Admin Versions', function () {
 
         // Switch to remote — URL input should appear, announcement select should not
         $page->click('#announcementLocation');
-        $page->click('[role=option]:has-text("Remote")');
+        $page->click('[role=option]:text-is("Remote")');
         $page->assertPresent('#announcementUrl');
         $page->assertNotPresent('#announcementId');
 
         // Switch to local — announcement select should appear, URL input should not
         $page->click('#announcementLocation');
-        $page->click('[role=option]:has-text("Local")');
+        $page->click('[role=option]:text-is("Local")');
         $page->assertPresent('#announcementId');
         $page->assertNotPresent('#announcementUrl');
 
         // Switch back to none — neither should be present
         $page->click('#announcementLocation');
-        $page->click('[role=option]:has-text("Don\'t send announcement notification")');
+        $page->click('[role=option]:text-is("Don\'t send announcement notification")');
         $page->assertNotPresent('#announcementUrl');
         $page->assertNotPresent('#announcementId');
     });
