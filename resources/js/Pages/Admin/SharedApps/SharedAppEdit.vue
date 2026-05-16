@@ -16,6 +16,14 @@ import { useForm } from '@inertiajs/vue3'
         <AdminSettings>
           <template #name>{{ $t('admin.sharedApps.aboutApp') }}</template>
           <template #settings>
+            <va-input v-model="form.label"
+              id="appLabel"
+              :label="$t('admin.sharedApps.label')"
+              class="mb-3"
+              immediateValidation
+              :error="$page.props.errors.label"
+              :error-messages="$page.props.errors.label"
+            />
             <va-select
               v-model="form.domain"
               :label="$t('admin.sharedApps.domain')"

@@ -118,6 +118,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         <va-select
           v-model="form.server_type"
           class="my-2"
+          id="serverType"
           :label="$t('admin.plans.serverType')"
           :messages="$t('admin.plans.serverTypeCaption')"
           immediateValidation
@@ -133,6 +134,7 @@ import { useForm, Link } from '@inertiajs/vue3'
             v-if="app.can.shareable"
             v-model="form.shared_app"
             class="my-2"
+            id="sharedApp"
             :label="$t('admin.plans.sharedApp')"
             :messages="$t('admin.plans.sharedAppCaption')"
             immediateValidation

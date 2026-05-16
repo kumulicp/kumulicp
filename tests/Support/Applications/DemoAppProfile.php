@@ -13,6 +13,8 @@ class DemoAppProfile extends AppProfile
 
     protected $activation_type = 'chart';
 
+    protected $compatibility = ['shareable'];
+
     protected $helm_chart = DemoHelmChart::class;
 
     protected $jobs = DemoJobs::class;

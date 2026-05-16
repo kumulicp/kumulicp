@@ -433,6 +433,50 @@ class TestSupports
         $this->demo_app = Application::where('slug', 'demo_app')->first();
     }
 
+    public function activateSharedApps(): Organization
+    {
+        $shared = Organization::where('type', 'shared')->first();
+
+        if (! $shared) {
+            $shared = new Organization;
+            $shared->slug = 'shared';
+            $shared->name = 'Shared Apps';
+            $shared->type = 'shared';
+            $shared->email = 'shared@example.com';
+            $shared->phone_number = '000-000-0000';
+            $shared->description = 'Shared applications organization';
+            $shared->contact_first_name = 'Shared';
+            $shared->contact_last_name = 'Apps';
+            $shared->contact_email = 'shared@example.com';
+            $shared->contact_phone_number = '000-000-0000';
+            $shared->street = '1 Shared St';
+            $shared->zipcode = '00000';
+            $shared->city = 'Sharedtown';
+            $shared->state = 'AZ';
+            $shared->country = 'US';
+            $shared->secretpw = \Illuminate\Support\Str::password(20, true, true, false, false);
+            $shared->status = 'active';
+            $shared->save();
+
+            AccountManager::accounts()->create($shared);
+            $superaccount = Organization::where('type', 'superaccount')->first();
+            (new \App\Services\SubscriptionService($shared))->all()->updateBase($superaccount->plan);
+        }
+
+        return $shared;
+    }
+
+    public function addSharedAppInstance(Organization $sharedOrg, \App\Application $app, AppPlan $plan, string $label = 'Shared App'): AppInstance
+    {
+        $version = $app->versions()->where('status', 'active')->first();
+        $service = AppFacade::activate($sharedOrg, $app, $version, $plan, label: $label);
+        $instance = $service->get();
+        $instance->status = 'active';
+        $instance->save();
+
+        return $instance;
+    }
+
     public function disableApps(): void
     {
         if ($app_1 = AppInstance::find(1)) {
