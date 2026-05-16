@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SetupAwareAuthenticate;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\UserOrganization;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
         ]);
         $middleware->alias([
+            'auth' => SetupAwareAuthenticate::class,
             'user.organization' => UserOrganization::class,
             'guest' => RedirectIfAuthenticated::class,
         ]);
