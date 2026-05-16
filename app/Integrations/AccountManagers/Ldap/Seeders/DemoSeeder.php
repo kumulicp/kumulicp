@@ -2,7 +2,7 @@
 
 namespace App\Integrations\AccountManagers\Ldap\Seeders;
 
-use App\Integrations\AccountManagers\Ldap\AccountManagerInterface;
+use App\Integrations\AccountManagers\Ldap\AccountManager as AccountManagerInterface;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group;
 use App\Support\Facades\Organization;
