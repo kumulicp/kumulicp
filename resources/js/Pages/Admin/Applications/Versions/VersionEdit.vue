@@ -169,7 +169,7 @@ import { useForm } from '@inertiajs/vue3'
                   multiple
                   searchable
                   clearable
-                  :options="groups"
+                  :options="roles"
                   :error="$page.props.errors.default_admin_roles"
                   :error-messages="$page.props.errors.default_admin_roles"
                 />
@@ -184,7 +184,7 @@ import { useForm } from '@inertiajs/vue3'
                   multiple
                   searchable
                   clearable
-                  :options="groups"
+                  :options="roles"
                   :error="$page.props.errors.default_user_roles"
                   :error-messages="$page.props.errors.default_user_roles"
                 />
@@ -206,7 +206,7 @@ export default {
     version: Object,
     errors: Object,
     announcements: Object,
-    groups: Object,
+    roles: Object,
     app: Object,
     can: Object,
     recommendations: Object
