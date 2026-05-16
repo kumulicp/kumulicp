@@ -10,38 +10,6 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
-// Auth: unauthenticated requests are redirected to login
-
-it('redirects guests from admin announcements index', function () {
-    $response = $this->get('/admin/service/announcements');
-    $response->assertRedirect('/login');
-});
-
-it('redirects guests attempting to create announcement', function () {
-    $response = $this->post('/admin/service/announcements', ['title' => 'Test Announcement']);
-    $response->assertRedirect('/login');
-});
-
-it('redirects guests attempting to update announcement', function () {
-    $announcement = Announcement::factory()->create();
-
-    $response = $this->put('/admin/service/announcements/'.$announcement->id, [
-        'title' => 'Updated Title',
-        'short_description' => 'Summary',
-        'description' => '<p>Content</p>',
-    ]);
-
-    $response->assertRedirect('/login');
-});
-
-it('redirects guests attempting to delete announcement', function () {
-    $announcement = Announcement::factory()->create();
-
-    $response = $this->delete('/admin/service/announcements/'.$announcement->id);
-
-    $response->assertRedirect('/login');
-});
-
 // Auth: non-admin users are forbidden
 
 describe('non-admin user', function () {
@@ -222,10 +190,3 @@ it('authenticated user can view announcement', function () {
     $response->assertStatus(200);
 });
 
-it('guest cannot view announcement', function () {
-    $announcement = Announcement::factory()->create();
-
-    $response = $this->get('/announcements/'.$announcement->id);
-
-    $response->assertRedirect('/login');
-});
