@@ -41,11 +41,11 @@ describe('Admin Versions', function () {
 
         // Switch to Recommendations — version select should disappear
         $page->click('text=Recommendations');
-        $page->assertNotVisible('#copyVersion');
+        $page->assertMissing('#copyVersion');
 
         // Switch to None — version select should remain hidden
         $page->click('text=None');
-        $page->assertNotVisible('#copyVersion');
+        $page->assertMissing('#copyVersion');
 
         // Switch back to Previous Version — version select should reappear
         $page->click('text=Previous Version');
