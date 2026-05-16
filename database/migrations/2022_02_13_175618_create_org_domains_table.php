@@ -74,6 +74,10 @@ class CreateOrgDomainsTable extends Migration
             $table->DateTime('transferred_at')->nullable();
             $table->dateTime('expires_at')->nullable();
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('app_instance_id');
+            $table->index('parent_domain_id');
+            $table->index('tld_id');
         });
     }
 

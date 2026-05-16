@@ -34,6 +34,7 @@ class CreatePlanTable extends Migration
             $table->timestamp('release_date')->nullable();
             $table->timestamp('suppress_date')->nullable();
             $table->timestamps();
+            $table->index('email_server_id');
         });
     }
 

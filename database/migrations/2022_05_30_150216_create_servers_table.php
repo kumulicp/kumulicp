@@ -34,6 +34,8 @@ class CreateServersTable extends Migration
             $table->json('settings')->nullable();
             $table->string('status');
             $table->timestamps();
+            $table->index('app_instance_id');
+            $table->index('default_backup_server_id');
         });
     }
 

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('name', 255);
             $table->string('category', 20);
             $table->timestamps();
+            $table->index('organization_id');
         });
     }
 

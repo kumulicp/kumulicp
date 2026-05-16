@@ -36,6 +36,13 @@ class CreateAppInstancesTable extends Migration
             $table->dateTime('trial_ends_at')->nullable();
             $table->dateTime('deactivate_at')->nullable();
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('application_id');
+            $table->index('version_id');
+            $table->index('plan_id');
+            $table->index('web_server_id');
+            $table->index('database_server_id');
+            $table->index('sso_server_id');
         });
     }
 

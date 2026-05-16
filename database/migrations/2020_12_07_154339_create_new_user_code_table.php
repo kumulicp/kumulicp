@@ -21,6 +21,7 @@ class CreateNewUserCodeTable extends Migration
             $table->string('status', 20)->default('pending');
             $table->boolean('activated');
             $table->timestamps();
+            $table->index('organization_id');
         });
     }
 

@@ -48,6 +48,12 @@ class CreateOrganizationsTable extends Migration
             $table->string('status');
             $table->dateTime('deactivate_at')->nullable();
             $table->timestamps();
+            $table->index('parent_organization_id');
+            $table->index('plan_id');
+            $table->index('primary_contact_id');
+            $table->index('account_test_id');
+            $table->index('primary_domain_id');
+            $table->index('base_domain_id');
         });
     }
 

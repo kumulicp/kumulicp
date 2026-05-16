@@ -21,6 +21,9 @@ class CreateOrgServersTable extends Migration
             $table->integer('server_customer_id')->nullable();
             $table->string('backup_driver')->nullable();
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('server_id');
+            $table->index('backup_server_id');
         });
     }
 

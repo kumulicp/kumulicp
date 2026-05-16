@@ -17,6 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->string('role', '20')->default('member');
             $table->timestamps();
+            $table->index('group_id');
+            $table->index('user_id');
         });
     }
 

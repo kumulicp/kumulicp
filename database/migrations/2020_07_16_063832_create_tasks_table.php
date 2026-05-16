@@ -34,6 +34,10 @@ class CreateTasksTable extends Migration
             $table->string('error_message')->nullable();
             $table->string('status')->default('pending');
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('application_id');
+            $table->index('version_id');
+            $table->index('app_instance_id');
         });
     }
 

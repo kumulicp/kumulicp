@@ -28,6 +28,7 @@ class CreateApplicationsTable extends Migration
             $table->text('description');
             $table->boolean('enabled');
             $table->timestamps();
+            $table->index('parent_app_id');
         });
     }
 

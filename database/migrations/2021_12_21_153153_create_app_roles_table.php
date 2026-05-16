@@ -26,6 +26,7 @@ class CreateAppRolesTable extends Migration
             $table->json('required_features');
             $table->string('status');
             $table->timestamps();
+            $table->index('application_id');
         });
     }
 

@@ -34,6 +34,11 @@ class CreateAppPlansTable extends Migration
             $table->timestamp('release_date')->nullable();
             $table->timestamp('suppress_date')->nullable();
             $table->timestamps();
+            $table->index('application_id');
+            $table->index('web_server_id');
+            $table->index('database_server_id');
+            $table->index('sso_server_id');
+            $table->index('shared_app_id');
         });
     }
 

@@ -20,6 +20,8 @@ class CreateEmailForwarderTable extends Migration
             $table->integer('server_email_id');
             $table->string('email');
             $table->timestamps();
+            $table->index('organization_id');
+            $table->index('domain_id');
         });
     }
 

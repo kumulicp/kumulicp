@@ -33,6 +33,7 @@ class CreateUsersTable extends Migration
             $table->boolean('is_allowed')->default(false);
             $table->softDeletes();
             $table->timestamps();
+            $table->index('organization_id');
         });
     }
 
