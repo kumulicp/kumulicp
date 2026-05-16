@@ -4,6 +4,11 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  server: {
+    watch: {
+      ignored: ['**/*.php', '**/vendor/**', '**/storage/**', '**/bootstrap/cache/**']
+    }
+  },
   plugins: [
     laravel([
       'resources/js/app.js',
