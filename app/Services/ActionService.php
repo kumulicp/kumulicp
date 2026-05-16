@@ -34,6 +34,7 @@ use App\Actions\Tests\ClearTestAccounts;
 use App\Actions\Tests\CreateTests;
 use App\AppInstance;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
+use App\Integrations\Applications\DemoApp\Actions\ProcessGroupOptions as DemoAppProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ManageAddon;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
@@ -89,6 +90,9 @@ class ActionService
         ],
         'civicrm-standalone' => [
             'process_permissions' => ActionsProcessPermissions::class,
+        ],
+        'demo_app' => [
+            'process_group_options' => DemoAppProcessGroupOptions::class,
         ],
         'rancher' => [
             'run_rancher_job' => RunJob::class,

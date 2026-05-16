@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
 use App\Support\Facades\Settings;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +16,7 @@ class AppInstance extends Model
 
     private $extensions = [
         'nextcloud' => NextcloudExtensions::class,
+        'demo_app' => DemoAppExtensions::class,
     ];
 
     protected $casts = [

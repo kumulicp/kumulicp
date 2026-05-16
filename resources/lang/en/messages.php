@@ -255,5 +255,11 @@ return [
             'team_folder_storage' => 'Nextcloud Team Folder Storage',
             'storage_quota_limited' => 'Nextcloud Storage Quota Limited!',
         ],
+        'demo_app' => [
+            'add_group_storage' => 'Add Group Storage',
+            'max_reached' => "You've reached the maximum additional storage for your plan. Upgrade your plan to add group storage.",
+            'subscription_affected' => 'Changing this group storage may affect your subscription price',
+            'group_storage_amount' => 'Group Storage Amount',
+        ],
     ],
 ];
