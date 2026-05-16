@@ -140,7 +140,7 @@ import { useForm } from '@inertiajs/vue3'
                   </div>
                 </div>
               </template>
-              <va-button :disabled="plan.payment_enabled && ! hasDefaultPaymentMethod" type="submit">{{ $t('organization.discover.activate') }}</va-button>
+              <va-button id="activate" :disabled="plan.payment_enabled && ! hasDefaultPaymentMethod" type="submit">{{ $t('organization.discover.activate') }}</va-button>
             </form>
           </va-card-content>
         </va-card>

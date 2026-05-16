@@ -55,7 +55,7 @@ import { Link } from '@inertiajs/vue3'
             <va-divider class="mb-3"></va-divider>
             <div v-if="can.activate" class="row">
               <div class="flex flex-col xs12">
-                <Link v-if="app.plan_count == 1" :href="'/discover/'+app.slug+'/plans/'+app.plan_id+'/review'"><va-button class="mb-3">{{ $t('organization.discover.select') }}</va-button></Link>
+                <Link v-if="app.plan_count == 1" id="select-plan" :href="'/discover/'+app.slug+'/plans/'+app.plan_id+'/review'"><va-button class="mb-3">{{ $t('organization.discover.select') }}</va-button></Link>
                 <Link v-if="app.plan_count > 1" :href="'/discover/'+app.slug+'/plans'"><va-button class="mb-3">{{ $t('organization.discover.chooseYourPlan') }}</va-button></Link>
               </div>
             </div>
