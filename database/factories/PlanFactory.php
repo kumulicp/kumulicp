@@ -22,12 +22,14 @@ class PlanFactory extends Factory
             'name' => fake()->word(),
             'description' => Str::random(50),
             'org_type' => 'business',
+            'payment_enabled' => false,
             'app_plans' => [
                 'nextcloud' => ['max' => '1', 'plans' => 'enabled'],
                 'wordpress' => ['max' => '1', 'plans' => 'enabled'],
             ],
             'settings' => [
-                'base' => ['price' => null, 'storage' => null, 'price_id' => null],
+                'suborganizations' => ['enabled' => false],
+                'base' => ['price' => null, 'storage' => null, 'price_id' => null, 'minimal_label' => null],
                 'basic' => [
                     'max' => null,
                     'name' => null,

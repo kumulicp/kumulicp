@@ -12,13 +12,13 @@ import draggable from 'vuedraggable'
     <va-card-title>{{ $t('admin.plans.plans') }}</va-card-title>
     <va-card-content>
       <div class="row justify-center">
-        <va-button class="" @click="showAddPlan = !showAddPlan">{{ $t('admin.plans.addPlan') }}</va-button>
+        <va-button id="addPlan" class="" @click="showAddPlan = !showAddPlan">{{ $t('admin.plans.addPlan') }}</va-button>
         <va-modal v-model="showAddPlan" no-outside-dismiss no-padding size="small" class="p-0">
           <template #content="{ ok }">
             <form @submit.prevent="form.post('/admin/service/plans')">
               <va-card-title class="m-0"> {{ $t('admin.plans.addPlan') }} </va-card-title>
               <va-card-content class="m-0">
-                <va-input v-model="form.name"
+                <va-input id="planName" v-model="form.name"
                   :label="$t('admin.plans.name')"
                   class="mb-3"
                   required-mark
@@ -26,7 +26,7 @@ import draggable from 'vuedraggable'
                   :error="$page.props.errors.name"
                   :error-messages="$page.props.errors.name"
                   />
-                <va-input v-model="form.description"
+                <va-input id="planDescription" v-model="form.description"
                   :label="$t('admin.plans.description')"
                   class="mb-3"
                   required-mark
@@ -37,7 +37,7 @@ import draggable from 'vuedraggable'
               </va-card-content>
               <va-card-actions align="right" class="">
                 <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-                <va-button type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+                <va-button id="addPlanSubmit" type="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
