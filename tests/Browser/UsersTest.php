@@ -22,6 +22,7 @@ describe('Users', function () {
             ->fill('#firstName input', 'Test')
             ->fill('#lastName input', 'User')
             ->fill('#personalEmail input', 'testuser@example.com')
+            ->fill('#phoneNumber input', '123 456-7890')
             ->click('#submit')
             ->assertPathIs('/users/testuser/permissions');
 
@@ -29,8 +30,10 @@ describe('Users', function () {
             ->assertValue('#firstName input', 'Test')
             ->assertValue('#lastName input', 'User')
             ->assertValue('#personalEmail input', 'testuser@example.com')
+            ->assertValue('#phoneNumber input', '123 456-7890')
             ->fill('#firstName input', 'Updated')
             ->fill('#lastName input', 'Name')
+            ->fill('#phoneNumber input', '098 765-4321')
             ->click('#submit')
             ->assertPathIs('/users/testuser')
             ->assertSee('Updated Name');
