@@ -28,7 +28,7 @@ import draggable from 'vuedraggable'
             @change="updateOrder"
           >
           <template #item="{ element }">
-            <div>
+            <div :id="'selected-role-' + element.id">
               <va-list-item class="py-1">
                 <va-list-item-section icon>
                   <va-list-item-label>
@@ -46,7 +46,7 @@ import draggable from 'vuedraggable'
           </template>
           </draggable>
         </va-list>
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
+        <va-button type="submit" id="updateRoles" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
       </div>
       <div class="flex xs12 lg4">
@@ -64,7 +64,7 @@ import draggable from 'vuedraggable'
             group="roles"
           >
           <template #item="{ element }">
-            <div>
+            <div :id="'available-role-' + element.id">
               <va-list-item class="py-1">
                 <va-list-item-section icon>
                   <va-list-item-label>
@@ -100,7 +100,7 @@ export default {
   },
   data () {
     const order = {}
-    for (const [key, role] of Object.entries(this.version.roles)) {
+    for (const [key, role] of Object.entries(this.version.roles.selected || [])) {
       if (role) {
         order[key] = role.id
       }

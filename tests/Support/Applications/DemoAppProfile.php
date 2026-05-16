@@ -50,6 +50,14 @@ class DemoAppProfile extends AppProfile
         ],
     ];
 
+    protected $recommendations = [
+        'helm_chart_version' => '2.5.0',
+        'helm_chart_name' => 'demo-chart',
+        'image_repo' => 'demo/app',
+        'image_registry' => 'registry.example.com',
+        'admin_path' => '/admin',
+    ];
+
     protected $features = [
         'enabled-feature' => EnabledFeature::class,
         'optional-feature' => OptionalFeature::class,
