@@ -375,9 +375,9 @@ class Users extends Controller
         $new_organization = \App\Organization::find($validatedData['organization']);
 
         // Update user storage
+        $additional_storage_changed = false;
         if (array_key_exists('additional_storage', $validatedData) && is_array($validatedData['additional_storage'])) {
             $apps = AppInstance::findMany(array_keys($validatedData['additional_storage']));
-            $additional_storage_changed = false;
             foreach ($apps as $app) {
                 $additional_storage = new AdditionalStorageService($organization, 'user', $user->attribute('username'), $app);
                 $additional_storage->updateQuantity(Arr::get($validatedData, "additional_storage.{$app->id}"));

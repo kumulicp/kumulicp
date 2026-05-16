@@ -13,12 +13,17 @@ class DeletingUser
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public $organization;
+
     /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct(public UserManager $user) {}
+    public function __construct(public UserManager $user)
+    {
+        $this->organization = $user->organization;
+    }
 
     /**
      * Get the channels the event should broadcast on.

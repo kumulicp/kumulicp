@@ -153,7 +153,7 @@ class UserInterface extends UserManager
 
     public function delete()
     {
-        $this->user->destroy();
+        $this->user->delete();
     }
 
     public function apps()
