@@ -12,15 +12,9 @@ use Illuminate\Support\Facades\Auth;
 
 class OrganizationService
 {
-    private $basic_users;
-
-    private $standard_users;
-
     private $organization;
 
     private $apps = [];
-
-    private $cache = [];
 
     public function __construct(?Organization $organization = null)
     {
