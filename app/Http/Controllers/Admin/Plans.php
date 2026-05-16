@@ -61,6 +61,7 @@ class Plans extends Controller
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
         $display_order = $order_num ? $order_num->display_order : 0;
         $apps = Application::all();
+        $app_plans = [];
         foreach ($apps as $app) {
             $app_plans[$app->slug] = [];
         }
@@ -80,6 +81,7 @@ class Plans extends Controller
             'application' => [],
             'domains' => [],
         ];
+        $plan->org_type = 'none';
         $plan->app_plans = $app_plans;
         $plan->status = 'hidden';
         $plan->save();
@@ -225,11 +227,11 @@ class Plans extends Controller
         $plan->org_type = $request->org_type;
         $plan->type = $request->type;
         $plan->features = $request->displayed_features;
-        $plan->payment_enabled = $request->payment_enabled;
+        $plan->payment_enabled = $request->boolean('payment_enabled');
         $plan->email_server_id = $request->email_server;
         $plan->app_plans = $request->app_plans;
-        $plan->domain_enabled = $request->domain_enabled;
-        $plan->email_enabled = $request->email_enabled;
+        $plan->domain_enabled = $request->boolean('domain_enabled');
+        $plan->email_enabled = $request->boolean('email_enabled');
         $plan->domain_max = $request->domain_max;
         $plan->updateSettings([
             'suborganizations.enabled' => $request->input('suborganizations.enabled'),

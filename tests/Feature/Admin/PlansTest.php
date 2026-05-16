@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Organization;
 use App\Plan;
+use App\Support\Facades\AccountManager;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
@@ -52,7 +53,7 @@ class PlansTest extends TestCase
 
         // Remove admin role from demo user so they are a plain org member
         $user = User::find(1);
-        $user->removeRole('control_panel_admin');
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
 
         $this->actingAs($user)
             ->get('/admin/service/plans')
@@ -73,7 +74,7 @@ class PlansTest extends TestCase
         $support->seed();
 
         $user = User::find(1);
-        $user->removeRole('control_panel_admin');
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
 
         $this->actingAs($user)
             ->post('/admin/service/plans', ['name' => 'Test', 'description' => 'Desc'])
@@ -97,7 +98,7 @@ class PlansTest extends TestCase
         $plan = Plan::factory()->create();
 
         $user = User::find(1);
-        $user->removeRole('control_panel_admin');
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
 
         $this->actingAs($user)
             ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload())
@@ -121,7 +122,7 @@ class PlansTest extends TestCase
         $plan = Plan::factory()->create();
 
         $user = User::find(1);
-        $user->removeRole('control_panel_admin');
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
 
         $this->actingAs($user)
             ->get("/admin/service/plans/{$plan->id}/remove")
@@ -142,7 +143,7 @@ class PlansTest extends TestCase
         $support->seed();
 
         $user = User::find(1);
-        $user->removeRole('control_panel_admin');
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
 
         $this->actingAs($user)
             ->post('/admin/service/plans/update_order', ['plans' => []])

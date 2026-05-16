@@ -19,7 +19,7 @@ import { useForm, Link } from '@inertiajs/vue3'
       <AdminSettings>
         <template #name></template>
         <template #settings>
-          <va-input v-model="form.name"
+          <va-input id="planName" v-model="form.name"
             :label="$t('admin.plans.name')"
             class="my-2"
             required-mark
@@ -438,7 +438,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         </template>
       </AdminSettings>
 
-        <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
+        <va-button id="submit" type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
       </form>
     </va-card-content>
   </va-card>

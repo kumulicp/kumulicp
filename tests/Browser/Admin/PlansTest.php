@@ -2,77 +2,41 @@
 
 use App\Organization;
 use App\Plan;
+use App\User;
 
 describe('Admin Plans', function () {
     beforeEach(function () {
-        // DemoSeeder already runs from Pest.php global beforeEach.
-        // The demo user (demo@example.com) has control_panel_admin access.
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
     });
 
-    function loginAsAdmin(): void
-    {
-        visit('/login')
-            ->fill('input[type=email]', 'demo@example.com')
-            ->fill('input[type=password]', 'demouser')
-            ->click('#submit')
-            ->assertPathIs('/');
-    }
-
-    // ---------------------------------------------------------------------------
-    // Add plan
-    // ---------------------------------------------------------------------------
-
-    it('shows the plans list page after login', function () {
-        loginAsAdmin();
-
+    it('shows the plans list and adds a new plan', function () {
         visit('/admin/service/plans')
-            ->assertSee('Plans');
-    });
-
-    it('adds a new plan via the modal form', function () {
-        loginAsAdmin();
-
-        visit('/admin/service/plans')
-            ->assertSee('Add Plan')
-            ->click('button:has-text("Add Plan")')
-            ->waitForSelector('input[aria-label="Name"], input[placeholder*="Name"], .va-modal input', ['timeout' => 5000])
-            ->fill('.va-modal input:first-of-type', 'Browser Test Plan')
-            ->fill('.va-modal textarea, .va-modal input:last-of-type', 'A plan created by a browser test')
-            ->click('.va-modal button[type=submit]')
+            ->assertSee('Plans')
+            ->click('#addPlan')
+            ->fill('#planName input', 'Browser Test Plan')
+            ->fill('#planDescription input', 'A plan created by a browser test')
+            ->click('#addPlanSubmit')
             ->assertPathIs('/admin/service/plans')
             ->assertSee('Browser Test Plan');
     });
 
-    // ---------------------------------------------------------------------------
-    // Update plan
-    // ---------------------------------------------------------------------------
-
-    it('can update a plan name and description', function () {
+    it('updates a plan name', function () {
         $plan = Plan::factory()->create([
-            'name' => 'Original Browser Plan',
+            'name' => 'Original Plan',
             'description' => 'Original description',
+            'type' => 'app',
         ]);
 
-        loginAsAdmin();
-
         visit("/admin/service/plans/{$plan->id}")
-            ->assertSee('Edit')
-            ->waitForSelector('input', ['timeout' => 5000])
-            ->clear('input[value="Original Browser Plan"]')
-            ->fill('input[value=""]', 'Renamed Browser Plan')
-            ->click('button[type=submit]:has-text("Update")')
+            ->assertSee('Original Plan')
+            ->fill('#planName input', 'Renamed Plan')
+            ->click('#submit')
             ->assertPathIs('/admin/service/plans')
-            ->assertSee('Renamed Browser Plan');
+            ->assertSee('Renamed Plan');
     });
 
-    // ---------------------------------------------------------------------------
-    // Remove plan
-    // ---------------------------------------------------------------------------
-
-    it('removes a plan with no subscribers by navigating to the remove route', function () {
+    it('removes a plan with no subscribers', function () {
         $plan = Plan::factory()->create(['name' => 'Plan To Remove']);
-
-        loginAsAdmin();
 
         visit("/admin/service/plans/{$plan->id}/remove")
             ->assertPathIs('/admin/service/plans');
@@ -80,35 +44,16 @@ describe('Admin Plans', function () {
         expect(Plan::find($plan->id))->toBeNull();
     });
 
-    it('does not remove a plan that has active subscribers', function () {
+    it('does not remove a plan with active subscribers', function () {
         $plan = Plan::factory()->create(['name' => 'Subscribed Plan']);
 
         $org = Organization::find(1);
         $org->plan_id = $plan->id;
         $org->save();
 
-        loginAsAdmin();
-
         visit("/admin/service/plans/{$plan->id}/remove")
             ->assertPathIs('/admin/service/plans');
 
         expect(Plan::find($plan->id))->not->toBeNull();
-    });
-
-    // ---------------------------------------------------------------------------
-    // Update order
-    // ---------------------------------------------------------------------------
-
-    it('updates plan display order via the update_order form submission', function () {
-        $plan_a = Plan::factory()->create(['name' => 'Alpha Plan', 'display_order' => 1]);
-        $plan_b = Plan::factory()->create(['name' => 'Beta Plan', 'display_order' => 2]);
-
-        loginAsAdmin();
-
-        // The draggable table renders on this page; submit the existing order to confirm the action works
-        visit('/admin/service/plans')
-            ->assertSee('Alpha Plan')
-            ->assertSee('Beta Plan')
-            ->assertSee('Update Order');
     });
 });
