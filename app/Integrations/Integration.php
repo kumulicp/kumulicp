@@ -254,7 +254,7 @@ class Integration
     {
         $settings = collect([
             'timeout' => $this->timeout,
-            'verify' => false,
+            'verify' => true,
         ]);
         if ($this->cookie_jar) {
             $settings = $settings->merge(['cookies' => $this->cookie_jar]);
