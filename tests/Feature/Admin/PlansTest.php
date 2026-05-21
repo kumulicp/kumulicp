@@ -349,6 +349,46 @@ class PlansTest extends TestCase
         $this->assertDatabaseHas('plans', ['id' => $existing_default->id, 'is_default' => false]);
     }
 
+    public function test_update_nulls_out_users_and_storage_settings_for_app_type_plans()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create([
+            'type' => 'package',
+            'settings' => [
+                'suborganizations' => ['enabled' => false],
+                'base' => ['price' => 5, 'price_id' => 'base_stripe', 'storage' => 1, 'minimal_label' => 'Constituent'],
+                'standard' => ['price' => 2, 'max' => 10, 'price_id' => 'std_stripe', 'storage' => 1],
+                'basic' => ['name' => 'Volunteer', 'price' => 1, 'amount' => 5, 'max' => 20, 'price_id' => 'basic_stripe', 'storage' => 0.5],
+                'storage' => ['price' => 1, 'max' => 50, 'price_id' => 'sto_stripe', 'amount' => 5],
+                'email' => ['price' => null, 'max' => null, 'price_id' => null, 'storage' => null],
+                'application' => ['price' => 3, 'max' => 5, 'price_id' => 'app_stripe'],
+                'domains' => ['connect' => false, 'register' => false, 'transfer' => false],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'base' => ['price' => 5, 'price_id' => 'base_stripe', 'minimal_label' => 'Constituent'],
+                'standard' => ['price' => 2, 'max' => 10, 'price_id' => 'std_stripe', 'storage' => 1],
+                'basic' => ['name' => 'Volunteer', 'price' => 1, 'amount' => 5, 'max' => 20, 'price_id' => 'basic_stripe', 'storage' => 0.5],
+                'storage' => ['price' => 1, 'max' => 50, 'price_id' => 'sto_stripe', 'amount' => 5],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $plan->refresh();
+        // Pricing fields must be nulled out for app type
+        $this->assertNull($plan->setting('base.price'));
+        $this->assertNull($plan->setting('base.price_id'));
+        $this->assertNull($plan->setting('standard.price'));
+        $this->assertNull($plan->setting('standard.max'));
+        $this->assertNull($plan->setting('basic.name'));
+        $this->assertNull($plan->setting('storage.price'));
+        $this->assertNull($plan->setting('application.price'));
+        // Non-pricing fields are preserved
+        $this->assertEquals('Constituent', $plan->setting('base.minimal_label'));
+    }
+
     public function test_update_normalizes_single_app_plan_value_to_array()
     {
         $user = $this->adminUser();

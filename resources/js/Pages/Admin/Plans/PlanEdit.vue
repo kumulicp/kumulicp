@@ -125,24 +125,26 @@ import { useForm, Link } from '@inertiajs/vue3'
       <AdminSettings>
         <template #name>{{ $t('admin.plans.baseOptions') }}</template>
         <template #settings>
-          <va-input
-            type="number"
-            v-model="form.base.price"
-            :label="$t('admin.plans.price')"
-            class="my-2"
-            :messages="$t('admin.plans.basePriceCaption')"
-            immediateValidation
-            min="0"
-            step=".01"
-          >
-            <template #prependInner>
-              $
-            </template>
-          </va-input>
-          <va-input v-model="form.base.price_id"
-            :label="$t('admin.plans.productID')"
-            class="my-2"
-            />
+          <template v-if="form.type === 'package'">
+            <va-input
+              type="number"
+              v-model="form.base.price"
+              :label="$t('admin.plans.price')"
+              class="my-2"
+              :messages="$t('admin.plans.basePriceCaption')"
+              immediateValidation
+              min="0"
+              step=".01"
+            >
+              <template #prependInner>
+                $
+              </template>
+            </va-input>
+            <va-input v-model="form.base.price_id"
+              :label="$t('admin.plans.productID')"
+              class="my-2"
+              />
+          </template>
           <va-input
             v-model="form.base.minimal_label"
             :label="$t('admin.plans.minimalUserLabel')"
@@ -151,6 +153,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           />
         </template>
       </AdminSettings>
+      <template v-if="form.type === 'package'">
       <va-list-separator class="my-1" fit />
       <AdminSettings>
         <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
@@ -310,6 +313,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           </va-input>
         </template>
       </AdminSettings>
+      </template>
       <va-list-separator v-if="email_servers.length > 0" class="my-1" fit />
       <AdminSettings v-if="email_servers.length > 0">
         <template #name>{{ $t('admin.plans.emailOptions') }}</template>

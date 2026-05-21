@@ -57,13 +57,30 @@ describe('Admin Plans', function () {
         $page->assertSee('Changing the plan type');
     });
 
+    it('hides users and storage sections for app type plans', function () {
+        $plan = Plan::factory()->create(['type' => 'app', 'name' => 'App Type Visibility Plan', 'org_type' => 'none']);
+
+        visit('/admin/service/plans/'.$plan->id)
+            ->assertSee('Base Options')
+            ->assertDontSee('Standard User Options')
+            ->assertDontSee('Basic User Options')
+            ->assertDontSee('Additional Storage Options');
+    });
+
+    it('shows users and storage sections for package type plans', function () {
+        $plan = Plan::factory()->create(['type' => 'package', 'name' => 'Package Visibility Plan', 'org_type' => 'none']);
+
+        visit('/admin/service/plans/'.$plan->id)
+            ->assertSee('Standard User Options')
+            ->assertSee('Basic User Options')
+            ->assertSee('Additional Storage Options');
+    });
+
     it('app plan select allows only a single selection', function () {
         $plan = Plan::factory()->create(['type' => 'app', 'name' => 'Single Select Plan', 'org_type' => 'none']);
 
         $page = visit('/admin/service/plans/'.$plan->id);
         $page->assertSee('App Settings');
-        // Verify the select does not have multiple attribute by asserting only one value can be active
-        // We check via the DOM that the va-select does not have a 'multiple' attribute
         $hasMultiple = $page->script("
             const selects = document.querySelectorAll('.va-select');
             return Array.from(selects).some(el => el.hasAttribute('multiple'));
