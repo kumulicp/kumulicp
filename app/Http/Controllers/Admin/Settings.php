@@ -47,7 +47,7 @@ class Settings extends Controller
         SettingsFacade::update('base_domain', $validated['base_domain']);
         SettingsFacade::update('terms_url', $validated['terms_url']);
         SettingsFacade::update('docs_url', $validated['docs_url']);
-        SettingsFacade::update('welcome_page', $validated['welcome_page']);
+        SettingsFacade::update('welcome_page', clean($validated['welcome_page'], 'rich_text'));
         SettingsFacade::update('primary_color', $validated['primary_color']);
         SettingsFacade::update('secondary_color', $validated['secondary_color']);
         SettingsFacade::update('support_email', Arr::get($validated, 'support_email'));
