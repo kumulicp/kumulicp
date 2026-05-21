@@ -254,7 +254,7 @@ class Integration
     {
         $settings = collect([
             'timeout' => $this->timeout,
-            'verify' => true,
+            'verify' => ! app()->environment('local', 'testing'),
         ]);
         if ($this->cookie_jar) {
             $settings = $settings->merge(['cookies' => $this->cookie_jar]);
@@ -303,7 +303,7 @@ class Integration
 
         $url = $this->basePath();
 
-        $verify = env('APP_ENV') == 'production' ? 2 : 0;
+        $verify = app()->environment('local', 'testing') ? 0 : 2;
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
