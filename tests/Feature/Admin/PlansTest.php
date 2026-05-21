@@ -154,20 +154,39 @@ class PlansTest extends TestCase
     // Store tests
     // ---------------------------------------------------------------------------
 
-    public function test_admin_can_create_a_plan()
+    public function test_admin_can_create_a_package_plan()
     {
         $user = $this->adminUser();
 
         $this->actingAs($user)
             ->post('/admin/service/plans', [
-                'name' => 'New Plan',
-                'description' => 'A new plan description',
+                'name' => 'New Package Plan',
+                'description' => 'A package plan',
+                'type' => 'package',
             ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('plans', [
-            'name' => 'New Plan',
-            'description' => 'A new plan description',
+            'name' => 'New Package Plan',
+            'type' => 'package',
+        ]);
+    }
+
+    public function test_admin_can_create_an_app_plan()
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)
+            ->post('/admin/service/plans', [
+                'name' => 'New App Plan',
+                'description' => 'An app plan',
+                'type' => 'app',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('plans', [
+            'name' => 'New App Plan',
+            'type' => 'app',
         ]);
     }
 
@@ -178,6 +197,7 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans', [
                 'description' => 'Missing name',
+                'type' => 'package',
             ])
             ->assertSessionHasErrors('name');
 
@@ -191,10 +211,40 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans', [
                 'name' => 'No Description Plan',
+                'type' => 'package',
             ])
             ->assertSessionHasErrors('description');
 
         $this->assertDatabaseMissing('plans', ['name' => 'No Description Plan']);
+    }
+
+    public function test_store_requires_type()
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)
+            ->post('/admin/service/plans', [
+                'name' => 'No Type Plan',
+                'description' => 'Missing type',
+            ])
+            ->assertSessionHasErrors('type');
+
+        $this->assertDatabaseMissing('plans', ['name' => 'No Type Plan']);
+    }
+
+    public function test_store_rejects_invalid_type()
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)
+            ->post('/admin/service/plans', [
+                'name' => 'Bad Type Plan',
+                'description' => 'Invalid type value',
+                'type' => 'invalid',
+            ])
+            ->assertSessionHasErrors('type');
+
+        $this->assertDatabaseMissing('plans', ['name' => 'Bad Type Plan']);
     }
 
     public function test_new_plan_gets_next_display_order()
@@ -207,6 +257,7 @@ class PlansTest extends TestCase
             ->post('/admin/service/plans', [
                 'name' => 'Order Test Plan',
                 'description' => 'Checking display order',
+                'type' => 'package',
             ]);
 
         $created = Plan::where('name', 'Order Test Plan')->first();
@@ -296,6 +347,29 @@ class PlansTest extends TestCase
 
         $this->assertDatabaseHas('plans', ['id' => $new_plan->id, 'is_default' => true]);
         $this->assertDatabaseHas('plans', ['id' => $existing_default->id, 'is_default' => false]);
+    }
+
+    public function test_update_normalizes_single_app_plan_value_to_array()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'app']);
+
+        $app = \App\Application::factory()->create(['slug' => 'test_app_norm', 'name' => 'Test App Norm', 'enabled' => true]);
+        $appPlan = \App\AppPlan::factory()->create(['application_id' => $app->id]);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [
+                    $app->slug => ['max' => 1, 'plans' => $appPlan->id],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $plan->refresh();
+        $saved = $plan->app_plans[$app->slug]['plans'] ?? null;
+        $this->assertIsArray($saved, 'plans should be stored as an array');
+        $this->assertEquals([$appPlan->id], $saved);
     }
 
     // ---------------------------------------------------------------------------

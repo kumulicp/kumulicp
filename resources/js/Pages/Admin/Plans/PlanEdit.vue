@@ -36,6 +36,7 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error-messages="$page.props.errors.default"
             />
           <va-select
+            id="planType"
             v-model="form.type"
             :label="$t('admin.plans.planType')"
             class="my-2"
@@ -46,6 +47,14 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error="$page.props.errors.type"
             :error-messages="$page.props.errors.type"
           />
+          <va-alert
+            v-if="typeChanged"
+            id="planTypeChangeWarning"
+            color="warning"
+            class="my-2"
+          >
+            {{ $t('admin.plans.planTypeChangeWarning') }}
+          </va-alert>
           <va-input v-model="form.description"
             :label="$t('admin.plans.description')"
             class="my-2"
@@ -421,7 +430,6 @@ import { useForm, Link } from '@inertiajs/vue3'
             text-by="text"
             class="my-2"
             immediateValidation
-            multiple
             clearable
             :placeholder="$t('admin.plans.disabled')"
             :messages="$t('admin.plans.appPlanCaption')"
@@ -466,6 +474,7 @@ export default {
     })
 
     return {
+      originalType: this.plan.type,
       features: this.plan.features,
       app_plans: appPlans,
       planTypes: [
@@ -532,6 +541,11 @@ export default {
         web_server: this.plan.web_server,
         app_plans: this.plan.app_plans
       })
+    }
+  },
+  computed: {
+    typeChanged () {
+      return this.originalType !== null && this.form.type !== this.originalType
     }
   },
   methods: {

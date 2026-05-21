@@ -72,6 +72,10 @@ class BasePlanService
 
     public function stripePricing()
     {
+        if ($this->plan->type === 'app') {
+            return [];
+        }
+
         $pricing = [];
 
         if ($this->plan->setting('base.price_id')) {
@@ -144,6 +148,10 @@ class BasePlanService
 
     public function pricingOptions()
     {
+        if ($this->plan->type === 'app') {
+            return [];
+        }
+
         $pricing = [];
         $options = [];
 
@@ -173,6 +181,10 @@ class BasePlanService
 
     public function stats()
     {
+        if ($this->plan->type === 'app') {
+            return [];
+        }
+
         $base = $this;
 
         return FastCache::retrieve('base_plan_stats_'.$this->plan->id, function () use ($base) {
@@ -380,6 +392,10 @@ class BasePlanService
 
     public function totalPrice()
     {
+        if ($this->plan->type === 'app') {
+            return 0;
+        }
+
         $base = $this;
 
         return FastCache::retrieve('base_plan_total_price', function () use ($base) {

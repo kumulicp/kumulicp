@@ -55,6 +55,7 @@ class Plans extends Controller
         $validated = $request->validate([
             'name' => 'required',
             'description' => 'required',
+            'type' => 'required|in:package,app',
         ]);
 
         // Get bottom display order number
@@ -69,6 +70,7 @@ class Plans extends Controller
         $plan = new Plan;
         $plan->name = $request->name;
         $plan->description = $request->description;
+        $plan->type = $request->type;
         $plan->app_plans = [];
         $plan->display_order = $display_order + 1;
         $plan->settings = [
@@ -99,9 +101,10 @@ class Plans extends Controller
 
         $app_plans = [];
         foreach ($apps as $app) {
+            $plans = Arr::get($plan->app_plans, "{$app->slug}.plans");
             $app_plans[$app->slug] = [
                 'max' => Arr::get($plan->app_plans, "{$app->slug}.max") ?? 0,
-                'plans' => Arr::get($plan->app_plans, "{$app->slug}.plans"),
+                'plans' => is_array($plans) ? ($plans[0] ?? null) : null,
             ];
         }
 
@@ -229,7 +232,14 @@ class Plans extends Controller
         $plan->features = $request->displayed_features;
         $plan->payment_enabled = $request->boolean('payment_enabled');
         $plan->email_server_id = $request->email_server;
-        $plan->app_plans = $request->app_plans;
+        $rawAppPlans = $request->app_plans ?? [];
+        foreach ($rawAppPlans as $slug => &$config) {
+            if (array_key_exists('plans', $config) && ! is_array($config['plans'])) {
+                $config['plans'] = $config['plans'] !== null ? [$config['plans']] : [];
+            }
+        }
+        unset($config);
+        $plan->app_plans = $rawAppPlans;
         $plan->domain_enabled = $request->boolean('domain_enabled');
         $plan->email_enabled = $request->boolean('email_enabled');
         $plan->domain_max = $request->domain_max;
