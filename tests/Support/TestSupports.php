@@ -212,6 +212,46 @@ class TestSupports
         $this->createBaseWithSpecificPlans();
     }
 
+    /**
+     * Return a Plan with base_1's settings but the given type.
+     * Use in tests that currently reference $this->base_1 so the same
+     * numeric assertions hold for both 'app' and 'package' plan types.
+     */
+    public function basePlan1OfType(string $type): Plan
+    {
+        if ($type === 'app') {
+            return $this->base_1;
+        }
+
+        return Plan::factory()->create([
+            'payment_enabled' => false,
+            'type' => 'package',
+            'is_default' => false,
+            'app_plans' => ['demo_app' => ['max' => 1, 'plans' => 'enabled']],
+            'settings' => $this->base_1->settings,
+        ]);
+    }
+
+    /**
+     * Return a Plan with base_2's settings but the given type.
+     * Use in tests that currently reference $this->base_2 so the same
+     * numeric assertions hold for both 'app' and 'package' plan types.
+     */
+    public function basePlan2OfType(string $type): Plan
+    {
+        if ($type === 'package') {
+            return $this->base_2;
+        }
+
+        return Plan::factory()->create([
+            'payment_enabled' => false,
+            'type' => 'app',
+            'is_default' => false,
+            'app_plans' => ['demo_app' => ['max' => 1, 'plans' => 'enabled']],
+            'settings' => $this->base_2->settings,
+        ]);
+    }
+
     public function createBase2Plan(): void
     {
         $this->base_2 = Plan::factory()->create([
