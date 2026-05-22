@@ -233,6 +233,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::get('payment/method', 'Account\PaymentMethod@show')->name('organization.payment_method');
         Route::get('payment/', 'Account\PaymentMethod@edit')->name('organization.payment_method.edit');
         Route::post('payment/method', 'Account\PaymentMethod@update')->name('organization.payment_method.update');
+        Route::post('payment/method/fake', 'Account\PaymentMethod@storeFake')->name('organization.payment_method.fake');
         Route::get('payment/method/delete', 'Account\PaymentMethod@delete')->name('organization.payment_method.delete');
         Route::get('invoice/{invoice}/download', 'Account\Subscription@download')->name('organization.invoice.download');
         Route::post('billing/managers', 'Account\BillingManagers@store')->name('organization.billing.manager.store');

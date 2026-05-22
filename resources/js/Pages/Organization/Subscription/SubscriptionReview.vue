@@ -49,11 +49,12 @@ export default {
     prices: Object,
     total: Number,
     driver: String,
+    has_payment_method: Boolean
   },
   data () {
     console.log(this.driver)
     return {
-      hasDefaultPaymentMethod: false,
+      hasDefaultPaymentMethod: this.has_payment_method,
       form: useForm({
       })
     }

@@ -11,6 +11,7 @@ use App\AppPlan;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
+use App\Support\Facades\Billing;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
@@ -107,6 +108,7 @@ class Plans extends Controller
                 'name' => $plan->name,
                 'description' => $plan->description,
                 'features' => $plan->displayFeatures(),
+                'payment_enabled' => $plan->payment_enabled,
             ],
             'customizations' => collect($customizations)->map(function ($customization) {
                 return [
@@ -117,6 +119,8 @@ class Plans extends Controller
             }),
             'prices' => $prices,
             'total' => $total,
+            'driver' => Billing::component(),
+            'has_payment_method' => Billing::hasDefaultPaymentMethod(),
         ]);
     }
 

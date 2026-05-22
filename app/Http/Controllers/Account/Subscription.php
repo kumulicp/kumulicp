@@ -301,6 +301,8 @@ class Subscription extends Controller
             ],
             'prices' => $prices,
             'total' => SubscriptionFacade::totalPrice(),
+            'driver' => Billing::component(),
+            'has_payment_method' => Billing::hasDefaultPaymentMethod(),
             'breadcrumbs' => [
                 [
                     'label' => 'Subscription Overview',

@@ -16,6 +16,11 @@ class BillingService
         'stripe' => StripeGateway::class,
     ];
 
+    private array $components = [
+        'stripe' => 'StripePaymentMethod',
+        'fake' => 'FakePaymentMethod',
+    ];
+
     public function __construct(?Organization $organization = null)
     {
         $this->organization = $organization;
@@ -35,6 +40,13 @@ class BillingService
         if (! empty($name)) {
             throw new \Exception(__('messages.exception.no_billing_driver'));
         }
+    }
+
+    public function component(): string
+    {
+        $name = config('billing.default');
+
+        return $this->components[$name] ?? '';
     }
 
     public function register(string $driver, $class)

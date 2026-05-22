@@ -235,7 +235,7 @@ class Discover extends Controller
                     'text' => $domain->name,
                 ];
             }),
-            'driver' => 'StripePaymentMethod',
+            'driver' => Billing::component(),
             'default_label' => $other_apps > 0 ? $app->name.' '.$other_apps + 1 : $app->name,
             'has_payment_method' => Billing::hasDefaultPaymentMethod(),
             'settings' => $settings,
