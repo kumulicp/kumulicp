@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
+use OffloadProject\Toggle\Facades\Toggle;
 use Tightenco\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -112,6 +113,9 @@ class HandleInertiaRequests extends Middleware
                 'secondary_color' => Settings::get('secondary_color', '#d91698'),
             ],
             'language' => config('app.locale') ?? config('app.fallback_locale'),
+            'flags' => collect(Toggle::all())
+                ->mapWithKeys(fn (bool $value, string $key) => [Str::camel($key) => $value])
+                ->all(),
         ]);
     }
 }
