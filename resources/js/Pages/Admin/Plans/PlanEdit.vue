@@ -79,7 +79,8 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error="$page.props.errors.payment_enabled"
             :error-messages="$page.props.errors.payment_enabled"
             />
-          <va-checkbox v-model="form.suborganizations.enabled"
+          <va-checkbox v-if="$page.props.flags.subOrganizations"
+            v-model="form.suborganizations.enabled"
             :label="$t('admin.plans.enableSuborganizations')"
             class="my-2"
             immediateValidation
@@ -313,9 +314,8 @@ import { useForm, Link } from '@inertiajs/vue3'
           </va-input>
         </template>
       </AdminSettings>
-      </template>
-      <va-list-separator v-if="email_servers.length > 0" class="my-1" fit />
-      <AdminSettings v-if="email_servers.length > 0">
+      <va-list-separator v-if="$page.props.flags.emails && email_servers.length > 0" class="my-1" fit />
+      <AdminSettings v-if="$page.props.flags.emails && email_servers.length > 0">
         <template #name>{{ $t('admin.plans.emailOptions') }}</template>
         <template #settings>
           <va-checkbox v-model="form.email_enabled"

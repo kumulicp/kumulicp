@@ -89,7 +89,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
           <td class="setting-label">{{ $t('admin.plans.ssoServer') }}</td>
           <td v-for="plan in plans" :key="plan.id">{{ plan.sso_server }}</td>
         </tr>
-        <tr v-if="app.can.shareable">
+        <tr v-if="app.can.shareable && $page.props.flags.sharedApps">
           <td class="setting-label">{{ $t('admin.plans.sharedApp') }}</td>
           <td v-for="plan in plans" :key="plan.id">{{ plan.shared_app }}</td>
         </tr>
