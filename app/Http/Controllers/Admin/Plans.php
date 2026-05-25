@@ -181,7 +181,7 @@ class Plans extends Controller
             'default' => 'nullable',
             'type' => 'required|in:package,app',
             'description' => 'required',
-            'org_type' => 'required|string|in:nonprofit,business,none',
+            'org_type' => 'required|string|in:nonprofit,business,none,superaccount',
             'displayed_features' => 'nullable',
             'payment_enabled' => 'nullable',
             'base.price' => 'numeric|nullable',

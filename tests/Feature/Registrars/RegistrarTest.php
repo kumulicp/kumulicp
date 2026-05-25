@@ -4,7 +4,6 @@ use App\OrgDomain;
 use App\Support\Facades\Domain;
 use App\Tld;
 use App\User;
-use Tests\Support\Registrars\FakePricingInterface;
 use Tests\Support\TestSupports;
 
 beforeEach(function () {
@@ -14,6 +13,7 @@ beforeEach(function () {
     $this->actingAs($this->user);
 
     setupRegistrarDriver('fake');
+    setupBillingDriver('fake');
 
     $this->tld = Tld::firstOrCreate(
         ['name' => 'com'],
@@ -159,6 +159,7 @@ describe('POST /settings/domains/check', function () {
     beforeEach(function () {
         $plan = $this->support->createRegistrarPlan();
         $this->support->setSubscription($this->user->organization, $plan);
+
     });
 
     it('returns available=true with price for a regular domain', function () {
@@ -206,6 +207,7 @@ describe('POST /settings/domains/transfer/price', function () {
     beforeEach(function () {
         $plan = $this->support->createRegistrarPlan();
         $this->support->setSubscription($this->user->organization, $plan);
+
     });
 
     it('returns the 1-year transfer price for a known TLD', function () {
@@ -232,6 +234,7 @@ describe('Register flow', function () {
     beforeEach(function () {
         $plan = $this->support->createRegistrarPlan();
         $this->support->setSubscription($this->user->organization, $plan);
+
 
         // Pre-create the pending_registration domain as the select step would
         $this->pending = OrgDomain::factory()->create([
@@ -280,6 +283,7 @@ describe('Transfer flow', function () {
     beforeEach(function () {
         $plan = $this->support->createRegistrarPlan();
         $this->support->setSubscription($this->user->organization, $plan);
+
     });
 
     it('POST /settings/domains/transfer redirects and creates the domain in transferring status', function () {

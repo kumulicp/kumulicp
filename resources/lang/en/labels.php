@@ -65,7 +65,7 @@ return [
     'sso' => 'Single Sign-on',
     'shared_apps' => 'Shared Apps',
     'none_org_type' => 'Individual',
+    'superaccount' => 'Super Account',
     'enabled' => 'Enabled',
-    'disabled' => 'Disabled',
     'package_manager' => 'Plugin Manager',
 ];

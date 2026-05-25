@@ -115,7 +115,7 @@ class TestSupports
                 'storage' => ['max' => 1, 'price' => 1, 'amount' => 1, 'price_id' => 'stripe_storage'],
                 'standard' => ['max' => 10, 'price' => 1, 'storage' => 1, 'price_id' => 'stripe_standard'],
                 'application' => ['max' => 1, 'price' => 1, 'price_id' => 'stripe_application'],
-                'domains' => ['connect' => true, 'register' => false, 'transfer' => false],
+                'domains' => ['connect' => true, 'register' => true, 'transfer' => true],
             ],
         ]);
 
@@ -463,6 +463,14 @@ class TestSupports
                 'domains' => ['connect' => true, 'register' => true, 'transfer' => true],
             ],
         ]);
+    }
+
+    public function setDefaultPaymentMethod(Organization $organization): void
+    {
+        $organization->stripe_id = 'cus_fake_'.$organization->id;
+        $organization->pm_type = 'visa';
+        $organization->pm_last_four = '4242';
+        $organization->save();
     }
 
     public function createRegistrarTld(string $tld_name = 'com'): Tld

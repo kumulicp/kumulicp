@@ -4,11 +4,10 @@ namespace Tests\Support\Registrars;
 
 use App\Contracts\Registrar\RegistrarDomainContract;
 use App\OrgDomain;
+use App\Support\Domains\DomainManager;
 
-class FakeDomainInterface implements RegistrarDomainContract
+class FakeDomainInterface extends DomainManager implements RegistrarDomainContract
 {
-    public function __construct(private OrgDomain $domain) {}
-
     public function info(): array
     {
         return [
@@ -18,7 +17,7 @@ class FakeDomainInterface implements RegistrarDomainContract
             'owner_name' => 'Fake Owner',
             'is_owner' => true,
             'is_premium' => str_contains($this->domain->name, 'premium'),
-            'created_date' => now()->toDateString(),
+            'created_date' => now()->toDate0String(),
             'expired_date' => now()->addYear()->toDateString(),
             'whois_guard' => [
                 'enabled' => false,

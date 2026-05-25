@@ -180,7 +180,7 @@ class Subscription extends Controller
                 ],
                 'plans_url' => "/subscription/{$organization->id}/options",
                 'can' => [
-                    'change_plan' => count($base_plan->allAvailable()) > 1,
+                    'change_plan' => count($base_plan->allAvailable()) > 0,
                     'unsubscribe' => Gate::allows('unsubscribe', $organization),
                     'resubscribe' => Gate::allows('resubscribe', $organization),
                 ],
@@ -259,6 +259,7 @@ class Subscription extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
+            'driver' => 'StripePaymentMethod',
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use App\Support\Facades\Billing;
+use Tests\Support\Billing\FakeBillingGateway;
 use Tests\Support\Registrars\FakeRegistrar;
 use Tests\Support\ServerManagers\FakeServerManagerProfile;
 use Tests\Support\SSO\FakeSSOProfile;
@@ -220,6 +222,14 @@ dataset('registrar_drivers', ['fake', 'namecheap']);
  * Register a fake or real registrar driver with DomainService.
  * Must be called before any Domain::registrar() call.
  */
+function setupBillingDriver(string $driver): void
+{
+    if ($driver === 'fake') {
+        Billing::register('fake', FakeBillingGateway::class);
+        config(['billing.default' => 'fake']);
+    }
+}
+
 function setupRegistrarDriver(string $driver): void
 {
     if ($driver === 'fake') {

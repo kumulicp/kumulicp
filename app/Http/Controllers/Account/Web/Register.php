@@ -150,6 +150,7 @@ class Register extends Controller
         }
 
         $domain->name = $validated['domain_name'];
+        $domain->host = $validated['domain_name'];
         $domain->is_premium = $domain_response['is_premium_name'];
         $domain->icann_fee = $domain_response['ican_fee'];
         $domain->premium_registration_price = $domain_response['premium_registration_price'];
@@ -268,10 +269,12 @@ class Register extends Controller
 
         $subdomain = new OrgSubdomain;
         $subdomain->domain()->associate($org_domain);
+        $subdomain->organization_id = $organization->id;
         $subdomain->host = '*';
         $subdomain->name = $domain_name;
         $subdomain->type = 'A';
         $subdomain->ttl = 1800;
+        $subdomain->status = 'active';
         $subdomain->save();
 
         $subdomain2 = $subdomain->replicate()->fill([

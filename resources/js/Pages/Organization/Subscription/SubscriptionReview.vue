@@ -15,7 +15,7 @@ import { useForm } from '@inertiajs/vue3'
       <va-card clas="h-fit">
         <va-card-title>{{ $t('organization.subscription.options') }}</va-card-title>
         <va-card-content>
-          <credit-card v-if="plan.payment_enabled" v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" />
+          <credit-card v-if="plan.payment_enabled" v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" :driver="driver" />
           <template v-else>
             <div class="row m-5">
               <div class="flex flex-col xs12 va-text-center mt-4">
@@ -47,9 +47,11 @@ export default {
     organization: Object,
     plan: Object,
     prices: Object,
-    total: Number
+    total: Number,
+    driver: String,
   },
   data () {
+    console.log(this.driver)
     return {
       hasDefaultPaymentMethod: false,
       form: useForm({
