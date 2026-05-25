@@ -13,6 +13,7 @@ export default {
     driver: String
   },
   data () {
+    console.log(this.driver)
     return {
       paymentMethodWidget: new Map()
     }

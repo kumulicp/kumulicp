@@ -6,14 +6,16 @@ use App\Contracts\Registrar\RegistrarPricingContract;
 
 class FakePricingInterface implements RegistrarPricingContract
 {
+    public function __construct(private bool $premium = false) {}
+
     public function isPremium(): bool
     {
-        return false;
+        return $this->premium;
     }
 
     public function premiumPrice(): float
     {
-        return 0.0;
+        return 99.99;
     }
 
     public function registrationPrice(int $years = 1): float
@@ -21,9 +23,13 @@ class FakePricingInterface implements RegistrarPricingContract
         return 9.99 * $years;
     }
 
+    /**
+     * Year-keyed array matching how the real PricingInterface stores prices.
+     * Keys are 1-based years; the real calculatePrice() sums entries where key <= $years.
+     */
     public function registrationPrices(): array
     {
-        return array_map(fn ($y) => $this->registrationPrice($y), range(1, 10));
+        return array_combine(range(1, 10), array_fill(0, 10, 9.99));
     }
 
     public function transferPrice(int $years = 1): float
@@ -33,7 +39,7 @@ class FakePricingInterface implements RegistrarPricingContract
 
     public function transferPrices(): array
     {
-        return array_map(fn ($y) => $this->transferPrice($y), range(1, 10));
+        return array_combine(range(1, 10), array_fill(0, 10, 8.99));
     }
 
     public function renewPrice(int $years = 1): float
@@ -43,7 +49,7 @@ class FakePricingInterface implements RegistrarPricingContract
 
     public function renewPrices(): array
     {
-        return array_map(fn ($y) => $this->renewPrice($y), range(1, 10));
+        return array_combine(range(1, 10), array_fill(0, 10, 9.99));
     }
 
     public function reactivatePrice(): float

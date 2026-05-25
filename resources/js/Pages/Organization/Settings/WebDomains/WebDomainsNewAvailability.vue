@@ -22,6 +22,7 @@ import axios from 'axios'
                   <va-button-group grow>
                     <va-input
                       v-model="form.domain_name"
+                      id="domainName"
                       class="mb-4"
                       immediateValidation
                       placeholder="example.com"
@@ -29,7 +30,7 @@ import axios from 'axios'
                       :success="domain_available"
                     >
                       <template #append>
-                        <va-button color="info" type="submit">{{ $t('organization.webDomains.checkAvailability') }}</va-button>
+                        <va-button id="checkAvailability" color="info" type="submit">{{ $t('organization.webDomains.checkAvailability') }}</va-button>
                       </template>
                     </va-input>
                   </va-button-group>
@@ -68,7 +69,7 @@ import axios from 'axios'
               </div>
             </div>
             <div v-if="domain_available" class="row justify-center mb-3">
-              <va-button @click="form.post('/settings/domains/availability')" size="large">{{ $t('organization.webDomains.checkoutDomain') }}</va-button>
+              <va-button id="checkoutDomain" @click="form.post('/settings/domains/availability')" size="large">{{ $t('organization.webDomains.checkoutDomain') }}</va-button>
             </div>
             <template v-else-if="error">
               <div class="row justify-center mb-3">

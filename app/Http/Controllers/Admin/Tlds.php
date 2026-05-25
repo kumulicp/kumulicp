@@ -48,7 +48,7 @@ class Tlds extends Controller
         foreach ($tlds as $tld) {
             $flight = Tld::updateOrCreate(
                 [
-                    'name' => $tld['Name'],
+                    'name' => $tld['name'],
                     'default_driver' => config('domains.default'),
                 ],
                 [

@@ -13,6 +13,7 @@ use App\Ldap\Models\Organization as LdapOrganization;
 use App\Organization;
 use App\Plan;
 use App\Services\SubscriptionService;
+use App\Tld;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as AppFacade;
@@ -114,7 +115,7 @@ class TestSupports
                 'storage' => ['max' => 1, 'price' => 1, 'amount' => 1, 'price_id' => 'stripe_storage'],
                 'standard' => ['max' => 10, 'price' => 1, 'storage' => 1, 'price_id' => 'stripe_standard'],
                 'application' => ['max' => 1, 'price' => 1, 'price_id' => 'stripe_application'],
-                'domains' => ['connect' => true, 'register' => false, 'transfer' => false],
+                'domains' => ['connect' => true, 'register' => true, 'transfer' => true],
             ],
         ]);
 
@@ -443,5 +444,52 @@ class TestSupports
             $app_2->organization_id = 10;
             $app_2->save();
         }
+    }
+
+    public function createRegistrarPlan(): Plan
+    {
+        return Plan::factory()->create([
+            'type' => 'package',
+            'payment_enabled' => false,
+            'domain_enabled' => true,
+            'domain_max' => 5,
+            'settings' => [
+                'base' => ['price' => 0, 'storage' => 0, 'price_id' => null, 'minimal_label' => 'minimal'],
+                'basic' => ['max' => 5, 'name' => 'Registrar Plan', 'price' => 0, 'amount' => 1, 'storage' => 0, 'price_id' => null],
+                'email' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'storage' => ['max' => 0, 'price' => 0, 'amount' => 0, 'price_id' => null],
+                'standard' => ['max' => 0, 'price' => 0, 'storage' => 0, 'price_id' => null],
+                'application' => ['max' => 0, 'price' => 0, 'price_id' => null],
+                'domains' => ['connect' => true, 'register' => true, 'transfer' => true],
+            ],
+        ]);
+    }
+
+    public function setDefaultPaymentMethod(Organization $organization): void
+    {
+        $organization->stripe_id = 'cus_fake_'.$organization->id;
+        $organization->pm_type = 'visa';
+        $organization->pm_last_four = '4242';
+        $organization->save();
+    }
+
+    public function createRegistrarTld(string $tld_name = 'com'): Tld
+    {
+        return Tld::firstOrCreate(
+            ['name' => $tld_name],
+            [
+                'default_driver' => 'fake',
+                'is_api_registerable' => true,
+                'is_api_transferable' => true,
+                'is_api_renewable' => true,
+                'standard_price' => 9.99,
+                'min_register_years' => 1,
+                'max_register_years' => 10,
+                'min_transfer_years' => 1,
+                'max_transfer_years' => 10,
+                'min_renew_years' => 1,
+                'max_renew_years' => 10,
+            ]
+        );
     }
 }

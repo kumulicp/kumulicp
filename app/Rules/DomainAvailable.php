@@ -2,55 +2,46 @@
 
 namespace App\Rules;
 
-use App\Integrations\Registrars\Namecheap\API\Domains;
+use App\Exceptions\DomainRegistrationException;
+use App\Support\Facades\Domain;
+use App\Tld;
 use Illuminate\Contracts\Validation\Rule;
 
 class DomainAvailable implements Rule
 {
-    protected $message = 'This domain is unavailable';
+    protected string $message = 'This domain is unavailable';
 
-    /**
-     * Create a new rule instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    public function __construct() {}
+
+    public function passes($attribute, $value): bool
     {
-        //
-    }
+        $tld_name = Domain::getTld($value);
+        $tld = Tld::where('name', $tld_name)->first();
 
-    /**
-     * Determine if the validation rule passes.
-     *
-     * @param  string  $attribute
-     * @param  mixed  $value
-     * @return bool
-     */
-    public function passes($attribute, $value)
-    {
-        $organization = auth()->user()->organization;
-        $domains = new Domains($organization);
-        $domain_response = $domains->check($value);
+        if (! $tld) {
+            $this->message = __('messages.rule.domain_available');
 
-        if ($domains->hasError()) {
-            foreach ($domains->error('array') as $error) {
-                if ($error['Number'] == 2030280) {
-                    $this->message = __('messages.rule.domain_available');
-
-                    return false;
-                }
-            }
+            return false;
         }
 
-        return $domain_response['Available'];
+        try {
+            $domain_response = Domain::registrar($tld)->check($value);
+
+            if (! $domain_response['available']) {
+                $this->message = __('messages.rule.domain_available');
+
+                return false;
+            }
+
+            return true;
+        } catch (DomainRegistrationException $e) {
+            $this->message = $e->getMessage();
+
+            return false;
+        }
     }
 
-    /**
-     * Get the validation error message.
-     *
-     * @return string
-     */
-    public function message()
+    public function message(): string
     {
         return $this->message;
     }

@@ -28,6 +28,7 @@ import { countries } from '@/data/country_phone_codes.json'
             <va-select
               v-model="form.years"
               v-if="!is_premium"
+              id="years"
               :options="years"
               immediateValidation
               class="mb-3"
@@ -165,6 +166,7 @@ import { countries } from '@/data/country_phone_codes.json'
             <div class="auth-layout__options d-flex align-center mb-4">
               <va-checkbox
                 v-model="form.accept_terms"
+                id="acceptTerms"
                 class="mb-0"
                 immediateValidation
                 :error="$page.props.errors.accept_terms"
@@ -176,7 +178,7 @@ import { countries } from '@/data/country_phone_codes.json'
               </va-checkbox>
             </div>
             <p></p>
-            <va-button type="submit"
+            <va-button id="submit" type="submit"
               :disabled="form.processing"
               class="my-0"
             >

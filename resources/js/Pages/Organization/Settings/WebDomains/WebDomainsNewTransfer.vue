@@ -19,6 +19,7 @@ import axios from 'axios'
                 <div class="flex xs12 md8">
                   <va-input
                     v-model="form.domain_name"
+                    id="domainName"
                     placeholder="example.com"
                     class="mb-3"
                     :label="$t('organization.webDomains.domainName')"
@@ -30,12 +31,12 @@ import axios from 'axios'
                   />
                   <va-input
                     v-model="form.epp_code"
+                    id="eppCode"
                     :error="$page.props.errors.epp_code"
                     :error-messages="$page.props.errors.epp_code"
                     class="mb-3"
                     :label="$t('organization.webDomains.authEppCode')"
                     immediateValidation
-                    @change="getPrice"
                   />
                 </div>
                 <va-divider vertical />
@@ -54,7 +55,7 @@ import axios from 'axios'
                 </div>
                 <div class="flex xs12">
                   <div class="row justify-center">
-                    <va-button type="submit" :disabled="!domain_success" class="mb-3">{{ $t('organization.webDomains.transferDomain') }}</va-button>
+                    <va-button id="submit" type="submit" :disabled="!domain_success" class="mb-3">{{ $t('organization.webDomains.transferDomain') }}</va-button>
                   </div>
                 </div>
               </div>
