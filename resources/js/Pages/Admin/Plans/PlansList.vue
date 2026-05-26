@@ -70,6 +70,7 @@ import draggable from 'vuedraggable'
                   <th>{{ $t('admin.plans.name') }}</th>
                   <th>{{ $t('admin.plans.description') }}</th>
                   <th>{{ $t('admin.plans.planType') }}</th>
+                  <th>{{ $t('admin.plans.organizationType') }}</th>
                   <th>{{ $t('admin.plans.activeSubscribers') }}</th>
                 </tr>
               </thead>
@@ -79,6 +80,7 @@ import draggable from 'vuedraggable'
                     <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
                     <td><Link :href="'/admin/service/plans/'+element.id">{{ element.name }}</Link></td>
                     <td>{{ element.description }}</td>
+                    <td>{{ element.type }}</td>
                     <td>{{ element.org_type }}</td>
                     <td>{{ element.active_subscribers }}</td>
                   </tr>
@@ -96,6 +98,7 @@ import draggable from 'vuedraggable'
                   <th>{{ $t('admin.plans.archivedPlan') }}</th>
                   <th>{{ $t('admin.plans.description') }}</th>
                   <th>{{ $t('admin.plans.planType') }}</th>
+                  <th>{{ $t('admin.plans.organizationType') }}</th>
                   <th>{{ $t('admin.plans.activeSubscribers') }}</th>
                 </tr>
               </thead>
@@ -103,6 +106,7 @@ import draggable from 'vuedraggable'
                 <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
                   <td><Link :href="'/admin/service/plans/'+plan.id">{{ plan.name }}</Link></td>
                   <td>{{ plan.description }}</td>
+                  <td>{{ plan.type }}</td>
                   <td>{{ plan.org_type }}</td>
                   <td>{{ plan.active_subscribers }}</td>
                 </tr>

@@ -30,6 +30,7 @@ class Plans extends Controller
                     'active_subscribers' => $plan->subscribers()->count(),
                     'is_default' => $plan->is_default,
                     'org_type' => $plan->org_type ? $org_types[$plan->org_type] : '',
+                    'type' => $plan->type,
                 ];
             }),
             'archived' => $archived->map(function ($plan) {
