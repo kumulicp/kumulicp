@@ -70,24 +70,6 @@ class BasePlanService
         });
     }
 
-    public function stripePricing()
-    {
-        $pricing = [];
-
-        if ($this->plan->setting('base.price_id')) {
-            $pricing[$this->plan->setting('base.price_id')]['quantity'] = 1;
-        }
-
-        foreach ($this->pricingOptions() as $name => $option) {
-            if ($this->plan->setting("$name.price_id") && $this->org_service->countEntity($name) >= 0) {
-                $string_price_id = (string) $this->plan->setting("$name.price_id");
-                $pricing[$string_price_id]['quantity'] = $this->org_service->countEntity($name);
-            }
-        }
-
-        return $pricing;
-    }
-
     public function enabledApps()
     {
         $apps = [];
@@ -144,6 +126,10 @@ class BasePlanService
 
     public function pricingOptions()
     {
+        if ($this->plan->type === 'app') {
+            return [];
+        }
+
         $pricing = [];
         $options = [];
 
@@ -173,6 +159,10 @@ class BasePlanService
 
     public function stats()
     {
+        if ($this->plan->type === 'app') {
+            return [];
+        }
+
         $base = $this;
 
         return FastCache::retrieve('base_plan_stats_'.$this->plan->id, function () use ($base) {
@@ -380,6 +370,10 @@ class BasePlanService
 
     public function totalPrice()
     {
+        if ($this->plan->type === 'app') {
+            return 0;
+        }
+
         $base = $this;
 
         return FastCache::retrieve('base_plan_total_price', function () use ($base) {

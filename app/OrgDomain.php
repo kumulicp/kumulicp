@@ -12,6 +12,10 @@ class OrgDomain extends Model
 
     protected $table = 'org_domains';
 
+    protected $casts = [
+        'registered' => 'boolean',
+    ];
+
     private $tld;
 
     public function organization()

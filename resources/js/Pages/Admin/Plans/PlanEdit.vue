@@ -36,6 +36,7 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error-messages="$page.props.errors.default"
             />
           <va-select
+            id="planType"
             v-model="form.type"
             :label="$t('admin.plans.planType')"
             class="my-2"
@@ -46,6 +47,14 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error="$page.props.errors.type"
             :error-messages="$page.props.errors.type"
           />
+          <va-alert
+            v-if="typeChanged"
+            id="planTypeChangeWarning"
+            color="warning"
+            class="my-2"
+          >
+            {{ $t('admin.plans.planTypeChangeWarning') }}
+          </va-alert>
           <va-input v-model="form.description"
             :label="$t('admin.plans.description')"
             class="my-2"
@@ -116,24 +125,26 @@ import { useForm, Link } from '@inertiajs/vue3'
       <AdminSettings>
         <template #name>{{ $t('admin.plans.baseOptions') }}</template>
         <template #settings>
-          <va-input
-            type="number"
-            v-model="form.base.price"
-            :label="$t('admin.plans.price')"
-            class="my-2"
-            :messages="$t('admin.plans.basePriceCaption')"
-            immediateValidation
-            min="0"
-            step=".01"
-          >
-            <template #prependInner>
-              $
-            </template>
-          </va-input>
-          <va-input v-model="form.base.price_id"
-            :label="$t('admin.plans.productID')"
-            class="my-2"
-            />
+          <template v-if="form.type === 'package'">
+            <va-input
+              type="number"
+              v-model="form.base.price"
+              :label="$t('admin.plans.price')"
+              class="my-2"
+              :messages="$t('admin.plans.basePriceCaption')"
+              immediateValidation
+              min="0"
+              step=".01"
+            >
+              <template #prependInner>
+                $
+              </template>
+            </va-input>
+            <va-input v-model="form.base.price_id"
+              :label="$t('admin.plans.productID')"
+              class="my-2"
+              />
+          </template>
           <va-input
             v-model="form.base.minimal_label"
             :label="$t('admin.plans.minimalUserLabel')"
@@ -142,6 +153,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           />
         </template>
       </AdminSettings>
+      <template v-if="form.type === 'package'">
       <va-list-separator class="my-1" fit />
       <AdminSettings>
         <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
@@ -301,6 +313,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           </va-input>
         </template>
       </AdminSettings>
+      </template>
       <va-list-separator v-if="email_servers.length > 0" class="my-1" fit />
       <AdminSettings v-if="email_servers.length > 0">
         <template #name>{{ $t('admin.plans.emailOptions') }}</template>
@@ -421,7 +434,6 @@ import { useForm, Link } from '@inertiajs/vue3'
             text-by="text"
             class="my-2"
             immediateValidation
-            multiple
             clearable
             :placeholder="$t('admin.plans.disabled')"
             :messages="$t('admin.plans.appPlanCaption')"
@@ -466,6 +478,7 @@ export default {
     })
 
     return {
+      originalType: this.plan.type,
       features: this.plan.features,
       app_plans: appPlans,
       planTypes: [
@@ -532,6 +545,11 @@ export default {
         web_server: this.plan.web_server,
         app_plans: this.plan.app_plans
       })
+    }
+  },
+  computed: {
+    typeChanged () {
+      return this.originalType !== null && this.form.type !== this.originalType
     }
   },
   methods: {

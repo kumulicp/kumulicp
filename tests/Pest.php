@@ -29,6 +29,7 @@ use Tests\TestCase;
 
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/AccountManager');
+uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Billing');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Applications');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Auth');
 uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Domains');
