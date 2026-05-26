@@ -23,9 +23,13 @@ interface BillingContract
 
     public function status(): string;
 
+    public function component(): string;
+
     public function hasDefaultPaymentMethod(): bool;
 
     public function updateDefaultPaymentMethod(string $payment_method): void;
+
+    public function deleteDefaultPaymentMethod(): void;
 
     public function defaultPaymentMethodBrand();
 

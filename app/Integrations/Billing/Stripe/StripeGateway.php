@@ -23,6 +23,11 @@ class StripeGateway implements BillingContract
         $this->organization = $organization ?? OrganizationFacade::account();
     }
 
+    public function component(): string
+    {
+        return 'StripePaymentMethod';
+    }
+
     public function isBillable(): bool
     {
         $subscription = $this->organization->subscription('default');
@@ -299,7 +304,7 @@ class StripeGateway implements BillingContract
         return false;
     }
 
-    public function deleteDefaultPaymentMethod()
+    public function deleteDefaultPaymentMethod(): void
     {
         $this->organization->defaultPaymentMethod()->delete();
     }

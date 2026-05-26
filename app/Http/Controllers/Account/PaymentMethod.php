@@ -45,7 +45,7 @@ class PaymentMethod extends Controller
             'hasDefaultPaymentMethod' => Billing::hasDefaultPaymentMethod(),
             'managers' => $managers,
             'users' => $users,
-            'driver' => 'StripePaymentMethod',
+            'driver' => Billing::component(),
         ]);
     }
 

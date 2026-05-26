@@ -259,7 +259,6 @@ class Subscription extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
-            'driver' => 'StripePaymentMethod',
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -301,6 +300,8 @@ class Subscription extends Controller
             ],
             'prices' => $prices,
             'total' => SubscriptionFacade::totalPrice(),
+            'driver' => Billing::component(),
+            'has_payment_method' => Billing::hasDefaultPaymentMethod(),
             'breadcrumbs' => [
                 [
                     'label' => 'Subscription Overview',

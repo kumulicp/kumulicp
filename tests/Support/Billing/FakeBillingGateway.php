@@ -17,6 +17,11 @@ class FakeBillingGateway implements BillingContract
         $this->organization = $organization ?? OrganizationFacade::account();
     }
 
+    public function component(): string
+    {
+        return 'FakePaymentMethod';
+    }
+
     public function isBillable(): bool
     {
         return true;
@@ -56,6 +61,8 @@ class FakeBillingGateway implements BillingContract
     }
 
     public function updateDefaultPaymentMethod(string $payment_method): void {}
+
+    public function deleteDefaultPaymentMethod(): void {}
 
     public function defaultPaymentMethodBrand()
     {

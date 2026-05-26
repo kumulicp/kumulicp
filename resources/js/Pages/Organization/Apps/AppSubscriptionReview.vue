@@ -17,7 +17,7 @@ import { useForm } from '@inertiajs/vue3'
         <va-card class="mb-3">
           <va-card-title>{{ $t('organization.apps.planSettings', { label: app.label }) }}</va-card-title>
           <va-card-content>
-            <credit-card v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" v-if="plan.payment_enabled" :driver="driver" />
+            <credit-card v-if="plan.payment_enabled" v-model:hasDefaultPaymentMethod="hasDefaultPaymentMethod" :driver="driver" />
             <va-list-separator class="my-3" fit />
             <form @submit.prevent="form.put('/apps/'+app.id+'/plans/'+plan.id+'/select')">
               <app-customizations :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
@@ -51,6 +51,7 @@ export default {
     prices: Object,
     total: Number,
     driver: String,
+    has_payment_method: Boolean
   },
   data () {
     const customizationsForm = {}
@@ -59,6 +60,7 @@ export default {
     })
 
     return {
+      hasDefaultPaymentMethod: this.has_payment_method,
       form: useForm({
         customizations: customizationsForm
       })

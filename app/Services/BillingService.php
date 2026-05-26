@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Integrations\Billing\Fake\FakeBillingGateway;
 use App\Integrations\Billing\Stripe\StripeGateway;
 use App\Organization;
 use Illuminate\Support\Arr;
@@ -14,6 +15,7 @@ class BillingService
 
     private array $drivers = [
         'stripe' => StripeGateway::class,
+        'fake' => FakeBillingGateway::class,
     ];
 
     public function __construct(?Organization $organization = null)
@@ -35,6 +37,11 @@ class BillingService
         if (! empty($name)) {
             throw new \Exception(__('messages.exception.no_billing_driver'));
         }
+    }
+
+    public function component(): string
+    {
+        return $this->driver()?->component() ?? '';
     }
 
     public function register(string $driver, $class)
