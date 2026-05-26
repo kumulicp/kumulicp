@@ -17,7 +17,10 @@ class FakeBillingGateway implements BillingContract
         $this->organization = $organization ?? OrganizationFacade::account();
     }
 
-    public function isBillable(): bool { return true; }
+    public function isBillable(): bool
+    {
+        return true;
+    }
 
     public function update(): void {}
 
@@ -27,24 +30,45 @@ class FakeBillingGateway implements BillingContract
 
     public function sendInvoice(float $price, string $description): void {}
 
-    public function periodEnds(): ?Carbon { return null; }
+    public function periodEnds(): ?Carbon
+    {
+        return null;
+    }
 
-    public function invoices(): Collection { return collect(); }
+    public function invoices(): Collection
+    {
+        return collect();
+    }
 
-    public function upcomingInvoice(): array { return []; }
+    public function upcomingInvoice(): array
+    {
+        return [];
+    }
 
-    public function status(): string { return 'active'; }
+    public function status(): string
+    {
+        return 'active';
+    }
 
-    public function hasDefaultPaymentMethod(): bool { return true; }
+    public function hasDefaultPaymentMethod(): bool
+    {
+        return true;
+    }
 
     public function updateDefaultPaymentMethod(string $payment_method): void {}
 
-    public function defaultPaymentMethodBrand() { return 'visa'; }
+    public function defaultPaymentMethodBrand()
+    {
+        return 'visa';
+    }
 
     public function defaultPaymentMethod(): array
     {
         return ['card' => ['brand' => 'visa', 'last4' => '4242', 'exp_month' => 12, 'exp_year' => 2030]];
     }
 
-    public function defaultPaymentMethodBrandImage(): ?string { return null; }
+    public function defaultPaymentMethodBrandImage(): ?string
+    {
+        return null;
+    }
 }

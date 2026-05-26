@@ -1,14 +1,18 @@
 <?php
 
+use App\AppInstance;
+use App\Application;
+use App\AppPlan;
 use App\Services\AccountManagerService;
+use App\Services\AdditionalStorageService;
+use App\Services\UserPermissionsService;
 use App\Support\Facades\AccountManager;
-use App\Support\Facades\Domain;
-use App\Support\Facades\ServerInterface;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
 use App\Support\Facades\Billing;
+use App\Support\Facades\Domain;
+use App\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Tests\Support\Billing\FakeBillingGateway;
 use Tests\Support\Registrars\FakeRegistrar;
 use Tests\Support\ServerManagers\FakeServerManagerProfile;
@@ -27,29 +31,29 @@ use Tests\TestCase;
 |
 */
 
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Browser');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/AccountManager');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Billing');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Applications');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Auth');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Domains');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Profile');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Registrars');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/ServerManagers');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Services');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/SSO');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature/Subscription');
-uses(TestCase::class, Illuminate\Foundation\Testing\RefreshDatabase::class)->in('API');
+uses(TestCase::class, RefreshDatabase::class)->in('Browser');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/AccountManager');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Billing');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Applications');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Auth');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Registrars');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/ServerManagers');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Services');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/SSO');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Subscription');
+uses(TestCase::class, RefreshDatabase::class)->in('API');
 
 pest()->beforeEach(function () {
-    (new TestSupports())->seed();
+    (new TestSupports)->seed();
     setupFakeServerInterfaces();
-    })
+})
     ->in('Browser');
 
 pest()->afterEach(function () {
-    (new TestSupports())->cleanLdap();
-    })
+    (new TestSupports)->cleanLdap();
+})
     ->in('Feature/AccountManager', 'Feature/Auth');
 
 pest()->beforeEach(function () {
@@ -60,7 +64,7 @@ pest()->beforeEach(function () {
     $this->support->createBase2Plan();
     $this->support->addUsers();
 
-    $this->user = \App\User::where('username', 'demo')->firstOrFail();
+    $this->user = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($this->user);
     $this->demoApp = $this->support->demo_app->instances()->first();
 })->in('Feature/Subscription');
@@ -68,7 +72,6 @@ pest()->beforeEach(function () {
 pest()->afterEach(function () {
     $this->support->cleanLdap();
 })->in('Feature/Subscription');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -88,7 +91,6 @@ pest()->afterEach(function () {
 
 pest()->browser()
     ->timeout(10000);
-
 
 /*
 |--------------------------------------------------------------------------
@@ -142,7 +144,7 @@ function setupAccountManagerDriver(string $driver): void
     Config::set('account_manager.driver', $driver);
     Config::set('auth.guards.web.provider', $provider);
     Auth::forgetGuards();
-    app()->instance('account_manager', new AccountManagerService());
+    app()->instance('account_manager', new AccountManagerService);
     AccountManager::clearResolvedInstances();
 }
 
@@ -261,9 +263,9 @@ function skipUnlessRegistrar(string $driver, string $required): void
 
 function grantPermission(string $username, int $appId, array $roles): void
 {
-    $organization = \App\User::where('username', 'demo')->firstOrFail()->organization;
-    $user = \App\Support\Facades\AccountManager::users()->find($username);
-    (new \App\Services\UserPermissionsService)->updatePermissions(
+    $organization = User::where('username', 'demo')->firstOrFail()->organization;
+    $user = AccountManager::users()->find($username);
+    (new UserPermissionsService)->updatePermissions(
         user: $user,
         user_id: $username,
         organization: $organization,
@@ -274,9 +276,9 @@ function grantPermission(string $username, int $appId, array $roles): void
 
 function setAdditionalStorage(string $username, int $appInstanceId, int $quantity): void
 {
-    $organization = \App\User::where('username', 'demo')->firstOrFail()->organization;
-    $app = \App\AppInstance::find($appInstanceId);
-    (new \App\Services\AdditionalStorageService($organization, 'user', $username, $app))
+    $organization = User::where('username', 'demo')->firstOrFail()->organization;
+    $app = AppInstance::find($appInstanceId);
+    (new AdditionalStorageService($organization, 'user', $username, $app))
         ->updateQuantity($quantity);
 }
 
@@ -286,51 +288,51 @@ function setAdditionalStorage(string $username, int $appInstanceId, int $quantit
 |--------------------------------------------------------------------------
 */
 
-function createBulkEditTestPlans(\App\Application $app): array
+function createBulkEditTestPlans(Application $app): array
 {
-    $plan1 = \App\AppPlan::factory()->create([
-        'name'            => 'Original Name One',
-        'description'     => 'Original Desc One',
-        'application_id'  => $app->id,
-        'archive'         => false,
+    $plan1 = AppPlan::factory()->create([
+        'name' => 'Original Name One',
+        'description' => 'Original Desc One',
+        'application_id' => $app->id,
+        'archive' => false,
         'payment_enabled' => false,
-        'domain_enabled'  => false,
-        'domain_max'      => 0,
-        'settings'        => [
+        'domain_enabled' => false,
+        'domain_max' => 0,
+        'settings' => [
             'server_type' => 'separate',
-            'base'        => ['max' => 0, 'price' => 5,  'storage' => 10, 'price_id' => 'prod_1_base'],
-            'basic'       => ['max' => 2, 'name' => 'Basic One', 'price' => 2, 'amount' => 1, 'storage' => 1, 'price_id' => 'prod_1_basic'],
-            'storage'     => ['max' => 50, 'price' => 1, 'amount' => 5,  'price_id' => 'prod_1_sto'],
-            'features'    => [],
-            'standard'    => ['max' => 5, 'price' => 3, 'storage' => 2, 'price_id' => 'prod_1_std'],
+            'base' => ['max' => 0, 'price' => 5,  'storage' => 10, 'price_id' => 'prod_1_base'],
+            'basic' => ['max' => 2, 'name' => 'Basic One', 'price' => 2, 'amount' => 1, 'storage' => 1, 'price_id' => 'prod_1_basic'],
+            'storage' => ['max' => 50, 'price' => 1, 'amount' => 5,  'price_id' => 'prod_1_sto'],
+            'features' => [],
+            'standard' => ['max' => 5, 'price' => 3, 'storage' => 2, 'price_id' => 'prod_1_std'],
             'configurations' => [],
             'additionalConfigs' => [],
             'expires_after' => 0,
-            'trial_for'     => 0,
-            'admin_access'  => false,
+            'trial_for' => 0,
+            'admin_access' => false,
         ],
     ]);
 
-    $plan2 = \App\AppPlan::factory()->create([
-        'name'            => 'Original Name Two',
-        'description'     => 'Original Desc Two',
-        'application_id'  => $app->id,
-        'archive'         => false,
+    $plan2 = AppPlan::factory()->create([
+        'name' => 'Original Name Two',
+        'description' => 'Original Desc Two',
+        'application_id' => $app->id,
+        'archive' => false,
         'payment_enabled' => true,
-        'domain_enabled'  => false,
-        'domain_max'      => 0,
-        'settings'        => [
+        'domain_enabled' => false,
+        'domain_max' => 0,
+        'settings' => [
             'server_type' => 'separate',
-            'base'        => ['max' => 0, 'price' => 10, 'storage' => 20, 'price_id' => 'prod_2_base'],
-            'basic'       => ['max' => 4, 'name' => 'Basic Two', 'price' => 4, 'amount' => 2, 'storage' => 2, 'price_id' => 'prod_2_basic'],
-            'storage'     => ['max' => 100, 'price' => 2, 'amount' => 10, 'price_id' => 'prod_2_sto'],
-            'features'    => [],
-            'standard'    => ['max' => 10, 'price' => 6, 'storage' => 4, 'price_id' => 'prod_2_std'],
+            'base' => ['max' => 0, 'price' => 10, 'storage' => 20, 'price_id' => 'prod_2_base'],
+            'basic' => ['max' => 4, 'name' => 'Basic Two', 'price' => 4, 'amount' => 2, 'storage' => 2, 'price_id' => 'prod_2_basic'],
+            'storage' => ['max' => 100, 'price' => 2, 'amount' => 10, 'price_id' => 'prod_2_sto'],
+            'features' => [],
+            'standard' => ['max' => 10, 'price' => 6, 'storage' => 4, 'price_id' => 'prod_2_std'],
             'configurations' => [],
             'additionalConfigs' => [],
             'expires_after' => 0,
-            'trial_for'     => 0,
-            'admin_access'  => false,
+            'trial_for' => 0,
+            'admin_access' => false,
         ],
     ]);
 
@@ -340,22 +342,22 @@ function createBulkEditTestPlans(\App\Application $app): array
 function bulkEditSettingsPayload(array $overrides = []): array
 {
     return array_merge([
-        'default'          => false,
-        'payment_enabled'  => false,
-        'admin_access'     => false,
-        'domain_enabled'   => false,
-        'domain_max'       => 0,
-        'expires_after'    => 0,
-        'trial_for'        => 0,
-        'server_type'      => 'separate',
-        'web_server'       => null,
-        'database_server'  => null,
-        'sso_server'       => null,
-        'shared_app'       => null,
+        'default' => false,
+        'payment_enabled' => false,
+        'admin_access' => false,
+        'domain_enabled' => false,
+        'domain_max' => 0,
+        'expires_after' => 0,
+        'trial_for' => 0,
+        'server_type' => 'separate',
+        'web_server' => null,
+        'database_server' => null,
+        'sso_server' => null,
+        'shared_app' => null,
         'displayed_features' => [],
-        'base'     => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
+        'base' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
         'standard' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
-        'basic'    => ['name' => '', 'price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
-        'storage'  => ['price' => 0, 'price_id' => '', 'amount' => 0, 'max' => 0],
+        'basic' => ['name' => '', 'price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
+        'storage' => ['price' => 0, 'price_id' => '', 'amount' => 0, 'max' => 0],
     ], $overrides);
 }

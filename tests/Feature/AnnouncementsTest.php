@@ -189,4 +189,3 @@ it('authenticated user can view announcement', function () {
 
     $response->assertStatus(200);
 });
-

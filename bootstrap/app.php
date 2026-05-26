@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Middleware\SetupAwareAuthenticate;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\SetupAwareAuthenticate;
 use App\Http\Middleware\UserOrganization;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;

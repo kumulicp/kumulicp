@@ -22,7 +22,6 @@ class UserPermissionsService
      *
      * @param  mixed  $user  AccountManager user instance
      * @param  string  $userId  Username / user identifier
-     * @param  Organization  $organization
      * @param  array  $permissionsInput  Raw permissions array keyed by app instance ID
      * @param  bool  $withSideEffects  Set false to skip action dispatch, events, and notifications (useful in tests)
      */

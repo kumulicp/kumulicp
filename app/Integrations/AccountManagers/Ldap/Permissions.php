@@ -14,6 +14,7 @@ use App\Ldap\Models\User as LdapUser;
 use App\Organization;
 use App\Support\AccountManager\PermissionsManager;
 use App\Support\AccountManager\UserManager;
+use App\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -86,7 +87,6 @@ class Permissions extends PermissionsManager implements PermissionsContract
                 }
             }
         }
-
 
         $app_roles = $app_instance->application->roles;
 
@@ -173,7 +173,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         return $this->user->groups()->exists(LdapSupport::orgAdminGroup());
     }
 
-    public function addControlPanelAccess(?\App\User &$user = null, ?Organization $organization = null, bool $verified = false)
+    public function addControlPanelAccess(?User &$user = null, ?Organization $organization = null, bool $verified = false)
     {
         $organization = ($organization?->is($this->organization) || $organization?->parent_organization_id === $this->organization->id) ? $organization : $this->organization;
         $guid = LdapSupport::guid($this->user->get());
@@ -183,13 +183,13 @@ class Permissions extends PermissionsManager implements PermissionsContract
             $user->save();
         } else {
             // If user trashed, restore
-            $user = \App\User::withTrashed()->where('guid', $guid)->orWhere('email', $this->user->getFirstAttribute('mail'))->first();
+            $user = User::withTrashed()->where('guid', $guid)->orWhere('email', $this->user->getFirstAttribute('mail'))->first();
             if ($user && $user->trashed()) {
                 $user->restore();
             }
             // If user doesn't exist in database, create user
             elseif (! $user) {
-                $user = new \App\User;
+                $user = new User;
                 $user->name = $this->user->getFirstAttribute('displayName');
                 $user->email = $this->user->getFirstAttribute('mail');
                 $user->guid = $guid;
@@ -227,7 +227,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeControlPanelAccess()
     {
-        $db_user = \App\User::where('guid', LdapSupport::guid($this->user->get()))->delete();
+        $db_user = User::where('guid', LdapSupport::guid($this->user->get()))->delete();
 
         LdapSupport::orgAdminGroup()->members()->detach($this->user->get());
 
@@ -278,7 +278,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         return $this->user->groups()->exists($admin);
     }
 
-    public function addControlPanelAdminAccess(?\App\User &$user = null)
+    public function addControlPanelAdminAccess(?User &$user = null)
     {
         $admin_group = Dn::create('server', 'controlPanelAccess', 'admin');
         $this->addControlPanelAccess($user);

@@ -60,8 +60,8 @@ class User extends CiviCRMStandalone
         $this->action_description = __('messages.api.civicrm.users.update_roles', ['roles' => implode(', ', $roles) ?: 'none']);
 
         $this->form()->post($path, $this->data([
-          'values' => ['roles:name' => $roles],
-          'where' => [['username', '=', $this->user['username']]],
+            'values' => ['roles:name' => $roles],
+            'where' => [['username', '=', $this->user['username']]],
         ]));
 
         return $this;

@@ -124,7 +124,7 @@ class Subscription extends Controller
                         ])->filter(function ($feature) {
                             return ! empty($feature['description']) && ! empty($feature['price']);
                         }),
-                        'features' => $plan->features,
+                        'features' => $plan->features ?? [],
                     ],
                     'current' => $plan->id === $organization->plan_id,
                     'url' => "/subscription/{$organization->id}/plans/{$plan->id}",

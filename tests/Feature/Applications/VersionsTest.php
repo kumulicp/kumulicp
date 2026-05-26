@@ -22,7 +22,7 @@ beforeEach(function () {
 
 it('creates a version with none — stores null settings', function () {
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'   => '2.0',
+        'version' => '2.0',
         'copy_from' => 'none',
     ]);
 
@@ -40,7 +40,7 @@ it('creates a version with none — stores null settings', function () {
 
 it('creates a version with recommendations — copies settings from app profile', function () {
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'   => '2.0',
+        'version' => '2.0',
         'copy_from' => 'recommendations',
     ]);
 
@@ -62,15 +62,15 @@ it('creates a version with previous_version — copies settings, roles and admin
 
     $source = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
-        'name'           => '1.0',
-        'admin_path'     => '/source-admin',
-        'settings'       => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
-        'roles'          => ['order' => $roles, 'default_admin_groups' => [$roles[0]]],
+        'name' => '1.0',
+        'admin_path' => '/source-admin',
+        'settings' => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
+        'roles' => ['order' => $roles, 'default_admin_groups' => [$roles[0]]],
     ]);
 
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'      => '2.0',
-        'copy_from'    => 'previous_version',
+        'version' => '2.0',
+        'copy_from' => 'previous_version',
         'copy_version' => $source->id,
     ]);
 
@@ -91,7 +91,7 @@ it('creates a version with previous_version — copies settings, roles and admin
 
 it('rejects a version name with a forward slash', function () {
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'   => '2.0/rc1',
+        'version' => '2.0/rc1',
         'copy_from' => 'none',
     ]);
 
@@ -100,7 +100,7 @@ it('rejects a version name with a forward slash', function () {
 
 it('requires copy_version when copy_from is previous_version', function () {
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'   => '2.0',
+        'version' => '2.0',
         'copy_from' => 'previous_version',
     ]);
 
@@ -109,7 +109,7 @@ it('requires copy_version when copy_from is previous_version', function () {
 
 it('rejects an invalid copy_from value', function () {
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
-        'version'   => '2.0',
+        'version' => '2.0',
         'copy_from' => 'invalid',
     ]);
 
@@ -123,20 +123,20 @@ it('updates version settings and default roles', function () {
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
-        'name'           => '1.0',
-        'roles'          => ['order' => $roles],
+        'name' => '1.0',
+        'roles' => ['order' => $roles],
     ]);
 
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}", [
-        'version'              => '1.1',
-        'admin_path'           => '/new-admin',
-        'chart_version'        => '3.0.0',
-        'helm_repo_name'       => 'updated-chart',
-        'image_repo_name'      => 'updated/app',
-        'image_registry'       => 'registry2.example.com',
+        'version' => '1.1',
+        'admin_path' => '/new-admin',
+        'chart_version' => '3.0.0',
+        'helm_repo_name' => 'updated-chart',
+        'image_repo_name' => 'updated/app',
+        'image_registry' => 'registry2.example.com',
         'announcement_location' => 'none',
-        'default_admin_roles'  => [$roles[0]],
-        'default_user_roles'   => [$roles[1]],
+        'default_admin_roles' => [$roles[0]],
+        'default_user_roles' => [$roles[1]],
     ]);
 
     $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/1.1");
@@ -160,8 +160,8 @@ it('saves role order — adds roles to selected list', function () {
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
-        'name'           => '1.0',
-        'roles'          => null,
+        'name' => '1.0',
+        'roles' => null,
     ]);
 
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles", [
@@ -179,8 +179,8 @@ it('saves role order — removes roles by submitting a subset', function () {
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
-        'name'           => '1.0',
-        'roles'          => ['order' => $roles],
+        'name' => '1.0',
+        'roles' => ['order' => $roles],
     ]);
 
     $kept = [$roles[0]];
@@ -200,8 +200,8 @@ it('saves role order — clears all roles when order is empty', function () {
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
-        'name'           => '1.0',
-        'roles'          => ['order' => $roles],
+        'name' => '1.0',
+        'roles' => ['order' => $roles],
     ]);
 
     $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles", [

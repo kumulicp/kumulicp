@@ -3,7 +3,6 @@
 namespace Tests\Support\Registrars;
 
 use App\Contracts\Registrar\RegistrarDomainContract;
-use App\OrgDomain;
 use App\Support\Domains\DomainManager;
 
 class FakeDomainInterface extends DomainManager implements RegistrarDomainContract

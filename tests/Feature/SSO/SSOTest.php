@@ -1,12 +1,11 @@
 <?php
 
-use App\Application;
-use App\AppPlan;
-use App\AppVersion;
 use App\AppInstance;
+use App\Application;
 use App\Organization;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
+use Tests\Support\SSO\FakeSSOProfile;
 use Tests\Support\TestSupports;
 
 /**
@@ -26,7 +25,6 @@ use Tests\Support\TestSupports;
  * involve SSO setup should use setupFakeServerInterfaces() from the
  * ApplicationLifecycle helpers rather than these SSO-specific tests.
  */
-
 uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {
@@ -37,7 +35,7 @@ beforeEach(function () {
 it('resolves an SSO connection via the server interface', function (string $driver) {
     skipUnlessSSO($driver, 'fake');
 
-    app('server_interfaces')->register('sso', 'authentik', \Tests\Support\SSO\FakeSSOProfile::class);
+    app('server_interfaces')->register('sso', 'authentik', FakeSSOProfile::class);
 
     $org = Organization::find(1);
     $ssoServer = $org->sso_server ?? null;
@@ -54,7 +52,7 @@ it('resolves an SSO connection via the server interface', function (string $driv
 it('adds an SSO application via fake', function (string $driver) {
     skipUnlessSSO($driver, 'fake');
 
-    app('server_interfaces')->register('sso', 'authentik', \Tests\Support\SSO\FakeSSOProfile::class);
+    app('server_interfaces')->register('sso', 'authentik', FakeSSOProfile::class);
 
     $org = Organization::find(1);
     $ssoServer = $org->sso_server ?? null;
@@ -83,7 +81,7 @@ it('adds an SSO application via fake', function (string $driver) {
 it('updates an SSO application via fake', function (string $driver) {
     skipUnlessSSO($driver, 'fake');
 
-    app('server_interfaces')->register('sso', 'authentik', \Tests\Support\SSO\FakeSSOProfile::class);
+    app('server_interfaces')->register('sso', 'authentik', FakeSSOProfile::class);
 
     $org = Organization::find(1);
     $ssoServer = $org->sso_server ?? null;
@@ -112,7 +110,7 @@ it('updates an SSO application via fake', function (string $driver) {
 it('deletes an SSO application via fake', function (string $driver) {
     skipUnlessSSO($driver, 'fake');
 
-    app('server_interfaces')->register('sso', 'authentik', \Tests\Support\SSO\FakeSSOProfile::class);
+    app('server_interfaces')->register('sso', 'authentik', FakeSSOProfile::class);
 
     $org = Organization::find(1);
     $ssoServer = $org->sso_server ?? null;

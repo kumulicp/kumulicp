@@ -1,21 +1,20 @@
 <?php
 
 use App\AppPlan;
-use App\Support\Facades\AccountManager;
 use App\User;
 use Tests\Support\TestSupports;
 
 describe('User Permissions Update', function () {
     beforeEach(function () {
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
-        $support = new TestSupports();
+        $support = new TestSupports;
         $support->activateDemoApp();
         $support->addUsers();
         $this->demoInstance = $support->demo_app->instances()->where('organization_id', 1)->first();
     });
 
     afterEach(function () {
-        (new TestSupports())->cleanLdap();
+        (new TestSupports)->cleanLdap();
     });
 
     it('assigns a standard role, shows the access-type chip, and presents the confirm modal', function () {

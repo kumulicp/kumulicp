@@ -1,7 +1,7 @@
 <?php
 
-use App\AppPlan;
 use App\Application;
+use App\AppPlan;
 use App\User;
 use Tests\Support\TestSupports;
 
@@ -16,15 +16,15 @@ use Tests\Support\TestSupports;
 function createDemoPlans(Application $app): array
 {
     $plan1 = AppPlan::factory()->create([
-        'name'           => 'Alpha Plan',
-        'description'    => 'Alpha description',
+        'name' => 'Alpha Plan',
+        'description' => 'Alpha description',
         'application_id' => $app->id,
-        'archive'        => false,
+        'archive' => false,
         'payment_enabled' => false,
-        'settings'       => [
-            'base'     => ['max' => 0, 'price' => 5, 'storage' => 10, 'price_id' => 'prod_alpha_base'],
-            'basic'    => ['max' => 2, 'name' => 'Basic Alpha', 'price' => 2, 'amount' => 1, 'storage' => 1, 'price_id' => 'prod_alpha_basic'],
-            'storage'  => ['max' => 50, 'price' => 1, 'amount' => 5, 'price_id' => 'prod_alpha_sto'],
+        'settings' => [
+            'base' => ['max' => 0, 'price' => 5, 'storage' => 10, 'price_id' => 'prod_alpha_base'],
+            'basic' => ['max' => 2, 'name' => 'Basic Alpha', 'price' => 2, 'amount' => 1, 'storage' => 1, 'price_id' => 'prod_alpha_basic'],
+            'storage' => ['max' => 50, 'price' => 1, 'amount' => 5, 'price_id' => 'prod_alpha_sto'],
             'features' => [],
             'standard' => ['max' => 5, 'price' => 3, 'storage' => 2, 'price_id' => 'prod_alpha_std'],
             'configurations' => [],
@@ -33,15 +33,15 @@ function createDemoPlans(Application $app): array
     ]);
 
     $plan2 = AppPlan::factory()->create([
-        'name'           => 'Beta Plan',
-        'description'    => 'Beta description',
+        'name' => 'Beta Plan',
+        'description' => 'Beta description',
         'application_id' => $app->id,
-        'archive'        => false,
+        'archive' => false,
         'payment_enabled' => true,
-        'settings'       => [
-            'base'     => ['max' => 0, 'price' => 10, 'storage' => 20, 'price_id' => 'prod_beta_base'],
-            'basic'    => ['max' => 4, 'name' => 'Basic Beta', 'price' => 4, 'amount' => 2, 'storage' => 2, 'price_id' => 'prod_beta_basic'],
-            'storage'  => ['max' => 100, 'price' => 2, 'amount' => 10, 'price_id' => 'prod_beta_sto'],
+        'settings' => [
+            'base' => ['max' => 0, 'price' => 10, 'storage' => 20, 'price_id' => 'prod_beta_base'],
+            'basic' => ['max' => 4, 'name' => 'Basic Beta', 'price' => 4, 'amount' => 2, 'storage' => 2, 'price_id' => 'prod_beta_basic'],
+            'storage' => ['max' => 100, 'price' => 2, 'amount' => 10, 'price_id' => 'prod_beta_sto'],
             'features' => [],
             'standard' => ['max' => 10, 'price' => 6, 'storage' => 4, 'price_id' => 'prod_beta_std'],
             'configurations' => [],
