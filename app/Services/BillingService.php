@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Integrations\Billing\Fake\FakeBillingGateway;
 use App\Integrations\Billing\Stripe\StripeGateway;
 use App\Organization;
 use Illuminate\Support\Arr;
@@ -14,11 +15,7 @@ class BillingService
 
     private array $drivers = [
         'stripe' => StripeGateway::class,
-    ];
-
-    private array $components = [
-        'stripe' => 'StripePaymentMethod',
-        'fake' => 'FakePaymentMethod',
+        'fake' => FakeBillingGateway::class,
     ];
 
     public function __construct(?Organization $organization = null)
@@ -44,9 +41,7 @@ class BillingService
 
     public function component(): string
     {
-        $name = config('billing.default');
-
-        return $this->components[$name] ?? '';
+        return $this->driver()?->component() ?? '';
     }
 
     public function register(string $driver, $class)

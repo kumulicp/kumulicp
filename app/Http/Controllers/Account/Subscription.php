@@ -259,7 +259,6 @@ class Subscription extends Controller
                 'id' => $organization->id,
                 'name' => $organization->name,
             ],
-            'driver' => 'StripePaymentMethod',
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,

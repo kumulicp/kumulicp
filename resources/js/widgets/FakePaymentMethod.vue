@@ -64,6 +64,7 @@ import axios from 'axios'
           <div class="row">
             <div class="flex flex-col xs6 mr-1">
               <va-input
+                id="fakeCardNumber"
                 v-model="cardNumber"
                 label="Card Number"
                 placeholder="4242 4242 4242 4242"
@@ -75,6 +76,7 @@ import axios from 'axios'
             </div>
             <div class="flex flex-col xs3 mr-1">
               <va-input
+                id="fakeCardExpiry"
                 v-model="cardExpiry"
                 label="Expiry"
                 placeholder="MM/YY"
@@ -86,6 +88,7 @@ import axios from 'axios'
             </div>
             <div class="flex flex-col xs2">
               <va-input
+                id="fakeCardCvc"
                 v-model="cardCvc"
                 label="CVC"
                 placeholder="123"
@@ -99,7 +102,7 @@ import axios from 'axios'
       </div>
 
       <div class="row justify-center mb-2">
-        <va-button @click="updatePaymentMethod" :disabled="processing">
+        <va-button id="submitPaymentMethod" @click="updatePaymentMethod" :disabled="processing">
           <template v-if="hasDefaultPaymentMethod">Update Payment Method</template>
           <template v-else>Add Payment Method</template>
         </va-button>
@@ -186,22 +189,24 @@ export default {
       this.error = ''
 
       const expParts = this.cardExpiry.split('/')
-      const payload = {
+      const paymentMethod = JSON.stringify({
         card_number: this.cardNumber.replace(/\s/g, ''),
         exp_month: expParts[0],
         exp_year: expParts[1],
-        cvc: this.cardCvc,
-        _token: this.csrf_token
-      }
+        cvc: this.cardCvc
+      })
 
-      axios.post('/subscription/payment/method/fake', payload)
-        .then(() => {
-          const digits = this.cardNumber.replace(/\s/g, '')
+      axios.post('/subscription/payment/method', {
+        paymentMethod,
+        _token: this.csrf_token
+      })
+        .then((response) => {
+          const data = response.data
           this.paymentMethod = {
-            brand: this.detectBrand(digits),
-            last4: digits.slice(-4),
-            exp_month: expParts[0],
-            exp_year: expParts[1]
+            brand: data.card_brand,
+            last4: data.card_last_four,
+            exp_month: data.expiry_month,
+            exp_year: data.expiry_year
           }
           this.showDefaultPaymentMethod = true
           this.cardSubmittedSuccessfully = true
@@ -216,13 +221,6 @@ export default {
     },
     deletePaymentMethod () {
       window.location.href = '/subscription/payment/method/delete'
-    },
-    detectBrand (number) {
-      if (/^4/.test(number)) return 'Visa'
-      if (/^5[1-5]/.test(number)) return 'Mastercard'
-      if (/^3[47]/.test(number)) return 'American Express'
-      if (/^6(?:011|5)/.test(number)) return 'Discover'
-      return 'Card'
     }
   }
 }

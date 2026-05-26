@@ -79,39 +79,6 @@ class PaymentMethod extends Controller
         return response()->json($info, 200);
     }
 
-    public function storeFake(Request $request)
-    {
-        $request->validate([
-            'card_number' => 'required|string',
-            'exp_month' => 'required|string',
-            'exp_year' => 'required|string',
-            'cvc' => 'required|string',
-        ]);
-
-        $organization = Organization::account();
-
-        $card_number = preg_replace('/\D/', '', $request->input('card_number'));
-
-        $organization->updateSetting('fake_payment_method', [
-            'last4' => substr($card_number, -4),
-            'exp_month' => $request->input('exp_month'),
-            'exp_year' => $request->input('exp_year'),
-            'brand' => $this->detectCardBrand($card_number),
-        ]);
-        $organization->save();
-
-        return response()->json(['success' => true], 200);
-    }
-
-    private function detectCardBrand(string $number): string
-    {
-        if (str_starts_with($number, '4')) return 'Visa';
-        if (preg_match('/^5[1-5]/', $number)) return 'Mastercard';
-        if (preg_match('/^3[47]/', $number)) return 'American Express';
-        if (preg_match('/^6(?:011|5)/', $number)) return 'Discover';
-        return 'Card';
-    }
-
     public function delete()
     {
         $organization = Organization::account();
