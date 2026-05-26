@@ -33,7 +33,7 @@ describe('Admin Plans', function () {
             ->fill('#planName input', 'My App Plan')
             ->fill('#planDescription input', 'An app description')
             ->click('#planType')
-            ->click('[role=option]:text-is("Pay per App")')
+            ->click('text=Pay per App')
             ->click('#addPlanSubmit')
             ->assertPathIs('/admin/service/plans/'.Plan::where('name', 'My App Plan')->first()?->id);
     });
@@ -53,7 +53,7 @@ describe('Admin Plans', function () {
         $page = visit('/admin/service/plans/'.$plan->id);
         $page->assertDontSee('Changing the plan type');
         $page->click('#planType');
-        $page->click('[role=option]:text-is("Pay per App")');
+        $page->click('text=Pay per App');
         $page->assertSee('Changing the plan type');
     });
 
