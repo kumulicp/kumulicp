@@ -21,7 +21,6 @@ class StripeGateway implements BillingContract
     public function __construct(?Organization $organization = null)
     {
         $this->organization = $organization ?? OrganizationFacade::account();
-        $stripeCustomer = $this->organization->createOrGetStripeCustomer();
     }
 
     public function isBillable(): bool
@@ -56,7 +55,7 @@ class StripeGateway implements BillingContract
 
     public function update(): void
     {
-        $plan_pricing = $this->compileSubscriptionPricing();
+        $plan_pricing = $this->stripePricing();
 
         if ($this->organization->status !== 'deactivated' && count($plan_pricing) > 0 && $this->organization->hasDefaultPaymentMethod()) {
             // If organization already has a subscription of any time (active, canceled, etc)
@@ -217,7 +216,7 @@ class StripeGateway implements BillingContract
         return $status;
     }
 
-    private function compileSubscriptionPricing()
+    public function stripePricing()
     {
         if ($this->organization->setting('include_in_parent_invoice') === true && ! is_null($this->organization->parent_organization)) {
             $this->organization = OrganizationFacade::setOrganization($this->organization->parent_organization);

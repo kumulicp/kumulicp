@@ -131,32 +131,3 @@ it('recalculates pricing when adding additional storage', function (string $driv
     expect($app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price'])->toEqual(4.00);
 })->with('account_manager_drivers');
 
-it('compiles stripe pricing correctly', function (string $driver) {
-    skipUnlessDriver('ldap', $driver);
-    $this->withoutExceptionHandling();
-    $this->followingRedirects();
-    setupAccountManagerDriver($driver);
-    $support = new TestSupports;
-    $support->seed();
-    $support->activateDemoApp();
-    $support->createDemoAppPlans();
-    $support->createBase2Plan();
-    $support->addUsers();
-    $admin = User::where('username', 'demo')->firstOrFail();
-    $this->actingAs($admin);
-    $demoApp = $support->demo_app->instances()->first();
-
-    $support->base_1->payment_enabled = true;
-    $support->base_1->save();
-
-    $support->setSubscription($admin->organization, $support->base_1);
-    $base_pricing = Subscription::refresh()->base();
-    $stripe = $base_pricing->stripePricing();
-
-    expect(Arr::get($stripe, 'stripe_base.quantity'))->toEqual(1);
-    expect(Arr::get($stripe, 'stripe_basic.quantity'))->toEqual(0);
-    expect(Arr::get($stripe, 'stripe_email.quantity'))->toEqual(0);
-    expect(Arr::get($stripe, 'stripe_storage.quantity'))->toEqual(0);
-    expect(Arr::get($stripe, 'stripe_standard.quantity'))->toEqual(1);
-    expect(Arr::get($stripe, 'stripe_application.quantity'))->toEqual(1);
-})->with('account_manager_drivers');

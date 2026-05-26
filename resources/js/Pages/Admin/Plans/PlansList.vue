@@ -34,6 +34,22 @@ import draggable from 'vuedraggable'
                   :error="$page.props.errors.description"
                   :error-messages="$page.props.errors.description"
                   />
+                <va-select
+                  id="planType"
+                  v-model="form.type"
+                  :label="$t('admin.plans.planType')"
+                  class="mb-3"
+                  value-by="value"
+                  text-by="text"
+                  required-mark
+                  immediateValidation
+                  :options="planTypes"
+                  :error="$page.props.errors.type"
+                  :error-messages="$page.props.errors.type"
+                />
+                <p v-if="form.type" class="va-text-secondary mb-2" style="font-size:0.85rem;">
+                  {{ form.type === 'package' ? $t('admin.plans.packageDescription') : $t('admin.plans.payPerAppDescription') }}
+                </p>
               </va-card-content>
               <va-card-actions align="right" class="">
                 <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
@@ -54,6 +70,7 @@ import draggable from 'vuedraggable'
                   <th>{{ $t('admin.plans.name') }}</th>
                   <th>{{ $t('admin.plans.description') }}</th>
                   <th>{{ $t('admin.plans.planType') }}</th>
+                  <th>{{ $t('admin.plans.organizationType') }}</th>
                   <th>{{ $t('admin.plans.activeSubscribers') }}</th>
                 </tr>
               </thead>
@@ -63,6 +80,7 @@ import draggable from 'vuedraggable'
                     <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
                     <td><Link :href="'/admin/service/plans/'+element.id">{{ element.name }}</Link></td>
                     <td>{{ element.description }}</td>
+                    <td>{{ element.type }}</td>
                     <td>{{ element.org_type }}</td>
                     <td>{{ element.active_subscribers }}</td>
                   </tr>
@@ -80,6 +98,7 @@ import draggable from 'vuedraggable'
                   <th>{{ $t('admin.plans.archivedPlan') }}</th>
                   <th>{{ $t('admin.plans.description') }}</th>
                   <th>{{ $t('admin.plans.planType') }}</th>
+                  <th>{{ $t('admin.plans.organizationType') }}</th>
                   <th>{{ $t('admin.plans.activeSubscribers') }}</th>
                 </tr>
               </thead>
@@ -87,6 +106,7 @@ import draggable from 'vuedraggable'
                 <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
                   <td><Link :href="'/admin/service/plans/'+plan.id">{{ plan.name }}</Link></td>
                   <td>{{ plan.description }}</td>
+                  <td>{{ plan.type }}</td>
                   <td>{{ plan.org_type }}</td>
                   <td>{{ plan.active_subscribers }}</td>
                 </tr>
@@ -112,9 +132,14 @@ export default {
       showAddPlan: false,
       curPageValue: 1,
       pageSize: 10,
+      planTypes: [
+        { text: this.$t('admin.plans.package'), value: 'package' },
+        { text: this.$t('admin.plans.payPerApp'), value: 'app' }
+      ],
       form: useForm({
         name: '',
-        description: ''
+        description: '',
+        type: 'package'
       }),
       order: useForm({
         plans: this.plans

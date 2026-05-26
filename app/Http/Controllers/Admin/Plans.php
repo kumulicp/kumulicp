@@ -30,6 +30,7 @@ class Plans extends Controller
                     'active_subscribers' => $plan->subscribers()->count(),
                     'is_default' => $plan->is_default,
                     'org_type' => $plan->org_type ? $org_types[$plan->org_type] : '',
+                    'type' => $plan->type,
                 ];
             }),
             'archived' => $archived->map(function ($plan) {
@@ -55,6 +56,7 @@ class Plans extends Controller
         $validated = $request->validate([
             'name' => 'required',
             'description' => 'required',
+            'type' => 'required|in:package,app',
         ]);
 
         // Get bottom display order number
@@ -69,6 +71,7 @@ class Plans extends Controller
         $plan = new Plan;
         $plan->name = $request->name;
         $plan->description = $request->description;
+        $plan->type = $request->type;
         $plan->app_plans = [];
         $plan->display_order = $display_order + 1;
         $plan->settings = [
@@ -99,9 +102,10 @@ class Plans extends Controller
 
         $app_plans = [];
         foreach ($apps as $app) {
+            $plans = Arr::get($plan->app_plans, "{$app->slug}.plans");
             $app_plans[$app->slug] = [
                 'max' => Arr::get($plan->app_plans, "{$app->slug}.max") ?? 0,
-                'plans' => Arr::get($plan->app_plans, "{$app->slug}.plans"),
+                'plans' => is_array($plans) ? ($plans[0] ?? null) : null,
             ];
         }
 
@@ -229,39 +233,48 @@ class Plans extends Controller
         $plan->features = $request->displayed_features;
         $plan->payment_enabled = $request->boolean('payment_enabled');
         $plan->email_server_id = $request->email_server;
-        $plan->app_plans = $request->app_plans;
+        $rawAppPlans = $request->app_plans ?? [];
+        foreach ($rawAppPlans as $slug => &$config) {
+            if (array_key_exists('plans', $config) && ! is_array($config['plans'])) {
+                $config['plans'] = $config['plans'] !== null ? [$config['plans']] : [];
+            }
+        }
+        unset($config);
+        $plan->app_plans = $rawAppPlans;
         $plan->domain_enabled = $request->boolean('domain_enabled');
         $plan->email_enabled = $request->boolean('email_enabled');
         $plan->domain_max = $request->domain_max;
+        $isAppType = $request->type === 'app';
+
         $plan->updateSettings([
             'suborganizations.enabled' => $request->input('suborganizations.enabled'),
-            'base.price' => $request->input('base.price'),
-            'base.price_id' => $request->input('base.price_id'),
-            'base.minimal_label' => $request->input('base.minimal_label'),
-            'standard.price' => $request->input('standard.price'),
-            'standard.max' => $request->input('standard.max'),
-            'standard.price_id' => $request->input('standard.price_id'),
-            'standard.storage' => $request->input('standard.storage'),
-            'basic.name' => $request->input('basic.name'),
-            'basic.price' => $request->input('basic.price'),
-            'basic.amount' => $request->input('basic.amount'),
-            'basic.max' => $request->input('basic.max'),
-            'basic.price_id' => $request->input('basic.price_id'),
-            'basic.storage' => $request->input('basic.storage'),
-            'application.price' => $request->input('application.price'),
-            'application.max' => $request->input('application.max'),
-            'application.price_id' => $request->input('application.price_id'),
-            'email.price' => $request->input('email.price'),
-            'email.max' => $request->input('email.max'),
-            'email.price_id' => $request->input('email.price_id'),
-            'email.storage' => $request->input('email.storage'),
-            'storage.price' => $request->input('storage.price'),
-            'storage.max' => $request->input('storage.max'),
-            'storage.price_id' => $request->input('storage.price_id'),
-            'storage.amount' => $request->input('storage.amount'),
-            'domains.connect' => $request->input('domains.connect'),
-            'domains.register' => $request->input('domains.register'),
-            'domains.transfer' => $request->input('domains.transfer'),
+            'base.price'          => $isAppType ? null : $request->input('base.price'),
+            'base.price_id'       => $isAppType ? null : $request->input('base.price_id'),
+            'base.minimal_label'  => $request->input('base.minimal_label'),
+            'standard.price'      => $isAppType ? null : $request->input('standard.price'),
+            'standard.max'        => $isAppType ? null : $request->input('standard.max'),
+            'standard.price_id'   => $isAppType ? null : $request->input('standard.price_id'),
+            'standard.storage'    => $isAppType ? null : $request->input('standard.storage'),
+            'basic.name'          => $isAppType ? null : $request->input('basic.name'),
+            'basic.price'         => $isAppType ? null : $request->input('basic.price'),
+            'basic.amount'        => $isAppType ? null : $request->input('basic.amount'),
+            'basic.max'           => $isAppType ? null : $request->input('basic.max'),
+            'basic.price_id'      => $isAppType ? null : $request->input('basic.price_id'),
+            'basic.storage'       => $isAppType ? null : $request->input('basic.storage'),
+            'application.price'   => $isAppType ? null : $request->input('application.price'),
+            'application.max'     => $isAppType ? null : $request->input('application.max'),
+            'application.price_id' => $isAppType ? null : $request->input('application.price_id'),
+            'storage.price'       => $isAppType ? null : $request->input('storage.price'),
+            'storage.max'         => $isAppType ? null : $request->input('storage.max'),
+            'storage.price_id'    => $isAppType ? null : $request->input('storage.price_id'),
+            'storage.amount'      => $isAppType ? null : $request->input('storage.amount'),
+            'email.price'         => $request->input('email.price'),
+            'email.max'           => $request->input('email.max'),
+            'email.price_id'      => $request->input('email.price_id'),
+            'email.storage'       => $request->input('email.storage'),
+            'domains.connect'     => $request->input('domains.connect'),
+            'domains.register'    => $request->input('domains.register'),
+            'domains.transfer'    => $request->input('domains.transfer'),
         ]);
         $plan->status = $request->status ? 'available' : 'hidden';
         if (Arr::get($validated, 'default') && (! $plan->is_default || $plan->isDirty('org_type'))) {
