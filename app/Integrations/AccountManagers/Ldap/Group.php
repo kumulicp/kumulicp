@@ -2,8 +2,8 @@
 
 namespace App\Integrations\AccountManagers\Ldap;
 
-use App\Ldap\Actions\Dn;
 use App\AppInstance;
+use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Services\AdditionalStorageService;

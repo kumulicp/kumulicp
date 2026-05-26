@@ -9,7 +9,7 @@ describe('Profile Update', function () {
     });
 
     afterEach(function () {
-        (new TestSupports())->cleanLdap();
+        (new TestSupports)->cleanLdap();
     });
 
     it('shows the profile page with pre-filled form fields', function () {

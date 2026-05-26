@@ -1,7 +1,6 @@
 <?php
 
 use App\Plan;
-use App\User;
 
 describe('Registration', function () {
     it('renders the registration form with all required fields', function () {

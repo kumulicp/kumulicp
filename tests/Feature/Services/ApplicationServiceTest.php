@@ -24,7 +24,7 @@ it('manages applications via service', function () {
 
     $app = Application::initialize('demo_app');
 
-    expect($app)->toBeInstanceOf(\App\Application::class);
+    expect($app)->toBeInstanceOf(App\Application::class);
     expect(count(Application::roles('demo_app')))->toBe(1);
 
     $app_plan = AppPlan::factory()->create();
@@ -43,7 +43,7 @@ it('manages applications via service', function () {
 
     Application::persistentConfigurations($app, $app_plan);
 
-    expect(\App\Application::where('slug', 'demo_app')->first())->not->toBeNull();
+    expect(App\Application::where('slug', 'demo_app')->first())->not->toBeNull();
 
     $demo_app = Application::profile('demo_app');
     expect($demo_app)->toBeInstanceOf(AppProfile::class);

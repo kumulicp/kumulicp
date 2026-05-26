@@ -14,7 +14,6 @@ use Tests\Support\TestSupports;
  * WordPress, Nextcloud, and other apps have their own tests that reuse the
  * TestsApplicationLifecycle trait and add app-specific assertions.
  */
-
 uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {

@@ -235,7 +235,6 @@ describe('Register flow', function () {
         $plan = $this->support->createRegistrarPlan();
         $this->support->setSubscription($this->user->organization, $plan);
 
-
         // Pre-create the pending_registration domain as the select step would
         $this->pending = OrgDomain::factory()->create([
             'name' => 'flowtest.com',

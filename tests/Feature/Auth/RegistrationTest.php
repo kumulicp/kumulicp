@@ -68,11 +68,11 @@ it('registers new organization account', function (string $driver) {
             'type' => 'nonprofit',
             'terms_of_use' => true,
         ]);
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         if ($organization = Organization::where('slug', 'testing')->first()) {
             AccountManager::account($organization)->destroy();
         }
-        throw new \Exception($e->getMessage().$e->getTraceAsString());
+        throw new Exception($e->getMessage().$e->getTraceAsString());
     }
 
     $this->assertAuthenticated();

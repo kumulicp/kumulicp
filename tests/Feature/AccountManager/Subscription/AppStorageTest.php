@@ -2,6 +2,7 @@
 
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Application;
+use App\User;
 use Tests\Support\TestSupports;
 
 it('calculates total app instance storage', function (string $driver) {
@@ -13,7 +14,7 @@ it('calculates total app instance storage', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -41,7 +42,7 @@ it('calculates standard and basic user storage', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 

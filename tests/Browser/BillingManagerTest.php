@@ -1,7 +1,6 @@
 <?php
 
 use App\User;
-use App\Support\Facades\AccountManager;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 
@@ -12,7 +11,7 @@ describe('Billing Manager', function () {
         }
 
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
-        (new TestSupports())->addUsers();
+        (new TestSupports)->addUsers();
 
         DB::table('subscriptions')->insert([
             'organization_id' => 1,

@@ -36,13 +36,14 @@ describe('Change Base Plan', function () {
     it('can click Change Plan, select the new plan, and complete the plan change', function () {
         $newPlan = Plan::factory()->create([
             'name'            => 'Premium Plan',
+            'description' => 'Premium Plan',
             'org_type'        => 'superaccount',
             'payment_enabled' => false,
             'archive'         => false,
         ]);
 
         $orgId = $this->organization->id;
-
+        
         visit('/subscription/plans')
             ->assertSee('Change Plan')
             ->click('button:has-text("Change Plan")')

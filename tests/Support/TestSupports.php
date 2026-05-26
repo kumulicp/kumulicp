@@ -13,12 +13,12 @@ use App\Ldap\Models\Organization as LdapOrganization;
 use App\Organization;
 use App\Plan;
 use App\Services\SubscriptionService;
-use App\Tld;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
+use App\Tld;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -158,7 +158,7 @@ class TestSupports
             'is_allowed' => true,
         ]]);
 
-        OrganizationFacade::setOrganization(\App\Organization::find(1));
+        OrganizationFacade::setOrganization(Organization::find(1));
         AccountManager::accounts()->seeder('demo');
         app()->forgetInstance('settings');
     }
@@ -363,7 +363,7 @@ class TestSupports
      * Register DemoApp and return the Application + a ready AppPlan.
      * Does NOT create an AppInstance — use this before running ApplicationActivate.
      *
-     * @return array{app: \App\Application, plan: AppPlan}
+     * @return array{app: Application, plan: AppPlan}
      */
     public function prepareDemoApp(?int $webServerId = 1): array
     {

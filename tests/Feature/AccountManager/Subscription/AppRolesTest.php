@@ -2,6 +2,7 @@
 
 use App\Jobs\Applications\UpdateLdapGroups;
 use App\Support\Facades\AccountManager;
+use App\User;
 use Tests\Support\TestSupports;
 
 it('tracks app role access types', function (string $driver) {
@@ -13,7 +14,7 @@ it('tracks app role access types', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 

@@ -4,6 +4,7 @@ use App\Enums\PlanEntity;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
+use App\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\TestSupports;
@@ -19,7 +20,7 @@ it('reflects base pricing change', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -46,7 +47,7 @@ it('recalculates pricing when adding standard users', function (string $driver) 
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -70,7 +71,7 @@ it('recalculates pricing when adding basic users', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -109,7 +110,7 @@ it('recalculates pricing when adding additional storage', function (string $driv
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -141,7 +142,7 @@ it('compiles stripe pricing correctly', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 

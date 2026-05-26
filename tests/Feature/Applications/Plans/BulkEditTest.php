@@ -1,7 +1,7 @@
 <?php
 
-use App\AppPlan;
 use App\Application;
+use App\AppPlan;
 use App\User;
 use Tests\Support\TestSupports;
 
@@ -252,10 +252,10 @@ it('saves server_type per plan', function () {
 
 it('does not modify plans excluded from plan_ids during settings update', function () {
     $plan3 = AppPlan::factory()->create([
-        'name'           => 'Untouched Plan',
-        'description'    => 'Should not change',
+        'name' => 'Untouched Plan',
+        'description' => 'Should not change',
         'application_id' => $this->demoApp->id,
-        'archive'        => false,
+        'archive' => false,
     ]);
 
     $this->actingAs($this->user)->post(
@@ -274,10 +274,10 @@ it('does not modify plans excluded from plan_ids during settings update', functi
 
 it('cannot modify plans from another app via bulk edit', function () {
     $plan_other = AppPlan::factory()->create([
-        'name'           => 'Other App Plan',
-        'description'    => 'Should not change',
+        'name' => 'Other App Plan',
+        'description' => 'Should not change',
         'application_id' => 9999,
-        'archive'        => false,
+        'archive' => false,
     ]);
 
     $this->actingAs($this->user)->post(
@@ -285,8 +285,8 @@ it('cannot modify plans from another app via bulk edit', function () {
         [
             'plan_ids' => [$this->plan1->id, $plan_other->id],
             'plans' => [
-                $this->plan1->id  => bulkEditSettingsPayload(['name' => 'Changed', 'description' => 'Original Desc One']),
-                $plan_other->id   => bulkEditSettingsPayload(['name' => 'Hacked', 'description' => 'Other App Plan']),
+                $this->plan1->id => bulkEditSettingsPayload(['name' => 'Changed', 'description' => 'Original Desc One']),
+                $plan_other->id => bulkEditSettingsPayload(['name' => 'Hacked', 'description' => 'Other App Plan']),
             ],
         ]
     );
@@ -437,11 +437,11 @@ it('adds custom configuration for multiple plans', function () {
             'plan_ids' => [$this->plan1->id, $this->plan2->id],
             'plans' => [
                 $this->plan1->id => [
-                    'configurations'    => ['site-url' => 'https://plan1.example.com'],
+                    'configurations' => ['site-url' => 'https://plan1.example.com'],
                     'additionalConfigs' => ['site-url' => $additionalConfigMeta],
                 ],
                 $this->plan2->id => [
-                    'configurations'    => ['site-url' => 'https://plan2.example.com'],
+                    'configurations' => ['site-url' => 'https://plan2.example.com'],
                     'additionalConfigs' => ['site-url' => $additionalConfigMeta],
                 ],
             ],
@@ -466,11 +466,11 @@ it('stores different configuration values per plan', function () {
             'plan_ids' => [$this->plan1->id, $this->plan2->id],
             'plans' => [
                 $this->plan1->id => [
-                    'configurations'    => ['replica-count' => '1'],
+                    'configurations' => ['replica-count' => '1'],
                     'additionalConfigs' => ['replica-count' => $additionalConfigMeta],
                 ],
                 $this->plan2->id => [
-                    'configurations'    => ['replica-count' => '3'],
+                    'configurations' => ['replica-count' => '3'],
                     'additionalConfigs' => ['replica-count' => $additionalConfigMeta],
                 ],
             ],

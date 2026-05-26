@@ -6,7 +6,6 @@ use App\Providers\BillingServiceProvider;
 use App\Providers\DomainServiceProvider;
 use App\Providers\EmailServiceProvider;
 use App\Providers\EventServiceProvider;
-use App\Providers\TelescopeServiceProvider;
 use Illuminate\Auth\AuthServiceProvider;
 use Illuminate\Auth\Passwords\PasswordResetServiceProvider;
 use Illuminate\Broadcasting\BroadcastServiceProvider;

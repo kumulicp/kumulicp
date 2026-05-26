@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\Facades\AccountManager;
+use App\User;
 use Tests\Support\TestSupports;
 
 it('enforces max standard user limit', function (string $driver) {
@@ -14,7 +15,7 @@ it('enforces max standard user limit', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -44,7 +45,7 @@ it('enforces max additional storage limit', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
@@ -73,7 +74,7 @@ it('enforces max basic user limit', function (string $driver) {
     $support->createDemoAppPlans();
     $support->createBase2Plan();
     $support->addUsers();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 

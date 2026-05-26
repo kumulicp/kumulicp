@@ -19,12 +19,12 @@ describe('Admin Versions', function () {
 
         // Source version to copy from
         $this->sourceVersion = AppVersion::factory()->create([
-            'application_id'        => $this->demoApp->id,
-            'name'                  => '1.0',
-            'admin_path'            => '/source-admin',
+            'application_id' => $this->demoApp->id,
+            'name' => '1.0',
+            'admin_path' => '/source-admin',
             'announcement_location' => 'none',
-            'settings'              => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
-            'roles'                 => ['order' => $roles],
+            'settings' => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
+            'roles' => ['order' => $roles],
         ]);
 
         $this->allRoles = $roles;
@@ -114,8 +114,8 @@ describe('Admin Versions', function () {
         // Version with only the first role selected
         $version = AppVersion::factory()->create([
             'application_id' => $this->demoApp->id,
-            'name'           => '1.0-roles',
-            'roles'          => ['order' => [$selectedRole->id]],
+            'name' => '1.0-roles',
+            'roles' => ['order' => [$selectedRole->id]],
         ]);
 
         visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles")
@@ -125,12 +125,12 @@ describe('Admin Versions', function () {
 
         // Selected role must be in the left (selected) column
         $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
-        $page->assertPresent('#selected-role-' . $selectedRole->id);
-        $page->assertPresent('#available-role-' . $availableRole->id);
+        $page->assertPresent('#selected-role-'.$selectedRole->id);
+        $page->assertPresent('#available-role-'.$availableRole->id);
 
         // Verify selected role is NOT in available column and vice-versa
-        $page->assertNotPresent('#available-role-' . $selectedRole->id);
-        $page->assertNotPresent('#selected-role-' . $availableRole->id);
+        $page->assertNotPresent('#available-role-'.$selectedRole->id);
+        $page->assertNotPresent('#selected-role-'.$availableRole->id);
     });
 
     it('shows selected roles in the correct order', function () {
@@ -141,16 +141,16 @@ describe('Admin Versions', function () {
 
         $version = AppVersion::factory()->create([
             'application_id' => $this->demoApp->id,
-            'name'           => '1.0-order',
-            'roles'          => ['order' => $orderedIds],
+            'name' => '1.0-order',
+            'roles' => ['order' => $orderedIds],
         ]);
 
         $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
 
         // All roles should be in the selected column
         foreach ($orderedIds as $id) {
-            $page->assertPresent('#selected-role-' . $id);
-            $page->assertNotPresent('#available-role-' . $id);
+            $page->assertPresent('#selected-role-'.$id);
+            $page->assertNotPresent('#available-role-'.$id);
         }
 
         // Verify DOM order matches the stored order using script
@@ -163,7 +163,7 @@ describe('Admin Versions', function () {
             window.__orderCorrect = first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING ? true : false;
         ");
 
-        $result = $page->script("window.__orderCorrect");
+        $result = $page->script('window.__orderCorrect');
         expect($result)->toBeTrue();
     });
 
@@ -175,15 +175,15 @@ describe('Admin Versions', function () {
         // Start with only the first role selected
         $version = AppVersion::factory()->create([
             'application_id' => $this->demoApp->id,
-            'name'           => '1.0-drag',
-            'roles'          => ['order' => [$firstRole->id]],
+            'name' => '1.0-drag',
+            'roles' => ['order' => [$firstRole->id]],
         ]);
 
         $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
 
         // Verify initial state
-        $page->assertPresent('#selected-role-' . $firstRole->id);
-        $page->assertPresent('#available-role-' . $secondRole->id);
+        $page->assertPresent('#selected-role-'.$firstRole->id);
+        $page->assertPresent('#available-role-'.$secondRole->id);
 
         // Use Playwright drag to move second role from available to selected list
         $page->script("
@@ -231,10 +231,10 @@ describe('Admin Versions', function () {
         $userRole = $appRoles->skip(1)->first();
 
         $version = AppVersion::factory()->create([
-            'application_id'        => $this->demoApp->id,
-            'name'                  => '2.0',
+            'application_id' => $this->demoApp->id,
+            'name' => '2.0',
             'announcement_location' => 'none',
-            'roles'                 => ['order' => $appRoles->pluck('id')->toArray()],
+            'roles' => ['order' => $appRoles->pluck('id')->toArray()],
         ]);
 
         visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
@@ -259,10 +259,10 @@ describe('Admin Versions', function () {
         $roles = $this->demoApp->roles()->pluck('id')->toArray();
 
         $version = AppVersion::factory()->create([
-            'application_id'        => $this->demoApp->id,
-            'name'                  => '2.0',
+            'application_id' => $this->demoApp->id,
+            'name' => '2.0',
             'announcement_location' => 'none',
-            'roles'                 => ['order' => $roles],
+            'roles' => ['order' => $roles],
         ]);
 
         $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");

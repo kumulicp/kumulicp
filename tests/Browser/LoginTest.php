@@ -1,7 +1,5 @@
 <?php
 
-use App\User;
-
 describe('Login', function () {
     it('renders the login page and allows toggling remember me', function () {
         $page = visit('/login');
