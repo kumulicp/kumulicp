@@ -90,26 +90,3 @@ it('app plan returns empty stats regardless of settings', function () {
     expect($service->stats())->toBe([]);
 });
 
-it('package plan builds stripe pricing from configured price ids', function () {
-    $organization = Organization::find(1);
-    OrganizationFacade::setOrganization($organization);
-    $plan = makePackagePlanWithPriceIds();
-
-    $service = new BasePlanService($organization, $plan);
-
-    expect($plan->type)->toBe('package');
-    $pricing = $service->stripePricing();
-    expect($pricing)->toBeArray();
-    expect(array_key_exists('pkg_base_price', $pricing))->toBeTrue();
-});
-
-it('app plan returns empty stripe pricing even when price ids are configured', function () {
-    $organization = Organization::find(1);
-    OrganizationFacade::setOrganization($organization);
-
-    // base_1 has price_ids but is type='app'
-    $service = new BasePlanService($organization, $this->support->base_1);
-
-    expect($this->support->base_1->type)->toBe('app');
-    expect($service->stripePricing())->toBe([]);
-});

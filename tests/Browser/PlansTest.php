@@ -22,7 +22,7 @@ describe('Admin Plans', function () {
             ->fill('#planName input', 'My Package Plan')
             ->fill('#planDescription input', 'A package description')
             ->click('#planType')
-            ->click('text=Package')
+            ->click('[role=option]:text-is("Package")')
             ->click('#addPlanSubmit')
             ->assertPathIs('/admin/service/plans/'.Plan::where('name', 'My Package Plan')->first()?->id);
     });
@@ -33,7 +33,7 @@ describe('Admin Plans', function () {
             ->fill('#planName input', 'My App Plan')
             ->fill('#planDescription input', 'An app description')
             ->click('#planType')
-            ->click('text=Pay per App')
+            ->click('[role=option]:text-is("Pay per App")')
             ->click('#addPlanSubmit')
             ->assertPathIs('/admin/service/plans/'.Plan::where('name', 'My App Plan')->first()?->id);
     });
@@ -53,7 +53,7 @@ describe('Admin Plans', function () {
         $page = visit('/admin/service/plans/'.$plan->id);
         $page->assertDontSee('Changing the plan type');
         $page->click('#planType');
-        $page->click('text=Pay per App');
+        $page->click('[role=option]:text-is("Pay per App")');
         $page->assertSee('Changing the plan type');
     });
 
@@ -81,10 +81,7 @@ describe('Admin Plans', function () {
 
         $page = visit('/admin/service/plans/'.$plan->id);
         $page->assertSee('App Settings');
-        $hasMultiple = $page->script("
-            const selects = document.querySelectorAll('.va-select');
-            return Array.from(selects).some(el => el.hasAttribute('multiple'));
-        ");
+        $hasMultiple = $page->script("Array.from(document.querySelectorAll('.va-select')).some(el => el.hasAttribute('multiple'))");
         expect($hasMultiple)->toBeFalsy();
     });
 });

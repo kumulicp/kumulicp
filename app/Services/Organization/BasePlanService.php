@@ -70,28 +70,6 @@ class BasePlanService
         });
     }
 
-    public function stripePricing()
-    {
-        if ($this->plan->type === 'app') {
-            return [];
-        }
-
-        $pricing = [];
-
-        if ($this->plan->setting('base.price_id')) {
-            $pricing[$this->plan->setting('base.price_id')]['quantity'] = 1;
-        }
-
-        foreach ($this->pricingOptions() as $name => $option) {
-            if ($this->plan->setting("$name.price_id") && $this->org_service->countEntity($name) >= 0) {
-                $string_price_id = (string) $this->plan->setting("$name.price_id");
-                $pricing[$string_price_id]['quantity'] = $this->org_service->countEntity($name);
-            }
-        }
-
-        return $pricing;
-    }
-
     public function enabledApps()
     {
         $apps = [];
