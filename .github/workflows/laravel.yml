@@ -37,12 +37,12 @@ jobs:
       run: npm ci
     - name: Build Assets
       run: npm run build
-    - name: Generate key
-      run: php artisan key:generate
     - name: Directory Permissions
       run: |
         mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier
         chmod -R 777 storage bootstrap/cache
+    - name: Generate key
+      run: php artisan key:generate
     - name: Create Database
       run: |
         mkdir -p database
