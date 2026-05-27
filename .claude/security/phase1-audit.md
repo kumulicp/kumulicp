@@ -212,40 +212,45 @@ No default value. If `SESSION_SECURE_COOKIE` is absent from `.env`, this resolve
 ## Checklist Status
 
 ### 1.1 Composer / PHP
-- [x] `composer audit` — no CVEs flagged in locked versions (packages are current)
-- [x] Check `composer.json` for `*` pins — none found
+- [x] `composer audit` — no CVEs flagged in locked versions; added as blocking CI step ✓
+- [x] Check `composer.json` for `*` pins — none found ✓
 - [x] `laravel/framework` on latest patch — v11.51.0 ✓
 - [x] `ldaprecord-laravel`, `socialite`, `spatie/laravel-permission`, `cashier`, `ziggy` — all current ✓
-- [ ] **MEDIUM:** `minimum-stability: dev` — should be `stable`
-- [ ] Scan for abandoned/unmaintained packages — not yet run (requires network access to Packagist)
+- [x] `minimum-stability` changed from `dev` to `stable` ✓
+- [ ] Scan for abandoned/unmaintained packages — requires network access to Packagist; run manually or add a CI tool
 
 ### 1.2 NPM / JavaScript
-- [ ] `npm audit` — not run (no network/node_modules in audit environment); must be run in CI
-- [ ] **HIGH:** `vuestic-ui 1.10.4-next` — pre-release in production
+- [x] `npm audit --audit-level=high` added as blocking CI step ✓
+- [x] `vuestic-ui` pinned to stable `^1.10.3` — run `npm install` to update lock file ✓
 - [x] `axios ^1.13.2` — exceeds ≥1.6 requirement ✓
-- [ ] **HIGH:** `vue-tsc 0.35.0` — outdated (dev-only, LOW risk)
+- [ ] `vue-tsc 0.35.0` — outdated dev dependency; upgrade when convenient (LOW, dev-only)
 - [x] TinyMCE self-hosted via npm ✓
-- [ ] **HIGH:** `v-html` with dynamic data — 5 instances identified, unsanitized stored content
+- [x] `v-html` with dynamic data — all 5 instances resolved (purifier + strip_tags) ✓
 
 ### 1.3 PHP Static Analysis
-- [ ] `phpstan` / `psalm` — not run (requires dev dependencies installed); add to CI
+- [x] `larastan/larastan` added as dev dependency; `phpstan analyse` added to CI at level 5 ✓
 - [x] No `eval()`, `exec()`, `shell_exec()`, `system()` in integration code ✓
 - [x] No raw `DB::statement()` / `DB::select()` with string interpolation ✓
-- [ ] **CRITICAL:** `Integration.php:257` — `verify => false` for ALL HTTP clients
+- [x] `Integration.php` — TLS verification enabled; skipped only for `local`/`testing` environments ✓
 
 ### 1.4 Secret Scanning
-- [ ] **CRITICAL:** `.env.dev` committed to git with credentials
-- [ ] **HIGH:** `.gitignore` does not cover `.env.*` variants
-- [x] `.env.sample` has no real credentials ✓
+- [x] `.env.dev` removed from git tracking ✓
+- [x] `.gitignore` now covers `.env*` (except `.env.sample`) ✓
+- [x] `.env.sample` updated with all missing variables (no real credentials) ✓
 - [x] No `*.pem` / `*.key` files in git ✓
+
+### Session (noted during Phase 1)
+- [x] `secure` session cookie defaults to `true` ✓
+- [x] `same_site` changed from `lax` to `strict` ✓
+
+### CI/CD
+- [x] `actions/checkout` pinned to SHA `11bd71901bbe5b1630ceea73d27597364c9af683` ✓
+- [x] `composer audit`, `npm audit`, and `phpstan` added as blocking CI steps ✓
 
 ---
 
-## Recommended Immediate Actions (before Phase 2)
+## Phase 1 Complete
 
-1. **Fix `.gitignore`** to cover `.env.*` and remove `.env.dev` from tracking.
-2. **Set `verify => true`** in `Integration::client()` — highest-impact single-line fix.
-3. **Sanitize TinyMCE output** through `mews/purifier` before storing `announcement.description` and any other rich-text fields.
-4. **Set `secure` session cookie default to `true`** in `config/session.php`.
-5. **Pin `actions/checkout` to a SHA** in the GitHub Actions workflow.
-6. **Add `npm audit` and `composer audit`** as CI steps that fail on high/critical findings.
+All actionable findings resolved. Remaining items are deferred by design:
+- Abandoned package scan — run `composer outdated` + Packagist check manually or via a scheduled CI job
+- `vue-tsc` upgrade — low risk, dev-only; handle in a routine dependency update PR
