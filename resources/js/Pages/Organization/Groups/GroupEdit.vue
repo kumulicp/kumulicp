@@ -80,6 +80,7 @@ import { useForm } from '@inertiajs/vue3'
                   <template v-if="extension.input == 'va-checkbox'">
                     <component :is="extension.input"
                       v-model="form['extensions'][extension.id]"
+                      :id="extension.id"
                     />
                     <span v-if="extensions[extension.id] == true && form['extensions'][extension.id] == false">
                       error

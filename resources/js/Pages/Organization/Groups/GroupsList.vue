@@ -81,7 +81,7 @@ import { Link, useForm } from '@inertiajs/vue3'
               <td class="va-text-right">
                 <va-button
                   color="danger"
-                  :id="'delete'+group"
+                  :id="'delete-'+group.slug"
                   @click="showRemoveGroupModal(group)">
                   {{ $t('common.delete') }}
                 </va-button>

@@ -434,6 +434,19 @@ class TestSupports
         $this->demo_app = Application::where('slug', 'demo_app')->first();
     }
 
+    public function activateDemoAppWithStorage(int $storageAmount = 10, int $storageMax = 5): void
+    {
+        $this->activateDemoApp();
+
+        $demo_app = Application::where('slug', 'demo_app')->first();
+        $app_instance = $demo_app->instances()->first();
+        $plan = $app_instance->plan;
+        $settings = $plan->settings ?? [];
+        $settings['storage'] = ['max' => $storageMax, 'price' => 0, 'amount' => $storageAmount];
+        $plan->settings = $settings;
+        $plan->save();
+    }
+
     public function disableApps(): void
     {
         if ($app_1 = AppInstance::find(1)) {
