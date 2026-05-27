@@ -2,7 +2,8 @@
 .git/
 
 # environment config
-.env
+.env*
+!.env.sample
 
 #composer auth
 auth.json
