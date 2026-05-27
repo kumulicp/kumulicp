@@ -199,6 +199,7 @@ import { currencyByCode } from '@/constants/currencies'
               class="my-2"
               :messages="$t('admin.plans.maxUsersCaption')"
               immediateValidation
+              step="1"
             >
               <template #appendInner>
                 {{ $t('admin.plans.users') }}
@@ -211,6 +212,7 @@ import { currencyByCode } from '@/constants/currencies'
               type="number"
               immediateValidation
               min="0"
+              step="1"
             >
               <template #appendInner>
                 GB
@@ -259,6 +261,7 @@ import { currencyByCode } from '@/constants/currencies'
               :messages="$t('admin.plans.maxBasicUsersCaption')"
               class="my-2"
               immediateValidation
+              step="1"
             >
               <template #appendInner>
                 {{ $t('admin.plans.users') }}
@@ -271,6 +274,7 @@ import { currencyByCode } from '@/constants/currencies'
               immediateValidation
               type="number"
               min="0"
+              step="1"
             >
               <template #appendInner>
                 GB
@@ -283,6 +287,7 @@ import { currencyByCode } from '@/constants/currencies'
               immediateValidation
               type="number"
               min="0"
+              step="1"
             >
               <template #appendInner>
                 users
@@ -322,6 +327,7 @@ import { currencyByCode } from '@/constants/currencies'
             <va-input
               type="number"
               min="0"
+              step="1"
               v-model="form.storage.max"
               :label="$t('admin.plans.maxAdditionalStorage')"
               :messages="$t('admin.plans.maxAdditionalStorageCaption')"
@@ -339,6 +345,7 @@ import { currencyByCode } from '@/constants/currencies'
               immediateValidation
               type="number"
               min="0"
+              step="1"
             >
               <template #appendInner>
                 GB
@@ -397,6 +404,7 @@ import { currencyByCode } from '@/constants/currencies'
           <va-input
             type="number"
             min="0"
+            step="1"
             v-model="form.email.max"
             :label="$t('admin.plans.maxEmails')"
             class="my-2"
@@ -413,6 +421,7 @@ import { currencyByCode } from '@/constants/currencies'
             immediateValidation
             type="number"
             min="0"
+            step="1"
           >
             <template #appendInner>
               GB

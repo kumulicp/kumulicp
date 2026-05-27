@@ -147,7 +147,7 @@ class AdditionalStorageService
     public function additionalStorageOptions()
     {
         $max_storage = $this->maxAllowedAdditionalStorage();
-        $storage_amount = $this->plan->setting('storage.amount');
+        $storage_amount = (int) $this->plan->setting('storage.amount');
 
         $options = [];
 
@@ -164,8 +164,8 @@ class AdditionalStorageService
     public function additionalStorageUserOptions(string $access_type)
     {
         $max_storage = $this->maxAllowedAdditionalStorage();
-        $storage_amount = $this->plan->setting('storage.amount');
-        $user_storage = $this->plan->setting($access_type.'.storage');
+        $storage_amount = (int) $this->plan->setting('storage.amount');
+        $user_storage = (int) $this->plan->setting($access_type.'.storage');
 
         $options = [];
 
