@@ -1,6 +1,6 @@
 <?php
 
-use App\AdditionalStorage;
+use App\Application;
 use App\User;
 use Tests\Support\TestSupports;
 
@@ -155,7 +155,7 @@ describe('Group Storage Extension', function () {
 
     it('shows max reached message when storage limit is exceeded', function () {
         // Activate with a very tight plan: max = 1 storage unit
-        $demo_app = \App\Application::where('slug', 'demo_app')->first();
+        $demo_app = Application::where('slug', 'demo_app')->first();
         $app_instance = $demo_app->instances()->first();
         $plan = $app_instance->plan;
         $settings = $plan->settings ?? [];

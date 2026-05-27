@@ -1,6 +1,7 @@
 <?php
 
 use App\Integrations\Billing\Stripe\StripeGateway;
+use App\User;
 use Illuminate\Support\Arr;
 use Tests\Support\TestSupports;
 
@@ -8,7 +9,7 @@ it('compiles stripe pricing correctly', function () {
     setupAccountManagerDriver('db');
     $support = new TestSupports;
     $support->seed();
-    $admin = \App\User::where('username', 'demo')->firstOrFail();
+    $admin = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($admin);
 
     $support->base_1->payment_enabled = true;

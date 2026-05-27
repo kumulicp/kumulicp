@@ -5,7 +5,6 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\User;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\TestSupports;
 
@@ -130,4 +129,3 @@ it('recalculates pricing when adding additional storage', function (string $driv
     expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toEqual(4);
     expect($app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price'])->toEqual(4.00);
 })->with('account_manager_drivers');
-

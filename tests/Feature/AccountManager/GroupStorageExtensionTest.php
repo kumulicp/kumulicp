@@ -2,7 +2,6 @@
 
 use App\AdditionalStorage;
 use App\Application;
-use App\Support\Facades\AccountManager;
 use App\User;
 use Tests\Support\TestSupports;
 

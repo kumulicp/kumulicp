@@ -438,7 +438,7 @@ class TestSupports
     {
         $this->activateDemoApp();
 
-        $demo_app = \App\Application::where('slug', 'demo_app')->first();
+        $demo_app = Application::where('slug', 'demo_app')->first();
         $app_instance = $demo_app->instances()->first();
         $plan = $app_instance->plan;
         $settings = $plan->settings ?? [];
