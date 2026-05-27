@@ -129,10 +129,6 @@ expect()->extend('toBeOne', function () {
 // Named dataset — use ->with('account_manager_drivers') on any test.
 dataset('account_manager_drivers', ['db', 'ldap']);
 
-// Named dataset — use ->with('plan_types') on any subscription test that should
-// cover both base plan type modes ('app' = per-app limits, 'package' = org-level limits).
-dataset('plan_types', ['app', 'package']);
-
 /**
  * Swap the AccountManager singleton to the given driver.
  * Must be called before TestSupports::seed() since seed() reads the env var.

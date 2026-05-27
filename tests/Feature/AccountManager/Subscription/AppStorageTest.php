@@ -4,7 +4,7 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Application;
 use Tests\Support\TestSupports;
 
-it('calculates total app instance storage', function (string $driver, string $plan_type) {
+it('calculates total app instance storage', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     setupAccountManagerDriver($driver);
     $support = new TestSupports;
@@ -17,7 +17,7 @@ it('calculates total app instance storage', function (string $driver, string $pl
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $support->setSubscription($admin->organization, $support->basePlan2OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_2, $support->demo_app_2, $demoApp);
 
     Application::roles($support->demo_app);
     expect(Application::instance($demoApp)->storage()->calculateTotalAppStorage())->toBe(2);
@@ -29,9 +29,9 @@ it('calculates total app instance storage', function (string $driver, string $pl
 
     expect(Application::instance($demoApp)->storage()->calculateTotalAppStorage())->toBe(8);
     expect(Application::instance($demoApp)->storage()->totalAppStorage())->toBe(8);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
 
-it('calculates standard and basic user storage', function (string $driver, string $plan_type) {
+it('calculates standard and basic user storage', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     $this->withoutExceptionHandling();
     setupAccountManagerDriver($driver);
@@ -45,7 +45,7 @@ it('calculates standard and basic user storage', function (string $driver, strin
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_1, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_1, $support->demo_app_1, $demoApp);
 
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(1);
@@ -53,9 +53,9 @@ it('calculates standard and basic user storage', function (string $driver, strin
     grantPermission('testing1', $demoApp->id, ['basic_demo_role']);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(0.5);
 
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_1, $support->demo_app_2, $demoApp);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(1);
 
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(2);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');

@@ -8,7 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\TestSupports;
 
-it('reflects base pricing change', function (string $driver, string $plan_type) {
+it('reflects base pricing change', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     $this->withoutExceptionHandling();
     $this->followingRedirects();
@@ -23,11 +23,10 @@ it('reflects base pricing change', function (string $driver, string $plan_type) 
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $base_plan = $support->basePlan1OfType($plan_type);
-    $base_plan->payment_enabled = true;
-    $base_plan->save();
+    $support->base_1->payment_enabled = true;
+    $support->base_1->save();
 
-    $support->setSubscription($admin->organization, $base_plan, $support->demo_app_1, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_1, $support->demo_app_1, $demoApp);
 
     $base_pricing = Subscription::refresh()->base();
 
@@ -35,9 +34,9 @@ it('reflects base pricing change', function (string $driver, string $plan_type) 
     expect($base_pricing->optionStats('standard')['total_price'])->toEqual(1.00);
     expect($base_pricing->optionStats('basic')['total_price'])->toEqual(0.00);
     expect($base_pricing->optionStats('storage')['total_price'])->toEqual(0.00);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
 
-it('recalculates pricing when adding standard users', function (string $driver, string $plan_type) {
+it('recalculates pricing when adding standard users', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     $this->withoutExceptionHandling();
     setupAccountManagerDriver($driver);
@@ -51,16 +50,16 @@ it('recalculates pricing when adding standard users', function (string $driver, 
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $support->setSubscription($admin->organization, $support->basePlan2OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_2, $support->demo_app_2, $demoApp);
 
     $base_pricing = Subscription::base();
     expect($base_pricing->optionStats('standard')['total_price'])->toEqual(2.00);
 
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     expect($base_pricing->optionStats('standard')['total_price'])->toEqual(4.00);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
 
-it('recalculates pricing when adding basic users', function (string $driver, string $plan_type) {
+it('recalculates pricing when adding basic users', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     $this->withoutExceptionHandling();
     $this->followingRedirects();
@@ -75,7 +74,7 @@ it('recalculates pricing when adding basic users', function (string $driver, str
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $support->setSubscription($admin->organization, $support->basePlan2OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_2, $support->demo_app_2, $demoApp);
 
     $base_pricing = Subscription::all()->base();
     expect($base_pricing->optionStats('basic')['total_price'])->toEqual(0.00);
@@ -95,9 +94,9 @@ it('recalculates pricing when adding basic users', function (string $driver, str
 
     grantPermission('testing3', $demoApp->id, ['basic_demo_role']);
     expect($base_pricing->optionStats('basic')['total_price'])->toEqual(4.00);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
 
-it('recalculates pricing when adding additional storage', function (string $driver, string $plan_type) {
+it('recalculates pricing when adding additional storage', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     Http::fake([
         'https://demo-nextcloud.example.com:443/ocs/v1.php/cloud/users/testing1' => ['hey' => 'there'],
@@ -115,7 +114,7 @@ it('recalculates pricing when adding additional storage', function (string $driv
     $demoApp = $support->demo_app->instances()->first();
 
     Organization::setOrganization($admin->organization);
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->base_1, $support->demo_app_2, $demoApp);
 
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     setAdditionalStorage('testing1', $demoApp->id, 1);
@@ -129,9 +128,9 @@ it('recalculates pricing when adding additional storage', function (string $driv
 
     expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toEqual(4);
     expect($app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price'])->toEqual(4.00);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
 
-it('compiles stripe pricing correctly', function (string $driver, string $plan_type) {
+it('compiles stripe pricing correctly', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     $this->withoutExceptionHandling();
     $this->followingRedirects();
@@ -146,11 +145,10 @@ it('compiles stripe pricing correctly', function (string $driver, string $plan_t
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $base_plan = $support->basePlan1OfType($plan_type);
-    $base_plan->payment_enabled = true;
-    $base_plan->save();
+    $support->base_1->payment_enabled = true;
+    $support->base_1->save();
 
-    $support->setSubscription($admin->organization, $base_plan);
+    $support->setSubscription($admin->organization, $support->base_1);
     $base_pricing = Subscription::refresh()->base();
     $stripe = $base_pricing->stripePricing();
 
@@ -160,4 +158,4 @@ it('compiles stripe pricing correctly', function (string $driver, string $plan_t
     expect(Arr::get($stripe, 'stripe_storage.quantity'))->toEqual(0);
     expect(Arr::get($stripe, 'stripe_standard.quantity'))->toEqual(1);
     expect(Arr::get($stripe, 'stripe_application.quantity'))->toEqual(1);
-})->with('account_manager_drivers')->with('plan_types');
+})->with('account_manager_drivers');
