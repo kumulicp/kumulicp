@@ -176,7 +176,7 @@ import { useForm } from '@inertiajs/vue3'
               <span v-else class="va-text-secondary">—</span>
             </td>
           </tr>
-          <tr v-if="app.can.shareable">
+          <tr v-if="app.can.shareable && $page.props.flags.sharedApps">
             <td class="setting-label">{{ $t('admin.plans.sharedApp') }}</td>
             <td v-for="plan in plans" :key="plan.id">
               <va-select

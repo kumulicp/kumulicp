@@ -20,11 +20,11 @@ describe('Fake Payment Subscription', function () {
 
     it('can subscribe to a payment-enabled plan using the fake payment widget', function () {
         $paidPlan = Plan::factory()->create([
-            'name'            => 'Paid Plan',
-            'description'     => 'A plan requiring payment',
-            'org_type'        => 'superaccount',
+            'name' => 'Paid Plan',
+            'description' => 'A plan requiring payment',
+            'org_type' => 'superaccount',
             'payment_enabled' => true,
-            'archive'         => false,
+            'archive' => false,
         ]);
 
         $orgId = $this->organization->id;

@@ -17,6 +17,7 @@
         "laravel/ui": "^4.0",
         "mews/purifier": "^3.4",
         "nwidart/laravel-modules": "^11.1",
+        "offload-project/laravel-toggle": "*",
         "socialiteproviders/manager": "^4.9",
         "spatie/laravel-backup": "^9.2",
         "spatie/laravel-permission": "^6.9",

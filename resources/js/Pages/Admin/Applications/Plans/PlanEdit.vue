@@ -130,7 +130,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         />
         <template v-if="form.server_type == 'shared'">
           <va-select
-            v-if="app.can.shareable"
+            v-if="app.can.shareable && $page.props.flags.sharedApps"
             v-model="form.shared_app"
             class="my-2"
             :label="$t('admin.plans.sharedApp')"

@@ -6,6 +6,7 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
+use OffloadProject\Toggle\Facades\Toggle;
 
 class MenuService
 {
@@ -62,7 +63,7 @@ class MenuService
                         'name' => __('labels.shared_apps'),
                         'url' => '/admin/service/shared-apps',
                         'icon' => 'fa-circle',
-                        'perm' => $admin,
+                        'perm' => $admin && Toggle::active('shared-apps'),
                         'external' => false,
                         'order' => 300,
                     ],
@@ -228,7 +229,7 @@ class MenuService
                         'name' => __('labels.suborganizations'),
                         'url' => '/settings/suborganizations',
                         'icon' => 'fa-building',
-                        'perm' => Gate::allows('view-suborganizations'),
+                        'perm' => Toggle::active('sub-organizations') && Gate::allows('view-suborganizations'),
                         'external' => false,
                         'order' => 200,
                     ],
@@ -244,7 +245,7 @@ class MenuService
                         'name' => __('labels.email_accounts'),
                         'url' => '/settings/email/accounts',
                         'icon' => 'fa-envelope',
-                        'perm' => Gate::allows('view-emails'),
+                        'perm' => Toggle::active('emails') && Gate::allows('view-emails'),
                         'external' => false,
                         'order' => 400,
                     ],

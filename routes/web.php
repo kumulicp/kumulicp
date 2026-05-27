@@ -182,10 +182,10 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('{announcement}/archive', 'Admin\Announcements@archive')->name('server.announcements.archive');
                 Route::get('{announcement}/notify', 'Admin\Announcements@notify')->name('server.announcements.notify');
             });
-            Route::prefix('shared-apps')->group(function () {
+            Route::prefix('shared-apps')->middleware('toggle:shared-apps')->group(function () {
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
             });
-            Route::resource('shared-apps', 'Admin\SharedApps');
+            Route::resource('shared-apps', 'Admin\SharedApps')->middleware('toggle:shared-apps');
             Route::prefix('domains')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');
                 Route::get('tlds/refresh', 'Admin\Tlds@refresh')->name('service.domains.tlds.refresh');
@@ -255,7 +255,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('', 'Account\Organization@index')->name('settings.organization');
             Route::put('', 'Account\Organization@update')->name('settings.organization.update');
         });
-        Route::prefix('suborganizations')->group(function () {
+        Route::prefix('suborganizations')->middleware('toggle:sub-organizations')->group(function () {
             Route::get('', 'Account\Organization\Suborganization@index')->name('settings.suborganizations');
             Route::post('', 'Account\Organization\Suborganization@store')->name('settings.suborganizations.store');
             Route::get('{organization}', 'Account\Organization\Suborganization@edit')->name('settings.suborganizations.edit');
@@ -287,7 +287,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('enable_email', 'Account\Web\Domains@enable_email')->name('organization.settings.web.domains.enable_email');
             });
         });
-        Route::prefix('email')->group(function () {
+        Route::prefix('email')->middleware('toggle:emails')->group(function () {
             Route::get('setup', 'Account\Email\Accounts@setup')->name('settings.email.setup');
             Route::get('activate', 'Account\Email\Accounts@activate')->name('organization.settings.email.activate');
             Route::prefix('forwarders')->group(function () {

@@ -79,7 +79,8 @@ import { useForm, Link } from '@inertiajs/vue3'
             :error="$page.props.errors.payment_enabled"
             :error-messages="$page.props.errors.payment_enabled"
             />
-          <va-checkbox v-model="form.suborganizations.enabled"
+          <va-checkbox v-if="$page.props.flags.subOrganizations"
+            v-model="form.suborganizations.enabled"
             :label="$t('admin.plans.enableSuborganizations')"
             class="my-2"
             immediateValidation
@@ -154,168 +155,168 @@ import { useForm, Link } from '@inertiajs/vue3'
         </template>
       </AdminSettings>
       <template v-if="form.type === 'package'">
-      <va-list-separator class="my-1" fit />
-      <AdminSettings>
-        <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
-        <template #settings>
-          <va-input
-            type="number"
-            v-model="form.standard.price"
-            :label="$t('admin.plans.price')"
-            class="my-2"
-            :messages="$t('admin.plans.standardUserPriceCaption')"
-            immediateValidation
-            min="0"
-            step=".01"
-          >
-            <template #prependInner>
-              $
-            </template>
-          </va-input>
-          <va-input
-            type="number"
-            v-model="form.standard.max"
-            :label="$t('admin.plans.maxUsers')"
-            class="my-2"
-            :messages="$t('admin.plans.maxUsersCaption')"
-            immediateValidation
-          >
-            <template #appendInner>
-              {{ $t('admin.plans.users') }}
-            </template>
-          </va-input>
-          <va-input v-model="form.standard.price_id"
-            :label="$t('admin.plans.productID')"/>
-          <va-input v-model="form.standard.storage"
-            :label="$t('admin.plans.baseStorage')"
-            class="my-2"
-            :messages="$t('admin.plans.standardUserStorageCaption')"
-            type="number"
-            immediateValidation
-            min="0"
-          >
-            <template #appendInner>
-              GB
-            </template>
-          </va-input>
-        </template>
-      </AdminSettings>
-      <va-list-separator class="my-1" fit />
-      <AdminSettings>
-        <template #name>{{ $t('admin.plans.basicUserOptions') }}</template>
-        <template #settings>
-          <va-input v-model="form.basic.name"
-            :label="$t('admin.plans.name')"
-            :messages="$t('admin.plans.basicUserNameCaption')"
-            class="my-2"
-            immediateValidation />
-          <va-input
-            type="number"
-            v-model="form.basic.price"
-            :label="$t('admin.plans.price')"
-            :messages="$t('admin.plans.basicUserPriceCaption')"
-            class="my-2"
-            immediateValidation
-            min="0"
-            step=".01"
-          >
-            <template #prependInner>
-              $
-            </template>
-          </va-input>
-          <va-input
-            type="number"
-            v-model="form.basic.max"
-            :label="$t('admin.plans.maxUsers')"
-            :messages="$t('admin.plans.maxBasicUsersCaption')"
-            class="my-2"
-            immediateValidation
-          >
-            <template #appendInner>
-              {{ $t('admin.plans.users') }}
-            </template>
-          </va-input>
-          <va-input v-model="form.basic.price_id"
-            :label="$t('admin.plans.productID')"
-            class="my-2"
-            immediateValidation />
-          <va-input v-model="form.basic.storage"
-            :label="$t('admin.plans.baseStorage')"
-            :messages="$t('admin.plans.basicUserStorageCaption')"
-            class="my-2"
-            immediateValidation
-            type="number"
-            min="0"
-          >
-            <template #appendInner>
-              GB
-            </template>
-          </va-input>
-          <va-input v-model="form.basic.amount"
-            :label="$t('admin.plans.usersPerPrice')+form.basic.price"
-            :messages="$t('admin.plans.usersPerPriceCaption')"
-            class="my-2"
-            immediateValidation
-            type="number"
-            min="0"
-          >
-            <template #appendInner>
-              GB
-            </template>
-          </va-input>
-        </template>
-      </AdminSettings>
-      <va-list-separator class="my-1" fit />
-      <AdminSettings>
-        <template #name>{{ $t('admin.plans.additionalStorageOptions') }}</template>
-        <template #settings>
-          <va-input
-            type="number"
-            v-model="form.storage.price"
-            :label="$t('admin.plans.price')"
-            :messages="$t('admin.plans.additionalStoragePriceCaption')"
-            class="my-2"
-            immediateValidation
-            min="0"
-            step=".01"
-          >
-            <template #prependInner>
-              $
-            </template>
-          </va-input>
-          <va-input
-            type="number"
-            min="0"
-            v-model="form.storage.max"
-            :label="$t('admin.plans.maxAdditionalStorage')"
-            :messages="$t('admin.plans.maxAdditionalStorageCaption')"
-            class="my-2"
-            immediateValidation
-          >
-            <template #appendInner>
-              GB
-            </template>
-          </va-input>
-          <va-input v-model="form.storage.price_id"
+        <va-list-separator class="my-1" fit />
+        <AdminSettings>
+          <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
+          <template #settings>
+            <va-input
+              type="number"
+              v-model="form.standard.price"
               :label="$t('admin.plans.price')"
-            immediateValidation />
-          <va-input v-model="form.storage.amount"
-            :label="$t('admin.plans.quantity')"
-            :messages="$t('admin.plans.additionalStorageQuantityCaption')"
-            class="my-2"
-            immediateValidation
-            type="number"
-            min="0"
-          >
-            <template #appendInner>
-              GB
-            </template>
-          </va-input>
-        </template>
-      </AdminSettings>
+              class="my-2"
+              :messages="$t('admin.plans.standardUserPriceCaption')"
+              immediateValidation
+              min="0"
+              step=".01"
+            >
+              <template #prependInner>
+                $
+              </template>
+            </va-input>
+            <va-input
+              type="number"
+              v-model="form.standard.max"
+              :label="$t('admin.plans.maxUsers')"
+              class="my-2"
+              :messages="$t('admin.plans.maxUsersCaption')"
+              immediateValidation
+            >
+              <template #appendInner>
+                {{ $t('admin.plans.users') }}
+              </template>
+            </va-input>
+            <va-input v-model="form.standard.price_id"
+              :label="$t('admin.plans.productID')"/>
+            <va-input v-model="form.standard.storage"
+              :label="$t('admin.plans.baseStorage')"
+              class="my-2"
+              :messages="$t('admin.plans.standardUserStorageCaption')"
+              type="number"
+              immediateValidation
+              min="0"
+            >
+              <template #appendInner>
+                GB
+              </template>
+            </va-input>
+          </template>
+        </AdminSettings>
+        <va-list-separator class="my-1" fit />
+        <AdminSettings>
+          <template #name>{{ $t('admin.plans.basicUserOptions') }}</template>
+          <template #settings>
+            <va-input v-model="form.basic.name"
+              :label="$t('admin.plans.name')"
+              :messages="$t('admin.plans.basicUserNameCaption')"
+              class="my-2"
+              immediateValidation />
+            <va-input
+              type="number"
+              v-model="form.basic.price"
+              :label="$t('admin.plans.price')"
+              :messages="$t('admin.plans.basicUserPriceCaption')"
+              class="my-2"
+              immediateValidation
+              min="0"
+              step=".01"
+            >
+              <template #prependInner>
+                $
+              </template>
+            </va-input>
+            <va-input
+              type="number"
+              v-model="form.basic.max"
+              :label="$t('admin.plans.maxUsers')"
+              :messages="$t('admin.plans.maxBasicUsersCaption')"
+              class="my-2"
+              immediateValidation
+            >
+              <template #appendInner>
+                {{ $t('admin.plans.users') }}
+              </template>
+            </va-input>
+            <va-input v-model="form.basic.price_id"
+              :label="$t('admin.plans.productID')"
+              class="my-2"
+              immediateValidation />
+            <va-input v-model="form.basic.storage"
+              :label="$t('admin.plans.baseStorage')"
+              :messages="$t('admin.plans.basicUserStorageCaption')"
+              class="my-2"
+              immediateValidation
+              type="number"
+              min="0"
+            >
+              <template #appendInner>
+                GB
+              </template>
+            </va-input>
+            <va-input v-model="form.basic.amount"
+              :label="$t('admin.plans.usersPerPrice')+form.basic.price"
+              :messages="$t('admin.plans.usersPerPriceCaption')"
+              class="my-2"
+              immediateValidation
+              type="number"
+              min="0"
+            >
+              <template #appendInner>
+                GB
+              </template>
+            </va-input>
+          </template>
+        </AdminSettings>
+        <va-list-separator class="my-1" fit />
+        <AdminSettings>
+          <template #name>{{ $t('admin.plans.additionalStorageOptions') }}</template>
+          <template #settings>
+            <va-input
+              type="number"
+              v-model="form.storage.price"
+              :label="$t('admin.plans.price')"
+              :messages="$t('admin.plans.additionalStoragePriceCaption')"
+              class="my-2"
+              immediateValidation
+              min="0"
+              step=".01"
+            >
+              <template #prependInner>
+                $
+              </template>
+            </va-input>
+            <va-input
+              type="number"
+              min="0"
+              v-model="form.storage.max"
+              :label="$t('admin.plans.maxAdditionalStorage')"
+              :messages="$t('admin.plans.maxAdditionalStorageCaption')"
+              class="my-2"
+              immediateValidation
+            >
+              <template #appendInner>
+                GB
+              </template>
+            </va-input>
+            <va-input v-model="form.storage.price_id"
+                :label="$t('admin.plans.price')"
+              immediateValidation />
+            <va-input v-model="form.storage.amount"
+              :label="$t('admin.plans.quantity')"
+              :messages="$t('admin.plans.additionalStorageQuantityCaption')"
+              class="my-2"
+              immediateValidation
+              type="number"
+              min="0"
+            >
+              <template #appendInner>
+                GB
+              </template>
+            </va-input>
+          </template>
+        </AdminSettings>
       </template>
-      <va-list-separator v-if="email_servers.length > 0" class="my-1" fit />
-      <AdminSettings v-if="email_servers.length > 0">
+      <va-list-separator v-if="$page.props.flags.emails && email_servers.length > 0" class="my-1" fit />
+      <AdminSettings v-if="$page.props.flags.emails && email_servers.length > 0">
         <template #name>{{ $t('admin.plans.emailOptions') }}</template>
         <template #settings>
           <va-checkbox v-model="form.email_enabled"
