@@ -57,7 +57,7 @@ describe('Admin Settings', function () {
             ->fill('#label input', 'My Provider')
             ->click('#submit')
             ->assertSee('Provider added')
-            ->assertSee('My Provider');
+            ->assertValue('#label input', 'My Provider');
 
         expect(SsoProvider::where('name', 'my-provider')->exists())->toBeTrue();
     });
