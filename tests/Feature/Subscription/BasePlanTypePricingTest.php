@@ -89,4 +89,3 @@ it('app plan returns empty stats regardless of settings', function () {
     expect($this->support->base_1->type)->toBe('app');
     expect($service->stats())->toBe([]);
 });
-

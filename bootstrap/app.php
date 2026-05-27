@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\EnsureFeatureEnabled;
-use App\Http\Middleware\SetupAwareAuthenticate;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SetupAwareAuthenticate;

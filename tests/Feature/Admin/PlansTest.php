@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Application;
+use App\AppPlan;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\AccountManager;
@@ -394,8 +396,8 @@ class PlansTest extends TestCase
         $user = $this->adminUser();
         $plan = Plan::factory()->create(['type' => 'app']);
 
-        $app = \App\Application::factory()->create(['slug' => 'test_app_norm', 'name' => 'Test App Norm', 'enabled' => true]);
-        $appPlan = \App\AppPlan::factory()->create(['application_id' => $app->id]);
+        $app = Application::factory()->create(['slug' => 'test_app_norm', 'name' => 'Test App Norm', 'enabled' => true]);
+        $appPlan = AppPlan::factory()->create(['application_id' => $app->id]);
 
         $this->actingAs($user)
             ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
