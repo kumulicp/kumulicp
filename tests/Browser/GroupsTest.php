@@ -1,6 +1,7 @@
 <?php
 
 use App\User;
+use Tests\Support\TestSupports;
 
 describe('Groups', function () {
     beforeEach(function () {
@@ -8,12 +9,16 @@ describe('Groups', function () {
         $this->actingAs($user);
     });
 
+    afterEach(function () {
+        (new TestSupports)->cleanLdap();
+    });
+
     it('can create, update and delete a group', function () {
         visit('/groups')
             ->click('#addGroup')
             ->fill('#name input', 'Engineering Team')
             ->click('#category')
-            ->click('text=Other')
+            ->click('text="Other"')
             ->click('#submit')
             ->assertSee('Edit Engineering Team Group')
             ->assertValue('#name input', 'Engineering Team')
@@ -21,7 +26,7 @@ describe('Groups', function () {
             ->click('#submit')
             ->assertSee('Updated Name');
         visit('/groups')
-            ->click('.table-row button')
+            ->click('tr:has-text("Updated Name") button')
             ->assertSee('Remove Updated Name?')
             ->click('#delete')
             ->assertPathIs('/groups')

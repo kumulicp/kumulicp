@@ -77,6 +77,24 @@ The global `beforeEach` in `tests/Pest.php` calls `(new TestSupports())->seed()`
 
 `RefreshDatabase` is applied to the Browser suite in `tests/Pest.php`. It works because pest-plugin-browser runs in-process — DB transactions wrap both test code and HTTP requests, so seeded data is visible to the server.
 
+### LDAP cleanup in browser tests
+
+Any browser test that interacts with groups or users **must** call `cleanLdap()` in an `afterEach` hook inside the `describe` block. Without this, LDAP entries from one test bleed into subsequent tests and cause strict-mode violations or assertion failures on group/user list pages.
+
+```php
+use Tests\Support\TestSupports;
+
+describe('Groups', function () {
+    afterEach(function () {
+        (new TestSupports())->cleanLdap();
+    });
+
+    // tests...
+});
+```
+
+This mirrors the scoped `afterEach` already wired for `Feature/AccountManager` and `Feature/Auth` in `tests/Pest.php`. The `cleanLdap()` method is a no-op when the LDAP driver is not active, so it is safe to call unconditionally.
+
 ## Writing all tests
 
 When running tests that target basic or minimal access types, make sure the user's organization's plan or app plan has the basic or minimal access type label added.
