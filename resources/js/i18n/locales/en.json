@@ -174,7 +174,10 @@
       "removeMessage": "Are you sure you want to remove {name}? This action is permanent.",
       "edit": "Edit",
       "helmChartValues": "Helm Chart Values",
-      "serverValues": "Server - Values"
+      "serverValues": "Server - Values",
+      "backupServer": "Backup Server",
+      "editBackupServer": "Edit Backup Server",
+      "none": "None"
     },
     "sharedApps": {
       "apps": "Apps",

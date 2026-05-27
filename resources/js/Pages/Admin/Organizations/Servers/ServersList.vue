@@ -25,7 +25,7 @@ import { useForm } from '@inertiajs/vue3'
           <td>{{ server.type }}</td>
           <td>{{ server.backup_server_name ?? $t('admin.servers.none') }}</td>
           <td>
-            <va-button size="small" @click="openEditModal(server)">{{ $t('common.edit') }}</va-button>
+            <va-button @click="openEditModal(server)">{{ $t('common.edit') }}</va-button>
           </td>
         </tr>
       </tbody>
