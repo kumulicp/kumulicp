@@ -5,6 +5,18 @@ namespace App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property int|null $app_instance_id
+ * @property int|null $parent_domain_id
+ * @property string $host
+ * @property string|null $status
+ * @property-read \App\Organization $organization
+ * @property-read \App\AppInstance|null $app_instance
+ * @property-read \App\OrgDomain|null $domain
+ * @property-read \App\AppInstance|null $primary_app_instance
+ */
 class OrgSubdomain extends Model
 {
     use HasFactory;

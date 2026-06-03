@@ -40,8 +40,8 @@ class Settings extends Controller
             'welcome_page' => 'string|nullable',
             'primary_color' => 'nullable|string|max:10',
             'secondary_color' => 'nullable|string|max:10',
-            'support_email' => 'nullable|email|max:100',
-            'error_email' => 'nullable|email|max:100',
+            'support_email' => 'nullable|email:rfc,filter|max:100',
+            'error_email' => 'nullable|email:rfc,filter|max:100',
         ]);
 
         SettingsFacade::update('base_domain', $validated['base_domain']);

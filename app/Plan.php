@@ -6,6 +6,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property int|null $email_server_id
+ * @property array|null $app_plans
+ * @property array|null $settings
+ * @property array|null $features
+ * @property bool $is_default
+ * @property bool $payment_enabled
+ * @property bool $domain_enabled
+ * @property bool $email_enabled
+ * @property bool $archive
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $subscribers
+ * @property-read \App\Server|null $email_server
+ */
 class Plan extends Model
 {
     use HasFactory;

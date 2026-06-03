@@ -35,7 +35,7 @@ class Profile extends Controller
         $validatedData = $request->validate([
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'personal_email' => ['email', 'required', new AccountEmailChecks, new EmailAddressExists($user->username)],
+            'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($user->username)],
             'phone_number' => [new MainContact($user, $organization)],
         ]);
 

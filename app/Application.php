@@ -6,6 +6,24 @@ use App\Enums\AccessType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property int|null $parent_app_id
+ * @property string|null $description
+ * @property string|null $domain_option
+ * @property \App\Enums\AccessType $access_type
+ * @property bool $primary_domain_allowed
+ * @property bool $can_update_domain
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $organizations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $instances
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Application> $children
+ * @property-read \App\Application|null $parent_app
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppVersion> $versions
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppPlan> $plans
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppRole> $roles
+ */
 class Application extends Model
 {
     use HasFactory;

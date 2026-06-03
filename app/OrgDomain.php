@@ -6,6 +6,30 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property string $name
+ * @property string|null $status
+ * @property bool $registered
+ * @property string|null $expires_at
+ * @property string|null $registered_at
+ * @property int|null $tld_id
+ * @property int|null $app_instance_id
+ * @property int|null $parent_domain_id
+ * @property int|null $email_server_id
+ * @property int $is_primary
+ * @property int $email_enabled
+ * @property string|null $email_status
+ * @property-read \App\Organization|null $organization
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $subdomains
+ * @property-read \App\AppInstance|null $app_instance
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
+ * @property-read \App\OrgDomain|null $parent_domain
+ * @property-read \App\AppInstance|null $primary_app_instance
+ * @property-read \App\Tld|null $tld
+ * @property-read \App\OrgServer|null $email_server
+ */
 class OrgDomain extends Model
 {
     use HasFactory;

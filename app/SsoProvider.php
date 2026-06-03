@@ -4,6 +4,22 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string|null $display_name
+ * @property string $driver
+ * @property string|null $client_id
+ * @property string|null $client_secret
+ * @property string|null $redirect_url
+ * @property string|null $base_url
+ * @property string|null $scopes
+ * @property bool $enabled
+ * @property string|null $access_token
+ * @property string|null $refresh_token
+ * @property \Carbon\Carbon|null $token_expires_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\UserSsoAccount> $accounts
+ */
 class SsoProvider extends Model
 {
     protected $fillable = [

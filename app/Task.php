@@ -5,6 +5,25 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
+/**
+ * @property int $id
+ * @property int|null $application_id
+ * @property int|null $version_id
+ * @property int|null $organization_id
+ * @property int|null $app_instance_id
+ * @property string $status
+ * @property string|null $error_message
+ * @property int|null $job_id
+ * @property string|null $action_group
+ * @property string|null $action_slug
+ * @property string|null $task_group
+ * @property int $notified
+ * @property array|null $custom_values
+ * @property-read \App\Application|null $application
+ * @property-read \App\AppVersion|null $version
+ * @property-read \App\Organization|null $organization
+ * @property-read \App\AppInstance|null $app_instance
+ */
 class Task extends Model
 {
     protected $table = 'tasks';

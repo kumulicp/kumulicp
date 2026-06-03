@@ -9,6 +9,40 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 
+/**
+ * @property int $id
+ * @property int|null $application_id
+ * @property int|null $version_id
+ * @property int|null $organization_id
+ * @property int|null $parent_id
+ * @property int|null $database_server_id
+ * @property int|null $web_server_id
+ * @property int|null $sso_server_id
+ * @property int|null $plan_id
+ * @property int|null $primary_domain_id
+ * @property string $name
+ * @property string $label
+ * @property string|null $status
+ * @property string|null $api_password
+ * @property array|null $settings
+ * @property \Carbon\Carbon|null $deactivate_at
+ * @property \Carbon\Carbon|null $trial_ends_at
+ * @property-read \App\Application|null $application
+ * @property-read \App\AppVersion|null $version
+ * @property-read \App\Organization|null $organization
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $children
+ * @property-read \App\AppInstance|null $parent
+ * @property-read \App\OrgServer|null $database_server
+ * @property-read \App\OrgServer|null $web_server
+ * @property-read \App\OrgServer|null $sso_server
+ * @property-read \App\Server|null $server
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Task> $tasks
+ * @property-read \App\AppPlan|null $subscription
+ * @property-read \App\AppPlan|null $plan
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AdditionalStorage> $additional_storage
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $domains
+ * @property-read \App\OrgSubdomain|null $primary_domain
+ */
 class AppInstance extends Model
 {
     protected $table = 'app_instances';

@@ -6,6 +6,19 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $type
+ * @property string|null $hostname
+ * @property string|null $interface
+ * @property array|null $settings
+ * @property bool $is_backup_server
+ * @property int|null $app_instance_id
+ * @property-read \App\AppInstance|null $app_instance
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $org_servers
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
+ */
 class Server extends Model
 {
     use HasFactory;

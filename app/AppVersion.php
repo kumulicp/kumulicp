@@ -7,6 +7,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
+/**
+ * @property int $id
+ * @property int $application_id
+ * @property string|null $name
+ * @property string|null $admin_path
+ * @property array $roles
+ * @property array $settings
+ * @property-read \App\Application $application
+ */
 class AppVersion extends Model
 {
     use HasFactory;

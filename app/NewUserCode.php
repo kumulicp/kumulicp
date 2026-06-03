@@ -5,6 +5,13 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property string $username
+ * @property string $code
+ * @property-read \App\Organization $organization
+ */
 class NewUserCode extends Model
 {
     protected $table = 'new_user_code';

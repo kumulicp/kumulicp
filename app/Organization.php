@@ -12,6 +12,52 @@ use Laravel\Cashier\Billable;
 
 use function Illuminate\Events\queueable;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property string|null $status
+ * @property string|null $email
+ * @property string|null $contact_email
+ * @property string|null $contact_phone_number
+ * @property string|null $street
+ * @property string|null $zipcode
+ * @property string|null $city
+ * @property string|null $state
+ * @property string|null $country
+ * @property string|null $secretpw
+ * @property string|null $api_token
+ * @property string|null $stripe_id
+ * @property array|null $settings
+ * @property \Carbon\Carbon|null $deactivate_at
+ * @property int|null $primary_domain_id
+ * @property int|null $base_domain_id
+ * @property int|null $plan_id
+ * @property int|null $primary_contact_id
+ * @property int|null $account_test_id
+ * @property int|null $parent_organization_id
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgDomain> $domains
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $subdomains
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgBackup> $backups
+ * @property-read \App\OrgDomain|null $primary_domain
+ * @property-read \App\OrgDomain|null $base_domain
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\EmailForwarder> $email_forwarders
+ * @property-read \App\Plan|null $plan
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $servers
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\User> $users
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Log> $logs
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Application> $applications
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AdditionalStorage> $additional_storage
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Task> $tasks
+ * @property-read \App\User|null $primary_contact
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\NewUserCode> $new_user_codes
+ * @property-read \App\AccountTest|null $account_test
+ * @property-read \App\Organization|null $parent_organization
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $suborganizations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\SuborgUser> $suborg_users
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
+ */
 class Organization extends Model
 {
     use Billable, HasFactory;

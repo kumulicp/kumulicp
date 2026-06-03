@@ -223,7 +223,7 @@ class Register extends Controller
         $validated = $request->validate([
             'years' => 'integer|min:1|max:10|required',
             'organization_name' => 'string|max:100|required',
-            'email_address' => 'email|max:128|required',
+            'email_address' => 'email:rfc,filter|max:128|required',
             'first_name' => 'string|max:60|required',
             'last_name' => 'string|max:60|required',
             'accept_terms' => 'boolean|required|accepted',
