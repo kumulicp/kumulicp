@@ -44,7 +44,7 @@ jobs:
         mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier
         chmod -R 777 storage bootstrap/cache
     - name: Generate key
-      run: php artisan key:generate
+      run: php -r "file_put_contents('.env', preg_replace('/^APP_KEY=.*/m', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
     - name: Create Database
       run: |
         mkdir -p database

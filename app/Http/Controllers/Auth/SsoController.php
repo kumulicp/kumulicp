@@ -9,6 +9,7 @@ use App\Support\Facades\Settings;
 use App\User;
 use App\UserSsoAccount;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,7 @@ class SsoController extends Controller
             ->redirect();
     }
 
-    public function callback(string $providerSlug)
+    public function callback(string $providerSlug, Request $request)
     {
         $provider = SsoProvider::where('name', $providerSlug)
             ->where('enabled', true)
@@ -43,6 +44,8 @@ class SsoController extends Controller
 
         $web_provider = config('auth.guards.web.provider');
         $provider_driver = config("auth.providers.$web_provider.driver");
+
+        $user = null;
 
         if ($provider_driver === 'ldap') {
             // Find the user in LDAP
@@ -76,12 +79,19 @@ class SsoController extends Controller
             }
         }
 
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.sso_failed')],
+            ])->redirectTo('/login');
+        }
+
         $account = UserSsoAccount::where('sso_provider_id', $provider->id)
             ->where('provider_user_id', $social_user->getId())
             ->first();
 
         if ($account && ! $user->is($account->user)) {
             $account->delete();
+            $account = null;
         }
 
         if (! $account) {
@@ -103,6 +113,7 @@ class SsoController extends Controller
         ]);
 
         Auth::login($user);
+        $request->session()->regenerate();
 
         return redirect()->intended('/');
     }

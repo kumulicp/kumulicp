@@ -19,13 +19,20 @@ class UserOrganization
         $user = Auth::user();
 
         if (! $user->organization && $user->ldap()) {
-            $organization = $user->ldap()->organization();
+            $organization = Organization::where('slug', $user->ldap()->organization())->first();
 
-            $organization = Organization::where('slug', $organization)->first();
+            if ($organization) {
+                $user->organization_id = $organization->id;
+                $user->save();
+            } else {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-            $user->organization_id = $organization->id;
-            $user->save();
-
+                return redirect('/login')->withErrors([
+                    'email' => __('auth.failed'),
+                ]);
+            }
         }
 
         return $next($request);
