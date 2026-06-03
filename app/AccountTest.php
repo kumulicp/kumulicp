@@ -6,6 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
+/**
+ * @property int $id
+ * @property int|null $organization_id
+ * @property int|null $created_by_id
+ * @property string|null $name
+ * @property string|null $status
+ * @property array $settings
+ * @property-read \App\Organization|null $organization
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $organizations
+ * @property-read \App\User|null $created_by
+ */
 class AccountTest extends Model
 {
     use HasFactory;

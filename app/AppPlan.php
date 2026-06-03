@@ -7,6 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int $application_id
+ * @property string $name
+ * @property array|null $settings
+ * @property bool $is_default
+ * @property bool $payment_enabled
+ * @property bool $domain_enabled
+ * @property bool $archive
+ * @property array|null $features
+ * @property int|null $web_server_id
+ * @property int|null $database_server_id
+ * @property int|null $sso_server_id
+ * @property int|null $global_app_id
+ * @property-read \App\Application|null $application
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $subscribers
+ * @property-read \App\Server|null $web_server
+ * @property-read \App\Server|null $database_server
+ * @property-read \App\Server|null $sso_server
+ * @property-read \App\AppInstance|null $shared_app
+ */
 class AppPlan extends Model
 {
     use HasFactory;

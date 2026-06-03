@@ -4,6 +4,18 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $user_id
+ * @property int $sso_provider_id
+ * @property string|null $provider_user_id
+ * @property string|null $email
+ * @property string|null $access_token
+ * @property string|null $refresh_token
+ * @property string|null $token_expires_at
+ * @property-read \App\User $user
+ * @property-read \App\SsoProvider $provider
+ */
 class UserSsoAccount extends Model
 {
     protected $fillable = [

@@ -61,8 +61,8 @@ class Applications extends Controller
         $app->name = $name;
         $app->slug = $slug;
         $app->category = $request->category;
-        $app->short_description = $request->description;
-        $app->description = $request->description;
+        $app->short_description = strip_tags($request->description);
+        $app->description = clean($request->description, 'rich_text');
         $app->enabled = false;
         $app->save();
 
@@ -196,8 +196,8 @@ class Applications extends Controller
         }
         $app->name = $request->name;
         $app->category = $request->category;
-        $app->short_description = $request->short_description;
-        $app->description = $request->description;
+        $app->short_description = strip_tags($request->short_description);
+        $app->description = clean($request->description, 'rich_text');
         $app->parent_app_id = $request->parent_app ?? 0;
         $app->access_type = $request->access_type;
         $app->primary_domain_allowed = $request->primary_domain_allowed ?? false;

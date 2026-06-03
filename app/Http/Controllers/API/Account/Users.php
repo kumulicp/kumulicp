@@ -29,7 +29,7 @@ class Users extends Controller
             'username' => ['required', 'alpha_num', new UserNotExists],
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'email' => ['email', 'required', new AccountEmailChecks, new EmailAddressExists],
+            'email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists],
             'phone' => '',
             'source' => ['required', new AppExists],
         ]);

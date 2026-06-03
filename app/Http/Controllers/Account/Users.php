@@ -209,7 +209,7 @@ class Users extends Controller
             'username' => ['required', 'alpha_num', 'lowercase', new UserNotExists],
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'personal_email' => ['email', 'required', new AccountEmailChecks, new EmailAddressExists],
+            'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists],
             'account_email' => '',
             'phone_number' => '',
         ]);
@@ -357,7 +357,7 @@ class Users extends Controller
         $validatedData = $request->validate([
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'personal_email' => ['email', 'required', new AccountEmailChecks, new EmailAddressExists($userid)],
+            'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($userid)],
             'phone_number' => [new MainContact($userid, $organization)],
             'additional_storage' => 'nullable|array',
             'organization' => [

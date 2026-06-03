@@ -89,7 +89,7 @@ class Suborganization extends Controller
             'subdomain' => ['required', 'string', 'max:30', 'alpha_num', 'unique:organizations,slug', 'lowercase'],
             'name' => ['required', 'string', 'max:100'],
             'description' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:100'],
+            'email' => ['required', 'email:rfc,filter', 'max:100'],
             'phone_number' => ['required', 'string', 'max:30'],
             'street' => ['required', 'string', 'max:100'],
             'zipcode' => ['required', 'string', 'max:100'],
@@ -190,7 +190,7 @@ class Suborganization extends Controller
         $validatedData = $request->validate([
             'name' => 'required',
             'description' => 'required',
-            'org_email' => 'required|email|lowercase',
+            'org_email' => 'required|email:rfc,filter|lowercase',
             'org_phone_number' => 'required',
             'street' => 'required',
             'zipcode' => 'required',

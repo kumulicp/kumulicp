@@ -6,6 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property int|null $server_id
+ * @property int|null $application_id
+ * @property string|null $recurrence
+ * @property string|null $time
+ * @property string|null $last_scheduled_at
+ * @property-read \App\Server|null $server
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\BackupSchedule> $scheduled
+ * @property-read \App\Organization $organization
+ * @property-read \App\Application|null $application
+ */
 class RecurringBackup extends Model
 {
     use HasFactory;

@@ -13,6 +13,21 @@ use LdapRecord\Laravel\Auth\AuthenticatesWithLdap;
 use LdapRecord\Laravel\Auth\LdapAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ * @property string|null $guid
+ * @property int|null $organization_id
+ * @property \App\Enums\AccessType|null $access_type
+ * @property \Carbon\Carbon|null $email_verified_at
+ * @property string|null $remember_token
+ * @property \Carbon\Carbon|null $deleted_at
+ * @property-read \App\Organization|null $organization
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\UserSsoAccount> $ssoAccounts
+ */
 class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEmail
 {
     use AuthenticatesWithLdap, HasFactory, HasRoles, Notifiable, SoftDeletes;

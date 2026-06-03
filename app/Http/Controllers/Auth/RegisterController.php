@@ -101,7 +101,7 @@ class RegisterController extends Controller
     {
         return Validator::make($data, [
             'username' => ['required', 'string', 'min:5', 'max:30', 'alpha_num', 'lowercase', 'unique:users,username', new UserNotExists],
-            'contact_email' => ['required', 'string', 'max:100', 'email', new EmailAddressExists, 'unique:users,email'],
+            'contact_email' => ['required', 'string', 'max:100', 'email:rfc,filter', new EmailAddressExists, 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()->uncompromised(2)],
             'contact_first_name' => ['required', 'string', 'max:100'],
             'contact_last_name' => ['required', 'string', 'max:100'],

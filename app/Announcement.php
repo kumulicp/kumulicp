@@ -5,6 +5,14 @@ namespace App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $title
+ * @property string|null $short_description
+ * @property string|null $description
+ * @property array $tags
+ * @property array $affected_apps
+ */
 class Announcement extends Model
 {
     use HasFactory;

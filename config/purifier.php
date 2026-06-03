@@ -110,6 +110,23 @@ return [
             'Attr.AllowedFrameTargets' => ['_blank', '_self'],
             'Attr.ForbiddenClasses' => [],
         ],
+        'rich_text' => [
+            'HTML.Doctype' => 'HTML 4.01 Transitional',
+            'HTML.Allowed' => 'div[style|class],p[style],br,b,strong,i,em,u,s,strike,
+                h1,h2,h3,h4,h5,h6,blockquote,pre,code,
+                ul,ol,li,a[href|title|target],
+                span[style|class],img[src|alt|width|height|style],
+                table[border|cellpadding|cellspacing|style|class],
+                thead,tbody,tfoot,tr[style],th[style|colspan|rowspan],td[style|colspan|rowspan],
+                hr,sub,sup',
+            'CSS.AllowedProperties' => 'font,font-size,font-weight,font-style,font-family,
+                text-decoration,text-align,padding,padding-left,padding-right,padding-top,padding-bottom,
+                margin,margin-left,color,background-color,border,border-collapse,width,height,
+                vertical-align,list-style-type',
+            'AutoFormat.RemoveEmpty' => true,
+            'URI.AllowedSchemes' => ['http' => true, 'https' => true, 'mailto' => true],
+            'Attr.AllowedFrameTargets' => ['_blank', '_self'],
+        ],
     ],
 
 ];

@@ -4,6 +4,14 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int|null $organization_id
+ * @property string|null $level
+ * @property string|null $message
+ * @property string|null $created_at
+ * @property-read \App\Organization|null $organization
+ */
 class Log extends Model
 {
     /**

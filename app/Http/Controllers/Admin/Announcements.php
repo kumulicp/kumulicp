@@ -105,8 +105,8 @@ class Announcements extends Controller
         $announcement = Announcement::where('id', $id)->first();
         $announcement->title = $validatedData['title'];
         $announcement->affected_apps = Arr::get($validatedData, 'apps', []);
-        $announcement->short_description = $validatedData['short_description'];
-        $announcement->description = $validatedData['description'];
+        $announcement->short_description = strip_tags($validatedData['short_description']);
+        $announcement->description = clean($validatedData['description'], 'rich_text');
         $announcement->update();
 
         return back()->with('success', __('admin.announcements.updated'));

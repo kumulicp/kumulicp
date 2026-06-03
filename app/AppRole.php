@@ -10,6 +10,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property int $application_id
+ * @property string $name
+ * @property string $slug
+ * @property \App\Enums\AccessType $access_type
+ * @property array|null $required_features
+ * @property bool $ignore_role
+ * @property-read \App\Application|null $application
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppRole> $implied_roles
+ */
 class AppRole extends Model
 {
     use HasFactory;
