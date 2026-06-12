@@ -56,3 +56,6 @@ boost.json
 tests/Browser/Screenshots
 tests/Browser/Videos
 test-results/
+
+# Claude
+.claude/security

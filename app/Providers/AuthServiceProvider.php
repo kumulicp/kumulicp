@@ -87,7 +87,7 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('add-suborganization', function (User $user) {
-            return ! $user->organization->parent_organization
+            return ! $user->organization->parent_organization && $user->organization->status !== 'deactivated'
                 ? Response::allow()
                 : Response::deny();
         });
@@ -272,13 +272,23 @@ class AuthServiceProvider extends ServiceProvider
                 return Response::deny(__('organization.user.denied.exists'));
             }
 
-            return ($user->organization->status != 'deactivated')
+            $belongs_to_organization = $user_manager->organization()?->id === $user->organization->id
+                || $user_manager->organization()?->parent_organization_id === $user->organization->id;
+
+            return ($belongs_to_organization && $user->organization->status != 'deactivated')
                 ? Response::allow()
                 : Response::deny(__('organization.user.denied.edit', ['name' => $user_manager?->attribute('name')]));
         });
 
         Gate::define('delete-user', function (User $user, ?UserManager $user_manager = null) {
             if (! $user_manager) {
+                return Response::deny(__('organization.user.denied.exists'));
+            }
+
+            $belongs_to_organization = $user_manager->organization()?->id === $user->organization->id
+                || $user_manager->organization()?->parent_organization_id === $user->organization->id;
+
+            if (! $belongs_to_organization) {
                 return Response::deny(__('organization.user.denied.exists'));
             }
 

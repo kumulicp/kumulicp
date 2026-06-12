@@ -38,7 +38,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'guid', 'organization_id',
+        'name', 'email', 'password', 'guid',
     ];
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\EmailForwarder;
 use App\OrgDomain;
 use App\Services\EmailService;
 use App\Support\Facades\AccountManager;
@@ -84,13 +85,14 @@ class EmailServiceProvider extends ServiceProvider
                 : Response::deny(__('organization.email.denied.activate'));
         });
 
-        Gate::define('edit-email-settings', function (User $user) {
+        Gate::define('edit-email-settings', function (User $user, ?EmailForwarder $forwarder = null) {
             $organization = $user->organization;
             $domains = $organization->domains()->emailEnabled()->active()->get();
 
-            return $user->organization->status !== 'deactivated'
+            return $organization->status !== 'deactivated'
                 && Subscription::emailEnabled()
                 && $domains->count() != 0
+                && (! $forwarder || $forwarder->organization_id === $organization->id)
                 ? Response::allow()
                 : Response::deny(__('organization.email.denied.edit'));
         });
