@@ -31,8 +31,8 @@ import Editor from '@tinymce/tinymce-vue'
     <Editor
       v-model:model-value="content"
       id="welcomePage"
+      license-key="gpl"
       :init="{
-        license_key: 'gpl',
         plugins: 'lists advlist link image table code help wordcount media persistentgrid',
         table_class_list: [
           {title: 'Default', value: 'va-table'},
@@ -54,7 +54,7 @@ import Editor from '@tinymce/tinymce-vue'
           alignright: { selector: 'p,h1,h2,h3,h4,h5,h6,td,th,div,ul,ol,li,table,img,audio,video', classes: 'va-text-right' },
           alignjustify: { selector: 'p,h1,h2,h3,h4,h5,h6,td,th,div,ul,ol,li,table,img,audio,video', classes: 'va-text-justify' }
         },
-        toolbar: 'undo redo | revisionhistory | aidialog aishortcuts | blocks fontsizeinput | bold italic | align numlist bullist | link image | table persistentgrid math media pageembed | lineheight  outdent indent | strikethrough forecolor backcolor formatpainter removeformat | charmap emoticons checklist | code fullscreen preview | save print | pagebreak anchor codesample footnotes mergetags | addtemplate inserttemplate | addcomment showcomments | ltr rtl casechange | spellcheckdialog a11ycheck',
+        toolbar: 'undo redo | blocks fontsizeinput | bold italic | align numlist bullist | link image | table persistentgrid media | lineheight outdent indent | strikethrough forecolor backcolor removeformat | charmap emoticons | code fullscreen preview | save print | pagebreak anchor codesample | ltr rtl',
         promotion: false,
         contextmenu: 'persistentgrid link image table',
         content_css: tinymceCssFile,

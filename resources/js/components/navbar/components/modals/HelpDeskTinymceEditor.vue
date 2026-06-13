@@ -17,8 +17,8 @@ const emit = defineEmits(['update:modelValue'])
   <Editor
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
+    license-key="gpl"
     :init="{
-      license_key: 'gpl',
       plugins: 'lists advlist link',
       toolbar: 'bold italic underline | bullist numlist | link | removeformat',
       menubar: false,
