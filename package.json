@@ -68,7 +68,7 @@
         "flag-icons": "^6.6.4",
         "pinia": "^2.0.16",
         "register-service-worker": "^1.7.1",
-        "tinymce": "^8.4.0",
+        "tinymce": "^8.6.0",
         "vue": "^3.2.31",
         "vue-chartjs": "^4.1.1",
         "vue-i18n": "^11.3.1",
@@ -76,5 +76,8 @@
         "vuestic-ui": "^1.10.3",
         "xvfb": "^0.4.0",
         "yaml": "^2.9.0"
+    },
+    "overrides": {
+        "esbuild": "0.28.1"
     }
 }
