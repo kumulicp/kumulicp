@@ -21,6 +21,8 @@ class Subdomains extends Controller
 
     public function store(Request $request, OrgDomain $domain)
     {
+        $this->authorize('edit-domain', $domain);
+
         $organization = auth()->user()->organization;
         $validated = $this->validation($request, $domain);
 

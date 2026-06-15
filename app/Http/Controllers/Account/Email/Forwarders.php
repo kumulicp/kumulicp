@@ -91,7 +91,7 @@ class Forwarders extends Controller
 
     public function remove(EmailForwarder $forwarder, $destination)
     {
-        $this->authorize('edit-email-settings');
+        $this->authorize('edit-email-settings', $forwarder);
 
         $email_server = Domain::connect($forwarder->domain, 'email');
         if ($email_server) {

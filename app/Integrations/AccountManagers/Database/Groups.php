@@ -16,7 +16,7 @@ class Groups
 
     public function add(array $data)
     {
-        $group = GroupModel::where('name', $data['name'])->first();
+        $group = GroupModel::where('name', $data['name'])->where('organization_id', $this->organization->id)->first();
 
         if (! $group) {
             $group = new GroupModel;

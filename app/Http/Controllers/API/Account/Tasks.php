@@ -22,7 +22,11 @@ class Tasks extends Controller
     public function delete($task)
     {
         $organization = Organization::account();
-        $task = Task::where('id', $task)->first();
+        $task = Task::where('id', $task)->where('organization_id', $organization->id)->first();
+
+        if (! $task) {
+            return response()->json(['status' => 'failed'], 404);
+        }
 
         $remove_group = Task::where('task_group', $task->task_group)
             ->where('organization_id', $organization->id)
