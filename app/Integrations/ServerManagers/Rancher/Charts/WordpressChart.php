@@ -80,10 +80,11 @@ class WordpressChart extends HelmChart
             ],
             'extraEnvVars' => $this->extraEnv(),
             'image' => [
-                'registry' => $version->setting('image_registry'),
+                'registry' => $this->imageRegistry(),
                 'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
                 'repository' => $version->setting('image_repo_name'),
                 'tag' => $version->name,
+                'pullSecrets' => $this->imagePullSecrets(),
             ],
             'updateStrategy' => [
                 'type' => $app_instance->configuration('updateStrategy-type'),

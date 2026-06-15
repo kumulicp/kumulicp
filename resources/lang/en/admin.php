@@ -140,6 +140,13 @@ return [
         ],
         'updated' => 'Settings updated',
     ],
+    'pullSecrets' => [
+        'pullSecrets' => 'Image Pull Secrets',
+        'added' => 'Pull secret added',
+        'deleted' => 'Pull secret deleted',
+        'inUse' => 'This pull secret cannot be deleted because it is required by one or more app instances',
+        'migrated' => 'App versions migrated to the new pull secret',
+    ],
     'tasks' => [
         'tasks' => 'Tasks',
         'restarted' => 'Task will attempt to run again',

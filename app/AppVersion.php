@@ -32,6 +32,16 @@ class AppVersion extends Model
         return $this->belongsTo('App\Application', 'application_id');
     }
 
+    public function pullSecret()
+    {
+        return $this->belongsTo('App\PullSecret', 'pull_secret_id');
+    }
+
+    public function requiresPullSecret(): bool
+    {
+        return $this->pull_secret_id !== null && $this->pullSecret && $this->pullSecret->requiresAuth();
+    }
+
     public function roles(string|array|null $type = null, $all = true)
     {
         $list = [];

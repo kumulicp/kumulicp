@@ -163,6 +163,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::put('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@update');
                 Route::delete('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@idestroy');
             });
+            Route::prefix('pull-secrets')->group(function () {
+                Route::get('/', 'App\Http\Controllers\Admin\Settings\PullSecrets@index');
+                Route::post('/', 'App\Http\Controllers\Admin\Settings\PullSecrets@store');
+                Route::post('mass-migrate', 'App\Http\Controllers\Admin\Settings\PullSecrets@massMigrate');
+                Route::delete('{pullSecret}', 'App\Http\Controllers\Admin\Settings\PullSecrets@destroy');
+            });
         });
 
         Route::prefix('service')->group(function () {

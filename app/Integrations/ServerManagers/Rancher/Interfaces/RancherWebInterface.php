@@ -10,6 +10,7 @@ use App\Integrations\ServerManagers\Rancher\API\Ingress;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
 use App\Integrations\ServerManagers\Rancher\API\Middleware;
+use App\Integrations\ServerManagers\Rancher\API\Secret;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\Services\OrganizationServices;
@@ -33,6 +34,8 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     private $job;
 
+    private $secret;
+
     public function __construct(
         private OrgServer $server,
         private ?AppInstance $app_instance = null,
@@ -44,6 +47,22 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         $this->application = new Application($this->organization, $server);
         $this->ingress = new Ingress($this->organization, $server);
         $this->job = new Job($this->organization, $this->server);
+        $this->secret = new Secret($this->organization, $this->server);
+    }
+
+    // Make sure the image pull secret required by the app instance's version
+    // exists in the organization's namespace before the app is deployed
+    public function ensurePullSecret()
+    {
+        $version = $this->app_instance->version;
+
+        if (! $version || ! $version->requiresPullSecret()) {
+            return true;
+        }
+
+        $this->secret->ensure($this->organization->slug, $version->pullSecret);
+
+        return true;
     }
 
     public function exists()
@@ -87,6 +106,8 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
     {
         // verify the organization exists is active
         if ($this->existsOrganization()) {
+            $this->ensurePullSecret();
+
             $charts = ApplicationFacade::instance($this->app_instance)->charts();
 
             foreach ($charts as $chart) {
@@ -111,6 +132,8 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     public function update()
     {
+        $this->ensurePullSecret();
+
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
 
         foreach ($charts as $chart) {
