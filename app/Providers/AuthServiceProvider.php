@@ -98,7 +98,9 @@ class AuthServiceProvider extends ServiceProvider
             $base_plan = $plans->base();
 
             // Checks plan to confirm that organization isn't going to be breaking any limits before changing
-            if ($plan->org_type != $organization->type || $plan->archive) {
+            if ($organization->status === 'deactivated') {
+                return Response::deny(__('organization.plan.denied.unavailable'));
+            } elseif ($plan->org_type != $organization->type || $plan->archive) {
                 return Response::deny(__('organization.plan.denied.unavailable'));
             } elseif ($base_plan && $base_plan->isAnyMaxBroken()) {
                 return Response::deny(__('organization.plan.denied.limit'));

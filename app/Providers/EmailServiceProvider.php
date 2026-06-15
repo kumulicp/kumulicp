@@ -67,7 +67,7 @@ class EmailServiceProvider extends ServiceProvider
 
         Gate::define('add-user-email-account-to-domain', function (User $user, $organization_user, OrgDomain $domain) {
             return $user->organization->status !== 'deactivated'
-                && $domain->organization_id == $user->organization->id
+                && $domain->organization_id === $user->organization->id
                 && $domain->belongsToOrganization($user->organization)
                 && Subscription::base($user->organization)->emailEnabled()
                 && AccountManager::users()->find($organization_user)->isUserAccessType('standard')
