@@ -64,6 +64,11 @@ class Organization extends Model
 
     protected $table = 'organizations';
 
+    protected $hidden = [
+        'secretpw',
+        'api_token',
+    ];
+
     protected $casts = [
         'secretpw' => 'encrypted',
         'api_token' => 'hashed',

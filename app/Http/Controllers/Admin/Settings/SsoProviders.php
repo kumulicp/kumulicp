@@ -18,7 +18,6 @@ class SsoProviders extends Controller
                     'name' => $provider->name,
                     'label' => $provider->label,
                     'client_id' => $provider->client_id,
-                    'client_secret' => $provider->client_secret,
                     'base_url' => $provider->base_url,
                     'redirect_url' => $provider->redirect_url,
                     'scopes' => $provider->scopes,
