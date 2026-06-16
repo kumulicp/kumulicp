@@ -167,33 +167,33 @@ class Roles extends Controller
         return redirect('admin/apps/'.$app->slug.'/roles')->with('error', 'App role does not exist');
     }
 
-    public function enable($application_id, $roleid)
+    public function enable(Application $app, $roleid)
     {
-        $role = AppRole::find($roleid);
+        $role = $app->roles()->where('id', $roleid)->firstOrFail();
         $role->status = 'enabled';
         $role->save();
 
-        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.enabled', ['role' => $role->name]));
+        return redirect('admin/apps/'.$app->slug.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.enabled', ['role' => $role->name]));
     }
 
-    public function disable($application_id, $roleid)
+    public function disable(Application $app, $roleid)
     {
-        $role = AppRole::find($roleid);
+        $role = $app->roles()->where('id', $roleid)->firstOrFail();
         $role->status = 'disabled';
         $role->save();
 
-        return redirect('admin/apps/'.$application_id.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.disabled', ['role' => $role->name]));
+        return redirect('admin/apps/'.$app->slug.'/roles/'.$roleid.'/edit')->with('success', __('admin.applications.roles.disabled', ['role' => $role->name]));
     }
 
-    public function remove($application_id, $roleid)
+    public function remove(Application $app, $roleid)
     {
-        $role = AppRole::find($roleid);
+        $role = $app->roles()->where('id', $roleid)->firstOrFail();
 
         // Remove from Version Options List
         // $versions = AppVersion::whereJsonContains('roles->order', $role->id)->get();
 
         $role->delete();
 
-        return redirect('admin/apps/'.$application_id.'/roles/')->with('success', __('admin.applications.roles.deleted', ['role' => $role->name]));
+        return redirect('admin/apps/'.$app->slug.'/roles/')->with('success', __('admin.applications.roles.deleted', ['role' => $role->name]));
     }
 }

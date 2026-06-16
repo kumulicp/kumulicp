@@ -23,9 +23,18 @@ class ChangePassword extends Controller
     public function set($code)
     {
         $new_user = NewUserCode::where('code', $code)->first();
+
+        if (! $new_user) {
+            return abort(404);
+        }
+
+        if ($new_user->expires_at && $new_user->expires_at->isPast()) {
+            return abort(410);
+        }
+
         Organization::setOrganization($new_user->organization);
 
-        if ($new_user && $new_user->activated == 0) {
+        if ($new_user->activated == 0) {
             $user = AccountManager::users()->find($new_user->username);
 
             return inertia('Auth/SetPassword', [
@@ -49,6 +58,14 @@ class ChangePassword extends Controller
         ]);
 
         $new_user = NewUserCode::where('code', $code)->first();
+
+        if (! $new_user || $new_user->activated) {
+            return abort(404);
+        }
+
+        if ($new_user->expires_at && $new_user->expires_at->isPast()) {
+            return abort(410);
+        }
 
         Organization::setOrganization($new_user->organization);
 
