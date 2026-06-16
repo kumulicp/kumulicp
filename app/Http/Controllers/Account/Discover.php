@@ -10,6 +10,7 @@ use App\AppVersion;
 use App\Http\Controllers\Controller;
 use App\OrgDomain;
 use App\OrgSubdomain;
+use App\Rules\HostLabel;
 use App\Rules\OrgAppInstance;
 use App\Rules\OrgDomainName;
 use App\Rules\OrgSuborganization;
@@ -280,7 +281,7 @@ class Discover extends Controller
                     $fail(__('organization.domain.denied.ip', ['domain' => $subdomain->name, 'ip' => $plan->web_server->ip]));
                 },
             ],
-            'subdomain' => 'required_if:domain,new|nullable|string|max:100',
+            'subdomain' => ['required_if:domain,new', 'nullable', 'string', 'lowercase', new HostLabel],
             'parent_domain' => [
                 'required_if:domain,new',
                 'nullable',
@@ -321,7 +322,7 @@ class Discover extends Controller
             }
         }
 
-        $activate_app = Action::execute(new ApplicationActivate($organization, $app, $plan, $request->input('customizations'), $parent_app, label: $validatedData['label'], domain: $subdomain, configurations: $request->configurations));
+        $activate_app = Action::execute(new ApplicationActivate($organization, $app, $plan, $request->input('customizations'), $parent_app, label: $validatedData['label'], domain: $subdomain, configurations: $this->personalizedConfigurations($app, $request->configurations)));
 
         if ($organization->setting('step') === 1) {
             $organization->updateSetting('step', 2);
@@ -331,5 +332,23 @@ class Discover extends Controller
         }
 
         return redirect('/apps')->with('success', __('organization.app.activating', ['app' => $validatedData['label']]));
+    }
+
+    private function personalizedConfigurations(Application $app, ?array $configurations): ?array
+    {
+        if (! $configurations) {
+            return null;
+        }
+
+        $allowedKeys = array_map(
+            fn($k) => str_replace('configurations.', '', $k),
+            array_keys(ApplicationFacade::validateConfigurations($app, true))
+        );
+
+        if (empty($allowedKeys)) {
+            return null;
+        }
+
+        return array_intersect_key($configurations, array_flip($allowedKeys)) ?: null;
     }
 }

@@ -34,7 +34,7 @@ class Groups extends Controller
         $this->authorize('active');
         /* Validate */
         $validatedData = $request->validate([
-            'name' => ['required', 'max:100', new GroupNameNotUsed],
+            'name' => ['required', 'max:100', 'not_regex:/[\/\\\\]/', new GroupNameNotUsed],
             'category' => 'required|in:departments,teams,projects,ministries,others',
         ]);
 
@@ -105,7 +105,7 @@ class Groups extends Controller
         /* Validate */
         $validator = Validator::make($request->all(), [
             'original_name' => 'required', // TODO: Check if original name exists
-            'name' => ['required', 'max:100'],
+            'name' => ['required', 'max:100', 'not_regex:/[\/\\\\]/'],
             'category' => 'required|in:departments,teams,projects,ministries,others',
             'managers' => 'array',
             'members' => 'array',

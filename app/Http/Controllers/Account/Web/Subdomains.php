@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Http\Controllers\Controller;
 use App\OrgDomain;
 use App\OrgSubdomain;
+use App\Rules\HostLabel;
 use App\Rules\SubdomainNotExists;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
@@ -108,7 +109,7 @@ class Subdomains extends Controller
         $organization = auth()->user()->organization;
 
         $validated = $request->validate([
-            'host' => ['string', 'required', new SubdomainNotExists($domain, $subdomain)],
+            'host' => ['string', 'required', 'lowercase', new HostLabel, new SubdomainNotExists($domain, $subdomain)],
             'type' => ['in:A,AAAA,ALIAS,CAA,CNAME,MX,MXE,NS,TXT,URL,URL301,FRAME,app'],
             'value' => ['required_unless:type,app'],
             'ttl' => ['exclude_if:type,app', 'numeric', 'required'],

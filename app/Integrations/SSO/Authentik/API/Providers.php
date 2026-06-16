@@ -46,7 +46,6 @@ class Providers extends Authentik
         $app = Application::get($app_instance->application->slug);
         $app_instance = Application::instance($app_instance);
         $server = $app_instance->server('sso')->server;
-        $generator = new ComputerPasswordGenerator;
 
         $redirect_path = Arr::get($app, 'sso_redirect_path.path', null);
         $redirect_uri = [
@@ -55,22 +54,7 @@ class Providers extends Authentik
         ];
 
         $client_id = Str::password(41, true, true, false);
-        /*$generator
-            ->setUppercase()
-            ->setLowercase()
-            ->setNumbers()
-            ->setSymbols(false)
-            ->setLength(41)
-            ->generatePassword();*/
-
         $client_secret = Str::password(129, true, true, false);
-        /*$generator
-            ->setUppercase()
-            ->setLowercase()
-            ->setNumbers()
-            ->setSymbols(false)
-            ->setLength(129)
-            ->generatePassword();*/
 
         $app_instance->updateSetting('sso_client_id', Crypt::encryptString($client_id));
         $app_instance->updateSetting('sso_client_secret', Crypt::encryptString($client_secret));
