@@ -26,6 +26,7 @@ use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -182,10 +183,15 @@ class Users extends Controller
         $validatedData = $request->validate([
             'username' => 'required|alpha_num|max:100',
         ]);
-        $userid = $request->username;
-        $organization = auth()->user()->organization;
 
-        $user = AccountManager::users()->find($userid);
+        $user = AccountManager::users()->find($request->username);
+
+        if (! $user) {
+            return response()->json([], 404);
+        }
+
+        $this->authorize('view-user', $user);
+
         $info = [
             'username' => $user->attribute('username'),
             'first_name' => $user->attribute('first_name'),
@@ -214,35 +220,48 @@ class Users extends Controller
             'phone_number' => '',
         ]);
 
-        $input['username'] = $request->username;
-        $input['first_name'] = $request->first_name;
-        $input['last_name'] = $request->last_name;
-        $input['name'] = $request->first_name.' '.$request->last_name;
-        $input['email'] = $request->personal_email;
-        $input['account_email'] = $request->organization_email;
-        $input['password'] = Str::password(20, true, true, false, false);
-        $input['phone_number'] = $request->phone_number;
+        $lock = Cache::lock('add-user-'.$organization->id, 30);
+        $lock->block(10);
 
-        $user = AccountManager::users()->add($input);
-        $user->addToDefaultUserGroups();
-        $user->permissions()->updateUserAccessType();
+        try {
+            // Re-check limit inside the lock to prevent TOCTOU race
+            if (! Gate::allows('add-user')) {
+                return back()->withErrors(['limit' => __('organization.user.denied.add')]);
+            }
 
-        $new_user_code = new NewUserCode;
-        $new_user_code->organization()->associate($organization);
-        $new_user_code->generate($user->attribute('username'));
-        $new_user_code->status = 'pending';
-        $new_user_code->save();
+            $input['username'] = $request->username;
+            $input['first_name'] = $request->first_name;
+            $input['last_name'] = $request->last_name;
+            $input['name'] = $request->first_name.' '.$request->last_name;
+            $input['email'] = $request->personal_email;
+            $input['account_email'] = $request->organization_email;
+            $input['password'] = Str::password(20, true, true, false, false);
+            $input['phone_number'] = $request->phone_number;
 
-        $code = $new_user_code->code;
+            $user = AccountManager::users()->add($input);
+            $user->addToDefaultUserGroups();
+            $user->permissions()->updateUserAccessType();
 
-        if ($organization->parent_organization_id) {
-            $suborg_user = new SuborgUser;
-            $suborg_user->organization()->associate($organization);
-            $suborg_user->username = $input['username'];
-            $suborg_user->save();
+            $new_user_code = new NewUserCode;
+            $new_user_code->organization()->associate($organization);
+            $new_user_code->generate($user->attribute('username'));
+            $new_user_code->status = 'pending';
+            $new_user_code->expires_at = now()->addHours(72);
+            $new_user_code->save();
+
+            $code = $new_user_code->code;
+
+            if ($organization->parent_organization_id) {
+                $suborg_user = new SuborgUser;
+                $suborg_user->organization()->associate($organization);
+                $suborg_user->username = $input['username'];
+                $suborg_user->save();
+            }
+
+            event(new UserCreated($user));
+        } finally {
+            $lock->release();
         }
-
-        event(new UserCreated($user));
 
         if ($organization->setting('step') === 2) {
             $organization->updateSetting('step', 3);
@@ -458,7 +477,13 @@ class Users extends Controller
         $this->authorize('edit-user', $user);
 
         $split = explode('@', $email_address);
-        $domain = OrgDomain::where('name', $split[1])->first();
+        $domain = OrgDomain::where('name', $split[1])
+            ->where('organization_id', auth()->user()->organization->id)
+            ->first();
+
+        if (! $domain) {
+            return redirect('/users/'.$username)->with('error', __('organization.user.denied.email_failed'));
+        }
 
         $email_server = Domain::connect($domain, 'email');
         $email_server->deleteUserEmail($user, $email_address);
@@ -480,6 +505,7 @@ class Users extends Controller
         $new_user_code->generate($user->attribute('username'));
         $new_user_code->status = 'pending';
         $new_user_code->activated = false;
+        $new_user_code->expires_at = now()->addHours(72);
         $new_user_code->save();
         $user->notify(new ResetPassword($user, $new_user_code->code));
 
