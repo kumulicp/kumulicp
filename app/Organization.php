@@ -71,6 +71,7 @@ class Organization extends Model
 
     protected $casts = [
         'secretpw' => 'encrypted',
+        'api_token' => 'hashed',
         'settings' => 'array',
         'deactivate_at' => 'date',
     ];
