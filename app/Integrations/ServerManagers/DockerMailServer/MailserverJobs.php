@@ -16,7 +16,7 @@ class MailserverJobs extends MailserverJobChart
                 '/bin/sh', '-c',
             ],
             args: [
-                '(supervisord -c /etc/supervisor/supervisord.conf &) && sleep 10 && setup config dkim domain '.$this->domain->name.' | grep DKIM1 > /dkim_key && curl -X POST '.$return_url.' -d dkim_public_key="$(cat /dkim_key)"',
+                '(supervisord -c /etc/supervisor/supervisord.conf &) && sleep 10 && setup config dkim domain '.escapeshellarg($this->domain->name).' | grep DKIM1 > /dkim_key && curl -X POST '.$return_url.' -d dkim_public_key="$(cat /dkim_key)"',
             ],
             env: [
                 [
