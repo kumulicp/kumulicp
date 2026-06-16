@@ -8,12 +8,13 @@ use App\Rules\OrgDomainName;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class Forwarders extends Controller
 {
     public function index()
     {
-        $this->authorize('view-emails');
+        Gate::authorize('view-emails');
 
         $organization = Organization::account();
         $custom_domains = $organization->domains()->emailEnabled()->active()->where('type', 'connection')->get();
@@ -53,7 +54,7 @@ class Forwarders extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-email-accounts');
+        Gate::authorize('add-email-accounts');
 
         /* Validate */
         $validated = $request->validate([
@@ -91,7 +92,7 @@ class Forwarders extends Controller
 
     public function remove(EmailForwarder $forwarder, $destination)
     {
-        $this->authorize('edit-email-settings', $forwarder);
+        Gate::authorize('edit-email-settings', $forwarder);
 
         $email_server = Domain::connect($forwarder->domain, 'email');
         if ($email_server) {

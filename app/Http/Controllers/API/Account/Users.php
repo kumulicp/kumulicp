@@ -26,7 +26,7 @@ class Users extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-user');
+        Gate::authorize('add-user');
 
         /* Validate */
         $validatedData = $request->validate([

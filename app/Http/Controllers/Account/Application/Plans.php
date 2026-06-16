@@ -16,12 +16,13 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Gate;
 
 class Plans extends Controller
 {
     public function index(AppInstance $app)
     {
-        $this->authorize('change-app-plan', [$app]);
+        Gate::authorize('change-app-plan', [$app]);
 
         $plans = Subscription::app_instance($app)->allAvailable();
         $subsciption_count = $plans->count();
@@ -86,7 +87,7 @@ class Plans extends Controller
 
     public function show(AppInstance $app, AppPlan $plan)
     {
-        $this->authorize('update-to-plan', [$app, $plan]);
+        Gate::authorize('update-to-plan', [$app, $plan]);
 
         $organization = Organization::account();
         $plans = Subscription::all($organization);
@@ -126,7 +127,7 @@ class Plans extends Controller
 
     public function update(Request $request, AppInstance $app, AppPlan $plan)
     {
-        $this->authorize('update-to-plan', [$app, $plan]);
+        Gate::authorize('update-to-plan', [$app, $plan]);
 
         $validatedData = $request->validate([
             'customizations' => 'nullable',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class BillingManagers extends Controller
 {
@@ -12,7 +13,7 @@ class BillingManagers extends Controller
     {
         $user = AccountManager::users()->find($request->user_id);
 
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $request->validate([
             'user_id' => ['required', 'string'],
@@ -27,7 +28,7 @@ class BillingManagers extends Controller
     {
         $user = AccountManager::users()->find($id);
 
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $user_name = $user->attribute('name');
         $user->permissions()->removeBillingManagerAccess();

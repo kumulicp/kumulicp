@@ -16,21 +16,12 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\User;
 use Illuminate\Auth\Access\Response;
-use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
 {
-    /**
-     * The policy mappings for the application.
-     *
-     * @var array
-     */
-    protected $policies = [
-        // 'App\Model' => 'App\Policies\ModelPolicy',
-    ];
-
     /**
      * Register any authentication / authorization services.
      *
@@ -38,8 +29,6 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->registerPolicies();
-
         /* Admin */
         Gate::define('admin', function (User $user, ?UserManager $other_user = null) {
             $user = $other_user ?? AccountManager::users()->find($user->username);

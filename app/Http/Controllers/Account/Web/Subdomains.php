@@ -22,7 +22,7 @@ class Subdomains extends Controller
 
     public function store(Request $request, OrgDomain $domain)
     {
-        $this->authorize('edit-domain', $domain);
+        Gate::authorize('edit-domain', $domain);
 
         $organization = auth()->user()->organization;
         $validated = $this->validation($request, $domain);
@@ -55,8 +55,8 @@ class Subdomains extends Controller
 
     public function update(Request $request, OrgDomain $domain, OrgSubdomain $subdomain)
     {
-        $this->authorize('edit-domain', $domain);
-        $this->authorize('redirect-domain', $subdomain);
+        Gate::authorize('edit-domain', $domain);
+        Gate::authorize('redirect-domain', $subdomain);
 
         $organization = auth()->user()->organization;
 

@@ -11,6 +11,7 @@ use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Gate;
 
 class Organizations extends Controller
 {
@@ -182,7 +183,7 @@ class Organizations extends Controller
 
     public function destroy(Organization $organization)
     {
-        $this->authorize('delete-organization', $organization);
+        Gate::authorize('delete-organization', $organization);
 
         Action::execute(new DeleteOrganization($organization));
 

@@ -9,6 +9,7 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class Permissions extends Controller
 {
@@ -16,7 +17,7 @@ class Permissions extends Controller
     {
         $user = AccountManager::users()->find($userid);
 
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $organization = Organization::account();
 
@@ -65,7 +66,7 @@ class Permissions extends Controller
         $user = AccountManager::users()->find($userid);
         $organization = auth()->user()->organization;
 
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $request->validate([
             'permission.control_panel.0' => [

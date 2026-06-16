@@ -15,12 +15,13 @@ use App\Support\Facades\Subscription;
 use App\Support\Organizations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Gate;
 
 class Suborganization extends Controller
 {
     public function index()
     {
-        $this->authorize('view-suborganizations');
+        Gate::authorize('view-suborganizations');
 
         $organization = Organization::account();
 
@@ -83,7 +84,7 @@ class Suborganization extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-suborganization');
+        Gate::authorize('add-suborganization');
 
         $data = $request->validate([
             'subdomain' => ['required', 'string', 'max:30', 'alpha_num', 'unique:organizations,slug', 'lowercase'],
@@ -146,7 +147,7 @@ class Suborganization extends Controller
 
     public function edit(Organization $organization)
     {
-        $this->authorize('edit-organization', $organization);
+        Gate::authorize('edit-organization', $organization);
 
         return inertia('Organization/Settings/Organization/SuborganizationEdit', [
             'org' => [
@@ -184,7 +185,7 @@ class Suborganization extends Controller
 
     public function update(Request $request, Organization $organization)
     {
-        $this->authorize('edit-organization', $organization);
+        Gate::authorize('edit-organization', $organization);
 
         /* Validate */
         $validatedData = $request->validate([

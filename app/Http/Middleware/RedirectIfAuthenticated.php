@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Providers\RouteServiceProvider;
 use App\Support\Facades\Settings;
 use Closure;
 use Illuminate\Http\Request;
@@ -20,7 +19,7 @@ class RedirectIfAuthenticated
     public function handle($request, Closure $next, $guard = null)
     {
         if (Auth::guard($guard)->check()) {
-            return redirect(RouteServiceProvider::HOME);
+            return redirect('/');
         } elseif (! $request->expectsJson()) {
             $installed = Settings::get('installed');
 
