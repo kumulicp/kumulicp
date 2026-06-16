@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -265,6 +266,35 @@ class AppInstance extends Model
         }
 
         return $api_password;
+    }
+
+    public function dbPassword(): string
+    {
+        try {
+            if ($encrypted = $this->setting('db_password')) {
+                return Crypt::decryptString($encrypted);
+            }
+        } catch (\Throwable $e) {
+            // fall through to org secretpw for existing instances
+        }
+
+        return $this->organization->secretpw;
+    }
+
+    public function siteApiKey(): string
+    {
+        try {
+            if ($encrypted = $this->setting('site_api_key')) {
+                return Crypt::decryptString($encrypted);
+            }
+        } catch (\Throwable $e) {
+            //
+        }
+
+        $key = Str::random(32);
+        $this->updateSetting('site_api_key', Crypt::encryptString($key));
+
+        return $key;
     }
 
     public function extensionExists($extension)

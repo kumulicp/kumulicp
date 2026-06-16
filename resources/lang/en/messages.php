@@ -68,6 +68,7 @@ return [
         'organization' => 'Organization doesn\'t exist',
         'org_suborganization' => 'This suborganization doesn\'t exist',
         'org_app_instance' => 'This app doesn\'t exist',
+        'host_label' => 'Must be a valid hostname label: lowercase letters, numbers, and hyphens only (e.g. myapp)',
         'subdomain_exists' => 'Domain already exists. Choose a new :attribute',
         'org_subdomain_message' => 'Subdomain is already used',
     ],

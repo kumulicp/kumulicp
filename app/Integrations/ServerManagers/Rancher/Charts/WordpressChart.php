@@ -48,7 +48,7 @@ class WordpressChart extends HelmChart
                 'enabled' => $database_server ? true : false,
                 'database' => $app_instance->databasename,
                 'host' => $database_server ? $database_server->internal_address : '',
-                'password' => $organization->secretpw,
+                'password' => $this->app_instance->dbPassword(),
                 'user' => $app_instance->databasename,
             ],
             'ingress' => [

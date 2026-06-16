@@ -306,6 +306,7 @@ class ApplicationService
             $app_instance->parent()->associate($parent_app);
         }
         $app_instance->updateSetting('configurations', $this->persistentConfigurations($application, $plan));
+        $app_instance->updateSetting('db_password', Crypt::encryptString(Str::random(32)));
 
         if ($domain) {
             $app_instance->primary_domain()->associate($domain);

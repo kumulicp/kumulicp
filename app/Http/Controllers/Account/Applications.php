@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\Applications\UpdateLDAPGroups;
 use App\OrgDomain;
 use App\OrgSubdomain;
+use App\Rules\HostLabel;
 use App\Rules\OrgSubdomainAvailable;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
@@ -201,7 +202,7 @@ class Applications extends Controller
                 },
             ],
             'parent_domain' => 'nullable|required_if:domain,connection|numeric|exists:org_domains,id',
-            'subdomain' => ['nullable', 'required_if:domain,connection', 'string', new OrgSubdomainAvailable($app)],
+            'subdomain' => ['nullable', 'required_if:domain,connection', 'string', 'lowercase', new HostLabel, new OrgSubdomainAvailable($app)],
         ], $validateConfigurations));
 
         $customizations = $request->input('customizations') ?? [];

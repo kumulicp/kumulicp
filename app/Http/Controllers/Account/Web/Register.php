@@ -123,7 +123,7 @@ class Register extends Controller
         $this->authorize('register-domains');
 
         $validated = $request->validate([
-            'domain_name' => ['string', 'max:70', 'required', 'lowercase', new DomainAvailable], // TODO: Put checks here(organization owns domain, domain is available, registerable at control panel
+            'domain_name' => ['string', 'max:70', 'required', 'lowercase', new DomainName, new DomainAvailable], // TODO: Put checks here(organization owns domain, domain is available, registerable at control panel
         ]);
 
         $organization = auth()->user()->organization;
