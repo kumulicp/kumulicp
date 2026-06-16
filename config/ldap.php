@@ -36,7 +36,7 @@ return [
             'base_dn' => env('LDAP_BASE_DN'),
             'timeout' => env('LDAP_TIMEOUT', 0),
             'use_ssl' => env('LDAP_SSL', false),
-            'use_tls' => env('LDAP_TLS', false),
+            'use_tls' => env('LDAP_TLS', true),
         ],
 
     ],

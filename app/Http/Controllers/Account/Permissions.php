@@ -73,7 +73,7 @@ class Permissions extends Controller
                     if ($value === 'none') {
                         return;
                     } elseif ($org_access = Organization::find($value)) {
-                        if ($org_access->is($organization) || $org_access->parent_organization()->is($organization)) {
+                        if ($org_access->is($organization) || $org_access->parent_organization?->is($organization)) {
                             return true;
                         }
                     }

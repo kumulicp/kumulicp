@@ -70,7 +70,6 @@ class WordpressRancherJobs extends WordpressJobChart
 
         $default_settings = [
             ['name' => 'APP_URL', 'value' => $this->app_instance->address()],
-            ['name' => 'ACCOUNT_TOKEN', 'value' => $this->organization->api_token],
             ['name' => 'NO_REPLY_HOST', 'value' => env('MAIL_HOST')],
             ['name' => 'NO_REPLY_PORT', 'value' => env('MAIL_PORT')],
             ['name' => 'NO_REPLY_PASSWORD', 'value' => env('MAIL_PASSWORD')],
