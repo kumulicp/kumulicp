@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetupAwareAuthenticate;
 use App\Http\Middleware\UserOrganization;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->appendToGroup('web', [
             HandleInertiaRequests::class,
+            SecurityHeaders::class,
         ]);
         $middleware->alias([
             'auth' => SetupAwareAuthenticate::class,

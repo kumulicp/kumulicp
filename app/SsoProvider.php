@@ -34,6 +34,12 @@ class SsoProvider extends Model
         'enabled',
     ];
 
+    protected $hidden = [
+        'client_secret',
+        'access_token',
+        'refresh_token',
+    ];
+
     protected $casts = [
         'enabled' => 'boolean',
         'client_secret' => 'encrypted',
