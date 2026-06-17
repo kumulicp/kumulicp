@@ -107,4 +107,32 @@ export default [
     name: 'key',
     to: 'ion-md-key',
   },
+  {
+    name: 'expand_more',
+    to: 'fa4-chevron-down',
+  },
+  {
+    name: 'expand_less',
+    to: 'fa4-chevron-up',
+  },
+  {
+    name: 'notifications',
+    to: 'fa4-bell',
+  },
+  {
+    name: 'notifications_active',
+    to: 'fa4-bell',
+  },
+  {
+    name: 'visibility',
+    to: 'fa4-eye',
+  },
+  {
+    name: 'visibility_off',
+    to: 'fa4-eye-slash',
+  },
+  {
+    name: 'info',
+    to: 'fa4-info-circle',
+  },
 ]
