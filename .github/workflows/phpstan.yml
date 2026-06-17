@@ -20,7 +20,7 @@ jobs:
     - name: Prepare Laravel Environment
       run: |
         cp .env.sample .env
-        php artisan key:generate
         mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions bootstrap/cache
+        php artisan key:generate
     - name: Static Analysis
       run: vendor/bin/phpstan analyse --memory-limit=512M
