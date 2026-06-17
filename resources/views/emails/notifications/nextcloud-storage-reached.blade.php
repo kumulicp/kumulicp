@@ -31,6 +31,6 @@
 {{ __('messages.api.nextcloud.team_folders.quota_reached.go_to_nextcloud') }}
 @endcomponent
 
-Thanks,<br>
+{{ __('labels.thanks') }},<br>
 {{ config('app.name') }}
 @endcomponent

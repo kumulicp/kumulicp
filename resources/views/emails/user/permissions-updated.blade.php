@@ -2,7 +2,7 @@
 
 ## {{ $user->attribute('name') }},
 
-{{ ('messages.notification.permissions_updated.message') }}
+{{ __('messages.notification.permissions_updated.message') }}
 
 @if (array_key_exists('access', $permissions) && count($permissions['access']) > 0)
 ### {{ __('messages.notification.permissions_updated.app_access_title') }}

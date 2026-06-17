@@ -68,4 +68,5 @@ return [
     'superaccount' => 'Super Account',
     'enabled' => 'Enabled',
     'package_manager' => 'Plugin Manager',
+    'thanks' => 'Thanks',
 ];

@@ -1,5 +1,5 @@
 <h1>{{ env('APP_URL') }}{{ $log['level_name'] }}</h1>
-<h2>@if ($organization) {{ $organization->name }} @else Cron job @endif</h2>
+<h2>@if ($organization) {{ $organization->name }} @else {{ __('messages.notification.critical_log.cron_job') }} @endif</h2>
 <p><span style="font-weight: bold">{{ __('messages.notification.critical_log.error') }}:</span> {!! $log['formatted'] !!}</p>
 <p><span style="font-weight: bold">{{ __('messages.notification.critical_log.time') }}:</span> {{ $log['record_datetime'] }}</p>
 <p><span style="font-weight: bold">{{ __('messages.notification.critical_log.user_agent') }}:</span> {{ $log['user_agent'] }}</p>

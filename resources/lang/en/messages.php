@@ -138,6 +138,7 @@ return [
             'remote_ip' => 'Remote IP',
             'extra_info' => 'Extra Info',
             'trace_log' => 'Trace Log',
+            'cron_job' => 'Cron Job',
         ],
         'bill' => [
             'line_1' => 'Attached is your invoice for your recurring bill for',
@@ -152,6 +153,7 @@ return [
         'domain_transfer_request' => [
             'title' => 'Domain Transfer Request',
             'name' => 'Name',
+            'phone' => 'Phone',
             'email' => 'Email',
             'domain' => 'Domain',
         ],
