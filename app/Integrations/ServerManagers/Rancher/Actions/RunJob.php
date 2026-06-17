@@ -20,7 +20,7 @@ class RunJob extends Action
     {
         $this->organization = $org_server->organization;
         $this->job_method = Str::camel($job_name);
-        $job_title = str_replace('_', ' ', Str::title($job_name));
+        $job_title = ucwords(str_replace('_', ' ', $job_name));
         $this->setCustomValues(['job' => serialize($job_chart), 'job_name' => $job_name, 'org_server_id' => $org_server->id, 'namespace' => $namespace]);
 
         $this->description = $job_title;

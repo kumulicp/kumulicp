@@ -11,8 +11,8 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
-        @if(Auth::check())
+        @auth
         <script src="https://js.stripe.com/v3"></script>
-        @endif
+        @endauth
     </body>
 </html>

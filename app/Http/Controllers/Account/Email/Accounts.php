@@ -16,7 +16,7 @@ class Accounts extends Controller
 {
     public function index()
     {
-        $this->authorize('view-emails');
+        Gate::authorize('view-emails');
 
         $organization = Organization::account();
         $domains = $organization->domains()->emailEnabled()->primary()->get();
@@ -48,7 +48,7 @@ class Accounts extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-email-accounts');
+        Gate::authorize('add-email-accounts');
 
         /* Validate */
         $validated = $request->validate([
@@ -89,7 +89,7 @@ class Accounts extends Controller
 
     public function update(Request $request, $email_address)
     {
-        $this->authorize('edit-email-settings');
+        Gate::authorize('edit-email-settings');
 
         $organization = Organization::account();
         $email_parts = explode('@', $email_address);

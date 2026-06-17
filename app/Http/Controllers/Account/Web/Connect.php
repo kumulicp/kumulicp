@@ -7,12 +7,13 @@ use App\OrgDomain;
 use App\Rules\DomainName;
 use App\Support\Facades\Domain;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class Connect extends Controller
 {
     public function setup()
     {
-        $this->authorize('connect-domains');
+        Gate::authorize('connect-domains');
 
         $organization = auth()->user()->organization;
 
@@ -21,7 +22,7 @@ class Connect extends Controller
 
     public function add(Request $request)
     {
-        $this->authorize('connect-domains');
+        Gate::authorize('connect-domains');
 
         /* Validate */
         $validated = $request->validate([

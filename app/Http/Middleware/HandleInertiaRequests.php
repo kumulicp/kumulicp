@@ -75,7 +75,7 @@ class HandleInertiaRequests extends Middleware
         $headers = $request->header();
         // if (array_key_exists('content-type', $headers) && in_array($headers['content-type'])) {
         if (! in_array(true, Arr::get($headers, 'x-inertia', [])) && in_array('application/json', Arr::get($headers, 'content-type', []))) {
-            return;
+            return [];
         }
 
         return array_merge(parent::share($request), [

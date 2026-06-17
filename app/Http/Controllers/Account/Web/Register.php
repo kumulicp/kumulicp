@@ -15,12 +15,13 @@ use App\Tld;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class Register extends Controller
 {
     public function setup($domain_name)
     {
-        $this->authorize('register-domains');
+        Gate::authorize('register-domains');
 
         $organization = auth()->user()->organization;
 
@@ -103,7 +104,7 @@ class Register extends Controller
 
     public function availability()
     {
-        $this->authorize('register-domains');
+        Gate::authorize('register-domains');
 
         return inertia('Organization/Settings/WebDomains/WebDomainsNewAvailability', [
             'breadcrumbs' => [
@@ -120,7 +121,7 @@ class Register extends Controller
 
     public function select(Request $request)
     {
-        $this->authorize('register-domains');
+        Gate::authorize('register-domains');
 
         $validated = $request->validate([
             'domain_name' => ['string', 'max:70', 'required', 'lowercase', new DomainName, new DomainAvailable], // TODO: Put checks here(organization owns domain, domain is available, registerable at control panel
@@ -168,7 +169,7 @@ class Register extends Controller
 
     public function check(Request $request)
     {
-        $this->authorize('register-domains');
+        Gate::authorize('register-domains');
 
         $validated = $request->validate([
             'domain_name' => ['string', 'max:200', 'required', 'lowercase', new DomainName], // TODO: Check whether this is truly a domain name
@@ -218,7 +219,7 @@ class Register extends Controller
 
     public function register(Request $request, $domain_name)
     {
-        $this->authorize('register-domains');
+        Gate::authorize('register-domains');
 
         $validated = $request->validate([
             'years' => 'integer|min:1|max:10|required',

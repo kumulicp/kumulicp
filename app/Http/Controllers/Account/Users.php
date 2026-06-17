@@ -81,7 +81,7 @@ class Users extends Controller
     {
         $organization = auth()->user()->organization;
         $user = AccountManager::users()->find($userid);
-        $this->authorize('view-user', [$user]);
+        Gate::authorize('view-user', [$user]);
 
         if (! $user) {
             // return to user list if user doesn't exist
@@ -190,7 +190,7 @@ class Users extends Controller
             return response()->json([], 404);
         }
 
-        $this->authorize('view-user', $user);
+        Gate::authorize('view-user', $user);
 
         $info = [
             'username' => $user->attribute('username'),
@@ -206,7 +206,7 @@ class Users extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-user');
+        Gate::authorize('add-user');
 
         $organization = auth()->user()->organization;
 
@@ -276,8 +276,8 @@ class Users extends Controller
     public function edit($userid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('view-user', $user);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('view-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $organization = auth()->user()->organization;
         $suborganizations = $organization->suborganizations;
@@ -367,8 +367,8 @@ class Users extends Controller
     public function update(Request $request, $userid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('view-user', $user);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('view-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $organization = auth()->user()->organization;
 
@@ -436,8 +436,8 @@ class Users extends Controller
     public function destroy(string $userid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('view-user', $user);
-        $this->authorize('delete-user', $user);
+        Gate::authorize('view-user', $user);
+        Gate::authorize('delete-user', $user);
 
         $organization = auth()->user()->organization;
 
@@ -453,9 +453,9 @@ class Users extends Controller
     public function createAccountEmail(string $username, OrgDomain $domain)
     {
         $user = AccountManager::users()->find($username);
-        $this->authorize('view-user', $user);
-        $this->authorize('edit-user', $user);
-        $this->authorize('add-user-email-account-to-domain', [$username, $domain]);
+        Gate::authorize('view-user', $user);
+        Gate::authorize('edit-user', $user);
+        Gate::authorize('add-user-email-account-to-domain', [$username, $domain]);
 
         try {
             $email_server = Domain::connect($domain, 'email');
@@ -473,8 +473,8 @@ class Users extends Controller
     public function removeAccountEmail(string $username, string $email_address)
     {
         $user = AccountManager::users()->find($username);
-        $this->authorize('view-user', $user);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('view-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $split = explode('@', $email_address);
         $domain = OrgDomain::where('name', $split[1])
@@ -494,7 +494,7 @@ class Users extends Controller
     public function resetPassword(string $username)
     {
         $user = AccountManager::users()->find($username);
-        $this->authorize('view-user', $user);
+        Gate::authorize('view-user', $user);
 
         $new_user_code = NewUserCode::where('username', $username)->first();
 

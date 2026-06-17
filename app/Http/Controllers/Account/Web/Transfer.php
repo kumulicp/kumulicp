@@ -16,7 +16,7 @@ class Transfer extends Controller
 {
     public function setup()
     {
-        $this->authorize('transfer-domains');
+        Gate::authorize('transfer-domains');
 
         return inertia('Organization/Settings/WebDomains/WebDomainsNewTransfer');
     }
@@ -64,7 +64,7 @@ class Transfer extends Controller
 
     public function transfer(Request $request)
     {
-        $this->authorize('transfer-domains');
+        Gate::authorize('transfer-domains');
 
         $validated = $request->validate([
             'domain_name' => ['required', 'string', 'max:70', 'unique:org_domains,name', 'lowercase', new DomainName],
