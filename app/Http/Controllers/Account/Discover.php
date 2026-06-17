@@ -28,7 +28,7 @@ class Discover extends Controller
 {
     public function index()
     {
-        $this->authorize('active');
+        Gate::authorize('active');
         $organization = Organization::account();
         $apps = Subscription::base()->enabledApps();
 
@@ -50,7 +50,7 @@ class Discover extends Controller
 
     public function show(Request $request, Application $app)
     {
-        $this->authorize('view-app', $app);
+        Gate::authorize('view-app', $app);
 
         $organization = Organization::account();
         $version = AppVersion::where('application_id', $app->id)->orderBy('name', 'desc')->first();
@@ -107,7 +107,7 @@ class Discover extends Controller
 
     public function plans(Application $app)
     {
-        $this->authorize('activate-app', $app);
+        Gate::authorize('activate-app', $app);
 
         $organization = Organization::account();
         $plans = ApplicationFacade::availablePlans($app, $organization, display_order: true);
@@ -140,8 +140,8 @@ class Discover extends Controller
 
     public function review(Application $app, AppPlan $plan)
     {
-        $this->authorize('activate-app', $app);
-        $this->authorize('select-app-plan', $plan);
+        Gate::authorize('activate-app', $app);
+        Gate::authorize('select-app-plan', $plan);
 
         $organization = Organization::account();
 
@@ -245,8 +245,8 @@ class Discover extends Controller
 
     public function activate(Request $request, Application $app, AppPlan $plan)
     {
-        $this->authorize('activate-app', $app);
-        $this->authorize('select-app-plan', $plan);
+        Gate::authorize('activate-app', $app);
+        Gate::authorize('select-app-plan', $plan);
 
         $organization = Organization::account();
 

@@ -70,11 +70,10 @@ class WordpressRancherJobs extends WordpressJobChart
 
         $default_settings = [
             ['name' => 'APP_URL', 'value' => $this->app_instance->address()],
-            ['name' => 'ACCOUNT_TOKEN', 'value' => $this->organization->api_token],
-            ['name' => 'NO_REPLY_HOST', 'value' => config('mail.mailers.smtp.host')],
-            ['name' => 'NO_REPLY_PORT', 'value' => config('mail.mailers.smtp.port')],
-            ['name' => 'NO_REPLY_PASSWORD', 'value' => config('mail.mailers.smtp.password')],
-            ['name' => 'NO_REPLY_EMAIL', 'value' => config('mail.from.address')],
+            ['name' => 'NO_REPLY_HOST', 'value' => env('MAIL_HOST')],
+            ['name' => 'NO_REPLY_PORT', 'value' => env('MAIL_PORT')],
+            ['name' => 'NO_REPLY_PASSWORD', 'value' => env('MAIL_PASSWORD')],
+            ['name' => 'NO_REPLY_EMAIL', 'value' => env('MAIL_FROM_ADDRESS')],
             ['name' => 'NO_REPLY_DOMAIN', 'value' => $no_reply_domain],
             ['name' => 'LDAP_GROUP_DN', 'value' => $ldap_group_dn],
             ['name' => 'LDAP_URI', 'value' => $ldap_uri],

@@ -23,7 +23,7 @@ class Domains extends Controller
 {
     public function index()
     {
-        $this->authorize('view-domains');
+        Gate::authorize('view-domains');
 
         $organization = auth()->user()->organization;
         $base_domain = $organization->base_domain();
@@ -86,7 +86,7 @@ class Domains extends Controller
 
     public function edit(OrgDomain $domain)
     {
-        $this->authorize('edit-domain', $domain);
+        Gate::authorize('edit-domain', $domain);
 
         $organization = auth()->user()->organization;
 
@@ -220,7 +220,7 @@ class Domains extends Controller
 
     public function update(Request $request, OrgDomain $domain)
     {
-        $this->authorize('edit-domain', $domain);
+        Gate::authorize('edit-domain', $domain);
 
         $organization = auth()->user()->organization;
 
@@ -244,7 +244,7 @@ class Domains extends Controller
 
     public function renew(Request $request, OrgDomain $domain)
     {
-        $this->authorize('renew-domain', $domain);
+        Gate::authorize('renew-domain', $domain);
 
         $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
 
@@ -263,7 +263,7 @@ class Domains extends Controller
 
     public function reactivate(Request $request, OrgDomain $domain)
     {
-        $this->authorize('reactivate-domain', $domain);
+        Gate::authorize('reactivate-domain', $domain);
 
         $validate = $request->validate([
             'years' => 'required|numeric|min:1|max:10',
@@ -280,7 +280,7 @@ class Domains extends Controller
 
     public function self_manage(Request $request, OrgDomain $domain)
     {
-        $this->authorize('self-manage-domain', $domain);
+        Gate::authorize('self-manage-domain', $domain);
 
         $domain->transfer_id = null;
         $domain->status = 'active';
@@ -295,7 +295,7 @@ class Domains extends Controller
 
     public function remove(Request $request, OrgDomain $domain)
     {
-        $this->authorize('remove-domain', $domain);
+        Gate::authorize('remove-domain', $domain);
 
         $organization = auth()->user()->organization;
 
@@ -309,7 +309,7 @@ class Domains extends Controller
 
     public function enable_email(OrgDomain $domain)
     {
-        $this->authorize('enable-email-domain', $domain);
+        Gate::authorize('enable-email-domain', $domain);
 
         $organization = auth()->user()->organization;
 
@@ -320,7 +320,7 @@ class Domains extends Controller
 
     public function request_transfer(OrgDomain $domain)
     {
-        $this->authorize('request-domain-transfer', $domain);
+        Gate::authorize('request-domain-transfer', $domain);
 
         $organization = auth()->user()->organization;
         $support_email = Settings::get('support_email');
@@ -333,7 +333,7 @@ class Domains extends Controller
 
     public function transfer_in(Request $request, OrgDomain $domain)
     {
-        $this->authorize('transfer-in-domain', $domain);
+        Gate::authorize('transfer-in-domain', $domain);
 
         $validated = $request->validate([
             'epp_code' => 'required|string|max:20',

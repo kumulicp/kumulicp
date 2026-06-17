@@ -8,7 +8,6 @@ use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class ApplicationUpdateJob extends Action
 {
@@ -19,7 +18,7 @@ class ApplicationUpdateJob extends Action
         $this->organization = $app_instance->organization;
         $this->app_instance = $app_instance;
         $this->setCustomValues(['job_name' => $job]);
-        $job_title = str_replace('_', ' ', Str::title($job));
+        $job_title = ucwords(str_replace('_', ' ', $job));
 
         $this->description = "$job_title: {$app_instance->label}";
     }

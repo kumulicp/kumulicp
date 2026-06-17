@@ -22,64 +22,11 @@ use App\Integrations\ServerManagers\Rancher\Listeners\UpdateIngressMiddleware;
 use App\Integrations\SSO\Authentik\Listeners\SyncLDAP;
 use App\Integrations\SSO\Authentik\Listeners\UpdateAppInfo;
 use App\Listeners\UpdateAppLdapGroups;
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
-    /**
-     * The event listener mappings for the application.
-     *
-     * @var array
-     */
-    protected $listen = [
-        ApplicationPreActivation::class => [
-            //
-        ],
-        ApplicationActivating::class => [
-            //
-        ],
-        ApplicationActivated::class => [
-            //
-        ],
-        AppInstanceUpdated::class => [
-            //
-        ],
-        UserPermissionsUpdated::class => [
-            SyncLDAP::class,
-        ],
-        DeletingUser::class => [
-            SyncLDAP::class,
-        ],
-        UserCreated::class => [
-            SyncLDAP::class,
-        ],
-        UserUpdated::class => [
-            SyncLDAP::class,
-        ],
-        UserDeleted::class => [
-            SyncLDAP::class,
-        ],
-        OrganizationRegistered::class => [
-        ],
-        AppInstanceSubscriptionChanged::class => [
-            NextcloudUpdateGroupFolderStorageQuota::class,
-            UpdateAppLdapGroups::class,
-        ],
-        AppInstanceDomainChanged::class => [
-            UpdateAppInfo::class,
-        ],
-        DomainDeleted::class => [
-            UpdateIngressMiddleware::class,
-        ],
-        SubscriptionUpdated::class => [
-            //
-        ],
-        TestEvent::class => [
-            //
-        ],
-    ];
-
     /**
      * Register any events for your application.
      *
@@ -87,8 +34,17 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        parent::boot();
+        Event::listen(UserPermissionsUpdated::class, SyncLDAP::class);
+        Event::listen(DeletingUser::class, SyncLDAP::class);
+        Event::listen(UserCreated::class, SyncLDAP::class);
+        Event::listen(UserUpdated::class, SyncLDAP::class);
+        Event::listen(UserDeleted::class, SyncLDAP::class);
 
-        //
+        Event::listen(AppInstanceSubscriptionChanged::class, NextcloudUpdateGroupFolderStorageQuota::class);
+        Event::listen(AppInstanceSubscriptionChanged::class, UpdateAppLdapGroups::class);
+
+        Event::listen(AppInstanceDomainChanged::class, UpdateAppInfo::class);
+
+        Event::listen(DomainDeleted::class, UpdateIngressMiddleware::class);
     }
 }

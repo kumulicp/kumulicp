@@ -17,6 +17,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Vapor Maintenance Mode
+    |--------------------------------------------------------------------------
+    |
+    | Indicates if the application is running on Laravel Vapor.
+    | When enabled, cached services path will be set to a writable location.
+    |
+    */
+    'vapor_maintenance_mode' => env('VAPOR_MAINTENANCE_MODE', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Module Stubs
     |--------------------------------------------------------------------------
     |
@@ -30,7 +41,7 @@ return [
             'routes/web' => 'routes/web.php',
             'routes/api' => 'routes/api.php',
             'views/index' => 'resources/views/index.blade.php',
-            'views/master' => 'resources/views/layouts/master.blade.php',
+            'views/master' => 'resources/views/components/layouts/master.blade.php',
             'scaffold/config' => 'config/config.php',
             'composer' => 'composer.json',
             'assets/js/app' => 'resources/assets/js/app.js',
@@ -39,12 +50,33 @@ return [
             'package' => 'package.json',
         ],
         'replacements' => [
-            'routes/web' => ['LOWER_NAME', 'STUDLY_NAME', 'MODULE_NAMESPACE', 'CONTROLLER_NAMESPACE'],
-            'routes/api' => ['LOWER_NAME', 'STUDLY_NAME', 'MODULE_NAMESPACE', 'CONTROLLER_NAMESPACE'],
-            'vite' => ['LOWER_NAME', 'STUDLY_NAME'],
-            'json' => ['LOWER_NAME', 'STUDLY_NAME', 'MODULE_NAMESPACE', 'PROVIDER_NAMESPACE'],
+            /**
+             * Define custom replacements for each section.
+             * You can now specify a class name that extends
+             * \Nwidart\Modules\Support\ReplacementKeyCommand for dynamic values.
+             *
+             * Example:
+             *
+             * 'composer' => [
+             *      // Map the UPPERCASE token to your command class
+             *      'CUSTOM_KEY' => \App\Modules\Support\Replacements\CustomKey::class,
+             *      // You can still list built-in tokens by their names
+             *      'LOWER_NAME',
+             *      'STUDLY_NAME',
+             *      // ...
+             * ],
+             *
+             * The command class must extend ReplacementKeyCommand and implement handle(): string
+             * to return the replacement text.
+             *
+             * Note: Keys should be in UPPERCASE.
+             */
+            'routes/web' => ['LOWER_NAME', 'STUDLY_NAME', 'PLURAL_LOWER_NAME', 'KEBAB_NAME', 'MODULE_NAMESPACE', 'CONTROLLER_NAMESPACE'],
+            'routes/api' => ['LOWER_NAME', 'STUDLY_NAME', 'PLURAL_LOWER_NAME', 'KEBAB_NAME', 'MODULE_NAMESPACE', 'CONTROLLER_NAMESPACE'],
+            'vite' => ['LOWER_NAME', 'STUDLY_NAME', 'KEBAB_NAME'],
+            'json' => ['LOWER_NAME', 'STUDLY_NAME', 'KEBAB_NAME', 'MODULE_NAMESPACE', 'PROVIDER_NAMESPACE'],
             'views/index' => ['LOWER_NAME'],
-            'views/master' => ['LOWER_NAME', 'STUDLY_NAME'],
+            'views/master' => ['LOWER_NAME', 'STUDLY_NAME', 'KEBAB_NAME'],
             'scaffold/config' => ['STUDLY_NAME'],
             'composer' => [
                 'LOWER_NAME',
@@ -116,6 +148,7 @@ return [
             'channels' => ['path' => 'app/Broadcasting', 'generate' => false],
             'class' => ['path' => 'app/Classes', 'generate' => false],
             'command' => ['path' => 'app/Console', 'generate' => false],
+            'command_replacements' => ['path' => 'app/Console/Replacements', 'generate' => false],
             'component-class' => ['path' => 'app/View/Components', 'generate' => false],
             'emails' => ['path' => 'app/Emails', 'generate' => false],
             'event' => ['path' => 'app/Events', 'generate' => false],
@@ -158,6 +191,8 @@ return [
             'assets' => ['path' => 'resources/assets', 'generate' => true],
             'component-view' => ['path' => 'resources/views/components', 'generate' => false],
             'views' => ['path' => 'resources/views', 'generate' => true],
+            'inertia' => ['path' => 'resources/js/Pages', 'generate' => false],
+            'inertia-components' => ['path' => 'resources/js/Components', 'generate' => false],
 
             // routes/
             'routes' => ['path' => 'routes', 'generate' => true],
@@ -279,4 +314,19 @@ return [
     ],
 
     'activator' => 'file',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inertia
+    |--------------------------------------------------------------------------
+    |
+    | Default Inertia frontend framework used by make commands when no
+    | framework flag (--vue, --react, --svelte) is provided.
+    |
+    | Supported: "vue", "react", "svelte"
+    |
+    */
+    'inertia' => [
+        'frontend' => 'vue',
+    ],
 ];

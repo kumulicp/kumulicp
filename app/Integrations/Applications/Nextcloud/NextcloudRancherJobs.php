@@ -6,6 +6,7 @@ use App\Actions\Apps\ApplicationUpdate;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
 use App\Ldap\Actions\Dn;
 use App\Support\Facades\Action;
+use Illuminate\Support\Facades\Crypt;
 
 class NextcloudRancherJobs extends NextcloudJobChart
 {

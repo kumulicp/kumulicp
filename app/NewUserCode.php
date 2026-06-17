@@ -20,6 +20,10 @@ class NewUserCode extends Model
         'activated' => false,
     ];
 
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
+
     public function organization()
     {
         return $this->belongsTo('App\Organization', 'organization_id');

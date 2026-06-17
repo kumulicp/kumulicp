@@ -71,7 +71,7 @@ class Applications extends Controller
 
     public function edit(AppInstance $app)
     {
-        $this->authorize('edit-app', $app);
+        Gate::authorize('edit-app', $app);
 
         $organization = Organization::account();
         $version = $app->version()->where('status', 'active')->first();
@@ -171,7 +171,7 @@ class Applications extends Controller
 
     public function update(Request $request, AppInstance $app)
     {
-        $this->authorize('edit-app', $app);
+        Gate::authorize('edit-app', $app);
 
         if ($app->status === 'updating') {
             return back()->with('error', 'Unable to update app while updates in progress');
@@ -265,7 +265,7 @@ class Applications extends Controller
 
     public function reactivate(Request $request, AppInstance $app)
     {
-        $this->authorize('reactivate-app', $app);
+        Gate::authorize('reactivate-app', $app);
 
         $app->deactivate_at = null;
         $app->status = 'active';
@@ -280,7 +280,7 @@ class Applications extends Controller
 
     public function destroy(Request $request, AppInstance $app)
     {
-        $this->authorize('deactivate-app', $app);
+        Gate::authorize('deactivate-app', $app);
 
         if (Billing::isBillable()) {
             $period_end = Billing::periodEnds();

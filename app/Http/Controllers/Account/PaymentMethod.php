@@ -11,6 +11,7 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Gate;
 
 class PaymentMethod extends Controller
 {
@@ -31,7 +32,7 @@ class PaymentMethod extends Controller
 
     public function edit()
     {
-        $this->authorize('has-billing-account');
+        Gate::authorize('has-billing-account');
         $organization = Organization::account();
         $managers = AccountManager::users()->billingManagers();
         $users = AccountManager::users()->collect()->map(function ($user) {

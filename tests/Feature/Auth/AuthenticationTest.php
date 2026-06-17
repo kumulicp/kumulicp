@@ -1,6 +1,5 @@
 <?php
 
-use App\Providers\RouteServiceProvider;
 use App\ServerSetting;
 use Tests\Support\TestSupports;
 
@@ -24,7 +23,7 @@ it('authenticates users via login screen', function (string $driver) {
         'password' => 'demouser',
     ]);
 
-    $response->assertRedirect(RouteServiceProvider::HOME);
+    $response->assertRedirect('/');
     $this->assertAuthenticated();
 })->with('account_manager_drivers');
 

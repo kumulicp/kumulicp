@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Account\User;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class Groups extends Controller
 {
     public function edit($userid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $categories = AccountManager::groups()->all();
         $groups = [];
@@ -51,7 +52,7 @@ class Groups extends Controller
     public function add(Request $request, $userid, $groupid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $group = $user->addToGroup($groupid);
 
@@ -61,7 +62,7 @@ class Groups extends Controller
     public function remove(Request $request, $userid, $groupid)
     {
         $user = AccountManager::users()->find($userid);
-        $this->authorize('edit-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $group = $user->removeFromGroup($groupid);
 

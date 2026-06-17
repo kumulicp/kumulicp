@@ -41,7 +41,7 @@ class Backups extends Controller
 
                 $backup->save();
             } elseif ($request->input('result.status') === 'failed') {
-                Log::critical($request->all(), ['organization_id' => 1]);
+                Log::critical(__('messages.failed')."! : {$results_to_string}", ['organization_id' => $backup->organization_id]);
                 $backup->status = 'failed';
                 $backup->save();
             }

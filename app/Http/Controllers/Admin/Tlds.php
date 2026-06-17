@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Facades\Domain;
 use App\Tld;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class Tlds extends Controller
 {
@@ -81,7 +82,7 @@ class Tlds extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('add-tld');
+        Gate::authorize('add-tld');
 
         $validated = $request->validate([
             'tld' => 'required|max:15|string|unique:tlds,name',

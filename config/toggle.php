@@ -59,9 +59,9 @@ return [
     */
 
     'flags' => [
-        'sub-organizations' => env('TOGGLE_SUB_ORGANIZATIONS', true),
-        'emails' => env('TOGGLE_EMAILS', true),
-        'shared-apps' => env('TOGGLE_SHARED_APPS', true),
+        'sub-organizations' => env('TOGGLE_SUB_ORGANIZATIONS', false),
+        'emails' => env('TOGGLE_EMAILS', false),
+        'shared-apps' => env('TOGGLE_SHARED_APPS', false),
     ],
 
     'database_flags' => [

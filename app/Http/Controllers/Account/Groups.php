@@ -9,12 +9,13 @@ use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Gate;
 
 class Groups extends Controller
 {
     public function index()
     {
-        $this->authorize('active');
+        Gate::authorize('active');
 
         $organization = Organization::account();
         $categories = AccountManager::groups()->all();
@@ -31,7 +32,7 @@ class Groups extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('active');
+        Gate::authorize('active');
         /* Validate */
         $validatedData = $request->validate([
             'name' => ['required', 'max:100', 'not_regex:/[\/\\\\]/', new GroupNameNotUsed],
@@ -58,7 +59,7 @@ class Groups extends Controller
 
     public function edit($group)
     {
-        $this->authorize('active');
+        Gate::authorize('active');
         $organization = Organization::account();
 
         $group = AccountManager::groups()->find($group);
@@ -101,7 +102,7 @@ class Groups extends Controller
 
     public function update(Request $request, $group_name)
     {
-        $this->authorize('active');
+        Gate::authorize('active');
         /* Validate */
         $validator = Validator::make($request->all(), [
             'original_name' => 'required', // TODO: Check if original name exists
@@ -145,7 +146,7 @@ class Groups extends Controller
 
     public function destroy($group_name)
     {
-        $this->authorize('active');
+        Gate::authorize('active');
         $organization = Organization::account();
 
         $active_apps = $organization->active_apps();

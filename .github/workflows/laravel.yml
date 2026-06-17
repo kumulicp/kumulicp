@@ -65,4 +65,5 @@ jobs:
         LDAP_USERNAME: "cn=admin,dc=example,dc=com"
         LDAP_PASSWORD: admin
         LDAP_BASE_DN: "dc=example,dc=com"
+        LDAP_TLS: false
       run: php artisan test --testsuite=AccountManagerLdap

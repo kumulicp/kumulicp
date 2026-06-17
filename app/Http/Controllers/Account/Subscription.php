@@ -21,7 +21,7 @@ class Subscription extends Controller
 {
     public function index()
     {
-        $this->authorize('has-billing-account');
+        Gate::authorize('has-billing-account');
         $organization = Organization::account();
         if ($organization->suborganizations()->count() === 0) {
             return $this->commonView($organization);
@@ -249,7 +249,7 @@ class Subscription extends Controller
 
     public function review(\App\Organization $organization, Plan $plan)
     {
-        $this->authorize('select-plan', [$organization, $plan]);
+        Gate::authorize('select-plan', [$organization, $plan]);
         $plans = SubscriptionFacade::all();
         $base_plan = SubscriptionFacade::dryBaseChange($plan)->base();
         $prices = $plans->compileAllStats();
@@ -324,7 +324,7 @@ class Subscription extends Controller
 
     public function update(Request $request, \App\Organization $organization, Plan $plan)
     {
-        $this->authorize('select-plan', [$organization, $plan]);
+        Gate::authorize('select-plan', [$organization, $plan]);
 
         // Check if needs to set payment
         if ($plan->payment_enabled && ! Billing::hasDefaultPaymentMethod()) {
@@ -458,7 +458,7 @@ class Subscription extends Controller
 
     private function commonView(\App\Organization $organization)
     {
-        $this->authorize('view-organization', $organization);
+        Gate::authorize('view-organization', $organization);
         $subscription = (new SubscriptionService($organization))->all();
 
         $stats = $subscription->compileCostStats();
