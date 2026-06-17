@@ -34,4 +34,9 @@ return [
         'access_token' => env('MATRIX_ACCESS_TOKEN'),
         'room_id' => env('MATRIX_ROOM_ID'),
     ],
+
+    'stripe' => [
+        'key' => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
 ];

@@ -73,7 +73,7 @@ class HelmChart extends Chart
 
     public function clusterIssuer()
     {
-        return env('APP_ENV') == 'production' ? 'letsencrypt-production' : 'letsencrypt-staging';
+        return app()->environment('production') ? 'letsencrypt-production' : 'letsencrypt-staging';
     }
 
     public function appEnabled()

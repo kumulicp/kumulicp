@@ -8,6 +8,7 @@ use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Application;
 use App\Task;
+use Throwable;
 
 class DomainDelete extends Action
 {

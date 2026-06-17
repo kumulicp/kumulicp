@@ -44,7 +44,9 @@ use App\Jobs\RunAction;
 use App\Organization;
 use App\Task;
 use Illuminate\Support\Arr;
+use App\Exceptions\ConnectionFailedException;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ActionService
 {

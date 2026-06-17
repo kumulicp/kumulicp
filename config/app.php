@@ -120,6 +120,8 @@ return [
 
     'asset_url' => env('ASSET_URL', null),
 
+    'proxy' => env('PROXY', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

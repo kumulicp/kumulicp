@@ -23,7 +23,7 @@ class PaymentMethod extends Controller
             'intent' => Billing::intent(),
             'defaultPaymentMethod' => Billing::defaultPaymentMethod(),
             'brand_image' => Billing::defaultPaymentMethodBrandImage(),
-            'stripe_key' => env('STRIPE_KEY'),
+            'stripe_key' => config('services.stripe.key'),
         ];
 
         return response()->json($data, 200);

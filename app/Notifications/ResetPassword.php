@@ -50,7 +50,7 @@ class ResetPassword extends Notification implements ShouldQueue
         $name = $user->attribute('first_name').' '.$user->attribute('last_name');
 
         return (new MailMessage)
-            ->subject($organization->name.' has sent a password reset on '.env('APP_NAME'))
+            ->subject($organization->name.' has sent a password reset on '.config('app.name'))
             ->greeting(__('labels.greeting', ['name' => $name]))
             ->line(__('messages.notification.password.reset_link', ['organization', $organization->name]))
             ->line(__('messages.notification.account.username', ['username' => $user->attribute('username')]))

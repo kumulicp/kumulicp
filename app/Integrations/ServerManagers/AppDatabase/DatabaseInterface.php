@@ -23,7 +23,7 @@ class DatabaseInterface implements DatabaseContract
         Config::set('database.connections.app_db', [
             'driver' => 'mysql',
             'host' => $server->server->host,
-            'port' => env('DB_PORT', '3306'),
+            'port' => config('database.connections.mysql.port', '3306'),
             'database' => 'information_schema',
             'username' => $server->server->api_key,
             'password' => $server->server->api_secret,

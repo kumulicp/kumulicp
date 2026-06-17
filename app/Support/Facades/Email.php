@@ -4,6 +4,9 @@ namespace App\Support\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
+/**
+ * @method static array requiredDNSRecords(\App\OrgDomain $domain)
+ */
 class Email extends Facade
 {
     /**

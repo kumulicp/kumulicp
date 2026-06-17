@@ -7,6 +7,7 @@ use App\OrgDomain;
 use App\Support\Facades\Domain;
 use App\Task;
 use App\Tld;
+use Throwable;
 
 class AddWebDomain extends Action
 {

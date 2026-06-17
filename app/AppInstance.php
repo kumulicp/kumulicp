@@ -171,7 +171,7 @@ class AppInstance extends Model
 
     public function address()
     {
-        $http = env('APP_ENV') === 'production' ? 'https://' : 'http://'; // TODO: Need a setting for this cause this isn't good
+        $http = app()->environment('production') ? 'https://' : 'http://'; // TODO: Need a setting for this cause this isn't good
 
         return $http.$this->domain();
     }

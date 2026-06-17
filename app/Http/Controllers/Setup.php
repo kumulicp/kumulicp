@@ -32,7 +32,7 @@ class Setup extends Controller
         // Run system checks
         $disabled = explode(',', ini_get('disable_functions'));
 
-        if (config('account_manager.driver') === 'ldap' || env('LOGIN_PROVIDER') === 'ldap') {
+        if (config('account_manager.driver') === 'ldap' || config('auth.guards.web.provider') === 'ldap') {
             $checks[__('setup.extension', ['extension' => 'ldap'])] = extension_loaded('ldap');
         }
         $checks[__('setup.extension', ['extension' => 'intl'])] = extension_loaded('intl');
@@ -41,9 +41,9 @@ class Setup extends Controller
         $checks[__('setup.extension', ['extension' => 'curl'])] = extension_loaded('curl');
         $checks[__('setup.function', ['function' => 'curl_exec'])] = ! in_array('curl_exec', $disabled);
 
-        if (config('billing.default') === 'stripe' && ! is_null(env('STRIPE_KEY')) && ! is_null(env('STRIPE_SECRET'))) {
+        if (config('billing.default') === 'stripe' && ! is_null(config('services.stripe.key')) && ! is_null(config('services.stripe.secret'))) {
             try {
-                Stripe::setApiKey(env('STRIPE_SECRET'));
+                Stripe::setApiKey(config('services.stripe.secret'));
                 // Attempt to retrieve a list of test customers (will be empty if new)
                 $customers = Customer::all(['limit' => 1]);
 

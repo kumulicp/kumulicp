@@ -36,9 +36,9 @@ class WordpressRancherJobs extends WordpressJobChart
         $ldap_group_dn = Dn::create($this->organization, 'applications', $this->app_instance->name);
         $ldap_admin_dn = 'cn=admin,'.Dn::create($this->organization);
         $ldap_users_dn = Dn::create($this->organization, 'users');
-        $ldap_host = env('LDAP_HOST');
+        $ldap_host = config('ldap.connections.default.hosts.0');
         $ldap_uri = "ldap://$ldap_admin_dn:$secretpw@$ldap_host/$ldap_users_dn";
-        $no_reply_domain = explode('@', env('MAIL_FROM_ADDRESS'))[1];
+        $no_reply_domain = explode('@', config('mail.from.address'))[1];
 
         $app_instance = Application::instance($this->app_instance);
         $sso_server = $app_instance->server('sso')?->serverInfo();
@@ -71,14 +71,14 @@ class WordpressRancherJobs extends WordpressJobChart
         $default_settings = [
             ['name' => 'APP_URL', 'value' => $this->app_instance->address()],
             ['name' => 'ACCOUNT_TOKEN', 'value' => $this->organization->api_token],
-            ['name' => 'NO_REPLY_HOST', 'value' => env('MAIL_HOST')],
-            ['name' => 'NO_REPLY_PORT', 'value' => env('MAIL_PORT')],
-            ['name' => 'NO_REPLY_PASSWORD', 'value' => env('MAIL_PASSWORD')],
-            ['name' => 'NO_REPLY_EMAIL', 'value' => env('MAIL_FROM_ADDRESS')],
+            ['name' => 'NO_REPLY_HOST', 'value' => config('mail.mailers.smtp.host')],
+            ['name' => 'NO_REPLY_PORT', 'value' => config('mail.mailers.smtp.port')],
+            ['name' => 'NO_REPLY_PASSWORD', 'value' => config('mail.mailers.smtp.password')],
+            ['name' => 'NO_REPLY_EMAIL', 'value' => config('mail.from.address')],
             ['name' => 'NO_REPLY_DOMAIN', 'value' => $no_reply_domain],
             ['name' => 'LDAP_GROUP_DN', 'value' => $ldap_group_dn],
             ['name' => 'LDAP_URI', 'value' => $ldap_uri],
-            ['name' => 'CP_URL', 'value' => env('APP_URL')],
+            ['name' => 'CP_URL', 'value' => config('app.url')],
             ['name' => 'USE_SSL', 'value' => $app_instance->configuration('ingress-tls') ? 'true' : 'false'],
             ['name' => 'ORG_TYPE', 'value' => $this->organization->type],
             ['name' => 'LDAP_GROUPS', 'value' => json_encode($roles)],

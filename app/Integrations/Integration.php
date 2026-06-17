@@ -40,7 +40,7 @@ class Integration
     public function __construct(
         public Organization $organization,
     ) {
-        if (env('APP_ENV') === 'testing') {
+        if (app()->environment('testing')) {
             $this->testing_fakes();
         }
     }

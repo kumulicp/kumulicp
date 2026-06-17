@@ -38,8 +38,8 @@ class NextcloudEnvVars extends EnvVar
 
         $ldap_settings = config('account_manager.driver') === 'ldap' ? [
             'USE_LDAP' => 'true',
-            'LDAP_HOST' => env('LDAP_HOST'),
-            'LDAP_PORT' => env('LDAP_PORT'),
+            'LDAP_HOST' => config('ldap.connections.default.hosts.0'),
+            'LDAP_PORT' => config('ldap.connections.default.port'),
             'LDAP_ADMIN' => $admin_dn,
             'LDAP_AGENT_PASSWORD' => $secretpw,
             'LDAP_BASE' => $base_dn,

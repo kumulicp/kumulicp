@@ -73,8 +73,8 @@ class NextcloudRancherJobs extends NextcloudJobChart
             command: ['/set-ldap.sh'],
             env: [
                 ['name' => 'USE_LDAP', 'value' => 'true'],
-                ['name' => 'LDAP_HOST', 'value' => env('LDAP_HOST')],
-                ['name' => 'LDAP_PORT', 'value' => env('LDAP_PORT')],
+                ['name' => 'LDAP_HOST', 'value' => config('ldap.connections.default.hosts.0')],
+                ['name' => 'LDAP_PORT', 'value' => config('ldap.connections.default.port')],
                 ['name' => 'LDAP_ADMIN', 'value' => "cn=admin,$base_dn"],
                 ['name' => 'LDAP_AGENT_PASSWORD', 'value' => $this->organization->secretpw],
                 ['name' => 'LDAP_BASE', 'value' => $base_dn],

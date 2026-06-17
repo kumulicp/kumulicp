@@ -59,7 +59,7 @@ class Dn
             }
             $n++;
         }
-        $dn[$n] = env('LDAP_BASE_DN');
+        $dn[$n] = config('ldap.connections.default.base_dn');
 
         $fullDn = implode(',', $dn);
 
