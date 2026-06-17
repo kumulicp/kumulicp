@@ -2,113 +2,45 @@
 
 namespace $NAMESPACE$;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Database\Eloquent\Factory;
+use Nwidart\Modules\Support\ModuleServiceProvider;
+use Illuminate\Console\Scheduling\Schedule;
 
-class $CLASS$ extends ServiceProvider
+class $CLASS$ extends ModuleServiceProvider
 {
     /**
-     * @var string $moduleName
+     * The name of the module.
      */
-    protected $moduleName = '$MODULE$';
+    protected string $name = '$MODULE$';
 
     /**
-     * @var string $moduleNameLower
+     * The lowercase version of the module name.
      */
-    protected $moduleNameLower = '$LOWER_NAME$';
+    protected string $nameLower = '$LOWER_NAME$';
 
     /**
-     * Boot the application events.
+     * Command classes to register.
      *
-     * @return void
+     * @var string[]
      */
-    public function boot()
-    {
-        $this->registerTranslations();
-        $this->registerConfig();
-        $this->registerViews();
-        $this->loadMigrationsFrom(module_path($this->moduleName, '$MIGRATIONS_PATH$'));
-    }
+    // protected array $commands = [];
 
     /**
-     * Register the service provider.
+     * Provider classes to register.
      *
-     * @return void
+     * @var string[]
      */
-    public function register()
-    {
-        $this->app->register(RouteServiceProvider::class);
-    }
+    protected array $providers = [
+        EventServiceProvider::class,
+        RouteServiceProvider::class,
+    ];
 
     /**
-     * Register config.
-     *
-     * @return void
+     * Define module schedules.
+     * 
+     * @param $schedule
      */
-    protected function registerConfig()
-    {
-        $this->publishes([
-            module_path($this->moduleName, '$PATH_CONFIG$/config.php') => config_path($this->moduleNameLower . '.php'),
-        ], 'config');
-        $this->mergeConfigFrom(
-            module_path($this->moduleName, '$PATH_CONFIG$/config.php'), $this->moduleNameLower
-        );
-    }
-
-    /**
-     * Register views.
-     *
-     * @return void
-     */
-    public function registerViews()
-    {
-        $viewPath = resource_path('views/modules/' . $this->moduleNameLower);
-
-        $sourcePath = module_path($this->moduleName, '$PATH_VIEWS$');
-
-        $this->publishes([
-            $sourcePath => $viewPath
-        ], ['views', $this->moduleNameLower . '-module-views']);
-
-        $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->moduleNameLower);
-    }
-
-    /**
-     * Register translations.
-     *
-     * @return void
-     */
-    public function registerTranslations()
-    {
-        $langPath = resource_path('lang/modules/' . $this->moduleNameLower);
-
-        if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, $this->moduleNameLower);
-            $this->loadJsonTranslationsFrom($langPath, $this->moduleNameLower);
-        } else {
-            $this->loadTranslationsFrom(module_path($this->moduleName, '$PATH_LANG$'), $this->moduleNameLower);
-            $this->loadJsonTranslationsFrom(module_path($this->moduleName, '$PATH_LANG$'), $this->moduleNameLower);
-        }
-    }
-
-    /**
-     * Get the services provided by the provider.
-     *
-     * @return array
-     */
-    public function provides()
-    {
-        return [];
-    }
-
-    private function getPublishableViewPaths(): array
-    {
-        $paths = [];
-        foreach (\Config::get('view.paths') as $path) {
-            if (is_dir($path . '/modules/' . $this->moduleNameLower)) {
-                $paths[] = $path . '/modules/' . $this->moduleNameLower;
-            }
-        }
-        return $paths;
-    }
+    // protected function configureSchedules(Schedule $schedule): void
+    // {
+    //     $schedule->command('inspire')->hourly();
+    // }
 }
