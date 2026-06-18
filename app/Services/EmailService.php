@@ -20,7 +20,7 @@ class EmailService
 
     public function checkEmailDNSSettings(OrgDomain $domain)
     {
-        if (env('APP_ENV') != 'production') {
+        if (! app()->environment('production')) {
             return true;
         }
 
@@ -99,7 +99,7 @@ class EmailService
         ];
     }
 
-    public function getRequiredDNSRecords(OrgDomain $domain)
+    public function requiredDNSRecords(OrgDomain $domain)
     {
         $this->domain = $domain;
         $required_records = [];

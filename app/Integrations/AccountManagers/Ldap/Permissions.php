@@ -253,7 +253,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => true,
-            'application' => env('APP_NAME'),
+            'application' => config('app.name'),
         ]);
 
         return $this;
@@ -265,7 +265,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => false,
-            'application' => env('APP_NAME'),
+            'application' => config('app.name'),
         ]);
 
         return $this;
@@ -293,7 +293,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
         Arr::set($this->changes, 'access.control_panel_admin', [
             'access' => true,
-            'application' => env('APP_NAME').' '.__('labels.admin'),
+            'application' => config('app.name').' '.__('labels.admin'),
         ]);
     }
 
@@ -307,7 +307,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
         Arr::set($this->changes, 'access.control_panel_admin', [
             'access' => false,
-            'application' => env('APP_NAME').' '.__('labels.admin'),
+            'application' => config('app.name').' '.__('labels.admin'),
         ]);
 
         return $organization;

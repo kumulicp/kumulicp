@@ -46,7 +46,7 @@ class DomainTransferred extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject(__('messages.notification.domain_transferred', ['domain' => $this->domain->name]))
-            ->line(__('messages.notification.domain_transferred_notice', ['domain' => $this->domain->name, 'appname' => env('APP_NAME')]))
+            ->line(__('messages.notification.domain_transferred_notice', ['domain' => $this->domain->name, 'appname' => config('app.name')]))
             ->action(__('messages.notification.manage_domains'), url(config('app.url').'/settings/domains'));
     }
 
@@ -65,7 +65,7 @@ class DomainTransferred extends Notification implements ShouldQueue
     public function toPanel()
     {
         return [
-            'message' => __('messages.notification.domain_transferred_notice', ['domain' => $this->domain->name, 'appname' => env('APP_NAME')]),
+            'message' => __('messages.notification.domain_transferred_notice', ['domain' => $this->domain->name, 'appname' => config('app.name')]),
         ];
     }
 }

@@ -10,7 +10,7 @@ class MailserverJobs extends MailserverJobChart
     public function addDkimKey()
     {
         $job_name = 'mailserver-job-'.Str::lower(Str::random(10));
-        $return_url = env('APP_URL').'/api/dkim/'.$job_name.'?api_token='.$this->domain->organization->api_token;
+        $return_url = config('app.url').'/api/dkim/'.$job_name.'?api_token='.$this->domain->organization->api_token;
         $this->run(
             command: [
                 '/bin/sh', '-c',

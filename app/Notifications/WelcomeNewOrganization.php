@@ -41,7 +41,7 @@ class WelcomeNewOrganization extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject(__('messages.notification.welcome', ['name' => $this->organization->name]))
-            ->line(__('messages.notification.welcome_notice', ['controlpanelname' => env('APP_NAME')]))
+            ->line(__('messages.notification.welcome_notice', ['controlpanelname' => config('app.name')]))
             ->action(__('actions.get_started'), url('/'));
     }
 
@@ -62,7 +62,7 @@ class WelcomeNewOrganization extends Notification implements ShouldQueue
     {
         return [
             'title' => __('messages.notification.welcome', ['name' => $this->organization->name]),
-            'message' => __('messages.notification.welcome_notice', ['controlpanelname' => env('APP_NAME')]),
+            'message' => __('messages.notification.welcome_notice', ['controlpanelname' => config('app.name')]),
         ];
     }
 }

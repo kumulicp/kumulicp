@@ -142,7 +142,7 @@ class Users extends Namecheap
         $namecheap = $this->namecheap;
         $this->username = null;
 
-        $password = Crypt::decrypString($namecheap->password);
+        $password = Crypt::decryptString($namecheap->password);
 
         $this->command = 'namecheap.users.create';
         $this->parameters = [

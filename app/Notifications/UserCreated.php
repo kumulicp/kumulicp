@@ -57,10 +57,10 @@ class UserCreated extends Notification implements ShouldQueue
         $name = $user->attribute('first_name').' '.$user->attribute('last_name');
 
         $mail_message = (new MailMessage)
-            ->subject(__('messages.notification.account.created', ['name' => $organization->name, 'panel_name' => env('APP_NAME')]))
+            ->subject(__('messages.notification.account.created', ['name' => $organization->name, 'panel_name' => config('app.name')]))
             ->greeting(__('messages.notification.welcome', ['name' => $name]));
         if (count($app_names) > 0) {
-            $mail_message->line(__('messages.notification.account.app_access', ['panel_name' => env('APP_NAME'), 'app_list' => $app_list]));
+            $mail_message->line(__('messages.notification.account.app_access', ['panel_name' => config('app.name'), 'app_list' => $app_list]));
         }
         $mail_message->line(__('messages.notification.account.username', ['username' => $user->attribute('username')]))
             ->action(__('messages.notification.password.set'), url("/public/setpassword/$code"));

@@ -41,11 +41,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        if (env('PROXY') == 'true') {
+        if (config('app.proxy') == 'true') {
             URL::forceScheme('https');
         }
 
-        App::setLocale((auth()->user())?->organization->default_locale ?? env('APP_LOCALE'));
+        App::setLocale((auth()->user())?->organization->default_locale ?? config('app.locale'));
 
         Paginator::useBootstrap();
         Cashier::useCustomerModel(Organization::class);
