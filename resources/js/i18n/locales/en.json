@@ -87,6 +87,7 @@
     "yes": "Yes!",
     "view": "View",
     "soundsGood": "Sounds Good!"
+    "copy": "Copy"
   },
   "modal": {
     "deactivate": "Deactivate",
@@ -982,7 +983,9 @@
       "suborganizations": "Suborganizations",
       "registration": "Registration",
       "selfRegistrationEnabled": "Allow Self-Registration",
-      "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address."
+      "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address.",
+      "selfRegistrationUrl": "Registration Link",
+      "copied": "Copied!"
     },
     "subscription": {
       "plan": "Plan",
@@ -1163,6 +1166,17 @@
       "publicFacingLabel": "Public facing label"
     },
     "pullSecrets": "Pull Secrets"
+    "selfRegistration": "Self-Registration",
+    "captcha": "CAPTCHA",
+    "captchaDescription": "Add CAPTCHA protection to the self-registration form to prevent spam and automated submissions.",
+    "captchaProvider": "CAPTCHA Provider",
+    "captchaNone": "None (disabled)",
+    "captchaTurnstile": "Cloudflare Turnstile",
+    "captchaHcaptcha": "hCaptcha",
+    "captchaSiteKey": "Site Key",
+    "captchaSecretKey": "Secret Key",
+    "selfRegistrationEnabled": "Enable Self-Registration",
+    "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually."
   },
   "other": {
     "initialSetup": "Initial Setup",

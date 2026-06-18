@@ -261,6 +261,8 @@ return [
     ],
     'org_registration' => [
         'token_invalid' => 'This registration link is invalid or has expired. Please request a new one.',
+        'too_many_attempts' => 'Too many registration attempts. Please try again in :seconds seconds.',
+        'captcha_failed' => 'CAPTCHA verification failed. Please try again.',
     ],
     'extensions' => [
         'nextcloud' => [
