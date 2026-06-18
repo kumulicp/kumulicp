@@ -7,6 +7,7 @@ use App\Announcement;
 use App\Application;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
+use App\PullSecret;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Http\Request;
@@ -105,6 +106,7 @@ class Versions extends Controller
                 'helm_repo_name' => $version->setting('helm_repo_name'),
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
+                'pull_secret_id' => $version->pull_secret_id,
                 'chart_version' => $version->setting('chart_version'),
                 'chart_name' => $version->setting('chart_name'),
                 'admin_path' => $version->admin_path,
@@ -123,6 +125,13 @@ class Versions extends Controller
                 'name' => $app->name,
                 'id' => $app->id,
             ],
+            'pull_secrets' => PullSecret::orderBy('name')->get()->map(function ($pull_secret) {
+                return [
+                    'id' => $pull_secret->id,
+                    'name' => $pull_secret->name,
+                    'registry' => $pull_secret->registry,
+                ];
+            }),
             'recommendations' => collect(ApplicationFacade::profile($app)->recommendations())->map(function (string $value, string $key) {
                 return [
                     'name' => Str::headline($key),
@@ -175,7 +184,7 @@ class Versions extends Controller
             'chart_version' => 'string|nullable',
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
-            'image_registry' => 'nullable|string',
+            'pull_secret_id' => 'nullable|integer|exists:pull_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
             'announcement_url' => 'required_if:announcement_location,remote|url:http,https|nullable',
@@ -189,11 +198,11 @@ class Versions extends Controller
         $version->name = $request->input('version');
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
+        $version->pull_secret_id = $request->input('pull_secret_id') ?: null;
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
             'helm_repo_name' => $request->input('helm_repo_name'),
             'image_repo_name' => $request->input('image_repo_name'),
-            'image_registry' => $request->input('image_registry'),
             'chart_name' => $request->input('chart_name'),
         ]);
         $version->announcement_location = $request->input('announcement_location');

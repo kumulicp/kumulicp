@@ -44,6 +44,10 @@ export default {
       {
         title: this.$t('settings.ssoProviders'),
         url: basePath + '/sso-providers'
+      },
+      {
+        title: this.$t('settings.pullSecrets'),
+        url: basePath + '/pull-secrets'
       }
     ]
 

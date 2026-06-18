@@ -41,9 +41,10 @@ class NextcloudChart extends HelmChart
             'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-nextcloud-'.$app_instance->id),
             'image' => [
                 'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
-                'registry' => $version->setting('image_registry'),
+                'registry' => $this->imageRegistry(),
                 'repository' => $version->setting('image_repo_name'),
                 'tag' => $version->name,
+                'pullSecrets' => $this->imagePullSecrets(),
             ],
             'externalDatabase' => [
                 'enabled' => $database_server ? true : false,

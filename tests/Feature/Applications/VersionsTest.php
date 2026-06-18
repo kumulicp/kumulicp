@@ -1,6 +1,7 @@
 <?php
 
 use App\AppVersion;
+use App\PullSecret;
 use App\Support\Facades\Application;
 use App\User;
 use Tests\Support\Applications\DemoAppProfile;
@@ -121,6 +122,8 @@ it('rejects an invalid copy_from value', function () {
 it('updates version settings and default roles', function () {
     $roles = $this->demoApp->roles()->pluck('id')->toArray();
 
+    $pull_secret = PullSecret::factory()->create(['registry' => 'registry2.example.com']);
+
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
         'name' => '1.0',
@@ -133,7 +136,7 @@ it('updates version settings and default roles', function () {
         'chart_version' => '3.0.0',
         'helm_repo_name' => 'updated-chart',
         'image_repo_name' => 'updated/app',
-        'image_registry' => 'registry2.example.com',
+        'pull_secret_id' => $pull_secret->id,
         'announcement_location' => 'none',
         'default_admin_roles' => [$roles[0]],
         'default_user_roles' => [$roles[1]],
@@ -148,7 +151,8 @@ it('updates version settings and default roles', function () {
     expect($version->setting('chart_version'))->toBe('3.0.0');
     expect($version->setting('helm_repo_name'))->toBe('updated-chart');
     expect($version->setting('image_repo_name'))->toBe('updated/app');
-    expect($version->setting('image_registry'))->toBe('registry2.example.com');
+    expect($version->pull_secret_id)->toBe($pull_secret->id);
+    expect($version->pullSecret->registry)->toBe('registry2.example.com');
     expect($version->roles['default_admin_groups'])->toBe([$roles[0]]);
     expect($version->roles['default_user_groups'])->toBe([$roles[1]]);
 });

@@ -96,4 +96,28 @@ class HelmChart extends Chart
     {
         return Str::replace('_', '-', $string);
     }
+
+    // The registry to pull the application's container image from
+    public function imageRegistry(): ?string
+    {
+        $version = $this->app_instance->version;
+
+        if ($version->pullSecret) {
+            return $version->pullSecret->registry;
+        }
+
+        return $version->setting('image_registry');
+    }
+
+    // The names of any imagePullSecrets required to pull the application's container image
+    public function imagePullSecrets(): array
+    {
+        $version = $this->app_instance->version;
+
+        if ($version->requiresPullSecret()) {
+            return [$version->pullSecret->k8sSecretName()];
+        }
+
+        return [];
+    }
 }

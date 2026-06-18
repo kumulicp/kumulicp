@@ -41,8 +41,10 @@ uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Registrars');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/ServerManagers');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Services');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Settings');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/SSO');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Subscription');
+uses(TestCase::class, RefreshDatabase::class)->in('Unit');
 uses(TestCase::class, RefreshDatabase::class)->in('API');
 
 pest()->beforeEach(function () {
