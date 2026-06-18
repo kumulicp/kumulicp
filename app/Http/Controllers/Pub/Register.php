@@ -14,7 +14,11 @@ use App\Rules\UserNotExists;
 use App\SuborgUser;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization as OrganizationFacade;
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Str;
 
@@ -29,12 +33,31 @@ class Register extends Controller
                 'name' => $organization->name,
                 'slug' => $organization->slug,
             ],
+            'captchaProvider' => SettingsFacade::get('captcha_provider'),
+            'captchaSiteKey' => SettingsFacade::get('captcha_site_key'),
         ]);
     }
 
     public function submit(Request $request, Organization $organization)
     {
         $this->abortIfDisabled($organization);
+
+        $key = 'org-register:' . $organization->slug . ':' . $request->ip();
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            throw ValidationException::withMessages([
+                'email' => __('messages.org_registration.too_many_attempts', ['seconds' => $seconds]),
+            ]);
+        }
+        RateLimiter::hit($key, 600);
+
+        if (SettingsFacade::get('captcha_provider')) {
+            if (! $this->verifyCaptcha($request->input('captcha_token'))) {
+                throw ValidationException::withMessages([
+                    'email' => __('messages.org_registration.captcha_failed'),
+                ]);
+            }
+        }
 
         $request->validate([
             'email' => ['required', 'email', 'max:255'],
@@ -155,9 +178,28 @@ class Register extends Controller
         return redirect()->route('public.password.set', ['code' => $new_user_code->code]);
     }
 
+    private function verifyCaptcha(?string $token): bool
+    {
+        if (! $token) {
+            return false;
+        }
+
+        $provider = SettingsFacade::get('captcha_provider');
+        $url = $provider === 'turnstile'
+            ? 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
+            : 'https://hcaptcha.com/siteverify';
+
+        $response = Http::asForm()->post($url, [
+            'secret' => SettingsFacade::get('captcha_secret_key'),
+            'response' => $token,
+        ]);
+
+        return $response->json('success') === true;
+    }
+
     private function abortIfDisabled(Organization $organization): void
     {
-        if (! $organization->setting('self_registration_enabled')) {
+        if (! SettingsFacade::get('registration_enabled') || ! $organization->setting('self_registration_enabled')) {
             abort(404);
         }
     }
