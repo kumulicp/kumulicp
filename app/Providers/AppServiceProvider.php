@@ -45,7 +45,9 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        App::setLocale((auth()->user())?->organization->default_locale ?? config('app.locale'));
+        if (! $this->app->runningInConsole()) {
+            App::setLocale((auth()->user())?->organization->default_locale ?? config('app.locale'));
+        }
 
         Paginator::useBootstrap();
         Cashier::useCustomerModel(Organization::class);
