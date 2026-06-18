@@ -101,7 +101,6 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
                 Route::resource('backups', 'Admin\Organizations\BackupRestore');
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore');
-                Route::resource('apps', 'Admin\Organizations\Applications');
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
@@ -246,7 +245,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::delete('billing/managers/{user}', 'Account\BillingManagers@destroy')->name('organization.billing.manager.destroy');
         Route::get('options', 'Account\Subscription@options')->name('organization.subscription.options.none');
         Route::prefix('{organization}')->group(function () {
-            Route::delete('', 'Account\Subscription@cancel')->name('organization.cancel');
+            Route::delete('', 'Account\Subscription@cancel')->name('organization.subscription.cancel');
             Route::get('', 'Account\Subscription@show')->name('organization.subscription.show');
             Route::post('resubscribe', 'Account\Subscription@resubscribe')->name('organization.subscription.resubscribe');
             Route::get('options', 'Account\Subscription@options')->name('organization.subscription.options');
@@ -267,7 +266,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::post('', 'Account\Organization\Suborganization@store')->name('settings.suborganizations.store');
             Route::get('{organization}', 'Account\Organization\Suborganization@edit')->name('settings.suborganizations.edit');
             Route::put('{organization}', 'Account\Organization\Suborganization@update')->name('settings.suborganizations.update');
-            Route::delete('{organization}', 'Account\Organization\Suborganization@destroy')->name('settings.suborganizations.update');
+            Route::delete('{organization}', 'Account\Organization\Suborganization@destroy')->name('settings.suborganizations.destroy');
         });
         Route::prefix('domains')->group(function () {
             Route::get('', 'Account\Web\Domains@index')->name('organization.settings.web.domains');
