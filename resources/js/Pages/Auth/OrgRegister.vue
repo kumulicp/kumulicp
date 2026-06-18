@@ -30,7 +30,7 @@ import { Head, useForm } from '@inertiajs/vue3'
       <va-button
         type="submit"
         id="submit"
-        :disabled="form.processing || (captchaProvider && !form.captcha_token)"
+        :disabled="form.processing || !!(captchaProvider && !form.captcha_token)"
         class="my-0"
       >
         {{ $t('auth.orgUserRegisterContinue') }}
