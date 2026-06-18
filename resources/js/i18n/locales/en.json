@@ -86,7 +86,7 @@
     "name": "Name",
     "yes": "Yes!",
     "view": "View",
-    "soundsGood": "Sounds Good!"
+    "soundsGood": "Sounds Good!",
     "copy": "Copy"
   },
   "modal": {
@@ -1165,7 +1165,7 @@
       "scopes": "Scopes",
       "publicFacingLabel": "Public facing label"
     },
-    "pullSecrets": "Pull Secrets"
+    "pullSecrets": "Pull Secrets",
     "selfRegistration": "Self-Registration",
     "captcha": "CAPTCHA",
     "captchaDescription": "Add CAPTCHA protection to the self-registration form to prevent spam and automated submissions.",
