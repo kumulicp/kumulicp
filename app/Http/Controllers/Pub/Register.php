@@ -22,6 +22,8 @@ class Register extends Controller
 {
     public function show(Organization $organization)
     {
+        $this->abortIfDisabled($organization);
+
         return inertia('Auth/OrgRegister', [
             'organization' => [
                 'name' => $organization->name,
@@ -32,6 +34,8 @@ class Register extends Controller
 
     public function submit(Request $request, Organization $organization)
     {
+        $this->abortIfDisabled($organization);
+
         $request->validate([
             'email' => ['required', 'email', 'max:255'],
         ]);
@@ -55,6 +59,8 @@ class Register extends Controller
 
     public function pending(Organization $organization)
     {
+        $this->abortIfDisabled($organization);
+
         return inertia('Auth/OrgRegisterPending', [
             'organization' => [
                 'name' => $organization->name,
@@ -65,6 +71,8 @@ class Register extends Controller
 
     public function verify(Organization $organization, string $token)
     {
+        $this->abortIfDisabled($organization);
+
         $registration = OrgUserRegistration::where('organization_id', $organization->id)
             ->where('token', $token)
             ->first();
@@ -87,6 +95,8 @@ class Register extends Controller
 
     public function complete(Request $request, Organization $organization, string $token)
     {
+        $this->abortIfDisabled($organization);
+
         $registration = OrgUserRegistration::where('organization_id', $organization->id)
             ->where('token', $token)
             ->first();
@@ -143,5 +153,12 @@ class Register extends Controller
         $registration->delete();
 
         return redirect()->route('public.password.set', ['code' => $new_user_code->code]);
+    }
+
+    private function abortIfDisabled(Organization $organization): void
+    {
+        if (! $organization->setting('self_registration_enabled')) {
+            abort(404);
+        }
     }
 }

@@ -979,7 +979,10 @@
       "address": "Address",
       "invoiceSettings": "Invoice Settings",
       "includeInParentInvoice": "Include in Parent Invoice",
-      "suborganizations": "Suborganizations"
+      "suborganizations": "Suborganizations",
+      "registration": "Registration",
+      "selfRegistrationEnabled": "Allow Self-Registration",
+      "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address."
     },
     "subscription": {
       "plan": "Plan",
