@@ -77,10 +77,12 @@
     "soundsGood": "Sounds Good!"
   },
   "modal": {
+    "deactivate": "Deactivate",
     "ok": "Ok"
   },
   "form": {
     "cleanYaml": "Clean up YAML",
+    "remove": "Remove",
     "reset": "Reset"
   },
   "admin": {
@@ -859,6 +861,7 @@
       "txtRecord": "TXT Record",
       "nsRecord": "NS Record",
       "caaRecord": "CAA Record",
+      "url301Record": "URL 301 Redirect Record",
       "urlRecord": "URL Redirect Record",
       "aliasRecord": "ALIAS Record",
       "frameRecord": "URL Frame Record",
