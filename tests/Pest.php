@@ -37,6 +37,7 @@ uses(TestCase::class, RefreshDatabase::class)->in('Feature/Billing');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Applications');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Auth');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Organization');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Registrars');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/ServerManagers');
