@@ -131,6 +131,24 @@ import { useForm, Link } from '@inertiajs/vue3'
         <app-customizations v-if="Object.keys(customizations).length > 0" :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
         <h5 v-if="settings.length > 0" class="va-h5">{{ $t('admin.apps.appSettings') }}</h5>
         <app-settings :settings="settings" :settings_form="form.configurations" @update:settings="updateSettings($event)" />
+        <template v-if="can_enable_self_registration">
+          <va-divider class="my-2"/>
+          <h6 class="va-h6 mb-2">{{ $t('organization.settings.registration') }}</h6>
+          <div class="row">
+            <div class="flex flex-col xs12 lg6 mb-2">
+              <va-switch v-model="form.self_registration_enabled"
+                id="self_registration_enabled"
+                left-label
+                immediateValidation
+                :error="$page.props.errors.self_registration_enabled"
+                :error-messages="$page.props.errors.self_registration_enabled"
+              >
+                {{ $t('organization.settings.selfRegistrationEnabled') }}
+              </va-switch>
+              <p class="va-text-secondary">{{ $t('organization.settings.selfRegistrationDescription') }}</p>
+            </div>
+          </div>
+        </template>
         <div class="row">
           <div class="flex flex-col xs12">
             <div>
@@ -164,7 +182,8 @@ export default {
     errors: Object,
     can: Object,
     parent_domains: Object,
-    settings: Object
+    settings: Object,
+    can_enable_self_registration: Boolean
   },
   data () {
     const customizationsForm = {}
@@ -192,7 +211,8 @@ export default {
         label: this.app.label,
         parent_domain: null,
         subdomain: '',
-        configurations: settings
+        configurations: settings,
+        self_registration_enabled: this.app.self_registration_enabled
       })
     }
   },

@@ -141,22 +141,13 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
       </div>
-      <template v-if="registrationGloballyEnabled">
+      <template v-if="registrationGloballyEnabled && org.self_registration_enabled">
       <h6 class="va-h6 my-3">{{ $t('organization.settings.registration') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
-          <va-switch v-model="form.self_registration_enabled"
-            id="self_registration_enabled"
-            left-label
-            immediateValidation
-            :error="$page.props.errors.self_registration_enabled"
-            :error-messages="$page.props.errors.self_registration_enabled"
-            >
-            {{ $t('organization.settings.selfRegistrationEnabled') }}
-          </va-switch>
           <p class="va-text-secondary">{{ $t('organization.settings.selfRegistrationDescription') }}</p>
         </div>
-        <div v-if="form.self_registration_enabled" class="flex flex-col xs12 lg6 mb-2">
+        <div class="flex flex-col xs12 lg6 mb-2">
           <va-input
             readonly
             :model-value="registrationUrl"
@@ -168,8 +159,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               </va-button>
             </template>
           </va-input>
-        </div>
-        <div v-else class="flex flex-col xs12 lg6 mb-2">
         </div>
       </div>
       </template>
@@ -209,8 +198,7 @@ export default {
         user_email: this.org.main_contact.email,
         user_phone_number: this.org.main_contact.phone_number,
         user_first_name: this.org.main_contact.first_name,
-        user_last_name: this.org.main_contact.last_name,
-        self_registration_enabled: this.org.self_registration_enabled
+        user_last_name: this.org.main_contact.last_name
       })
     }
   },

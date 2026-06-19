@@ -181,6 +181,11 @@ return [
             'action' => 'Verify Email & Continue',
             'line2' => 'If you did not request this, you can safely ignore this email.',
             'expiry' => 'This link will expire in 1 hour.',
+            'welcome_subject' => 'Welcome to :org !',
+            'welcome_greeting' => 'Welcome :name !',
+            'welcome_line1' => 'Your registration with :org is complete. Set your password below to finish activating your account.',
+            'welcome_app_access' => 'You have been given access to these apps: **:app_list**',
+            'welcome_username' => 'Your username is: :username',
         ],
     ],
     'api' => [

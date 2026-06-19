@@ -30,7 +30,7 @@ interface UserInterface extends UserManager
 
     public function appStorage(AppInstance $app_instance);
 
-    public function addToDefaultUserGroups();
+    public function addToDefaultUserGroups(?iterable $appInstances = null);
 
     private function removeFromAllGroups();
 

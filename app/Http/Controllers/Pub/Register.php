@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Pub;
 use App\Events\Users\UserCreated as UserCreatedEvent;
 use App\Http\Controllers\Controller;
 use App\NewUserCode;
+use App\Notifications\OrgRegistrationComplete;
 use App\Notifications\OrgRegistrationVerification;
-use App\Notifications\UserCreated;
 use App\Organization;
 use App\OrgUserRegistration;
 use App\Rules\EmailAddressExists;
@@ -150,7 +150,7 @@ class Register extends Controller
         ];
 
         $user = AccountManager::users($organization)->add($input);
-        $user->addToDefaultUserGroups();
+        $user->addToDefaultUserGroups($organization->selfRegistrationApps());
         $user->permissions()->updateUserAccessType();
 
         $new_user_code = new NewUserCode;
@@ -166,8 +166,7 @@ class Register extends Controller
             $suborg_user->save();
         }
 
-        // Send UserCreated notification with the code (mirrors permissions controller flow)
-        $user->notify(new UserCreated($user, $new_user_code->code));
+        $user->notify(new OrgRegistrationComplete($user, $new_user_code->code));
         $new_user_code->status = 'sent';
         $new_user_code->save();
 
@@ -199,7 +198,7 @@ class Register extends Controller
 
     private function abortIfDisabled(Organization $organization): void
     {
-        if (! SettingsFacade::get('registration_enabled') || ! $organization->setting('self_registration_enabled')) {
+        if (! SettingsFacade::get('registration_enabled') || ! $organization->hasSelfRegistrationEnabled()) {
             abort(404);
         }
     }

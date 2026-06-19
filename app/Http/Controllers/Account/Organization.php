@@ -40,7 +40,7 @@ class Organization extends Controller
                     'phone_number' => $organization->contact_phone_number,
                 ] : [],
                 'slug' => $organization->slug,
-                'self_registration_enabled' => (bool) $organization->setting('self_registration_enabled'),
+                'self_registration_enabled' => $organization->hasSelfRegistrationEnabled(),
             ],
             'registrationGloballyEnabled' => (bool) SettingsFacade::get('registration_enabled'),
             'users' => $users,
@@ -70,7 +70,6 @@ class Organization extends Controller
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
             'country' => 'required|string|max:100',
-            'self_registration_enabled' => 'boolean',
         ]);
         $organization = auth()->user()->organization;
 
@@ -101,7 +100,6 @@ class Organization extends Controller
         $organization->city = $city;
         $organization->state = $state;
         $organization->country = $country;
-        $organization->updateSetting('self_registration_enabled', $request->boolean('self_registration_enabled'));
         $organization->save();
 
         UpdateOrganization::dispatch($organization);
