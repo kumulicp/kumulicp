@@ -247,12 +247,12 @@ class AppInstance extends Model
 
     public function selfRegistrationEnabled(): bool
     {
-        return (bool) $this->setting('self_registration_enabled');
+        return $this->canEnableSelfRegistration() && (bool) $this->setting('self_registration_enabled');
     }
 
     public function canEnableSelfRegistration(): bool
     {
-        return (bool) Settings::get('registration_enabled') && count($this->version?->defaultUserRoles() ?? []) > 0;
+        return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;
     }
 
     public function admin_address()

@@ -147,6 +147,11 @@ class AppPlan extends Model
         return is_array($this->settings) ? Arr::get($this->settings, $setting, null) : null;
     }
 
+    public function selfRegistrationEnabled(): bool
+    {
+        return (bool) $this->setting('self_registration_enabled');
+    }
+
     public function updateSetting($setting, $value)
     {
         $settings = $this->settings;

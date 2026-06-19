@@ -198,7 +198,7 @@ class Register extends Controller
 
     private function abortIfDisabled(Organization $organization): void
     {
-        if (! SettingsFacade::get('registration_enabled') || ! $organization->hasSelfRegistrationEnabled()) {
+        if (! $organization->hasSelfRegistrationEnabled()) {
             abort(404);
         }
     }

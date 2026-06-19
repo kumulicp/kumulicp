@@ -141,7 +141,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
       </div>
-      <template v-if="registrationGloballyEnabled && org.self_registration_enabled">
+      <template v-if="org.self_registration_enabled">
       <h6 class="va-h6 my-3">{{ $t('organization.settings.registration') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
@@ -177,7 +177,6 @@ export default {
     org: Object,
     users: Object,
     errors: Object,
-    registrationGloballyEnabled: Boolean,
   },
   data () {
     return {

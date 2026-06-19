@@ -286,6 +286,8 @@
       "enableEmail": "Enable Email",
       "adminAccess": "Admin Access",
       "adminAccessCaption": "Give admins direct access to the initial admin account",
+      "selfRegistration": "Allow Self-Registration",
+      "selfRegistrationCaption": "Let organizations subscribed to this plan enable self-registration on their apps",
       "expiresAfter": "Expires after",
       "expiresAfterCaption": "Used mainly for limited feature/limited time demos which require upgrading plans to keep active",
       "days": "Days",

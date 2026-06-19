@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Jobs\Accounts\UpdateOrganization;
 use App\Support\Facades\AccountManager;
-use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 
 class Organization extends Controller
@@ -42,7 +41,6 @@ class Organization extends Controller
                 'slug' => $organization->slug,
                 'self_registration_enabled' => $organization->hasSelfRegistrationEnabled(),
             ],
-            'registrationGloballyEnabled' => (bool) SettingsFacade::get('registration_enabled'),
             'users' => $users,
             'breadcrumbs' => [
                 [

@@ -11,15 +11,6 @@ import { useForm } from '@inertiajs/vue3'
   </Head>
   <form @submit.prevent="form.put('/admin/settings/registration')">
     <AdminSettings>
-      <template #name>{{ $t('settings.selfRegistration') }}</template>
-      <template #description>{{ $t('settings.selfRegistrationDescription') }}</template>
-      <template #settings>
-        <va-switch v-model="form.registration_enabled" left-label class="mb-3">
-          {{ $t('settings.selfRegistrationEnabled') }}
-        </va-switch>
-      </template>
-    </AdminSettings>
-    <AdminSettings v-if="form.registration_enabled">
       <template #name>{{ $t('settings.captcha') }}</template>
       <template #description>{{ $t('settings.captchaDescription') }}</template>
       <template #settings>
@@ -70,7 +61,6 @@ export default {
         { value: 'hcaptcha', label: this.$t('settings.captchaHcaptcha') },
       ],
       form: useForm({
-        registration_enabled: this.settings.registration_enabled ?? false,
         captcha_provider: this.settings.captcha_provider ?? null,
         captcha_site_key: this.settings.captcha_site_key ?? '',
         captcha_secret_key: this.settings.captcha_secret_key ?? '',
