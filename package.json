@@ -66,6 +66,7 @@
         "ace-builds": "^1.38.0",
         "axios": "^1.13.2",
         "flag-icons": "^6.6.4",
+        "material-icons": "^1.13.14",
         "pinia": "^2.0.16",
         "register-service-worker": "^1.7.1",
         "tinymce": "^8.6.0",
