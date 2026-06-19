@@ -4,6 +4,7 @@ namespace App\Ldap\Models;
 
 use App\AppInstance;
 use App\AppRole;
+use App\Enums\AccessType;
 use App\Ldap\Actions\Dn;
 use App\Organization;
 use Illuminate\Support\Arr;
@@ -85,11 +86,11 @@ class Group extends Model
         return AppRole::where('slug', $this->roleName())->first();
     }
 
-    public function appRoleAccessType()
+    public function appRoleAccessType(): ?AccessType
     {
         $role_name = $this->roleName();
         if (in_array($role_name, ['standard', 'basic'])) {
-            return $role_name;
+            return AccessType::from($role_name);
         } else {
             return $this->appRole()?->access_type;
         }
