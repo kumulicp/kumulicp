@@ -147,6 +147,19 @@ import { useForm, Link } from '@inertiajs/vue3'
               </va-switch>
               <p class="va-text-secondary">{{ $t('organization.settings.selfRegistrationDescription') }}</p>
             </div>
+            <div v-if="form.self_registration_enabled" class="flex flex-col xs12 lg6 mb-2">
+              <va-input
+                readonly
+                :model-value="app.registration_url"
+                :label="$t('organization.settings.selfRegistrationUrl')"
+              >
+                <template #appendInner>
+                  <va-button size="small" preset="plain" @click="copyRegistrationUrl">
+                    {{ copied ? $t('organization.settings.copied') : $t('common.copy') }}
+                  </va-button>
+                </template>
+              </va-input>
+            </div>
           </div>
         </template>
         <div class="row">
@@ -205,6 +218,7 @@ export default {
     return {
       listedParentDomains: parentDomains,
       isPasswordVisible: false,
+      copied: false,
       form: useForm({
         domain: this.app.domain,
         customizations: customizationsForm,
@@ -227,6 +241,11 @@ export default {
       this.form.domain = this.app.domain
       this.form.subdomain = ''
       this.form.parent_domain = null
+    },
+    copyRegistrationUrl () {
+      navigator.clipboard.writeText(this.app.registration_url)
+      this.copied = true
+      setTimeout(() => { this.copied = false }, 2000)
     }
   }
 }

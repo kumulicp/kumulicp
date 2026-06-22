@@ -38,8 +38,6 @@ class Organization extends Controller
                     'email' => $organization->contact_email,
                     'phone_number' => $organization->contact_phone_number,
                 ] : [],
-                'slug' => $organization->slug,
-                'self_registration_enabled' => $organization->hasSelfRegistrationEnabled(),
             ],
             'users' => $users,
             'breadcrumbs' => [

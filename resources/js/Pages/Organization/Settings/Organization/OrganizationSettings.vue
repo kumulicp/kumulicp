@@ -141,27 +141,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
       </div>
-      <template v-if="org.self_registration_enabled">
-      <h6 class="va-h6 my-3">{{ $t('organization.settings.registration') }}</h6>
-      <div class="row">
-        <div class="flex flex-col xs12 lg6 mb-2">
-          <p class="va-text-secondary">{{ $t('organization.settings.selfRegistrationDescription') }}</p>
-        </div>
-        <div class="flex flex-col xs12 lg6 mb-2">
-          <va-input
-            readonly
-            :model-value="registrationUrl"
-            :label="$t('organization.settings.selfRegistrationUrl')"
-          >
-            <template #appendInner>
-              <va-button size="small" preset="plain" @click="copyRegistrationUrl">
-                {{ copied ? $t('organization.settings.copied') : $t('common.copy') }}
-              </va-button>
-            </template>
-          </va-input>
-        </div>
-      </div>
-      </template>
       <div class="row justify">
         <div class="flex flex-col">
           <va-button type="submit" id="submit" class="mt-3">{{ $t('common.update') }}</va-button>
@@ -181,7 +160,6 @@ export default {
   data () {
     return {
       contact_search: false,
-      copied: false,
       form: useForm({
         _token: this.$page.props.csrf_token,
         name: this.org.name,
@@ -210,16 +188,6 @@ export default {
     },
     has_contact_errors () {
       return (this.errors.user_id || this.errors.user_email || this.errors.user_phone_number || this.errors.first_name || this.errors.user_last_name)
-    },
-    registrationUrl () {
-      return this.route('public.org.register', { organization: this.org.slug })
-    }
-  },
-  methods: {
-    copyRegistrationUrl () {
-      navigator.clipboard.writeText(this.registrationUrl)
-      this.copied = true
-      setTimeout(() => { this.copied = false }, 2000)
     }
   }
 }

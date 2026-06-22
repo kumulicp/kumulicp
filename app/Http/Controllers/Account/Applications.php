@@ -142,6 +142,7 @@ class Applications extends Controller
                 'admin_access' => $app->plan->setting('admin_access', false),
                 'admin_password' => $app->api_password(),
                 'self_registration_enabled' => $app->selfRegistrationEnabled(),
+                'registration_url' => route('public.org.register', ['organization' => $organization->slug]),
             ],
             'can_enable_self_registration' => $app->canEnableSelfRegistration(),
             'customizations' => $features,
