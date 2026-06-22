@@ -58,7 +58,17 @@ import { useForm } from '@inertiajs/vue3'
               <tr>
                 <td class="setting-label pl-4">{{ setting.label }}</td>
                 <td v-for="plan in plans" :key="plan.id">
+                  <va-select
+                    v-if="setting.type === 'server'"
+                    v-model="form.plans[plan.id].features[feature.value].settings[setting.name]"
+                    :options="setting.servers"
+                    immediateValidation
+                    clearable
+                    value-by="id"
+                    text-by="name"
+                  />
                   <va-input
+                    v-else
                     v-model="form.plans[plan.id].features[feature.value].settings[setting.name]"
                     immediateValidation
                   />

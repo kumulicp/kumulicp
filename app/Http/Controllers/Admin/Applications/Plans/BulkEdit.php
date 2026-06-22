@@ -41,6 +41,20 @@ class BulkEdit extends Controller
         ];
     }
 
+    private function withFeatureServerOptions(array $settings): array
+    {
+        foreach ($settings as $name => $setting) {
+            if (($setting['type'] ?? null) === 'server') {
+                $settings[$name]['servers'] = Server::where('type', $setting['server_type'])
+                    ->where('status', 'active')
+                    ->get(['id', 'name'])
+                    ->map(fn ($server) => ['id' => $server->id, 'name' => $server->name]);
+            }
+        }
+
+        return $settings;
+    }
+
     private function getServerData(): array
     {
         $web_servers = Server::where('type', 'web')->get();
@@ -126,7 +140,7 @@ class BulkEdit extends Controller
                     'label' => $feature->label,
                     'value' => $feature->name,
                     'description' => $feature->description,
-                    'settings' => $feature->admin_settings(),
+                    'settings' => $this->withFeatureServerOptions($feature->admin_settings()),
                 ];
             }),
             'configs' => $first_plan_configs,
@@ -278,7 +292,7 @@ class BulkEdit extends Controller
                     'input' => $feature->input,
                     'value' => $feature->name,
                     'description' => $feature->description,
-                    'settings' => $feature->admin_settings(),
+                    'settings' => $this->withFeatureServerOptions($feature->admin_settings()),
                 ];
             }),
             'breadcrumbs' => $this->breadcrumbs($app),

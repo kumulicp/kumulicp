@@ -95,16 +95,31 @@ class Server extends Model
 
     public function app_plans()
     {
-        $column = $this->type.'_server_id';
+        if (in_array($this->type, ['web', 'database', 'sso'])) {
+            return $this->hasMany('App\AppPlan', $this->type.'_server_id');
+        }
 
-        return $this->hasMany('App\AppPlan', $column);
+        return $this->assignedTo('App\AppPlan');
     }
 
     public function base_plans()
     {
-        $column = $this->type.'_server_id';
+        if ($this->type === 'email') {
+            return $this->hasMany('App\Plan', $this->type.'_server_id');
+        }
 
-        return $this->hasMany('App\Plan', $column);
+        return $this->assignedTo('App\Plan');
+    }
+
+    private function assignedTo(string $model)
+    {
+        return $model::whereIn('id', function ($query) use ($model) {
+            $query->select('assignable_id')
+                ->from('server_assignments')
+                ->where('assignable_type', $model)
+                ->where('server_type', $this->type)
+                ->where('server_id', $this->id);
+        });
     }
 
     public function connect(Organization $organization)

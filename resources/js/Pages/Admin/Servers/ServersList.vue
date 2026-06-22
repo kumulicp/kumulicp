@@ -158,6 +158,7 @@ export default {
     interfaces: Object,
     servers: Object,
     applications: Object,
+    server_types: Array,
     errors: Object
   },
   data () {
@@ -167,12 +168,6 @@ export default {
       showAddServer: false,
       showRemoveServer: false,
       removeServer: '',
-      server_types: [
-        { value: 'web', text: this.$t('admin.servers.web') },
-        { value: 'database', text: this.$t('admin.servers.database') },
-        { value: 'email', text: this.$t('admin.servers.email') },
-        { value: 'sso', text: this.$t('admin.servers.sso') }
-      ],
       locations: [
         { value: 'external', text: this.$t('admin.servers.external') },
         { value: 'internal', text: this.$t('admin.servers.internal') }

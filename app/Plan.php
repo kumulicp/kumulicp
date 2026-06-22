@@ -27,6 +27,8 @@ class Plan extends Model
 
     protected $table = 'plans';
 
+    private const BUILT_IN_SERVER_TYPES = ['email'];
+
     private $organization;
 
     protected $fillable = [
@@ -52,6 +54,33 @@ class Plan extends Model
     public function email_server()
     {
         return $this->belongsTo('App\Server', 'email_server_id');
+    }
+
+    public function serverFor(string $type): ?Server
+    {
+        if (in_array($type, self::BUILT_IN_SERVER_TYPES)) {
+            return $this->{$type.'_server'};
+        }
+
+        return ServerAssignment::where('assignable_type', static::class)
+            ->where('assignable_id', $this->id)
+            ->where('server_type', $type)
+            ->first()?->server;
+    }
+
+    public function assignServer(string $type, Server $server): void
+    {
+        if (in_array($type, self::BUILT_IN_SERVER_TYPES)) {
+            $this->{$type.'_server_id'} = $server->id;
+            $this->save();
+
+            return;
+        }
+
+        ServerAssignment::updateOrCreate(
+            ['assignable_type' => static::class, 'assignable_id' => $this->id, 'server_type' => $type],
+            ['server_id' => $server->id]
+        );
     }
 
     public function displayFeatures()

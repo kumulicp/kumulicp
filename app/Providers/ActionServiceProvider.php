@@ -9,6 +9,7 @@ use App\Services\BackupService;
 use App\Services\FastCacheService;
 use App\Services\OrganizationService;
 use App\Services\ServerInterfaceService;
+use App\Services\ServerTypeRegistry;
 use App\Services\SettingsService;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Application;
@@ -34,6 +35,17 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
 
         $this->app->singleton('server_interfaces', function ($app) {
             return new ServerInterfaceService($app);
+        });
+
+        $this->app->singleton('server_types', function ($app) {
+            $registry = new ServerTypeRegistry;
+
+            $registry->register('web', __('admin.servers.web'));
+            $registry->register('database', __('admin.servers.database'));
+            $registry->register('email', __('admin.servers.email'));
+            $registry->register('sso', __('admin.servers.sso'));
+
+            return $registry;
         });
 
         $this->app->singleton('backups', function ($app) {
@@ -75,6 +87,6 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
      */
     public function provides()
     {
-        return ['actions', 'applications', 'server_interfaces', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
+        return ['actions', 'applications', 'server_interfaces', 'server_types', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
     }
 }

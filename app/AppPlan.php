@@ -32,6 +32,8 @@ class AppPlan extends Model
 {
     use HasFactory;
 
+    private const BUILT_IN_SERVER_TYPES = ['web', 'database', 'sso'];
+
     private $app_instance;
 
     protected $casts = [
@@ -71,6 +73,40 @@ class AppPlan extends Model
     public function shared_app()
     {
         return $this->belongsTo('App\AppInstance', 'global_app_id');
+    }
+
+    public function serverFor(string $type): ?Server
+    {
+        if (in_array($type, self::BUILT_IN_SERVER_TYPES)) {
+            return $this->{$type.'_server'};
+        }
+
+        return ServerAssignment::where('assignable_type', static::class)
+            ->where('assignable_id', $this->id)
+            ->where('server_type', $type)
+            ->first()?->server;
+    }
+
+    public function assignServer(string $type, Server $server): void
+    {
+        if (in_array($type, self::BUILT_IN_SERVER_TYPES)) {
+            $this->{$type.'_server_id'} = $server->id;
+            $this->save();
+
+            return;
+        }
+
+        ServerAssignment::updateOrCreate(
+            ['assignable_type' => static::class, 'assignable_id' => $this->id, 'server_type' => $type],
+            ['server_id' => $server->id]
+        );
+    }
+
+    public function featureServer(string $feature, string $setting): ?Server
+    {
+        $server_id = $this->featureValue("$feature.settings.$setting");
+
+        return $server_id ? Server::find($server_id) : null;
     }
 
     public function displayFeatures()

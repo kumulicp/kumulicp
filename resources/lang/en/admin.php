@@ -212,6 +212,10 @@ return [
         'validated' => ':server validated',
         'is_default' => 'Server is set as default',
         'chart' => 'Chart',
+        'web' => 'Web',
+        'database' => 'Database',
+        'email' => 'Email',
+        'sso' => 'SSO',
     ],
     'packages' => [
         'installed' => "Package ':package' installed successfully.",

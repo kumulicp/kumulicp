@@ -5,11 +5,26 @@ namespace App\Http\Controllers\Admin\Applications\Plans;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
+use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Http\Request;
 
 class Features extends Controller
 {
+    private function withServerOptions(array $settings): array
+    {
+        foreach ($settings as $name => $setting) {
+            if (($setting['type'] ?? null) === 'server') {
+                $settings[$name]['servers'] = Server::where('type', $setting['server_type'])
+                    ->where('status', 'active')
+                    ->get(['id', 'name'])
+                    ->map(fn ($server) => ['id' => $server->id, 'name' => $server->name]);
+            }
+        }
+
+        return $settings;
+    }
+
     public function edit(Application $app, AppPlan $plan)
     {
         $features = ApplicationFacade::profile($app->slug)->features();
@@ -36,7 +51,7 @@ class Features extends Controller
                     'input' => $feature->input,
                     'value' => $feature->name,
                     'description' => $feature->description,
-                    'settings' => $feature->admin_settings(),
+                    'settings' => $this->withServerOptions($feature->admin_settings()),
                 ];
             }),
             'breadcrumbs' => [

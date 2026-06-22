@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\Facades\ServerInterface;
+use App\Support\Facades\ServerType;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class Servers extends Controller
 {
@@ -33,12 +35,10 @@ class Servers extends Controller
                     'value' => $app->slug,
                 ];
             }),
-            'interfaces' => [
-                'web' => ServerInterface::all('web'),
-                'database' => ServerInterface::all('database'),
-                'email' => ServerInterface::all('email'),
-                'sso' => ServerInterface::all('sso'),
-            ],
+            'server_types' => ServerType::all(),
+            'interfaces' => collect(ServerType::keys())->mapWithKeys(function ($type) {
+                return [$type => ServerInterface::all($type)];
+            }),
             'breadcrumbs' => [
                 [
                     'label' => 'Servers',
@@ -88,7 +88,7 @@ class Servers extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'type' => 'required|string',
+            'type' => ['required', 'string', Rule::in(ServerType::keys())],
             'interface' => 'required|string',
             'location' => 'required|in:external,internal',
             'app' => 'nullable|required_if:location,internal|exists:applications,slug',

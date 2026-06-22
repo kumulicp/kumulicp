@@ -39,7 +39,19 @@ import { useForm } from '@inertiajs/vue3'
             />
           <template v-if="features[feature.value]['settings']">
             <template v-for="(setting, index) in feature.settings" :key="index">
+              <va-select
+                v-if="setting.type === 'server'"
+                v-model="form['features'][feature.value]['settings'][setting.name]"
+                :options="setting.servers"
+                :label="setting.label"
+                immediateValidation
+                clearable
+                value-by="id"
+                text-by="name"
+                class="pb-2"
+              />
               <va-input
+                v-else
                 v-model="form['features'][feature.value]['settings'][setting.name]"
                 immediateValidation
                 :label="setting.label"
