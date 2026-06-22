@@ -58,7 +58,19 @@
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
-    "confirmNewPassword": "Confirm New Password"
+    "confirmNewPassword": "Confirm New Password",
+    "orgUserRegisterTitle": "Join {org}",
+    "orgUserRegisterHeading": "Join {org}",
+    "orgUserRegisterSubheading": "Enter your email address to get started. We'll send you a verification link.",
+    "orgUserRegisterContinue": "Continue",
+    "orgRegisterPendingTitle": "Check Your Email",
+    "orgRegisterPendingHeading": "Check Your Email",
+    "orgRegisterPendingLine1": "We've sent a verification link to your email address. Click the link to complete your registration with {org}.",
+    "orgRegisterPendingLine2": "The link will expire in 1 hour. If you don't see the email, check your spam folder.",
+    "orgRegisterPendingTryAgain": "Try a different email",
+    "orgRegisterCompleteTitle": "Complete Registration - {org}",
+    "orgRegisterCompleteHeading": "Complete Your Registration with {org}",
+    "orgRegisterCompleteSubmit": "Create Account"
   },
   "common": {
     "cancel": "Cancel",
@@ -74,7 +86,8 @@
     "name": "Name",
     "yes": "Yes!",
     "view": "View",
-    "soundsGood": "Sounds Good!"
+    "soundsGood": "Sounds Good!",
+    "copy": "Copy"
   },
   "modal": {
     "deactivate": "Deactivate",
@@ -273,6 +286,8 @@
       "enableEmail": "Enable Email",
       "adminAccess": "Admin Access",
       "adminAccessCaption": "Give admins direct access to the initial admin account",
+      "selfRegistration": "Allow Self-Registration",
+      "selfRegistrationCaption": "Let organizations subscribed to this plan enable self-registration on their apps",
       "expiresAfter": "Expires after",
       "expiresAfterCaption": "Used mainly for limited feature/limited time demos which require upgrading plans to keep active",
       "days": "Days",
@@ -967,7 +982,12 @@
       "address": "Address",
       "invoiceSettings": "Invoice Settings",
       "includeInParentInvoice": "Include in Parent Invoice",
-      "suborganizations": "Suborganizations"
+      "suborganizations": "Suborganizations",
+      "registration": "Registration",
+      "selfRegistrationEnabled": "Allow Self-Registration",
+      "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address.",
+      "selfRegistrationUrl": "Registration Link",
+      "copied": "Copied!"
     },
     "subscription": {
       "plan": "Plan",
@@ -1147,7 +1167,18 @@
       "scopes": "Scopes",
       "publicFacingLabel": "Public facing label"
     },
-    "pullSecrets": "Pull Secrets"
+    "pullSecrets": "Pull Secrets",
+    "selfRegistration": "Self-Registration",
+    "captcha": "CAPTCHA",
+    "captchaDescription": "Add CAPTCHA protection to the self-registration form to prevent spam and automated submissions.",
+    "captchaProvider": "CAPTCHA Provider",
+    "captchaNone": "None (disabled)",
+    "captchaTurnstile": "Cloudflare Turnstile",
+    "captchaHcaptcha": "hCaptcha",
+    "captchaSiteKey": "Site Key",
+    "captchaSecretKey": "Secret Key",
+    "selfRegistrationEnabled": "Enable Self-Registration",
+    "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually."
   },
   "other": {
     "initialSetup": "Initial Setup",

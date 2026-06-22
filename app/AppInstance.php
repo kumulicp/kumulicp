@@ -245,6 +245,16 @@ class AppInstance extends Model
         $this->save();
     }
 
+    public function selfRegistrationEnabled(): bool
+    {
+        return $this->canEnableSelfRegistration() && (bool) $this->setting('self_registration_enabled');
+    }
+
+    public function canEnableSelfRegistration(): bool
+    {
+        return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;
+    }
+
     public function admin_address()
     {
         $version = $this->version;

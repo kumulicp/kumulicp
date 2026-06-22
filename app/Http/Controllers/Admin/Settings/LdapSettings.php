@@ -26,7 +26,9 @@ class LdapSettings extends Controller
             'breadcrumbs' => [
                 [
                     'label' => __('admin.settings.control_panel_settings'),
+                    'url' => '/admin/settings',
                 ],
+                ['label' => __('admin.settings.ldap_settings')],
             ],
         ]);
     }

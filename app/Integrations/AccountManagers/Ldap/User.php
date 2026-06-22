@@ -180,10 +180,9 @@ class User extends UserManager
         return $this->user->groups()->exists($role_dn);
     }
 
-    public function addToDefaultUserGroups()
+    public function addToDefaultUserGroups(?iterable $appInstances = null)
     {
-        $apps = [];
-        foreach ($this->organization->app_instances as $app) {
+        foreach ($appInstances ?? $this->organization->app_instances as $app) {
             // updateAppRoles will automatically use default app roles if nothing provided.
             $this->permissions()->updateAppRoles($app);
         }

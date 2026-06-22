@@ -38,6 +38,8 @@ class Organization extends Controller
                     'email' => $organization->contact_email,
                     'phone_number' => $organization->contact_phone_number,
                 ] : [],
+                'slug' => $organization->slug,
+                'self_registration_enabled' => $organization->hasSelfRegistrationEnabled(),
             ],
             'users' => $users,
             'breadcrumbs' => [
@@ -55,6 +57,7 @@ class Organization extends Controller
             'name' => 'required|string|max:100',
             'description' => 'required|string|max:255',
             'org_email' => 'required|email:rfc,filter|lowercase|max:100',
+            'org_email' => 'required|email|lowercase|max:100',
             'org_phone_number' => 'required|max:100',
             'user_first_name' => 'required|max:100',
             'user_last_name' => 'required|max:100',

@@ -106,6 +106,7 @@ class Plans extends Controller
                 'archived' => $plan->archive,
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
+                'self_registration_enabled' => $plan->selfRegistrationEnabled(),
             ],
             'features' => $features->map(function ($feature) {
                 return [
@@ -219,6 +220,7 @@ class Plans extends Controller
                 'archived' => $plan->archive,
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
+                'self_registration_enabled' => $plan->selfRegistrationEnabled(),
             ],
             'web_servers' => $web_servers->map(function ($server) {
                 return [
@@ -303,6 +305,7 @@ class Plans extends Controller
             'trial_for' => 'nullable|numeric',
             'shared_app' => 'numeric|nullable|exists:app_instances,id',
             'server_type' => 'required|in:separate,shared',
+            'self_registration_enabled' => 'nullable|bool',
         ]);
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
@@ -340,6 +343,7 @@ class Plans extends Controller
             'storage.amount' => (int) $request->input('storage.amount'),
             'expires_after' => (int) $request->input('expires_after'),
             'trial_for' => (int) $request->input('trial_for'),
+            'self_registration_enabled' => $request->boolean('self_registration_enabled'),
         ]);
         $plan->save();
 

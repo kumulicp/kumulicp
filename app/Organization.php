@@ -346,6 +346,16 @@ class Organization extends Model
         return Arr::get($this->settings, $setting);
     }
 
+    public function selfRegistrationApps()
+    {
+        return $this->app_instances->filter(fn ($app) => $app->selfRegistrationEnabled());
+    }
+
+    public function hasSelfRegistrationEnabled(): bool
+    {
+        return $this->selfRegistrationApps()->isNotEmpty();
+    }
+
     public function updateSetting($setting, $value)
     {
         $settings = [];

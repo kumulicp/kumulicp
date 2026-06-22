@@ -141,7 +141,9 @@ class Applications extends Controller
                 ] : null,
                 'admin_access' => $app->plan->setting('admin_access', false),
                 'admin_password' => $app->api_password(),
+                'self_registration_enabled' => $app->selfRegistrationEnabled(),
             ],
+            'can_enable_self_registration' => $app->canEnableSelfRegistration(),
             'customizations' => $features,
             'settings' => $settings,
             'domains' => $domains,
@@ -203,11 +205,16 @@ class Applications extends Controller
             ],
             'parent_domain' => 'nullable|required_if:domain,connection|numeric|exists:org_domains,id',
             'subdomain' => ['nullable', 'required_if:domain,connection', 'string', 'lowercase', new HostLabel, new OrgSubdomainAvailable($app)],
+            'self_registration_enabled' => 'boolean',
         ], $validateConfigurations));
 
         $customizations = $request->input('customizations') ?? [];
         $app->label = $validated['label'];
         $app->save();
+
+        if ($app->canEnableSelfRegistration()) {
+            $app->updateSetting('self_registration_enabled', $request->boolean('self_registration_enabled'));
+        }
 
         $current_subdomain = $app->primary_domain;
 

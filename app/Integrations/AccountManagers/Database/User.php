@@ -140,7 +140,7 @@ class User extends UserManager
         return false;
     }
 
-    public function addToDefaultUserGroups() {}
+    public function addToDefaultUserGroups(?iterable $appInstances = null) {}
 
     private function removeFromAllGroups()
     {

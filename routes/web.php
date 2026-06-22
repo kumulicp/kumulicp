@@ -156,6 +156,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             });
             Route::get('ldap', 'Admin\Settings\LdapSettings@index')->name('server.settings.ldap');
             Route::put('ldap', 'Admin\Settings\LdapSettings@update')->name('server.settings.ldap.update');
+            Route::get('registration', 'Admin\Settings\RegistrationSettings@index')->name('settings.registration');
+            Route::put('registration', 'Admin\Settings\RegistrationSettings@update')->name('settings.registration.update');
             Route::prefix('sso-providers')->group(function () {
                 Route::get('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@index');
                 Route::post('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@store');
@@ -361,6 +363,14 @@ Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
     Route::post('setpassword/{code}/save', 'Pub\ChangePassword@store')->name('public.password.store');
     Route::post('{account}/{email}', 'Pub\ChangePassword@update')->name('public.password.update');
     Route::get('/users/done/{code}', 'Pub\ChangePassword@done')->name('public.changepassword.done');
+
+    Route::prefix('org/{organization:slug}')->group(function () {
+        Route::get('register', 'Pub\Register@show')->name('public.org.register');
+        Route::post('register', 'Pub\Register@submit')->name('public.org.register.submit');
+        Route::get('register/pending', 'Pub\Register@pending')->name('public.org.register.pending');
+        Route::get('register/verify/{token}', 'Pub\Register@verify')->name('public.org.register.verify');
+        Route::post('register/verify/{token}', 'Pub\Register@complete')->name('public.org.register.complete');
+    });
 });
 
 Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['auth']], function () {

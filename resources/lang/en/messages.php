@@ -174,6 +174,19 @@ return [
             'permissions_removed' => 'Your :role permission have been revoked in :app',
             'go_to' => 'Go To :app',
         ],
+        'org_registration' => [
+            'subject' => 'Complete your registration with :org',
+            'greeting' => 'Hello!',
+            'line1' => 'You\'ve requested to register with :org. Click the button below to verify your email and complete your registration.',
+            'action' => 'Verify Email & Continue',
+            'line2' => 'If you did not request this, you can safely ignore this email.',
+            'expiry' => 'This link will expire in 1 hour.',
+            'welcome_subject' => 'Welcome to :org !',
+            'welcome_greeting' => 'Welcome :name !',
+            'welcome_line1' => 'Your registration with :org is complete. Set your password below to finish activating your account.',
+            'welcome_app_access' => 'You have been given access to these apps: **:app_list**',
+            'welcome_username' => 'Your username is: :username',
+        ],
     ],
     'api' => [
         'nextcloud' => [
@@ -250,6 +263,11 @@ return [
                 ],
             ],
         ],
+    ],
+    'org_registration' => [
+        'token_invalid' => 'This registration link is invalid or has expired. Please request a new one.',
+        'too_many_attempts' => 'Too many registration attempts. Please try again in :seconds seconds.',
+        'captcha_failed' => 'CAPTCHA verification failed. Please try again.',
     ],
     'extensions' => [
         'nextcloud' => [

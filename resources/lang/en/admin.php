@@ -138,7 +138,10 @@ return [
             'updated' => 'Provider updated',
             'deleted' => 'Provider deleted',
         ],
+        'registration_settings' => 'Self-registration',
         'updated' => 'Settings updated',
+        'ldap_settings' => 'LDAP Settings',
+        'invoice_settings' => 'Invoice Settings',
     ],
     'pullSecrets' => [
         'pullSecrets' => 'Image Pull Secrets',

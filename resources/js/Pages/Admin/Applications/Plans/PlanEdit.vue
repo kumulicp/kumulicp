@@ -57,6 +57,14 @@ import { useForm, Link } from '@inertiajs/vue3'
           :error="$page.props.errors.admin_access"
           :error-messages="$page.props.errors.admin_access"
         />
+        <va-checkbox v-model="form.self_registration_enabled"
+          class="my-2"
+          :label="$t('admin.plans.selfRegistration')"
+          :messages="$t('admin.plans.selfRegistrationCaption')"
+          immediateValidation
+          :error="$page.props.errors.self_registration_enabled"
+          :error-messages="$page.props.errors.self_registration_enabled"
+        />
         <va-input
           type="number"
           class="my-2"
@@ -485,6 +493,7 @@ export default {
         description: this.plan.description,
         payment_enabled: this.plan.payment_enabled,
         admin_access: this.plan.admin_access,
+        self_registration_enabled: this.plan.self_registration_enabled,
         displayed_features: this.plan.features,
         default: this.plan.is_default,
         domain_enabled: this.plan.domain_enabled,
