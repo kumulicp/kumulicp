@@ -135,6 +135,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('logs')->group(function () {
                 Route::get('', 'Admin\Logs@index')->name('admin.logs.index');
             });
+            Route::prefix('security/scans')->group(function () {
+                Route::get('', 'Admin\SecurityScans@index')->name('security.scans.index');
+                Route::post('', 'Admin\SecurityScans@store')->name('security.scans.store');
+                Route::get('{scan}', 'Admin\SecurityScans@show')->name('security.scans.show');
+                Route::delete('{scan}', 'Admin\SecurityScans@destroy')->name('security.scans.destroy');
+            });
             Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups');
             Route::prefix('backup_scheduler/recurring')->group(function () {
                 Route::get('{recurrence}/activate', 'Admin\RecurringBackups@activate')->name('server.backup.recurring.activate');

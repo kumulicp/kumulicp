@@ -40,6 +40,7 @@ use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
 use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
+use App\Actions\Security\RunSecurityScan;
 use App\Jobs\RunAction;
 use App\Organization;
 use App\Task;
@@ -98,6 +99,9 @@ class ActionService
         ],
         'rancher' => [
             'run_rancher_job' => RunJob::class,
+        ],
+        'security_scan' => [
+            'run_scan' => RunSecurityScan::class,
         ],
     ];
 
