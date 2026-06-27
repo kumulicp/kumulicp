@@ -38,17 +38,23 @@ const HelpDeskTinymceEditor = defineAsyncComponent(() =>
               required-mark
               maxlength="100"
               />
+            <div class="va-input-label text-align-left text-color-primary">
+              {{ $t('navbar.helpDeskBody') }}
+            </div>
             <HelpDeskTinymceEditor
               v-if="showHelpDesk"
               v-model="form.body"
-              class="mb-3"
               />
+            <div class="va-message-list__message">
+              {{ $t('navbar.helpDeskBodyMessage') }}
+            </div>
             <va-select
               v-model="form.request"
               :options="requests"
               :label="$t('navbar.typeOfRequest')"
               :error="$page.props.errors.request"
               :error-messages="$page.props.errors.request"
+              class="mt-3"
               value-by="value"
               text-by="text"
               auto-select-first-option

@@ -1230,6 +1230,8 @@
     "helpDesk": "Help Desk",
     "helpDeskDescription": "Before submitting a support ticket, please check out our",
     "helpDeskError": "There was an error submitting your service request. Please try again shortly.",
+    "helpDeskBody": "Description",
+    "helpDeskBodyMessage": "Give a detailed summary of the question, feature, or problem you're having",
     "subject": "Subject",
     "subjectMessage": "A brief summary",
     "description": "Description",

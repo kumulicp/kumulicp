@@ -41,6 +41,12 @@ class Support extends Controller
             }
         }
 
+        try {
+            throw new \Exception('Support email not set');
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return response()->json([
             'success' => 'error',
             'text' => __('organization.support.critical_fail'),
