@@ -19,6 +19,7 @@ class AdminAccessTest extends TestCase
 
         $user = User::find(1);
         $permissions = AccountManager::users()->find('demo')->permissions();
+        $this->assertTrue($permissions->hasControlPanelAdminAccess());
         $permissions->removeControlPanelAdminAccess();
 
         // Confirm the user still holds regular control panel access but not admin
