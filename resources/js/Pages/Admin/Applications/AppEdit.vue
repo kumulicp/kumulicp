@@ -120,6 +120,8 @@ import { useForm } from '@inertiajs/vue3'
           :label="$t('admin.apps.domainTypeAllowed')"
           :messages="$t('admin.apps.domainTypeAllowedMessage')"
           class="my-2"
+          id="domainOption"
+          multiple
           immediateValidation
           :options="domain_options"
           value-by="value"
@@ -223,8 +225,6 @@ export default {
           { value: 'standard', text: this.$t('admin.apps.accessTypeStandard') }
       ],
       domain_options: [
-          { value: 'none', text: this.$t('admin.apps.domainOptionNone') },
-          { value: 'all', text: this.$t('admin.apps.domainOptionAll') },
           { value: 'subdomains', text: this.$t('admin.apps.domainOptionSubdomains') },
           { value: 'primary', text: this.$t('admin.apps.domainOptionPrimary') },
           { value: 'base', text: this.$t('admin.apps.domainOptionBase') },

@@ -272,45 +272,42 @@ class AppInstanceService
 
     public function orgSubdomains(Organization $organization)
     {
-        $domain_option = $this->app_instance->application->domain_option;
-        // Base domain will return nothing
-        if (! in_array($domain_option, ['base', 'parent', 'none'])) {
-            $domains = $organization->subdomains();
-            // Get Primary domains
-            if ($domain_option === 'primary') {
-                $domains->where('host', '@');
-            }
+        $application = $this->app_instance->application;
+        $allowsPrimary = $application->hasDomainOption('primary');
+        $allowsSubdomains = $application->hasDomainOption('subdomains');
 
-            // Get only subdomains
-            if ($domain_option === 'subdomains') {
-                $domains->whereNot('host', '@');
-            }
-
-            $domains->where(function ($query) {
-                return $query->where('app_instance_id', $this->id)
-                    ->orWhere('app_instance_id', 0)
-                    ->orWhere('app_instance_id', null);
-            })
-                ->where('type', 'app');
-
-            return $domains->get();
+        if (! $allowsPrimary && ! $allowsSubdomains) {
+            return collect();
         }
 
-        return collect();
+        $domains = $organization->subdomains();
+
+        if ($allowsPrimary && ! $allowsSubdomains) {
+            $domains->where('host', '@');
+        } elseif ($allowsSubdomains && ! $allowsPrimary) {
+            $domains->whereNot('host', '@');
+        }
+
+        $domains->where(function ($query) {
+            return $query->where('app_instance_id', $this->id)
+                ->orWhere('app_instance_id', 0)
+                ->orWhere('app_instance_id', null);
+        })
+            ->where('type', 'app');
+
+        return $domains->get();
     }
 
     public function isSubdomainAvailable(OrgSubdomain $domain)
     {
-        $domain_option = $this->app_instance->application->domain_option;
+        $application = $this->app_instance->application;
+        $allowsPrimary = $application->hasDomainOption('primary');
+        $allowsSubdomains = $application->hasDomainOption('subdomains');
 
         return in_array($domain->app_instance_id, [$this->id, 0, null])
             && $domain->type === 'app'
-            && ! in_array($domain_option, ['base', 'parent', 'none'])
-            && (($domain_option === 'primary'
-                    && $domain->host === '@')
-                || ($domain_option === 'subdomains'
-                    && $domain->host !== '@')
-                || ($domain_option === 'all'));
+            && (($allowsPrimary && $domain->host === '@')
+                || ($allowsSubdomains && $domain->host !== '@'));
     }
 
     public function personalized_settings()

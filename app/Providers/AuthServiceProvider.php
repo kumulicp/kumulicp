@@ -182,7 +182,7 @@ class AuthServiceProvider extends ServiceProvider
                 return Response::deny(__('organization.app.denied.limit'), 'limit_reached');
             } elseif ($app->parent_app && AppFacade::availableParents($app)->count() == 0) {
                 return Response::deny(__('organization.app.denied.no_parent_app', ['app' => $app->name, 'parent_app' => $app->parent_app->name]), 'missing_parent_app');
-            } elseif (in_array($app->domain_option, ['subdomains', 'primary']) && count($organization->main_domains()) === 0) {
+            } elseif ($app->hasDomainOption(['subdomains', 'primary']) && ! $app->hasDomainOption(['base', 'parent']) && count($organization->main_domains()) === 0) {
                 return Response::deny(__('organization.app.denied.primary_domain'));
             }
 

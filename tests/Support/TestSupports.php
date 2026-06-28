@@ -299,7 +299,7 @@ class TestSupports
     {
         $nextcloud = Application::firstOrCreate(
             ['slug' => 'nextcloud'],
-            ['name' => 'Nextcloud', 'short_description' => 'Nextcloud', 'description' => 'Nextcloud', 'domain_option' => 'base', 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'File Sharing & Collaboration', 'access_type' => 'standard']
+            ['name' => 'Nextcloud', 'short_description' => 'Nextcloud', 'description' => 'Nextcloud', 'domain_option' => ['base'], 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'File Sharing & Collaboration', 'access_type' => 'standard']
         );
 
         $app_plan = new AppPlan;
@@ -331,7 +331,7 @@ class TestSupports
     {
         $wordpress = Application::firstOrCreate(
             ['slug' => 'wordpress'],
-            ['name' => 'Wordpress', 'short_description' => 'Wordpress', 'description' => 'Wordpress', 'domain_option' => 'base', 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'Website Builder', 'access_type' => 'basic']
+            ['name' => 'Wordpress', 'short_description' => 'Wordpress', 'description' => 'Wordpress', 'domain_option' => ['base'], 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'Website Builder', 'access_type' => 'basic']
         );
 
         $app_plan = new AppPlan;

@@ -166,21 +166,21 @@ class Discover extends Controller
 
         $number_of_domains = count($domains);
 
-        if (in_array($app->domain_option, ['all', 'base'])) {
+        if ($app->hasDomainOption('base')) {
             $domains->push([
                 'text' => __('labels.system_provided_domain'),
                 'value' => 'base',
             ]);
         }
 
-        if ($organization->domains()->active()->primary()->count() > 0 && in_array($app->domain_option, ['all', 'subdomains'])) {
+        if ($organization->domains()->active()->primary()->count() > 0 && $app->hasDomainOption('subdomains')) {
             $domains->push([
                 'text' => __('labels.add_subdomain'),
                 'value' => 'new',
             ]);
         }
 
-        if ($app->domain_option === 'parent') {
+        if ($app->hasDomainOption('parent')) {
             $domains->push([
                 'text' => __('labels.parent_app_domain'),
                 'value' => 'parent',
@@ -267,9 +267,39 @@ class Discover extends Controller
             'label' => 'required|string|max:100',
             'domain' => [
                 'required',
-                function (string $attribute, mixed $value, \Closure $fail) use ($plan) {
-                    if (! $value || in_array($value, ['new', 'default', 'parent', 'base'])) {
-                        return true;
+                function (string $attribute, mixed $value, \Closure $fail) use ($plan, $app) {
+                    if ($value === 'base') {
+                        if (! $app->hasDomainOption('base')) {
+                            $fail(__('organization.domain.denied.type'));
+                        }
+
+                        return;
+                    }
+
+                    if ($value === 'new') {
+                        if (! $app->hasDomainOption('subdomains')) {
+                            $fail(__('organization.domain.denied.type'));
+                        }
+
+                        return;
+                    }
+
+                    if ($value === 'parent') {
+                        if (! $app->hasDomainOption('parent')) {
+                            $fail(__('organization.domain.denied.type'));
+                        }
+
+                        return;
+                    }
+
+                    if ($value === 'default') {
+                        return;
+                    }
+
+                    if (! $app->hasDomainOption(['primary', 'subdomains'])) {
+                        $fail(__('organization.domain.denied.type'));
+
+                        return;
                     }
 
                     $subdomain = OrgSubdomain::find($value);

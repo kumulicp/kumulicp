@@ -200,7 +200,8 @@ class Applications extends Controller
             'short_description' => 'required',
             'description' => 'required',
             'primary_domain_allowed' => 'boolean',
-            'domain_option' => 'required|in:none,all,subdomains,primary,base,parent',
+            'domain_option' => 'present|array',
+            'domain_option.*' => 'in:subdomains,primary,base,parent',
             'can_update_domain' => 'boolean',
             'screenshots' => 'nullable|array',
             'screenshots.*' => 'file|image|mimes:png,jpg,jpeg,webp',
@@ -243,7 +244,7 @@ class Applications extends Controller
         $app->parent_app_id = $request->parent_app ?? 0;
         $app->access_type = $request->access_type;
         $app->primary_domain_allowed = $request->primary_domain_allowed ?? false;
-        $app->domain_option = $request->domain_option;
+        $app->domain_option = $request->domain_option ?? [];
         $app->can_update_domain = $request->can_update_domain;
         $app->save();
 

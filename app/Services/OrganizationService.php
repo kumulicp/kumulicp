@@ -77,21 +77,22 @@ class OrganizationService
 
     public function availableDomains(Application $app)
     {
-        // Only show available domains if not base or parent option
-        if (! in_array($app->domain_option, ['base', 'parent', 'none'])) {
-            $domains = $this->organization->domains()->active()->whereNull('app_instance_id');
+        $allowsPrimary = $app->hasDomainOption('primary');
+        $allowsSubdomains = $app->hasDomainOption('subdomains');
 
-            // Get Parent domains
-            if ($app->domain_option === 'primary') {
-                $domains->whereNull('parent_domain_id');
-            } elseif ($app->domain_option === 'subdomains') {
-                $domains->whereNotNull('parent_domain_id');
-            }
-
-            return $domains->get();
+        if (! $allowsPrimary && ! $allowsSubdomains) {
+            return collect();
         }
 
-        return collect();
+        $domains = $this->organization->domains()->active()->whereNull('app_instance_id');
+
+        if ($allowsPrimary && ! $allowsSubdomains) {
+            $domains->whereNull('parent_domain_id');
+        } elseif ($allowsSubdomains && ! $allowsPrimary) {
+            $domains->whereNotNull('parent_domain_id');
+        }
+
+        return $domains->get();
     }
 
     public function server(Server $server)

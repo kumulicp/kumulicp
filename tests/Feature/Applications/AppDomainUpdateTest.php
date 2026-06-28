@@ -19,7 +19,7 @@ beforeEach(function () {
     $this->demoApp = $this->support->demo_app->instances()->first();
 
     $application = $this->demoApp->application;
-    $application->domain_option = 'all';
+    $application->domain_option = ['base', 'subdomains', 'primary'];
     $application->can_update_domain = true;
     $application->save();
 

@@ -10,7 +10,7 @@ describe('App Activation', function () {
         ['app' => $application, 'plan' => $plan] = $support->prepareDemoApp();
 
         $application->enabled = true;
-        $application->domain_option = 'base';
+        $application->domain_option = ['base'];
         $application->save();
 
         // Make the plan discoverable by referencing its ID in the org's base plan
