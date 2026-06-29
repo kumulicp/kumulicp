@@ -34,6 +34,11 @@ class FakeServerManager implements AppInterface, OrganizationInterface
         return true;
     }
 
+    public function notFoundMessage(): string
+    {
+        return 'Please review the error in the fake server manager.';
+    }
+
     public function get(): mixed
     {
         return null;

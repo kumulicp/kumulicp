@@ -72,6 +72,11 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         return $app->isActive($this->app_instance) === 1 || $app->isActive($this->app_instance) === 2;
     }
 
+    public function notFoundMessage(): string
+    {
+        return __('messages.exception.app_not_found_rancher');
+    }
+
     public function get()
     {
         $app_instance = $this->app_instance;

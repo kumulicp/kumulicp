@@ -175,6 +175,17 @@ class ApplicationActivate extends Action
         if ($app_instance && ! $task->getValue('shared_app')) {
             $server = $app_instance->connect('web');
 
+            if (! $server->exists()) {
+                $task->error_message = __('messages.exception.app_not_found_on_server', [
+                    'app' => $app_instance->application->name,
+                    'guidance' => $server->notFoundMessage(),
+                ]);
+                $task->status = 'failed';
+                $task->save();
+
+                return;
+            }
+
             if ($server->isActive()) {
                 // Get roles if any
 
