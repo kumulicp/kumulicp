@@ -31,8 +31,10 @@ class ConvertDomainOptionToArray extends Migration
         }
 
         Schema::table('applications', function (Blueprint $table) {
-            $table->text('domain_option')->default('[]')->change();
+            $table->text('domain_option')->nullable(false)->change();
         });
+
+        DB::statement("UPDATE `applications` SET `domain_option` = '[]' WHERE `domain_option` IS NULL");
     }
 
     /**

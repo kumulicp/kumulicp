@@ -32,6 +32,15 @@ class Application extends Model
     protected $table = 'applications';
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'domain_option' => '[]',
+    ];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
