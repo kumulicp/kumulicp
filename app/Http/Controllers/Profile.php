@@ -23,7 +23,9 @@ class Profile extends Controller
                 'last_name' => $profile->last_name,
                 'personal_email' => $profile->email,
                 'phone_number' => $profile->phone_number,
+                'locale' => $profile->locale,
             ],
+            'locales' => config('locales.available'),
         ]);
     }
 
@@ -37,6 +39,7 @@ class Profile extends Controller
             'last_name' => 'required|max:100',
             'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($user->username)],
             'phone_number' => [new MainContact($user, $organization)],
+            'locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
 
         $user->email = $request->personal_email;
@@ -44,6 +47,7 @@ class Profile extends Controller
         $user->first_name = $request->first_name;
         $user->last_name = $request->last_name;
         $user->name = $request->first_name.' '.$request->last_name;
+        $user->locale = $request->locale;
         $user->save();
 
         $validatedData['name'] = $validatedData['first_name'].' '.$validatedData['last_name'];

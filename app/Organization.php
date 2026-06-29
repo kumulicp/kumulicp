@@ -29,6 +29,7 @@ use function Illuminate\Events\queueable;
  * @property string|null $api_token
  * @property string|null $stripe_id
  * @property array|null $settings
+ * @property string|null $default_locale
  * @property \Carbon\Carbon|null $deactivate_at
  * @property int|null $primary_domain_id
  * @property int|null $base_domain_id

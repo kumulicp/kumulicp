@@ -112,7 +112,8 @@ class HandleInertiaRequests extends Middleware
                 'primary_color' => Settings::get('primary_color', '#6042B3'),
                 'secondary_color' => Settings::get('secondary_color', '#d91698'),
             ],
-            'language' => config('app.locale') ?? config('app.fallback_locale'),
+            'language' => app()->getLocale(),
+            'locales' => config('locales.available'),
             'flags' => collect(Toggle::all())
                 ->mapWithKeys(fn (bool $value, string $key) => [Str::camel($key) => $value])
                 ->all(),

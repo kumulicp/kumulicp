@@ -6,6 +6,7 @@ use App\Organization;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
 use App\Support\Facades\Application;
+use App\Support\Facades\Settings;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
@@ -46,7 +47,14 @@ class AppServiceProvider extends ServiceProvider
         }
 
         if (! $this->app->runningInConsole()) {
-            App::setLocale((auth()->user())?->organization->default_locale ?? config('app.locale'));
+            $user = auth()->user();
+
+            App::setLocale(
+                $user?->locale
+                ?? $user?->organization?->default_locale
+                ?? Settings::get('default_locale', null)
+                ?? config('app.locale')
+            );
         }
 
         Paginator::useBootstrap();

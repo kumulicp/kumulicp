@@ -57,6 +57,21 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               />
         </div>
       </div>
+      <div class="row">
+        <div class="flex flex-col xs12 lg6 mb-2">
+          <va-select v-model="form.default_locale"
+            :label="$t('organization.settings.defaultLanguage')"
+            id="defaultLocale"
+            :options="localeOptions"
+            value-by="code"
+            text-by="name"
+            clearable
+            immediateValidation
+            :error="$page.props.errors.default_locale"
+            :error-messages="$page.props.errors.default_locale"
+            />
+        </div>
+      </div>
       <h6 class="va-h6 my-3">{{ $t('organization.settings.billingAddress') }}</h6>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
@@ -155,11 +170,13 @@ export default {
   props: {
     org: Object,
     users: Object,
+    locales: Object,
     errors: Object,
   },
   data () {
     return {
       contact_search: false,
+      localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       form: useForm({
         _token: this.$page.props.csrf_token,
         name: this.org.name,
@@ -171,6 +188,7 @@ export default {
         city: this.org.city,
         state: this.org.state,
         country: this.org.country ?? 'US',
+        default_locale: this.org.default_locale,
         user_id: this.org.main_contact.id,
         user_email: this.org.main_contact.email,
         user_phone_number: this.org.main_contact.phone_number,

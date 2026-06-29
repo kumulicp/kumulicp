@@ -112,6 +112,29 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             </va-list-item-section>
           </va-list-item>
 
+          <va-list-separator class="my-1" fit />
+          <va-list-item class="pb-3">
+            <va-list-item-section label>
+              <va-list-item-label>
+                <h5>{{ $t('organization.users.language') }}:</h5>
+              </va-list-item-label>
+            </va-list-item-section>
+            <va-list-item-section>
+              <va-list-item-label>
+                <va-select v-model="form.locale"
+                  id="locale"
+                  :options="localeOptions"
+                  value-by="code"
+                  text-by="name"
+                  clearable
+                  immediateValidation
+                  :error="$page.props.errors.locale"
+                  :error-messages="$page.props.errors.locale"
+                  />
+              </va-list-item-label>
+            </va-list-item-section>
+          </va-list-item>
+
           <template v-if="profile.org_emails">
             <va-list-separator class="my-1" fit />
             <va-list-item class="pb-3">
@@ -209,11 +232,13 @@ export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
     profile: Object,
+    locales: Object,
     errors: Object
   },
   data () {
     return {
       showChangePasswordModal: false,
+      localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       password_form: useForm({
         current_password: '',
         password: '',
@@ -224,7 +249,8 @@ export default {
         first_name: this.profile.first_name,
         last_name: this.profile.last_name,
         phone_number: this.profile.phone_number,
-        personal_email: this.profile.personal_email
+        personal_email: this.profile.personal_email,
+        locale: this.profile.locale
       })
     }
   }
