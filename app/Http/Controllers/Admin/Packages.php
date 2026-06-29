@@ -20,8 +20,23 @@ class Packages extends Controller
 
         return inertia()->render('Admin/Packages/PackagesList', [
             'packages' => $packages,
+            'allowUnstable' => $this->manager->isAllowUnstable(),
             'breadcrumbs' => [['label' => __('labels.package_manager')]],
         ]);
+    }
+
+    /**
+     * Toggle whether unstable (beta, alpha, RC, dev) package versions are shown/installable.
+     */
+    public function updateSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'allow_unstable' => 'required|boolean',
+        ]);
+
+        $this->manager->setAllowUnstable($validated['allow_unstable']);
+
+        return redirect()->back()->with('success', __('admin.packages.settingsUpdated'));
     }
 
     /**
@@ -90,7 +105,8 @@ class Packages extends Controller
      */
     public function install(string $vendor, string $package)
     {
-        $result = $this->manager->install("{$vendor}/{$package}");
+        $version = $this->manager->resolveInstallableVersion($vendor, $package);
+        $result = $this->manager->install("{$vendor}/{$package}", $version);
 
         if ($result['success']) {
             return redirect()->back()->with('success', __('admin.packages.installed', ['package' => "{$vendor}/{$package}"]));
@@ -118,7 +134,8 @@ class Packages extends Controller
      */
     public function upgrade(string $vendor, string $package)
     {
-        $result = $this->manager->upgrade("{$vendor}/{$package}");
+        $version = $this->manager->resolveInstallableVersion($vendor, $package);
+        $result = $this->manager->upgrade("{$vendor}/{$package}", $version);
 
         if ($result['success']) {
             return redirect()->back()->with('success', __('admin.packages.upgraded', ['package' => "{$vendor}/{$package}"]));
