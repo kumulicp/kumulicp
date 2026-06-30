@@ -13,6 +13,7 @@ interface Package {
   enabled: boolean
   version: string | null
   updateAvailable: boolean
+  isUnstable: boolean
   source: string
 }
 
@@ -23,6 +24,10 @@ export default defineComponent({
     packages: {
       type: Array as () => Package[],
       required: true,
+    },
+    allowUnstable: {
+      type: Boolean,
+      default: false,
     },
   },
 
@@ -115,6 +120,10 @@ export default defineComponent({
       router.post(`/admin/packages/${vendor}/${name}/upgrade`)
     },
 
+    toggleAllowUnstable(value: boolean) {
+      router.post('/admin/packages/settings', { allow_unstable: value })
+    },
+
     statusColor(pkg: Package): string {
       if (!pkg.installed) return 'secondary'
       return pkg.enabled ? 'success' : 'warning'
@@ -169,6 +178,14 @@ export default defineComponent({
           />
         </div>
 
+        <div class="flex flex-col items-end">
+          <va-switch
+            :model-value="allowUnstable"
+            :label="$t('admin.packages.allowUnstable')"
+            @update:model-value="toggleAllowUnstable"
+          />
+        </div>
+
         <div class="flex flex-col md3 items-end">
           <va-button icon="fa-file-zipper" @click="openUpload">
             {{ $t('admin.packages.installFromZip') }}
@@ -216,6 +233,12 @@ export default defineComponent({
                 <va-badge
                   :color="statusColor(pkg)"
                   :text="statusLabel(pkg)"
+                />
+                <va-badge
+                  v-if="pkg.isUnstable"
+                  color="warning"
+                  :text="$t('admin.packages.unstable')"
+                  class="ml-1"
                 />
               </td>
               <td class="text-right whitespace-nowrap">

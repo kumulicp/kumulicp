@@ -209,6 +209,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('', 'Admin\Packages@index')->name('admin.packages.index');
             Route::post('download', 'Admin\Packages@download')->name('admin.packages.download');
             Route::post('upload', 'Admin\Packages@uploadModule')->name('admin.packages.upload');
+            Route::post('settings', 'Admin\Packages@updateSettings')->name('admin.packages.settings');
             Route::prefix('{vendor}/{package}')->group(function () {
                 Route::get('', 'Admin\Packages@show')->name('admin.packages.show');
                 Route::delete('', 'Admin\Packages@destroy')->name('admin.packages.destroy');

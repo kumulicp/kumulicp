@@ -26,6 +26,7 @@ import { defineComponent } from 'vue'
             />
             <va-badge v-else color="secondary" :text="$t('admin.packages.notInstalled')" />
             <va-badge v-if="package.updateAvailable" color="warning" :text="$t('admin.packages.updateAvailable')" />
+            <va-badge v-if="package.isUnstable" color="warning" :text="$t('admin.packages.unstable')" />
           </div>
           <p class="text-gray-500 text-sm">{{ package.description || $t('admin.packages.noDescription') }}</p>
           <div v-if="package.keywords.length" class="flex flex-wrap gap-1 mt-2">
@@ -213,6 +214,7 @@ interface Package {
   enabled: boolean
   version: string | null
   updateAvailable: boolean
+  isUnstable: boolean
   path: string | null
   module_name: string
 }

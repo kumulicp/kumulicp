@@ -616,7 +616,10 @@
       "moduleName": "Module name",
       "requirements": "Requirements",
       "constraint": "Constraint",
-      "authors": "Authors"
+      "authors": "Authors",
+      "allowUnstable": "Allow unstable packages",
+      "allowUnstableHint": "Show and install beta, alpha, RC, and dev versions.",
+      "unstable": "Unstable"
     },
     "domains": {
       "addTld": "Add TLD",
