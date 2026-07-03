@@ -4,7 +4,6 @@ namespace App\Actions\Organizations;
 
 use App\Actions\Action;
 use App\Jobs\Applications\UpdateLDAPGroups;
-use App\Jobs\Users\UpdateUserStorage;
 use App\Notifications\SubscriptionUpdatedNotification;
 use App\Organization;
 use App\Services\SubscriptionService;
@@ -46,7 +45,6 @@ class SubscriptionUpdate extends Action
         OrganizationFacade::setOrganization($task->organization);
         Billing::update();
         Bus::chain([
-            new UpdateUserStorage($task->organization),
             function () use ($organization) {
                 // Update Subscription Summary with correct info
                 $organization->deactivate_at = null;

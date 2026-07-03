@@ -2,7 +2,7 @@
 
 namespace App\Jobs\Users;
 
-use App\Organization;
+use App\Events\Users\UserStorageUpdated;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
@@ -23,18 +23,19 @@ class UpdateUserStorage implements ShouldQueue
      *
      * @return void
      */
-    public function __construct(private Organization $organization) {}
+    public function __construct() {}
 
     /**
      * Handle the event.
      *
-     * @param  UpdateUserStorage  $event
      * @return void
      */
-    public function handle()
+    public function handle(UserStorageUpdated $event)
     {
-        OrganizationFacade::setOrganization($this->organization);
-        $apps = $this->organization->app_instances;
+        $organization = $event->organization;
+
+        OrganizationFacade::setOrganization($organization);
+        $apps = $organization->app_instances;
 
         foreach ($apps as $app) {
             if (Application::instance($app)->plan()->hasUserStorage()) {
