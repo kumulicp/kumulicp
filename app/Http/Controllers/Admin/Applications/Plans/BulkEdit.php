@@ -12,6 +12,7 @@ use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class BulkEdit extends Controller
 {
@@ -356,29 +357,42 @@ class BulkEdit extends Controller
             'int' => 'nullable|integer',
         ];
 
+        $rules = [];
+        $additionalConfigsByPlan = [];
+
         foreach ($plans as $plan) {
             $plan_data = $request->input("plans.{$plan->id}", []);
-            if (empty($plan_data)) {
-                continue;
-            }
-
             $configurations = Arr::get($plan_data, 'configurations', []);
             $additional_configs_input = Arr::get($plan_data, 'additionalConfigs', []);
-
-            $additional_configs = [];
             $merged_additional_configs = array_merge($additional_configs_input, $plan->additionalConfigs());
+
+            foreach ($validate_configurations as $key => $rule) {
+                $name = Str::after($key, 'configurations.');
+                $rules["plans.{$plan->id}.configurations.{$name}"] = $rule;
+            }
 
             foreach ($merged_additional_configs as $config) {
                 if (array_key_exists($config['type'], $validationTypes) && Arr::has($configurations, $config['name'])) {
-                    $additional_configs[$config['name']] = $config;
+                    $rules["plans.{$plan->id}.configurations.{$config['name']}"] = $validationTypes[$config['type']];
+                    $additionalConfigsByPlan[$plan->id][$config['name']] = $config;
                 }
             }
+        }
+
+        $validated = $request->validate($rules);
+
+        foreach ($plans as $plan) {
+            if (empty($request->input("plans.{$plan->id}", []))) {
+                continue;
+            }
+
+            $configurations = Arr::get($validated, "plans.{$plan->id}.configurations", []);
 
             $plan->updateSettings([
                 'configurations' => ! empty($configurations)
                     ? ApplicationFacade::processConfigurations($app, $plan, $configurations)
                     : [],
-                'additionalConfigs' => $additional_configs,
+                'additionalConfigs' => $additionalConfigsByPlan[$plan->id] ?? [],
             ]);
             $plan->save();
         }

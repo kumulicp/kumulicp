@@ -149,11 +149,28 @@ class ApplicationService
 
         foreach ($options as $name => $option) {
             if (! $personalized || ($personalized && Arr::get($option, 'personalized', false))) {
-                $validations["configurations.$name"] = Arr::get($option, 'validations', '');
+                $rules = Arr::get($option, 'validations', '');
+
+                if ($option['type'] === 'yaml') {
+                    $rules = $this->ensureArrayRule($rules);
+                }
+
+                $validations["configurations.$name"] = $rules;
             }
         }
 
         return $validations;
+    }
+
+    private function ensureArrayRule($rules)
+    {
+        $rules = is_array($rules) ? $rules : array_filter(explode('|', $rules));
+
+        if (! in_array('array', $rules)) {
+            $rules[] = 'array';
+        }
+
+        return $rules;
     }
 
     public function processConfigurations(Application $app, AppPlan $plan, $configs)

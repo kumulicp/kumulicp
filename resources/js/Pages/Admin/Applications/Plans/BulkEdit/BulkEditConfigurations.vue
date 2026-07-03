@@ -28,7 +28,7 @@ import { useForm } from '@inertiajs/vue3'
                 <div>{{ config.name }}</div>
                 <div class="va-text-secondary" style="font-size:0.8em">{{ config.persistent }}</div>
               </td>
-              <td v-for="plan in plans" :key="plan.id">
+              <td v-for="plan in plans" :key="plan.id" :id="'config-' + plan.id + '-' + config.name">
                 <va-input
                   v-if="config.type === 'string'"
                   v-model="form.plans[plan.id].configurations[config.name]"
@@ -49,7 +49,7 @@ import { useForm } from '@inertiajs/vue3'
                 <YamlEditor
                   v-else-if="config.type === 'yaml'"
                   v-model="form.plans[plan.id].configurations[config.name]"
-                  debounce="1000"
+                  :error-messages="errors && errors['plans.' + plan.id + '.configurations.' + config.name]"
                 />
                 <va-input
                   v-else-if="config.type === 'json'"
@@ -193,9 +193,23 @@ export default {
       })
     }
   },
+  mounted () {
+    this.scrollToFirstError()
+  },
   methods: {
     submit () {
       this.form.put('/admin/apps/' + this.app.slug + '/plans/bulk-edit/configurations')
+    },
+    scrollToFirstError () {
+      if (! this.errors) return
+
+      const match = Object.keys(this.errors)
+        .find(key => /^plans\.\d+\.configurations\./.test(key))
+      if (! match) return
+
+      const [, planId, configName] = match.match(/^plans\.(\d+)\.configurations\.(.+)$/)
+      const el = document.getElementById('config-' + planId + '-' + configName)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     },
     addNewConfig () {
       if (!this.newConfig.name) return

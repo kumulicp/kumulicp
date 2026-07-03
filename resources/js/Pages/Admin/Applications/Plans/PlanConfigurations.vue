@@ -19,7 +19,7 @@ import { useForm } from '@inertiajs/vue3'
         </va-list-item-section>
       </va-list-item>
       <template v-for="(config, index) in configList" :key="index">
-        <va-list-item class="py-3">
+        <va-list-item class="py-3" :id="'config-' + config.name">
           <va-list-item-section label>
             <va-list-item-label>
               <h5>{{ config.name }}</h5>
@@ -54,7 +54,7 @@ import { useForm } from '@inertiajs/vue3'
                 v-if="config.type == 'yaml'"
                 v-model="form['configurations'][config.name]"
                 class="pb-1"
-                debounce="1000"
+                :error-messages="errors && errors['configurations.' + config.name]"
                 />
               <va-input
                 v-if="config.type == 'json'"
@@ -190,7 +190,20 @@ export default {
       ]
     }
   },
+  mounted () {
+    this.scrollToFirstError()
+  },
   methods: {
+    scrollToFirstError () {
+      if (! this.errors) return
+
+      const name = Object.keys(this.errors).find(key => key.startsWith('configurations.'))
+      if (! name) return
+
+      const configName = name.replace('configurations.', '')
+      const el = document.getElementById('config-' + configName)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    },
     addNewConfig () {
       this.configList[this.newConfig.name] = {
         name: this.newConfig.name,
