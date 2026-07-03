@@ -6,6 +6,7 @@ use App\Application;
 use App\Http\Controllers\Controller;
 use App\Plan;
 use App\Server;
+use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\Organizations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -109,7 +110,10 @@ class Plans extends Controller
             ];
         }
 
+        $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
+
         return inertia()->render('Admin/Plans/PlanEdit', [
+            'enabled_currencies' => $enabledCurrencies,
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -178,8 +182,19 @@ class Plans extends Controller
     public function update(Request $request, $plan_id)
     {
 
+        $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
+        $components = ['base', 'standard', 'basic', 'storage', 'application', 'email'];
+
+        $currencyRules = [];
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                $currencyRules["prices.{$component}.{$currency}.amount"] = 'numeric|nullable';
+                $currencyRules["prices.{$component}.{$currency}.price_id"] = 'string|max:50|nullable';
+            }
+        }
+
         /* Validate */
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name' => 'required',
             'status' => 'nullable',
             'default' => 'nullable',
@@ -188,29 +203,17 @@ class Plans extends Controller
             'org_type' => 'required|string|in:nonprofit,business,none,superaccount',
             'displayed_features' => 'nullable',
             'payment_enabled' => 'nullable',
-            'base.price' => 'numeric|nullable',
-            'base.price_id' => 'string|max:50|nullable',
             'base.minimal_label' => 'nullable|string|max:100',
-            'standard.price' => 'numeric|nullable',
             'standard.max' => 'numeric|nullable',
-            'standard.price_id' => 'string|max:50|nullable',
             'standard.storage' => 'numeric|nullable',
             'basic.name' => 'nullable|string',
-            'basic.price' => 'numeric|nullable',
             'basic.amount' => 'numeric|nullable',
             'basic.max' => 'numeric|nullable',
-            'basic.price_id' => 'string|max:50|nullable',
             'basic.storage' => 'numeric|nullable',
-            'storage.price' => 'numeric|nullable',
             'storage.max' => 'numeric|nullable',
-            'storage.price_id' => 'string|max:50|nullable',
             'storage.amount' => 'numeric|nullable',
-            'application.price' => 'numeric|nullable',
-            'application.price_id' => 'string|max:50|nullable',
             'application.max' => 'numeric|nullable',
-            'email.price' => 'numeric|nullable',
             'email.max' => 'numeric|nullable',
-            'email.price_id' => 'string|max:50|nullable',
             'email.storage' => 'numeric|nullable',
             'app_plans' => 'array|nullable',
             'domains.connect' => 'boolean|nullable',
@@ -221,7 +224,7 @@ class Plans extends Controller
             'email_enabled' => 'boolean',
             'domain_max' => 'numeric|nullable',
             'email_server' => 'required_if_accepted:email_enabled|numeric|nullable|exists:servers,id',
-        ]);
+        ], $currencyRules));
         // Get bottom display order number
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
@@ -246,36 +249,38 @@ class Plans extends Controller
         $plan->domain_max = $request->domain_max;
         $isAppType = $request->type === 'app';
 
-        $plan->updateSettings([
+        $settingsToUpdate = [
             'suborganizations.enabled' => $request->input('suborganizations.enabled'),
-            'base.price' => $isAppType ? null : $request->input('base.price'),
-            'base.price_id' => $isAppType ? null : $request->input('base.price_id'),
             'base.minimal_label' => $request->input('base.minimal_label'),
-            'standard.price' => $isAppType ? null : $request->input('standard.price'),
             'standard.max' => $isAppType ? null : $request->input('standard.max'),
-            'standard.price_id' => $isAppType ? null : $request->input('standard.price_id'),
             'standard.storage' => $isAppType ? null : $request->input('standard.storage'),
             'basic.name' => $isAppType ? null : $request->input('basic.name'),
-            'basic.price' => $isAppType ? null : $request->input('basic.price'),
             'basic.amount' => $isAppType ? null : $request->input('basic.amount'),
             'basic.max' => $isAppType ? null : $request->input('basic.max'),
-            'basic.price_id' => $isAppType ? null : $request->input('basic.price_id'),
             'basic.storage' => $isAppType ? null : $request->input('basic.storage'),
-            'application.price' => $isAppType ? null : $request->input('application.price'),
             'application.max' => $isAppType ? null : $request->input('application.max'),
-            'application.price_id' => $isAppType ? null : $request->input('application.price_id'),
-            'storage.price' => $isAppType ? null : $request->input('storage.price'),
             'storage.max' => $isAppType ? null : $request->input('storage.max'),
-            'storage.price_id' => $isAppType ? null : $request->input('storage.price_id'),
             'storage.amount' => $isAppType ? null : $request->input('storage.amount'),
-            'email.price' => $request->input('email.price'),
             'email.max' => $request->input('email.max'),
-            'email.price_id' => $request->input('email.price_id'),
             'email.storage' => $request->input('email.storage'),
             'domains.connect' => $request->input('domains.connect'),
             'domains.register' => $request->input('domains.register'),
             'domains.transfer' => $request->input('domains.transfer'),
-        ]);
+        ];
+
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                if ($isAppType && in_array($component, ['base', 'standard', 'basic', 'storage', 'application'])) {
+                    $settingsToUpdate["{$component}.prices.{$currency}.amount"] = null;
+                    $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = null;
+                } else {
+                    $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
+                    $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
+                }
+            }
+        }
+
+        $plan->updateSettings($settingsToUpdate);
         $plan->status = $request->status ? 'available' : 'hidden';
         if (Arr::get($validated, 'default') && (! $plan->is_default || $plan->isDirty('org_type'))) {
             // Replace old default with new one

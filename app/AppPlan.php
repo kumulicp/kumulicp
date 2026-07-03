@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -140,6 +141,52 @@ class AppPlan extends Model
     public function featureValue(string $name)
     {
         return Arr::get($this->settings, "features.$name", null);
+    }
+
+    /**
+     * Returns the Stripe price_id for an optional feature in the given currency,
+     * falling back to default currency then legacy flat price_id.
+     */
+    public function featurePriceId(string $featureName, string $currency): ?string
+    {
+        $priceId = Arr::get($this->settings, "features.{$featureName}.prices.{$currency}.price_id");
+        if ($priceId) {
+            return $priceId;
+        }
+
+        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
+        if ($currency !== $defaultCurrency) {
+            $priceId = Arr::get($this->settings, "features.{$featureName}.prices.{$defaultCurrency}.price_id");
+            if ($priceId) {
+                return $priceId;
+            }
+        }
+
+        // Legacy flat format
+        return Arr::get($this->settings, "features.{$featureName}.price_id");
+    }
+
+    /**
+     * Returns the amount for an optional feature in the given currency,
+     * falling back to default currency then legacy flat price.
+     */
+    public function featurePriceAmount(string $featureName, string $currency): mixed
+    {
+        $amount = Arr::get($this->settings, "features.{$featureName}.prices.{$currency}.amount");
+        if ($amount !== null) {
+            return $amount;
+        }
+
+        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
+        if ($currency !== $defaultCurrency) {
+            $amount = Arr::get($this->settings, "features.{$featureName}.prices.{$defaultCurrency}.amount");
+            if ($amount !== null) {
+                return $amount;
+            }
+        }
+
+        // Legacy flat format
+        return Arr::get($this->settings, "features.{$featureName}.price");
     }
 
     public function setting($setting)

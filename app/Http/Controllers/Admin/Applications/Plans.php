@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -190,7 +191,10 @@ class Plans extends Controller
         $profile = ApplicationFacade::profile($app);
         $settings['features'] = $plan_features;
 
+        $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
+
         return inertia()->render('Admin/Applications/Plans/PlanEdit', [
+            'enabled_currencies' => $enabledCurrencies,
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
@@ -269,32 +273,35 @@ class Plans extends Controller
 
     public function update(Request $request, Application $app, AppPlan $plan)
     {
+        $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
+        $components = ['base', 'standard', 'basic', 'storage'];
+
+        $currencyRules = [];
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                $currencyRules["prices.{$component}.{$currency}.amount"] = 'numeric|nullable';
+                $currencyRules["prices.{$component}.{$currency}.price_id"] = 'string|max:50|nullable';
+            }
+        }
+
         /* Validate */
         $validateConfigurations = ApplicationFacade::validateConfigurations($app);
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name' => 'required',
             'default' => 'nullable',
             'description' => 'required',
             'displayed_features' => 'nullable',
             'payment_enabled' => 'nullable',
             'admin_access' => 'nullable|bool',
-            'base.price' => 'numeric|nullable',
-            'base.price_id' => 'string|max:50|nullable',
             'base.storage' => 'numeric|nullable',
             'base.max' => 'numeric|nullable',
-            'standard.price' => 'numeric|nullable',
             'standard.max' => 'numeric|nullable',
-            'standard.price_id' => 'string|max:50|nullable',
             'standard.storage' => 'numeric|nullable',
             'basic.name' => 'string|nullable',
-            'basic.price' => 'numeric|nullable',
             'basic.amount' => 'numeric|nullable',
             'basic.max' => 'numeric|nullable',
-            'basic.price_id' => 'string|max:50|nullable',
             'basic.storage' => 'numeric|nullable',
-            'storage.price' => 'numeric|nullable',
             'storage.max' => 'numeric|nullable',
-            'storage.price_id' => 'string|max:50|nullable',
             'storage.amount' => 'numeric|nullable',
             'domain_enabled' => 'nullable',
             'domain_max' => 'numeric|nullable',
@@ -306,7 +313,7 @@ class Plans extends Controller
             'shared_app' => 'numeric|nullable|exists:app_instances,id',
             'server_type' => 'required|in:separate,shared',
             'self_registration_enabled' => 'nullable|bool',
-        ]);
+        ], $currencyRules));
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
@@ -320,31 +327,32 @@ class Plans extends Controller
         $plan->shared_app_id = $request->shared_app;
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;
-        $plan->updateSettings([
+        $settingsToUpdate = [
             'server_type' => $request->input('server_type'),
             'admin_access' => $request->input('admin_access'),
-            'base.price' => (int) $request->input('base.price'),
-            'base.price_id' => $request->input('base.price_id'),
             'base.storage' => (int) $request->input('base.storage'),
             'base.max' => (int) $request->input('base.max'),
-            'standard.price' => (int) $request->input('standard.price'),
             'standard.max' => (int) $request->input('standard.max'),
-            'standard.price_id' => $request->input('standard.price_id'),
             'standard.storage' => (int) $request->input('standard.storage'),
             'basic.name' => $request->input('basic.name'),
-            'basic.price' => (int) $request->input('basic.price'),
             'basic.amount' => (int) $request->input('basic.amount'),
             'basic.max' => (int) $request->input('basic.max'),
-            'basic.price_id' => $request->input('basic.price_id'),
             'basic.storage' => (int) $request->input('basic.storage'),
-            'storage.price' => (int) $request->input('storage.price'),
             'storage.max' => (int) $request->input('storage.max'),
-            'storage.price_id' => $request->input('storage.price_id'),
             'storage.amount' => (int) $request->input('storage.amount'),
             'expires_after' => (int) $request->input('expires_after'),
             'trial_for' => (int) $request->input('trial_for'),
             'self_registration_enabled' => $request->boolean('self_registration_enabled'),
-        ]);
+        ];
+
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
+                $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
+            }
+        }
+
+        $plan->updateSettings($settingsToUpdate);
         $plan->save();
 
         // Update default plan

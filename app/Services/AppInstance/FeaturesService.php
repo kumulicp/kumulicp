@@ -32,6 +32,8 @@ class FeaturesService
     private function build()
     {
         $app_features = Application::features($this->app_instance->application->slug, $this->app_instance->get());
+        $currency = $this->app_instance->organization?->billingCurrency() ?? 'USD';
+
         foreach ($app_features as $app_feature) {
             $name = $app_feature->name;
 
@@ -40,8 +42,8 @@ class FeaturesService
                 [
                     'class' => $app_feature,
                     'plan_status' => $this->plan()?->featureValue("$name.status"),
-                    'price' => $this->plan()?->featureValue("$name.price"),
-                    'price_id' => $this->plan()?->featureValue("$name.price_id"),
+                    'price' => $this->plan()?->featurePriceAmount($name, $currency),
+                    'price_id' => $this->plan()?->featurePriceId($name, $currency),
                     'status' => $this->status($name),
                     'settings' => $this->settings($app_feature),
                     'override' => $this->override($name),

@@ -68,16 +68,18 @@ class AppInstancePlanService
     public function pricing(): array
     {
         $pricing = [];
+        $currency = $this->organization->billingCurrency();
 
-        if ($this->plan->setting('base.price_id')) {
-            $pricing[$this->plan->setting('base.price_id')]['quantity'] = 1;
+        $basePriceData = $this->plan->priceFor('base', $currency);
+        if ($basePriceData['price_id']) {
+            $pricing[$basePriceData['price_id']]['quantity'] = 1;
         }
 
         foreach ($this->pricingOptions() as $name => $option) {
             if ($name != 'features') {
-                if ($this->plan->setting("$name.price_id") && $this->countEntity($name) >= 0) {
-                    $price_id = $this->plan->setting("$name.price_id");
-                    $pricing[$price_id]['quantity'] = $this->countEntity($name);
+                $priceData = $this->plan->priceFor($name, $currency);
+                if ($priceData['price_id'] && $this->countEntity($name) >= 0) {
+                    $pricing[$priceData['price_id']]['quantity'] = $this->countEntity($name);
                 }
             }
         }
@@ -97,15 +99,16 @@ class AppInstancePlanService
 
         $entities = $this->pricing_options;
 
-        foreach ($entities as $entity) {
-            $price_id = "{$entity->value}.price_id";
-            $price = "{$entity->value}.price";
+        $currency = $this->organization->billingCurrency();
 
-            if ($this->plan->setting("{$entity->value}.price_id")) {
+        foreach ($entities as $entity) {
+            $priceData = $this->plan->priceFor($entity->value, $currency);
+
+            if ($priceData['price_id']) {
                 $option = [
                     'name' => $entity->value,
-                    'price_id' => $this->plan->setting("{$entity->value}.price_id"),
-                    'price' => $this->plan->setting("{$entity->value}.price"),
+                    'price_id' => $priceData['price_id'],
+                    'price' => $priceData['amount'],
                     'quantity' => $this->countEntity($entity->value),
                 ];
 
@@ -237,12 +240,15 @@ class AppInstancePlanService
 
         $app_instance_service = Application::instance($this->app_instance);
 
+        $currency = $this->organization->billingCurrency();
+
         foreach (Arr::get($settings, 'features', []) as $name => $feature) {
-            if (Arr::get($feature, 'price_id') && $app_instance_service->features()->isActive($name)) {
+            $priceId = $this->plan->featurePriceId($name, $currency);
+            if ($priceId && $app_instance_service->features()->isActive($name)) {
                 $pricing[$name] = [
                     'name' => $name,
-                    'price_id' => $feature['price_id'],
-                    'price' => $feature['price'],
+                    'price_id' => $priceId,
+                    'price' => $this->plan->featurePriceAmount($name, $currency),
                     'quantity' => 1,
                     'status' => $feature['status'],
                 ];

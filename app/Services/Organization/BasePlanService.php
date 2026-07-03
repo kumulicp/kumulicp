@@ -135,13 +135,16 @@ class BasePlanService
 
         $entities = $this->pricing_options;
 
-        foreach ($entities as $entity) {
+        $currency = $this->organization->billingCurrency();
 
-            if ($this->plan->setting("{$entity->value}.price_id")) {
+        foreach ($entities as $entity) {
+            $priceData = $this->plan->priceFor($entity->value, $currency);
+
+            if ($priceData['price_id']) {
                 $option = [
                     'name' => $entity,
-                    'price_id' => $this->plan->setting("{$entity->value}.price_id"),
-                    'price' => $this->plan->setting("{$entity->value}.price"),
+                    'price_id' => $priceData['price_id'],
+                    'price' => $priceData['amount'],
                     'quantity' => $this->org_service->countEntity($entity->value),
                 ];
 

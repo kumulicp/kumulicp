@@ -24,8 +24,10 @@ class PlanFeaturesService
         foreach (Application::profile($this->application->slug)->features() as $name => $feature) {
             $this->features[$name] = (array) $feature;
             $this->features[$name]['status'] = $this->plan->featureValue("$name.status") ?? 'disabled';
+            // Legacy flat price/price_id preserved for display; per-currency prices live in prices.*
             $this->features[$name]['price'] = $this->plan->featureValue("$name.price");
             $this->features[$name]['price_id'] = $this->plan->featureValue("$name.price_id");
+            $this->features[$name]['prices'] = $this->plan->featureValue("$name.prices") ?? [];
             $this->features[$name]['payment_type'] = $this->plan->featureValue("$name.payment_type");
             $this->features[$name]['settings'] = $this->plan->featureValue("$name.settings");
 

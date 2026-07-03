@@ -5,6 +5,7 @@ import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
 import { useForm } from '@inertiajs/vue3'
 import { useColors } from 'vuestic-ui'
+import { CURRENCIES } from '@/constants/currencies'
 
 </script>
 <template>
@@ -81,6 +82,40 @@ import { useColors } from 'vuestic-ui'
         />
       </template>
     </AdminSettings>
+    <va-list-separator class="my-1" fit />
+    <AdminSettings>
+      <template #name>{{ $t('settings.currency') }}</template>
+      <template #description>{{ $t('settings.currencyDescription') }}</template>
+      <template #settings>
+        <va-select
+          v-model="form.default_currency"
+          :label="$t('settings.defaultCurrency')"
+          :options="currencyOptions"
+          value-by="value"
+          text-by="text"
+          class="mb-3"
+          id="defaultCurrency"
+          immediateValidation
+          :error="!!$page.props.errors.default_currency"
+          :error-messages="$page.props.errors.default_currency"
+        />
+        <va-select
+          v-model="form.enabled_currencies"
+          :label="$t('settings.enabledCurrencies')"
+          :options="currencyOptions"
+          value-by="value"
+          text-by="text"
+          multiple
+          class="mb-3"
+          id="enabledCurrencies"
+          immediateValidation
+          :error="!!$page.props.errors.enabled_currencies"
+          :error-messages="$page.props.errors.enabled_currencies"
+        />
+        <p class="va-text-secondary mt-1">{{ $t('settings.currencyNote') }}</p>
+      </template>
+    </AdminSettings>
+    <va-list-separator class="my-1" fit />
     <h6 class="va-h6 my-3">{{ $t('settings.welcomePage') }}</h6>
     <tinymce-editor v-model:htmlContent="form.welcome_page" />
     <va-button type="submit"
@@ -110,6 +145,7 @@ export default {
     return {
       defaultPrimaryColor: primary,
       defaultSecondaryColor: secondary,
+      currencyOptions: CURRENCIES.map(c => ({ value: c.code, text: `${c.code} — ${c.label}` })),
       form: useForm({
         base_domain: this.settings.base_domain,
         terms_url: this.settings.terms_url,
@@ -118,7 +154,9 @@ export default {
         primary_color: this.settings.primary_color,
         secondary_color: this.settings.secondary_color,
         support_email: this.settings.support_email,
-        error_email: this.settings.error_email
+        error_email: this.settings.error_email,
+        default_currency: this.settings.default_currency ?? 'USD',
+        enabled_currencies: this.settings.enabled_currencies ?? ['USD'],
       })
     }
   },
