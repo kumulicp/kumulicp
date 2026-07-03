@@ -15,29 +15,31 @@ import axios from 'axios'
           <va-card-title>{{ $t('organization.webDomains.transferDomain') }}</va-card-title>
           <va-card-content>
             <form @submit.prevent="transfer">
-              <div class="row justify-center">
-                <div class="flex xs12 md6">
-                  <va-input
-                    v-model="form.domain_name"
-                    id="domainName"
-                    placeholder="example.com"
-                    class="mb-3"
-                    :label="$t('organization.webDomains.domainName')"
-                    immediateValidation
-                    :error="$page.props.errors.domain_name"
-                    :error-messages="$page.props.errors.domain_name"
-                    :success="domain_success"
-                    @change="getPrice"
-                  />
-                  <va-input
-                    v-model="form.epp_code"
-                    id="eppCode"
-                    :error="$page.props.errors.epp_code"
-                    :error-messages="$page.props.errors.epp_code"
-                    class="mb-3"
-                    :label="$t('organization.webDomains.authEppCode')"
-                    immediateValidation
-                  />
+              <div class="row">
+                <div class="flex xs12 md8">
+                  <div>
+                    <va-input
+                      v-model="form.domain_name"
+                      id="domainName"
+                      placeholder="example.com"
+                      class="mb-3"
+                      :label="$t('organization.webDomains.domainName')"
+                      immediateValidation
+                      :error="$page.props.errors.domain_name"
+                      :error-messages="$page.props.errors.domain_name"
+                      :success="domain_success"
+                      @change="getPrice"
+                    />
+                    <va-input
+                      v-model="form.epp_code"
+                      id="eppCode"
+                      :error="$page.props.errors.epp_code"
+                      :error-messages="$page.props.errors.epp_code"
+                      class="mb-3"
+                      :label="$t('organization.webDomains.authEppCode')"
+                      immediateValidation
+                    />
+                  </div>
                 </div>
                 <va-divider vertical />
                 <div class="flex xs12 md3 mb-4">
