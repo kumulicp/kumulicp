@@ -15,8 +15,8 @@ import axios from 'axios'
           <va-card-title>{{ $t('organization.webDomains.transferDomain') }}</va-card-title>
           <va-card-content>
             <form @submit.prevent="transfer">
-              <div class="row">
-                <div class="flex xs12 md8">
+              <div class="row justify-center">
+                <div class="flex xs12 md6">
                   <va-input
                     v-model="form.domain_name"
                     id="domainName"
