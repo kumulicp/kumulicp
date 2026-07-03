@@ -258,7 +258,6 @@ class DemoSeeder extends Seeder
         DB::table('organizations')->insert([
             [
                 'id' => 1,
-                'base_domain_id' => 1,
                 'plan_id' => 1,
                 'slug' => 'demo',
                 'name' => 'Demo',
