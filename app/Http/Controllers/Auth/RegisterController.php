@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Enums\AccessType;
+use App\Events\OrganizationCreated;
 use App\Events\OrganizationRegistered;
 use App\Http\Controllers\Controller;
 use App\Notifications\WelcomeNewOrganization;
@@ -219,6 +220,7 @@ class RegisterController extends Controller
 
         try {
             event(new OrganizationRegistered($registration_info['organization'], $registration_info['user']));
+            event(new OrganizationCreated($registration_info['organization'], $registration_info['user']));
         } catch (UnexpectedResponseException $e) {
             report($e);
 

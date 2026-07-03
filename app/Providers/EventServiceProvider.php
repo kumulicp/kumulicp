@@ -9,6 +9,7 @@ use App\Events\Apps\ApplicationActivated;
 use App\Events\Apps\ApplicationActivating;
 use App\Events\Apps\ApplicationPreActivation;
 use App\Events\Domains\DomainDeleted;
+use App\Events\OrganizationCreated;
 use App\Events\OrganizationRegistered;
 use App\Events\SubscriptionUpdated;
 use App\Events\TestEvent;
@@ -21,6 +22,7 @@ use App\Integrations\Applications\Nextcloud\Actions\NextcloudUpdateGroupFolderSt
 use App\Integrations\ServerManagers\Rancher\Listeners\UpdateIngressMiddleware;
 use App\Integrations\SSO\Authentik\Listeners\SyncLDAP;
 use App\Integrations\SSO\Authentik\Listeners\UpdateAppInfo;
+use App\Listeners\NotifyCpAdminOfNewOrganization;
 use App\Listeners\UpdateAppLdapGroups;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -46,5 +48,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(AppInstanceDomainChanged::class, UpdateAppInfo::class);
 
         Event::listen(DomainDeleted::class, UpdateIngressMiddleware::class);
+
+        Event::listen(OrganizationCreated::class, NotifyCpAdminOfNewOrganization::class);
     }
 }
