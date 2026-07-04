@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\VerifiesEmails;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class VerificationController extends Controller
@@ -40,10 +42,9 @@ class VerificationController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth')->only(['show', 'resend']);
         $this->middleware('signed')->only('verify');
         $this->middleware('throttle:6,1')->only('verify', 'resend');
-        $this->middleware('user.organization')->only('verify');
     }
 
     /**
@@ -67,7 +68,9 @@ class VerificationController extends Controller
     }
 
     /**
-     * Mark the authenticated user's email address as verified.
+     * Mark the email address identified by the signed link as verified, then
+     * sign the user in. The link is opened from an email client, so the
+     * browser following it usually isn't authenticated as anyone yet.
      *
      * @return JsonResponse|RedirectResponse
      *
@@ -75,26 +78,27 @@ class VerificationController extends Controller
      */
     public function verify(Request $request)
     {
-        if (! hash_equals((string) $request->route('id'), (string) $request->user()->getKey())) {
+        $user = User::find($request->route('id'));
+
+        if (! $user || ! hash_equals((string) $request->route('hash'), sha1($user->emailForVerification()))) {
             throw new AuthorizationException;
         }
 
-        if (! hash_equals((string) $request->route('hash'), sha1($request->user()->emailForVerification()))) {
-            throw new AuthorizationException;
+        $alreadyVerified = $user->hasVerifiedEmail();
+
+        if (! $alreadyVerified && $user->markEmailAsVerified()) {
+            event(new Verified($user));
         }
 
-        if ($request->user()->hasVerifiedEmail()) {
+        if (Auth::id() !== $user->id) {
+            Auth::login($user);
+            $request->session()->regenerate();
+        }
+
+        if ($alreadyVerified) {
             return $request->wantsJson()
                         ? new JsonResponse([], 204)
                         : redirect($this->redirectPath());
-        }
-
-        if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
-        }
-
-        if ($response = $this->verified($request)) {
-            return $response;
         }
 
         return $request->wantsJson()
