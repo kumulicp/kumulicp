@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppVersion> $versions
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppPlan> $plans
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppRole> $roles
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppScreenshot> $screenshots
  */
 class Application extends Model
 {
@@ -93,6 +94,11 @@ class Application extends Model
     public function roles()
     {
         return $this->hasMany('App\AppRole', 'application_id');
+    }
+
+    public function screenshots()
+    {
+        return $this->hasMany('App\AppScreenshot', 'application_id')->orderBy('display_order');
     }
 
     public function is_installed(Organization $organization)

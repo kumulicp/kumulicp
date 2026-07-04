@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
+use App\AppScreenshot;
 use App\Application;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -150,5 +153,86 @@ class ApplicationsTest extends TestCase
             'id' => $app->id,
             'short_description' => 'alert(1)Plain text',
         ]);
+    }
+
+    public function test_admin_can_upload_screenshots_for_an_application()
+    {
+        Storage::fake('local');
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_screenshots_upload']);
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload([
+                'screenshots' => [
+                    UploadedFile::fake()->image('screenshot-one.png'),
+                    UploadedFile::fake()->image('screenshot-two.png'),
+                ],
+            ]))
+            ->assertRedirect("/admin/apps/{$app->slug}/edit");
+
+        $this->assertDatabaseCount('app_screenshots', 2);
+        $screenshots = AppScreenshot::where('application_id', $app->id)->orderBy('display_order')->get();
+        expect($screenshots)->toHaveCount(2);
+        expect($screenshots[0]->display_order)->toBeLessThan($screenshots[1]->display_order);
+        foreach ($screenshots as $screenshot) {
+            Storage::assertExists('images/screenshots/'.$screenshot->filename);
+        }
+    }
+
+    public function test_admin_can_view_the_edit_page_with_existing_screenshots()
+    {
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_screenshots_view']);
+        $screenshot = AppScreenshot::create([
+            'application_id' => $app->id,
+            'filename' => 'existing-screenshot.png',
+            'display_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->get("/admin/apps/{$app->slug}/edit")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Applications/AppEdit')
+                ->where('app.screenshots.0.id', $screenshot->id)
+                ->where('app.screenshots.0.url', '/images/screenshots/existing-screenshot.png')
+            );
+    }
+
+    public function test_admin_can_remove_an_existing_screenshot()
+    {
+        Storage::fake('local');
+        Storage::put('images/screenshots/to-remove.png', 'fake-image-contents');
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_screenshots_remove']);
+        $screenshot = AppScreenshot::create([
+            'application_id' => $app->id,
+            'filename' => 'to-remove.png',
+            'display_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload([
+                'remove_screenshots' => [$screenshot->id],
+            ]))
+            ->assertRedirect("/admin/apps/{$app->slug}/edit");
+
+        $this->assertDatabaseMissing('app_screenshots', ['id' => $screenshot->id]);
+        Storage::assertMissing('images/screenshots/to-remove.png');
+    }
+
+    public function test_update_rejects_non_image_screenshots()
+    {
+        Storage::fake('local');
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_screenshots_invalid']);
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload([
+                'screenshots' => [UploadedFile::fake()->create('not-an-image.txt', 10)],
+            ]))
+            ->assertSessionHasErrors('screenshots.0');
+
+        $this->assertDatabaseCount('app_screenshots', 0);
     }
 }

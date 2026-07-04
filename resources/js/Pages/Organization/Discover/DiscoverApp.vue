@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PlanCard from '@/components/cards/PlanCard.vue'
+import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
 import { Link } from '@inertiajs/vue3'
 
 </script>
@@ -52,6 +53,7 @@ import { Link } from '@inertiajs/vue3'
               </template>
             </va-alert>
             <div id="description" v-html="app.description" style="overflow-x: auto; overflow-y: hidden"></div>
+            <screenshot-gallery :screenshots="app.screenshots" class="mb-3" />
             <va-divider class="mb-3"></va-divider>
             <div v-if="can.activate" class="row">
               <div class="flex flex-col xs12">
