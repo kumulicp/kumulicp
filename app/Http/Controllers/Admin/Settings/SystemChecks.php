@@ -18,7 +18,27 @@ class SystemChecks extends Controller
     {
         return inertia()->render('Admin/Settings/SystemChecks', [
             'breadcrumbs' => $this->breadcrumbs(),
-            'ldap_model_results' => (new LdapModelValidation)->run(),
+            'ldap_model_results' => [
+                'issues' => (new LdapModelValidation)->run(),
+            ],
+        ]);
+    }
+
+    public function correctLdapModels()
+    {
+        $check = new LdapModelValidation;
+
+        $corrections = array_map(
+            fn (array $issue) => $check->attemptFix($issue['dn']),
+            $check->run(),
+        );
+
+        return inertia()->render('Admin/Settings/SystemChecks', [
+            'breadcrumbs' => $this->breadcrumbs(),
+            'ldap_model_results' => [
+                'issues' => $check->run(),
+                'corrections' => $corrections,
+            ],
         ]);
     }
 

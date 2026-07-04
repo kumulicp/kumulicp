@@ -174,6 +174,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('system-checks')->group(function () {
                 Route::get('', 'Admin\Settings\SystemChecks@index')->name('settings.system_checks');
                 Route::post('ldap-models', 'Admin\Settings\SystemChecks@ldapModels')->name('settings.system_checks.ldap_models');
+                Route::post('ldap-models/correct', 'Admin\Settings\SystemChecks@correctLdapModels')->name('settings.system_checks.ldap_models.correct');
             });
         });
 
