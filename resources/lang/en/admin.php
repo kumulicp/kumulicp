@@ -142,6 +142,7 @@ return [
         'updated' => 'Settings updated',
         'ldap_settings' => 'LDAP Settings',
         'invoice_settings' => 'Invoice Settings',
+        'system_checks_settings' => 'System Checks',
     ],
     'pullSecrets' => [
         'pullSecrets' => 'Image Pull Secrets',
