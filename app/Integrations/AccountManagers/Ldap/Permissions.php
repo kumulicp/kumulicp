@@ -281,7 +281,14 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function addControlPanelAdminAccess(?User &$user = null)
     {
         $admin_group = Dn::create('server', 'controlPanelAccess', 'admin');
-        $this->addControlPanelAccess($user);
+
+        // Only provision baseline control panel access if it isn't already
+        // granted — re-running addControlPanelAccess() here without an
+        // organization would reset a previously-scoped suborganization back
+        // to the top-level org.
+        if (! $this->hasControlPanelAccess()) {
+            $this->addControlPanelAccess($user);
+        }
 
         // Add user to admin group
         $admin_group = LdapGroup::find($admin_group);
