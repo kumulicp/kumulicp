@@ -51,6 +51,7 @@ class Profile extends Controller
         $user->save();
 
         $validatedData['name'] = $validatedData['first_name'].' '.$validatedData['last_name'];
+        unset($validatedData['locale']);
 
         if (AccountManager::driver() != 'direct') {
             AccountManager::users()->find($user->username)->update($validatedData);
