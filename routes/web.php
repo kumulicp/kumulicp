@@ -104,6 +104,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
+                        Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
                         Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
