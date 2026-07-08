@@ -6,9 +6,7 @@ use App\Organization;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
 use App\Support\Facades\Application;
-use App\Support\Facades\Settings;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -44,17 +42,6 @@ class AppServiceProvider extends ServiceProvider
     {
         if (config('app.proxy') == 'true') {
             URL::forceScheme('https');
-        }
-
-        if (! $this->app->runningInConsole()) {
-            $user = auth()->user();
-
-            App::setLocale(
-                $user?->locale
-                ?? $user?->organization?->default_locale
-                ?? Settings::get('default_locale', null)
-                ?? config('app.locale')
-            );
         }
 
         Paginator::useBootstrap();

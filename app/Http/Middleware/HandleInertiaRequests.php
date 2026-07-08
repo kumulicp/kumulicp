@@ -5,8 +5,10 @@ namespace App\Http\Middleware;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
 use App\Support\Facades\Settings;
+use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
@@ -23,6 +25,28 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * Handle an incoming request.
+     *
+     * Resolves the active locale here (rather than in a service provider's boot())
+     * because this middleware runs after StartSession, so the authenticated user
+     * is actually available. User locale always wins; falls back through the
+     * organization, control panel setting, then app config.
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        $user = $request->user();
+
+        App::setLocale(
+            $user?->locale
+            ?? $user?->organization?->default_locale
+            ?? Settings::get('default_locale', null)
+            ?? config('app.locale')
+        );
+
+        return parent::handle($request, $next);
+    }
+
+    /**
      * Determine the current asset version.
      *
      * @return string|null
@@ -36,12 +60,14 @@ class HandleInertiaRequests extends Middleware
     {
         $path_info = Arr::get($_SERVER, 'REQUEST_URI', null);
 
+        $locale = app()->getLocale();
+
         if ($path_info && Str::of($path_info)->explode('/')[1] == 'admin' && Gate::allows('admin')) {
-            $menu = FastCache::retrieve('admin_menu', function () {
+            $menu = FastCache::retrieve("admin_menu:{$locale}", function () {
                 return Menu::build('admin');
             });
         } else {
-            $menu = FastCache::retrieve('org_menu', function () {
+            $menu = FastCache::retrieve("org_menu:{$locale}", function () {
                 return Menu::build('organization');
             });
         }

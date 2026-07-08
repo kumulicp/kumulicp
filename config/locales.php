@@ -14,5 +14,6 @@ return [
     */
     'available' => [
         'en' => 'English',
+        'es' => 'Español',
     ],
 ];

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PasswordChecker from '@/components/FormInputs/PasswordChecker.vue'
+import i18n from '@/i18n'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
@@ -16,7 +17,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
   <va-card class="mb-4">
     <va-card-title>{{ $t('organization.profile.editProfile') }}</va-card-title>
     <va-card-content>
-      <form @submit.prevent="form.post('/profile')">
+      <form @submit.prevent="form.post('/profile', { onSuccess: () => { i18n.global.locale.value = $page.props.language } })">
         <va-list>
           <va-list-item class="pb-3">
             <va-list-item-section label>
