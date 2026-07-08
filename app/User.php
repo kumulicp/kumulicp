@@ -23,6 +23,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property \App\Enums\AccessType|null $access_type
  * @property \Carbon\Carbon|null $email_verified_at
  * @property string|null $remember_token
+ * @property string|null $locale
  * @property \Carbon\Carbon|null $deleted_at
  * @property-read \App\Organization|null $organization
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
@@ -38,7 +39,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'guid',
+        'name', 'email', 'password', 'guid', 'locale',
     ];
 
     /**

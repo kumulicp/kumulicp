@@ -990,7 +990,8 @@
       "selfRegistrationEnabled": "Allow Self-Registration",
       "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address.",
       "selfRegistrationUrl": "Registration Link",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "defaultLanguage": "Default Language"
     },
     "subscription": {
       "plan": "Plan",
@@ -1046,6 +1047,7 @@
       "lastName": "Last Name",
       "personalEmail": "Personal Email",
       "phoneNumber": "Phone Number",
+      "language": "Language",
       "organizationalEmail": "Organizational Email",
       "deleteEmail": "Delete Email",
       "addEmailAccount": "Add email account @{domain}",
@@ -1151,6 +1153,7 @@
     "ldapAttributes": "Attribute Mapping",
     "supportEmail": "Support Email",
     "errorEmail": "Error Email",
+    "defaultLanguage": "Default Language",
     "ldap": "LDAP",
     "ldapFullName": "Full Name",
     "ldapPersonalEmail": "Personal Email",

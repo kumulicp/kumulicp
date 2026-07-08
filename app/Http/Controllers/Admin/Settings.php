@@ -21,7 +21,9 @@ class Settings extends Controller
                 'welcome_page' => SettingsFacade::get('welcome_page'),
                 'support_email' => SettingsFacade::get('support_email'),
                 'error_email' => SettingsFacade::get('error_email'),
+                'default_locale' => SettingsFacade::get('default_locale'),
             ],
+            'locales' => config('locales.available'),
             'breadcrumbs' => [
                 [
                     'label' => __('admin.settings.control_panel_settings'),
@@ -42,6 +44,7 @@ class Settings extends Controller
             'secondary_color' => 'nullable|string|max:10',
             'support_email' => 'nullable|email:rfc,filter|max:100',
             'error_email' => 'nullable|email:rfc,filter|max:100',
+            'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
 
         SettingsFacade::update('base_domain', $validated['base_domain']);
@@ -52,6 +55,7 @@ class Settings extends Controller
         SettingsFacade::update('secondary_color', $validated['secondary_color']);
         SettingsFacade::update('support_email', Arr::get($validated, 'support_email'));
         SettingsFacade::update('error_email', Arr::get($validated, 'error_email'));
+        SettingsFacade::update('default_locale', Arr::get($validated, 'default_locale'));
 
         return redirect('admin/settings')->with('success', __('admin.settings.updated'));
     }

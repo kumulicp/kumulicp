@@ -55,6 +55,18 @@ import { useColors } from 'vuestic-ui'
           :error="$page.props.errors.error_email"
           :error-messages="$page.props.errors.error_email"
         />
+        <va-select v-model="form.default_locale"
+          :label="$t('settings.defaultLanguage')"
+          id="defaultLocale"
+          :options="localeOptions"
+          value-by="code"
+          text-by="name"
+          clearable
+          class="mb-3"
+          immediateValidation
+          :error="$page.props.errors.default_locale"
+          :error-messages="$page.props.errors.default_locale"
+        />
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
@@ -100,6 +112,7 @@ export default {
   },
   props: {
     settings: Object,
+    locales: Object,
     errors: Object
   },
   data () {
@@ -110,6 +123,7 @@ export default {
     return {
       defaultPrimaryColor: primary,
       defaultSecondaryColor: secondary,
+      localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       form: useForm({
         base_domain: this.settings.base_domain,
         terms_url: this.settings.terms_url,
@@ -118,7 +132,8 @@ export default {
         primary_color: this.settings.primary_color,
         secondary_color: this.settings.secondary_color,
         support_email: this.settings.support_email,
-        error_email: this.settings.error_email
+        error_email: this.settings.error_email,
+        default_locale: this.settings.default_locale
       })
     }
   },

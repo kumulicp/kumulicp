@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PasswordChecker from '@/components/FormInputs/PasswordChecker.vue'
+import i18n from '@/i18n'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useInputMask, createRegexMask } from 'vuestic-ui'
@@ -16,7 +17,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
   <va-card class="mb-4">
     <va-card-title>{{ $t('organization.profile.editProfile') }}</va-card-title>
     <va-card-content>
-      <form @submit.prevent="form.post('/profile')">
+      <form @submit.prevent="form.post('/profile', { onSuccess: () => { i18n.global.locale.value = $page.props.language } })">
         <va-list>
           <va-list-item class="pb-3">
             <va-list-item-section label>
@@ -107,6 +108,29 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                   required-mark
                   :error="$page.props.errors.personal_email"
                   :error-messages="$page.props.errors.personal_email"
+                  />
+              </va-list-item-label>
+            </va-list-item-section>
+          </va-list-item>
+
+          <va-list-separator class="my-1" fit />
+          <va-list-item class="pb-3">
+            <va-list-item-section label>
+              <va-list-item-label>
+                <h5>{{ $t('organization.users.language') }}:</h5>
+              </va-list-item-label>
+            </va-list-item-section>
+            <va-list-item-section>
+              <va-list-item-label>
+                <va-select v-model="form.locale"
+                  id="locale"
+                  :options="localeOptions"
+                  value-by="code"
+                  text-by="name"
+                  clearable
+                  immediateValidation
+                  :error="$page.props.errors.locale"
+                  :error-messages="$page.props.errors.locale"
                   />
               </va-list-item-label>
             </va-list-item-section>
@@ -209,11 +233,13 @@ export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
     profile: Object,
+    locales: Object,
     errors: Object
   },
   data () {
     return {
       showChangePasswordModal: false,
+      localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       password_form: useForm({
         current_password: '',
         password: '',
@@ -224,7 +250,8 @@ export default {
         first_name: this.profile.first_name,
         last_name: this.profile.last_name,
         phone_number: this.profile.phone_number,
-        personal_email: this.profile.personal_email
+        personal_email: this.profile.personal_email,
+        locale: this.profile.locale
       })
     }
   }

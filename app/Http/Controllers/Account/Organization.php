@@ -32,6 +32,7 @@ class Organization extends Controller
                 'city' => $organization->city,
                 'state' => $organization->state,
                 'country' => $organization->country,
+                'default_locale' => $organization->default_locale,
                 'main_contact' => $organization ? [
                     'first_name' => $organization->contact_first_name,
                     'last_name' => $organization->contact_last_name,
@@ -40,6 +41,7 @@ class Organization extends Controller
                 ] : [],
             ],
             'users' => $users,
+            'locales' => config('locales.available'),
             'breadcrumbs' => [
                 [
                     'label' => 'Organization Settings',
@@ -66,6 +68,7 @@ class Organization extends Controller
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
             'country' => 'required|string|max:100',
+            'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
         $organization = auth()->user()->organization;
 
@@ -96,6 +99,7 @@ class Organization extends Controller
         $organization->city = $city;
         $organization->state = $state;
         $organization->country = $country;
+        $organization->default_locale = $request->default_locale;
         $organization->save();
 
         UpdateOrganization::dispatch($organization);
