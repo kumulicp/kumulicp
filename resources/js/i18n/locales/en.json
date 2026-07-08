@@ -1176,6 +1176,7 @@
       "publicFacingLabel": "Public facing label"
     },
     "pullSecrets": "Pull Secrets",
+    "systemChecks": "System Checks",
     "selfRegistration": "Self-Registration",
     "captcha": "CAPTCHA",
     "captchaDescription": "Add CAPTCHA protection to the self-registration form to prevent spam and automated submissions.",
@@ -1187,6 +1188,21 @@
     "captchaSecretKey": "Secret Key",
     "selfRegistrationEnabled": "Enable Self-Registration",
     "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually."
+  },
+  "systemChecks": {
+    "ldapModelValidation": "LDAP Model Validation",
+    "ldapModelValidationDescription": "Scans every entry in the LDAP directory to make sure it satisfies the required object classes of one of the application's LDAP models (User, EmailUser, Group, etc.). Entries that don't fit any model fall back to a generic entry type, which can cause errors when the application expects a specific model.",
+    "runCheck": "Run Check",
+    "ldapModelValidationPassed": "No problem entries found.",
+    "ldapModelValidationFailed": "{count} entries don't fit any recognized model.",
+    "correctEntries": "Correct Broken Entries",
+    "correctionResults": "Correction Results",
+    "correctionFixed": "Fixed",
+    "correctionNotFixed": "Could not be fixed",
+    "problemEntries": "Problem Entries",
+    "status": "Status",
+    "dn": "Distinguished Name",
+    "objectClasses": "Object Classes"
   },
   "other": {
     "initialSetup": "Initial Setup",

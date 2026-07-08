@@ -5,6 +5,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 use App\AppInstance;
 use App\AppRole;
 use App\Contracts\AccountManager\PermissionsContract;
+use App\Integrations\AccountManagers\Ldap\User as LdapAccountUser;
 use App\Ldap\Actions\Dn;
 use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
@@ -31,8 +32,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function __construct(UserManager $user)
     {
         $this->organization = $user->organization();
-        if (isset($user->user) && is_a(EmailUser::class, $user->user)) {
-            $user = LdapUser::find($user->getDn());
+        if ($user instanceof LdapAccountUser && is_a($user->get(), EmailUser::class)) {
+            $user = new LdapAccountUser(LdapUser::find($user->getDn()));
         }
 
         $this->user = $user;

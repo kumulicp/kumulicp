@@ -27,7 +27,7 @@ class User extends UserManager
     public function __construct(LdapUser|EmailUser $user)
     {
         $this->organization = $user->organization();
-        if (is_a(EmailUser::class, $user)) {
+        if (is_a($user, EmailUser::class)) {
             $user = LdapUser::find($user->getDn());
         }
 
