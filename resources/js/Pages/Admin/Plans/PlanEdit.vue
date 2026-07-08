@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import { CURRENCIES, currencyByCode } from '@/constants/currencies'
+import { currencyByCode } from '@/constants/currencies'
 
 </script>
 <template>
@@ -129,10 +129,10 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
         <template #settings>
           <template v-if="form.type === 'package'">
             <template v-for="currency in enabled_currencies" :key="currency">
-              <p class="va-text-secondary mt-3 mb-1"><strong>{{ currency }}</strong> — {{ currencyLabel(currency) }}</p>
               <div class="row">
                 <div class="flex lg6 xs12">
                   <va-input
+                    :id="'base-price-' + currency"
                     type="number"
                     v-model="form.prices.base[currency].amount"
                     :label="$t('admin.plans.price') + ' (' + currency + ')'"
@@ -145,7 +145,8 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
                   </va-input>
                 </div>
                 <div class="flex lg6 xs12">
-                  <va-input v-model="form.prices.base[currency].price_id"
+                  <va-input :id="'base-price-id-' + currency"
+                    v-model="form.prices.base[currency].price_id"
                     :label="$t('admin.plans.productID') + ' (' + currency + ')'"
                     class="my-2"
                   />
@@ -167,10 +168,10 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
           <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
           <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
-              <p class="va-text-secondary mt-3 mb-1"><strong>{{ currency }}</strong> — {{ currencyLabel(currency) }}</p>
               <div class="row">
                 <div class="flex lg6 xs12">
                   <va-input
+                    :id="'standard-price-' + currency"
                     type="number"
                     v-model="form.prices.standard[currency].amount"
                     :label="$t('admin.plans.price') + ' (' + currency + ')'"
@@ -183,7 +184,8 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
                   </va-input>
                 </div>
                 <div class="flex lg6 xs12">
-                  <va-input v-model="form.prices.standard[currency].price_id"
+                  <va-input :id="'standard-price-id-' + currency"
+                    v-model="form.prices.standard[currency].price_id"
                     :label="$t('admin.plans.productID') + ' (' + currency + ')'"
                     class="my-2"
                   />
@@ -226,10 +228,10 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
               class="my-2"
               immediateValidation />
             <template v-for="currency in enabled_currencies" :key="currency">
-              <p class="va-text-secondary mt-3 mb-1"><strong>{{ currency }}</strong> — {{ currencyLabel(currency) }}</p>
               <div class="row">
                 <div class="flex lg6 xs12">
                   <va-input
+                    :id="'basic-price-' + currency"
                     type="number"
                     v-model="form.prices.basic[currency].amount"
                     :label="$t('admin.plans.price') + ' (' + currency + ')'"
@@ -242,7 +244,8 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
                   </va-input>
                 </div>
                 <div class="flex lg6 xs12">
-                  <va-input v-model="form.prices.basic[currency].price_id"
+                  <va-input :id="'basic-price-id-' + currency"
+                    v-model="form.prices.basic[currency].price_id"
                     :label="$t('admin.plans.productID') + ' (' + currency + ')'"
                     class="my-2"
                   />
@@ -292,10 +295,10 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
           <template #name>{{ $t('admin.plans.additionalStorageOptions') }}</template>
           <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
-              <p class="va-text-secondary mt-3 mb-1"><strong>{{ currency }}</strong> — {{ currencyLabel(currency) }}</p>
               <div class="row">
                 <div class="flex lg6 xs12">
                   <va-input
+                    :id="'storage-price-' + currency"
                     type="number"
                     v-model="form.prices.storage[currency].amount"
                     :label="$t('admin.plans.price') + ' (' + currency + ')'"
@@ -308,7 +311,8 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
                   </va-input>
                 </div>
                 <div class="flex lg6 xs12">
-                  <va-input v-model="form.prices.storage[currency].price_id"
+                  <va-input :id="'storage-price-id-' + currency"
+                    v-model="form.prices.storage[currency].price_id"
                     :label="$t('admin.plans.productID') + ' (' + currency + ')'"
                     class="my-2"
                   />
@@ -366,10 +370,10 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
             :error-messages="$page.props.errors.email_server"
           />
           <template v-for="currency in enabled_currencies" :key="currency">
-            <p class="va-text-secondary mt-3 mb-1"><strong>{{ currency }}</strong> — {{ currencyLabel(currency) }}</p>
             <div class="row">
               <div class="flex lg6 xs12">
                 <va-input
+                  :id="'email-price-' + currency"
                   type="number"
                   v-model="form.prices.email[currency].amount"
                   :label="$t('admin.plans.price') + ' (' + currency + ')'"
@@ -382,7 +386,8 @@ import { CURRENCIES, currencyByCode } from '@/constants/currencies'
                 </va-input>
               </div>
               <div class="flex lg6 xs12">
-                <va-input v-model="form.prices.email[currency].price_id"
+                <va-input :id="'email-price-id-' + currency"
+                  v-model="form.prices.email[currency].price_id"
                   :label="$t('admin.plans.productID') + ' (' + currency + ')'"
                   class="my-2"
                 />
@@ -617,9 +622,6 @@ export default {
     removeFeature (index) {
       this.features.splice(index, 1)
       this.form.displayed_features.splice(index, 1)
-    },
-    currencyLabel (code) {
-      return currencyByCode(code)?.label ?? code
     },
     currencySymbol (code) {
       return currencyByCode(code)?.symbol ?? code
