@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './AppsLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
+import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
 import { useForm } from '@inertiajs/vue3'
 </script>
 <template>
@@ -163,6 +164,24 @@ import { useForm } from '@inertiajs/vue3'
     <div class="mb-3">
       <tinymce-editor v-model:htmlContent="form.description" />
     </div>
+    <h4 class="va-h4">{{ $t('admin.apps.screenshots') }}</h4>
+    <p class="va-list-item-label--caption mb-2">{{ $t('admin.apps.screenshotsMessage') }}</p>
+    <div class="mb-3">
+      <screenshot-gallery
+        :screenshots="visibleScreenshots"
+        editable
+        @remove="removeScreenshot"
+      />
+      <VaFileUpload
+        v-model="form.screenshots"
+        type="multiple"
+        dropzone
+        file-types="image/*"
+        class="my-2"
+        :error="!!$page.props.errors['screenshots.0']"
+        :error-messages="$page.props.errors['screenshots.0']"
+      />
+    </div>
     <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
@@ -191,7 +210,9 @@ export default {
         short_description: this.app.short_description,
         description: this.app.description,
         domain_option: this.app.domain_option,
-        can_update_domain: this.app.can_update_domain
+        can_update_domain: this.app.can_update_domain,
+        screenshots: [],
+        remove_screenshots: []
       }),
       toggle: useForm({
         version: ''
@@ -209,6 +230,16 @@ export default {
           { value: 'base', text: this.$t('admin.apps.domainOptionBase') },
           { value: 'parent', text: this.$t('admin.apps.domainOptionParent') }
         ]
+    }
+  },
+  computed: {
+    visibleScreenshots () {
+      return this.app.screenshots.filter((screenshot) => !this.form.remove_screenshots.includes(screenshot.id))
+    }
+  },
+  methods: {
+    removeScreenshot (id) {
+      this.form.remove_screenshots.push(id)
     }
   }
 }

@@ -475,7 +475,9 @@
       "status": "Status",
       "shortDescription": "Short Description",
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
-      "description": "Page Description"
+      "description": "Page Description",
+      "screenshots": "Screenshots",
+      "screenshotsMessage": "Shown on the app view and Discover pages"
     },
     "backups": {
       "action": "Action",
@@ -1210,6 +1212,12 @@
       "symbols": "Must contain symbols",
       "minLength": "Must be at least 8 characters long",
       "match": "Must match"
+    },
+    "screenshotGallery": {
+      "previous": "Previous screenshot",
+      "next": "Next screenshot",
+      "removeTitle": "Remove screenshot",
+      "removeConfirm": "Are you sure you want to remove this screenshot? This action cannot be undone."
     }
   },
   "errors": {

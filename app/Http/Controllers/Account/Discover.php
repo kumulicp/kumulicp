@@ -83,6 +83,12 @@ class Discover extends Controller
                 'name' => $app->name,
                 'slug' => $app->slug,
                 'description' => $app->description,
+                'screenshots' => $app->screenshots->map(function ($screenshot) {
+                    return [
+                        'id' => $screenshot->id,
+                        'url' => $screenshot->url,
+                    ];
+                }),
                 'plan_count' => count($plans),
                 'plan_id' => $plan ? $plan['id'] : null,
                 'activated' => $is_installed,
