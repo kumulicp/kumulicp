@@ -3,7 +3,6 @@
 namespace App\Integrations\ServerManagers\Rancher\Charts\Ingress;
 
 use App\Support\Facades\Application;
-use App\Support\Facades\Domain;
 
 class RedirectChart extends IngressChart
 {
@@ -72,25 +71,6 @@ class RedirectChart extends IngressChart
             'rules' => $rules,
             'hosts' => $hosts,
         ];
-    }
-
-    public function domain_name()
-    {
-        $org_domains = $this->app_instance->domains;
-        $app_instance_primary_domain = $this->app_instance->primary_domain;
-        $domains = [];
-
-        if ($app_instance_primary_domain) {
-            $domains[] = $this->app_instance->application->slug.'.'.$this->organization->base_domain->name;
-        }
-
-        foreach ($org_domains as $domain) {
-            if ($domain->id != $this->app_instance->primary_domain_id && Domain::ipPointsToServer($domain, $this->app_instance->web_server->server)) {
-                $domains[] = $domain->name;
-            }
-        }
-
-        return $domains;
     }
 
     private function domain_names()

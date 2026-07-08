@@ -32,7 +32,6 @@ use function Illuminate\Events\queueable;
  * @property string|null $default_locale
  * @property \Carbon\Carbon|null $deactivate_at
  * @property int|null $primary_domain_id
- * @property int|null $base_domain_id
  * @property int|null $plan_id
  * @property int|null $primary_contact_id
  * @property int|null $account_test_id
@@ -41,7 +40,6 @@ use function Illuminate\Events\queueable;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $subdomains
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgBackup> $backups
  * @property-read \App\OrgDomain|null $primary_domain
- * @property-read \App\OrgDomain|null $base_domain
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\EmailForwarder> $email_forwarders
  * @property-read \App\Plan|null $plan
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $servers
@@ -109,11 +107,6 @@ class Organization extends Model
     public function primary_domain()
     {
         return $this->belongsTo('\App\OrgDomain', 'primary_domain_id');
-    }
-
-    public function base_domain()
-    {
-        return $this->belongsTo('App\OrgDomain', 'base_domain_id');
     }
 
     public function email_forwarders()

@@ -10,7 +10,6 @@ class RedirectChart extends MiddlewareChart
     {
         $namespace = $this->organization->slug;
         $app_instance = $this->app_instance;
-        $base_domain = $this->organization->base_domain;
 
         $list_domains = implode('|', $this->domain_names());
 

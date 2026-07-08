@@ -21,7 +21,6 @@ class OrganizationFactory extends Factory
     {
         return [
             'primary_domain_id' => 0,
-            'base_domain_id' => 0,
             'name' => fake()->word(),
             'slug' => Str::lower(Str::random(5)),
             'description' => fake()->sentence(),
