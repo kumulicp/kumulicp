@@ -18,6 +18,12 @@ class AppScreenshot extends Model
 
     protected $table = 'app_screenshots';
 
+    protected $fillable = [
+        'application_id',
+        'filename',
+        'display_order',
+    ];
+
     public function application()
     {
         return $this->belongsTo('App\Application', 'application_id');
