@@ -88,6 +88,8 @@ describe('Admin Application Screenshots', function () {
     it('removes a screenshot and persists the removal after saving', function () {
         visit("/admin/apps/{$this->application->slug}/edit")
             ->click('[data-testid="screenshot-remove-'.$this->screenshotOne->id.'"]')
+            ->assertVisible('[data-testid="screenshot-remove-confirm"]')
+            ->click('[data-testid="screenshot-remove-confirm-button"]')
             ->assertNotVisible('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
             ->click('#submit')
             ->assertPathIs("/admin/apps/{$this->application->slug}/edit")

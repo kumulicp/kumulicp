@@ -17,6 +17,8 @@ const emit = defineEmits(['remove'])
 const strip = ref(null)
 const showFullscreen = ref(false)
 const activeIndex = ref(0)
+const showRemoveConfirm = ref(false)
+const pendingRemoveId = ref(null)
 
 const carouselItems = computed(() => props.screenshots.map((screenshot) => ({ src: screenshot.url, alt: '' })))
 
@@ -29,8 +31,15 @@ function open (index) {
   showFullscreen.value = true
 }
 
-function remove (id) {
-  emit('remove', id)
+function confirmRemove (id) {
+  pendingRemoveId.value = id
+  showRemoveConfirm.value = true
+}
+
+function remove () {
+  emit('remove', pendingRemoveId.value)
+  showRemoveConfirm.value = false
+  pendingRemoveId.value = null
 }
 </script>
 
@@ -63,7 +72,7 @@ function remove (id) {
           size="small"
           icon="close"
           :aria-label="$t('common.remove')"
-          @click.stop="remove(screenshot.id)"
+          @click.stop="confirmRemove(screenshot.id)"
         />
       </div>
     </div>
@@ -79,7 +88,6 @@ function remove (id) {
 
     <va-modal
       v-model="showFullscreen"
-      fullscreen
       hide-default-actions
       no-padding
       class="screenshot-gallery__modal"
@@ -100,8 +108,21 @@ function remove (id) {
           arrows
           :indicators="false"
           :autoscroll="false"
-          height="100vh"
+          height="75vh"
         />
+      </template>
+    </va-modal>
+
+    <va-modal v-model="showRemoveConfirm" no-padding size="small" data-testid="screenshot-remove-confirm">
+      <template #content="{ ok }">
+        <va-card-title>{{ $t('components.screenshotGallery.removeTitle') }}</va-card-title>
+        <va-card-content>
+          <p>{{ $t('components.screenshotGallery.removeConfirm') }}</p>
+        </va-card-content>
+        <va-card-actions align="right">
+          <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button color="danger" data-testid="screenshot-remove-confirm-button" @click="remove">{{ $t('common.remove') }}</va-button>
+        </va-card-actions>
       </template>
     </va-modal>
   </div>
@@ -138,8 +159,8 @@ function remove (id) {
     height: 100%;
   }
 
-  &__remove {
-    position: absolute;
+  &__thumb &__remove {
+    position: absolute !important;
     top: 4px;
     right: 4px;
   }
@@ -151,6 +172,9 @@ function remove (id) {
 
   &__modal .va-modal__dialog {
     background: rgba(0, 0, 0, 0.9);
+    width: 75vw;
+    height: 75vh;
+    max-width: 75vw;
   }
 
   &__modal-close {
