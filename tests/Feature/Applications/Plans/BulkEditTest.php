@@ -105,11 +105,13 @@ it('updates base price independently per plan', function () {
             'plans' => [
                 $this->plan1->id => bulkEditSettingsPayload([
                     'name' => 'Original Name One', 'description' => 'Original Desc One',
-                    'base' => ['price' => 25, 'price_id' => 'prod_new_1', 'storage' => 50, 'max' => 0],
+                    'base' => ['storage' => 50, 'max' => 0],
+                    'prices' => ['base' => ['USD' => ['amount' => 25, 'price_id' => 'prod_new_1']]],
                 ]),
                 $this->plan2->id => bulkEditSettingsPayload([
                     'name' => 'Original Name Two', 'description' => 'Original Desc Two',
-                    'base' => ['price' => 75, 'price_id' => 'prod_new_2', 'storage' => 100, 'max' => 0],
+                    'base' => ['storage' => 100, 'max' => 0],
+                    'prices' => ['base' => ['USD' => ['amount' => 75, 'price_id' => 'prod_new_2']]],
                 ]),
             ],
         ]
@@ -118,8 +120,8 @@ it('updates base price independently per plan', function () {
     $this->plan1->refresh();
     $this->plan2->refresh();
 
-    expect($this->plan1->settings['base']['price'])->toBe(25);
-    expect($this->plan2->settings['base']['price'])->toBe(75);
+    expect($this->plan1->settings['base']['prices']['USD']['amount'])->toBe(25);
+    expect($this->plan2->settings['base']['prices']['USD']['amount'])->toBe(75);
 });
 
 it('updates standard user settings per plan', function () {
@@ -130,11 +132,13 @@ it('updates standard user settings per plan', function () {
             'plans' => [
                 $this->plan1->id => bulkEditSettingsPayload([
                     'name' => 'Original Name One', 'description' => 'Original Desc One',
-                    'standard' => ['price' => 8, 'price_id' => 'std_1', 'storage' => 3, 'max' => 20],
+                    'standard' => ['storage' => 3, 'max' => 20],
+                    'prices' => ['standard' => ['USD' => ['amount' => 8, 'price_id' => 'std_1']]],
                 ]),
                 $this->plan2->id => bulkEditSettingsPayload([
                     'name' => 'Original Name Two', 'description' => 'Original Desc Two',
-                    'standard' => ['price' => 15, 'price_id' => 'std_2', 'storage' => 6, 'max' => 50],
+                    'standard' => ['storage' => 6, 'max' => 50],
+                    'prices' => ['standard' => ['USD' => ['amount' => 15, 'price_id' => 'std_2']]],
                 ]),
             ],
         ]
@@ -145,8 +149,8 @@ it('updates standard user settings per plan', function () {
 
     expect($this->plan1->settings['standard']['max'])->toBe(20);
     expect($this->plan2->settings['standard']['max'])->toBe(50);
-    expect($this->plan1->settings['standard']['price'])->toBe(8);
-    expect($this->plan2->settings['standard']['price'])->toBe(15);
+    expect($this->plan1->settings['standard']['prices']['USD']['amount'])->toBe(8);
+    expect($this->plan2->settings['standard']['prices']['USD']['amount'])->toBe(15);
 });
 
 it('updates basic user settings per plan', function () {

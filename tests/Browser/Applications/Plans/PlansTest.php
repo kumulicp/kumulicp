@@ -24,6 +24,9 @@ describe('App Plans', function () {
             'settings' => [
                 'server_type' => 'separate',
                 'base' => ['max' => 0, 'storage' => 10],
+                'standard' => ['max' => 0, 'storage' => 0],
+                'basic' => ['max' => 0, 'name' => null, 'amount' => 0, 'storage' => 0],
+                'storage' => ['max' => 0, 'amount' => 0],
             ],
         ]);
 
