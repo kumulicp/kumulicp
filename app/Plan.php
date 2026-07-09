@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -85,6 +86,35 @@ class Plan extends Model
     public function setting($setting)
     {
         return is_array($this->settings) ? Arr::get($this->settings, $setting, null) : null;
+    }
+
+    /**
+     * Returns ['amount' => ..., 'price_id' => ...] for the given component and currency,
+     * falling back to the default currency then to the legacy flat price/price_id keys.
+     */
+    public function priceFor(string $component, string $currency): array
+    {
+        $amount = $this->setting("{$component}.prices.{$currency}.amount");
+        $priceId = $this->setting("{$component}.prices.{$currency}.price_id");
+
+        if ($priceId) {
+            return ['amount' => $amount, 'price_id' => $priceId];
+        }
+
+        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
+        if ($currency !== $defaultCurrency) {
+            $amount = $this->setting("{$component}.prices.{$defaultCurrency}.amount");
+            $priceId = $this->setting("{$component}.prices.{$defaultCurrency}.price_id");
+            if ($priceId) {
+                return ['amount' => $amount, 'price_id' => $priceId];
+            }
+        }
+
+        // Legacy flat format (pre-currency migration)
+        return [
+            'amount' => $this->setting("{$component}.price"),
+            'price_id' => $this->setting("{$component}.price_id"),
+        ];
     }
 
     public function updateSettings(array $settings)

@@ -2,6 +2,7 @@
 
 use App\Organization;
 use App\Plan;
+use App\Support\Facades\Settings;
 use App\User;
 
 describe('Admin Plans', function () {
@@ -55,5 +56,31 @@ describe('Admin Plans', function () {
             ->assertPathIs('/admin/service/plans');
 
         expect(Plan::find($plan->id))->not->toBeNull();
+    });
+
+    it('shows and saves a price per enabled currency for a package plan', function () {
+        Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+        $plan = Plan::factory()->create([
+            'name' => 'Multi Currency Plan',
+            'type' => 'package',
+            'org_type' => 'none',
+        ]);
+
+        visit("/admin/service/plans/{$plan->id}")
+            ->assertSee('Price (USD)')
+            ->assertSee('Price (CAD)')
+            ->fill('#base-price-USD input', '10')
+            ->fill('#base-price-id-USD input', 'usd_base_id')
+            ->fill('#base-price-CAD input', '14')
+            ->fill('#base-price-id-CAD input', 'cad_base_id')
+            ->click('#submit')
+            ->assertPathIs('/admin/service/plans');
+
+        $plan->refresh();
+        expect((float) $plan->setting('base.prices.USD.amount'))->toBe(10.0);
+        expect($plan->setting('base.prices.USD.price_id'))->toBe('usd_base_id');
+        expect((float) $plan->setting('base.prices.CAD.amount'))->toBe(14.0);
+        expect($plan->setting('base.prices.CAD.price_id'))->toBe('cad_base_id');
     });
 });

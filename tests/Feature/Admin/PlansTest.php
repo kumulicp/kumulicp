@@ -7,6 +7,7 @@ use App\AppPlan;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\AccountManager;
+use App\Support\Facades\Settings;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
@@ -358,12 +359,12 @@ class PlansTest extends TestCase
             'type' => 'package',
             'settings' => [
                 'suborganizations' => ['enabled' => false],
-                'base' => ['price' => 5, 'price_id' => 'base_stripe', 'storage' => 1, 'minimal_label' => 'Constituent'],
-                'standard' => ['price' => 2, 'max' => 10, 'price_id' => 'std_stripe', 'storage' => 1],
-                'basic' => ['name' => 'Volunteer', 'price' => 1, 'amount' => 5, 'max' => 20, 'price_id' => 'basic_stripe', 'storage' => 0.5],
-                'storage' => ['price' => 1, 'max' => 50, 'price_id' => 'sto_stripe', 'amount' => 5],
-                'email' => ['price' => null, 'max' => null, 'price_id' => null, 'storage' => null],
-                'application' => ['price' => 3, 'max' => 5, 'price_id' => 'app_stripe'],
+                'base' => ['storage' => 1, 'minimal_label' => 'Constituent', 'prices' => ['USD' => ['amount' => 5, 'price_id' => 'base_stripe']]],
+                'standard' => ['max' => 10, 'storage' => 1, 'prices' => ['USD' => ['amount' => 2, 'price_id' => 'std_stripe']]],
+                'basic' => ['name' => 'Volunteer', 'amount' => 5, 'max' => 20, 'storage' => 0.5, 'prices' => ['USD' => ['amount' => 1, 'price_id' => 'basic_stripe']]],
+                'storage' => ['max' => 50, 'amount' => 5, 'prices' => ['USD' => ['amount' => 1, 'price_id' => 'sto_stripe']]],
+                'email' => ['max' => null, 'storage' => null, 'prices' => ['USD' => ['amount' => null, 'price_id' => null]]],
+                'application' => ['max' => 5, 'prices' => ['USD' => ['amount' => 3, 'price_id' => 'app_stripe']]],
                 'domains' => ['connect' => false, 'register' => false, 'transfer' => false],
             ],
         ]);
@@ -371,24 +372,113 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
                 'type' => 'app',
-                'base' => ['price' => 5, 'price_id' => 'base_stripe', 'minimal_label' => 'Constituent'],
-                'standard' => ['price' => 2, 'max' => 10, 'price_id' => 'std_stripe', 'storage' => 1],
-                'basic' => ['name' => 'Volunteer', 'price' => 1, 'amount' => 5, 'max' => 20, 'price_id' => 'basic_stripe', 'storage' => 0.5],
-                'storage' => ['price' => 1, 'max' => 50, 'price_id' => 'sto_stripe', 'amount' => 5],
+                'base' => ['minimal_label' => 'Constituent'],
+                'standard' => ['max' => 10, 'storage' => 1],
+                'basic' => ['name' => 'Volunteer', 'amount' => 5, 'max' => 20, 'storage' => 0.5],
+                'storage' => ['max' => 50, 'amount' => 5],
+                'prices' => [
+                    'base' => ['USD' => ['amount' => 5, 'price_id' => 'base_stripe']],
+                    'standard' => ['USD' => ['amount' => 2, 'price_id' => 'std_stripe']],
+                    'basic' => ['USD' => ['amount' => 1, 'price_id' => 'basic_stripe']],
+                    'storage' => ['USD' => ['amount' => 1, 'price_id' => 'sto_stripe']],
+                    'application' => ['USD' => ['amount' => 3, 'price_id' => 'app_stripe']],
+                ],
             ]))
             ->assertRedirect('/admin/service/plans');
 
         $plan->refresh();
         // Pricing fields must be nulled out for app type
-        $this->assertNull($plan->setting('base.price'));
-        $this->assertNull($plan->setting('base.price_id'));
-        $this->assertNull($plan->setting('standard.price'));
+        $this->assertNull($plan->setting('base.prices.USD.amount'));
+        $this->assertNull($plan->setting('base.prices.USD.price_id'));
+        $this->assertNull($plan->setting('standard.prices.USD.amount'));
         $this->assertNull($plan->setting('standard.max'));
         $this->assertNull($plan->setting('basic.name'));
-        $this->assertNull($plan->setting('storage.price'));
-        $this->assertNull($plan->setting('application.price'));
+        $this->assertNull($plan->setting('storage.prices.USD.amount'));
+        $this->assertNull($plan->setting('application.prices.USD.amount'));
         // Non-pricing fields are preserved
         $this->assertEquals('Constituent', $plan->setting('base.minimal_label'));
+    }
+
+    // ---------------------------------------------------------------------------
+    // Multi-currency tests
+    // ---------------------------------------------------------------------------
+
+    public function test_admin_can_update_a_plan_with_multiple_currencies()
+    {
+        $user = $this->adminUser();
+        Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+        $plan = Plan::factory()->create(['type' => 'package', 'org_type' => 'none']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'prices' => [
+                    'base' => [
+                        'USD' => ['amount' => 10, 'price_id' => 'usd_base'],
+                        'CAD' => ['amount' => 14, 'price_id' => 'cad_base'],
+                    ],
+                    'standard' => [
+                        'USD' => ['amount' => 5, 'price_id' => 'usd_std'],
+                        'CAD' => ['amount' => 7, 'price_id' => 'cad_std'],
+                    ],
+                    'basic' => [
+                        'USD' => ['amount' => 3, 'price_id' => 'usd_basic'],
+                        'CAD' => ['amount' => 4, 'price_id' => 'cad_basic'],
+                    ],
+                    'storage' => [
+                        'USD' => ['amount' => 1, 'price_id' => 'usd_sto'],
+                        'CAD' => ['amount' => 2, 'price_id' => 'cad_sto'],
+                    ],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $plan->refresh();
+
+        $this->assertEquals(10, $plan->setting('base.prices.USD.amount'));
+        $this->assertEquals(14, $plan->setting('base.prices.CAD.amount'));
+        $this->assertEquals('usd_base', $plan->setting('base.prices.USD.price_id'));
+        $this->assertEquals('cad_base', $plan->setting('base.prices.CAD.price_id'));
+
+        $this->assertEquals(5, $plan->setting('standard.prices.USD.amount'));
+        $this->assertEquals(7, $plan->setting('standard.prices.CAD.amount'));
+
+        $this->assertEquals(3, $plan->setting('basic.prices.USD.amount'));
+        $this->assertEquals(4, $plan->setting('basic.prices.CAD.amount'));
+
+        $this->assertEquals(1, $plan->setting('storage.prices.USD.amount'));
+        $this->assertEquals(2, $plan->setting('storage.prices.CAD.amount'));
+    }
+
+    public function test_plan_edit_page_receives_all_enabled_currencies()
+    {
+        $user = $this->adminUser();
+        Settings::update('enabled_currencies', json_encode(['USD', 'CAD', 'EUR']));
+
+        $plan = Plan::factory()->create(['type' => 'package', 'org_type' => 'none']);
+
+        $this->actingAs($user)
+            ->get("/admin/service/plans/{$plan->id}")
+            ->assertInertia(fn ($page) => $page->where('enabled_currencies', ['USD', 'CAD', 'EUR']));
+    }
+
+    public function test_update_rejects_non_numeric_currency_amount()
+    {
+        $user = $this->adminUser();
+        Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+        $plan = Plan::factory()->create(['type' => 'package', 'org_type' => 'none']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'prices' => [
+                    'base' => [
+                        'USD' => ['amount' => 10, 'price_id' => 'usd_base'],
+                        'CAD' => ['amount' => 'not-a-number', 'price_id' => 'cad_base'],
+                    ],
+                ],
+            ]))
+            ->assertSessionHasErrors('prices.base.CAD.amount');
     }
 
     public function test_update_normalizes_single_app_plan_value_to_array()

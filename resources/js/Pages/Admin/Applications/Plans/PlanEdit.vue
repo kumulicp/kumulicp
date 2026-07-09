@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm, Link } from '@inertiajs/vue3'
+import { currencyByCode } from '@/constants/currencies'
 
 </script>
 <template>
@@ -229,28 +230,33 @@ import { useForm, Link } from '@inertiajs/vue3'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.baseOptions') }}</template>
       <template #settings>
-        <va-input
-          type="number"
-          class="my-2"
-          v-model="form.base.price"
-          :label="$t('admin.plans.price')"
-          :messages="$t('admin.plans.basePriceCaption')"
-          immediateValidation
-          id="basePrice"
-          min="0"
-          step=".01"
-        >
-          <template #prependInner>
-            {{ $t('admin.plans.currencySymbol') }}
-          </template>
-        </va-input>
-        <va-input
-          id="baseStripeId"
-          class="my-2"
-          :label="$t('admin.plans.productID')"
-          :messages="$t('admin.plans.productIDCaption')"
-          immediateValidation
-          v-model="form.base.price_id" />
+        <template v-for="currency in enabled_currencies" :key="currency">
+          <div class="row">
+            <div class="flex lg6 xs12">
+              <va-input
+                :id="'base-price-' + currency"
+                type="number"
+                v-model="form.prices.base[currency].amount"
+                :label="$t('admin.plans.price') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.basePriceCaption')"
+                class="my-2"
+                immediateValidation
+                min="0"
+                step=".01"
+              >
+                <template #prependInner>{{ currencySymbol(currency) }}</template>
+              </va-input>
+            </div>
+            <div class="flex lg6 xs12">
+              <va-input :id="'base-price-id-' + currency"
+                v-model="form.prices.base[currency].price_id"
+                :label="$t('admin.plans.productID') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.productIDCaption')"
+                class="my-2"
+              />
+            </div>
+          </div>
+        </template>
         <va-input v-model="form.base.storage"
           :label="$t('admin.plans.baseStorage')"
           :messages="$t('admin.plans.baseStorageCaption')"
@@ -269,21 +275,33 @@ import { useForm, Link } from '@inertiajs/vue3'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.standardUsers') }}</template>
       <template #settings>
-        <va-input
-          type="number"
-          class="my-2"
-          v-model="form.standard.price"
-          :label="$t('admin.plans.price')"
-          :messages="$t('admin.plans.standardUserPriceCaption')"
-          immediateValidation
-          id="standardPrice"
-          min="0"
-          step=".01"
-        >
-          <template #prependInner>
-            {{ $t('admin.plans.currencySymbol') }}
-          </template>
-        </va-input>
+        <template v-for="currency in enabled_currencies" :key="currency">
+          <div class="row">
+            <div class="flex lg6 xs12">
+              <va-input
+                :id="'standard-price-' + currency"
+                type="number"
+                v-model="form.prices.standard[currency].amount"
+                :label="$t('admin.plans.price') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.standardUserPriceCaption')"
+                class="my-2"
+                immediateValidation
+                min="0"
+                step=".01"
+              >
+                <template #prependInner>{{ currencySymbol(currency) }}</template>
+              </va-input>
+            </div>
+            <div class="flex lg6 xs12">
+              <va-input :id="'standard-price-id-' + currency"
+                v-model="form.prices.standard[currency].price_id"
+                :label="$t('admin.plans.productID') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.productIDCaption')"
+                class="my-2"
+              />
+            </div>
+          </div>
+        </template>
         <va-input
           type="number"
           class="my-2"
@@ -297,13 +315,6 @@ import { useForm, Link } from '@inertiajs/vue3'
             {{ $t('admin.plans.users') }}
           </template>
         </va-input>
-        <va-input
-          v-model="form.standard.price_id"
-          class="my-2"
-          :label="$t('admin.plans.productID')"
-          :messages="$t('admin.plans.productIDCaption')"
-          immediateValidation
-          id="standardStripeId" />
         <va-input
           v-if="app.can.additional_user_storage"
           v-model="form.standard.storage"
@@ -332,21 +343,33 @@ import { useForm, Link } from '@inertiajs/vue3'
           :messages="$t('admin.plans.basicUserNameCaption')"
           immediateValidation
           id="basicName" />
-        <va-input
-          type="number"
-          class="my-2"
-          v-model="form.basic.price"
-          :label="$t('admin.plans.price')"
-          :messages="$t('admin.plans.basicUserPriceCaption')"
-          immediateValidation
-          id="basicPrice"
-          min="0"
-          step=".01"
-        >
-          <template #prependInner>
-            {{ $t('admin.plans.currencySymbol') }}
-          </template>
-        </va-input>
+        <template v-for="currency in enabled_currencies" :key="currency">
+          <div class="row">
+            <div class="flex lg6 xs12">
+              <va-input
+                :id="'basic-price-' + currency"
+                type="number"
+                v-model="form.prices.basic[currency].amount"
+                :label="$t('admin.plans.price') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.basicUserPriceCaption')"
+                class="my-2"
+                immediateValidation
+                min="0"
+                step=".01"
+              >
+                <template #prependInner>{{ currencySymbol(currency) }}</template>
+              </va-input>
+            </div>
+            <div class="flex lg6 xs12">
+              <va-input :id="'basic-price-id-' + currency"
+                v-model="form.prices.basic[currency].price_id"
+                :label="$t('admin.plans.productID') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.productIDCaption')"
+                class="my-2"
+              />
+            </div>
+          </div>
+        </template>
         <va-input
           type="number"
           class="my-2"
@@ -360,13 +383,6 @@ import { useForm, Link } from '@inertiajs/vue3'
             {{ $t('admin.plans.users') }}
           </template>
         </va-input>
-        <va-input
-          v-model="form.basic.price_id"
-          class="my-2"
-          :label="$t('admin.plans.productID')"
-          :messages="$t('admin.plans.productIDCaption')"
-          immediateValidation
-          id="basicStripeId" />
         <va-input
           v-if="app.can.additional_user_storage"
           v-model="form.basic.storage"
@@ -385,7 +401,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         <va-input
           v-model="form.basic.amount"
           class="my-2"
-          :label="$t('admin.plans.usersPerPrice')+' '+form.basic.price"
+          :label="$t('admin.plans.usersPerPriceCaption')"
           :messages="$t('admin.plans.usersPerPriceCaption')"
           id="basicAmount"
           immediateValidation
@@ -402,21 +418,33 @@ import { useForm, Link } from '@inertiajs/vue3'
     <AdminSettings v-if="app.can.additional_user_storage">
       <template #name>{{ $t('admin.plans.additionalStorage') }}</template>
       <template #settings>
-        <va-input
-          type="number"
-          class="my-2"
-          v-model="form.storage.price"
-          :label="$t('admin.plans.price')"
-          :messages="$t('admin.plans.additionalStoragePriceCaption')"
-          id="storagePrice"
-          immediateValidation
-          min="0"
-          step=".01"
-        >
-          <template #prependInner>
-            {{ $t('admin.plans.currencySymbol') }}
-          </template>
-        </va-input>
+        <template v-for="currency in enabled_currencies" :key="currency">
+          <div class="row">
+            <div class="flex lg6 xs12">
+              <va-input
+                :id="'storage-price-' + currency"
+                type="number"
+                v-model="form.prices.storage[currency].amount"
+                :label="$t('admin.plans.price') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.additionalStoragePriceCaption')"
+                class="my-2"
+                immediateValidation
+                min="0"
+                step=".01"
+              >
+                <template #prependInner>{{ currencySymbol(currency) }}</template>
+              </va-input>
+            </div>
+            <div class="flex lg6 xs12">
+              <va-input :id="'storage-price-id-' + currency"
+                v-model="form.prices.storage[currency].price_id"
+                :label="$t('admin.plans.productID') + ' (' + currency + ')'"
+                :messages="$t('admin.plans.productIDCaption')"
+                class="my-2"
+              />
+            </div>
+          </div>
+        </template>
         <va-input
           type="number"
           class="my-2"
@@ -431,13 +459,6 @@ import { useForm, Link } from '@inertiajs/vue3'
             {{ $t('admin.plans.gb') }}
           </template>
         </va-input>
-        <va-input
-          v-model="form.storage.price_id"
-          class="my-2"
-          :label="$t('admin.plans.productID')"
-          :messages="$t('admin.plans.productIDCaption')"
-          immediateValidation
-          id="storageStripeId" />
         <va-input
           v-model="form.storage.amount"
           class="my-2"
@@ -470,9 +491,25 @@ export default {
     web_servers: Object,
     database_servers: Object,
     sso_servers: Object,
-    shared_apps: Object
+    shared_apps: Object,
+    enabled_currencies: {
+      type: Array,
+      default: () => ['USD']
+    }
   },
   data () {
+    const buildCurrencyPrices = (component) => {
+      const result = {}
+      for (const currency of this.enabled_currencies) {
+        const perCurrency = this.plan.settings?.[component]?.prices?.[currency]
+        result[currency] = {
+          amount: perCurrency?.amount ?? this.plan.settings?.[component]?.price ?? null,
+          price_id: perCurrency?.price_id ?? (currency === this.enabled_currencies[0] ? (this.plan.settings?.[component]?.price_id ?? '') : '')
+        }
+      }
+      return result
+    }
+
     return {
       features: this.plan.features,
       feature_options: [
@@ -499,30 +536,28 @@ export default {
         domain_enabled: this.plan.domain_enabled,
         domain_max: this.plan.domain_max,
         base: {
-          price: this.plan.settings.base.price,
-          price_id: this.plan.settings.base.price_id,
           storage: this.plan.settings.base.storage,
           max: this.plan.settings.base.max
         },
         standard: {
-          price: this.plan.settings.standard.price,
-          price_id: this.plan.settings.standard.price_id,
           storage: this.plan.settings.standard.storage,
           max: this.plan.settings.standard.max
         },
         basic: {
-          price: this.plan.settings.basic.price,
-          price_id: this.plan.settings.basic.price_id,
           storage: this.plan.settings.basic.storage,
           max: this.plan.settings.basic.max,
           name: this.plan.settings.basic.name,
           amount: this.plan.settings.basic.amount
         },
         storage: {
-          price: this.plan.settings.storage.price,
-          price_id: this.plan.settings.storage.price_id,
           amount: this.plan.settings.storage.amount,
           max: this.plan.settings.storage.max
+        },
+        prices: {
+          base: buildCurrencyPrices('base'),
+          standard: buildCurrencyPrices('standard'),
+          basic: buildCurrencyPrices('basic'),
+          storage: buildCurrencyPrices('storage')
         },
         server_type: this.plan.settings.server_type,
         web_server: this.plan.web_server,
@@ -548,6 +583,9 @@ export default {
     removeFeature (index) {
       this.features.splice(index, 1)
       this.form.displayed_features.splice(index, 1)
+    },
+    currencySymbol (code) {
+      return currencyByCode(code)?.symbol ?? code
     }
   }
 }

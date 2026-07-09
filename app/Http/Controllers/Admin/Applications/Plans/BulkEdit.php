@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -155,7 +156,18 @@ class BulkEdit extends Controller
         $plan_ids = $request->input('plan_ids', []);
         $plans = AppPlan::whereIn('id', $plan_ids)->where('application_id', $app->id)->get();
 
-        $request->validate([
+        $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
+        $components = ['base', 'standard', 'basic', 'storage'];
+
+        $currencyRules = [];
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                $currencyRules["plans.*.prices.{$component}.{$currency}.amount"] = 'numeric|nullable';
+                $currencyRules["plans.*.prices.{$component}.{$currency}.price_id"] = 'string|max:50|nullable';
+            }
+        }
+
+        $request->validate(array_merge([
             'plan_ids' => 'array',
             'plans.*.name' => 'required|string',
             'plans.*.description' => 'required|string',
@@ -163,23 +175,15 @@ class BulkEdit extends Controller
             'plans.*.default' => 'nullable',
             'plans.*.payment_enabled' => 'nullable',
             'plans.*.admin_access' => 'nullable|bool',
-            'plans.*.base.price' => 'numeric|nullable',
-            'plans.*.base.price_id' => 'string|max:50|nullable',
             'plans.*.base.storage' => 'numeric|nullable',
             'plans.*.base.max' => 'numeric|nullable',
-            'plans.*.standard.price' => 'numeric|nullable',
             'plans.*.standard.max' => 'numeric|nullable',
-            'plans.*.standard.price_id' => 'string|max:50|nullable',
             'plans.*.standard.storage' => 'numeric|nullable',
             'plans.*.basic.name' => 'string|nullable',
-            'plans.*.basic.price' => 'numeric|nullable',
             'plans.*.basic.amount' => 'numeric|nullable',
             'plans.*.basic.max' => 'numeric|nullable',
-            'plans.*.basic.price_id' => 'string|max:50|nullable',
             'plans.*.basic.storage' => 'numeric|nullable',
-            'plans.*.storage.price' => 'numeric|nullable',
             'plans.*.storage.max' => 'numeric|nullable',
-            'plans.*.storage.price_id' => 'string|max:50|nullable',
             'plans.*.storage.amount' => 'numeric|nullable',
             'plans.*.domain_enabled' => 'nullable',
             'plans.*.domain_max' => 'numeric|nullable',
@@ -189,7 +193,7 @@ class BulkEdit extends Controller
             'plans.*.shared_app' => 'numeric|nullable|exists:app_instances,id',
             'plans.*.expires_after' => 'nullable|numeric',
             'plans.*.trial_for' => 'nullable|numeric',
-        ]);
+        ], $currencyRules));
 
         foreach ($plans as $plan) {
             $d = $request->input("plans.{$plan->id}", []);
@@ -207,30 +211,31 @@ class BulkEdit extends Controller
             $plan->shared_app_id = Arr::get($d, 'shared_app');
             $plan->domain_enabled = Arr::get($d, 'domain_enabled');
             $plan->domain_max = Arr::get($d, 'domain_max');
-            $plan->updateSettings([
+            $planSettings = [
                 'server_type' => Arr::get($d, 'server_type'),
                 'admin_access' => Arr::get($d, 'admin_access'),
-                'base.price' => (int) Arr::get($d, 'base.price'),
-                'base.price_id' => Arr::get($d, 'base.price_id'),
                 'base.storage' => (int) Arr::get($d, 'base.storage'),
                 'base.max' => (int) Arr::get($d, 'base.max'),
-                'standard.price' => (int) Arr::get($d, 'standard.price'),
                 'standard.max' => (int) Arr::get($d, 'standard.max'),
-                'standard.price_id' => Arr::get($d, 'standard.price_id'),
                 'standard.storage' => (int) Arr::get($d, 'standard.storage'),
                 'basic.name' => Arr::get($d, 'basic.name'),
-                'basic.price' => (int) Arr::get($d, 'basic.price'),
                 'basic.amount' => (int) Arr::get($d, 'basic.amount'),
                 'basic.max' => (int) Arr::get($d, 'basic.max'),
-                'basic.price_id' => Arr::get($d, 'basic.price_id'),
                 'basic.storage' => (int) Arr::get($d, 'basic.storage'),
-                'storage.price' => (int) Arr::get($d, 'storage.price'),
                 'storage.max' => (int) Arr::get($d, 'storage.max'),
-                'storage.price_id' => Arr::get($d, 'storage.price_id'),
                 'storage.amount' => (int) Arr::get($d, 'storage.amount'),
                 'expires_after' => (int) Arr::get($d, 'expires_after'),
                 'trial_for' => (int) Arr::get($d, 'trial_for'),
-            ]);
+            ];
+
+            foreach ($enabledCurrencies as $currency) {
+                foreach ($components as $component) {
+                    $planSettings["{$component}.prices.{$currency}.amount"] = Arr::get($d, "prices.{$component}.{$currency}.amount");
+                    $planSettings["{$component}.prices.{$currency}.price_id"] = Arr::get($d, "prices.{$component}.{$currency}.price_id");
+                }
+            }
+
+            $plan->updateSettings($planSettings);
             $plan->save();
 
             if (Arr::get($d, 'default', false)) {

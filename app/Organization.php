@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Support\Facades\AccountManager;
+use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,6 +29,7 @@ use function Illuminate\Events\queueable;
  * @property string|null $secretpw
  * @property string|null $api_token
  * @property string|null $stripe_id
+ * @property string|null $billing_currency
  * @property array|null $settings
  * @property string|null $default_locale
  * @property \Carbon\Carbon|null $deactivate_at
@@ -74,6 +76,11 @@ class Organization extends Model
         'settings' => 'array',
         'deactivate_at' => 'date',
     ];
+
+    public function billingCurrency(): string
+    {
+        return $this->billing_currency ?: SettingsFacade::get('default_currency', 'USD');
+    }
 
     /**
      * The "booted" method of the model.
