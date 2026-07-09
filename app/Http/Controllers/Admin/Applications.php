@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Application;
 use App\AppPlan;
+use App\AppScreenshot;
 use App\AppVersion;
 use App\Enums\AccessType;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as ApplicationFacade;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -107,6 +109,12 @@ class Applications extends Controller
                 'short_description' => $app->short_description,
                 'description' => $app->description,
                 'enabled' => $app->enabled == 1 ? true : false,
+                'screenshots' => $app->screenshots->map(function ($screenshot) {
+                    return [
+                        'id' => $screenshot->id,
+                        'url' => $screenshot->url,
+                    ];
+                }),
             ],
             'breadcrumbs' => [
                 [
@@ -141,6 +149,12 @@ class Applications extends Controller
                 'description' => $app->description,
                 'can_update_domain' => $app->can_update_domain,
                 'enabled' => $app->enabled == 1 ? true : false,
+                'screenshots' => $app->screenshots->map(function ($screenshot) {
+                    return [
+                        'id' => $screenshot->id,
+                        'url' => $screenshot->url,
+                    ];
+                }),
                 'toggle' => [
                     'state' => $app->enabled ? 'disable' : 'enable',
                     'label' => $app->enabled ? 'Disable' : 'Enable',
@@ -188,12 +202,40 @@ class Applications extends Controller
             'primary_domain_allowed' => 'boolean',
             'domain_option' => 'required|in:none,all,subdomains,primary,base,parent',
             'can_update_domain' => 'boolean',
+            'screenshots' => 'nullable|array',
+            'screenshots.*' => 'file|image|mimes:png,jpg,jpeg,webp',
+            'remove_screenshots' => 'nullable|array',
+            'remove_screenshots.*' => 'integer|exists:app_screenshots,id',
         ]);
 
         if ($request->file('image')) {
             $appImageName = $app->slug.'.png';
             $appImagePath = $request->file('image')->storeAs('images', $appImageName);
         }
+
+        if ($request->remove_screenshots) {
+            $screenshotsToRemove = $app->screenshots()->whereIn('id', $request->remove_screenshots)->get();
+            foreach ($screenshotsToRemove as $screenshot) {
+                Storage::delete('images/screenshots/'.$screenshot->filename);
+                $screenshot->delete();
+            }
+        }
+
+        if ($request->file('screenshots')) {
+            $nextOrder = (int) $app->screenshots()->max('display_order') + 1;
+            foreach ($request->file('screenshots') as $screenshotFile) {
+                $screenshotName = Str::random(40).'.'.$screenshotFile->getClientOriginalExtension();
+                $screenshotFile->storeAs('images/screenshots', $screenshotName);
+
+                $screenshot = new AppScreenshot;
+                $screenshot->application_id = $app->id;
+                $screenshot->filename = $screenshotName;
+                $screenshot->display_order = $nextOrder;
+                $screenshot->save();
+                $nextOrder++;
+            }
+        }
+
         $app->name = $request->name;
         $app->category = $request->category;
         $app->short_description = strip_tags($request->short_description);

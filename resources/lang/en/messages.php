@@ -117,6 +117,7 @@ return [
         'organization' => [
             'subscribed' => ':organization just subscribed!',
             'cancelled' => ':organization cancelled!',
+            'created' => ':organization has been created!',
         ],
         'permissions' => [
             'updated' => 'Your Permissions Have Updated',

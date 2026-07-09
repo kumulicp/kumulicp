@@ -11,7 +11,7 @@ class Account extends Model
      *
      * @var array
      */
-    public static $objectClasses = [
+    public static array $objectClasses = [
         'top',
         'shadowAccount',
         'posixAccount',

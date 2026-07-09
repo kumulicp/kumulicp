@@ -52,6 +52,10 @@ export default {
       {
         title: this.$t('settings.selfRegistration'),
         url: basePath + '/registration'
+      },
+      {
+        title: this.$t('settings.systemChecks'),
+        url: basePath + '/system-checks'
       }
     ]
 

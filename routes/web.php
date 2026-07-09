@@ -104,6 +104,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
+                        Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
+                        Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
                         Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
@@ -171,6 +173,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('mass-migrate', 'App\Http\Controllers\Admin\Settings\PullSecrets@massMigrate');
                 Route::delete('{pullSecret}', 'App\Http\Controllers\Admin\Settings\PullSecrets@destroy');
             });
+            Route::prefix('system-checks')->group(function () {
+                Route::get('', 'Admin\Settings\SystemChecks@index')->name('settings.system_checks');
+                Route::post('ldap-models', 'Admin\Settings\SystemChecks@ldapModels')->name('settings.system_checks.ldap_models');
+                Route::post('ldap-models/correct', 'Admin\Settings\SystemChecks@correctLdapModels')->name('settings.system_checks.ldap_models.correct');
+            });
         });
 
         Route::prefix('service')->group(function () {
@@ -209,6 +216,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('', 'Admin\Packages@index')->name('admin.packages.index');
             Route::post('download', 'Admin\Packages@download')->name('admin.packages.download');
             Route::post('upload', 'Admin\Packages@uploadModule')->name('admin.packages.upload');
+            Route::post('settings', 'Admin\Packages@updateSettings')->name('admin.packages.settings');
             Route::prefix('{vendor}/{package}')->group(function () {
                 Route::get('', 'Admin\Packages@show')->name('admin.packages.show');
                 Route::delete('', 'Admin\Packages@destroy')->name('admin.packages.destroy');

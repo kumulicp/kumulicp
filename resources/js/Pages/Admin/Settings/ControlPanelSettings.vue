@@ -56,6 +56,18 @@ import { CURRENCIES } from '@/constants/currencies'
           :error="$page.props.errors.error_email"
           :error-messages="$page.props.errors.error_email"
         />
+        <va-select v-model="form.default_locale"
+          :label="$t('settings.defaultLanguage')"
+          id="defaultLocale"
+          :options="localeOptions"
+          value-by="code"
+          text-by="name"
+          clearable
+          class="mb-3"
+          immediateValidation
+          :error="$page.props.errors.default_locale"
+          :error-messages="$page.props.errors.default_locale"
+        />
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
@@ -135,6 +147,7 @@ export default {
   },
   props: {
     settings: Object,
+    locales: Object,
     errors: Object
   },
   data () {
@@ -146,6 +159,7 @@ export default {
       defaultPrimaryColor: primary,
       defaultSecondaryColor: secondary,
       currencyOptions: CURRENCIES.map(c => ({ value: c.code, text: `${c.code} — ${c.label}` })),
+      localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       form: useForm({
         base_domain: this.settings.base_domain,
         terms_url: this.settings.terms_url,
@@ -157,6 +171,7 @@ export default {
         error_email: this.settings.error_email,
         default_currency: this.settings.default_currency ?? 'USD',
         enabled_currencies: this.settings.enabled_currencies ?? ['USD'],
+        default_locale: this.settings.default_locale
       })
     }
   },

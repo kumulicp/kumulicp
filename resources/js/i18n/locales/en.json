@@ -475,7 +475,9 @@
       "status": "Status",
       "shortDescription": "Short Description",
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
-      "description": "Page Description"
+      "description": "Page Description",
+      "screenshots": "Screenshots",
+      "screenshotsMessage": "Shown on the app view and Discover pages"
     },
     "backups": {
       "action": "Action",
@@ -616,7 +618,10 @@
       "moduleName": "Module name",
       "requirements": "Requirements",
       "constraint": "Constraint",
-      "authors": "Authors"
+      "authors": "Authors",
+      "allowUnstable": "Allow unstable packages",
+      "allowUnstableHint": "Show and install beta, alpha, RC, and dev versions.",
+      "unstable": "Unstable"
     },
     "domains": {
       "addTld": "Add TLD",
@@ -987,7 +992,8 @@
       "selfRegistrationEnabled": "Allow Self-Registration",
       "selfRegistrationDescription": "When enabled, anyone with the registration link can join your organization after verifying their email address.",
       "selfRegistrationUrl": "Registration Link",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "defaultLanguage": "Default Language"
     },
     "subscription": {
       "plan": "Plan",
@@ -1043,6 +1049,7 @@
       "lastName": "Last Name",
       "personalEmail": "Personal Email",
       "phoneNumber": "Phone Number",
+      "language": "Language",
       "organizationalEmail": "Organizational Email",
       "deleteEmail": "Delete Email",
       "addEmailAccount": "Add email account @{domain}",
@@ -1153,6 +1160,7 @@
     "ldapAttributes": "Attribute Mapping",
     "supportEmail": "Support Email",
     "errorEmail": "Error Email",
+    "defaultLanguage": "Default Language",
     "ldap": "LDAP",
     "ldapFullName": "Full Name",
     "ldapPersonalEmail": "Personal Email",
@@ -1173,6 +1181,7 @@
       "publicFacingLabel": "Public facing label"
     },
     "pullSecrets": "Pull Secrets",
+    "systemChecks": "System Checks",
     "selfRegistration": "Self-Registration",
     "captcha": "CAPTCHA",
     "captchaDescription": "Add CAPTCHA protection to the self-registration form to prevent spam and automated submissions.",
@@ -1184,6 +1193,21 @@
     "captchaSecretKey": "Secret Key",
     "selfRegistrationEnabled": "Enable Self-Registration",
     "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually."
+  },
+  "systemChecks": {
+    "ldapModelValidation": "LDAP Model Validation",
+    "ldapModelValidationDescription": "Scans every entry in the LDAP directory to make sure it satisfies the required object classes of one of the application's LDAP models (User, EmailUser, Group, etc.). Entries that don't fit any model fall back to a generic entry type, which can cause errors when the application expects a specific model.",
+    "runCheck": "Run Check",
+    "ldapModelValidationPassed": "No problem entries found.",
+    "ldapModelValidationFailed": "{count} entries don't fit any recognized model.",
+    "correctEntries": "Correct Broken Entries",
+    "correctionResults": "Correction Results",
+    "correctionFixed": "Fixed",
+    "correctionNotFixed": "Could not be fixed",
+    "problemEntries": "Problem Entries",
+    "status": "Status",
+    "dn": "Distinguished Name",
+    "objectClasses": "Object Classes"
   },
   "other": {
     "initialSetup": "Initial Setup",
@@ -1209,6 +1233,12 @@
       "symbols": "Must contain symbols",
       "minLength": "Must be at least 8 characters long",
       "match": "Must match"
+    },
+    "screenshotGallery": {
+      "previous": "Previous screenshot",
+      "next": "Next screenshot",
+      "removeTitle": "Remove screenshot",
+      "removeConfirm": "Are you sure you want to remove this screenshot? This action cannot be undone."
     }
   },
   "errors": {

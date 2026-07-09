@@ -1,8 +1,10 @@
 <?php
 
+use App\Events\OrganizationCreated;
 use App\Organization;
 use App\Support\Facades\AccountManager;
 use App\User;
+use Illuminate\Support\Facades\Event;
 use Tests\Support\TestSupports;
 
 function validRegistrationPayload(array $overrides = []): array
@@ -80,6 +82,49 @@ it('registers new organization account', function (string $driver) {
     $organization = Organization::where('slug', 'testing')->first();
     expect($organization)->toBeInstanceOf(Organization::class);
     $response->assertRedirect('/registered');
+    AccountManager::account($organization)->destroy();
+})->with('account_manager_drivers');
+
+it('dispatches OrganizationCreated when a new organization registers', function (string $driver) {
+    setupAccountManagerDriver($driver);
+    (new TestSupports)->seed();
+
+    $this->withoutExceptionHandling();
+    Event::fake([OrganizationCreated::class]);
+
+    try {
+        $this->post('/register', [
+            'username' => 'test3',
+            'contact_email' => 'test3@example.com',
+            'password' => 'Test1password!',
+            'password_confirmation' => 'Test1password!',
+            'contact_first_name' => 'test3',
+            'contact_last_name' => 'user',
+            'contact_phone_number' => '1234567890',
+            'subdomain' => 'testing3',
+            'name' => 'test3',
+            'description' => 'test3',
+            'email' => 'test3@example.com',
+            'phone_number' => '1234567890',
+            'street' => 'test st',
+            'zipcode' => 'zipcode',
+            'city' => 'test city',
+            'state' => 'AL',
+            'country' => 'US',
+            'type' => 'nonprofit',
+            'terms_of_use' => true,
+        ]);
+    } catch (Throwable $e) {
+        if ($organization = Organization::where('slug', 'testing3')->first()) {
+            AccountManager::account($organization)->destroy();
+        }
+        throw new Exception($e->getMessage().$e->getTraceAsString());
+    }
+
+    $organization = Organization::where('slug', 'testing3')->first();
+
+    Event::assertDispatched(OrganizationCreated::class, fn ($event) => $event->organization->id === $organization->id);
+
     AccountManager::account($organization)->destroy();
 })->with('account_manager_drivers');
 

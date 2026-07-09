@@ -142,6 +142,7 @@ return [
         'updated' => 'Settings updated',
         'ldap_settings' => 'LDAP Settings',
         'invoice_settings' => 'Invoice Settings',
+        'system_checks_settings' => 'System Checks',
     ],
     'pullSecrets' => [
         'pullSecrets' => 'Image Pull Secrets',
@@ -232,5 +233,6 @@ return [
         'error_missing_providers' => 'Missing Providers directory or no provider files found.',
         'error_missing_routes' => 'Missing Routes directory.',
         'error_module_not_found' => "Module ':module' not found.",
+        'settingsUpdated' => 'Package manager settings updated.',
     ],
 ];

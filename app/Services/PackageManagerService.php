@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Facades\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\UploadedFile;
@@ -20,8 +21,11 @@ class PackageManagerService
     /** @var array<string,string>|null */
     protected ?array $installedVersions = null;
 
+    protected bool $allowUnstable;
+
     public function __construct()
     {
+        $this->allowUnstable = (bool) Settings::get('packages_allow_unstable', false);
         $this->registry_url = $this->resolveRegistryUrl();
 
         // TEMPORARY: remove second line below once repo is public and auth is handled by composer
@@ -61,8 +65,9 @@ class PackageManagerService
                     'name' => $package_name,
                     'label' => $this->packageLabel($package_name),
                     'description' => $latest['description'] ?? '',
-                    'versions' => array_column($versions, 'version'),
+                    'versions' => array_column($this->filterByStability($versions), 'version'),
                     'latest' => $latest['version'] ?? '',
+                    'isUnstable' => isset($latest['version']) && ! $this->isStable($latest['version']),
                     'type' => $latest['type'] ?? 'library',
                     'keywords' => $latest['keywords'] ?? [],
                     'homepage' => $latest['homepage'] ?? '',
@@ -101,7 +106,9 @@ class PackageManagerService
             return [
                 'name' => $package_name,
                 'description' => $latest['description'] ?? '',
+                'versions' => array_column($this->filterByStability($versions), 'version'),
                 'latest' => $latest['version'] ?? '',
+                'isUnstable' => isset($latest['version']) && ! $this->isStable($latest['version']),
                 'type' => $latest['type'] ?? 'library',
                 'keywords' => $latest['keywords'] ?? [],
                 'homepage' => $latest['homepage'] ?? '',
@@ -162,6 +169,7 @@ class PackageManagerService
                 'enabled' => $module ? $module['enabled'] : false,
                 'version' => $version,
                 'updateAvailable' => $this->isUpdateAvailable($version, $pkg['latest']),
+                'isUnstable' => $pkg['isUnstable'],
                 'source' => 'registry',
             ];
         })->values();
@@ -183,6 +191,7 @@ class PackageManagerService
                 'enabled' => $m['enabled'],
                 'version' => $m['version'],
                 'updateAvailable' => false,
+                'isUnstable' => false,
                 'source' => 'local',
             ];
         })->values();
@@ -258,10 +267,11 @@ class PackageManagerService
     /**
      * Upgrade a package to its latest version via composer require.
      */
-    public function upgrade(string $package): array
+    public function upgrade(string $package, ?string $version = null): array
     {
+        $spec = $version ? "{$package}:{$version}" : $package;
         $process = new Process(
-            ['composer', 'require', $package, '--no-interaction', '--no-ansi'],
+            ['composer', 'require', $spec, '--no-interaction', '--no-ansi'],
             base_path(),
             $this->composerEnv(),
             null,
@@ -452,9 +462,38 @@ class PackageManagerService
             'enabled' => $enabled,
             'version' => $version,
             'updateAvailable' => $this->isUpdateAvailable($version, $registry_info['latest'] ?? null),
+            'isUnstable' => $registry_info['isUnstable'] ?? false,
             'path' => $path,
             'module_name' => $moduleName,
         ];
+    }
+
+    /**
+     * Whether installing/showing unstable versions (beta, alpha, RC, dev) is currently allowed.
+     */
+    public function isAllowUnstable(): bool
+    {
+        return $this->allowUnstable;
+    }
+
+    /**
+     * Persist the "allow unstable packages" preference.
+     */
+    public function setAllowUnstable(bool $allow): void
+    {
+        Settings::update('packages_allow_unstable', $allow ? '1' : null);
+        $this->allowUnstable = $allow;
+    }
+
+    /**
+     * Resolve the version that should be installed/upgraded to for a package,
+     * honoring the "allow unstable" preference.
+     */
+    public function resolveInstallableVersion(string $vendor, string $name): ?string
+    {
+        $info = $this->getRegistryPackageInfo($vendor, $name);
+
+        return ! empty($info['latest']) ? $info['latest'] : null;
     }
 
     // -------------------------------------------------------------------------
@@ -506,7 +545,50 @@ class PackageManagerService
     protected function resolveLatestVersion(array $versions): array
     {
         // Registry packages.json lists versions newest-first
-        return reset($versions) ?: [];
+        $candidates = $this->filterByStability($versions);
+
+        return reset($candidates) ?: [];
+    }
+
+    /**
+     * Drop unstable (beta/alpha/RC/dev) versions from the list unless allowed.
+     */
+    protected function filterByStability(array $versions): array
+    {
+        if ($this->allowUnstable) {
+            return $versions;
+        }
+
+        return array_values(array_filter($versions, fn (array $v) => $this->isStable($v['version'] ?? '')));
+    }
+
+    protected function isStable(string $version): bool
+    {
+        return $this->versionStability($version) === 'stable';
+    }
+
+    /**
+     * Mirrors composer's Composer\Package\Version\VersionParser::parseStability().
+     */
+    protected function versionStability(string $version): string
+    {
+        $version = preg_replace('{#.+$}i', '', $version) ?? $version;
+
+        if (str_starts_with($version, 'dev-') || str_ends_with($version, '-dev')) {
+            return 'dev';
+        }
+
+        preg_match('{-?(beta|alpha|rc|dev)(?:[.-]?\d+)?$}i', $version, $match);
+        if (! empty($match[1])) {
+            return match (strtolower($match[1])) {
+                'beta' => 'beta',
+                'alpha' => 'alpha',
+                'rc' => 'RC',
+                default => 'dev',
+            };
+        }
+
+        return 'stable';
     }
 
     protected function isUpdateAvailable(?string $installed, ?string $latest): bool

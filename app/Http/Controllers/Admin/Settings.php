@@ -23,7 +23,9 @@ class Settings extends Controller
                 'error_email' => SettingsFacade::get('error_email'),
                 'default_currency' => SettingsFacade::get('default_currency', 'USD'),
                 'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
+                'default_locale' => SettingsFacade::get('default_locale'),
             ],
+            'locales' => config('locales.available'),
             'breadcrumbs' => [
                 [
                     'label' => __('admin.settings.control_panel_settings'),
@@ -47,6 +49,7 @@ class Settings extends Controller
             'default_currency' => 'required|string|size:3',
             'enabled_currencies' => 'required|array|min:1',
             'enabled_currencies.*' => 'string|size:3',
+            'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
 
         $enabledCurrencies = $validated['enabled_currencies'];
@@ -64,6 +67,7 @@ class Settings extends Controller
         SettingsFacade::update('error_email', Arr::get($validated, 'error_email'));
         SettingsFacade::update('default_currency', $validated['default_currency']);
         SettingsFacade::update('enabled_currencies', json_encode($enabledCurrencies));
+        SettingsFacade::update('default_locale', Arr::get($validated, 'default_locale'));
 
         return redirect('admin/settings')->with('success', __('admin.settings.updated'));
     }

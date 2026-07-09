@@ -26,7 +26,6 @@ class Domains extends Controller
         Gate::authorize('view-domains');
 
         $organization = auth()->user()->organization;
-        $base_domain = $organization->base_domain();
         $suborganizations = $organization->suborganizations()->with(['domains', 'domains.organization'])->get();
 
         $web_domains = OrgDomain::where(function ($query) use ($organization, $suborganizations) {

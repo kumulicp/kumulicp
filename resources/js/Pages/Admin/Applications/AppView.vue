@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './AppsLayout.vue'
+import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
 
 </script>
 <template>
@@ -20,6 +21,12 @@ import AppsLayout from './AppsLayout.vue'
       </div>
       <div class="flex flex-col lg8">
         {{ app.name }}
+      </div>
+    </div>
+    <div class="row">
+      <div class="flex flex-col xs12">
+        <div id="description" v-html="app.description"></div>
+        <screenshot-gallery :screenshots="app.screenshots" class="mt-3" />
       </div>
     </div>
   </div>
