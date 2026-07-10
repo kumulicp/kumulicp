@@ -96,7 +96,7 @@ class UserPermissionsService
             if ($with_side_effects) {
                 $task = Action::dispatch(
                     category: $app_instance->application->slug,
-                    action: 'prUserPermissionsServiceocess_permissions',
+                    action: 'process_permissions',
                     params: [$app_instance, ['permission' => $app_roles, 'user' => $user_id]],
                     parent_task: $task,
                 );
