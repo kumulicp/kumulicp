@@ -69,7 +69,26 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
     {
         $app = new Application($this->organization, $this->server);
 
-        return $app->isActive($this->app_instance) === 1 || $app->isActive($this->app_instance) === 2;
+        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
+            $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
+        } else {
+            $charts = ApplicationFacade::instance($this->app_instance)->charts();
+        }
+
+        foreach ($charts as $chart) {
+            $is_active = $app->isActive($this->app_instance, $chart);
+
+            if ($is_active === 1 || $is_active === 2) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function notFoundMessage(): string
+    {
+        return __('messages.exception.app_not_found_rancher');
     }
 
     public function get()

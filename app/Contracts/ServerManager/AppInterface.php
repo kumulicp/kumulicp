@@ -6,6 +6,8 @@ interface AppInterface
 {
     public function exists();
 
+    public function notFoundMessage(): string;
+
     public function get();
 
     public function isActive();
