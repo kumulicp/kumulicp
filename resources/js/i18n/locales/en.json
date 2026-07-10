@@ -674,6 +674,29 @@
       "migrateFrom": "From",
       "migrateTo": "To",
       "migrated": "App versions migrated to the new pull secret"
+    },
+    "security": {
+      "scans": "Security Scans",
+      "runScan": "Run New Scan",
+      "run": "Run",
+      "server": "Server",
+      "tool": "Tool",
+      "status": "Status",
+      "severity": "Severity",
+      "findings": "Findings",
+      "startedAt": "Started At",
+      "finishedAt": "Finished At",
+      "triggeredBy": "Triggered By",
+      "dateFrom": "Date From",
+      "dateTo": "Date To",
+      "viewReport": "View Report",
+      "scanReport": "Scan Report",
+      "title": "Title",
+      "category": "Category",
+      "remediation": "Remediation",
+      "rawOutput": "Raw Output",
+      "scan_started": "Security scan started",
+      "scan_deleted": "Security scan deleted"
     }
   },
   "language": {

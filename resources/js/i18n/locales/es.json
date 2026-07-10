@@ -669,6 +669,29 @@
       "migrateFrom": "Desde",
       "migrateTo": "Hasta",
       "migrated": "Versiones de la aplicación migradas al nuevo secreto de extracción"
+    },
+    "security": {
+      "scans": "Escaneos de Seguridad",
+      "runScan": "Ejecutar Nuevo Escaneo",
+      "run": "Ejecutar",
+      "server": "Servidor",
+      "tool": "Herramienta",
+      "status": "Estado",
+      "severity": "Severidad",
+      "findings": "Hallazgos",
+      "startedAt": "Iniciado El",
+      "finishedAt": "Finalizado El",
+      "triggeredBy": "Activado Por",
+      "dateFrom": "Fecha Desde",
+      "dateTo": "Fecha Hasta",
+      "viewReport": "Ver Informe",
+      "scanReport": "Informe de Escaneo",
+      "title": "Título",
+      "category": "Categoría",
+      "remediation": "Remediación",
+      "rawOutput": "Salida Sin Procesar",
+      "scan_started": "Escaneo de seguridad iniciado",
+      "scan_deleted": "Escaneo de seguridad eliminado"
     }
   },
   "language": {

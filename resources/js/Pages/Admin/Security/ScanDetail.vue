@@ -9,8 +9,8 @@ import { Link } from '@inertiajs/vue3'
   </Head>
 
   <va-card class="mb-4">
-    <va-card-title class="row align-center justify-space-between">
-      <span>{{ scan.tool }} - {{ scan.organization }}</span>
+    <va-card-title>
+      <span class="mr-3">{{ scan.tool }} - {{ scan.organization }}</span>
       <va-badge :color="statusColor(scan.status)" :text="scan.status" />
     </va-card-title>
     <va-card-content>
@@ -28,24 +28,26 @@ import { Link } from '@inertiajs/vue3'
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.security.findings') }} ({{ scan.findings.length }})</va-card-title>
     <va-card-content>
-      <table class="va-table va-table--hoverable" style="width:100%">
-        <thead>
-          <tr>
-            <th>{{ $t('admin.security.severity') }}</th>
-            <th>{{ $t('admin.security.title') }}</th>
-            <th>{{ $t('admin.security.category') }}</th>
-            <th>{{ $t('admin.security.remediation') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="finding in sortedFindings" :key="finding.id">
-            <td><va-badge :color="severityColor(finding.severity)" :text="finding.severity" /></td>
-            <td>{{ finding.title }}</td>
-            <td>{{ finding.category }}</td>
-            <td>{{ finding.remediation }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <va-scroll-container>
+        <table class="va-table va-table--hoverable" style="width:100%; table-layout: fixed">
+          <thead>
+            <tr>
+              <th style="width: 50px">{{ $t('admin.security.severity') }}</th>
+              <th>{{ $t('admin.security.title') }}</th>
+              <th>{{ $t('admin.security.category') }}</th>
+              <th style="width: 70%">{{ $t('admin.security.remediation') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="finding in sortedFindings" :key="finding.id">
+              <td><va-badge :color="severityColor(finding.severity)" :text="finding.severity" /></td>
+              <td style="white-space: normal; word-break: break-word">{{ finding.title }}</td>
+              <td style="white-space: normal; word-break: break-word">{{ finding.category }}</td>
+              <td style="white-space: normal; word-break: break-word">{{ finding.remediation }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </va-scroll-container>
     </va-card-content>
   </va-card>
 
@@ -53,7 +55,7 @@ import { Link } from '@inertiajs/vue3'
     <va-card-title>{{ $t('admin.security.rawOutput') }}</va-card-title>
     <va-card-content>
       <va-collapse :header="$t('admin.security.rawOutput')">
-        <pre style="max-height: 400px; overflow:auto">{{ scan.raw_output }}</pre>
+        <pre style="max-height: 400px; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-word">{{ scan.raw_output }}</pre>
       </va-collapse>
     </va-card-content>
   </va-card>

@@ -20,11 +20,15 @@ import { Link, router, useForm } from '@inertiajs/vue3'
   </div>
 
   <va-card class="mb-4">
-    <va-card-title class="row align-center justify-space-between">
+    <va-card-title>
       <span>{{ $t('admin.security.scans') }}</span>
-      <va-button @click="showRunModal = true">{{ $t('admin.security.runScan') }}</va-button>
     </va-card-title>
     <va-card-content>
+      <div class="row">
+        <div class="flex flex-col md3">
+          <va-button @click="showRunModal = true">{{ $t('admin.security.runScan') }}</va-button>
+        </div>
+      </div>
       <div class="row">
         <div class="flex flex-col md3">
           <VaSelect
