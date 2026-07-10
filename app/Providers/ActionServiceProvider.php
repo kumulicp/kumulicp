@@ -8,6 +8,7 @@ use App\Services\ApplicationService;
 use App\Services\BackupService;
 use App\Services\FastCacheService;
 use App\Services\OrganizationService;
+use App\Services\SecurityToolService;
 use App\Services\ServerInterfaceService;
 use App\Services\SettingsService;
 use App\Services\SubscriptionService;
@@ -34,6 +35,10 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
 
         $this->app->singleton('server_interfaces', function ($app) {
             return new ServerInterfaceService($app);
+        });
+
+        $this->app->singleton('security_tools', function ($app) {
+            return new SecurityToolService($app);
         });
 
         $this->app->singleton('backups', function ($app) {
@@ -75,6 +80,6 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
      */
     public function provides()
     {
-        return ['actions', 'applications', 'server_interfaces', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
+        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
     }
 }

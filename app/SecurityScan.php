@@ -22,8 +22,6 @@ use Illuminate\Database\Eloquent\Model;
  */
 class SecurityScan extends Model
 {
-    public const TOOLS = ['kube-hunter', 'kube-bench', 'kubescape', 'trivy', 'polaris', 'nuclei'];
-
     protected $guarded = [];
 
     protected $casts = [

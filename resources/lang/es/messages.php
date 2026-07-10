@@ -33,6 +33,7 @@ return [
         'no_backup_driver' => ':driver no existe',
         'no_domain_driver' => 'Controlador :name no encontrado',
         'no_server_interface' => 'La interfaz del servidor :server no existe',
+        'no_security_tool' => 'La herramienta de escaneo de seguridad :tool no está registrada',
         'no_connection' => 'No se puede conectar a :server',
         'sso_not_ready' => 'SSO no está listo: :reason',
         'http_error' => 'Error HTTP',

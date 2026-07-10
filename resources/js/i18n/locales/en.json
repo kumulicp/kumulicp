@@ -1215,7 +1215,12 @@
     "captchaSiteKey": "Site Key",
     "captchaSecretKey": "Secret Key",
     "selfRegistrationEnabled": "Enable Self-Registration",
-    "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually."
+    "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually.",
+    "securityTools": "Security Scan Tools",
+    "securityToolsDescription": "Each security scan tool runs from a pinned, known-good image version by default. You can override the image tag used for a tool below.",
+    "securityToolsWarning": "Overriding the default version is usually safe, but you are responsible for verifying the image you specify. Untrusted or unverified tags (including \"latest\") can introduce supply-chain risk. Use a custom version at your own risk.",
+    "securityToolDefaultImage": "Default",
+    "securityToolImageOverride": "Image Override"
   },
   "systemChecks": {
     "ldapModelValidation": "LDAP Model Validation",

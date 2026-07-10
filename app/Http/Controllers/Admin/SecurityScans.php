@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\OrgServer;
 use App\SecurityScan;
 use App\Support\Facades\Action;
+use App\Support\Facades\SecurityTool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -65,7 +66,7 @@ class SecurityScans extends Controller
                 'id' => $org_server->id,
                 'name' => ($org_server->organization->name ?? 'Org').' - '.($org_server->server->name ?? $org_server->id),
             ]),
-            'tools' => SecurityScan::TOOLS,
+            'tools' => SecurityTool::all(),
             'breadcrumbs' => [
                 ['label' => __('admin.security.scans')],
             ],
@@ -76,7 +77,7 @@ class SecurityScans extends Controller
     {
         $validated = $request->validate([
             'org_server_id' => 'required|integer|exists:org_servers,id',
-            'tool' => 'required|in:'.implode(',', SecurityScan::TOOLS),
+            'tool' => 'required|in:'.implode(',', SecurityTool::all()),
         ]);
 
         $org_server = OrgServer::find($validated['org_server_id']);

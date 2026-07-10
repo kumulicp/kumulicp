@@ -2,29 +2,12 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Charts\Job;
 
+use App\Support\Facades\SecurityTool;
 use Illuminate\Support\Str;
 
 class SecurityScanJobChart extends JobChart
 {
     public $chart = [];
-
-    public const IMAGES = [
-        'kube-hunter' => 'aquasec/kube-hunter:latest',
-        'kube-bench' => 'aquasec/kube-bench:latest',
-        'kubescape' => 'quay.io/kubescape/kubescape:latest',
-        'trivy' => 'aquasec/trivy:latest',
-        'polaris' => 'quay.io/fairwinds/polaris:latest',
-        'nuclei' => 'projectdiscovery/nuclei:latest',
-    ];
-
-    public const COMMANDS = [
-        'kube-hunter' => ['kube-hunter', '--pod', '--report', 'json'],
-        'kube-bench' => ['kube-bench', 'run', '--json'],
-        'kubescape' => ['kubescape', 'scan', '--format', 'json'],
-        'trivy' => ['trivy', 'k8s', '--report', 'all', '--format', 'json', 'cluster'],
-        'polaris' => ['polaris', 'audit', '--format', 'json'],
-        'nuclei' => ['nuclei', '-target', '', '-json'],
-    ];
 
     public function __construct(public string $tool, public string $namespace_name)
     {
@@ -36,6 +19,12 @@ class SecurityScanJobChart extends JobChart
     {
         if (! $job_name) {
             $job_name = $this->name;
+        }
+
+        $profile = SecurityTool::profile($this->tool);
+
+        if (! $profile) {
+            throw new \Exception(__('messages.exception.no_security_tool', ['tool' => $this->tool]));
         }
 
         $this->chart = [
@@ -58,8 +47,8 @@ class SecurityScanJobChart extends JobChart
                     'spec' => [
                         'containers' => [[
                             'name' => 'security-scan',
-                            'image' => self::IMAGES[$this->tool],
-                            'command' => self::COMMANDS[$this->tool],
+                            'image' => $profile->image(),
+                            'command' => $profile->command(),
                             'imagePullPolicy' => 'Always',
                             'terminationMessagePath' => '/dev/termination-log',
                             'terminationMessagePolicy' => 'File',

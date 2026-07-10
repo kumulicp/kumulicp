@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Facades\SecurityTool;
 use App\Support\Security\Parsers\KubeBenchParser;
 use App\Support\Security\Parsers\KubeHunterParser;
 use App\Support\Security\Parsers\NucleiParser;
@@ -61,7 +62,7 @@ test('nuclei parser reads newline-delimited json events', function () {
 });
 
 test('parser factory resolves a parser for every registered tool', function () {
-    foreach (array_keys(ParserFactory::MAP) as $tool) {
+    foreach (SecurityTool::all() as $tool) {
         expect(ParserFactory::make($tool))->toBeInstanceOf(\App\Support\Security\Parsers\Parser::class);
     }
 });

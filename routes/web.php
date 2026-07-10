@@ -166,6 +166,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::put('ldap', 'Admin\Settings\LdapSettings@update')->name('server.settings.ldap.update');
             Route::get('registration', 'Admin\Settings\RegistrationSettings@index')->name('settings.registration');
             Route::put('registration', 'Admin\Settings\RegistrationSettings@update')->name('settings.registration.update');
+            Route::get('security-tools', 'Admin\Settings\SecurityToolSettings@index')->name('settings.security_tools');
+            Route::put('security-tools', 'Admin\Settings\SecurityToolSettings@update')->name('settings.security_tools.update');
             Route::prefix('sso-providers')->group(function () {
                 Route::get('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@index');
                 Route::post('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@store');
