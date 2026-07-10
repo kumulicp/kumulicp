@@ -84,17 +84,30 @@ class RunSecurityScan extends Action
         $pod->setNamespace($namespace);
         $raw_output = $pod->logsForJob($job_name);
 
-        if ($job_status !== 'success' || ! $raw_output) {
-            $security_scan->fail("Scan job {$job_status}");
-            $task->error_message = "Security scan job {$job_status}";
+        if ($raw_output) {
+            $security_scan->raw_output = $raw_output;
+            $security_scan->save();
+        }
+
+        if ($job_status !== 'success') {
+            $error_message = "Security scan job {$job_status}";
+            $security_scan->fail($error_message);
+            $task->error_message = $error_message;
             $task->status = 'failed';
             $task->save();
 
             return;
         }
 
-        $security_scan->raw_output = $raw_output;
-        $security_scan->save();
+        if (! $raw_output) {
+            $error_message = 'Security scan job succeeded but no log output was retrieved';
+            $security_scan->fail($error_message);
+            $task->error_message = $error_message;
+            $task->status = 'failed';
+            $task->save();
+
+            return;
+        }
 
         $findings = ParserFactory::make($tool)->parse($raw_output);
 
