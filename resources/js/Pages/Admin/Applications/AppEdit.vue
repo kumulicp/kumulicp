@@ -211,7 +211,7 @@ export default {
         primary_domain_allowed: this.app.primary_domain_allowed,
         short_description: this.app.short_description,
         description: this.app.description,
-        domain_option: this.app.domain_option,
+        domain_option: this.app.domain_option ?? [],
         can_update_domain: this.app.can_update_domain,
         screenshots: [],
         remove_screenshots: []
