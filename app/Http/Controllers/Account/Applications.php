@@ -75,14 +75,14 @@ class Applications extends Controller
 
         $organization = Organization::account();
         $version = $app->version()->where('status', 'active')->first();
-        $domain_option = $app->application->domain_option;
+        $application = $app->application;
 
         $parent_app_instance = $app->parent()->with(['application', 'primary_domain'])->first();
 
         $domains = [];
         $parent_domains = [];
-        $can_add_custom_subdomains = in_array($domain_option, ['all', 'subdomains']);
-        if ($app->application->can_update_domain && $domain_option !== 'parent') {
+        $can_add_custom_subdomains = $application->hasDomainOption('subdomains');
+        if ($app->application->can_update_domain && ! $application->hasDomainOption('parent')) {
             $domains = Application::instance($app)->availableDomains()->map(function ($domain) {
                 return [
                     'text' => $domain->name,
@@ -186,6 +186,18 @@ class Applications extends Controller
             'domain' => [
                 'required',
                 function (string $attribute, mixed $value, \Closure $fail) use ($app) {
+                    if ($value === 0 && ! $app->application->hasDomainOption('base')) {
+                        $fail(__('organization.domain.denied.type'));
+
+                        return;
+                    }
+
+                    if ($value === 'connection' && ! $app->application->hasDomainOption('subdomains')) {
+                        $fail(__('organization.domain.denied.type'));
+
+                        return;
+                    }
+
                     if ($value === 0 || $value === 'connection') {
                         return true;
                     }

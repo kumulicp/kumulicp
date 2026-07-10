@@ -179,7 +179,7 @@ class AppInstance extends Model
     public function domain()
     {
         $shared = $this->plan->setting('server_type') === 'shared';
-        if ($shared || (! $shared && $this->application->domain_option === 'parent')) {
+        if ($shared || (! $shared && $this->application->hasDomainOption('parent'))) {
             return $this->parent ? $this->parent->domain() : null;
         } elseif ($this->primary_domain) {
             return $this->primary_domain->name;

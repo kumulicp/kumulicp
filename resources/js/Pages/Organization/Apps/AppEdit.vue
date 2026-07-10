@@ -73,6 +73,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         <div class="row">
           <div class="flex flex-col xs12 lg6">
             <va-input
+              id="label"
               v-model="form.label"
               :label="$t('organization.apps.appLabel')"
               immediateValidation
@@ -82,7 +83,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           </div>
         </div>
         <div class="row">
-          <div v-if="domains.length > 0" class="flex flex-col xs12 lg6 mb-2">
+          <div v-if="domains.length > 0" id="domain" class="flex flex-col xs12 lg6 mb-2">
             <va-select
               v-model="form.domain"
               :label="$t('organization.apps.domainLabel')"
@@ -97,6 +98,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           </div>
           <div v-if="can.add_custom_subdomain && form.domain === 'connection'" class="flex flex-col xs12 lg6 mb-2">
             <va-input v-model="form.subdomain"
+              id="subdomain"
               :label="$t('organization.apps.subdomain')"
               v-if="parent_domains.length > 0"
               :messages="form.parent_domain ? form.subdomain+'.'+listedParentDomains[form.parent_domain] : ''"
@@ -108,6 +110,7 @@ import { useForm, Link } from '@inertiajs/vue3'
             >
               <template #append>
                 <va-select
+                  id="parentDomain"
                   v-model="form.parent_domain"
                   :options="parent_domains"
                   text-by="text"

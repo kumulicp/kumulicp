@@ -99,6 +99,7 @@ return [
             'reactivate' => ":domain couldn't be reactivated. Please contact support and we will look into this immediately",
             'invalid' => 'Invalid domain name',
             'exists' => 'Domain name doesn\'t exist',
+            'type' => 'This domain type is not allowed for this app',
             'unregistered' => 'Domain name hasn\'t been registered.',
             'primary' => ':domain is your primary domain. Please select a new primary domain',
             'active' => ":domain is currently an active domain and can't be removed",

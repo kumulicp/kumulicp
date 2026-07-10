@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $slug
  * @property int|null $parent_app_id
  * @property string|null $description
- * @property string|null $domain_option
+ * @property array $domain_option
  * @property \App\Enums\AccessType $access_type
  * @property bool $primary_domain_allowed
  * @property bool $can_update_domain
@@ -32,6 +32,15 @@ class Application extends Model
     protected $table = 'applications';
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'domain_option' => '[]',
+    ];
+
+    /**
      * The attributes that should be cast to native types.
      *
      * @var array
@@ -40,7 +49,26 @@ class Application extends Model
         'access_type' => AccessType::class,
         'primary_domain_allowed' => 'boolean',
         'can_update_domain' => 'boolean',
+        'domain_option' => 'array',
     ];
+
+    /**
+     * Determine whether the given domain type(s) are allowed for this app.
+     *
+     * @param  string|array  $types
+     */
+    public function hasDomainOption($types): bool
+    {
+        $allowed = $this->domain_option ?? [];
+
+        foreach ((array) $types as $type) {
+            if (in_array($type, $allowed)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public function organizations()
     {
