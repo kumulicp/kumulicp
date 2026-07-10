@@ -691,7 +691,8 @@
       "remediation": "Remediación",
       "rawOutput": "Salida Sin Procesar",
       "scan_started": "Escaneo de seguridad iniciado",
-      "scan_deleted": "Escaneo de seguridad eliminado"
+      "scan_deleted": "Escaneo de seguridad eliminado",
+      "toolReference": "Referencia de Herramientas"
     }
   },
   "language": {

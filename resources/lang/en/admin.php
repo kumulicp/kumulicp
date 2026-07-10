@@ -198,6 +198,14 @@ return [
         'rawOutput' => 'Raw Output',
         'scan_started' => 'Security scan started',
         'scan_deleted' => 'Security scan deleted',
+        'tool_descriptions' => [
+            'kube-hunter' => 'Hunts for security weaknesses by probing the cluster from inside a pod, the way an attacker who already has network access would. Good for finding exposed APIs, open ports, and other attack-surface issues.',
+            'kube-bench' => 'Checks whether the cluster is configured according to the CIS Kubernetes Benchmark, a set of security best practices for control plane and node configuration.',
+            'kubescape' => 'Scans cluster resources against multiple security frameworks (NSA, MITRE ATT&CK, CIS) to find misconfigurations, compliance gaps, and risky workload settings.',
+            'trivy' => 'Scans running workloads and images for known vulnerabilities (CVEs), misconfigurations, and exposed secrets.',
+            'polaris' => 'Audits workload manifests against Kubernetes best practices, flagging things like missing resource limits, running as root, and other configuration hygiene issues.',
+            'nuclei' => 'Runs template-based vulnerability checks against exposed services in the cluster to catch known CVEs and misconfigurations.',
+        ],
     ],
     'shared_apps' => [
         'shared_apps' => 'Shared Apps',

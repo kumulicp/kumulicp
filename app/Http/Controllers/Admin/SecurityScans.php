@@ -67,6 +67,9 @@ class SecurityScans extends Controller
                 'name' => ($org_server->organization->name ?? 'Org').' - '.($org_server->server->name ?? $org_server->id),
             ]),
             'tools' => SecurityTool::all(),
+            'tool_descriptions' => collect(SecurityTool::all())->mapWithKeys(fn ($tool) => [
+                $tool => SecurityTool::profile($tool)->description(),
+            ]),
             'breadcrumbs' => [
                 ['label' => __('admin.security.scans')],
             ],

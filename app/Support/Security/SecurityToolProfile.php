@@ -9,6 +9,8 @@ class SecurityToolProfile
 {
     protected $name;
 
+    protected $description;
+
     protected $image;
 
     protected $command = [];
@@ -18,6 +20,22 @@ class SecurityToolProfile
     public function name()
     {
         return $this->name;
+    }
+
+    /**
+     * Translation key for this tool's description. Defaults to the built-in
+     * admin.security.tool_descriptions.{name} convention; override
+     * $description with a custom key (e.g. a module's own translation
+     * namespace) to provide a description for a tool registered elsewhere.
+     */
+    public function descriptionKey()
+    {
+        return $this->description ?: "admin.security.tool_descriptions.{$this->name}";
+    }
+
+    public function description()
+    {
+        return __($this->descriptionKey());
     }
 
     /**

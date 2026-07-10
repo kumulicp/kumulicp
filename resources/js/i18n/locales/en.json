@@ -696,7 +696,8 @@
       "remediation": "Remediation",
       "rawOutput": "Raw Output",
       "scan_started": "Security scan started",
-      "scan_deleted": "Security scan deleted"
+      "scan_deleted": "Security scan deleted",
+      "toolReference": "Tool Reference"
     }
   },
   "language": {

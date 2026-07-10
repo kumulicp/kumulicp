@@ -126,11 +126,30 @@ import { Link, router, useForm } from '@inertiajs/vue3'
       text-by="name"
       class="mb-3"
     />
-    <VaSelect
-      v-model="runForm.tool"
-      :label="$t('admin.security.tool')"
-      :options="tools"
-    />
+    <div class="row align-center">
+      <div class="flex">
+        <VaSelect
+          v-model="runForm.tool"
+          :label="$t('admin.security.tool')"
+          :options="tools"
+        />
+      </div>
+      <div class="flex flex-none">
+        <va-button
+          preset="plain"
+          icon="info"
+          :aria-label="$t('admin.security.toolReference')"
+          @click="showToolInfoModal = true"
+        />
+      </div>
+    </div>
+  </va-modal>
+
+  <va-modal v-model="showToolInfoModal" :title="$t('admin.security.toolReference')" hide-default-actions>
+    <div v-for="tool in tools" :key="tool" class="mb-3">
+      <div class="va-text-bold">{{ tool }}</div>
+      <div>{{ tool_descriptions[tool] }}</div>
+    </div>
   </va-modal>
 </template>
 
@@ -142,12 +161,14 @@ export default {
     meta: Object,
     summary: Object,
     org_servers: Array,
-    tools: Array
+    tools: Array,
+    tool_descriptions: Object
   },
   data () {
     return {
       curPage: this.meta.page,
       showRunModal: false,
+      showToolInfoModal: false,
       filters: {
         org_server_id: this.$page.props.ziggy?.query?.org_server_id || '',
         tool: this.$page.props.ziggy?.query?.tool || '',
