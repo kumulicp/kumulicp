@@ -50,6 +50,8 @@ class SettingsTest extends TestCase
             'welcome_page' => '<p>Welcome</p>',
             'primary_color' => '#123456',
             'secondary_color' => '#abcdef',
+            'default_currency' => 'USD',
+            'enabled_currencies' => ['USD'],
         ]);
 
         $response->assertRedirect('admin/settings');
