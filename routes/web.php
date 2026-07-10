@@ -135,6 +135,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('logs')->group(function () {
                 Route::get('', 'Admin\Logs@index')->name('admin.logs.index');
             });
+            Route::prefix('security/scans')->group(function () {
+                Route::get('', 'Admin\SecurityScans@index')->name('security.scans.index');
+                Route::post('', 'Admin\SecurityScans@store')->name('security.scans.store');
+                Route::get('{scan}', 'Admin\SecurityScans@show')->name('security.scans.show');
+                Route::delete('{scan}', 'Admin\SecurityScans@destroy')->name('security.scans.destroy');
+            });
             Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups');
             Route::prefix('backup_scheduler/recurring')->group(function () {
                 Route::get('{recurrence}/activate', 'Admin\RecurringBackups@activate')->name('server.backup.recurring.activate');
@@ -160,6 +166,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::put('ldap', 'Admin\Settings\LdapSettings@update')->name('server.settings.ldap.update');
             Route::get('registration', 'Admin\Settings\RegistrationSettings@index')->name('settings.registration');
             Route::put('registration', 'Admin\Settings\RegistrationSettings@update')->name('settings.registration.update');
+            Route::get('security-tools', 'Admin\Settings\SecurityToolSettings@index')->name('settings.security_tools');
+            Route::put('security-tools', 'Admin\Settings\SecurityToolSettings@update')->name('settings.security_tools.update');
             Route::prefix('sso-providers')->group(function () {
                 Route::get('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@index');
                 Route::post('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@store');

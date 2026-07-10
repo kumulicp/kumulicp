@@ -175,6 +175,16 @@ return [
     'logs' => [
         'logs' => 'Registros',
     ],
+    'security' => [
+        'tool_descriptions' => [
+            'kube-hunter' => 'Busca debilidades de seguridad sondeando el clúster desde dentro de un pod, tal como lo haría un atacante que ya tiene acceso a la red. Útil para encontrar APIs expuestas, puertos abiertos y otros problemas de superficie de ataque.',
+            'kube-bench' => 'Verifica si el clúster está configurado según el CIS Kubernetes Benchmark, un conjunto de mejores prácticas de seguridad para la configuración del plano de control y los nodos.',
+            'kubescape' => 'Analiza los recursos del clúster frente a varios marcos de seguridad (NSA, MITRE ATT&CK, CIS) para encontrar configuraciones incorrectas, brechas de cumplimiento y ajustes de carga de trabajo riesgosos.',
+            'trivy' => 'Analiza cargas de trabajo e imágenes en ejecución en busca de vulnerabilidades conocidas (CVEs), configuraciones incorrectas y secretos expuestos.',
+            'polaris' => 'Audita los manifiestos de carga de trabajo frente a las mejores prácticas de Kubernetes, señalando cosas como límites de recursos faltantes, ejecución como root y otros problemas de higiene de configuración.',
+            'nuclei' => 'Ejecuta verificaciones de vulnerabilidades basadas en plantillas contra los servicios expuestos en el clúster para detectar CVEs conocidos y configuraciones incorrectas.',
+        ],
+    ],
     'shared_apps' => [
         'shared_apps' => 'Aplicaciones compartidas',
         'shared_apps_description' => 'Contiene aplicaciones a las que cualquier organización puede suscribirse para usar',

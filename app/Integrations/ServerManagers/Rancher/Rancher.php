@@ -15,6 +15,8 @@ class Rancher extends Integration
 
     private $namespace;
 
+    private $raw_response = false;
+
     public function __construct(Organization $organization, public OrgServer $org_server)
     {
         parent::__construct($organization);
@@ -58,8 +60,24 @@ class Rancher extends Integration
         ];
     }
 
+    // Skips JSON decoding for the next request so plain-text responses
+    // (e.g. pod logs, which aren't guaranteed to be valid JSON) survive intact.
+    public function raw()
+    {
+        $this->raw_response = true;
+
+        return $this;
+    }
+
     public function parseResponse($response)
     {
+        if ($this->raw_response) {
+            $this->raw_response = false;
+            $this->setResponse($response);
+
+            return;
+        }
+
         $response = json_decode($response, true);
 
         if (Arr::get($response, 'type') === 'error' && in_array(Arr::get($response, 'status'), $this->statusErrorCodes())) {

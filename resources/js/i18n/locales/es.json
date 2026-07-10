@@ -669,6 +669,30 @@
       "migrateFrom": "Desde",
       "migrateTo": "Hasta",
       "migrated": "Versiones de la aplicación migradas al nuevo secreto de extracción"
+    },
+    "security": {
+      "scans": "Escaneos de Seguridad",
+      "runScan": "Ejecutar Nuevo Escaneo",
+      "run": "Ejecutar",
+      "server": "Servidor",
+      "tool": "Herramienta",
+      "status": "Estado",
+      "severity": "Severidad",
+      "findings": "Hallazgos",
+      "startedAt": "Iniciado El",
+      "finishedAt": "Finalizado El",
+      "triggeredBy": "Activado Por",
+      "dateFrom": "Fecha Desde",
+      "dateTo": "Fecha Hasta",
+      "viewReport": "Ver Informe",
+      "scanReport": "Informe de Escaneo",
+      "title": "Título",
+      "category": "Categoría",
+      "remediation": "Remediación",
+      "rawOutput": "Salida Sin Procesar",
+      "scan_started": "Escaneo de seguridad iniciado",
+      "scan_deleted": "Escaneo de seguridad eliminado",
+      "toolReference": "Referencia de Herramientas"
     }
   },
   "language": {
@@ -1181,7 +1205,12 @@
     "captchaSiteKey": "Clave del Sitio",
     "captchaSecretKey": "Clave Secreta",
     "selfRegistrationEnabled": "Habilitar Autorregistro",
-    "selfRegistrationDescription": "Cuando está habilitado, los administradores de la organización pueden compartir un enlace de registro que permite a los nuevos usuarios registrarse y unirse a su organización directamente, sin necesidad de que un administrador cree su cuenta manualmente."
+    "selfRegistrationDescription": "Cuando está habilitado, los administradores de la organización pueden compartir un enlace de registro que permite a los nuevos usuarios registrarse y unirse a su organización directamente, sin necesidad de que un administrador cree su cuenta manualmente.",
+    "securityTools": "Herramientas de Escaneo de Seguridad",
+    "securityToolsDescription": "Cada herramienta de escaneo de seguridad se ejecuta de forma predeterminada desde una versión de imagen fijada y verificada. Puede anular la etiqueta de imagen utilizada para una herramienta a continuación.",
+    "securityToolsWarning": "Anular la versión predeterminada suele ser seguro, pero usted es responsable de verificar la imagen que especifique. Las etiquetas no confiables o no verificadas (incluida \"latest\") pueden introducir riesgos en la cadena de suministro. Use una versión personalizada bajo su propio riesgo.",
+    "securityToolDefaultImage": "Predeterminado",
+    "securityToolImageOverride": "Anulación de Imagen"
   },
   "other": {
     "initialSetup": "Configuración Inicial",
