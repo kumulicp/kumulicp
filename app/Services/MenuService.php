@@ -133,6 +133,14 @@ class MenuService
                         'external' => false,
                         'order' => 700,
                     ],
+                    [
+                        'name' => __('admin.security.scans'),
+                        'url' => '/admin/server/security/scans',
+                        'icon' => 'fa-shield-alt',
+                        'perm' => $admin,
+                        'external' => false,
+                        'order' => 800,
+                    ],
                 ],
             ],
             'settings' => [
