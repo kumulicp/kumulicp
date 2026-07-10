@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AppInstance;
 use App\AppPlan;
+use App\Events\Users\UserStorageUpdated;
 use App\Organization;
 use App\Plan;
 use App\Services\AppInstance\AppInstancePlanService;
@@ -125,10 +126,16 @@ class SubscriptionService
 
     public function updateApp(AppPlan $plan, AppInstance $app_instance)
     {
+        $previous_plan = $app_instance->plan;
+
         $app_instance->plan()->associate($plan);
         $app_instance->save();
 
         $this->plans[$app_instance->id] = new AppInstancePlanService($plan, $app_instance);
+
+        if ($previous_plan && $previous_plan->setting('standard.storage') !== $plan->setting('standard.storage')) {
+            UserStorageUpdated::dispatch($this->organization, app_instance: $app_instance);
+        }
 
         return $this;
     }

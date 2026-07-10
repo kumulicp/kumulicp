@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AdditionalStorage;
 use App\AppInstance;
+use App\Events\Users\UserStorageUpdated;
 use App\Organization;
 use App\Support\Facades\Application;
 use App\Support\Facades\Subscription;
@@ -110,6 +111,7 @@ class AdditionalStorageService
         if ($quantity == 0 || $quantity == null) {
             $this->delete();
             $this->has_updated = true;
+            $this->notifyStorageUpdated();
 
             return;
         }
@@ -130,6 +132,15 @@ class AdditionalStorageService
                 $this->add($quantity);
                 $this->has_updated = true;
             }
+        }
+
+        $this->notifyStorageUpdated();
+    }
+
+    private function notifyStorageUpdated(): void
+    {
+        if ($this->has_updated && $this->entity === 'user') {
+            UserStorageUpdated::dispatch($this->organization, $this->name, $this->app_instance);
         }
     }
 
