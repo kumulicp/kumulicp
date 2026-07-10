@@ -13,7 +13,7 @@ describe('Admin Application Edit', function () {
             'access_type' => 'basic',
             'short_description' => 'Original short description',
             'description' => 'Original description',
-            'domain_option' => 'none',
+            'domain_option' => [],
         ]);
 
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
@@ -43,7 +43,7 @@ describe('Admin Application Screenshots', function () {
             'name' => 'Browser Test App Screenshots',
             'category' => 'Original Category',
             'access_type' => 'basic',
-            'domain_option' => 'none',
+            'domain_option' => [],
         ]);
 
         $this->screenshotOne = AppScreenshot::create([

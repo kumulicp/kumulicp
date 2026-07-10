@@ -46,6 +46,7 @@ class SsoProviders extends Controller
         $provider = new SsoProvider;
         $provider->name = $validated['name'];
         $provider->label = $validated['label'];
+        $provider->driver = 'oidc';
         $provider->enabled = false;
         $provider->scopes = 'openid email profile';
         $provider->save();
@@ -112,12 +113,12 @@ class SsoProviders extends Controller
         $provider->scopes = $validated['scopes'];
         $provider->save();
 
-        return redirect('/admin/server/settings/sso-providers/'.$provider->id)->with('success', __('admin.settings.sso_providers.updated'));
+        return redirect('/admin/settings/sso-providers/'.$provider->id)->with('success', __('admin.settings.sso_providers.updated'));
     }
 
-    public function destroy(SsoProvider $ssoProvider)
+    public function destroy(SsoProvider $provider)
     {
-        $ssoProvider->delete();
+        $provider->delete();
 
         return response()->json(['message' => __('admin.settings.sso_providers.deleted')]);
     }

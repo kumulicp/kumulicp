@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Settings;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Settings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 
 class LdapSettings extends Controller
 {
@@ -50,16 +51,16 @@ class LdapSettings extends Controller
             'password' => 'nullable|string|max:100',
         ]);
 
-        Settings::update('ldap_first_name', $validated['first_name']);
-        Settings::update('ldap_last_name', $validated['last_name']);
-        Settings::update('ldap_email', $validated['email']);
-        Settings::update('ldap_phone_number', $validated['phone_number']);
-        Settings::update('ldap_username', $validated['username']);
-        Settings::update('ldap_personal_email', $validated['personal_email']);
-        Settings::update('ldap_name', $validated['name']);
-        Settings::update('ldap_org_email', $validated['org_email']);
-        Settings::update('ldap_access_type', $validated['access_type']);
-        Settings::update('ldap_password', $validated['password']);
+        Settings::update('ldap_first_name', Arr::get($validated, 'first_name'));
+        Settings::update('ldap_last_name', Arr::get($validated, 'last_name'));
+        Settings::update('ldap_email', Arr::get($validated, 'email'));
+        Settings::update('ldap_phone_number', Arr::get($validated, 'phone_number'));
+        Settings::update('ldap_username', Arr::get($validated, 'username'));
+        Settings::update('ldap_personal_email', Arr::get($validated, 'personal_email'));
+        Settings::update('ldap_name', Arr::get($validated, 'name'));
+        Settings::update('ldap_org_email', Arr::get($validated, 'org_email'));
+        Settings::update('ldap_access_type', Arr::get($validated, 'access_type'));
+        Settings::update('ldap_password', Arr::get($validated, 'password'));
 
         return redirect('admin/settings/ldap')->with('success', __('admin.settings.updated'));
     }

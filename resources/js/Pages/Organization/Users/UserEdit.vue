@@ -87,7 +87,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
       </div>
-      <div v-if="user.org_emails || user.can.add_email_account" class="row">
+      <div v-if="user.org_email || user.can.add_email_account" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <h5>{{ $t('organization.users.organizationalEmail') }}</h5>
         </div>

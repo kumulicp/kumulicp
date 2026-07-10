@@ -173,7 +173,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('/', 'App\Http\Controllers\Admin\Settings\SsoProviders@store');
                 Route::get('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@show');
                 Route::put('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@update');
-                Route::delete('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@idestroy');
+                Route::delete('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@destroy');
             });
             Route::prefix('pull-secrets')->group(function () {
                 Route::get('/', 'App\Http\Controllers\Admin\Settings\PullSecrets@index');

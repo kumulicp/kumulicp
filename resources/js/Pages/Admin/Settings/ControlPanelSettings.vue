@@ -76,7 +76,7 @@ import { CURRENCIES } from '@/constants/currencies'
       <template #settings>
         <va-color-input v-model="form.primary_color"
           :label="$t('settings.primaryColor')"
-          id="baseDomain"
+          id="primaryColor"
           class="mb-3"
           immediateValidation
           @update:modelValue="changeColors()"
@@ -85,7 +85,7 @@ import { CURRENCIES } from '@/constants/currencies'
         />
         <va-color-input v-model="form.secondary_color"
           :label="$t('settings.secondaryColor')"
-          id="baseDomain"
+          id="secondaryColor"
           class="mb-3"
           immediateValidation
           @update:modelValue="changeColors"
