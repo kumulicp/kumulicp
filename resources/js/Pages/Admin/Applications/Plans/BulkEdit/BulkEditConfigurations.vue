@@ -48,6 +48,7 @@ import { useForm } from '@inertiajs/vue3'
                 />
                 <YamlEditor
                   v-else-if="config.type === 'yaml'"
+                  :ref="el => setYamlEditorRef(plan.id, config.name, el)"
                   v-model="form.plans[plan.id].configurations[config.name]"
                   :error-messages="errors && errors['plans.' + plan.id + '.configurations.' + config.name]"
                 />
@@ -190,14 +191,39 @@ export default {
       form: useForm({
         plan_ids: this.plan_ids,
         plans: plansMap
-      })
+      }),
+      yamlEditorRefs: {},
+      firstInvalidYamlConfig: null
     }
   },
   mounted () {
     this.scrollToFirstError()
   },
   methods: {
+    setYamlEditorRef (planId, name, el) {
+      const key = planId + '.' + name
+      if (el) {
+        this.yamlEditorRefs[key] = el
+      } else {
+        delete this.yamlEditorRefs[key]
+      }
+    },
     submit () {
+      this.firstInvalidYamlConfig = null
+
+      for (const [key, editor] of Object.entries(this.yamlEditorRefs)) {
+        if (! editor.applyChanges() && ! this.firstInvalidYamlConfig) {
+          this.firstInvalidYamlConfig = key
+        }
+      }
+
+      if (this.firstInvalidYamlConfig) {
+        const [planId, ...nameParts] = this.firstInvalidYamlConfig.split('.')
+        const el = document.getElementById('config-' + planId + '-' + nameParts.join('.'))
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+
       this.form.put('/admin/apps/' + this.app.slug + '/plans/bulk-edit/configurations')
     },
     scrollToFirstError () {

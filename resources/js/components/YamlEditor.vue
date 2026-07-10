@@ -81,14 +81,16 @@ function applyChanges () {
 
   if (parsed.errors.length) {
     applyError.value = parsed.errors[0].message
-    return
+    return false
   }
 
   try {
     const obj = parsed.toJS()
     emit('update:modelValue', obj)
+    return true
   } catch (e) {
     applyError.value = e.message
+    return false
   }
 }
 
@@ -152,6 +154,8 @@ watch(
 onBeforeUnmount(() => {
   if (view) view.destroy()
 })
+
+defineExpose({ applyChanges })
 </script>
 
 <style scoped>
