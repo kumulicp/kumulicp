@@ -31,7 +31,7 @@ class ApplicationsTest extends TestCase
             'access_type' => 'standard',
             'short_description' => 'An updated short description',
             'description' => 'An updated description',
-            'domain_option' => 'none',
+            'domain_option' => [],
             'primary_domain_allowed' => false,
             'can_update_domain' => false,
         ], $overrides);
