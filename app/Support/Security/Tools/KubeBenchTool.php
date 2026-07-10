@@ -9,7 +9,7 @@ class KubeBenchTool extends SecurityToolProfile
 {
     protected $name = 'kube-bench';
 
-    protected $image = 'aquasec/kube-bench:latest';
+    protected $image = 'aquasec/kube-bench:v0.15.6';
 
     protected $command = ['kube-bench', 'run', '--json'];
 

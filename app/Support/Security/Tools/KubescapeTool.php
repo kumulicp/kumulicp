@@ -9,7 +9,7 @@ class KubescapeTool extends SecurityToolProfile
 {
     protected $name = 'kubescape';
 
-    protected $image = 'quay.io/kubescape/kubescape:latest';
+    protected $image = 'quay.io/kubescape/kubescape:v4.0.10';
 
     protected $command = ['kubescape', 'scan', '--format', 'json'];
 

@@ -9,7 +9,7 @@ class TrivyTool extends SecurityToolProfile
 {
     protected $name = 'trivy';
 
-    protected $image = 'aquasec/trivy:latest';
+    protected $image = 'aquasec/trivy:0.72.0';
 
     protected $command = ['trivy', 'k8s', '--report', 'all', '--format', 'json', 'cluster'];
 

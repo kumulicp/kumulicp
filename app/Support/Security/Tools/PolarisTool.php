@@ -9,7 +9,7 @@ class PolarisTool extends SecurityToolProfile
 {
     protected $name = 'polaris';
 
-    protected $image = 'quay.io/fairwinds/polaris:latest';
+    protected $image = 'us-docker.pkg.dev/fairwinds-ops/oss/polaris:v10.2.0';
 
     protected $command = ['polaris', 'audit', '--format', 'json'];
 

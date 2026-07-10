@@ -9,7 +9,7 @@ class NucleiTool extends SecurityToolProfile
 {
     protected $name = 'nuclei';
 
-    protected $image = 'projectdiscovery/nuclei:latest';
+    protected $image = 'projectdiscovery/nuclei:v3.7.0';
 
     protected $command = ['nuclei', '-target', '', '-json'];
 
