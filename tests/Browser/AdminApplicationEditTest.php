@@ -41,6 +41,7 @@ describe('Admin Application Screenshots', function () {
         $this->application = Application::factory()->create([
             'slug' => 'browser_test_app_screenshots',
             'name' => 'Browser Test App Screenshots',
+            'category' => 'Original Category',
             'access_type' => 'basic',
             'domain_option' => 'none',
         ]);
@@ -82,7 +83,7 @@ describe('Admin Application Screenshots', function () {
             ->assertVisible('.va-carousel__arrow--left')
             ->assertVisible('.va-carousel__arrow--right')
             ->click('.screenshot-gallery__modal-close')
-            ->assertNotVisible('.screenshot-gallery__modal');
+            ->assertMissing('.screenshot-gallery__modal');
     });
 
     it('removes a screenshot and persists the removal after saving', function () {
@@ -90,10 +91,10 @@ describe('Admin Application Screenshots', function () {
             ->click('[data-testid="screenshot-remove-'.$this->screenshotOne->id.'"]')
             ->assertVisible('[data-testid="screenshot-remove-confirm"]')
             ->click('[data-testid="screenshot-remove-confirm-button"]')
-            ->assertNotVisible('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
+            ->assertMissing('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
             ->click('#submit')
             ->assertPathIs("/admin/apps/{$this->application->slug}/edit")
-            ->assertNotVisible('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
+            ->assertMissing('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
             ->assertVisible('[data-testid="screenshot-thumb-'.$this->screenshotTwo->id.'"]');
 
         expect(AppScreenshot::find($this->screenshotOne->id))->toBeNull();

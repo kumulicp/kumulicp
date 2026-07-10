@@ -144,6 +144,35 @@ class AppPlan extends Model
     }
 
     /**
+     * Returns ['amount' => ..., 'price_id' => ...] for the given component and currency,
+     * falling back to the default currency then to the legacy flat price/price_id keys.
+     */
+    public function priceFor(string $component, string $currency): array
+    {
+        $amount = $this->setting("{$component}.prices.{$currency}.amount");
+        $priceId = $this->setting("{$component}.prices.{$currency}.price_id");
+
+        if ($priceId) {
+            return ['amount' => $amount, 'price_id' => $priceId];
+        }
+
+        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
+        if ($currency !== $defaultCurrency) {
+            $amount = $this->setting("{$component}.prices.{$defaultCurrency}.amount");
+            $priceId = $this->setting("{$component}.prices.{$defaultCurrency}.price_id");
+            if ($priceId) {
+                return ['amount' => $amount, 'price_id' => $priceId];
+            }
+        }
+
+        // Legacy flat format (pre-currency migration)
+        return [
+            'amount' => $this->setting("{$component}.price"),
+            'price_id' => $this->setting("{$component}.price_id"),
+        ];
+    }
+
+    /**
      * Returns the Stripe price_id for an optional feature in the given currency,
      * falling back to default currency then legacy flat price_id.
      */
