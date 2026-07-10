@@ -140,7 +140,7 @@ class AdditionalStorageService
     private function notifyStorageUpdated(): void
     {
         if ($this->has_updated && $this->entity === 'user') {
-            UserStorageUpdated::dispatch($this->organization);
+            UserStorageUpdated::dispatch($this->organization, $this->name, $this->app_instance);
         }
     }
 

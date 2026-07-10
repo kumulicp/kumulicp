@@ -35,11 +35,15 @@ class UpdateUserStorage implements ShouldQueue
         $organization = $event->organization;
 
         OrganizationFacade::setOrganization($organization);
-        $apps = $organization->app_instances;
+        $apps = $event->app_instance ? [$event->app_instance] : $organization->app_instances;
 
         foreach ($apps as $app) {
             if (Application::instance($app)->plan()->hasUserStorage()) {
-                $users = AccountManager::users()->appUsers($app);
+                if ($event->user_id) {
+                    $users = ($user = AccountManager::users()->find($event->user_id)) ? [$user] : [];
+                } else {
+                    $users = AccountManager::users()->appUsers($app);
+                }
 
                 foreach ($users as $user) {
                     // Process user options on an app-by-app basis to make necessary adjustments directly through the apps API
