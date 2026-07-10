@@ -61,9 +61,9 @@ class SecurityScans extends Controller
                 'page' => $scans->currentPage(),
             ],
             'summary' => $summary,
-            'org_servers' => OrgServer::with('organization')->get()->map(fn ($org_server) => [
+            'org_servers' => OrgServer::with('organization', 'server')->get()->map(fn ($org_server) => [
                 'id' => $org_server->id,
-                'name' => ($org_server->organization->name ?? 'Org').' - '.($org_server->name ?? $org_server->id),
+                'name' => ($org_server->organization->name ?? 'Org').' - '.($org_server->server->name ?? $org_server->id),
             ]),
             'tools' => SecurityScan::TOOLS,
             'breadcrumbs' => [
@@ -128,10 +128,10 @@ class SecurityScans extends Controller
             'summary' => $scan->summary,
             'organization' => $scan->org_server?->organization?->name,
             'org_server_id' => $scan->org_server_id,
-            'started_at' => $scan->started_at,
-            'finished_at' => $scan->finished_at,
+            'started_at' => $scan->started_at?->format('Y-m-d H:i:s'),
+            'finished_at' => $scan->finished_at?->format('Y-m-d H:i:s'),
             'error_message' => $scan->error_message,
-            'created_at' => $scan->created_at,
+            'created_at' => $scan->created_at?->format('Y-m-d H:i:s'),
         ];
 
         if ($with_findings) {
