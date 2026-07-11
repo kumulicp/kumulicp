@@ -12,15 +12,15 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
-class PermissionsManager
+abstract class PermissionsManager
 {
-    private $add_roles = [];
-
-    private $remove_roles = [];
-
     public $changes = [];
 
-    private $organization;
+    protected UserManager $user;
+
+    abstract public function hasControlPanelAccess();
+
+    abstract public function hasControlPanelAdminAccess();
 
     public function get()
     {
@@ -59,7 +59,6 @@ class PermissionsManager
 
         return array_merge($access, [
             'categories' => $this->$get_categories(),
-            'access_type' => $this->user->userAccessType(),
             'edit' => true,
             'access_type' => $has_access ? 'standard' : 'none',
             'pricing' => Subscription::base()->payment_enabled,
@@ -83,13 +82,13 @@ class PermissionsManager
     public function getControlPanelCategories()
     {
         $organizations = collect([Organization::account()])->merge(Organization::account()->suborganizations);
-        $has_access = $this->hasControlPanelAccess($this->user);
+        $has_access = $this->hasControlPanelAccess();
 
         return [
             [
                 'id' => 0,
                 'name' => 'Organization',
-                'active_role' => $has_access && $this->user->organization->name ? $this->user->organization->name : 'none',
+                'active_role' => $has_access && $this->user->organization()->name ? $this->user->organization()->name : 'none',
                 'roles' => collect([[
                     'text' => 'No access',
                     'value' => 'none',
@@ -113,7 +112,7 @@ class PermissionsManager
             [
                 'id' => 0,
                 'name' => 'Control Panel',
-                'active_role' => $this->hasControlPanelAdminAccess($this->user) ? 'Allowed' : 'none',
+                'active_role' => $this->hasControlPanelAdminAccess() ? 'Allowed' : 'none',
                 'roles' => [
                     [
                         'text' => 'No access',
@@ -164,6 +163,9 @@ class PermissionsManager
         $categories = [];
         $category_id = 0;
         $version_categories = $app_instance->version->group_categories();
+
+        $can_update_app_standard_user = Subscription::base()->type === 'package' ? Gate::allows('update-standard-user', $this->user) : Gate::allows('update-app-standard-user', [$this->user, $app_instance]);
+        $can_update_app_basic_user = Subscription::base()->type === 'package' ? Gate::allows('update-basic-user', $this->user) : Gate::allows('update-app-basic-user', [$this->user, $app_instance]);
 
         if (count($app_instance->version->roles()) > 0 && count($version_categories) > 0) {
             foreach ($version_categories as $category) {

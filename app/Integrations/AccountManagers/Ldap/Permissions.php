@@ -27,7 +27,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     private $organization;
 
-    public $user;
+    public UserManager $user;
 
     public function __construct(UserManager $user)
     {

@@ -2,9 +2,9 @@
 
 namespace App\Contracts\AccountManager;
 
-use App\Support\AccountManager\GroupManager;
+use App\AppInstance;
 
-interface GroupInterface extends GroupManager
+interface GroupInterface
 {
     public function attribute($attribute);
 
@@ -35,8 +35,6 @@ interface GroupInterface extends GroupManager
     public function allAddtionalStorage();
 
     public function delete();
-
-    private function auto_save();
 
     public function save();
 

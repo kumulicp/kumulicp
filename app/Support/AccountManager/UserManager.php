@@ -3,12 +3,23 @@
 namespace App\Support\AccountManager;
 
 use App\AppInstance;
+use App\AppRole;
 use App\Enums\AccessType;
 use App\Services\AdditionalStorageService;
 use App\Support\Facades\Subscription;
 
-class UserManager
+abstract class UserManager
 {
+    abstract public function attribute(string $attribute, string $type = 'string');
+
+    abstract public function organization();
+
+    abstract public function userAccessType();
+
+    abstract public function appUserAccessType(AppInstance $app_instance);
+
+    abstract public function hasAppRole(AppInstance $app_instance, AppRole $role);
+
     public function appStorage(AppInstance $app_instance)
     {
         $subscription = Subscription::app_instance($app_instance);
