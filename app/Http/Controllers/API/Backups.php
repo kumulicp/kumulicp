@@ -14,7 +14,7 @@ class Backups extends Controller
     {
         $organization = Organization::account();
 
-        $backup = OrgBackup::where('id', $request->input('job_id'))->where('organization_id', $organization->id)->first();
+        $backup = OrgBackup::where('id', $request->input('job_id'))->first();
 
         $results_to_string = json_encode([
             'job_id' => $request->input('job_id'),
