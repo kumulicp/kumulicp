@@ -90,60 +90,164 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error="$page.props.errors.name"
         :error-messages="$page.props.errors.name"
       />
-      <va-input v-model="form.host"
-        :label="$t('admin.servers.host')"
-        :messages="server.description.host"
-        id="host"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.host"
-        :error-messages="$page.props.errors.host"
-      />
-      <va-input v-model="form.address"
-        :label="$t('admin.servers.address')"
-        :messages="server.description.address"
-        id="address"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.address"
-        :error-messages="$page.props.errors.address"
-      />
-      <va-input v-model="form.api_key"
-        :label="$t('admin.servers.apiKey')"
-        :messages="server.description.api_key"
-        id="apiKey"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.api_key"
-        :error-messages="$page.props.errors.api_key"
-      />
-      <va-input v-model="form.api_secret"
-        :label="$t('admin.servers.apiSecret')"
-        :messages="server.description.api_secret"
-        id="apiSecret"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.api_secret"
-        :error-messages="$page.props.errors.api_secret"
-      />
-      <va-input v-model="form.ip"
-        :label="$t('admin.servers.ip')"
-        :messages="server.description.ip"
-        id="ip"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.ip"
-        :error-messages="$page.props.errors.ip"
-      />
-      <va-input v-model="form.internal_address"
-        :label="$t('admin.servers.internalAddress')"
-        :messages="server.description.internal_address"
-        id="internalAddress"
-        class="mb-2"
-        immediateValidation
-        :error="$page.props.errors.internal_address"
-        :error-messages="$page.props.errors.internal_address"
-      />
+      <template v-if="server.interface !== 'helm_k8s'">
+        <va-input v-model="form.host"
+          :label="$t('admin.servers.host')"
+          :messages="server.description.host"
+          id="host"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.host"
+          :error-messages="$page.props.errors.host"
+        />
+        <va-input v-model="form.address"
+          :label="$t('admin.servers.address')"
+          :messages="server.description.address"
+          id="address"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.address"
+          :error-messages="$page.props.errors.address"
+        />
+        <va-input v-model="form.api_key"
+          :label="$t('admin.servers.apiKey')"
+          :messages="server.description.api_key"
+          :placeholder="server.has_api_key ? $t('admin.servers.leaveBlankToKeep') : ''"
+          id="apiKey"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.api_key"
+          :error-messages="$page.props.errors.api_key"
+        />
+        <va-input v-model="form.api_secret"
+          :label="$t('admin.servers.apiSecret')"
+          :messages="server.description.api_secret"
+          :placeholder="server.has_api_secret ? $t('admin.servers.leaveBlankToKeep') : ''"
+          id="apiSecret"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.api_secret"
+          :error-messages="$page.props.errors.api_secret"
+        />
+        <va-input v-model="form.ip"
+          :label="$t('admin.servers.ip')"
+          :messages="server.description.ip"
+          id="ip"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.ip"
+          :error-messages="$page.props.errors.ip"
+        />
+        <va-input v-model="form.internal_address"
+          :label="$t('admin.servers.internalAddress')"
+          :messages="server.description.internal_address"
+          id="internalAddress"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.internal_address"
+          :error-messages="$page.props.errors.internal_address"
+        />
+      </template>
+      <template v-else>
+        <va-input v-model="form.k8s_api_server"
+          :label="$t('admin.servers.k8sApiServer')"
+          :messages="server.description.k8s_api_server"
+          id="k8sApiServer"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.k8s_api_server"
+          :error-messages="$page.props.errors.k8s_api_server"
+        />
+        <va-textarea v-model="form.k8s_ca_cert"
+          :label="$t('admin.servers.k8sCaCert')"
+          :messages="server.description.k8s_ca_cert"
+          id="k8sCaCert"
+          class="mb-2"
+          min-rows="3"
+          immediateValidation
+          :error="$page.props.errors.k8s_ca_cert"
+          :error-messages="$page.props.errors.k8s_ca_cert"
+        />
+        <va-checkbox v-model="form.k8s_tls_verify"
+          :label="$t('admin.servers.k8sTlsVerify')"
+          :messages="server.description.k8s_tls_verify"
+          id="k8sTlsVerify"
+          class="mb-2"
+          immediateValidation
+        />
+        <va-input v-model="form.k8s_ingress_class"
+          :label="$t('admin.servers.k8sIngressClass')"
+          :messages="server.description.k8s_ingress_class"
+          id="k8sIngressClass"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.k8s_ingress_class"
+          :error-messages="$page.props.errors.k8s_ingress_class"
+        />
+        <va-select v-model="form.k8s_auth_type"
+          :label="$t('admin.servers.k8sAuthType')"
+          :messages="server.description.k8s_auth_type"
+          id="k8sAuthType"
+          class="mb-2"
+          :options="[{ value: 'bearer_token', text: $t('admin.servers.k8sAuthTypeBearerToken') }, { value: 'client_cert', text: $t('admin.servers.k8sAuthTypeClientCert') }]"
+          value-by="value"
+          text-by="text"
+          immediateValidation
+          :error="$page.props.errors.k8s_auth_type"
+          :error-messages="$page.props.errors.k8s_auth_type"
+        />
+        <va-input v-if="form.k8s_auth_type === 'bearer_token'" v-model="form.k8s_bearer_token"
+          type="password"
+          :label="$t('admin.servers.k8sBearerToken')"
+          :messages="server.description.k8s_bearer_token"
+          :placeholder="server.has_k8s_bearer_token ? $t('admin.servers.leaveBlankToKeep') : ''"
+          id="k8sBearerToken"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.k8s_bearer_token"
+          :error-messages="$page.props.errors.k8s_bearer_token"
+        />
+        <template v-if="form.k8s_auth_type === 'client_cert'">
+          <va-textarea v-model="form.k8s_client_cert"
+            :label="$t('admin.servers.k8sClientCert')"
+            :messages="server.description.k8s_client_cert"
+            :placeholder="server.has_k8s_client_cert ? $t('admin.servers.leaveBlankToKeep') : ''"
+            id="k8sClientCert"
+            class="mb-2"
+            min-rows="3"
+            immediateValidation
+            :error="$page.props.errors.k8s_client_cert"
+            :error-messages="$page.props.errors.k8s_client_cert"
+          />
+          <va-textarea v-model="form.k8s_client_key"
+            :label="$t('admin.servers.k8sClientKey')"
+            :messages="server.description.k8s_client_key"
+            :placeholder="server.has_k8s_client_key ? $t('admin.servers.leaveBlankToKeep') : ''"
+            id="k8sClientKey"
+            class="mb-2"
+            min-rows="3"
+            immediateValidation
+            :error="$page.props.errors.k8s_client_key"
+            :error-messages="$page.props.errors.k8s_client_key"
+          />
+        </template>
+        <va-input v-model="form.k8s_impersonate_user"
+          :label="$t('admin.servers.k8sImpersonateUser')"
+          id="k8sImpersonateUser"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.k8s_impersonate_user"
+          :error-messages="$page.props.errors.k8s_impersonate_user"
+        />
+        <va-input v-model="form.k8s_impersonate_group"
+          :label="$t('admin.servers.k8sImpersonateGroup')"
+          id="k8sImpersonateGroup"
+          class="mb-2"
+          immediateValidation
+          :error="$page.props.errors.k8s_impersonate_group"
+          :error-messages="$page.props.errors.k8s_impersonate_group"
+        />
+      </template>
       <va-select v-model="form.default_backup_server"
         :label="$t('admin.servers.defaultBackupServer')"
         id="defaultBackupServer"
@@ -251,10 +355,22 @@ export default {
         default_email_server: this.server.default_email_server,
         default_web_server: this.server.default_web_server,
         settings: this.server.settings,
-        api_key: this.server.api_key,
-        api_secret: this.server.api_secret,
+        // Secrets are never sent from the backend after saving — these
+        // start blank; submitting blank means "leave unchanged".
+        api_key: '',
+        api_secret: '',
         default_backup_server: this.server.default_backup_server,
-        is_backup_server: this.server.is_backup_server
+        is_backup_server: this.server.is_backup_server,
+        k8s_api_server: this.server.k8s_api_server,
+        k8s_ca_cert: this.server.k8s_ca_cert,
+        k8s_tls_verify: this.server.k8s_tls_verify,
+        k8s_ingress_class: this.server.k8s_ingress_class,
+        k8s_auth_type: this.server.k8s_auth_type || 'bearer_token',
+        k8s_bearer_token: '',
+        k8s_client_cert: '',
+        k8s_client_key: '',
+        k8s_impersonate_user: this.server.k8s_impersonate_user,
+        k8s_impersonate_group: this.server.k8s_impersonate_group
       })
     }
   },
