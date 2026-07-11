@@ -27,20 +27,13 @@ class Server extends Model
     protected $casts = [
         'settings' => 'array',
         'is_backup_server' => 'boolean',
-        'k8s_tls_verify' => 'boolean',
         'api_key' => 'encrypted',
         'api_secret' => 'encrypted',
-        'k8s_bearer_token' => 'encrypted',
-        'k8s_client_cert' => 'encrypted',
-        'k8s_client_key' => 'encrypted',
     ];
 
     protected $hidden = [
         'api_key',
         'api_secret',
-        'k8s_bearer_token',
-        'k8s_client_cert',
-        'k8s_client_key',
     ];
 
     /**
