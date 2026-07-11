@@ -264,6 +264,7 @@ import { currencyByCode } from '@/constants/currencies'
           immediateValidation
           type="number"
           min="0"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.gb') }}
@@ -310,6 +311,7 @@ import { currencyByCode } from '@/constants/currencies'
           :messages="$t('admin.plans.maxUsersCaption')"
           immediateValidation
           id="standardMax"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.users') }}
@@ -325,6 +327,7 @@ import { currencyByCode } from '@/constants/currencies'
           immediateValidation
           type="number"
           min="0"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.gb') }}
@@ -378,6 +381,7 @@ import { currencyByCode } from '@/constants/currencies'
           :messages="$t('admin.plans.maxBasicUsersCaption')"
           immediateValidation
           id="basicMax"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.users') }}
@@ -393,6 +397,7 @@ import { currencyByCode } from '@/constants/currencies'
           immediateValidation
           type="number"
           min="0"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.gb') }}
@@ -407,6 +412,7 @@ import { currencyByCode } from '@/constants/currencies'
           immediateValidation
           type="number"
           min="0"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.gb') }}
@@ -449,6 +455,7 @@ import { currencyByCode } from '@/constants/currencies'
           type="number"
           class="my-2"
           min="0"
+          step="1"
           v-model="form.storage.max"
           :label="$t('admin.plans.maxAdditionalStorage')"
           :messages="$t('admin.plans.maxAdditionalStorageCaption')"
@@ -468,6 +475,7 @@ import { currencyByCode } from '@/constants/currencies'
           immediateValidation
           type="number"
           min="0"
+          step="1"
         >
           <template #appendInner>
             {{ $t('admin.plans.gb') }}

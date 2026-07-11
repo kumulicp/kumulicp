@@ -74,24 +74,29 @@ import { CURRENCIES } from '@/constants/currencies'
     <AdminSettings>
       <template #name>{{ $t('settings.theme') }}</template>
       <template #settings>
-        <va-color-input v-model="form.primary_color"
-          :label="$t('settings.primaryColor')"
-          id="primaryColor"
-          class="mb-3"
-          immediateValidation
-          @update:modelValue="changeColors()"
-          :error="$page.props.errors.primary_color"
-          :error-messages="$page.props.errors.primary_color"
-        />
-        <va-color-input v-model="form.secondary_color"
-          :label="$t('settings.secondaryColor')"
-          id="secondaryColor"
-          class="mb-3"
-          immediateValidation
-          @update:modelValue="changeColors"
-          :error="$page.props.errors.secondary_color"
-          :error-messages="$page.props.errors.secondary_color"
-        />
+        <!-- va-color-input's compiled root uses a hoisted static vnode shared across
+        instances, so an `id` passed as a fallthrough attribute leaks onto every
+        va-color-input on the page (Vuestic UI 1.10.3). Wrap in a div instead. -->
+        <div id="primaryColor">
+          <va-color-input v-model="form.primary_color"
+            :label="$t('settings.primaryColor')"
+            class="mb-3"
+            immediateValidation
+            @update:modelValue="changeColors()"
+            :error="$page.props.errors.primary_color"
+            :error-messages="$page.props.errors.primary_color"
+          />
+        </div>
+        <div id="secondaryColor">
+          <va-color-input v-model="form.secondary_color"
+            :label="$t('settings.secondaryColor')"
+            class="mb-3"
+            immediateValidation
+            @update:modelValue="changeColors"
+            :error="$page.props.errors.secondary_color"
+            :error-messages="$page.props.errors.secondary_color"
+          />
+        </div>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />

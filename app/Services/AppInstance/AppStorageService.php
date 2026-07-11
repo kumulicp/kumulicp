@@ -38,7 +38,7 @@ class AppStorageService
         }
         $total += $this->userStorage();
 
-        return $total;
+        return (int) $total;
     }
 
     public function updateQuota()
