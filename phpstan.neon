@@ -7,3 +7,5 @@ parameters:
     level: 5
     ignoreErrors: []
     excludePaths: []
+    bootstrapFiles!:
+        - phpstan-bootstrap.php
