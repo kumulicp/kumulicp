@@ -19,7 +19,7 @@ it('enforces max standard user limit', function (string $driver, string $plan_ty
     $this->actingAs($admin);
     $demoApp = $support->demo_app->instances()->first();
 
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_1, $demoApp);
+    $support->setSubscription($admin->organization, $support->basePlanWithStandardMax($plan_type, 1), $support->demo_app_1, $demoApp);
 
     expect(AccountManager::users()->find('testing1')->canAccessApp($demoApp))->toBeFalse();
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeFalse();
@@ -30,7 +30,7 @@ it('enforces max standard user limit', function (string $driver, string $plan_ty
     expect(AccountManager::users()->find('testing1')->canAccessApp($demoApp))->toBeTrue();
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeFalse();
 
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->basePlanWithStandardMax($plan_type, 2), $support->demo_app_2, $demoApp);
 
     grantPermission('testing2', $demoApp->id, ['demo_role']);
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeTrue();
@@ -88,7 +88,7 @@ it('enforces max basic user limit', function (string $driver, string $plan_type)
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeFalse();
     expect(AccountManager::users()->find('testing2')->appUserAccessType($demoApp))->toBe('none');
 
-    $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
+    $support->setSubscription($admin->organization, $support->basePlan2OfType($plan_type), $support->demo_app_2, $demoApp);
 
     grantPermission('testing2', $demoApp->id, ['basic_demo_role']);
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeTrue();
@@ -118,7 +118,12 @@ it('updates user maximums when switching between plan types', function (string $
     expect(AccountManager::users()->find('testing1')->canAccessApp($demoApp))->toBeTrue();
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeFalse();
 
-    // Switch to package-type plan: demo_app_2 has max=2 standard users
-    $support->setSubscription($admin->organization, $support->base_2, $support->demo_app_2, $demoApp);
+    // Switch to a package-type plan allowing 2 standard users on top of the
+    // seeded admin, who always holds a standard slot org-wide under package plans.
+    $support->setSubscription($admin->organization, $support->basePlanWithStandardMax('package', 2), $support->demo_app_2, $demoApp);
+
+    // Permission previously denied under the max=1 limit isn't retroactively
+    // granted by raising the limit — it must be re-requested.
+    grantPermission('testing2', $demoApp->id, ['demo_role']);
     expect(AccountManager::users()->find('testing2')->canAccessApp($demoApp))->toBeTrue();
 })->with('account_manager_drivers');

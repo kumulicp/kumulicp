@@ -234,6 +234,33 @@ class TestSupports
     }
 
     /**
+     * Return a base plan that permits exactly $additional_users standard
+     * users beyond the seeded admin. For 'app' type, per-user limits are
+     * enforced against the app plan instead, so the base plan's own
+     * standard.max is irrelevant and base_1 is returned unmodified. For
+     * 'package' type, standard.max is enforced org-wide by the base plan,
+     * and the seeded 'demo' admin always holds one standard slot — so the
+     * configured max must include +1 headroom for that admin.
+     */
+    public function basePlanWithStandardMax(string $type, int $additional_users): Plan
+    {
+        if ($type === 'app') {
+            return $this->base_1;
+        }
+
+        $settings = $this->base_1->settings;
+        $settings['standard']['max'] = 1 + $additional_users;
+
+        return Plan::factory()->create([
+            'payment_enabled' => false,
+            'type' => 'package',
+            'is_default' => false,
+            'app_plans' => ['demo_app' => ['max' => 1, 'plans' => 'enabled']],
+            'settings' => $settings,
+        ]);
+    }
+
+    /**
      * Return a Plan with base_2's settings but the given type.
      * Use in tests that currently reference $this->base_2 so the same
      * numeric assertions hold for both 'app' and 'package' plan types.
