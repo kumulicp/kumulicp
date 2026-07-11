@@ -9,7 +9,7 @@ import { useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
-  <form @submit.prevent="form.put('/admin/apps/'+app.slug+'/plans/'+plan.id+'/configurations')">
+  <form @submit.prevent="submit">
     <va-list>
       <va-list-item class="py-3">
         <va-list-item-section label>
@@ -19,7 +19,7 @@ import { useForm } from '@inertiajs/vue3'
         </va-list-item-section>
       </va-list-item>
       <template v-for="(config, index) in configList" :key="index">
-        <va-list-item class="py-3">
+        <va-list-item class="py-3" :id="'config-' + config.name">
           <va-list-item-section label>
             <va-list-item-label>
               <h5>{{ config.name }}</h5>
@@ -52,9 +52,10 @@ import { useForm } from '@inertiajs/vue3'
                 />
               <YamlEditor
                 v-if="config.type == 'yaml'"
+                :ref="el => setYamlEditorRef(config.name, el)"
                 v-model="form['configurations'][config.name]"
                 class="pb-1"
-                debounce="1000"
+                :error-messages="errors && errors['configurations.' + config.name]"
                 />
               <va-input
                 v-if="config.type == 'json'"
@@ -181,6 +182,8 @@ export default {
         persistent: false
       },
       showAddNewConfigOptions: false,
+      yamlEditorRefs: {},
+      firstInvalidYamlConfig: null,
       configTypes: [
         { text: this.$t('admin.plans.configTypes.string'), value: 'string' },
         { text: this.$t('admin.plans.configTypes.int'), value: 'int' },
@@ -190,7 +193,44 @@ export default {
       ]
     }
   },
+  mounted () {
+    this.scrollToFirstError()
+  },
   methods: {
+    setYamlEditorRef (name, el) {
+      if (el) {
+        this.yamlEditorRefs[name] = el
+      } else {
+        delete this.yamlEditorRefs[name]
+      }
+    },
+    submit () {
+      this.firstInvalidYamlConfig = null
+
+      for (const [name, editor] of Object.entries(this.yamlEditorRefs)) {
+        if (! editor.applyChanges() && ! this.firstInvalidYamlConfig) {
+          this.firstInvalidYamlConfig = name
+        }
+      }
+
+      if (this.firstInvalidYamlConfig) {
+        const el = document.getElementById('config-' + this.firstInvalidYamlConfig)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+
+      this.form.put('/admin/apps/' + this.app.slug + '/plans/' + this.plan.id + '/configurations')
+    },
+    scrollToFirstError () {
+      if (! this.errors) return
+
+      const name = Object.keys(this.errors).find(key => key.startsWith('configurations.'))
+      if (! name) return
+
+      const configName = name.replace('configurations.', '')
+      const el = document.getElementById('config-' + configName)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    },
     addNewConfig () {
       this.configList[this.newConfig.name] = {
         name: this.newConfig.name,

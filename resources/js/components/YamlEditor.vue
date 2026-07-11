@@ -1,5 +1,5 @@
 <template>
-  <div class="yaml-editor">
+  <div class="yaml-editor" :class="{ 'has-error': hasError }">
     <div ref="editor"></div>
 
     <div class="toolbar">
@@ -7,12 +7,15 @@
       <span v-if="applyError" class="error">
         {{ applyError }}
       </span>
+      <span v-else-if="errorMessages" class="error">
+        {{ Array.isArray(errorMessages) ? errorMessages[0] : errorMessages }}
+      </span>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 import { EditorState } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
@@ -28,6 +31,10 @@ const props = defineProps({
   modelValue: {
     type: Object,
     default: () => ({})
+  },
+  errorMessages: {
+    type: [String, Array],
+    default: null
   }
 })
 
@@ -37,6 +44,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const editor = ref(null)
 const applyError = ref(null)
+const hasError = computed(() => Boolean(applyError.value || props.errorMessages))
 
 let view = null
 
@@ -73,14 +81,16 @@ function applyChanges () {
 
   if (parsed.errors.length) {
     applyError.value = parsed.errors[0].message
-    return
+    return false
   }
 
   try {
     const obj = parsed.toJS()
     emit('update:modelValue', obj)
+    return true
   } catch (e) {
     applyError.value = e.message
+    return false
   }
 }
 
@@ -144,6 +154,8 @@ watch(
 onBeforeUnmount(() => {
   if (view) view.destroy()
 })
+
+defineExpose({ applyChanges })
 </script>
 
 <style scoped>
@@ -151,6 +163,10 @@ onBeforeUnmount(() => {
   border: 1px solid #ccc;
   border-radius: 6px;
   overflow: hidden;
+}
+
+.yaml-editor.has-error {
+  border-color: red;
 }
 
 .yaml-editor .cm-editor {
