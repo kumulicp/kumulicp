@@ -18,7 +18,7 @@ class Middleware extends Kubernetes
 {
     public function enabled(): bool
     {
-        return $this->server()->k8s_ingress_class === 'traefik';
+        return $this->server()->setting('k8s_ingress_class') === 'traefik';
     }
 
     public function create(MiddlewareChart $chart)

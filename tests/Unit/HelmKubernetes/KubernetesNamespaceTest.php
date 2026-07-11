@@ -10,10 +10,10 @@ function makeHelmK8sOrgServer(): OrgServer
 {
     $server = Server::factory()->create([
         'interface' => 'helm_k8s',
-        'k8s_api_server' => 'https://cluster.example.com:6443',
-        'k8s_ca_cert' => 'fake-ca',
-        'k8s_auth_type' => 'bearer_token',
-        'k8s_bearer_token' => 'token',
+        'address' => 'https://cluster.example.com:6443',
+        'ca_cert' => 'fake-ca',
+        'api_secret' => 'token',
+        'settings' => ['k8s_auth_type' => 'bearer_token'],
     ]);
 
     $organization = Organization::factory()->create();

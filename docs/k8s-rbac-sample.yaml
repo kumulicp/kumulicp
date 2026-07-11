@@ -8,10 +8,10 @@
 #   kubectl create token kumulicp-deployer -n kumulicp-system --duration=87600h
 #
 # Then register a Server in the control panel with interface=helm_k8s using:
-#   - k8s_api_server: the cluster's API server URL (`kubectl cluster-info`)
-#   - k8s_ca_cert: `kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d`
-#   - k8s_auth_type: bearer_token
-#   - k8s_bearer_token: the token created above
+#   - Address: the cluster's API server URL (`kubectl cluster-info`)
+#   - CA Certificate: `kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d`
+#   - Settings: {"k8s_auth_type": "bearer_token"}
+#   - Api Secret: the token created above
 
 apiVersion: v1
 kind: Namespace
