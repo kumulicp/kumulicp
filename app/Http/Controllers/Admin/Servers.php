@@ -6,6 +6,7 @@ use App\Actions\Servers\ServerActivate;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateServerRequest;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\Facades\ServerInterface;
@@ -55,7 +56,7 @@ class Servers extends Controller
                 'name' => $server->name,
                 'host' => $server->host,
                 'address' => $server->address,
-                'api_key' => $server->api_key,
+                'has_api_key' => (bool) $server->api_key,
                 'ip' => $server->ip,
                 'internal_address' => $server->internal_address,
                 'type' => $server->type,
@@ -123,8 +124,8 @@ class Servers extends Controller
                 'name' => $server->name,
                 'host' => $server->host,
                 'address' => $server->address,
-                'api_key' => $server->api_key,
-                'api_secret' => $server->api_secret,
+                'has_api_key' => (bool) $server->api_key,
+                'has_api_secret' => (bool) $server->api_secret,
                 'ip' => $server->ip,
                 'internal_address' => $server->internal_address,
                 'type' => $server->type,
@@ -133,6 +134,16 @@ class Servers extends Controller
                 'settings' => $server->settings ? $server->settings : [],
                 'status' => $server->status,
                 'description' => $server_description,
+                'k8s_api_server' => $server->k8s_api_server,
+                'k8s_ca_cert' => $server->k8s_ca_cert,
+                'k8s_tls_verify' => $server->k8s_tls_verify,
+                'k8s_ingress_class' => $server->k8s_ingress_class,
+                'k8s_auth_type' => $server->k8s_auth_type,
+                'has_k8s_bearer_token' => (bool) $server->k8s_bearer_token,
+                'has_k8s_client_cert' => (bool) $server->k8s_client_cert,
+                'has_k8s_client_key' => (bool) $server->k8s_client_key,
+                'k8s_impersonate_user' => $server->k8s_impersonate_user,
+                'k8s_impersonate_group' => $server->k8s_impersonate_group,
                 'app_instance' => $server->app_instance ? [
                     'id' => $server->app_instance->id,
                     'label' => $server->app_instance->label,
@@ -169,31 +180,49 @@ class Servers extends Controller
         ]);
     }
 
-    public function update(Request $request, Server $server)
+    public function update(UpdateServerRequest $request, Server $server)
     {
-        $validated = $request->validate([
-            'name' => 'string|required',
-            'host' => 'string|required',
-            'address' => 'string|required',
-            'api_key' => 'string|required',
-            'api_secret' => 'string|required',
-            'ip' => 'string|required',
-            'internal_address' => 'string|required',
-            'settings' => 'array|nullable',
-            'default_backup_server' => 'nullable|exists:servers,id',
-            'is_backup_server' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $server->name = $validated['name'];
-        $server->host = $validated['host'];
-        $server->address = $validated['address'];
-        $server->api_key = $validated['api_key']; // Needs to be encrypted
-        $server->api_secret = $validated['api_secret']; // Needs to be encrypted
-        $server->ip = $validated['ip'];
-        $server->internal_address = $validated['internal_address'];
-        $server->settings = $validated['settings'];
-        $server->default_backup_server_id = $validated['default_backup_server'];
-        $server->is_backup_server = $validated['is_backup_server'];
+        $server->settings = $validated['settings'] ?? null;
+        $server->default_backup_server_id = $validated['default_backup_server'] ?? null;
+        $server->is_backup_server = $validated['is_backup_server'] ?? false;
+
+        if ($server->interface === 'helm_k8s') {
+            $server->k8s_api_server = $validated['k8s_api_server'];
+            $server->k8s_ca_cert = $validated['k8s_ca_cert'] ?? null;
+            $server->k8s_tls_verify = $validated['k8s_tls_verify'] ?? true;
+            $server->k8s_ingress_class = $validated['k8s_ingress_class'] ?? null;
+            $server->k8s_auth_type = $validated['k8s_auth_type'];
+            $server->k8s_impersonate_user = $validated['k8s_impersonate_user'] ?? null;
+            $server->k8s_impersonate_group = $validated['k8s_impersonate_group'] ?? null;
+
+            // Blank means "leave unchanged" — secrets are never sent back to
+            // the frontend, so only overwrite when a new value was submitted.
+            if (! empty($validated['k8s_bearer_token'])) {
+                $server->k8s_bearer_token = $validated['k8s_bearer_token'];
+            }
+            if (! empty($validated['k8s_client_cert'])) {
+                $server->k8s_client_cert = $validated['k8s_client_cert'];
+            }
+            if (! empty($validated['k8s_client_key'])) {
+                $server->k8s_client_key = $validated['k8s_client_key'];
+            }
+        } else {
+            $server->host = $validated['host'];
+            $server->address = $validated['address'];
+            $server->ip = $validated['ip'];
+            $server->internal_address = $validated['internal_address'];
+
+            if (! empty($validated['api_key'])) {
+                $server->api_key = $validated['api_key'];
+            }
+            if (! empty($validated['api_secret'])) {
+                $server->api_secret = $validated['api_secret'];
+            }
+        }
+
         $server->save();
 
         return redirect('/admin/server/servers/'.$server->id)->with('success', __('admin.servers.updated', ['server' => $server->name]));

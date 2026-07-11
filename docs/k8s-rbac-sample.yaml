@@ -1,0 +1,62 @@
+# Sample RBAC bootstrap for the direct helm/kubectl "helm_k8s" server manager
+# driver. Creates a narrowly-scoped ServiceAccount — NOT cluster-admin — that
+# can be granted to KumuliCP for a given cluster. Adjust the namespace/role
+# rules to match what your apps actually need.
+#
+# Usage:
+#   kubectl apply -f docs/k8s-rbac-sample.yaml
+#   kubectl create token kumulicp-deployer -n kumulicp-system --duration=87600h
+#
+# Then register a Server in the control panel with interface=helm_k8s using:
+#   - k8s_api_server: the cluster's API server URL (`kubectl cluster-info`)
+#   - k8s_ca_cert: `kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d`
+#   - k8s_auth_type: bearer_token
+#   - k8s_bearer_token: the token created above
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kumulicp-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kumulicp-deployer
+  namespace: kumulicp-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kumulicp-deployer
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["services", "secrets", "configmaps", "persistentvolumeclaims", "pods", "pods/log"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["traefik.io"]
+    resources: ["middlewares"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kumulicp-deployer
+subjects:
+  - kind: ServiceAccount
+    name: kumulicp-deployer
+    namespace: kumulicp-system
+roleRef:
+  kind: ClusterRole
+  name: kumulicp-deployer
+  apiGroup: rbac.authorization.k8s.io

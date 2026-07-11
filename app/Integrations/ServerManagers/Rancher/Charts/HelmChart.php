@@ -23,9 +23,9 @@ abstract class HelmChart extends Chart
         }
     }
 
-    abstract public function values(): array;
-
-    public function buildChart()
+    // The Helm values array for this chart, merged with the plan's additional
+    // configs. Shared by any server-manager driver — not Rancher-specific.
+    public function valuesWithAdditionalConfigs(): array
     {
         $app_instance = Application::instance($this->app_instance);
         $values = $this->values();
@@ -35,6 +35,14 @@ abstract class HelmChart extends Chart
             $key = str_replace('-', '.', $config['name']);
             Arr::set($values, $key, $app_instance->configuration($config['name']));
         }
+
+        return $values;
+    }
+
+    public function buildChart()
+    {
+        $app_instance = Application::instance($this->app_instance);
+        $values = $this->valuesWithAdditionalConfigs();
 
         $chart = [
             'charts' => [
