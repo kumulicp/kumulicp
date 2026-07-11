@@ -17,14 +17,13 @@ class HelmKubernetesProfile
             'general' => [
                 __('admin.servers.helm_k8s.general_1'),
             ],
-            'k8s_api_server' => __('admin.servers.helm_k8s.k8s_api_server'),
-            'k8s_ca_cert' => __('admin.servers.helm_k8s.k8s_ca_cert'),
-            'k8s_tls_verify' => __('admin.servers.helm_k8s.k8s_tls_verify'),
-            'k8s_ingress_class' => __('admin.servers.helm_k8s.k8s_ingress_class'),
-            'k8s_auth_type' => __('admin.servers.helm_k8s.k8s_auth_type'),
-            'k8s_bearer_token' => __('admin.servers.helm_k8s.k8s_bearer_token'),
-            'k8s_client_cert' => __('admin.servers.helm_k8s.k8s_client_cert'),
-            'k8s_client_key' => __('admin.servers.helm_k8s.k8s_client_key'),
+            'host' => __('admin.servers.helm_k8s.host'),
+            'address' => __('admin.servers.helm_k8s.address'),
+            'ca_cert' => __('admin.servers.helm_k8s.ca_cert'),
+            'ip' => __('admin.servers.helm_k8s.ip'),
+            'internal_address' => __('admin.servers.helm_k8s.internal_address'),
+            'api_key' => __('admin.servers.helm_k8s.api_key'),
+            'api_secret' => __('admin.servers.helm_k8s.api_secret'),
             'settings' => __('admin.servers.helm_k8s.settings'),
         ];
     }

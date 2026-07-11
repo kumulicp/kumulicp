@@ -17,12 +17,17 @@ CA_CERT=$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.
 ## 2. Register a Server in the control panel
 
 Admin > Servers > Add Server, type `web`, interface `helm_k8s`. On the edit
-page, fill in:
+page, fill in (see `HelmKubernetesProfile::description()` for the full field
+mapping — this driver reuses the generic Server fields rather than adding
+dedicated columns):
 
-- **Kubernetes API Server**: `$API_SERVER`
-- **Cluster CA Certificate**: `$CA_CERT`
-- **Authentication Method**: Bearer Token
-- **ServiceAccount Token**: `$TOKEN`
+- **Address**: `$API_SERVER` (the Kubernetes API server URL)
+- **CA Certificate**: `$CA_CERT`
+- **Api Secret**: `$TOKEN` (the ServiceAccount token — this field holds the
+  bearer token when `k8s_auth_type` is `bearer_token`)
+- **Settings** (JSON): `{"k8s_auth_type": "bearer_token"}`
+- **Host**/**IP**/**Internal Address**: not used by this driver, any value
+  is fine
 
 Requires the `helm` and `kubectl` binaries to be on `$PATH` for the process
 running the control panel (or set `HELM_BINARY_PATH`/`KUBECTL_BINARY_PATH`).

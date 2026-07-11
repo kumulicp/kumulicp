@@ -50,15 +50,19 @@ return [
         ],
         'helm_k8s' => [
             'general_1' => 'Connects directly to a Kubernetes cluster using helm and kubectl — no Rancher required. Works with any standard cluster (vanilla Kubernetes, EKS, GKE, AKS, k3s, etc).',
-            'k8s_api_server' => 'The Kubernetes API server URL, e.g. https://cluster.example.com:6443. Find it via `kubectl cluster-info` or your cloud provider\'s console.',
-            'k8s_ca_cert' => 'The cluster\'s CA certificate (PEM). Not secret — it only verifies the API server\'s identity. From `certificate-authority-data` in a kubeconfig (base64-decoded) or your provider\'s console.',
-            'k8s_tls_verify' => 'Verify the API server\'s TLS certificate against the CA above. Only disable for local/dev clusters with self-signed certificates you cannot otherwise verify.',
-            'k8s_ingress_class' => 'The ingress controller installed on this cluster, if any. Set to "traefik" to enable domain-redirect support (uses Traefik\'s Middleware CRD). Leave blank, or set to another value (e.g. "nginx"), to skip redirect-rule management.',
-            'k8s_auth_type' => 'How KumuliCP authenticates to the cluster: "Bearer Token" (a Kubernetes ServiceAccount token — recommended) or "Client Certificate" (mutual TLS).',
-            'k8s_bearer_token' => 'The ServiceAccount token used to authenticate. Create one with `kubectl create token <service-account>` or a long-lived Secret-backed token. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
-            'k8s_client_cert' => 'Client certificate (PEM) for mutual TLS authentication. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
-            'k8s_client_key' => 'Private key (PEM) matching the client certificate above. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
-            'settings' => 'Additional driver settings (JSON), e.g. "storage_class" to override the cluster\'s default StorageClass for app data volumes.',
+            'host' => 'Not used by this driver — any value is fine (e.g. the same as the API Server Address below).',
+            'address' => 'The Kubernetes API server URL, e.g. https://cluster.example.com:6443. Find it via `kubectl cluster-info` or your cloud provider\'s console.',
+            'ca_cert' => 'The cluster\'s CA certificate (PEM). Not secret — it only verifies the API server\'s identity. From `certificate-authority-data` in a kubeconfig (base64-decoded) or your provider\'s console.',
+            'ip' => 'Not used by this driver.',
+            'internal_address' => 'Not used by this driver.',
+            'api_key' => 'Meaning depends on the "k8s_auth_type" setting below. Bearer Token auth: not used, any value is fine. Client Certificate auth: the client private key (PEM). Stored encrypted; not shown again after saving — leave blank to keep the current value.',
+            'api_secret' => 'Meaning depends on the "k8s_auth_type" setting below. Bearer Token auth: the ServiceAccount token (create with `kubectl create token <service-account>` or a long-lived Secret-backed token). Client Certificate auth: the client certificate (PEM). Stored encrypted; not shown again after saving — leave blank to keep the current value.',
+            'settings' => 'Additional driver settings (JSON). Use this template: { "k8s_auth_type": "bearer_token", "k8s_tls_verify": "true", "k8s_ingress_class": "traefik", "k8s_impersonate_user": "", "k8s_impersonate_group": "", "storage_class": "" }.
+        "k8s_auth_type": "bearer_token" (recommended) or "client_cert" — controls how the Api Key/Api Secret fields above are interpreted.
+        "k8s_tls_verify": "true" or "false" (default true) — verify the API server\'s TLS certificate against the CA Certificate field. Only set to "false" for local/dev clusters with self-signed certificates you cannot otherwise verify.
+        "k8s_ingress_class": the ingress controller installed on this cluster, if any. Set to "traefik" to enable domain-redirect support (uses Traefik\'s Middleware CRD). Leave unset, or set to another value (e.g. "nginx"), to skip redirect-rule management.
+        "k8s_impersonate_user" / "k8s_impersonate_group": optional Kubernetes user/group impersonation.
+        "storage_class": optional StorageClass name to use for app data volumes, overriding the cluster default.',
         ],
         'servers' => 'Servers',
         'added' => ':server added',
@@ -68,18 +72,7 @@ return [
         'is_default' => 'Server is set as default',
         'chart' => 'Chart',
         'leaveBlankToKeep' => 'Leave blank to keep the current value',
-        'k8sApiServer' => 'Kubernetes API Server',
-        'k8sCaCert' => 'Cluster CA Certificate',
-        'k8sTlsVerify' => 'Verify TLS Certificate',
-        'k8sIngressClass' => 'Ingress Class',
-        'k8sAuthType' => 'Authentication Method',
-        'k8sAuthTypeBearerToken' => 'Bearer Token',
-        'k8sAuthTypeClientCert' => 'Client Certificate',
-        'k8sBearerToken' => 'ServiceAccount Token',
-        'k8sClientCert' => 'Client Certificate',
-        'k8sClientKey' => 'Client Private Key',
-        'k8sImpersonateUser' => 'Impersonate User (optional)',
-        'k8sImpersonateGroup' => 'Impersonate Group (optional)',
+        'caCert' => 'CA Certificate',
     ],
     'denied' => 'You must be an administrator to continue',
     'applications' => [
