@@ -19,6 +19,7 @@ class DeleteBackups
                     ->orWhereNull('delete_at');
             })
             ->whereNull('deleted_at')
+            ->orderByDesc('completed_at')
             ->get();
 
         $delete_intervals = [];
@@ -26,10 +27,11 @@ class DeleteBackups
 
         foreach ($backups as $backup) {
             if (is_null($backup->delete_at) && $backup->backup_schedule?->recurring_backup?->delete_interval === 'backups') {
-                $delete_intervals[$backup->scheduled_backup_id] = Arr::get($delete_intervals, $backup->scheduled_backup_id, $backup->backup_schedule->recurring_backup->delete_after);
-                $backup_ignores[$backup->scheduled_backup_id] = Arr::get($delete_ignores, $backup->scheduled_backup_id, 0) + 1;
+                $recurring_backup_id = $backup->backup_schedule->recurring_backup_id;
+                $delete_intervals[$recurring_backup_id] = Arr::get($delete_intervals, $recurring_backup_id, $backup->backup_schedule->recurring_backup->delete_after);
+                $delete_ignores[$recurring_backup_id] = Arr::get($delete_ignores, $recurring_backup_id, 0) + 1;
 
-                if ($backup_ignores[$backup->scheduled_backup_id] <= $delete_intervals[$backup->scheduled_backup_id]) {
+                if ($delete_ignores[$recurring_backup_id] <= $delete_intervals[$recurring_backup_id]) {
                     continue;
                 }
             }
