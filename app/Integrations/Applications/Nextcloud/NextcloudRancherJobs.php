@@ -6,6 +6,7 @@ use App\Actions\Apps\ApplicationUpdate;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
 use App\Ldap\Actions\Dn;
 use App\Support\Facades\Action;
+use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
 
 class NextcloudRancherJobs extends NextcloudJobChart
@@ -19,11 +20,7 @@ class NextcloudRancherJobs extends NextcloudJobChart
                 "php /var/www/html/occ config:system:set overwrite.cli.url --value=\"https://$NEXTCLOUD_TRUSTED_DOMAINS\"",
                 "php /var/www/html/occ config:system:set trusted_domains 1 --value=\"$NEXTCLOUD_TRUSTED_DOMAINS\"]",
             ],
-            // env: [
-            //     ['name' => 'IS_PROXY', 'value' => 'true'],
-            //     ['name' => 'NEXTCLOUD_TRUSTED_DOMAINS', 'value' => $this->app_instance->domain()],
-            //     ['name' => 'REWRITE_BASE', 'value' => '/'],
-            // ]
+            env: [],
         );
 
         Action::execute(new ApplicationUpdate($this->app_instance));
@@ -33,7 +30,9 @@ class NextcloudRancherJobs extends NextcloudJobChart
 
     public function updateSettings()
     {
-        $NEXTCLOUD_TRUSTED_DOMAINS = $this->app_instance->domain();
+        $app_instance = Application::instance($this->app_instance);
+        $NEXTCLOUD_TRUSTED_DOMAINS = $app_instance->domain();
+        $sso_server = $app_instance->server('sso')?->serverInfo();
         $sso_slug = $app_instance->setting('sso.slug') ?? "{$app_instance->id}-{$this->organization->slug}-{$app_instance->name}";
         $this->run(
             command: ['/bin/sh', '-c'],
@@ -43,7 +42,7 @@ class NextcloudRancherJobs extends NextcloudJobChart
             ],
             env: [
                 ['name' => 'IS_PROXY', 'value' => 'true'],
-                ['name' => 'NEXTCLOUD_TRUSTED_DOMAINS', 'value' => $this->app_instance->domain()],
+                ['name' => 'NEXTCLOUD_TRUSTED_DOMAINS', 'value' => $app_instance->domain()],
                 ['name' => 'REWRITE_BASE', 'value' => '/'],
                 ['name' => 'USE_SSO', 'value' => (string) $app_instance->configuration('enable-sso')],
                 ['name' => 'OIDC_CLIENT_ID', 'value' => $app_instance->configuration('enable-sso') ? Crypt::decryptString($app_instance->setting('sso_client_id')) : ''],

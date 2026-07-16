@@ -13,13 +13,15 @@ use App\OrgServer;
 
 class DomainMiddlewareService
 {
+    private Middleware $middleware;
+
+    private Ingress $ingress;
+
     public function __construct(
         private Organization $organization,
         private OrgServer $server,
         private AppInstance $app_instance,
-        ?Chart $chart = null,
     ) {
-        $this->chart = $chart;
         $this->middleware = new Middleware($organization, $server);
         $this->ingress = new Ingress($organization, $server);
     }

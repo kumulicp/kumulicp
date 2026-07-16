@@ -10,6 +10,9 @@ use App\Support\AccountManager\UserManager;
 use App\User as UserModel;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * @mixin \App\User
+ */
 class User extends UserManager
 {
     private $permissions;
@@ -168,7 +171,7 @@ class User extends UserManager
 
     public function __set($property, $value)
     {
-        return $this->user->$property = $value;
+        $this->user->$property = $value;
     }
 
     public function __call($method, $args)

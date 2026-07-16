@@ -29,19 +29,22 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public UserManager $user;
 
-    public function __construct(UserManager $user)
+    private LdapAccountUser $ldapUser;
+
+    public function __construct(LdapAccountUser $user)
     {
         $this->organization = $user->organization();
-        if ($user instanceof LdapAccountUser && is_a($user->get(), EmailUser::class)) {
+        if (is_a($user->get(), EmailUser::class)) {
             $user = new LdapAccountUser(LdapUser::find($user->getDn()));
         }
 
         $this->user = $user;
+        $this->ldapUser = $user;
     }
 
     public function roles()
     {
-        $groups = $this->user->groups()->get();
+        $groups = $this->ldapUser->groups()->get();
         $applications_ou = OrganizationalUnit::find(Dn::create($this->organization, 'applications'));
         foreach ($groups as $group) {
             if ($group->isDescendantOf($applications_ou) && $group->getParentDn() != $applications_ou->getDn()) {
@@ -106,8 +109,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
     {
         $role_group = LdapSupport::getAppRoleGroup($app_instance, $role);
 
-        if ($role_group && ! $this->user->groups()->exists($role_group)) {
-            $this->user->groups()->attach($role_group);
+        if ($role_group && ! $this->ldapUser->groups()->exists($role_group)) {
+            $this->ldapUser->groups()->attach($role_group);
             Arr::set($this->roles, $role->slug, $role_group->getDn());
 
             $this->addChange('add', $app_instance, $role);
@@ -118,8 +121,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
     {
         $role_group = LdapSupport::getAppRoleGroup($app_instance, $role);
 
-        if ($role_group && $this->user->groups()->exists($role_group)) {
-            $this->user->groups()->detach($role_group);
+        if ($role_group && $this->ldapUser->groups()->exists($role_group)) {
+            $this->ldapUser->groups()->detach($role_group);
             Arr::set($this->roles, $role, $role_group->getDn());
 
             $this->addChange('remove', $app_instance, $role);
@@ -128,8 +131,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function hasAppStandardAccess(AppInstance $app_instance)
     {
-        $app_name = $this->LdapSupport::getAppInstanceID($app_instance);
-        $app_role_count = $this->user->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
+        $app_name = LdapSupport::getAppInstanceID($app_instance);
+        $app_role_count = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
 
         return $app_instance->application->access_type == 'standard' && $app_role_count > 0;
     }
@@ -147,7 +150,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         if ($this->hasControlPanelAccess()) {
             $type = 'standard';
         } else {
-            $roles = $this->user->groups()->in(Dn::create($this->organization, 'applications'))->get();
+            $roles = $this->ldapUser->groups()->in(Dn::create($this->organization, 'applications'))->get();
             foreach ($roles as $role) {
                 if ($role->appRole()) {
                     if ($type != 'basic' && $role->appRoleAccessType()->value == 'minimal') {
@@ -162,8 +165,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
             }
         }
 
-        $this->user->setAttribute('employeeType', $type);
-        $this->user->save();
+        $this->ldapUser->setAttribute('employeeType', $type);
+        $this->ldapUser->save();
     }
 
     /**
@@ -171,32 +174,32 @@ class Permissions extends PermissionsManager implements PermissionsContract
      */
     public function hasControlPanelAccess()
     {
-        return $this->user->groups()->exists(LdapSupport::orgAdminGroup());
+        return $this->ldapUser->groups()->exists(LdapSupport::orgAdminGroup());
     }
 
     public function addControlPanelAccess(?User &$user = null, ?Organization $organization = null, bool $verified = false)
     {
         $organization = ($organization?->is($this->organization) || $organization?->parent_organization_id === $this->organization->id) ? $organization : $this->organization;
-        $guid = LdapSupport::guid($this->user->get());
+        $guid = LdapSupport::guid($this->ldapUser->get());
 
         if ($user) {
             $user->guid = $guid;
             $user->save();
         } else {
             // If user trashed, restore
-            $user = User::withTrashed()->where('guid', $guid)->orWhere('email', $this->user->getFirstAttribute('mail'))->first();
+            $user = User::withTrashed()->where('guid', $guid)->orWhere('email', $this->ldapUser->getFirstAttribute('mail'))->first();
             if ($user && $user->trashed()) {
                 $user->restore();
             }
             // If user doesn't exist in database, create user
             elseif (! $user) {
                 $user = new User;
-                $user->name = $this->user->getFirstAttribute('displayName');
-                $user->email = $this->user->getFirstAttribute('mail');
+                $user->name = $this->ldapUser->getFirstAttribute('displayName');
+                $user->email = $this->ldapUser->getFirstAttribute('mail');
                 $user->guid = $guid;
-                $user->username = $this->user->getFirstAttribute('cn');
-                $user->first_name = $this->user->getFirstAttribute('givenName');
-                $user->last_name = $this->user->getFirstAttribute('sn');
+                $user->username = $this->ldapUser->getFirstAttribute('cn');
+                $user->first_name = $this->ldapUser->getFirstAttribute('givenName');
+                $user->last_name = $this->ldapUser->getFirstAttribute('sn');
                 $user->password = Hash::make(Str::random(32));
             }
         }
@@ -208,7 +211,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         $user->is_allowed = true;
         $user->save();
 
-        LdapSupport::orgAdminGroup()->members()->attach($this->user->get());
+        LdapSupport::orgAdminGroup()->members()->attach($this->ldapUser->get());
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();
@@ -228,9 +231,9 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeControlPanelAccess()
     {
-        $db_user = User::where('guid', LdapSupport::guid($this->user->get()))->delete();
+        $db_user = User::where('guid', LdapSupport::guid($this->ldapUser->get()))->delete();
 
-        LdapSupport::orgAdminGroup()->members()->detach($this->user->get());
+        LdapSupport::orgAdminGroup()->members()->detach($this->ldapUser->get());
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();
@@ -250,7 +253,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function addBillingManagerAccess()
     {
-        LdapSupport::billingManagersGroup($this->organization)->members()->attach($this->user->get());
+        LdapSupport::billingManagersGroup($this->organization)->members()->attach($this->ldapUser->get());
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => true,
@@ -262,7 +265,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeBillingManagerAccess()
     {
-        LdapSupport::billingManagersGroup($this->organization)->members()->detach($this->user->get());
+        LdapSupport::billingManagersGroup($this->organization)->members()->detach($this->ldapUser->get());
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => false,
@@ -276,7 +279,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
     {
         $admin = LdapGroup::find(Dn::create('server', 'controlPanelAccess', 'admin'));
 
-        return $this->user->groups()->exists($admin);
+        return $this->ldapUser->groups()->exists($admin);
     }
 
     public function addControlPanelAdminAccess(?User &$user = null)
@@ -287,7 +290,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         // Add user to admin group
         $admin_group = LdapGroup::find($admin_group);
 
-        $admin_group->members()->attach($this->user->get());
+        $admin_group->members()->attach($this->ldapUser->get());
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();
@@ -301,7 +304,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function removeControlPanelAdminAccess()
     {
         $organization = LdapGroup::find(Dn::create('server', 'controlPanelAccess', 'admin'));
-        $organization->members()->detach($this->user->get());
+        $organization->members()->detach($this->ldapUser->get());
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();

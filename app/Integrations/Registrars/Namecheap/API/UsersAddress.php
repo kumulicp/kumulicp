@@ -6,7 +6,7 @@ use App\Integrations\Registrars\Namecheap\Namecheap;
 
 class UsersAddress extends Namecheap
 {
-    public function create($sld, $tld, $nameserver, $ip)
+    public function create($address_name, $email_address, $first_name, $last_name, $address_1, $city, $state_province, $state_province_choice, $zip, $country, $phone)
     {
         $this->command = 'namecheap.users.address.create';
         $this->parameters = [
@@ -26,7 +26,7 @@ class UsersAddress extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function delete($address_id)
+    public function delete($address_id, $data = [])
     {
         $this->command = 'namecheap.users.address.delete';
         $this->parameters = [
@@ -67,7 +67,7 @@ class UsersAddress extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function update($address_id, $address_name)
+    public function update($address_id, $address_name, $email_address, $first_name, $last_name, $address_1, $city, $state_province, $state_province_choice, $zip, $country, $phone)
     {
         $this->command = 'namecheap.users.address.update';
         $this->parameters = [
