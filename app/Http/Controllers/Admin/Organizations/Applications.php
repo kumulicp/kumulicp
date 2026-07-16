@@ -53,6 +53,8 @@ class Applications extends Controller
 
     public function show(Organization $organization, AppInstance $app)
     {
+        $app->load(['web_server.server', 'database_server.server', 'sso_server.server']);
+
         return inertia()->render('Admin/Organizations/Apps/AppView', [
             'organization' => [
                 'id' => $organization->id,
@@ -73,6 +75,15 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
             ],
+            'servers' => collect([
+                'web' => $app->web_server,
+                'database' => $app->database_server,
+                'sso' => $app->sso_server,
+            ])->filter()->map(fn ($org_server, $type) => [
+                'type' => $type,
+                'id' => $org_server->server->id,
+                'name' => $org_server->server->name,
+            ])->values(),
             'breadcrumbs' => [
                 [
                     'label' => __('admin.organizations.organizations'),

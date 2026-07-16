@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
-import { useForm } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
 
 </script>
@@ -64,6 +64,20 @@ import AppsLayout from './AppsLayout.vue'
         </va-list-item-label>
       </va-list-item-section>
     </va-list-item>
+    <va-list-separator class="my-1" fit />
+
+    <va-list-item v-for="server in servers" :key="server.type" class="py-3">
+      <va-list-item-section label>
+        <va-list-item-label>
+          <h5>{{ $t('admin.servers.' + server.type) }}</h5>
+        </va-list-item-label>
+      </va-list-item-section>
+      <va-list-item-section>
+        <va-list-item-label>
+          <Link :href="'/admin/server/servers/' + server.id">{{ server.name }}</Link>
+        </va-list-item-label>
+      </va-list-item-section>
+    </va-list-item>
   </va-list>
 </template>
 
@@ -75,7 +89,8 @@ export default {
   props: {
     app: Object,
     organization: Object,
-    versions: Object
+    versions: Object,
+    servers: Array
   },
   data () {
     const settings = this.app.settings ? JSON.stringify(this.app.settings, '', 2) : '{}'

@@ -2,6 +2,7 @@
 
 namespace App\Integrations\SSO\Authentik;
 
+use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Integration;
 use App\Organization;
 use App\OrgServer;
@@ -16,7 +17,13 @@ class Authentik extends Integration
 
     public function basePath()
     {
-        return $this->org_server->server->address;
+        $address = $this->org_server->server->address;
+
+        if (! $address) {
+            throw new ConnectionFailedException(__('messages.exception.sso_not_ready', ['reason' => __('messages.exception.no_server_address', ['server' => $this->org_server->server->name])]));
+        }
+
+        return $address;
     }
 
     public function headers()

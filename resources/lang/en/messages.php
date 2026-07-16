@@ -35,6 +35,7 @@ return [
         'no_server_interface' => ':server interface doesn\'t exist',
         'no_security_tool' => ':tool security scan tool is not registered',
         'no_connection' => 'Unable to connect to :server',
+        'no_server_address' => 'Server :server has no address configured',
         'sso_not_ready' => 'SSO not ready: :reason',
         'http_error' => 'HTTP error',
         'curl_error' => 'CURL error',

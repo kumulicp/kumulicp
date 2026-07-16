@@ -35,6 +35,7 @@ return [
         'no_server_interface' => 'La interfaz del servidor :server no existe',
         'no_security_tool' => 'La herramienta de escaneo de seguridad :tool no está registrada',
         'no_connection' => 'No se puede conectar a :server',
+        'no_server_address' => 'El servidor :server no tiene una dirección configurada',
         'sso_not_ready' => 'SSO no está listo: :reason',
         'http_error' => 'Error HTTP',
         'curl_error' => 'Error de CURL',
