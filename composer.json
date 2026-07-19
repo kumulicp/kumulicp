@@ -1,4 +1,16 @@
 {
+    "repositories": [
+        {
+            "name": "kumulicp",
+            "type": "composer",
+            "url": "https://plugins.kumuli.dev",
+            "options": {
+                "ssl": {
+                    "verify_peer": true
+                }
+            }
+        }
+    ],
     "require": {
         "php": "^8.4",
         "api-ecosystem-for-laravel/dingo-api": "^4.2.0",

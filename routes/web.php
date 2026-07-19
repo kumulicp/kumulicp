@@ -138,8 +138,15 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('security/scans')->group(function () {
                 Route::get('', 'Admin\SecurityScans@index')->name('security.scans.index');
                 Route::post('', 'Admin\SecurityScans@store')->name('security.scans.store');
+                Route::get('apps', 'Admin\SecurityScans@apps')->name('security.scans.apps');
+                Route::get('apps/{app_instance}/domains', 'Admin\SecurityScans@appDomains')->name('security.scans.app_domains');
+                Route::get('custom-domains', 'Admin\SecurityScans@customDomains')->name('security.scans.custom_domains.index');
+                Route::post('custom-domains', 'Admin\SecurityScans@storeCustomDomain')->name('security.scans.custom_domains.store');
+                Route::get('custom-namespaces', 'Admin\SecurityScans@customNamespaces')->name('security.scans.custom_namespaces.index');
+                Route::post('custom-namespaces', 'Admin\SecurityScans@storeCustomNamespace')->name('security.scans.custom_namespaces.store');
                 Route::get('{scan}', 'Admin\SecurityScans@show')->name('security.scans.show');
                 Route::delete('{scan}', 'Admin\SecurityScans@destroy')->name('security.scans.destroy');
+                Route::patch('{scan}/findings/{finding}', 'Admin\SecurityScans@updateFinding')->name('security.scans.findings.update');
             });
             Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups');
             Route::prefix('backup_scheduler/recurring')->group(function () {

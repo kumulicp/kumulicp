@@ -198,6 +198,13 @@ return [
         'rawOutput' => 'Raw Output',
         'scan_started' => 'Security scan started',
         'scan_deleted' => 'Security scan deleted',
+        'targets_required' => 'Select at least one domain to scan.',
+        'severity_required' => 'Select at least one severity to scan for.',
+        'app' => 'App',
+        'appDomains' => 'Connected Domains',
+        'customDomains' => 'Other Domains',
+        'addCustomDomain' => 'Add Domain',
+        'customDomainPlaceholder' => 'example.com',
         'tool_descriptions' => [
             'kube-hunter' => 'Hunts for security weaknesses by probing the cluster from inside a pod, the way an attacker who already has network access would. Good for finding exposed APIs, open ports, and other attack-surface issues.',
             'kube-bench' => 'Checks whether the cluster is configured according to the CIS Kubernetes Benchmark, a set of security best practices for control plane and node configuration.',

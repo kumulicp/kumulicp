@@ -27,6 +27,10 @@ class Pod extends Rancher
 
         $logs_url = $address.'/api/v1/namespaces/'.$namespace.'/pods/'.$pod_name.'/log';
 
+        // Integration's default 10s timeout is fine for typical API calls but
+        // nowhere near enough to pull a large scan report's worth of pod
+        // logs (seen timing out past 28MB received on a real trivy scan).
+        $this->timeout = 120.0;
         $this->raw()->ignoreErrorCode(404)->get($logs_url);
         $response = $this->response();
 

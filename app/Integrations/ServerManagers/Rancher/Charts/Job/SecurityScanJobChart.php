@@ -9,7 +9,7 @@ class SecurityScanJobChart extends JobChart
 {
     public $chart = [];
 
-    public function __construct(public string $tool, public string $namespace_name)
+    public function __construct(public string $tool, public string $namespace_name, public array $targets = [], public array $options = [])
     {
         $this->name = "security-scan-{$tool}-".Str::lower(Str::random(8));
         $this->namespace = $this->namespace_name;
@@ -48,14 +48,14 @@ class SecurityScanJobChart extends JobChart
                         'containers' => [[
                             'name' => 'security-scan',
                             'image' => $profile->image(),
-                            'command' => $profile->command(),
+                            'command' => $profile->command($this->targets, $this->options),
                             'imagePullPolicy' => 'Always',
                             'terminationMessagePath' => '/dev/termination-log',
                             'terminationMessagePolicy' => 'File',
                         ]],
                         'dnsPolicy' => 'ClusterFirst',
                         'restartPolicy' => 'Never',
-                        'serviceAccountName' => 'default',
+                        'serviceAccountName' => 'kumulicp-security-scan',
                         'terminationGracePeriodSeconds' => 30,
                     ],
                 ],
