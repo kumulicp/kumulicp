@@ -21,7 +21,7 @@ class RunSecurityScan extends Action
 
     public $replace = true;
 
-    public function __construct(private OrgServer $org_server, private string $tool, private SecurityScan $security_scan)
+    public function __construct(private OrgServer $org_server, private string $tool, private SecurityScan $security_scan, private array $targets = [], private array $options = [])
     {
         $this->organization = $org_server->organization;
         $this->description = "Security scan ({$tool}) on {$org_server->organization->slug}";
@@ -30,6 +30,8 @@ class RunSecurityScan extends Action
             'org_server_id' => $org_server->id,
             'security_scan_id' => $security_scan->id,
             'tool' => $tool,
+            'targets' => $targets,
+            'options' => $options,
         ]);
     }
 
@@ -38,15 +40,17 @@ class RunSecurityScan extends Action
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $tool = $task->getValue('tool');
         $security_scan = SecurityScan::find($task->getValue('security_scan_id'));
+        $targets = $task->getValue('targets') ?? [];
+        $options = $task->getValue('options') ?? [];
 
         $namespace = $org_server->organization->slug;
-        $chart = (new SecurityScanJobChart($tool, $namespace))->run();
+        $chart = (new SecurityScanJobChart($tool, $namespace, $targets, $options))->run();
 
         $job = new Job($org_server->organization, $org_server);
         $job->setNamespace($namespace);
         $response = $job->create($chart);
 
-        $run = new self($org_server, $tool, $security_scan);
+        $run = new self($org_server, $tool, $security_scan, $targets, $options);
 
         if ($response) {
             $security_scan->status = 'running';
@@ -82,10 +86,21 @@ class RunSecurityScan extends Action
 
         $pod = new Pod($task->organization, $org_server);
         $pod->setNamespace($namespace);
-        $raw_output = $pod->logsForJob($job_name);
+
+        try {
+            $raw_output = $pod->logsForJob($job_name);
+        } catch (\Throwable $exception) {
+            $error_message = 'Failed to retrieve scan job logs: '.$exception->getMessage();
+            $security_scan->fail($error_message);
+            $task->error_message = $error_message;
+            $task->status = 'failed';
+            $task->save();
+
+            return;
+        }
 
         if ($raw_output) {
-            $security_scan->raw_output = $raw_output;
+            $security_scan->raw_output = self::truncateRawOutput($raw_output);
             $security_scan->save();
         }
 
@@ -116,9 +131,12 @@ class RunSecurityScan extends Action
                 'severity' => Arr::get($finding, 'severity', 'info'),
                 'title' => Arr::get($finding, 'title', 'Untitled finding'),
                 'category' => Arr::get($finding, 'category'),
+                'resource_type' => Arr::get($finding, 'resource_type'),
+                'resource_name' => Arr::get($finding, 'resource_name'),
                 'description' => Arr::get($finding, 'description'),
                 'remediation' => Arr::get($finding, 'remediation'),
                 'rule_id' => Arr::get($finding, 'rule_id'),
+                'metadata' => Arr::get($finding, 'metadata'),
             ]);
         }
 
@@ -129,11 +147,31 @@ class RunSecurityScan extends Action
         $task->groupNotified();
     }
 
+    /**
+     * Some tools (Kubescape in particular) can emit reports well into the
+     * tens of megabytes for a large cluster, which is unusable to store and
+     * display as-is. Findings are already parsed from the full, untruncated
+     * output before this runs - this only bounds what's kept for the raw
+     * output preview shown in the scan report.
+     */
+    private static function truncateRawOutput(string $raw_output): string
+    {
+        $limit = 500 * 1024;
+
+        if (strlen($raw_output) <= $limit) {
+            return $raw_output;
+        }
+
+        return substr($raw_output, 0, $limit)."\n\n[... output truncated, ".number_format(strlen($raw_output))." bytes total]";
+    }
+
     public static function retry(Task $task)
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $security_scan = SecurityScan::find($task->getValue('security_scan_id'));
-        $retry = new self($org_server, $task->getValue('tool'), $security_scan);
+        $targets = $task->getValue('targets') ?? [];
+        $options = $task->getValue('options') ?? [];
+        $retry = new self($org_server, $task->getValue('tool'), $security_scan, $targets, $options);
         $retry->status = 'ready';
 
         return $retry;

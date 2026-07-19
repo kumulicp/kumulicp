@@ -23,12 +23,17 @@ class NucleiParser implements Parser
 
             $info = $event['info'] ?? [];
 
+            $description = $info['description'] ?? null;
+            if ($matched_at = $event['matched-at'] ?? null) {
+                $description = trim("Matched at: {$matched_at}\n\n".($description ?? ''));
+            }
+
             $findings[] = [
                 'severity' => strtolower($info['severity'] ?? 'info'),
                 'title' => $info['name'] ?? ($event['template-id'] ?? 'Nuclei finding'),
                 'category' => implode(',', $info['tags'] ?? []) ?: null,
-                'description' => $event['matched-at'] ?? null,
-                'remediation' => $info['remediation'] ?? null,
+                'description' => $description,
+                'remediation' => $info['remediation'] ?? (! empty($info['reference']) ? 'See: '.implode(', ', (array) $info['reference']) : null),
                 'rule_id' => $event['template-id'] ?? null,
             ];
         }
