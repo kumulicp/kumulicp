@@ -70,7 +70,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('view-suborganizations', function (User $user) {
             return ! $user->organization->parent_organization
-                && $user->organization->plan->setting('suborganizations.enabled') ?? false
+                && $user->organization->plan->setting('suborganizations.enabled')
                 ? Response::allow()
                 : Response::deny();
         });
@@ -147,7 +147,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('add-additional-storage', function (User $user) {
             $organization = $user->organization;
-            $base_plan = Subscription::base($organization);
+            $base_plan = Subscription::base();
 
             return $organization->status != 'deactivated' && $organization->plan && ! $base_plan->isMax('storage');
         });
@@ -162,7 +162,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('view-app', function (User $user, Application $app) {
             $organization = $user->organization;
-            $base_plan = Subscription::base($organization);
+            $base_plan = Subscription::base();
 
             return $base_plan->appEnabled($app);
         });
@@ -170,7 +170,7 @@ class AuthServiceProvider extends ServiceProvider
         /* APPS */
         Gate::define('activate-app', function (User $user, Application $app) {
             $organization = $user->organization;
-            $subscription = $organization->children ? new JointSubscriptionService($organization) : Subscription::access();
+            $subscription = $organization->suborganizations()->exists() ? new JointSubscriptionService($organization) : Subscription::access();
             $base_plan = Subscription::base();
 
             $plans_with_higher_app_limit = $subscription->isAppLimitReached($app);
@@ -251,7 +251,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('add-user', function (User $user) {
             $organization = $user->organization;
-            $maxed = Subscription::base($organization)->isMax('standard');
+            $maxed = Subscription::base()->isMax('standard');
 
             return $organization->status !== 'deactivated' && ! $maxed
                 ? Response::allow()
@@ -268,7 +268,7 @@ class AuthServiceProvider extends ServiceProvider
 
             return ($belongs_to_organization && $user->organization->status != 'deactivated')
                 ? Response::allow()
-                : Response::deny(__('organization.user.denied.edit', ['name' => $user_manager?->attribute('name')]));
+                : Response::deny(__('organization.user.denied.edit', ['name' => $user_manager->attribute('name')]));
         });
 
         Gate::define('delete-user', function (User $user, ?UserManager $user_manager = null) {
@@ -289,7 +289,7 @@ class AuthServiceProvider extends ServiceProvider
 
             return (! $user_manager->permissions()->hasControlPanelAdminAccess())
                 ? Response::allow()
-                : Response::deny(__('organization.user.denied.delete_admin', ['name' => $user_manager?->attribute('name')]));
+                : Response::deny(__('organization.user.denied.delete_admin', ['name' => $user_manager->attribute('name')]));
         });
 
         Gate::define('add-app-user', function (User $user, AppInstance $app_instance) {
@@ -307,8 +307,7 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('update-standard-user', function (User $user, UserManager $user_manager) {
             $plan = Subscription::base();
 
-            return $user_manager
-                && $user->organization->status !== 'deactivated'
+            return $user->organization->status !== 'deactivated'
                 && $plan
                 && (! $plan->isMax('standard') || $user_manager->userAccessType() === 'standard');
         });
@@ -316,8 +315,7 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('update-basic-user', function (User $user, UserManager $user_manager) {
             $plan = Subscription::base();
 
-            return $user_manager
-                && $user->organization->status !== 'deactivated'
+            return $user->organization->status !== 'deactivated'
                 && $plan
                 && (! $plan->isMax('basic') || $user_manager->userAccessType() === 'basic');
         });
@@ -327,8 +325,7 @@ class AuthServiceProvider extends ServiceProvider
                 $plan = Subscription::app_instance($app_instance);
             }
 
-            return $user_manager
-                && $user->organization->status !== 'deactivated'
+            return $user->organization->status !== 'deactivated'
                 && $app_instance->belongsToOrganization($user->organization)
                 && $plan
                 && (! $plan->isMax('standard')
@@ -341,11 +338,10 @@ class AuthServiceProvider extends ServiceProvider
                 $plan = Subscription::app_instance($app_instance); // TODO Need to remove refresh, without it, there are problems with Pest testing
             }
 
-            return $user_manager
-                && $user->organization->status !== 'deactivated'
+            return $user->organization->status !== 'deactivated'
                 && $app_instance->belongsToOrganization($user->organization)
                 && $plan
-                && $plan && $plan->isBasicUsersEnabled()
+                && $plan->isBasicUsersEnabled()
                 && (! $plan->isMax('basic')
                     || $user_manager->appUserAccessType($app_instance) == 'basic'
                 );

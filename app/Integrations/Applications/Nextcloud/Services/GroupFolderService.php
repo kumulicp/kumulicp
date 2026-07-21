@@ -15,6 +15,8 @@ class GroupFolderService
 
     public $group_name;
 
+    public AdditionalStorageService $additional_storage;
+
     public function __construct(AppInstance $app_instance, string $group_name)
     {
         $this->group_folder = new GroupFolders($app_instance);

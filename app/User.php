@@ -28,6 +28,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read \App\Organization|null $organization
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\UserSsoAccount> $ssoAccounts
+ * @property-read \Illuminate\Database\Eloquent\Relations\Pivot $pivot
  */
 class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEmail
 {

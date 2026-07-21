@@ -5,6 +5,10 @@ namespace App\Ldap\Models;
 use LdapRecord\Models\Model;
 use LdapRecord\Models\OpenLDAP\Entry;
 
+/**
+ * @property array|string|null $cn
+ * @property array|string|null $userPassword
+ */
 class Admin extends Entry
 {
     /**

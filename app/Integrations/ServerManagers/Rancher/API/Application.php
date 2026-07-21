@@ -44,7 +44,7 @@ class Application extends Rancher
 
         $url = $address."/v1/catalog.cattle.io.clusterrepos/$repo_name?action=upgrade";
 
-        $data = $chart->buildChart($app_instance);
+        $data = $chart->buildChart();
         $response = $this->json()->post($url, $data);
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
@@ -82,7 +82,7 @@ class Application extends Rancher
         $application = $app_instance->application;
         $address = $this->org_server->server->address;
 
-        $data = $chart->buildChart($app_instance);
+        $data = $chart->buildChart();
 
         $url = "$address/v1/catalog.cattle.io.apps/$namespace/$app_name?action=uninstall";
 

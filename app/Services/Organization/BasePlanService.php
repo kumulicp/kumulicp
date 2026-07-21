@@ -17,6 +17,15 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
+/**
+ * Proxies undeclared property/method access to the underlying Plan model via __get/__call.
+ *
+ * @property int $id
+ * @property array|null $app_plans
+ *
+ * @method array appPlansList(Application $app)
+ * @method mixed setting(string $setting)
+ */
 class BasePlanService
 {
     private $plan;

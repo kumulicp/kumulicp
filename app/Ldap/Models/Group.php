@@ -11,6 +11,11 @@ use Illuminate\Support\Arr;
 use LdapRecord\Models\Attributes\DistinguishedName;
 use LdapRecord\Models\Model;
 
+/**
+ * @property array|string|null $cn
+ * @property array|string|null $description
+ * @property array|string|null $member
+ */
 class Group extends Model
 {
     private $organization;

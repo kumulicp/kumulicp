@@ -2,4 +2,15 @@
 
 namespace App\Integrations\Applications;
 
-class AppFeature {}
+use App\AppInstance;
+
+class AppFeature
+{
+    public $name = '';
+
+    public $label = '';
+
+    public $description = '';
+
+    public ?AppInstance $app_instance = null;
+}

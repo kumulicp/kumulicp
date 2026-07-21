@@ -14,6 +14,8 @@ abstract class UserManager
 
     abstract public function organization();
 
+    abstract public function permissions();
+
     abstract public function userAccessType();
 
     abstract public function appUserAccessType(AppInstance $app_instance);

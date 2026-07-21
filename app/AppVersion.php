@@ -15,6 +15,7 @@ use Illuminate\Support\Arr;
  * @property array $roles
  * @property array $settings
  * @property-read \App\Application $application
+ * @property-read \App\PullSecret|null $pullSecret
  */
 class AppVersion extends Model
 {
