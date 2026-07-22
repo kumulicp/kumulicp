@@ -17,7 +17,6 @@ function makeCompletedBackup(Organization $organization, RecurringBackup $recurr
     $schedule = BackupSchedule::create([
         'recurring_backup_id' => $recurringBackup->id,
         'scheduled_at' => $completedAt,
-        'status' => 'completed',
     ]);
 
     return OrgBackup::create([

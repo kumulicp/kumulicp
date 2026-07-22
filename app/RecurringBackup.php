@@ -25,6 +25,19 @@ class RecurringBackup extends Model
 
     protected $table = 'recurring_backups';
 
+    protected $fillable = [
+        'server_id',
+        'organization_id',
+        'application_id',
+        'recurrence',
+        'type',
+        'time',
+        'delete_after',
+        'delete_interval',
+        'status',
+        'last_scheduled_at',
+    ];
+
     public function server()
     {
         return $this->belongsTo('App\Server', 'server_id');
