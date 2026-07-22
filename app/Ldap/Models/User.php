@@ -35,7 +35,7 @@ class User extends Entry implements Authenticatable
     {
         $provider = config('auth.guards.web.provider');
         $object_classes = config("auth.providers.$provider.user_object_classes");
-        if ($object_classes && $object_classes !== '') {
+        if ($object_classes) {
             self::$objectClasses = explode(',', $object_classes);
         }
     }
@@ -175,7 +175,7 @@ class User extends Entry implements Authenticatable
         $group_dns = config("auth.providers.$provider.groups") ?? [];
         $groups = explode('|', $group_dns);
 
-        if ($group_dns && count($groups) > 0) {
+        if ($group_dns) {
             foreach ($groups as $group) {
                 if ($this->groups()->exists($group)) {
                     return true;

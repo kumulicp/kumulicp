@@ -15,6 +15,8 @@ class GroupFolderService
 
     public $group_name;
 
+    public AdditionalStorageService $additional_storage;
+
     public function __construct(AppInstance $app_instance, string $group_name)
     {
         $this->group_folder = new GroupFolders($app_instance);
@@ -80,9 +82,7 @@ class GroupFolderService
     {
         $this->group_folder->updateMountPoint($name);
 
-        if ($this->additional_storage) {
-            $this->additional_storage->updateName($name);
-        }
+        $this->additional_storage->updateName($name);
     }
 
     public function updateQuota($quantity)

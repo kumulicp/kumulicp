@@ -24,10 +24,6 @@ class DeckAddon extends AppFeature
 
     public $action = ManageAddon::class;
 
-    public string $label;
-
-    public string $description;
-
     public function __construct()
     {
         $this->label = __('actions.nextcloud.deck_addon');

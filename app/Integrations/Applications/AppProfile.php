@@ -6,6 +6,8 @@ use Illuminate\Support\Arr;
 
 class AppProfile
 {
+    protected $name = '';
+
     protected $sidecars = [];
 
     protected $envs = [];
@@ -15,6 +17,8 @@ class AppProfile
     protected $configurations = [];
 
     protected $roles = [];
+
+    protected $role_groups = [];
 
     protected $recommendations = [];
 

@@ -2,6 +2,8 @@
 
 namespace App\Ldap\Models;
 
+use Illuminate\Notifications\Notification;
+
 class EmailUser extends User
 {
     /**
@@ -17,13 +19,11 @@ class EmailUser extends User
 
     protected string $guidKey = 'entryUUID';
 
-    private $organization;
-
     public function __construct()
     {
         $provider = config('auth.guards.web.provider');
         $object_classes = config("auth.providers.$provider.email_user_object_classes");
-        if ($object_classes && $object_classes !== '') {
+        if ($object_classes) {
             self::$objectClasses = explode(',', $object_classes);
         }
     }

@@ -4,7 +4,7 @@ namespace App\Contracts\AccountManager;
 
 use App\AppInstance;
 
-interface UserInterface extends UserManager
+interface UserInterface
 {
     public function get();
 
@@ -31,8 +31,6 @@ interface UserInterface extends UserManager
     public function appStorage(AppInstance $app_instance);
 
     public function addToDefaultUserGroups(?iterable $appInstances = null);
-
-    private function removeFromAllGroups();
 
     public function save();
 

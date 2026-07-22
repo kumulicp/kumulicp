@@ -6,11 +6,13 @@ use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-class HelmChart extends Chart
+abstract class HelmChart extends Chart
 {
     public $app_storage;
 
     public $delete_method = 'remove';
+
+    public $chart_name = '';
 
     public function chartName()
     {
@@ -20,6 +22,8 @@ class HelmChart extends Chart
             return $this->format($this->app_instance->setOverrideIfEmpty("chart.{$this->chart_name}.name", $this->name));
         }
     }
+
+    abstract public function values(): array;
 
     public function buildChart()
     {

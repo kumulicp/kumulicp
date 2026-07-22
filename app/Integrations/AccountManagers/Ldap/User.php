@@ -16,6 +16,9 @@ use App\User as DbUser;
 use LdapRecord\Container;
 use LdapRecord\Models\OpenLDAP\Entry;
 
+/**
+ * @mixin \App\Ldap\Models\User
+ */
 class User extends UserManager
 {
     private $permissions;

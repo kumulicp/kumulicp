@@ -3,6 +3,7 @@
 namespace App\Contracts\AccountManager;
 
 use App\AppInstance;
+use App\User;
 
 interface UsersInterface
 {

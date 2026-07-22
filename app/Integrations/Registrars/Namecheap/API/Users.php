@@ -3,7 +3,6 @@
 namespace App\Integrations\Registrars\Namecheap\API;
 
 use App\Integrations\Registrars\Namecheap\Namecheap;
-use Illuminate\Support\Facades\Crypt;
 
 class Users extends Namecheap
 {
@@ -43,6 +42,7 @@ class Users extends Namecheap
                         $product_attributes = $product->attributes();
 
                         $product_name = (string) $product_attributes['Name'];
+                        $prices = [];
 
                         foreach ($product->Price as $price) {
                             $price_attributes = $price->attributes();
@@ -95,7 +95,7 @@ class Users extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function update($sld, $tld)
+    public function update($sld, $tld, $first_name, $last_name, $address_1, $city, $state_province, $zip, $country, $email_address, $phone)
     {
         $this->command = 'namecheap.users.update';
         $this->parameters = [
@@ -113,7 +113,7 @@ class Users extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function createAddFundsRequest($domain_name)
+    public function createAddFundsRequest($username, $payment_type, $amount, $return_url)
     {
         $this->command = 'namecheap.users.createaddfundsrequest';
         $this->parameters = [
@@ -136,28 +136,24 @@ class Users extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function create()
+    public function create($password, $email_address, $first_name, $last_name, $address_1, $city, $state_province, $zip, $country, $phone)
     {
         $organization = $this->organization;
-        $namecheap = $this->namecheap;
-        $this->username = null;
-
-        $password = Crypt::decryptString($namecheap->password);
 
         $this->command = 'namecheap.users.create';
         $this->parameters = [
             'NewUserName' => $organization->slug,
             'NewUserPassword' => $password,
-            'EmailAddress' => $namecheap->email_address,
-            'FirstName' => $namecheap->first_name,
-            'LastName' => $namecheap->last_name,
+            'EmailAddress' => $email_address,
+            'FirstName' => $first_name,
+            'LastName' => $last_name,
             'AcceptTerms' => 1,
-            'Address1' => $namecheap->address_1,
-            'City' => $namecheap->city,
-            'StateProvince' => $namecheap->state_province,
-            'Zip' => $namecheap->zip,
-            'Country' => $namecheap->country,
-            'Phone' => $namecheap->phone,
+            'Address1' => $address_1,
+            'City' => $city,
+            'StateProvince' => $state_province,
+            'Zip' => $zip,
+            'Country' => $country,
+            'Phone' => $phone,
         ];
 
         $this->form()->post($this->basePath(), $this->postParameters());
@@ -165,8 +161,6 @@ class Users extends Namecheap
 
     public function login($password)
     {
-        $this->username = $this->organization->namecheap->username;
-
         $this->command = 'namecheap.users.login';
         $this->parameters = [
             'Password' => $password,
@@ -175,7 +169,7 @@ class Users extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function resetPassword($domain_name, $hosts)
+    public function resetPassword($find_by, $find_by_value)
     {
         $this->command = 'namecheap.users.resetPassword';
         $this->parameters = [

@@ -11,10 +11,6 @@ class Nextcloud extends Application
 
     public $expected_response = 'xml';
 
-    private $active_group_folder_id = null;
-
-    private $active_group_folder = null;
-
     protected $base_path = '/ocs/v1.php/cloud';
 
     public function basePath()
@@ -42,15 +38,17 @@ class Nextcloud extends Application
             $body = (object) simplexml_load_string($response);
 
             // Check for XML formatting errors
-            if (libxml_get_errors()) {
-                foreach (libxml_get_errors() as $xml_error) {
+            $libxml_errors = libxml_get_errors();
+            if ($libxml_errors) {
+                $xml_errors = [];
+                foreach ($libxml_errors as $xml_error) {
                     $xml_errors[] = $xml_error->message;
                 }
 
                 $this->setError(json_encode($xml_errors), 'response_format', false);
             }
 
-            if (is_object($body) && property_exists($body, 'meta')) {
+            if (property_exists($body, 'meta')) {
                 if ($body->meta->status == 'ok') {
                     $this->setResponse($body->data);
                 } elseif ($body->meta->status == 'failure') {
@@ -111,9 +109,11 @@ class Nextcloud extends Application
         ]);
     }
 
-    public function array_to_xml($data)
+    public function array_to_xml($data, ?\SimpleXMLElement $xml_data = null)
     {
-        $xml_data = new \SimpleXMLElement('<?xml version="1.0"?><data></data>');
+        if ($xml_data === null) {
+            $xml_data = new \SimpleXMLElement('<?xml version="1.0"?><data></data>');
+        }
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 if (is_numeric($key)) {

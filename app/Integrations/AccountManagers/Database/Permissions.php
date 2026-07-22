@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\AppRole;
 use App\Contracts\AccountManager\PermissionsContract;
 use App\Enums\AccessType;
+use App\Integrations\AccountManagers\Database\User as DatabaseUser;
 use App\Organization;
 use App\Support\AccountManager\PermissionsManager;
 use App\Support\AccountManager\UserManager;
@@ -14,24 +15,24 @@ use Illuminate\Support\Arr;
 
 class Permissions extends PermissionsManager implements PermissionsContract
 {
-    private $roles = [];
+    public UserManager $user;
 
-    private $add_application = null;
+    private DatabaseUser $databaseUser;
 
-    private $remove_application = null;
-
-    private $permissions = [];
-
-    public function __construct(public UserManager $user) {}
+    public function __construct(DatabaseUser $user)
+    {
+        $this->user = $user;
+        $this->databaseUser = $user;
+    }
 
     public function roles()
     {
-        return $this->user->roles;
+        return $this->databaseUser->roles;
     }
 
     public function groups()
     {
-        return $this->user->groups;
+        return $this->databaseUser->groups;
     }
 
     public function appPermissions(AppInstance $app_instance)
@@ -41,13 +42,13 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function updateUserAccessType()
     {
-        if ($this->user->hasRole(['control_panel_admin', 'organization_admin'])) {
-            $this->user->access_type = AccessType::STANDARD;
+        if ($this->databaseUser->hasRole(['control_panel_admin', 'organization_admin'])) {
+            $this->databaseUser->access_type = AccessType::STANDARD;
         } else {
-            $this->user->access_type = AccessType::NONE;
+            $this->databaseUser->access_type = AccessType::NONE;
         }
 
-        $this->user->save();
+        $this->databaseUser->save();
     }
 
     public function updateAppRoles(AppInstance $app_instance, array $roles = []) {}
@@ -64,19 +65,19 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function hasControlPanelAccess()
     {
-        return $this->user->is_allowed;
+        return $this->databaseUser->is_allowed;
     }
 
     public function addControlPanelAccess(?User &$user = null, ?Organization $organization = null, bool $verified = false)
     {
-        $this->user->assignRole('organization_admin');
-        $this->user->is_allowed = true;
-        $this->user->save();
+        $this->databaseUser->assignRole('organization_admin');
+        $this->databaseUser->is_allowed = true;
+        $this->databaseUser->save();
 
         $this->updateUserAccessType();
 
         if ($organization) {
-            $user = $this->user->get();
+            $user = $this->databaseUser->get();
             $user->organization()->associate($organization);
             if ($verified) {
                 $user->email_verified_at = now();
@@ -94,9 +95,9 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeControlPanelAccess()
     {
-        $this->user->removeRole('organization_admin');
-        $this->user->is_allowed = false;
-        $this->user->save();
+        $this->databaseUser->removeRole('organization_admin');
+        $this->databaseUser->is_allowed = false;
+        $this->databaseUser->save();
 
         $this->updateUserAccessType();
 
@@ -110,7 +111,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function addBillingManagerAccess()
     {
-        $this->user->assignRole('billing_manager');
+        $this->databaseUser->assignRole('billing_manager');
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => true,
@@ -122,7 +123,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeBillingManagerAccess()
     {
-        $this->user->removeRole('billing_manager');
+        $this->databaseUser->removeRole('billing_manager');
 
         Arr::set($this->changes, 'access.control_panel', [
             'access' => false,
@@ -134,13 +135,13 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function hasControlPanelAdminAccess()
     {
-        return $this->user->hasRole('control_panel_admin');
+        return $this->databaseUser->hasRole('control_panel_admin');
     }
 
     public function addControlPanelAdminAccess(?User &$user = null)
     {
-        $this->user->assignRole('control_panel_admin');
-        $user = $this->user->get();
+        $this->databaseUser->assignRole('control_panel_admin');
+        $user = $this->databaseUser->get();
         $user->email_verified_at = now();
         $user->save();
 
@@ -154,7 +155,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function removeControlPanelAdminAccess()
     {
-        $this->user->removeRole('control_panel_admin');
+        $this->databaseUser->removeRole('control_panel_admin');
 
         $this->updateUserAccessType();
 

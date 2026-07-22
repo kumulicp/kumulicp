@@ -42,6 +42,6 @@ class TalkAddon extends AppFeature
 
     public function status(AppInstance $app_instance)
     {
-        return $app_instance ? ($app_instance->setting('features.spreed.status') == 'enabled') : false;
+        return $app_instance->setting('features.spreed.status') == 'enabled';
     }
 }

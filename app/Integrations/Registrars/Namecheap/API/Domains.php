@@ -23,6 +23,8 @@ class Domains extends Namecheap
 
         $domains_response = $this->response_content()->DomainGetListResult;
 
+        $domains = [];
+
         foreach ($domains_response->Domain as $domain) {
             $attributes = $domain->attributes();
 
@@ -59,12 +61,12 @@ class Domains extends Namecheap
         $organization = $domain->organization;
 
         if ($domain->status != 'registering') {
-            $this->error = "Domain isn't registered";
+            $this->setError("Domain isn't registered", 'domain_not_registering');
 
             return;
         }
         if ($extended_attributes === false) {
-            $this->error = __('organization.domain.denied.extended_attributes');
+            $this->setError(__('organization.domain.denied.extended_attributes'), 'extended_attributes_denied');
 
             return;
         }
@@ -161,6 +163,8 @@ class Domains extends Namecheap
 
         $this->form()->post($this->basePath(), $this->postParameters());
 
+        $tlds = [];
+
         foreach ($this->response_content()->Tlds->Tld as $tld) {
             $attributes = $tld->attributes();
 
@@ -201,50 +205,60 @@ class Domains extends Namecheap
         return $tlds;
     }
 
-    public function setContacts($domain_name)
+    public function setContacts(OrgDomain $domain, $extended_attributes = '')
     {
+        $organization = $domain->organization;
+
+        $phone = str_replace(' ', '', $domain->country_phone_code).'.'.str_replace('-', '', $domain->phone);
+
         $this->command = 'namecheap.domains.SetContacts';
         $this->parameters = [
-            'DomainName' => $domain_name,
-            'Years' => $years,
-            'RegistrantFirstName' => $registrant_first_name,
-            'RegistrantLastName' => $registrant_last_name,
-            'RegistrantAddress1' => $registrant_address_1,
-            'RegistrantCity' => $registrant_city,
-            'RegistrantStateProvince' => $registrant_state_province,
-            'RegistrantPostalCode' => $registrant_postal_code,
-            'RegistrantCountry' => $registrant_country,
-            'RegistrantPhone' => $registrant_phone,
-            'RegistrantEmailAddress' => $registrant_email_address,
-            'TechFirstName' => $tech_first_name,
-            'TechLastName' => $tech_last_name,
-            'TechAddress1' => $tech_address_1,
-            'TechCity' => $tech_city,
-            'TechStateProvince' => $tech_province,
-            'TechPostalCode' => $tech_postal_code,
-            'TechCountry' => $tech_country,
-            'TechPhone' => $tech_phone,
-            'TechEmailAddress' => $tech_email_address,
-            'AdminFirstName' => $admin_first_name,
-            'AdminLastName' => $admin_last_name,
-            'AdminAddress1' => $admin_address_1,
-            'AdminCity' => $admin_city,
-            'AdminStateProvince' => $admin_state_province,
-            'AdminPostalCode' => $admin_postal_code,
-            'AdminCountry' => $admin_country,
-            'AdminPhone' => $admin_phone,
-            'AdminEmailAddress' => $admin_email_address,
-            'AuxBillingFirstName' => $aux_first_name,
-            'AuxBillingLastName' => $aux_last_name,
-            'AuxBillingAddress1' => $aux_address1,
-            'AuxBillingCity' => $aux_city,
-            'AuxBillingStateProvince' => $aux_province,
-            'AuxBillingPostalCode' => $aux_postal_code,
-            'AuxBillingCountry' => $aux_country,
-            'AuxBillingPhone' => $aux_phone,
-            'AuxBillingEmailAddress' => $aux_email_address,
-            'Extended attributes' => $extended_attributes,
+            'DomainName' => $domain->name,
+            'RegistrantOrganizationName' => $organization->name,
+            'RegistrantFirstName' => $domain->first_name,
+            'RegistrantLastName' => $domain->last_name,
+            'RegistrantAddress1' => $domain->address_1,
+            'RegistrantCity' => $domain->city,
+            'RegistrantStateProvince' => $domain->state_province,
+            'RegistrantPostalCode' => $domain->postal_code,
+            'RegistrantCountry' => $domain->country,
+            'RegistrantPhone' => $phone,
+            'RegistrantEmailAddress' => $domain->email_address,
+            'TechOrganizationName' => $organization->name,
+            'TechFirstName' => $domain->first_name,
+            'TechLastName' => $domain->last_name,
+            'TechAddress1' => $domain->address_1,
+            'TechCity' => $domain->city,
+            'TechStateProvince' => $domain->state_province,
+            'TechPostalCode' => $domain->postal_code,
+            'TechCountry' => $domain->country,
+            'TechPhone' => $phone,
+            'TechEmailAddress' => $domain->email_address,
+            'AdminOrganizationName' => $organization->name,
+            'AdminFirstName' => $domain->first_name,
+            'AdminLastName' => $domain->last_name,
+            'AdminAddress1' => $domain->address_1,
+            'AdminCity' => $domain->city,
+            'AdminStateProvince' => $domain->state_province,
+            'AdminPostalCode' => $domain->postal_code,
+            'AdminCountry' => $domain->country,
+            'AdminPhone' => $phone,
+            'AdminEmailAddress' => $domain->email_address,
+            'AuxBillingOrganizationName' => $organization->name,
+            'AuxBillingFirstName' => $domain->first_name,
+            'AuxBillingLastName' => $domain->last_name,
+            'AuxBillingAddress1' => $domain->address_1,
+            'AuxBillingCity' => $domain->city,
+            'AuxBillingStateProvince' => $domain->state_province,
+            'AuxBillingPostalCode' => $domain->postal_code,
+            'AuxBillingCountry' => $domain->country,
+            'AuxBillingPhone' => $phone,
+            'AuxBillingEmailAddress' => $domain->email_address,
         ];
+
+        if (is_array($extended_attributes)) {
+            $this->parameters = array_merge($this->parameters, $extended_attributes);
+        }
 
         $this->form()->post($this->basePath(), $this->postParameters());
     }

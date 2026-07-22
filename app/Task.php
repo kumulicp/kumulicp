@@ -81,19 +81,15 @@ class Task extends Model
         switch ($format) {
             case 'json':
                 return $this->custom_values;
-                break;
 
             case 'object':
                 return (object) $this->custom_values;
-                break;
 
             case 'array':
-                return is_array($this->custom_values) ? $this->custom_values : json_decode($this->custom_values, true);
-                break;
+                return is_array($this->custom_values) ? $this->custom_values : [];
 
             default:
                 return $this->custom_values;
-                break;
         }
 
     }

@@ -2,16 +2,10 @@
 
 namespace App\Integrations\ServerManagers\Empty\Interfaces;
 
-use App\AppInstance;
-use App\Contracts\DatabaseInterface;
-use App\OrgServer;
+use App\Contracts\ServerManager\DatabaseContract;
 
-class EmptyDatabaseInterface implements DatabaseInterface
+class EmptyDatabaseInterface implements DatabaseContract
 {
-    private $database = '';
-
-    public function __construct(OrgServer $server, private ?AppInstance $app_instance = null) {}
-
     public function existsOrganization()
     {
         return true;

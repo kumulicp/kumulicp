@@ -4,6 +4,9 @@ namespace App\Ldap\Models;
 
 use LdapRecord\Models\Model;
 
+/**
+ * @property array|string|null $ou
+ */
 class OrganizationalUnit extends Model
 {
     /**

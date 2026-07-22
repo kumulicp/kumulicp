@@ -149,7 +149,7 @@ class AppInstance extends Model
     {
         return $this->organization_id === $organization->id
                 || $this->organization?->parent_organization_id === $organization->id
-                || $this->organization?->parent_organization_id === $organization->parent_domain_id;
+                || $this->organization?->parent_organization_id === $organization->parent_organization_id;
     }
 
     public function appNameIncludingChildApps()

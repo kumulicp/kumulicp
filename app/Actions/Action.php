@@ -31,6 +31,8 @@ class Action
 
     public $organization;
 
+    public $slug = '';
+
     protected $application;
 
     protected $version;

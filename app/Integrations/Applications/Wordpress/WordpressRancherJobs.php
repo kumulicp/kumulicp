@@ -7,6 +7,7 @@ use App\Actions\Apps\ApplicationUpgrade;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
 use App\Ldap\Actions\Dn;
 use App\Support\Facades\Action;
+use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
 
 class WordpressRancherJobs extends WordpressJobChart
@@ -32,7 +33,7 @@ class WordpressRancherJobs extends WordpressJobChart
 
     public function updateSettings()
     {
-        $secretpw = $this->organization->parent_organization?->secretpw ?? $this->organization->secretpw;
+        $secretpw = $this->organization->parent_organization->secretpw ?? $this->organization->secretpw;
         $ldap_group_dn = Dn::create($this->organization, 'applications', $this->app_instance->name);
         $ldap_admin_dn = 'cn=admin,'.Dn::create($this->organization);
         $ldap_users_dn = Dn::create($this->organization, 'users');
@@ -70,10 +71,10 @@ class WordpressRancherJobs extends WordpressJobChart
 
         $default_settings = [
             ['name' => 'APP_URL', 'value' => $this->app_instance->address()],
-            ['name' => 'NO_REPLY_HOST', 'value' => env('MAIL_HOST')],
-            ['name' => 'NO_REPLY_PORT', 'value' => env('MAIL_PORT')],
-            ['name' => 'NO_REPLY_PASSWORD', 'value' => env('MAIL_PASSWORD')],
-            ['name' => 'NO_REPLY_EMAIL', 'value' => env('MAIL_FROM_ADDRESS')],
+            ['name' => 'NO_REPLY_HOST', 'value' => config('mail.mailers.smtp.host')],
+            ['name' => 'NO_REPLY_PORT', 'value' => config('mail.mailers.smtp.port')],
+            ['name' => 'NO_REPLY_PASSWORD', 'value' => config('mail.mailers.smtp.password')],
+            ['name' => 'NO_REPLY_EMAIL', 'value' => config('mail.from.address')],
             ['name' => 'NO_REPLY_DOMAIN', 'value' => $no_reply_domain],
             ['name' => 'LDAP_GROUP_DN', 'value' => $ldap_group_dn],
             ['name' => 'LDAP_URI', 'value' => $ldap_uri],
