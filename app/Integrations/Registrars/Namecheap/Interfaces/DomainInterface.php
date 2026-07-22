@@ -42,10 +42,7 @@ class DomainInterface extends DomainManager implements RegistrarDomainContract
         $domains_transfer = new DomainsTransfer($this->domain->organization);
         $response = $domains_transfer->create($this->domain->name, $epp_code);
         if ($domains_transfer->hasError()) {
-            $task->status = 'failed';
-            $task->error_message = $domains_transfer->error();
-            $task->error_code = 'domain_transfer_failed';
-            $task->save();
+            throw new \Exception($domains_transfer->error());
         }
 
         if (array_key_exists('Transfer', $response) && $response['Transfer'] == true) {
@@ -79,17 +76,17 @@ class DomainInterface extends DomainManager implements RegistrarDomainContract
     {
         $max_years = count($this->pricing()->renewPrices());
 
-        $expires = Carbon::createFromDate($this->domain->expires_at);
+        $expires = Carbon::parse($this->domain->expires_at);
 
-        return $max_years - $expires->diffInYears(Carbon::now());
+        return (int) ($max_years - $expires->diffInYears(Carbon::now()));
     }
 
     public function reactivate(): array
     {
         $domains = new Domains($this->domain->organization);
-        $domains->reactivate($domain_name);
+        $domains->reactivate($this->domain->name);
 
-        $price = $domains->reactivatePrice();
+        $price = $this->pricing()->reactivatePrice();
 
         return [
             'price' => $price,
