@@ -24,6 +24,23 @@ class OrgBackup extends Model
 
     protected $table = 'org_backups';
 
+    protected $fillable = [
+        'organization_id',
+        'scheduled_backup_id',
+        'app_instance_id',
+        'org_server_id',
+        'job_id',
+        'backup_name',
+        'action',
+        'source',
+        'type',
+        'settings',
+        'status',
+        'scheduled_at',
+        'completed_at',
+        'delete_at',
+    ];
+
     public function organization()
     {
         return $this->belongsTo(Organization::class, 'organization_id');

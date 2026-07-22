@@ -17,6 +17,11 @@ class BackupSchedule extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'recurring_backup_id',
+        'scheduled_at',
+    ];
+
     protected $cast = [
         'scheduled_at' => 'datetime',
     ];
