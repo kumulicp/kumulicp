@@ -15,7 +15,7 @@ class SecurityToolService
 {
     private $tools = [];
 
-    public function __construct(private $app)
+    public function __construct()
     {
         $this->register(new KubeHunterTool);
         $this->register(new KubeBenchTool);

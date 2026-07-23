@@ -51,11 +51,11 @@ class DummyNotification extends Notification implements ShouldQueue
             return (new MailMessage)
                 ->subject($this->task->description.' '.__('labels.success'))
                 ->line(__('messages.notification.dummy.completed'));
-        } elseif ($this->task->status == 'failed') {
-            return (new MailMessage)
-                ->subject($this->task->description.' '.__('labels.failed'))
-                ->line(__('messages.notification.dummy.failed'));
         }
+
+        return (new MailMessage)
+            ->subject($this->task->description.' '.__('labels.failed'))
+            ->line(__('messages.notification.dummy.failed'));
     }
 
     /**
@@ -66,7 +66,7 @@ class DummyNotification extends Notification implements ShouldQueue
      */
     public function toDatabase($notifiable)
     {
-        //
+        return [];
     }
 
     public function toPanel($notifiable)

@@ -36,7 +36,7 @@ class EmailServiceProvider extends ServiceProvider
     {
         Gate::define('view-emails', function (User $user) {
             $organization = $user->organization;
-            $plan = Subscription::all($organization);
+            $plan = Subscription::all();
             $domains = $organization->domains()->active()->emailEnabled()->emailActive()->count();
 
             return $organization->status !== 'deactivated'
@@ -59,7 +59,7 @@ class EmailServiceProvider extends ServiceProvider
 
         Gate::define('add-user-email-account', function (User $user, $organization_user) {
             return $user->organization->status != 'deactivated'
-                && Subscription::base($user->organization)->emailEnabled()
+                && Subscription::base()->emailEnabled()
                 && AccountManager::users()->find($organization_user)->isUserAccessType('standard')
                 ? Response::allow()
                 : Response::deny();
@@ -69,7 +69,7 @@ class EmailServiceProvider extends ServiceProvider
             return $user->organization->status !== 'deactivated'
                 && $domain->organization_id === $user->organization->id
                 && $domain->belongsToOrganization($user->organization)
-                && Subscription::base($user->organization)->emailEnabled()
+                && Subscription::base()->emailEnabled()
                 && AccountManager::users()->find($organization_user)->isUserAccessType('standard')
                 ? Response::allow()
                 : Response::deny(__('organization.user.denied.email_domain'));

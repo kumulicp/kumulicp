@@ -20,8 +20,6 @@ class NextcloudGroupFolderQuotaReached extends Notification implements ShouldQue
 
     private $app_instance;
 
-    private $message;
-
     /**
      * Create a new notification instance.
      *
@@ -32,7 +30,6 @@ class NextcloudGroupFolderQuotaReached extends Notification implements ShouldQue
         $this->organization = $organization;
         $this->app_instance = $app_instance;
         $this->folders = $folders;
-        $this->message = $this->folders;
     }
 
     /**

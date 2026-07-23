@@ -6,6 +6,10 @@ use Illuminate\Contracts\Validation\Rule;
 
 class MainContact implements Rule
 {
+    protected $user;
+
+    protected $organization;
+
     /**
      * Create a new rule instance.
      *
