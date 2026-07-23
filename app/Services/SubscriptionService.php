@@ -58,7 +58,7 @@ class SubscriptionService
 
     public function app_instance(AppInstance $app_instance)
     {
-        if (! Arr::has($this->plans, $app_instance->id)) {
+        if (! array_key_exists($app_instance->id, $this->plans)) {
             $this->add($app_instance->id, $app_instance->plan, $app_instance);
         }
 

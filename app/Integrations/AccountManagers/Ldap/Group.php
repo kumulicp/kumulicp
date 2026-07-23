@@ -14,6 +14,8 @@ class Group extends GroupManager
 {
     private $organization;
 
+    private $auto_save = true;
+
     public function __construct(private LdapGroup $group)
     {
         $this->organization = Organization::account();
@@ -132,10 +134,8 @@ class Group extends GroupManager
 
     public function updateQuota(AppInstance $app_instance, $quantity)
     {
-        if ($this->additionalStorage()) {
-            if ($this->additional_strorage) {
-                $this->additional_storage->updateQuantity($quantity);
-            }
+        if ($additional_storage = $this->additionalStorage($app_instance)) {
+            $additional_storage->updateQuantity($quantity);
         }
     }
 

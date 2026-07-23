@@ -39,7 +39,7 @@ class ProcessPermissions extends Action
         $username = $custom_values['user'];
         $permissions = $custom_values['permission'];
 
-        if (Arr::has($permissions, $task->app_instance->id, null)) {
+        if (array_key_exists($task->app_instance->id, $permissions)) {
             $user = new User($task->app_instance);
 
             $roles = [];

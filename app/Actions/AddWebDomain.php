@@ -61,9 +61,9 @@ class AddWebDomain extends Action
             }
         } catch (Throwable $e) {
             report($e);
-            $this->task->error_message = $e->getMessage();
-            $this->task->status = 'failed';
-            $this->task->save();
+            $task->error_message = $e->getMessage();
+            $task->status = 'failed';
+            $task->save();
         }
     }
 

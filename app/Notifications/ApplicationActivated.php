@@ -14,8 +14,6 @@ class ApplicationActivated extends Notification implements ShouldQueue
 
     private $task;
 
-    private $message;
-
     /**
      * Create a new notification instance.
      *

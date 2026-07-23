@@ -49,7 +49,7 @@ class Connect extends Controller
             ->first();
 
         if ($org_domain) {
-            return redirect('/settings/domains')->where('error', __('organization.domain.denied.registered', ['domain' => $org_domain->name]));
+            return redirect('/settings/domains')->with('error', __('organization.domain.denied.registered', ['domain' => $org_domain->name]));
         }
 
         $domain = Domain::add(organization: $organization, name: $domain_name, source: 'organization', type: 'connection', status: 'active');

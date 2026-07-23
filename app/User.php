@@ -37,7 +37,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'name', 'email', 'password', 'guid', 'locale',
@@ -46,7 +46,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     /**
      * The attributes that should be hidden for arrays.
      *
-     * @var array
+     * @var list<string>
      */
     protected $hidden = [
         'password', 'remember_token',
@@ -55,7 +55,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'access_type' => AccessType::class,
@@ -65,7 +65,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     /**
      * The relationships that should always be loaded.
      *
-     * @var array
+     * @var list<string>
      */
     protected $with = ['organization'];
 

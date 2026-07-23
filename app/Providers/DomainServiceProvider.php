@@ -69,7 +69,7 @@ class DomainServiceProvider extends ServiceProvider
         Gate::define('view-domains', function (User $user) {
             $domains = $user->organization->domains()->where('type', '!=', 'base')->count();
 
-            $organization_subscription_service = Subscription::all($user->organization);
+            $organization_subscription_service = Subscription::all();
 
             // Check if domains are enabled or organization has domains added from a previous subscription
             return ($organization_subscription_service->domainsEnabled() || $domains > 0)
@@ -78,7 +78,7 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('add-domains', function (User $user) {
-            $organization_subscription_service = Subscription::all($user->organization);
+            $organization_subscription_service = Subscription::all();
 
             return $user->organization->status !== 'deactivated'
                 && $organization_subscription_service->domainsEnabled()
@@ -88,7 +88,7 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('connect-domains', function (User $user) {
-            $organization_subscription_service = Subscription::all($user->organization);
+            $organization_subscription_service = Subscription::all();
 
             return $user->organization->status !== 'deactivated'
                 && $organization_subscription_service->domainsEnabled()
@@ -110,7 +110,7 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('register-domains', function (User $user) {
-            $organization_subscription_service = Subscription::all($user->organization);
+            $organization_subscription_service = Subscription::all();
 
             if (! Billing::hasDefaultPaymentMethod()) {
                 return Response::deny(__('organization.denied.payment_method_required'));
@@ -125,7 +125,7 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('transfer-domains', function (User $user) {
-            $organization_subscription_service = Subscription::all($user->organization);
+            $organization_subscription_service = Subscription::all();
 
             if (! Billing::hasDefaultPaymentMethod()) {
                 return Response::deny(__('organization.denied.payment_method_required'));
@@ -156,7 +156,7 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('enable-email-domain', function (User $user, OrgDomain $domain) {
-            $base_subscription = Subscription::base($user->organization);
+            $base_subscription = Subscription::base();
 
             return $user->organization->status !== 'deactivated'
                 && $base_subscription->emailEnabled()

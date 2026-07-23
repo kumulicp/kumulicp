@@ -34,7 +34,7 @@ class Application extends Model
     /**
      * The model's default values for attributes.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected $attributes = [
         'domain_option' => '[]',
@@ -43,7 +43,7 @@ class Application extends Model
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'access_type' => AccessType::class,

@@ -102,6 +102,7 @@ class Suborganization extends Controller
         ]);
 
         $organization = Organization::account();
+        $suborganization = null;
         try {
             // Create organization in database
             $suborganization = new Organization;
@@ -137,8 +138,10 @@ class Suborganization extends Controller
 
         } catch (\Throwable $e) {
             report($e);
-            $suborganization->domains()->delete();
-            $suborganization->delete();
+            if ($suborganization) {
+                $suborganization->domains()->delete();
+                $suborganization->delete();
+            }
             throw new \Exception($e->getMessage());
         }
 

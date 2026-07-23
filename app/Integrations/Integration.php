@@ -29,10 +29,6 @@ class Integration
 
     protected $status_message;
 
-    private $data_type = 'form_params';
-
-    private $cookies = false;
-
     private $cookie_jar = false;
 
     private $client = null;
@@ -45,6 +41,16 @@ class Integration
         }
     }
 
+    public function testing_fakes()
+    {
+        //
+    }
+
+    public function basePath()
+    {
+        return '';
+    }
+
     public function json()
     {
         $this->client()->asJson();
@@ -55,13 +61,6 @@ class Integration
     public function form()
     {
         $this->client()->asForm();
-
-        return $this;
-    }
-
-    public function cookies(bool $cookies = true)
-    {
-        $this->cookies = $cookies;
 
         return $this;
     }
@@ -250,6 +249,8 @@ class Integration
         return $this;
     }
 
+    // Cookies from each response are captured in send() via storeCookies() and replayed
+    // here automatically on the next request; there is no separate opt-in step.
     public function client()
     {
         $settings = collect([

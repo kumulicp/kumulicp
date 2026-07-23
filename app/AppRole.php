@@ -43,14 +43,14 @@ class AppRole extends Model
 
     public function accessType(BasePlanService|AppInstancePlanService|null $subscription = null, ?AppInstance $app = null)
     {
-        $subscription = $subscription ?? Subscription::base()->type === 'package' ? Subscription::base() : Subscription::app_instance($app);
+        $subscription = $subscription ?? (Subscription::base()->type === 'package' ? Subscription::base() : Subscription::app_instance($app));
 
         $access_type = $this->access_type;
         $available_access_types = $subscription->availableAccessTypesList();
         if (($this->access_type === AccessType::BASIC && ! in_array('basic', $available_access_types))
             || ($this->access_type === AccessType::MINIMAL && ! in_array('minimal', $available_access_types) && ! in_array('basic', $available_access_types))) {
             $access_type = AccessType::STANDARD;
-        } elseif ($this->access_type === 'minimal' && ! in_array('minimal', $available_access_types) && in_array('basic', $available_access_types)) {
+        } elseif ($this->access_type === AccessType::MINIMAL && ! in_array('minimal', $available_access_types) && in_array('basic', $available_access_types)) {
             $access_type = AccessType::BASIC;
         }
 

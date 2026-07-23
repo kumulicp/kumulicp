@@ -15,7 +15,6 @@ use App\Integrations\Applications\Wordpress\WordpressProfile;
 use App\Organization;
 use App\OrgSubdomain;
 use App\Services\Application\AppPlanService;
-use App\Support\Facades\Organization as OrgFacade;
 use App\Support\Facades\Subscription;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
@@ -340,9 +339,8 @@ class ApplicationService
 
     public function instance(AppInstance $app_instance)
     {
-        $app_id = is_string($app_instance) ? $app_instance : $app_instance->id;
-        if (! Arr::has($this->instances, $app_id) || ! is_a($this->instances[$app_id], AppInstanceService::class)) {
-            $app_instance = is_string($app_instance) ? OrgFacade::account()->app_instances()->where('name', $app_instance)->first() : $app_instance; // TODO
+        $app_id = $app_instance->id;
+        if (! array_key_exists($app_id, $this->instances) || ! is_a($this->instances[$app_id], AppInstanceService::class)) {
             $this->instances[$app_id] = new AppInstanceService($app_instance);
         }
 

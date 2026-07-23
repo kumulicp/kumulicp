@@ -75,6 +75,7 @@ class BackupRestore extends Controller
             'backup_type' => 'required|string',
             'keep_for' => 'required|integer',
         ]);
+        $app_instance = null;
         if ($validated['backup_type'] == 'email') {
             $org_server = $organization->domains()->where('id', $validated['backup'])->first()->email_server;
         } elseif ($validated['backup_type'] == 'web') {
@@ -93,7 +94,7 @@ class BackupRestore extends Controller
         $scheduled_backup->scheduled_at = $date_time;
         $scheduled_backup->save();
 
-        $backup_server = (new OrgServerService($org_server))->backupServer($validated['backup_type']);
+        $backup_server = (new OrgServerService($org_server))->backupServer();
         $backup = Backup::schedule(
             $scheduled_backup,
             scheduled_at: $date_time,

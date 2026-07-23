@@ -34,11 +34,11 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
         });
 
         $this->app->singleton('server_interfaces', function ($app) {
-            return new ServerInterfaceService($app);
+            return new ServerInterfaceService;
         });
 
         $this->app->singleton('security_tools', function ($app) {
-            return new SecurityToolService($app);
+            return new SecurityToolService;
         });
 
         $this->app->singleton('backups', function ($app) {

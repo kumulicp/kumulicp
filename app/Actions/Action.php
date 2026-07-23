@@ -88,19 +88,15 @@ class Action
         switch ($format) {
             case 'json':
                 return json_encode($this->custom_values);
-                break;
 
             case 'object':
                 return (object) $this->custom_values;
-                break;
 
             case 'array':
                 return $this->custom_values;
-                break;
 
             default:
                 return $this->custom_values;
-                break;
         }
 
     }
@@ -115,19 +111,6 @@ class Action
         $this->app_instance = $app_instance;
 
         return $this;
-    }
-
-    private function custom_values()
-    {
-        if (isset($this->task) && $this->task->custom_values) {
-
-            $decode = json_decode($this->task->custom_values);
-
-            return $decode;
-
-        }
-
-        return null;
     }
 
     public function task_exists()

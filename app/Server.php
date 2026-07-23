@@ -59,7 +59,7 @@ class Server extends Model
 
     public function successfulBaseTests()
     {
-        $plans = $this->base_plans;
+        $plans = $this->base_plans()->get();
         $tests = AccountTest::limit(10)
             ->where('status', 'succeeded')
             ->where(function (Builder $query) use ($plans) {
@@ -107,21 +107,10 @@ class Server extends Model
         return $this->hasMany('App\Plan', $column);
     }
 
-    public function connect(Organization $organization)
-    {
-        $interface = $this->interface;
-
-        return new $inferface($organization);
-    }
-
     public function setting(string $setting)
     {
         if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
+            $settings = $this->settings;
 
             if (array_key_exists($setting, $settings)) {
                 return $settings[$setting];
@@ -133,15 +122,7 @@ class Server extends Model
 
     public function updateSetting($setting, $value)
     {
-        $settings = [];
-
-        if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
-        }
+        $settings = $this->settings ?? [];
 
         $settings[$setting] = $value;
 
