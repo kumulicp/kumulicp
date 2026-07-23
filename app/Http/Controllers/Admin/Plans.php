@@ -137,7 +137,7 @@ class Plans extends Controller
                     'transfer' => $plan->setting('domains.transfer'),
                 ],
             ],
-            'apps' => $apps->map(function ($app) use ($plan) {
+            'apps' => $apps->map(function ($app) {
                 return [
                     'id' => $app->id,
                     'name' => $app->name,

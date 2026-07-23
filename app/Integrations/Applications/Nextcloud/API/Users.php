@@ -54,7 +54,7 @@ class Users extends Nextcloud
             'value' => $value,
         ];
 
-        $this->form()->cookies()->put($this->path, $data);
+        $this->form()->put($this->path, $data);
 
         return $this->response_content();
     }

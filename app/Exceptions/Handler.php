@@ -14,7 +14,7 @@ class Handler extends ExceptionHandler
     /**
      * A list of the exception types that are not reported.
      *
-     * @var array
+     * @var array<int, class-string<Throwable>>
      */
     protected $dontReport = [
         TransportException::class,
@@ -23,7 +23,7 @@ class Handler extends ExceptionHandler
     /**
      * A list of the inputs that are never flashed for validation exceptions.
      *
-     * @var array
+     * @var array<int, string>
      */
     protected $dontFlash = [
         'password',
@@ -54,17 +54,17 @@ class Handler extends ExceptionHandler
     {
         $response = parent::render($request, $exception);
 
-        if (! app()->environment(['local', 'testing']) && in_array($response->status(), [500, 503, 404, 403])) {
+        if (! app()->environment(['local', 'testing']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
             if (Auth::check()) {
-                return inertia('ErrorPage', ['status' => $response->status()])
+                return inertia('ErrorPage', ['status' => $response->getStatusCode()])
                     ->toResponse($request)
-                    ->setStatusCode($response->status());
+                    ->setStatusCode($response->getStatusCode());
             } else {
-                return inertia('UnauthenticatedErrorPage', ['status' => $response->status()])
+                return inertia('UnauthenticatedErrorPage', ['status' => $response->getStatusCode()])
                     ->toResponse($request)
-                    ->setStatusCode($response->status());
+                    ->setStatusCode($response->getStatusCode());
             }
-        } elseif ($response->status() === 419) {
+        } elseif ($response->getStatusCode() === 419) {
             return back()->with([
                 'message' => __('messages.expired'),
             ]);

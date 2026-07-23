@@ -40,8 +40,6 @@ class OrgDomain extends Model
         'registered' => 'boolean',
     ];
 
-    private $tld;
-
     public function organization()
     {
         return $this->belongsTo('App\Organization', 'organization_id');
@@ -113,18 +111,7 @@ class OrgDomain extends Model
     {
         return $this->organization_id === $organization->id
                 || $this->organization?->parent_organization_id === $organization->id
-                || $this->organization?->parent_organization_id === $organization->parent_domain_id;
-    }
-
-    private function standardPrice()
-    {
-        $standard_price = $this->tld->standard_price;
-
-        if (is_float($standard_price) && $standard_price > 0) {
-            return $standard_price;
-        }
-
-        return 0;
+                || $this->organization?->parent_organization_id === $organization->parent_organization_id;
     }
 
     public function registeredAt()
