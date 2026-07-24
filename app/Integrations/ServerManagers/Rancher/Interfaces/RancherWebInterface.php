@@ -123,6 +123,10 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     public function add()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return ApplicationFacade::instance($parent)->connect('web')->update();
+        }
+
         // verify the organization exists is active
         if ($this->existsOrganization()) {
             $this->ensurePullSecret();
@@ -151,6 +155,10 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     public function update()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return ApplicationFacade::instance($parent)->connect('web')->update();
+        }
+
         $this->ensurePullSecret();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
@@ -172,6 +180,17 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     public function delete()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            // Mark deactivated first so the parent's chart-building excludes this
+            // child (e.g. B1ChurchChart filters children via notDeactivated())
+            // before it rebuilds its ingress host list — no Rancher uninstall
+            // to run since this child never had its own release.
+            $this->app_instance->status = 'deactivated';
+            $this->app_instance->save();
+
+            return ApplicationFacade::instance($parent)->connect('web')->update();
+        }
+
         $this->updateRedirectDomains();
 
         $this->app_instance->refresh();

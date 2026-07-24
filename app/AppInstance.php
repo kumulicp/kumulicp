@@ -250,6 +250,18 @@ class AppInstance extends Model
         return $this->canEnableSelfRegistration() && (bool) $this->setting('self_registration_enabled');
     }
 
+    // Distinguishes plan-level shared-app registrations (many orgs, one release —
+    // AppPlan.server_type=shared + global_app_id) from type-level parent apps
+    // (same org, same release, activation_type=job — routed explicitly by the
+    // Actions layer instead). Server managers should reroute add/update/delete
+    // to this parent instead of deploying their own release when this is set.
+    public function sharedPlanParent(): ?self
+    {
+        return $this->parent_id && $this->plan?->setting('server_type') === 'shared'
+            ? $this->parent
+            : null;
+    }
+
     public function canEnableSelfRegistration(): bool
     {
         return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;
