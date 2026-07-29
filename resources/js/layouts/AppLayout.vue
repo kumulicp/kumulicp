@@ -48,7 +48,7 @@ router.on('success', () => {
   }
   if (page.props.notices.error) {
     toast.init({
-      message: page.props.notices.error[1],
+      message: page.props.notices.error,
       customClass: 'success-toast',
       color: 'danger',
       duration: 10000
@@ -58,7 +58,7 @@ router.on('success', () => {
 router.on('error', () => {
   if (page.props.notices.error) {
     toast.init({
-      message: page.props.notices.error[1],
+      message: page.props.notices.error,
       customClass: 'success-toast',
       color: 'danger',
       duration: 10000
