@@ -90,4 +90,20 @@ class Chart
 
         return $sidecars;
     }
+
+    // The names of any imagePullSecrets required to pull the application's container image
+    public function imagePullSecrets(): array
+    {
+        if (! isset($this->app_instance)) {
+            return [];
+        }
+
+        $version = $this->app_instance->version;
+
+        if ($version && $version->requiresPullSecret()) {
+            return [$version->pullSecret->k8sSecretName()];
+        }
+
+        return [];
+    }
 }

@@ -18,6 +18,10 @@ class Job extends Rancher
 
         $data = $job->chart;
 
+        if ($pull_secrets = $job->imagePullSecrets()) {
+            Arr::set($data, 'spec.template.spec.imagePullSecrets', array_map(fn ($name) => ['name' => $name], $pull_secrets));
+        }
+
         $this->json()->post($url, $data);
         $response = $this->response();
 

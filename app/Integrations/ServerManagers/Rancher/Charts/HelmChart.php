@@ -112,16 +112,4 @@ abstract class HelmChart extends Chart
 
         return $version->setting('image_registry');
     }
-
-    // The names of any imagePullSecrets required to pull the application's container image
-    public function imagePullSecrets(): array
-    {
-        $version = $this->app_instance->version;
-
-        if ($version->requiresPullSecret()) {
-            return [$version->pullSecret->k8sSecretName()];
-        }
-
-        return [];
-    }
 }
