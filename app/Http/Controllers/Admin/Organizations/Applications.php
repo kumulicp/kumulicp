@@ -107,8 +107,10 @@ class Applications extends Controller
     public function edit(Organization $organization, AppInstance $app)
     {
         $versions = AppVersion::where('application_id', $app->application_id)
-            ->where('name', '>', $app->version->name)
-            ->get();
+            ->get()
+            ->filter(fn ($version) => version_compare($version->name, $app->version->name, '>'))
+            ->sort(fn ($a, $b) => version_compare($a->name, $b->name))
+            ->values();
 
         return inertia()->render('Admin/Organizations/Apps/AppEdit', [
             'organization' => [
