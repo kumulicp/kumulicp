@@ -56,6 +56,7 @@ class DeleteBackups
                     $response = $backup_interface->delete();
 
                     $backup->job_id = $response['job_id'];
+                    $backup->status = 'deleting';
                     $backup->save();
                 } catch (\Throwable $e) {
                     report($e);

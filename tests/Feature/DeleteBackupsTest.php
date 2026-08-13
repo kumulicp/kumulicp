@@ -62,6 +62,35 @@ it('deletes backups beyond the configured count across multiple scheduled runs',
     // The 2 oldest backups should have had delete() called on them.
     expect($backups[0]->fresh()->job_id)->toBe('job-123');
     expect($backups[1]->fresh()->job_id)->toBe('job-123');
+    expect($backups[0]->fresh()->status)->toBe('deleting');
+    expect($backups[1]->fresh()->status)->toBe('deleting');
+});
+
+it('does not redispatch delete for a backup already awaiting deletion confirmation', function () {
+    $organization = Organization::factory()->create();
+    $server = Server::factory()->create();
+
+    $recurringBackup = RecurringBackup::create([
+        'server_id' => $server->id,
+        'organization_id' => $organization->id,
+        'delete_after' => 0,
+        'delete_interval' => 'backups',
+        'status' => 'active',
+        'time' => '00:00',
+    ]);
+
+    $backup = makeCompletedBackup($organization, $recurringBackup, now()->subDays(1));
+
+    // Regardless of how many times the (every-minute-scheduled) job runs while
+    // waiting on the external delete webhook, delete() should only fire once.
+    Backup::shouldReceive('connect')->once()->andReturnSelf();
+    Backup::shouldReceive('delete')->once()->andReturn(['job_id' => 'job-123']);
+
+    (new DeleteBackups)();
+    (new DeleteBackups)();
+    (new DeleteBackups)();
+
+    expect($backup->fresh()->status)->toBe('deleting');
 });
 
 it('keeps a full run intact when multiple app instances share one scheduled run', function () {
