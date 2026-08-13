@@ -321,13 +321,19 @@ class PackageManagerService
             }
 
             $moduleRoot = $entries[0];
-            $moduleDirName = basename($moduleRoot);
 
             // Validate required files
             $errors = $this->validateModuleDirectory($moduleRoot);
             if (! empty($errors)) {
                 return ['success' => false, 'error' => implode(' ', $errors)];
             }
+
+            // Destination must match module.json's "name" (the studly-cased name
+            // nwidart/laravel-modules and the "Modules\\" => "modules/" PSR-4 rule
+            // expect), not the zip's raw top-level folder name -- otherwise the
+            // module's provider class can never be autoloaded.
+            $moduleJson = json_decode(File::get("{$moduleRoot}/module.json"), true);
+            $moduleDirName = $moduleJson['name'] ?? basename($moduleRoot);
 
             // Move into the modules path (overwrite if exists)
             $destination = base_path("modules/{$moduleDirName}");
