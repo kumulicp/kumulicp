@@ -38,7 +38,7 @@ class ApplicationUpgrade extends Action
         $app_instance->save();
         $this->app_instance = $app_instance;
 
-        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance, 'upgrade'), null, true)) {
+        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
             $this->addCustomValue(['waiting_for' => [$job->id]]);
         }
     }
