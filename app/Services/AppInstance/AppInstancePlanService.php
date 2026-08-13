@@ -230,7 +230,7 @@ class AppInstancePlanService
     public function refresh()
     {
         $this->app_instance->refresh();
-        $this->app_instance->plan;
+        $this->plan = $this->app_instance->plan;
     }
 
     public function featureOptions()
@@ -345,7 +345,7 @@ class AppInstancePlanService
 
         foreach ($availabe_plans as $plan) {
             $app_instance_plan = new self($plan, $this->app_instance);
-            if (! $app_instance_plan->isAnyMaxBroken() || $plan->id == $this->id) {
+            if (! $app_instance_plan->isAnyMaxBroken() || $plan->id == $this->plan->id) {
                 $plans[] = $app_instance_plan;
             }
         }
@@ -425,7 +425,7 @@ class AppInstancePlanService
 
     public function isDomainMax(): bool
     {
-        return (! $this->plan->domain_max || $this->app_instance->main_domains()->count() < $this->plan->domain_max) ? false : true;
+        return (! $this->plan->domain_max || $this->organization->main_domains()->count() < $this->plan->domain_max) ? false : true;
     }
 
     public function isMaxBroken(PlanEntity $entity): bool
@@ -514,6 +514,7 @@ class AppInstancePlanService
     public function updateFeatures(array $features)
     {
         $plan_changed = false;
+        $plan_settings = [];
 
         foreach ($features as $name => $feature) {
             if (is_string($feature)) {

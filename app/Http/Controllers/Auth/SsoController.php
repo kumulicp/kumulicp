@@ -27,9 +27,13 @@ class SsoController extends Controller
 
         $this->setDynamicConfig($provider);
 
-        return Socialite::driver($provider->driver)
-            ->scopes(explode(' ', $provider->scopes) ?? [])
-            ->redirect();
+        $socialite_driver = Socialite::driver($provider->driver);
+
+        if ($socialite_driver instanceof \Laravel\Socialite\Two\AbstractProvider) {
+            $socialite_driver->scopes($provider->scopes ? explode(' ', $provider->scopes) : []);
+        }
+
+        return $socialite_driver->redirect();
     }
 
     public function callback(string $providerSlug, Request $request)
@@ -52,7 +56,7 @@ class SsoController extends Controller
             $ldap_user = LdapUser::where(Settings::get('ldap_personal_email', 'mail'), '=', $social_user->getEmail())->first();
             $sync_attributes = config("auth.providers.$web_provider.database.sync_attributes");
 
-            if ($ldap_user && $ldap_user->hasControlPanelAccess()) {
+            if ($ldap_user instanceof LdapUser && $ldap_user->hasControlPanelAccess()) {
                 // Import the user
                 (new Importer)
                     ->setLdapObjects(Collection::make([$ldap_user]))
@@ -104,13 +108,15 @@ class SsoController extends Controller
         }
 
         // Update tokens
-        $account->update([
-            'access_token' => $social_user->token,
-            'refresh_token' => $social_user->refreshToken ?? null,
-            'token_expires_at' => $social_user->expiresIn
-            ? Carbon::now()->addSeconds($social_user->expiresIn)
-            : null,
-        ]);
+        if ($social_user instanceof \Laravel\Socialite\Two\User) {
+            $account->update([
+                'access_token' => $social_user->token,
+                'refresh_token' => $social_user->refreshToken,
+                'token_expires_at' => $social_user->expiresIn
+                ? Carbon::now()->addSeconds($social_user->expiresIn)
+                : null,
+            ]);
+        }
 
         Auth::login($user);
         $request->session()->regenerate();

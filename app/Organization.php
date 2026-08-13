@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Jobs\Accounts\UpdateOrganization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Builder;
@@ -359,15 +360,7 @@ class Organization extends Model
 
     public function updateSetting($setting, $value)
     {
-        $settings = [];
-
-        if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
-        }
+        $settings = $this->settings ?? [];
 
         Arr::set($settings, $setting, $value);
 
@@ -379,11 +372,7 @@ class Organization extends Model
         $this->status = 'active';
         $this->save();
 
-        foreach ($this->domains as $domain) {
-            foreach ($domain->servers as $server) {
-                $server->updateOrganization();
-            }
-        }
+        UpdateOrganization::dispatch($this);
     }
 
     public function deactivate()
@@ -391,11 +380,7 @@ class Organization extends Model
         $this->status = 'deactivated';
         $this->save();
 
-        foreach ($this->domains as $domain) {
-            foreach ($domain->servers as $server) {
-                $server->updateOrganization();
-            }
-        }
+        UpdateOrganization::dispatch($this);
     }
 
     public function scopeNotDeactivated(Builder $query)

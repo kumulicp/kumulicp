@@ -8,8 +8,6 @@ use App\Support\Facades\Application as ApplicationFacade;
 
 class Application extends Integration
 {
-    private $base_uri = '';
-
     public $action_description = '';
 
     public $action = '';
@@ -19,7 +17,7 @@ class Application extends Integration
     ) {
         $organization = $app_instance->organization;
 
-        parent::__construct($organization, $app_instance->web_server);
+        parent::__construct($organization);
     }
 
     public function baseURI()
@@ -40,11 +38,6 @@ class Application extends Integration
         $this->organization = $app_instance->organization;
 
         return $this;
-    }
-
-    public function body()
-    {
-        return $this->body;
     }
 
     public function appName()

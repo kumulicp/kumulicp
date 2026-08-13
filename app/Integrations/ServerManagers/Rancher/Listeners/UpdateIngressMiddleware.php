@@ -20,7 +20,7 @@ class UpdateIngressMiddleware
     /**
      * Handle the event.
      *
-     * @param  \App\Events\DomainDeleted  $event
+     * @param  \App\Events\Domains\DomainDeleted  $event
      * @return void
      */
     public function handle(DomainDeleted $event)

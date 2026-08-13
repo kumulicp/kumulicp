@@ -8,6 +8,7 @@ use App\AppInstance;
 use App\Integrations\Applications\Nextcloud\API\Users;
 use App\Support\Facades\AccountManager;
 use App\Task;
+use Illuminate\Support\Str;
 
 class ProcessPermissions extends Action
 {
@@ -36,7 +37,19 @@ class ProcessPermissions extends Action
             $user->find($task->getValue('user'));
         } catch (\Throwable $e) {
             if (AccountManager::driver() == 'direct') {
-                $user->add($organization_values['user']);
+                $account_user = AccountManager::users()->find($task->getValue('user'));
+
+                if ($account_user) {
+                    $user->add([
+                        'username' => $account_user->attribute('username'),
+                        'password' => Str::random(20),
+                        'first_name' => $account_user->attribute('first_name'),
+                        'last_name' => $account_user->attribute('last_name'),
+                        'email' => $account_user->attribute('email'),
+                        'groups' => [],
+                        'quota' => $account_user->appStorage($task->app_instance),
+                    ]);
+                }
             }
 
             $task->error_message = $e->getMessage();

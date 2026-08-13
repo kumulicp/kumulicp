@@ -3,7 +3,6 @@
 namespace App\Listeners;
 
 use App\Events\OrganizationRegistered;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class SendEmailVerificationNotification
 {
@@ -14,7 +13,7 @@ class SendEmailVerificationNotification
      */
     public function handle(OrganizationRegistered $event)
     {
-        if ($event->user instanceof MustVerifyEmail && ! $event->user->hasVerifiedEmail()) {
+        if (! $event->user->hasVerifiedEmail()) {
             $event->user->sendEmailVerificationNotification();
         }
     }

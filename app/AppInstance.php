@@ -60,22 +60,34 @@ class AppInstance extends Model
         'trial_ends_at' => 'date',
     ];
 
-    public function application()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     */
+    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
 
-    public function version()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppVersion, $this>
+     */
+    public function version(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\AppVersion', 'version_id');
     }
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
 
-    public function children()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppInstance, $this>
+     */
+    public function children(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\AppInstance', 'parent_id');
     }
@@ -90,7 +102,10 @@ class AppInstance extends Model
         return $this->belongsTo('App\OrgServer', 'database_server_id');
     }
 
-    public function web_server()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\OrgServer, $this>
+     */
+    public function web_server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'web_server_id');
     }
@@ -156,7 +171,7 @@ class AppInstance extends Model
     {
         $names = [];
 
-        foreach ($this->children() as $app) {
+        foreach ($this->children as $app) {
             $names[] = $app->label;
         }
 
@@ -179,7 +194,7 @@ class AppInstance extends Model
     public function domain()
     {
         $shared = $this->plan->setting('server_type') === 'shared';
-        if ($shared || (! $shared && $this->application->hasDomainOption('parent'))) {
+        if ($shared || $this->application->hasDomainOption('parent')) {
             return $this->parent ? $this->parent->domain() : null;
         } elseif ($this->primary_domain) {
             return $this->primary_domain->name;
@@ -215,13 +230,7 @@ class AppInstance extends Model
     public function setting($setting, $default = null)
     {
         if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
-
-            return Arr::get($settings, $setting);
+            return Arr::get($this->settings, $setting);
         }
 
         return $default;
@@ -229,15 +238,7 @@ class AppInstance extends Model
 
     public function updateSetting($setting, $value)
     {
-        $settings = [];
-
-        if ($this->settings != null) {
-            if (is_array($this->settings)) {
-                $settings = $this->settings;
-            } else {
-                $settings = json_decode($this->settings, true);
-            }
-        }
+        $settings = $this->settings ?? [];
 
         Arr::set($settings, $setting, $value);
 

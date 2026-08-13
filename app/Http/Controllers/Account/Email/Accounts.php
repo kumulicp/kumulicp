@@ -75,10 +75,11 @@ class Accounts extends Controller
             } catch (\Throwable $e) {
                 report($e);
 
-                if ($email_server->existsEmail($domain, $email_address)) {
+                try {
                     $email_server->deleteEmail($domain, $email_address);
+                } catch (\Throwable $cleanup_exception) {
+                    report($cleanup_exception);
                 }
-                $email_account->delete();
 
                 return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.glitch', ['email' => $email_address]));
             }

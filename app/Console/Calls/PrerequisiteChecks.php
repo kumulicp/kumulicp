@@ -7,16 +7,6 @@ use App\Task;
 
 class PrerequisiteChecks
 {
-    private $task;
-
-    private $passed;
-
-    private $permanent_fail;
-
-    private $error_code;
-
-    private $messages = [];
-
     public function __invoke()
     {
         $tasks = Task::where('status', 'pending')->get();
@@ -25,14 +15,14 @@ class PrerequisiteChecks
             try {
                 $prerequisites = Action::checkPrerequisites($task);
                 if ($prerequisites->passed) {
-                    $task->notified = false;
+                    $task->notified = 0;
                     $task->status = 'ready';
                     $task->save();
-                } elseif (! $prerequisites->passed && $prerequisites->permanent_fail == true) {
+                } elseif ($prerequisites->permanent_fail == true) {
                     $task->status = 'failed';
                     $task->save();
                 } else {
-                    $task->error_code = $this->error_code;
+                    $task->error_code = null;
                     $task->error_message = $prerequisites->message;
                     $task->save();
                 }

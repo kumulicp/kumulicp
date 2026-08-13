@@ -2,6 +2,7 @@
 
 namespace App\Contracts;
 
+use App\Application;
 use App\Enums\AccessType;
 use App\Enums\PlanEntity;
 use App\Support\AccountManager\UserManager;

@@ -5,14 +5,13 @@ namespace App\Console\Calls;
 use App\Application;
 use App\BackupSchedule;
 use App\Organization;
-use App\OrgServer;
 use App\RecurringBackup;
 use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Backup;
 
 class RecurringBackups
 {
-    private $datatime;
+    private $datetime;
 
     public function __invoke()
     {
@@ -39,12 +38,8 @@ class RecurringBackups
             $backup_schedule->recurring_backup_id = $backup->id;
             $backup_schedule->save();
 
-            // Backup server settings
-            if ($backup->type == 'settings') {
-                $this->backupServerSettings();
-            }
             // Backup applications for each organization
-            elseif (in_array($backup->server->type, ['web', 'database'])) {
+            if (in_array($backup->server->type, ['web', 'database'])) {
                 // Backup specific application
                 if (isset($backup->application_id)) {
                     $this->backupApplication($backup, $backup_schedule);
@@ -53,10 +48,6 @@ class RecurringBackups
                 else {
                     $this->backupAllApps($backup, $backup_schedule);
                 }
-            }
-            // Backup email server emails
-            elseif ($backup->type == 'email') {
-                $this->backupEmail($backup, $backup_schedule);
             }
 
             $backup->last_scheduled_at = $this->datetime;
@@ -133,33 +124,6 @@ class RecurringBackups
                     );
                 }
             }
-        }
-    }
-
-    private function backupEmail(RecurringBackup $recurring_backup, BackupSchedule $backup_schedule)
-    {
-        $server_type = $recurring_backup->type;
-        $server_id = $server_type.'_server_id';
-
-        $organization_email_servers = OrgServer::selectRaw('org_servers.*, servers.host, servers.type')
-            ->leftJoin('servers', function ($join) {
-                $join->on('servers.id', '=', 'org_servers.server_id')
-                    ->where('servers.type', 'email');
-            })
-            ->where('servers.type', 'email')
-            ->get();
-
-        foreach ($organization_email_servers as $organization_email_server) {
-            $backup_server = AppFacade::instance($app_instance)->backupServer($server_type);
-            Backup::schedule(
-                $backup_schedule,
-                scheduled_at: $this->datetime,
-                organization: $app_instance->organization_id,
-                org_server: $backup_server->get(),
-                app_instance: $app_instance->id,
-                type: $recurring_backup->type,
-                delete_after: $recurring_backup->delete_after,
-            );
         }
     }
 }

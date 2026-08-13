@@ -38,7 +38,7 @@ class Authentik extends Integration
     {
         if ($this->status_code == 400) {
             $response = json_decode($response, true);
-            $error_message = __('messages.exception.api_error', ['description' => $this->action_description, 'code' => $response['code'], 'message' => $response['message']]);
+            $error_message = __('messages.exception.api_error', ['description' => 'Authentik', 'code' => $response['code'], 'message' => $response['message']]);
             Log::critical($error_message, ['organization_id' => $this->organization->id]);
 
             $this->setError($error_message, $response['code']);

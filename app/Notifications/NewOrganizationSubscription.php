@@ -39,10 +39,11 @@ class NewOrganizationSubscription extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         $organization = $notifiable->organization();
+        $message = __('messages.notification.organization.subscribed', ['organization' => $organization->name]);
 
         return (new MailMessage)
-            ->subject()
-            ->line($this->message)
+            ->subject($message)
+            ->line($message)
             ->action('View '.$organization->name, url('/admin/organizations/'.$organization->id));
     }
 

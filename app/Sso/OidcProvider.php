@@ -62,7 +62,7 @@ class OidcProvider extends AbstractProvider
     /**
      * Map user to Socialite User object
      */
-    protected function mapUserToObject(array $user)
+    protected function mapUserToObject(array $user): User
     {
         return (new User)->setRaw($user)->map([
             'id' => $user['sub'] ?? null,

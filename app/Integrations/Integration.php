@@ -304,12 +304,12 @@ class Integration
 
         $url = $this->basePath();
 
-        $verify = app()->environment('local', 'testing') ? 0 : 2;
+        $verify = ! app()->environment('local', 'testing');
 
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verify);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify ? 2 : 0);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         $verbose = fopen('php://temp', 'w+');
         curl_setopt($ch, CURLOPT_STDERR, $verbose);

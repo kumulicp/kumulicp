@@ -65,7 +65,7 @@ class CreateTests extends Action
             $organization->name = $test_name;
             $organization->description = $test_name;
             $organization->contact_first_name = 'Test';
-            $organization->contact_last_name = $num;
+            $organization->contact_last_name = (string) $num;
             $organization->contact_email = $test_name.'@'.Settings::get('base_domain');
             $organization->contact_phone_number = '123-456-7890';
             $organization->street = '123 Street St';
@@ -89,7 +89,7 @@ class CreateTests extends Action
                 'first_name' => $test_name,
                 'last_name' => $test_name,
                 'name' => $test_name,
-                'email' => $test_name.'@'.Settings::get('base_domain') ?? 'example.com',
+                'email' => $test_name.'@'.(Settings::get('base_domain') ?? 'example.com'),
                 'password' => 'thisisadumbpassword',
                 'phone_number' => '1234567890',
             ]);

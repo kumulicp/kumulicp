@@ -8,6 +8,8 @@ use Illuminate\Support\Arr;
 
 class JobChart extends Chart
 {
+    public $chart = [];
+
     public function persistentVolumeClaim()
     {
         if ($pvc_name = $this->app_instance->getOverride('pvc.name')) {

@@ -92,7 +92,6 @@ class Users extends Nextcloud
     public function removeFromGroup($group = '')
     {
         if ($this->user) {
-            $this->request_type = 'DELETE';
             $path = $this->path.'/groups';
             $data = ['groupid' => $group];
             $this->action_description = __('messages.api.nextcloud.users.remove_from_group', ['group' => $group]);
@@ -108,9 +107,7 @@ class Users extends Nextcloud
             $groups = (array) $this->groups();
 
             if (! $this->error() && $groups) {
-                $groups = isset($groups) ? $groups : [];
-
-                if ($groups && in_array($permission, $groups)) {
+                if (in_array($permission, $groups)) {
                     return true;
                 }
             }

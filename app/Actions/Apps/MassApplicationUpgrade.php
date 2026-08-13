@@ -33,10 +33,6 @@ class MassApplicationUpgrade extends Action
 
     public static function run($task)
     {
-        $prereqs = new Prerequisites;
-        $prereqs->add_time_range('12:01 am', '11:59 pm');
-        $prereqs->prerequisites = $prereqs->get();
-
         $organizations_with_version = AppInstance::where('application_id', $task->application_id)->get();
 
         foreach ($organizations_with_version as $app_instance) {

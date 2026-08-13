@@ -8,15 +8,19 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $organization_id
+ * @property int|null $organization_id
  * @property int|null $server_id
  * @property int|null $application_id
  * @property string|null $recurrence
+ * @property string|null $type
  * @property string|null $time
+ * @property int|null $delete_after
+ * @property string|null $delete_interval
+ * @property string|null $status
  * @property string|null $last_scheduled_at
  * @property-read \App\Server|null $server
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\BackupSchedule> $scheduled
- * @property-read \App\Organization $organization
+ * @property-read \App\Organization|null $organization
  * @property-read \App\Application|null $application
  */
 class RecurringBackup extends Model

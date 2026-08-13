@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account\Web;
 
 use App\Actions\Domains\DomainDelete;
+use App\Actions\Domains\TransferDomainName;
 use App\Actions\Email\AddEmailDomain;
 use App\Actions\Organizations\InvoiceOrganization;
 use App\Http\Controllers\Controller;
@@ -126,6 +127,7 @@ class Domains extends Controller
         $tld = $domain->tld;
         $year = 0;
         $total = 0;
+        $max_renewal_years = null;
         if (method_exists(Domain::registrar($domain), 'maxRenewalYears')) {
             $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
         }
@@ -174,7 +176,7 @@ class Domains extends Controller
                     ];
 
                 })->filter(function ($value, int $key) use ($max_renewal_years) {
-                    return $value['year'] < $max_renewal_years;
+                    return $max_renewal_years === null || $value['year'] < $max_renewal_years;
                 })->all() : [],
                 'can' => [
                 ],
@@ -194,7 +196,7 @@ class Domains extends Controller
                     'status' => $subdomain->status,
                     'can' => [
                         'edit' => true,
-                        'delete' => $subdomain?->app_instance?->primary_domain_id !== $subdomain->id,
+                        'delete' => $subdomain->app_instance?->primary_domain_id !== $subdomain->id,
                     ],
                 ];
             }),
@@ -324,7 +326,7 @@ class Domains extends Controller
         $organization = auth()->user()->organization;
         $support_email = Settings::get('support_email');
         if ($support_email) {
-            Mail::to($support_email)->send(new DomainTransferRequest($organization, auth()->user, $domain));
+            Mail::to($support_email)->send(new DomainTransferRequest($organization, auth()->user(), $domain));
         }
 
         return redirect('/settings/domains')->with('success', __('organization.domain.request_transfer'));
@@ -347,13 +349,13 @@ class Domains extends Controller
         $tld = Tld::where('name', $domain_tld)->first();
 
         $registrar_price = Domain::registrar($tld)->pricing($tld, $domain->name);
-        $transfer_price = $registrar_price->transferPrices($organization)[1];
+        $transfer_price = $registrar_price->transferPrice(1);
 
-        Action::execute(new TransferDomainName($organization, $domain, $validated['epp_code'], $registrar_price->transferPrice(1)));
+        Action::execute(new TransferDomainName($organization, $domain, $validated['epp_code'], $transfer_price));
 
         // Charge organization for domain name
-        $stripeCharge = $organization->invoiceFor(__('organization.domain.invoice.transfer', ['domain' => $domain->name]), $domain->stripePrice());
+        $stripeCharge = $organization->invoiceFor(__('organization.domain.invoice.transfer', ['domain' => $domain->name]), (int) number_format($transfer_price, 2, '', ''));
 
-        return redirect('/settings/domains')->with('success', __('organization.domain.transferring', ['domain' => $response['DomainName']]));
+        return redirect('/settings/domains')->with('success', __('organization.domain.transferring', ['domain' => $domain->name]));
     }
 }

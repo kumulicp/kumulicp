@@ -20,7 +20,6 @@ class Apps extends Nextcloud
 
     public function findByFilter($filter)
     {
-        $this->request_type = 'GET';
         $this->form()->get($this->basePath().'/apps', [
             'filter' => $filter,
         ]);
@@ -35,7 +34,6 @@ class Apps extends Nextcloud
 
     public function enable($app)
     {
-        $this->request_type = 'POST';
         $path = $this->basePath().'/apps/'.$app;
 
         $this->post($path, null);
@@ -56,7 +54,7 @@ class Apps extends Nextcloud
     {
         $list = (array) $this->findByFilter('enabled');
 
-        if (is_array($list) && in_array($app, $list)) {
+        if (in_array($app, $list)) {
             return true;
         }
 

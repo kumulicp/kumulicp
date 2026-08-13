@@ -22,6 +22,8 @@ abstract class UserManager
 
     abstract public function hasAppRole(AppInstance $app_instance, AppRole $role);
 
+    abstract public function allUserApps();
+
     public function appStorage(AppInstance $app_instance)
     {
         $subscription = Subscription::app_instance($app_instance);
@@ -37,7 +39,7 @@ abstract class UserManager
         // If new user code doesn't exist, the user has been initiated which, at the moment, means they have set their password.
         $new_user_code = $this->organization()->new_user_codes()->where('username', $this->attribute('username'))->first();
 
-        return ! $new_user_code || ($new_user_code && $new_user_code->activated === 1);
+        return ! $new_user_code || $new_user_code->activated === 1;
     }
 
     public function accessTypes(string $access_type): AccessType

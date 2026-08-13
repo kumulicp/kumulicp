@@ -31,7 +31,7 @@ class FastCacheService
     public function clear(?string $key = null, ?\App\Organization $organization = null): void
     {
         if (config('cache.default') === 'redis') {
-            $organization = $organization?->slug ?? Organization::account()->slug;
+            $organization = $organization->slug ?? Organization::account()->slug;
             if ($key) {
                 Cache::tags([$organization])->pull($key);
             } else {

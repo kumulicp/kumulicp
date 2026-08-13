@@ -10,19 +10,13 @@ class DnsHosts
 {
     private $dns_records = [];
 
-    private $organization;
-
     private $domain;
 
     public $with_email;
 
-    private $domains;
-
     public function __construct(OrgDomain $domain)
     {
-        $this->organization = $domain->organization;
         $this->domain = $domain;
-        $this->domains = collect();
         $app_instance = $domain->app_instance()->with('web_server.server')->first();
         $subdomains = $domain->subdomains()->with('app_instance.web_server.server')->get();
 
@@ -47,6 +41,7 @@ class DnsHosts
         if ($domain_email) {
             $this->with_email = true;
             $email_server = $domain_email->server;
+            $records = [];
 
             foreach (Email::requiredDNSRecords($this->domain) as $record) {
                 $records[] = [

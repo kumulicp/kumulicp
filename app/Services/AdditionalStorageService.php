@@ -22,10 +22,8 @@ class AdditionalStorageService
         private Organization $organization,
         private string $entity,
         private string $name,
-        ?AppInstance $app_instance = null,
+        private ?AppInstance $app_instance = null,
     ) {
-        $this->app_instance = $app_instance;
-
         $storage = AdditionalStorage::where('organization_id', $organization->id)->where('name', $name)->where('entity', $entity);
 
         if ($app_instance) {
@@ -53,9 +51,9 @@ class AdditionalStorageService
             $storage->application = $this->app_instance->application->slug;
             $storage->quantity = $quantity;
             $storage->save();
-        }
 
-        $this->storage = $storage;
+            $this->storage = $storage;
+        }
     }
 
     public function delete()
@@ -76,16 +74,6 @@ class AdditionalStorageService
         }
 
         return 0;
-    }
-
-    private function baseQuantity()
-    {
-        switch ($this->entity) {
-            case 'group':
-                return 1;
-            default:
-                return 0;
-        }
     }
 
     public function quota()

@@ -64,11 +64,6 @@ class BackupService
         return $this->drivers[$type][$driver];
     }
 
-    private function backupServerSettings(RecurringBackup $recurring_backup)
-    {
-        // Not in use yet
-    }
-
     public function schedule(
         BackupSchedule $backup_schedule,
         string $scheduled_at,
@@ -79,7 +74,7 @@ class BackupService
         AppInstance $app_instance,
     ) {
         // Check if backup should even be scheduled
-        if ($org_server && ! $this->driverExists($org_server)) {
+        if (! $this->driverExists($org_server)) {
             return;
         }
 

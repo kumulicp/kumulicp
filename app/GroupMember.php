@@ -2,7 +2,7 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
 /**
  * @property int $id
@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property-read \App\Group $group
  * @property-read \App\User $user
  */
-class GroupMember extends Model
+class GroupMember extends Pivot
 {
+    public $incrementing = true;
+
     public function group()
     {
         return $this->belongsTo(Group::class);

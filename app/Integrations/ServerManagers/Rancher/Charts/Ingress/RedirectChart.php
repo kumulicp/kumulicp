@@ -8,7 +8,7 @@ class RedirectChart extends IngressChart
 {
     public $chart_name = 'redirect';
 
-    public function values()
+    public function values(): array
     {
         $namespace = $this->organization->slug;
 

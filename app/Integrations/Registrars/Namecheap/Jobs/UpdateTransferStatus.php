@@ -9,6 +9,7 @@ use App\Notifications\DomainTransferred;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Action;
+use App\Task;
 use Illuminate\Support\Facades\Log;
 
 class UpdateTransferStatus
@@ -67,7 +68,7 @@ class UpdateTransferStatus
                         $org_domain->save();
 
                         // If is a critical error or status id isn't in my list, submit a critical log
-                        if ($this->isCriticalError($transfer['StatusID']) || (! $this->isCriticalError($transfer['StatusID']) && ! $this->isUserMessage($transfer['StatusID']))) {
+                        if ($this->isCriticalError($transfer['StatusID']) || ! $this->isUserMessage($transfer['StatusID'])) {
                             Log::critical("Transfering {$transfer['DomainName']}: ({$transfer['StatusID']}) {$transfer['StatusDescription']}", ['organization_id' => $organization->id]);
                         } elseif ($transfer['Status'] == 'COMPLETED') {
 
@@ -79,10 +80,15 @@ class UpdateTransferStatus
                             Action::execute(new UpdateDnsRecords($org_domain->organization, $org_domain));
 
                             // Charge organization for domain name
+                            $task = Task::where('action_slug', 'transfer_domain_name')
+                                ->where('custom_values->domain_id', $org_domain->id)
+                                ->first();
+                            $price = $task?->getValue('price') ?? 0;
+
                             Action::execute(new InvoiceOrganization($org_domain->organization, __('actions.notify.domain_transfer_fee'), $price), $task);
 
                             // Notify admins that transfer complete.
-                            $organization->notifyAdmins(new DomainTransferred);
+                            $organization->notifyAdmins(new DomainTransferred($org_domain));
                         }
                     }
                 }

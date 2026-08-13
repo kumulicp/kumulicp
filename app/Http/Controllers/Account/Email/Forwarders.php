@@ -83,8 +83,8 @@ class Forwarders extends Controller
             $forwarder->save();
         }
 
-        if (isset($error)) {
-            return redirect('/settings/email/forwarders')->with('error', $error);
+        if ($email_server->hasEmailError()) {
+            return redirect('/settings/email/forwarders')->with('error', $email_server->emailError());
         } else {
             return redirect('/settings/email/forwarders')->with('success', __('organization.email.created', ['email' => $forwarder_email]));
         }

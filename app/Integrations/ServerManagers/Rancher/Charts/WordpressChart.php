@@ -6,8 +6,6 @@ use App\Support\Facades\Application;
 
 class WordpressChart extends HelmChart
 {
-    private $database_server;
-
     public $chart_name = 'wordpress';
 
     public function values(): array
@@ -19,7 +17,6 @@ class WordpressChart extends HelmChart
         if ($database_server = $app_instance->server('database')) {
             $database_server = $database_server->server;
         }
-        $this->database_server = $database_server;
 
         return [
             'affinity' => [

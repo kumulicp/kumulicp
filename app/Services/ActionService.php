@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Actions\Action;
 use App\Actions\AddWebDomain;
 use App\Actions\Apps\ApplicationActivate;
-use App\Actions\Apps\ApplicationAddonActivate;
 use App\Actions\Apps\ApplicationDeactivate;
 use App\Actions\Apps\ApplicationDelete;
 use App\Actions\Apps\ApplicationDomainChecks;
@@ -22,7 +21,6 @@ use App\Actions\Domains\UpdateDnsRecords;
 use App\Actions\DummyAction;
 use App\Actions\Email\AddEmailDomain;
 use App\Actions\Email\RetrieveDkimKey;
-use App\Actions\EmailSettingsUpdate;
 use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\InvoiceOrganization;
@@ -64,7 +62,6 @@ class ActionService
             'application_domain_checks' => ApplicationDomainChecks::class,
             'application_deactivate' => ApplicationDeactivate::class,
             'mass_application_upgrade' => MassApplicationUpgrade::class,
-            'email_settings_update' => EmailSettingsUpdate::class,
             'create_tests' => CreateTests::class,
             'clear_tests' => ClearTestAccounts::class,
             'process_customizations' => ProcessCustomizations::class,
@@ -77,7 +74,6 @@ class ActionService
             'dummy_action' => DummyAction::class,
             'update_subscription_settings' => UpdateSubscriptionSettings::class,
             'application_update_job' => ApplicationUpdateJob::class,
-            'application_addon_activate' => ApplicationAddonActivate::class,
             'server_activate' => ServerActivate::class,
             'deactivate_organization' => DeactivateOrganization::class,
             'application_sso_setup' => ApplicationSSOSetup::class,
@@ -140,7 +136,7 @@ class ActionService
                 $task->custom_values = $retry->custom_values;
                 $task->save();
 
-                if ($retry && method_exists($retry, 'postGenerate')) {
+                if (is_object($retry) && method_exists($retry, 'postGenerate')) {
                     $task->status = $retry->status;
                     $retry->postGenerate($task);
                 }
@@ -173,7 +169,7 @@ class ActionService
                 $run = $action::run($task);
 
                 // Update custom values if they've been changed
-                if ($run && $run->customValues() != $task->organization_values) {
+                if ($run && $run->customValues() != $task->custom_values) {
                     $task->custom_values = $run->customValues();
                     $task->save();
                 }
@@ -186,6 +182,7 @@ class ActionService
     public function complete(Task $task)
     {
         $action = Arr::get($this->actions, $task->action());
+        $action_complete = null;
         if ($this->waiting_for($task->getValue('waiting_for'))) {
             $error_message = __('messages.action.waiting_for');
             if ($task->error_message != $error_message) {
@@ -304,7 +301,7 @@ class ActionService
             $revert = $action::revert($task);
 
             // Update custom values if they've been changed
-            if ($revert && $revert->customValues() != $task->organization_values) {
+            if ($revert && $revert->customValues() != $task->custom_values) {
                 $task->custom_values = $revert->customValues();
                 $task->save();
             }

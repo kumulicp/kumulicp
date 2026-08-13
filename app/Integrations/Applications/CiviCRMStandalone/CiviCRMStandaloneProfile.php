@@ -3,7 +3,6 @@
 namespace App\Integrations\Applications\CiviCRMStandalone;
 
 use App\Integrations\Applications\AppProfile;
-use Modules\Kumuli\Entities\Applications\CiviCRM\CiviCRMRancherJobs;
 
 class CiviCRMStandaloneProfile extends AppProfile
 {
@@ -14,8 +13,6 @@ class CiviCRMStandaloneProfile extends AppProfile
     protected $compatibility = ['helm_chart', 'rancher'];
 
     protected $helm_chart = CiviCRMStandaloneChart::class;
-
-    protected $jobs = CiviCRMRancherJobs::class;
 
     protected $recommendations = [
         'image_repo' => 'images/civicrm-standalone',

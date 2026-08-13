@@ -27,13 +27,11 @@ class ApplicationService
 
     private $applications = [];
 
-    private $organization;
-
     private $activated_apps;
 
     private $instances = [];
 
-    public function __construct(private $app)
+    public function __construct()
     {
         $this->register(new GenericAppProfile);
         $this->register(new NextcloudProfile);
@@ -67,7 +65,7 @@ class ApplicationService
     public function roles(Application|string $app)
     {
         $app = is_string($app) ? Application::where('slug', $app)->with('roles')->first() : $app;
-        $app_name = is_string($app) ? $app : $app->slug;
+        $app_name = $app->slug;
         $app_roles = [];
 
         foreach ($app->roles as $role) {
@@ -147,7 +145,7 @@ class ApplicationService
         $validations = [];
 
         foreach ($options as $name => $option) {
-            if (! $personalized || ($personalized && Arr::get($option, 'personalized', false))) {
+            if (! $personalized || Arr::get($option, 'personalized', false)) {
                 $rules = Arr::get($option, 'validations', '');
 
                 if ($option['type'] === 'yaml') {
@@ -261,13 +259,11 @@ class ApplicationService
     {
         $app_name = $app_instance->application->slug;
         $job_class = $this->profile($app_instance->application)->jobs();
-        if ($job_class && class_exists($job_class)) {
-            $job = new $job_class($app_instance->organization, $app_instance);
-        }
-
         $job_command = Str::camel($job_name);
 
-        if ($job_class && method_exists($job_class, $job_command)) {
+        if ($job_class && class_exists($job_class) && method_exists($job_class, $job_command)) {
+            $job = new $job_class($app_instance->organization, $app_instance);
+
             return $this->instance($app_instance)->connect('web')->runJob($job->$job_command());
         }
 

@@ -90,7 +90,7 @@ class Plans extends Controller
         Gate::authorize('update-to-plan', [$app, $plan]);
 
         $organization = Organization::account();
-        $plans = Subscription::all($organization);
+        $plans = Subscription::all();
         $dry_plan = $plans->dryAppChange($app, $plan);
         $stats = $dry_plan->compileCostStats();
         $prices = $dry_plan->compileAllStats();

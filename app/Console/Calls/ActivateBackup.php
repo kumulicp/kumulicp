@@ -21,6 +21,7 @@ class ActivateBackup
             }
             try {
                 if ($backup_server = Backup::connect($backup)) {
+                    $response = null;
                     if ($backup->action == 'backup') {
                         Log::info(__('labels.backup').": {$backup->backup_name}", ['organization_id' => $backup->organization_id]);
                         $this->logBackup($backup);

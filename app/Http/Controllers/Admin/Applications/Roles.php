@@ -101,8 +101,6 @@ class Roles extends Controller
                 ],
             ],
         ]);
-
-        return redirect("admin/apps/{$application_id}/roles");
     }
 
     public function store(Request $request, Application $app)
@@ -116,21 +114,19 @@ class Roles extends Controller
             'category' => 'required|string|max:100',
             'access_type' => 'required|string|max:100',
         ]);
-        if ($app) {
-            $role = new AppRole;
-            $role->application_id = $app->id;
-            $role->name = $request->sub_name;
-            $role->slug = Str::snake($request->slug);
-            $role->label = $request->label;
-            $role->description = $request->description;
-            $role->category = $request->category;
-            $role->access_type = $request->access_type;
-            $role->status = 'enabled';
+        $role = new AppRole;
+        $role->application_id = $app->id;
+        $role->name = $request->sub_name;
+        $role->slug = Str::snake($request->slug);
+        $role->label = $request->label;
+        $role->description = $request->description;
+        $role->category = $request->category;
+        $role->access_type = $request->access_type;
+        $role->status = 'enabled';
 
-            $role->save();
+        $role->save();
 
-            return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.added', ['role' => $role->name]));
-        }
+        return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.added', ['role' => $role->name]));
     }
 
     public function update(Request $request, Application $app, $role)

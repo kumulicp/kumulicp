@@ -16,7 +16,6 @@ class NextcloudChart extends HelmChart
         $organization = $this->organization;
         $app_instance = Application::instance($this->app_instance);
         $version = $app_instance->version;
-        $this->app_instance_select = $app_instance;
 
         $ingress_enabled = $app_instance->configuration('ingress-enabled', true);
 
@@ -26,7 +25,6 @@ class NextcloudChart extends HelmChart
             $middleware_service->updateChart($dav);
         }
 
-        $this->web_server = $app_instance->server('web')->serverInfo();
         $database_server = '';
         if ($organization_database_server = $app_instance->server('database')) {
             $database_server = $organization_database_server->serverInfo();

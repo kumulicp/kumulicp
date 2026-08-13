@@ -28,7 +28,10 @@ class Server extends Model
         'is_backup_server' => 'boolean',
     ];
 
-    public function app_instance()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppInstance, $this>
+     */
+    public function app_instance(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
     }

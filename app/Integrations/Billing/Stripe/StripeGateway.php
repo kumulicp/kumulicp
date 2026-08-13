@@ -3,6 +3,8 @@
 namespace App\Integrations\Billing\Stripe;
 
 use App\Contracts\BillingContract;
+use App\Notifications\NewOrganizationSubscription;
+use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
 use App\Services\Organization\JointSubscriptionService;
 use App\Support\Facades\AccountManager;
@@ -113,10 +115,10 @@ class StripeGateway implements BillingContract
     public function cancel(): void
     {
         if ($this->organization->subscribed('default')) {
-            $this->subscription('default')->cancel();
+            $this->organization->subscription('default')->cancel();
 
             $superaccount = Organization::where('type', 'superaccount')->first();
-            $superaccount->notifyAdmins(new OrganizationCancelledSubscription($this->organization->account()));
+            $superaccount->notifyAdmins(new OrganizationCancelledSubscription($this->organization));
         }
     }
 
@@ -173,8 +175,10 @@ class StripeGateway implements BillingContract
         $period_end = Organization::account()->subscription('default')?->upcomingInvoice()?->period_end;
 
         if ($period_end) {
-            return \Carbon\Carbon($period_end);
+            return Carbon::createFromTimestamp($period_end);
         }
+
+        return null;
     }
 
     public function upcomingInvoice(): array
@@ -264,13 +268,11 @@ class StripeGateway implements BillingContract
 
     public function defaultPaymentMethodBrand()
     {
-        if ($this->hasDefaultPaymentMethod() && $this->defaultPaymentMethod()->card->brand) {
-            if ($this->defaultPaymentMethod()->card->brand) {
-                $brand = $this->defaultPaymentMethod()->card->brand;
-                $image_location = '/images/cards/'.$brand.'.png';
-                if (Storage::exists($image_location)) {
-                    return $image_location;
-                }
+        $brand = Arr::get($this->defaultPaymentMethod(), 'card.brand');
+        if ($this->hasDefaultPaymentMethod() && $brand) {
+            $image_location = '/images/cards/'.$brand.'.png';
+            if (Storage::exists($image_location)) {
+                return $image_location;
             }
         }
 
@@ -301,7 +303,7 @@ class StripeGateway implements BillingContract
             }
         }
 
-        return false;
+        return null;
     }
 
     public function deleteDefaultPaymentMethod(): void

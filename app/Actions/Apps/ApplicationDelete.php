@@ -12,13 +12,12 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
-use Illuminate\Support\Arr;
 
 class ApplicationDelete extends Action
 {
     public $slug = 'application_delete';
 
-    public function __construct(AppInstance $app_instance, ?Prerequisites $prerequisites = null, ?string $start_time = null, ?string $end_time = null)
+    public function __construct(AppInstance $app_instance, ?string $start_time = null, ?string $end_time = null)
     {
         $this->organization = $app_instance->organization;
         $this->app_instance = Application::instance($app_instance);
@@ -42,14 +41,14 @@ class ApplicationDelete extends Action
         $app_instance = Application::instance($task->app_instance);
         $parent_app = $app_instance->application->parent_app;
         $app_delete = new self($task->app_instance);
-        $app_profile = Application::get($app_instance->application->slug);
+        $app_profile = Application::profile($app_instance->application->slug);
         RemoveLDAPGroups::dispatch($task->app_instance);
 
         // Delete App
-        if (Arr::get($app_profile, 'activation_type', 'chart') === 'chart') {  // Delete via chart
+        if ($app_profile->activationType() === 'chart') {  // Delete via chart
             $web_server = $app_instance->connect('web');
             $web_server->delete();
-        } elseif (Arr::get($app_profile, 'activation_type') === 'job') {  // Delete via job
+        } elseif ($app_profile->activationType() === 'job') {  // Delete via job
             if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
                 // Need to wait until this new job task is complete
                 $app_delete->addCustomValue(['waiting_for' => [$job->id]]);

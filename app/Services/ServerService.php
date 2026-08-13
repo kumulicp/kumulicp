@@ -13,13 +13,10 @@ class ServerService
         switch ($type) {
             case 'web':
                 return self::defaultWebServer();
-                break;
             case 'email':
                 return self::defaultEmailServer();
-                break;
             case 'database':
                 return self::defaultDatabaseServer();
-                break;
         }
     }
 

@@ -75,7 +75,7 @@ class Configurations extends Controller
 
         $plan->updateSettings([
             'configurations' => Arr::has($validated, 'configurations') ? ApplicationFacade::processConfigurations($app, $plan, $validated['configurations']) : [],
-            'additionalConfigs' => $additionalConfigs ?? [],
+            'additionalConfigs' => $additionalConfigs,
         ]);
         $plan->save();
 

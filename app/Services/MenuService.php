@@ -295,7 +295,7 @@ class MenuService
                 'name' => __('labels.documentation'),
                 'url' => Settings::get('docs_url'),
                 'icon' => 'fa-file-alt',
-                'perm' => Settings::get('docs_url') && Settings::get('docs_url') !== '',
+                'perm' => (bool) Settings::get('docs_url'),
                 'external' => true,
                 'order' => 10000,
             ],

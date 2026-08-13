@@ -50,7 +50,7 @@ class Job extends Rancher
 
         $data = $response['content'];
 
-        $data['spec'] = $job->values()['spec'];
+        $data['spec'] = $job->chart['spec'];
 
         $this->json()->put($url, $data);
         $response = $this->response();
@@ -68,7 +68,7 @@ class Job extends Rancher
         $namespace = $this->namespace();
         $address = $this->org_server->server->address;
 
-        $url = $address.'/v1/batch.jobs/'.$namespace.'/'.$chart->name;
+        $url = $address.'/v1/batch.jobs/'.$namespace.'/'.$job->name;
 
         $this->json()->delete($url);
         $response = $this->response();

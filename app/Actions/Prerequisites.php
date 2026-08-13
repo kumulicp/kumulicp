@@ -48,6 +48,7 @@ class Prerequisites
         }
 
         foreach ($instructions['prereqs'] as $prereq) {
+            $new_prereq = [];
             foreach ($prereq as $key => $value) {
                 if (array_key_exists($value, $vars)) {
                     $new_prereq[$key] = $vars[$value];

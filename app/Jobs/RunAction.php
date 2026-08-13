@@ -30,7 +30,6 @@ class RunAction implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  UpdateOrganization  $event
      * @return void
      */
     public function handle()
@@ -45,7 +44,7 @@ class RunAction implements ShouldQueue
 
             if ($action) {
 
-                if ($action->customValues() != $this->task->organization_values) {
+                if ($action->customValues() != $this->task->custom_values) {
                     $this->task->custom_values = $action->customValues();
                     $this->task->save();
                 }

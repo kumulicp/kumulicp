@@ -8,7 +8,7 @@ use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Nwidart\Modules\Facades\Module;
+use Nwidart\Modules\Contracts\RepositoryInterface;
 use Symfony\Component\Process\Process;
 use ZipArchive;
 
@@ -35,6 +35,11 @@ class PackageManagerService
             'timeout' => 30,
             'headers' => $token ? ['Authorization' => "Bearer {$token}"] : [],
         ]);
+    }
+
+    private function modules(): RepositoryInterface
+    {
+        return app(RepositoryInterface::class);
     }
 
     /**
@@ -126,7 +131,7 @@ class PackageManagerService
      */
     public function getInstalledModules(): array
     {
-        return collect(Module::all())->map(function ($module) {
+        return collect($this->modules()->all())->map(function ($module) {
             $composer_json = $this->readModuleComposer($module);
 
             $composer_name = $composer_json['name'] ?? '';
@@ -232,7 +237,7 @@ class PackageManagerService
     {
         // Disable the module first if it is active
         $moduleName = $this->packageToModuleName($package);
-        if ($moduleName && Module::find($moduleName)?->isEnabled()) {
+        if ($moduleName && $this->modules()->find($moduleName)?->isEnabled()) {
             $this->disable($moduleName);
         }
 
@@ -403,7 +408,7 @@ class PackageManagerService
      */
     public function enable(string $moduleName): array
     {
-        $module = Module::find($moduleName);
+        $module = $this->modules()->find($moduleName);
         if (! $module) {
             return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $moduleName])];
         }
@@ -419,7 +424,7 @@ class PackageManagerService
      */
     public function disable(string $moduleName): array
     {
-        $module = Module::find($moduleName);
+        $module = $this->modules()->find($moduleName);
         if (! $module) {
             return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $moduleName])];
         }
@@ -437,7 +442,7 @@ class PackageManagerService
     {
         $registry_info = $this->getRegistryPackageInfo($vendor, $name);
         $moduleName = ucfirst($name);
-        $module = Module::find($moduleName);
+        $module = $this->modules()->find($moduleName);
 
         $installed = (bool) $module;
         $enabled = $module?->isEnabled() ?? false;

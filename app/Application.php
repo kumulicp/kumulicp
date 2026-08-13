@@ -75,7 +75,10 @@ class Application extends Model
         return $this->belongsToMany(Organization::class, 'app_instances', 'application_id', 'organization_id');
     }
 
-    public function instances()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppInstance, $this>
+     */
+    public function instances(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\AppInstance', 'application_id');
     }
@@ -95,14 +98,20 @@ class Application extends Model
         return $this->versions()->where('status', 'active')->first();
     }
 
-    public function versions()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppVersion, $this>
+     */
+    public function versions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\AppVersion', 'application_id');
     }
 
-    public function plans()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppPlan, $this>
+     */
+    public function plans(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany('\App\AppPlan', 'application_id');
+        return $this->hasMany('App\AppPlan', 'application_id');
     }
 
     public function default_plan()
@@ -119,7 +128,10 @@ class Application extends Model
         return $this->slug;
     }
 
-    public function roles()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppRole, $this>
+     */
+    public function roles(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\AppRole', 'application_id');
     }

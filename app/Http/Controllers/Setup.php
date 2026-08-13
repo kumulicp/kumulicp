@@ -88,7 +88,7 @@ class Setup extends Controller
         $plan->type = 'app';
         $plan->app_plans = json_decode('{}', true);
         $plan->settings = json_decode('{"base": {"price": null, "storage": null, "price_id": null}, "basic": {"max": null, "name": null, "price": null, "amount": null, "storage": null, "price_id": null}, "email": {"max": null, "price": null, "storage": null, "price_id": null}, "storage": {"max": null, "price": null, "amount": null, "price_id": null}, "standard": {"max": null, "price": null, "storage": null, "price_id": null}, "application": {"max": null, "price": null, "price_id": null}, "suborganizations": {"enabled": false}}', true);
-        $plan->archive = 1;
+        $plan->archive = true;
         $plan->save();
 
         // Create Organization Account
@@ -128,8 +128,6 @@ class Setup extends Controller
                 $setting->delete();
             }
             throw new \Exception($e->getMessage());
-
-            return back()->withError($e->getMessage());
         }
 
         $organization->save();

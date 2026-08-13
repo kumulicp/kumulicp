@@ -11,11 +11,6 @@ class GroupFolders extends Nextcloud
 {
     public $data;
 
-    private function url()
-    {
-        return $this->app_instance->address();
-    }
-
     public function find($id)
     {
         $path = $this->baseURI().'/apps/groupfolders/folders/'.(string) $id;
@@ -68,7 +63,6 @@ class GroupFolders extends Nextcloud
         $mountpoint = trim($mountpoint);
 
         // Create Team Folder
-        $this->request_type = 'POST';
         $path = $this->baseURI().'/apps/groupfolders/folders';
         $data = ['mountpoint' => $mountpoint];
 

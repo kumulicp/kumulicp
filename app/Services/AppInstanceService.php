@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Actions\Apps\ApplicationDomainChecks;
 use App\Actions\Apps\ApplicationUpdateJob;
 use App\AppInstance;
+use App\AppPlan;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
 use App\Organization;
@@ -142,7 +143,7 @@ class AppInstanceService
             $plan = $this->app_instance->plan;
         }
 
-        return new AppPlanService($plan, $plan->application);
+        return new AppPlanService($plan);
     }
 
     public function updatePrimaryDomain(?OrgSubdomain $domain = null)
@@ -289,7 +290,7 @@ class AppInstanceService
         }
 
         $domains->where(function ($query) {
-            return $query->where('app_instance_id', $this->id)
+            return $query->where('app_instance_id', $this->app_instance->id)
                 ->orWhere('app_instance_id', 0)
                 ->orWhere('app_instance_id', null);
         })
@@ -304,7 +305,7 @@ class AppInstanceService
         $allowsPrimary = $application->hasDomainOption('primary');
         $allowsSubdomains = $application->hasDomainOption('subdomains');
 
-        return in_array($domain->app_instance_id, [$this->id, 0, null])
+        return in_array($domain->app_instance_id, [$this->app_instance->id, 0, null])
             && $domain->type === 'app'
             && (($allowsPrimary && $domain->host === '@')
                 || ($allowsSubdomains && $domain->host !== '@'));
@@ -368,7 +369,7 @@ class AppInstanceService
     {
         $additional_storage = 0;
 
-        foreach ($this->additional_storage()->get() as $storage) {
+        foreach ($this->app_instance->additional_storage()->get() as $storage) {
             $additional_storage += $storage->quantity ?? 0;
         }
 
@@ -382,7 +383,7 @@ class AppInstanceService
 
     public function roles(bool $all = true)
     {
-        return $this->version->roles(all: $all);
+        return $this->app_instance->version->roles(all: $all);
     }
 
     public function enabledGroups()
@@ -410,7 +411,7 @@ class AppInstanceService
     public function childrenGroups()
     {
         $roles = collect();
-        foreach ($this->children as $child) {
+        foreach ($this->app_instance->children as $child) {
             $roles = $roles->merge(Application::instance($child)->roles()->all());
         }
 
@@ -437,7 +438,7 @@ class AppInstanceService
     public function standardRoles()
     {
         if (! $this->role_groups) {
-            $this->role_groups = $this->version->roles('standard');
+            $this->role_groups = $this->app_instance->version->roles('standard');
         }
 
         return $this->role_groups;
@@ -446,7 +447,7 @@ class AppInstanceService
     public function basicRoles()
     {
         if (! $this->role_groups) {
-            $this->role_groups = $this->version->roles('basic');
+            $this->role_groups = $this->app_instance->version->roles('basic');
         }
 
         return $this->role_groups;

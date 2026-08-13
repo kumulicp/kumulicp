@@ -17,7 +17,7 @@ class PanelChannel
     {
         $username = is_a($notifiable, User::class) ? $notifiable->username : $notifiable->getFirstAttribute('cn');
         $type = get_class($notification);
-        $message = $notification->toPanel($notifiable);
+        $message = method_exists($notification, 'toPanel') ? $notification->toPanel($notifiable) : '';
 
         $notification = new \App\Notification;
         $notification->type = $type;

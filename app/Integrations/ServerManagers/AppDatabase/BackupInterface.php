@@ -17,12 +17,11 @@ class BackupInterface implements BackupContract
 
     private string $password = '';
 
-    private $organization;
+    private string $host = '';
 
     public function __construct(
         private OrgBackup $backup)
     {
-        $this->organization = $backup->organization;
         $this->host = $backup->org_server->backup_server->server->host;
         $this->database = $backup->app_instance->databasename;
         $this->username = $backup->app_instance->databasename;
@@ -31,7 +30,7 @@ class BackupInterface implements BackupContract
 
     public function exists()
     {
-        return Storage::disk(config('filesystem.app_backup'))->exists($this->backup->backup_name);
+        return Storage::disk(config('filesystems.app_backup'))->exists($this->backup->backup_name);
     }
 
     public function get() {}
@@ -41,7 +40,7 @@ class BackupInterface implements BackupContract
         $backup_file = $this->backup->app_instance->name.'-dump.sql';
         $backup_location = storage_path('app/backup-temp').'/'.$backup_file;
 
-        $database = MySql::create()
+        MySql::create()
             ->setDbName($this->database)
             ->setHost($this->host)
             ->setUserName($this->username)
@@ -64,11 +63,16 @@ class BackupInterface implements BackupContract
 
     public function restore()
     {
-        if ($backup_file = $this->backup->backup_name) {
-            $backup_location = storage_path('app/backup-temp').'/'.$backup_file;
-            $file = Storage::disk(config('filesystems.app_backup'))->get($backup_file);
-            Storage::put('backup-temp'.'/'.$this->backup->backup_name, $file);
+        $backup_file = $this->backup->backup_name;
+
+        if (! $backup_file) {
+            throw new \Exception(__('messages.exception.no_backup_file'));
         }
+
+        $backup_location = storage_path('app/backup-temp').'/'.$backup_file;
+
+        $file = Storage::disk(config('filesystems.app_backup'))->get($backup_file);
+        Storage::put('backup-temp'.'/'.$backup_file, $file);
 
         $run_restore = Process::run(implode(' ', ['mysql', '-u', $this->username, '-p'.$this->password, '-h', $this->host, '--database', $this->database, '<', $backup_location]));
 
@@ -84,6 +88,6 @@ class BackupInterface implements BackupContract
 
     public function delete()
     {
-        Storage::disk(config('filesystem.app_backup'))->delete($this->backup->backup_name);
+        Storage::disk(config('filesystems.app_backup'))->delete($this->backup->backup_name);
     }
 }

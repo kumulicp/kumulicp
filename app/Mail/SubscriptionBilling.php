@@ -23,7 +23,7 @@ class SubscriptionBilling extends Mailable implements ShouldQueue
      */
     public function __construct(public $invoice)
     {
-        $admins = AccountManager::accounts($invoice->owner())->users()->orgAdmins();
+        $admins = AccountManager::users($invoice->owner())->orgAdmins();
 
         if ($admins) {
             foreach ($admins as $admin) {

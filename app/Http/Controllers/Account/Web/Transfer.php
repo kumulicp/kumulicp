@@ -75,7 +75,7 @@ class Transfer extends Controller
         $domain_tld = Domain::getTld($validated['domain_name']);
 
         $tld = Tld::where('name', $domain_tld)->first();
-        $tld_driver = $tld?->default_driver ?? config('domains.default');
+        $tld_driver = $tld->default_driver ?? config('domains.default');
 
         $domain = Domain::add(organization: $organization, name: $validated['domain_name'], source: $tld_driver, type: 'managed', status: 'transferring');
 

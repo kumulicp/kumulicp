@@ -11,12 +11,9 @@ use App\User as UserModel;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Spatie\Permission\Models\Role;
 
 class Users
 {
-    private $users = [];
-
     public function __construct(private ?\App\Organization $organization = null)
     {
         if (! $organization) {
@@ -134,7 +131,7 @@ class Users
 
     public function notifyBillingManagers($invoice, string $type = 'subscription', ?string $description = '', ?string $price = '')
     {
-        $billing_managers = Role::where('name', 'billing_manager')->get();
+        $billing_managers = UserModel::role('billing_manager')->get();
 
         foreach ($billing_managers as $manager) {
             if ($manager->email) {

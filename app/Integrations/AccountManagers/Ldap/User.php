@@ -91,7 +91,6 @@ class User extends UserManager
     public function appUserAccessType(AppInstance $app_instance)
     {
         $type = 'none';
-        $permissions_type = $app_instance->application->permissions_type;
         $app_name = $app_instance->parent_id ? $app_instance->parent->name : $app_instance->name;
         $app_dn = Dn::create($this->organization, 'applications', $app_name);
 
@@ -101,7 +100,7 @@ class User extends UserManager
             if ($app_role && $group->application()?->is($app_instance)) {
                 if (! in_array($type, ['standard', 'basic']) && $app_role->accessType(app: $app_instance)->value === 'minimal') {
                     $type = 'minimal';
-                } elseif ($type !== 'standard' && $app_role->accessType(app: $app_instance)->value === 'basic') {
+                } elseif ($app_role->accessType(app: $app_instance)->value === 'basic') {
                     $type = 'basic';
                 } elseif ($app_role->accessType(app: $app_instance)->value === 'standard') {
                     $type = 'standard';
@@ -157,22 +156,30 @@ class User extends UserManager
     {
         $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
 
-        if ($group && ! $this->user->groups()->exists($group)) {
-            $this->user->groups()->attach($group);
+        if ($group instanceof LdapGroup) {
+            if (! $this->user->groups()->exists($group)) {
+                $this->user->groups()->attach($group);
+            }
+
+            return new Group($group);
         }
 
-        return new Group($group);
+        return null;
     }
 
     public function removeFromGroup($groupid)
     {
         $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
 
-        if ($group && $this->user->groups()->exists($group)) {
-            $this->user->groups()->detach($group);
+        if ($group instanceof LdapGroup) {
+            if ($this->user->groups()->exists($group)) {
+                $this->user->groups()->detach($group);
+            }
+
+            return new Group($group);
         }
 
-        return new Group($group);
+        return null;
     }
 
     public function hasAppRole(AppInstance $app_instance, AppRole $role)

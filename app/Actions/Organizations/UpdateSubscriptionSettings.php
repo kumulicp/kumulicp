@@ -37,11 +37,9 @@ class UpdateSubscriptionSettings extends Action
 
     public static function retry(Task $task)
     {
-        $organization = $task->organization;
-        $price = $task->getValue('price');
-        $description = $task->getValue('description');
+        $plan = AppPlan::find($task->getValue('plan'));
 
-        return new self($organization, $description, $price);
+        return new self($plan);
     }
 
     public static function complete(Task $task) {}

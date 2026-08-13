@@ -35,7 +35,10 @@ class Permissions extends PermissionsManager implements PermissionsContract
     {
         $this->organization = $user->organization();
         if (is_a($user->get(), EmailUser::class)) {
-            $user = new LdapAccountUser(LdapUser::find($user->getDn()));
+            $ldap_user = LdapUser::find($user->getDn());
+            if ($ldap_user instanceof LdapUser) {
+                $user = new LdapAccountUser($ldap_user);
+            }
         }
 
         $this->user = $user;
@@ -86,7 +89,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
             foreach ($user_groups as $group) {
                 $group = LdapGroup::find(Dn::create($app_instance->organization, 'applications', [$group->app_slug($app_instance), $app_name]));
 
-                if ($group) {
+                if ($group instanceof LdapGroup) {
                     $roles[] = $group->appRole();
                 }
             }
@@ -134,7 +137,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         $app_name = LdapSupport::getAppInstanceID($app_instance);
         $app_role_count = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
 
-        return $app_instance->application->access_type == 'standard' && $app_role_count > 0;
+        return $app_instance->application->access_type->value === 'standard' && $app_role_count > 0;
     }
 
     /*
@@ -155,7 +158,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
                 if ($role->appRole()) {
                     if ($type != 'basic' && $role->appRoleAccessType()->value == 'minimal') {
                         $type = 'minimal';
-                    } elseif ($type != 'standard' && $role->appRoleAccessType()->value == 'basic') {
+                    } elseif ($role->appRoleAccessType()->value == 'basic') {
                         $type = 'basic';
                     } elseif ($role->appRoleAccessType()->value == 'standard') {
                         $type = 'standard';
@@ -290,7 +293,9 @@ class Permissions extends PermissionsManager implements PermissionsContract
         // Add user to admin group
         $admin_group = LdapGroup::find($admin_group);
 
-        $admin_group->members()->attach($this->ldapUser->get());
+        if ($admin_group instanceof LdapGroup) {
+            $admin_group->members()->attach($this->ldapUser->get());
+        }
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();
@@ -304,7 +309,9 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function removeControlPanelAdminAccess()
     {
         $organization = LdapGroup::find(Dn::create('server', 'controlPanelAccess', 'admin'));
-        $organization->members()->detach($this->ldapUser->get());
+        if ($organization instanceof LdapGroup) {
+            $organization->members()->detach($this->ldapUser->get());
+        }
 
         // Update user type; used by plan settings to determine which users will add to the price
         $this->updateUserAccessType();

@@ -50,8 +50,8 @@ class NextcloudEnvVars extends EnvVar
 
         $sso_settings = $app_instance->configuration('enable-sso') ? [
             'USE_SSO' => 'true',
-            'OIDC_CLIENT_ID' => ($app_instance->configuration('enable-sso') && $app_instance->setting('sso_client_id')) ? Crypt::decryptString($app_instance->setting('sso_client_id')) : '',
-            'OIDC_CLIENT_SECRET' => ($app_instance->configuration('enable-sso') && $app_instance->setting('sso_client_secret')) ? Crypt::decryptString($app_instance->setting('sso_client_secret')) : '',
+            'OIDC_CLIENT_ID' => $app_instance->setting('sso_client_id') ? Crypt::decryptString($app_instance->setting('sso_client_id')) : '',
+            'OIDC_CLIENT_SECRET' => $app_instance->setting('sso_client_secret') ? Crypt::decryptString($app_instance->setting('sso_client_secret')) : '',
             'OIDC_DISCOVERY_URI' => $sso_server ? $sso_server->address.'/application/o/'.$sso_slug.'/.well-known/openid-configuration' : '',
             'OIDC_SCOPE' => $app_instance->configuration('oidc-scope'),
             'OIDC_END_SESSION_ENDPOINT_URI' => '',

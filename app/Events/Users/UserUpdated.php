@@ -22,7 +22,7 @@ class UserUpdated
      */
     public function __construct(public UserManager $user)
     {
-        $this->organization = $user->organization;
+        $this->organization = $user->organization();
     }
 
     /**

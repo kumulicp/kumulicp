@@ -46,7 +46,7 @@ class DomainPrivacy extends Namecheap
             'PageSize' => $page_size,
         ];
 
-        $this->send();
+        $this->form()->post($this->basePath(), $this->postParameters());
     }
 
     public function renew($whoisguard_id, $years)
@@ -57,6 +57,6 @@ class DomainPrivacy extends Namecheap
             'Years' => $years,
         ];
 
-        $this->send();
+        $this->form()->post($this->basePath(), $this->postParameters());
     }
 }

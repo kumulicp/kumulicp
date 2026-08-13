@@ -12,7 +12,6 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
-use Illuminate\Support\Arr;
 
 class ApplicationDeactivate extends Action
 {
@@ -40,10 +39,10 @@ class ApplicationDeactivate extends Action
     {
         $app_instance = Application::instance($task->app_instance);
 
-        $application_deactivate = new self($app_instance->app_instance, $app_instance->version);
+        $application_deactivate = new self($app_instance->app_instance);
         RemoveLDAPGroups::dispatch($task->app_instance);
 
-        if (Arr::get(Application::get($app_instance->application->slug), 'activation_type') == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'upgrade'), null, true)) {
+        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'upgrade'), null, true)) {
             $application_deactivate->addCustomValue(['waiting_for' => [$job->id]]);
 
             $parent_app = Application::instance($app_instance->parent);

@@ -221,7 +221,7 @@ class AppVersion extends Model
     public function hasRole($find_role)
     {
         $roles = $this->roles;
-        if (is_array($roles) && array_key_exists('roles', $roles)) {
+        if (array_key_exists('roles', $roles)) {
             foreach ($roles['roles'] as $role) {
                 if (array_key_exists('subroles', $role)) {
                     foreach ($role['subroles'] as $subrole) {

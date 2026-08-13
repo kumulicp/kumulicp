@@ -25,7 +25,6 @@ class CreateApplicationSSO
     /**
      * Handle the event.
      *
-     * @param  ApplicationActivating  $event
      * @return void
      */
     public function handle()
@@ -52,7 +51,7 @@ class CreateApplicationSSO
             if ($this->task) {
                 $this->task->status = 'failed';
                 $this->task->error_message = $e->getMessage();
-                $this->save();
+                $this->task->save();
             }
         }
     }

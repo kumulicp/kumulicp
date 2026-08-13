@@ -44,7 +44,10 @@ class AppPlan extends Model
         'features' => 'array',
     ];
 
-    public function application()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     */
+    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
@@ -218,9 +221,9 @@ class AppPlan extends Model
         return Arr::get($this->settings, "features.{$featureName}.price");
     }
 
-    public function setting($setting)
+    public function setting($setting, $default = null)
     {
-        return is_array($this->settings) ? Arr::get($this->settings, $setting, null) : null;
+        return is_array($this->settings) ? Arr::get($this->settings, $setting, $default) : $default;
     }
 
     public function selfRegistrationEnabled(): bool

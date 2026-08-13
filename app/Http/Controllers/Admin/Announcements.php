@@ -126,7 +126,7 @@ class Announcements extends Controller
     {
         $announcement = Announcement::where('id', $id)->first();
 
-        $affected = json_decode($announcement->affected_apps, true);
+        $affected = $announcement->affected_apps;
         foreach ($affected['affected'] as $app) {
             $application = Application::where('name', $app)->first();
 

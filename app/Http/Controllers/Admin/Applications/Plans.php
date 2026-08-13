@@ -371,12 +371,8 @@ class Plans extends Controller
     public function remove(Application $app, AppPlan $plan)
     {
         if ($plan->subscribers->count() == 0) {
-            if ($plan) {
-                $plan_name = $plan->name;
-                $plan->delete();
-            } else {
-                $plan_name = '';
-            }
+            $plan_name = $plan->name;
+            $plan->delete();
 
             return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.added', ['plan' => $plan_name]));
         }

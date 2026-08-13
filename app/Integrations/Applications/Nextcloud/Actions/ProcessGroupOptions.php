@@ -31,7 +31,6 @@ class ProcessGroupOptions extends Action
     {
         $this->organization = $app_instance->organization;
         $this->app_instance = $app_instance;
-        $this->group = $group;
         $this->setCustomValues($custom_values);
         $this->addCustomValue(['group_slug' => $group->attribute('slug')]);
 
@@ -46,7 +45,6 @@ class ProcessGroupOptions extends Action
             // Update additional storage
             $additional_storage_service = new AdditionalStorageService($this->organization, 'group', $name, $this->app_instance);
             $additional_storage_service->updateQuantity(Arr::get($custom_values, 'extensions.nextcloud_additional_storage', 0));
-            $this->additional_storage_service = $additional_storage_service;
         }
 
         $this->prerequisites = $prereqs->get();

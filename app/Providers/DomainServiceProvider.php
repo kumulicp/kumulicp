@@ -168,7 +168,7 @@ class DomainServiceProvider extends ServiceProvider
         Gate::define('disable-email-domain', function (User $user, OrgDomain $domain) {
             return $user->organization->status !== 'deactivated'
                 && $domain->status === 'active'
-                && $domain->email_enabled === true;
+                && $domain->email_enabled == true;
         });
 
         Gate::define('renew-domain', function (User $user, OrgDomain $domain) {

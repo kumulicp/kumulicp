@@ -8,6 +8,9 @@ interface EmailContract
 {
     public function emailList(OrgDomain $domain);
 
+    /**
+     * @phpstan-impure
+     */
     public function existsEmail(OrgDomain $domain, string $address);
 
     public function email(OrgDomain $domain, string $username);

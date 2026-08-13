@@ -16,8 +16,6 @@ use Illuminate\Support\Facades\Mail;
 
 class Users
 {
-    private $users = [];
-
     public function __construct(private ?\App\Organization $organization = null)
     {
         if (! $organization) {
@@ -62,14 +60,16 @@ class Users
 
         $user = LdapUser::find($user->getDn());
 
-        $user_interface = $this->get($user);
+        if (! $user instanceof LdapUser) {
+            return null;
+        }
 
-        return $user_interface;
+        return $this->get($user);
     }
 
     public function find(string $username)
     {
-        if ($user = LdapUser::find(Dn::create($this->organization, 'users', $username))) {
+        if (($user = LdapUser::find(Dn::create($this->organization, 'users', $username))) instanceof LdapUser) {
             return new User($user);
         }
     }
@@ -78,7 +78,7 @@ class Users
     {
         $user = LdapUser::where('mail', '=', $user_email)->first();
 
-        if ($user) {
+        if ($user instanceof LdapUser) {
             return $this->get($user);
         }
 
@@ -95,7 +95,7 @@ class Users
 
             foreach ($admins->getAttribute('member') as $admin) {
                 $admin = LdapUser::find($admin);
-                if ($admin && $admin->isChildOf($users)) {
+                if ($admin instanceof LdapUser && $admin->isChildOf($users)) {
                     $n[] = $this->get($admin);
                 }
             }
@@ -110,7 +110,7 @@ class Users
 
         $billing_managers = collect();
 
-        if ($managers) {
+        if ($managers instanceof Group) {
             $billing_managers = $managers->members()->where('objectClass', 'person')->get();
         }
 
@@ -161,7 +161,7 @@ class Users
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
             $group_directory = Group::find($group_dn);
 
-            if ($group_directory) {
+            if ($group_directory instanceof Group) {
                 if ($get_members = $group_directory->members()->where('objectClass', 'person')->get()) {
                     foreach ($get_members as $member) {
                         if (! $members->contains(function ($value, $key) use ($member) {
@@ -193,7 +193,7 @@ class Users
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
             $group_directory = Group::find($group_dn);
 
-            if ($group_directory) {
+            if ($group_directory instanceof Group) {
                 if ($get_members = $group_directory->members()->where('employeeType', 'standard')->get()) {
                     foreach ($get_members as $member) {
                         if (! $group_members->contains(function ($value, $key) use ($member) {
@@ -206,7 +206,7 @@ class Users
             }
         }
 
-        return $group_members ?? collect();
+        return $group_members;
     }
 
     public function appBasicUsers(AppInstance $app_instance)
@@ -225,7 +225,7 @@ class Users
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
             $group_directory = Group::find($group_dn);
 
-            if ($group_directory) {
+            if ($group_directory instanceof Group) {
                 $group_members = $group_directory->members()->where('employeeType', 'basic')->get();
 
                 foreach ($group_members as $member) {
@@ -245,7 +245,7 @@ class Users
 
         $billing_managers = [];
 
-        if ($managers) {
+        if ($managers instanceof Group) {
             $billing_managers = $managers->members()->get();
             foreach ($billing_managers as $manager) {
                 if ($manager->getFirstAttribute('mail')) {
@@ -302,7 +302,7 @@ class Users
             $users = LdapUser::in(Dn::create($this->organization, 'users'))->whereIn('cn', $this->getUserList());
         }
 
-        return $users->orderBy()->paginate($items_per_page);
+        return $users->orderBy('givenName')->paginate($items_per_page);
     }
 
     public function map($users)

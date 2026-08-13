@@ -2,4 +2,7 @@
 
 namespace App\Support\AccountManager;
 
-class GroupManager {}
+abstract class GroupManager
+{
+    abstract public function attribute($attribute);
+}

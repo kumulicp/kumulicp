@@ -144,12 +144,12 @@ class Versions extends Controller
                     'text' => $announcement->title,
                 ];
             }) : [],
-            'roles' => $roles ? $roles->map(function ($role) {
+            'roles' => $roles->map(function ($role) {
                 return [
                     'text' => $role->label,
                     'value' => $role->id,
                 ];
-            }) : [],
+            }),
             'can' => [
                 'helm_chart' => ApplicationFacade::profile($app)->isCompatible(['helm_chart']),
             ],

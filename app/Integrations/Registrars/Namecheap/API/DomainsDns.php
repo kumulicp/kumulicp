@@ -26,7 +26,7 @@ class DomainsDns extends Namecheap
         $this->parameters = [
             'SLD' => $sld,
             'TLD' => $tld,
-            'Nameserver' => $name_servers,
+            'Nameserver' => $name_server,
         ];
 
         $this->form()->post($this->basePath(), $this->postParameters());
@@ -59,6 +59,7 @@ class DomainsDns extends Namecheap
         if (! $this->hasError()) {
             $DomainDNSGetHostsResult = $this->response_content()->DomainDNSGetHostsResult;
             $attributes = $DomainDNSGetHostsResult->attributes();
+            $hosts = [];
 
             foreach ($DomainDNSGetHostsResult->host as $host) {
                 $host_attributes = $host->attributes();
@@ -109,7 +110,6 @@ class DomainsDns extends Namecheap
         $tld = $domain->tld->name;
 
         $this->command = 'namecheap.domains.dns.setHosts';
-        $this->request_type = 'POST';
         $parameters = [
             'SLD' => $sld,
             'TLD' => $tld,

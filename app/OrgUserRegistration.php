@@ -13,16 +13,19 @@ class OrgUserRegistration extends Model
         'expires_at' => 'datetime',
     ];
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id');
     }
 
-    public static function generate(Organization $organization, string $email): static
+    public static function generate(Organization $organization, string $email): self
     {
-        static::where('organization_id', $organization->id)->where('email', $email)->delete();
+        self::where('organization_id', $organization->id)->where('email', $email)->delete();
 
-        $record = new static;
+        $record = new self;
         $record->organization_id = $organization->id;
         $record->email = $email;
         $record->token = Str::random(64);

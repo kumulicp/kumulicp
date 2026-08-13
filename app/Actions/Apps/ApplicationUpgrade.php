@@ -13,7 +13,6 @@ use App\Services\AppInstance\AppStorageService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
-use Illuminate\Support\Arr;
 
 class ApplicationUpgrade extends Action
 {
@@ -39,7 +38,7 @@ class ApplicationUpgrade extends Action
         $app_instance->save();
         $this->app_instance = $app_instance;
 
-        if (Arr::get(Application::get($app_instance->application->slug), 'activation_type') == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance, 'upgrade'), null, true)) {
+        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance, 'upgrade'), null, true)) {
             $this->addCustomValue(['waiting_for' => [$job->id]]);
         }
     }
@@ -49,7 +48,7 @@ class ApplicationUpgrade extends Action
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
         $app_instance = Application::instance($task->app_instance);
-        if (Arr::get(Application::get($app_instance->application->slug), 'activation_type') == 'job' && $parent_app = Application::instance($app_instance->parent)) {
+        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
             $server = $app_instance->connect('web')->update();

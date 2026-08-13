@@ -40,8 +40,8 @@ class OrganizationCancelledSubscription extends Notification implements ShouldQu
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->subject(__('messages.notification.organization.unsubscribed', ['organization' => $organization->name]))
-            ->line(__('messages.notification.organization.unsubscribed', ['organization' => $organization->name]))
+            ->subject(__('messages.notification.organization.unsubscribed', ['organization' => $this->organization->name]))
+            ->line(__('messages.notification.organization.unsubscribed', ['organization' => $this->organization->name]))
             ->action('View '.$this->organization->name, url('/admin/organizations/'.$this->organization->id));
     }
 

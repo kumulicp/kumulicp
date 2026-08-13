@@ -133,14 +133,14 @@ class Subdomains extends Controller
                     }
                 },
             ], function (Fluent $request) {
-                return $request->type === 'app';
+                return $request->get('type') === 'app';
             })->validate();
 
         $hostValidation = Validator::make($request->all(), [])
             ->sometimes('value', ['required', 'ipv4'], function (Fluent $request) {
-                return $request->type === 'A';
+                return $request->get('type') === 'A';
             })->sometimes('value', 'required|ipv6', function (Fluent $request) {
-                return $request->type === 'AAAA';
+                return $request->get('type') === 'AAAA';
             })->sometimes('value', ['required', function (string $attribute, mixed $value, \Closure $fail) {
                 $preg_matched = preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $value) // valid chars check
                     && preg_match('/^.{1,253}$/', $value) // overall length check
@@ -151,9 +151,9 @@ class Subdomains extends Controller
                     $fail('This value must be a valid domain name');
                 }
             }], function (Fluent $request) {
-                return in_array($request->type, ['CNAME', 'MX', 'MXE', 'NS']);
+                return in_array($request->get('type'), ['CNAME', 'MX', 'MXE', 'NS']);
             })->sometimes('value', 'required|string', function (Fluent $request) {
-                return in_array($request->type, ['ALIAS', 'TXT', 'CAA']);
+                return in_array($request->get('type'), ['ALIAS', 'TXT', 'CAA']);
             })->validate();
 
         return $request->all();

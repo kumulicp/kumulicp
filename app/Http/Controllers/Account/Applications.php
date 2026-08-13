@@ -50,7 +50,7 @@ class Applications extends Controller
                         })->push($app->deactivate_at ? [
                             'id' => 0,
                             'name' => '',
-                            'description' => __('labels.deactivates', ['date' => $app->deactivate_at?->format('M d Y')]),
+                            'description' => __('labels.deactivates', ['date' => $app->deactivate_at->format('M d Y')]),
                         ] : []),
                         'organization' => [
                             'name' => $app->organization->name,

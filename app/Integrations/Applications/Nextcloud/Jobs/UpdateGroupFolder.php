@@ -54,7 +54,7 @@ class UpdateGroupFolder
             $group_folder_service = new GroupFolderService($this->app_instance, $group_name);
             $additional_storage = Arr::get($options, 'extensions.nextcloud_additional_storage', null);
             // Get group nextcloud quota
-            if ($additional_storage && is_int((int) $additional_storage)) {
+            if ($additional_storage && is_numeric($additional_storage)) {
                 $additional_storage = new AdditionalStorageService($this->organization, 'group', $group_name, $this->app_instance);
             }
 
@@ -67,6 +67,7 @@ class UpdateGroupFolder
                 $group_folder_service->add($options['name']);
             }
 
+            $managers = [];
             foreach ($options['managers'] as $manager) {
                 $managers[] = $manager;
             }

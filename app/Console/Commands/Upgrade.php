@@ -52,7 +52,9 @@ class Upgrade extends Command
             }
         }
 
-        Settings::update('installed_version', $version);
+        Settings::update('installed_version', array_key_last($this->versions));
+
+        return 0;
     }
 
     private function alpha_215()

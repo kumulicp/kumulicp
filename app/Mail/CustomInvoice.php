@@ -23,7 +23,7 @@ class CustomInvoice extends Mailable implements ShouldQueue
      */
     public function __construct(public $invoice, public string $description, public $price)
     {
-        $this->admins = AccountManager::accounts($invoice->owner())->users()->orgAdmins();
+        $this->admins = AccountManager::users($invoice->owner())->orgAdmins();
     }
 
     /**

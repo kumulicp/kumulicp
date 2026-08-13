@@ -373,7 +373,7 @@ class Subscription extends Controller
             $child->status = 'deactivating';
             $child->save();
 
-            $billing = new Billing($child);
+            $billing = Billing::organization($child);
 
             if ($billing->isBillable()) {
                 $billing->cancel();
@@ -424,7 +424,7 @@ class Subscription extends Controller
         if ($plan = $organization->plan) {
             $data = array_merge($data, [
                 'name' => $plan->name,
-                'features' => json_decode($plan->features, true),
+                'features' => $plan->features,
             ]);
         }
 
@@ -433,7 +433,7 @@ class Subscription extends Controller
 
             $data = array_merge($data, [
                 'name' => $plan->name,
-                'features' => json_decode($plan->features, true),
+                'features' => $plan->features,
             ]);
         }
 

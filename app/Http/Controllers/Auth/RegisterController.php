@@ -66,7 +66,7 @@ class RegisterController extends Controller
     /**
      * Show the application registration form.
      *
-     * @return View
+     * @return \Inertia\Response
      */
     public function showRegistrationForm()
     {
@@ -117,7 +117,7 @@ class RegisterController extends Controller
     /**
      * Create a new user instance after a valid registration.
      *
-     * @return User
+     * @return array{user: User, organization: \App\Organization}|RedirectResponse
      */
     protected function create(array $data)
     {
@@ -191,12 +191,16 @@ class RegisterController extends Controller
             Action::execute(new SubscriptionUpdate($organization, $plan), background: true);
         } catch (\Throwable $e) {
             report($e);
-            AccountManager::account($organization)->destroy();
-            $organization->domains()->delete();
+            if (isset($organization)) {
+                AccountManager::account($organization)->destroy();
+                $organization->domains()->delete();
+            }
             if (isset($user)) {
                 $user->delete();
             }
-            $organization->delete();
+            if (isset($organization)) {
+                $organization->delete();
+            }
             throw new \Exception($e->getMessage().$e->getTraceAsString());
         }
 
@@ -217,6 +221,10 @@ class RegisterController extends Controller
         $this->validator($request->all())->validate();
 
         $registration_info = $this->create($request->all());
+
+        if ($registration_info instanceof RedirectResponse) {
+            return $registration_info;
+        }
 
         try {
             event(new OrganizationRegistered($registration_info['organization'], $registration_info['user']));

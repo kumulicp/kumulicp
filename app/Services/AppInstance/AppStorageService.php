@@ -11,6 +11,8 @@ class AppStorageService
 {
     private $additional_storage = [];
 
+    private $organization;
+
     public function __construct(private AppInstance $app_instance)
     {
         $this->organization = $this->app_instance->organization;

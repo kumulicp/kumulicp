@@ -33,7 +33,7 @@ class EmailAddressExists implements Rule
         // Checks if email address is being used by anyone else in the LDAP directory
         $user = AccountManager::checkEmail($value);
 
-        return (($user && ! $this->user) || ($user && $this->user && $user != $this->user)) ? false : true;
+        return (($user && ! $this->user) || ($user && $user != $this->user)) ? false : true;
     }
 
     /**

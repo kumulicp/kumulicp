@@ -21,6 +21,10 @@ class AuthentikSSOInterface
 
     private $groups;
 
+    private $policy_bindings;
+
+    private $sources;
+
     public function __construct(
         private OrgServer $server,
         private ?AppInstance $app_instance = null,
@@ -48,6 +52,8 @@ class AuthentikSSOInterface
 
     public function add()
     {
+        $application = null;
+
         $this->sources->LDAPSync($this->app_instance);
 
         if (! $this->providers->exists($this->app_instance)) {

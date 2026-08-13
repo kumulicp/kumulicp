@@ -65,11 +65,11 @@ class OrgServerService
     {
         $server_type = $type.'_server';
         if (! $org_server = $app_instance->$server_type) {
-            $server = $this->defaultServer($type);
+            $server = ServerService::defaultServer($type);
             $org_server = OrgServer::where('organization_id', $app_instance->organization_id)->where('server_id', $server->id)->first();
 
             if (! $org_server) {
-                $org_server = $this->addOrgServer($app_instance->organization, 'database');
+                $org_server = self::add($app_instance->organization, 'database');
             }
 
             $server_type_id = $server_type.'_id';
@@ -119,8 +119,6 @@ class OrgServerService
     public function connect()
     {
         return ServerInterface::connect($this->org_server);
-
-        throw new \Exception(__('messages.exception.no_server_interface', ['server' => $server->name]));
     }
 
     public function checkConnection($connection)

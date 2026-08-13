@@ -34,7 +34,7 @@ class ChangePassword extends Controller
 
         Organization::setOrganization($new_user->organization);
 
-        if ($new_user->activated == 0) {
+        if (! $new_user->activated) {
             $user = AccountManager::users()->find($new_user->username);
 
             return inertia('Auth/SetPassword', [
@@ -43,11 +43,9 @@ class ChangePassword extends Controller
                     'email' => $user->attribute('email'),
                 ],
             ]);
-        } elseif ($new_user && $new_user->activated == 1) {
-            return redirect('/public/users/done/'.$code);
-        } else {
-            return abort(404);
         }
+
+        return redirect('/public/users/done/'.$code);
     }
 
     public function store(Request $request, $code)
@@ -73,7 +71,7 @@ class ChangePassword extends Controller
         $user->setPassword($request->input('password'));
         $user->save();
 
-        $new_user->activated = 1;
+        $new_user->activated = true;
         $new_user->save();
 
         return redirect('/public/users/done/'.$code);
@@ -83,7 +81,7 @@ class ChangePassword extends Controller
     {
         /* Validate */
         $validatedData = $request->validate([
-            'currentPassword' => ['required', new ConfirmOldPassword($organization, $email)],
+            'currentPassword' => ['required', new ConfirmOldPassword($email)],
             'newPassword' => 'required|confirmed',
         ]);
 

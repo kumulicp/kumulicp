@@ -32,22 +32,34 @@ class Task extends Model
         'custom_values' => 'array',
     ];
 
-    public function application()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     */
+    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
 
-    public function version()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppVersion, $this>
+     */
+    public function version(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\AppVersion', 'version_id');
     }
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
 
-    public function app_instance()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppInstance, $this>
+     */
+    public function app_instance(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
     }

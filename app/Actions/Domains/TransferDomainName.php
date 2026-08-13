@@ -20,7 +20,7 @@ class TransferDomainName extends Action
 
         $domain->status = 'transferring';
         $domain->type = 'managed';
-        $domain->source = $domain->tld?->default_driver ?? config('domains.default');
+        $domain->source = $domain->tld->default_driver ?? config('domains.default');
         $domain->save();
 
         $this->domain = $domain;

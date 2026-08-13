@@ -9,6 +9,7 @@ use App\Integrations\Registrars\Namecheap\Interfaces\RegistrarInterface;
 use App\Organization;
 use App\OrgDomain;
 use App\OrgSubdomain;
+use App\Plan;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\Facades\ServerInterface;
@@ -72,26 +73,20 @@ class DomainService
 
     public function registrar(OrgDomain|Tld|string|null $domain = null)
     {
-        switch (gettype($domain)) {
-            case 'NULL':
-                $driver = config('domains.default');
-                break;
-            case 'object':
-                if (is_a($domain, OrgDomain::class)) {
-                    if (in_array($domain->type, ['default', 'connection']) || ($domain->type == 'app' && in_array($domain->parent_domain->type, ['default', 'connection']))) {
-                        $driver = 'default';
-                    } else {
-                        $driver = $domain->source;
-                    }
+        if ($domain === null) {
+            $driver = config('domains.default');
+        } elseif ($domain instanceof OrgDomain) {
+            if (in_array($domain->type, ['default', 'connection']) || ($domain->type == 'app' && in_array($domain->parent_domain->type, ['default', 'connection']))) {
+                $driver = 'default';
+            } else {
+                $driver = $domain->source;
+            }
 
-                    return $this->driver($driver)->select($domain);
-                } elseif (is_a($domain, Tld::class)) {
-                    $driver = $domain->default_driver;
-                }
-                break;
-            case 'string':
-                $driver = $domain;
-                break;
+            return $this->driver($driver)->select($domain);
+        } elseif ($domain instanceof Tld) {
+            $driver = $domain->default_driver;
+        } else {
+            $driver = $domain;
         }
 
         return $this->driver($driver);
@@ -180,9 +175,8 @@ class DomainService
         $subdomain->status = $domain->status;
         $subdomain->host = $host;
 
-        if ($domain) {
-            $subdomain->domain()->associate($domain->id);
-        }
+        $subdomain->domain()->associate($domain->id);
+
         if ($app_instance) {
             $subdomain->app_instance()->associate($app_instance->id);
             $subdomain->value = $app_instance->web_server?->server->ip;
@@ -202,7 +196,7 @@ class DomainService
     {
         $changed = false;
         if ($app_instance && ! $app_instance->is($subdomain->app_instance)) {
-            if ($subdomain->type == 'app' && $app_instance && ! $app_instance->is($subdomain->app_instance)) {
+            if ($subdomain->type == 'app') {
                 $subdomain->app_instance()->associate($app_instance);
                 $subdomain->value = $app_instance->web_server->server->ip;
                 $subdomain->save();

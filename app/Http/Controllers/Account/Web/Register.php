@@ -68,7 +68,7 @@ class Register extends Controller
             'user' => [
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
-                'phone' => $user->phone,
+                'phone' => $user->phone_number,
                 'email' => $user->email,
             ],
             'organization' => [
@@ -265,7 +265,7 @@ class Register extends Controller
         $org_domain->phone = $validated['phone'];
         $org_domain->type = 'managed';
         $org_domain->status = 'registering';
-        $org_domain->source = $org_domain->tld?->default_driver ?? config('domains.default');
+        $org_domain->source = $org_domain->tld->default_driver ?? config('domains.default');
         $org_domain->save();
 
         $subdomain = new OrgSubdomain;

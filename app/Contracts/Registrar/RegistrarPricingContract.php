@@ -11,8 +11,6 @@ interface RegistrarPricingContract
 
     /**
      * Get premium price for premium domains.
-     *
-     * @return bool
      */
     public function premiumPrice(): float;
 
@@ -33,8 +31,6 @@ interface RegistrarPricingContract
 
     /**
      * Get transfer prices for each year.
-     *
-     * @return float
      */
     public function transferPrices(): array;
 
@@ -45,8 +41,6 @@ interface RegistrarPricingContract
 
     /**
      * Get renew prices for each year.
-     *
-     * @return float
      */
     public function renewPrices(): array;
 

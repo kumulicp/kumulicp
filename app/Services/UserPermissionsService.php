@@ -21,9 +21,9 @@ class UserPermissionsService
      * Update a user's app permissions.
      *
      * @param  mixed  $user  AccountManager user instance
-     * @param  string  $userId  Username / user identifier
-     * @param  array  $permissionsInput  Raw permissions array keyed by app instance ID
-     * @param  bool  $withSideEffects  Set false to skip action dispatch, events, and notifications (useful in tests)
+     * @param  string  $user_id  Username / user identifier
+     * @param  array  $permissions_input  Raw permissions array keyed by app instance ID
+     * @param  bool  $with_side_effects  Set false to skip action dispatch, events, and notifications (useful in tests)
      */
     public function updatePermissions(
         mixed $user,
@@ -166,12 +166,17 @@ class UserPermissionsService
         $organization_access = data_get($permissions_input, 'control_panel.0');
         $organization_give_access = is_int($organization_access) ? Organization::find($organization_access) : null;
         $control_panel_access = $permissions->hasControlPanelAccess();
+        $database_user = $user->databaseUser();
 
         if ($organization_give_access && ! $control_panel_access) {
             $permissions->addControlPanelAccess(organization: $organization_give_access);
-        } elseif ($organization_give_access && $control_panel_access && $user->databaseUser()?->organization_id !== $organization_access) {
-            $user->databaseUser()?->organization()->associate($organization_give_access)->save();
-        } elseif (! $organization_give_access && $control_panel_access) {
+        } elseif ($organization_give_access) {
+            // $control_panel_access is guaranteed true here
+            if ($database_user instanceof \App\User && $database_user->organization_id !== $organization_access) {
+                $database_user->organization()->associate($organization_give_access)->save();
+            }
+        } elseif ($control_panel_access) {
+            // $organization_give_access is guaranteed false here
             $permissions->removeControlPanelAccess();
         }
 

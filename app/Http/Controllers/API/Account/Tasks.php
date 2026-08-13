@@ -14,7 +14,7 @@ class Tasks extends Controller
         $organization = Organization::account();
 
         $tasks = new TaskHelpers;
-        $response = $tasks->get_group_status(['organization_id' => $organization->id, 'background' => 0]);
+        $response = $tasks->getGroupStatus(['organization_id' => $organization->id, 'background' => 0]);
 
         return response()->json($response);
     }

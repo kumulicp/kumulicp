@@ -26,7 +26,10 @@ class Log extends Model
         ];
     }
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Organization');
     }

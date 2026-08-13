@@ -15,10 +15,6 @@ class FeaturesService
 
     private $plan;
 
-    private $app_instance_features;
-
-    private $feature_info;
-
     public $app_instance;
 
     private $updated_features = [];
@@ -75,6 +71,8 @@ class FeaturesService
 
     public function active()
     {
+        $features = [];
+
         foreach ($this->features as $name => $feature) {
             if ($this->isActive($name)) {
                 $features[$name] = $feature;
@@ -243,13 +241,6 @@ class FeaturesService
         }
 
         return $settings;
-    }
-
-    private function updateSettings($name, array $settings)
-    {
-        if (! $this->hasOverride($name)) {
-            $this->features[$name]['settings'] = $settings;
-        }
     }
 
     public function appFeature($feature, $info = null)

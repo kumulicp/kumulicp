@@ -34,9 +34,9 @@ class Announcement extends Model
 
     public function affected_apps()
     {
-        $affected_apps = json_decode($this->affected_apps);
+        $apps = [];
 
-        foreach ($affected_apps->affected as $affected_app) {
+        foreach ($this->affected_apps['affected'] ?? [] as $affected_app) {
             $apps[] = Application::where('slug', $affected_app)->first();
         }
 

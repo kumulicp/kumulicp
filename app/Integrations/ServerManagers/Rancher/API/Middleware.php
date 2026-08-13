@@ -8,8 +8,6 @@ use Illuminate\Support\Facades\Log;
 
 class Middleware extends Rancher
 {
-    private string $middleware_name = 'middlewares';
-
     public function create(MiddlewareChart $chart)
     {
         $namespace = $this->organization->slug;

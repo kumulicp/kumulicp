@@ -27,7 +27,7 @@ class UpdateAppInfo implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  UserPermissionsUpdated  $event
+     * @param  AppInstanceDomainChanged  $event
      * @return void
      */
     public function handle(AppInstanceDomainChanged $event)

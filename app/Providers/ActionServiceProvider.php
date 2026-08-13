@@ -30,7 +30,7 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
         });
 
         $this->app->singleton('applications', function ($app) {
-            return new ApplicationService($app);
+            return new ApplicationService;
         });
 
         $this->app->singleton('server_interfaces', function ($app) {

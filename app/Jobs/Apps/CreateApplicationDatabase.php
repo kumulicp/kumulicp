@@ -17,6 +17,8 @@ class CreateApplicationDatabase
 
     public $app_instance;
 
+    public $task;
+
     /**
      * Create the event listener.
      *
@@ -25,12 +27,12 @@ class CreateApplicationDatabase
     public function __construct(AppInstance $app_instance, ?Task $task = null)
     {
         $this->app_instance = $app_instance;
+        $this->task = $task;
     }
 
     /**
      * Handle the event.
      *
-     * @param  ApplicationActivating  $event
      * @return void
      */
     public function handle()
@@ -59,7 +61,7 @@ class CreateApplicationDatabase
             if ($this->task) {
                 $this->task->status = 'failed';
                 $this->task->error_message = $e->getMessage();
-                $this->save();
+                $this->task->save();
             }
         }
     }

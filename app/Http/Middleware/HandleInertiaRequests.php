@@ -37,8 +37,8 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         App::setLocale(
-            $user?->locale
-            ?? $user?->organization?->default_locale
+            $user->locale
+            ?? $user->organization->default_locale
             ?? Settings::get('default_locale', null)
             ?? config('app.locale')
         );

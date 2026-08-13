@@ -7,7 +7,7 @@ use App\Actions\Domains\UpdateDnsRecords;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Actions\Prerequisites;
 use App\AppInstance;
-use app\Application as App;
+use App\Application as App;
 use App\AppPlan;
 use App\AppVersion;
 use App\Events\ApplicationActivated as EventApplicationActivated;
@@ -31,10 +31,12 @@ class ApplicationActivate extends Action
 
     private $sso_task;
 
+    private $plan;
+
     public function __construct(Organization $organization, App $app, AppPlan $plan, ?array $custom_values = [], ?AppInstance $parent_app_instance = null, ?AppVersion $version = null, ?string $label = null, ?OrgSubdomain $domain = null, ?array $configurations = null)
     {
         $this->organization = $organization;
-        $this->app = $app;
+        $this->application = $app;
         $this->plan = $plan;
         $this->version = $version ?? $app->active_version();
         if ($this->version->custom_values) {
@@ -69,9 +71,7 @@ class ApplicationActivate extends Action
             }
         }
 
-        if ($custom_values) {
-            $this->addCustomValue($custom_values);
-        }
+        $this->addCustomValue($custom_values);
 
         $application->features()->update($custom_values);
 
@@ -106,7 +106,7 @@ class ApplicationActivate extends Action
             AddLdapGroups::dispatch($task->app_instance);
 
             if ($this->sso_task) {
-                $task_values = $this->sso_task?->custom_values;
+                $task_values = $this->sso_task->custom_values;
                 $new_values = Arr::set($task_values, 'parent_task_id', $task->id);
                 $this->sso_task->custom_values = $new_values;
                 $this->sso_task->save();

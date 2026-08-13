@@ -36,7 +36,10 @@ class AppRole extends Model
         return $this->belongsTo('App\Application', 'application_id');
     }
 
-    public function implied_roles()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\AppRole, $this>
+     */
+    public function implied_roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany('App\AppRole', 'app_implied_roles', 'primary_app_role_id', 'implied_app_role_id');
     }

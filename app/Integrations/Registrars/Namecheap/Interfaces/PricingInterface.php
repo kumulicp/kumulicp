@@ -17,8 +17,6 @@ class PricingInterface implements RegistrarPricingContract
 
     private $organization;
 
-    private $price = 0;
-
     private $domain_info;
 
     public function __construct(Tld $tld, string $domain_name, ?array $domain_info = null)
@@ -128,6 +126,7 @@ class PricingInterface implements RegistrarPricingContract
             $this->tld->register_price = array_values($users_response['register'][$this->tld->name])[0]['YourPrice'];
 
             // Update register prices
+            $prices = [];
             foreach ($users_response['register'][$this->tld->name] as $year => $price) {
                 $prices[$year] = $price['YourPrice'];
             }
@@ -138,6 +137,7 @@ class PricingInterface implements RegistrarPricingContract
             $this->tld->transfer_price = array_values($users_response['transfer'][$this->tld->name])[0]['YourPrice'];
 
             // Update transfer_prices
+            $prices = [];
             foreach ($users_response['transfer'][$this->tld->name] as $year => $price) {
                 $prices[$year] = $price['YourPrice'];
             }
@@ -147,6 +147,7 @@ class PricingInterface implements RegistrarPricingContract
             $this->tld->renew_price = array_values($users_response['renew'][$this->tld->name])[0]['YourPrice'];
 
             // Update renew prices
+            $prices = [];
             foreach ($users_response['renew'][$this->tld->name] as $year => $price) {
                 $prices[$year] = $price['YourPrice'];
             }

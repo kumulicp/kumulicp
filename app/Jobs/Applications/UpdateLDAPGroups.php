@@ -31,7 +31,6 @@ class UpdateLDAPGroups implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  ApplicationActivating  $event
      * @return void
      */
     public function handle()

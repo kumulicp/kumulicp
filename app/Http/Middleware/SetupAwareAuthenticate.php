@@ -27,5 +27,7 @@ class SetupAwareAuthenticate extends Middleware
                 return route('initial.setup');
             }
         }
+
+        return null;
     }
 }

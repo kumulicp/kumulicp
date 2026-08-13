@@ -232,7 +232,7 @@ class Servers extends Controller
             'server' => [
                 'id' => $server->id,
                 'name' => $server->name,
-                'chart' => $server->chart,
+                'chart' => $server->setting('chart'),
             ],
             'breadcrumbs' => [
                 [

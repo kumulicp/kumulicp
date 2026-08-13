@@ -6,7 +6,7 @@ class NextcloudDavRedirect extends MiddlewareChart
 {
     public $chart_name = 'dav';
 
-    public function values()
+    public function values(): array
     {
         $namespace = $this->organization->slug;
 

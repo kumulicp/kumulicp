@@ -24,7 +24,10 @@ class OrgServer extends Model
 {
     use HasFactory;
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
@@ -44,7 +47,10 @@ class OrgServer extends Model
         return $this->hasMany('App\OrgDomain', 'email_server_id');
     }
 
-    public function server()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Server, $this>
+     */
+    public function server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\Server', 'server_id');
     }

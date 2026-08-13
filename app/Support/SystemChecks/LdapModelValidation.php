@@ -24,6 +24,8 @@ class LdapModelValidation
 {
     /**
      * The LDAP models an entry is expected to satisfy the requirements of.
+     *
+     * @var array<class-string<\LdapRecord\Models\Model>>
      */
     protected array $models = [
         EmailUser::class,

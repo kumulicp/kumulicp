@@ -53,7 +53,7 @@ class DomainsTransfer extends Namecheap
         ];
     }
 
-    public function updateStatus($sld, $tld, $nameserver)
+    public function updateStatus($transfer_id, $resubmit)
     {
         $this->command = 'namecheap.domains.transfer.updateStatus';
         $this->parameters = [
@@ -80,6 +80,7 @@ class DomainsTransfer extends Namecheap
         if (! $this->hasError()) {
             $nc_transfers = $this->response_content()->TransferGetListResult;
             $paging = $this->response_content()->Paging;
+            $transfers = [];
 
             foreach ($nc_transfers->Transfer as $nc_transfer) {
                 $attributes = $nc_transfer->attributes();

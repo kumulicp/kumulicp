@@ -272,7 +272,7 @@ class Applications extends Controller
             $version->status = 'active';
             $version->save();
 
-            $app->enabled = 1;
+            $app->enabled = true;
             $app->save();
 
             return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.enabled', ['app' => $app->name]));
@@ -283,7 +283,7 @@ class Applications extends Controller
 
     public function disable(Request $request, Application $app)
     {
-        $app->enabled = 0;
+        $app->enabled = false;
         $app->save();
 
         return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.disabled'));

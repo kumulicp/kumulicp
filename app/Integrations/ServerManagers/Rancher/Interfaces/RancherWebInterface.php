@@ -6,10 +6,8 @@ use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
 use App\Integrations\ServerManagers\Rancher\API\Application;
-use App\Integrations\ServerManagers\Rancher\API\Ingress;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
-use App\Integrations\ServerManagers\Rancher\API\Middleware;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
@@ -26,11 +24,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     private $namespace;
 
-    private $middleware;
-
     private $application;
-
-    private $ingress;
 
     private $job;
 
@@ -43,9 +37,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         $this->organization = $server->organization;
 
         $this->namespace = new KubernetesNamespace($this->organization, $server);
-        $this->middleware = new Middleware($this->organization, $server);
         $this->application = new Application($this->organization, $server);
-        $this->ingress = new Ingress($this->organization, $server);
         $this->job = new Job($this->organization, $this->server);
         $this->secret = new Secret($this->organization, $this->server);
     }

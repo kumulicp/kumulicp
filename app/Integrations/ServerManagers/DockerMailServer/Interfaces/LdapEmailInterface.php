@@ -2,6 +2,7 @@
 
 namespace App\Integrations\ServerManagers\DockerMailServer\Interfaces;
 
+use App\Contracts\AccountManager\UserInterface;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\EmailContract;
 use App\Integrations\ServerManagers\DockerMailServer\MailserverJobs;
@@ -12,7 +13,6 @@ use App\Ldap\Models\Email;
 use App\Ldap\Models\User;
 use App\OrgDomain;
 use App\Server;
-use App\Support\AccountManager\UserManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
 use LdapRecord\Models\Attributes\Password;
@@ -51,6 +51,9 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
         return false;
     }
 
+    /**
+     * @phpstan-impure
+     */
     public function existsEmail(OrgDomain $domain, string $address)
     {
         return ! is_null(Email::in(Dn::create($domain->organization, 'emails'))->where('mail', $address)->first());
@@ -148,7 +151,7 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
 
     public function deleteEmailForwarders(string $forwarder_address, string $destination_address) {}
 
-    public function createUserEmail(UserManager $user, OrgDomain $domain)
+    public function createUserEmail(UserInterface $user, OrgDomain $domain)
     {
         $username = $user->attribute('username');
         if ($user = User::find(Dn::create($user->account(), 'users', $username))) {
@@ -169,7 +172,7 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
         ];
     }
 
-    public function deleteUserEmail(UserManager $user, string $email)
+    public function deleteUserEmail(UserInterface $user, string $email)
     {
         $username = $user->attribute('username');
         if ($user = User::find(Dn::create($user->account(), 'users', $username))) {
@@ -228,7 +231,7 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
 
     public function deleteDomain(OrgDomain $domain)
     {
-        if ($ldap = Domain::in(Dn::create($domain->organization, 'domains')->where('dc', $domain->name)->first())) {
+        if ($ldap = Domain::in(Dn::create($domain->organization, 'domains'))->where('dc', $domain->name)->first()) {
             $ldap->delete();
         }
 
@@ -241,6 +244,16 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
     }
 
     public function domainError()
+    {
+        return false;
+    }
+
+    public function hasEmailError()
+    {
+        return false;
+    }
+
+    public function emailError()
     {
         return false;
     }

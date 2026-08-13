@@ -31,6 +31,7 @@ return [
         'action_not_subclass' => ':action is not a subclass of Action',
         'no_configuration' => 'Could not obtain :app configuration :configuration',
         'no_backup_driver' => ':driver doesn\'t exist',
+        'no_backup_file' => 'No backup file to restore from',
         'no_domain_driver' => ':name driver not found',
         'no_server_interface' => ':server interface doesn\'t exist',
         'no_security_tool' => ':tool security scan tool is not registered',

@@ -45,12 +45,12 @@ class Groups
     {
         $organization = Organization::account();
         if ($category) {
-            $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $validatedData['name']));
+            $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $group_name));
         } else {
             $group = LdapGroup::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
         }
 
-        if ($group) {
+        if ($group instanceof LdapGroup) {
             return $this->get($group);
         }
 

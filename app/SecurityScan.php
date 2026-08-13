@@ -30,7 +30,10 @@ class SecurityScan extends Model
         'finished_at' => 'datetime',
     ];
 
-    public function org_server()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\OrgServer, $this>
+     */
+    public function org_server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'org_server_id');
     }
@@ -40,7 +43,10 @@ class SecurityScan extends Model
         return $this->belongsTo('App\Task', 'task_id');
     }
 
-    public function findings()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\SecurityFinding, $this>
+     */
+    public function findings(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany('App\SecurityFinding', 'security_scan_id');
     }

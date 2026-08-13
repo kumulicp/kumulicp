@@ -39,7 +39,7 @@ class ResetPasswordController extends Controller
      *
      * If no token is present, display the link request form.
      *
-     * @return Factory|View
+     * @return \Inertia\Response
      */
     public function showResetForm(Request $request)
     {

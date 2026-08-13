@@ -125,7 +125,6 @@ class Plans extends Controller
                 'domain_enabled' => $plan->domain_enabled,
                 'domain_max' => $plan->domain_max,
                 'email_enabled' => $plan->email_enabled,
-                'web_server' => $plan->web_server ? $plan->web_server->id : null,
                 'email_server' => $plan->email_server ? $plan->email_server->id : null,
                 'settings' => $plan->settings ?? [],
                 'app_plans' => $app_plans,
@@ -137,17 +136,20 @@ class Plans extends Controller
                     'transfer' => $plan->setting('domains.transfer'),
                 ],
             ],
-            'apps' => $apps->map(function ($app) {
+            'apps' => $apps->map(function (\App\Application $app) {
+                $plans = [];
+                foreach ($app->plans as $plan) {
+                    $plans[] = [
+                        'id' => $plan->id,
+                        'name' => $plan->name,
+                    ];
+                }
+
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
                     'slug' => $app->slug,
-                    'plans' => $app->plans->map(function ($plan) {
-                        return [
-                            'id' => $plan->id,
-                            'name' => $plan->name,
-                        ];
-                    }),
+                    'plans' => $plans,
                 ];
             }),
             'org_types' => collect(Organizations::types())->map(function ($label, $name) {

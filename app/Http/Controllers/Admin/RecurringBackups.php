@@ -42,7 +42,6 @@ class RecurringBackups extends Controller
                     'type' => $backup->type,
                     'last_scheduled_at' => $backup->last_scheduled_at,
                     'status' => $backup->status,
-                    'scheduled_at' => $backup->scheduled_at,
                 ];
             }),
             'organizations' => $organizations->map(function ($organization) {

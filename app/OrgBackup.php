@@ -41,7 +41,10 @@ class OrgBackup extends Model
         'delete_at',
     ];
 
-    public function organization()
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id');
     }

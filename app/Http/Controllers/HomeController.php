@@ -16,7 +16,7 @@ class HomeController extends Controller
     /**
      * Show the application dashboard.
      *
-     * @return Renderable
+     * @return \Inertia\Response|\Illuminate\Http\RedirectResponse
      */
     public function index()
     {

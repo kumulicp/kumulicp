@@ -74,6 +74,7 @@ class Namecheap extends Integration
 
         if (libxml_get_errors()) {
 
+            $xml_errors = [];
             foreach (libxml_get_errors() as $xml_error) {
 
                 $xml_errors[] = $xml_error->message;
@@ -84,7 +85,7 @@ class Namecheap extends Integration
 
         }
 
-        if (is_object($body) && count($body->Errors) > 0 && (string) $body->attributes() != 'OK') {
+        if (is_object($body) && isset($body->Errors->Error) && (string) $body->attributes() != 'OK') {
             foreach ($body->Errors as $error) {
 
                 $attributes = $error->Error->attributes();
@@ -96,7 +97,7 @@ class Namecheap extends Integration
 
         }
 
-        if (isset($errors) && count($errors) > 0) {
+        if (isset($errors)) {
             $this->setError(json_encode($errors), 'namecheap_errors');
         } elseif (is_object($body)) {
             $this->setResponse($body->CommandResponse);
@@ -113,7 +114,6 @@ class Namecheap extends Integration
             '3016166' => 'Domain is not associated with Enom',
             '3019510' => 'This domain is expired/ has transfered out/ is not associated with your account',
             '3050900' => 'Unknown response from provider',
-            '5050900' => 'Unknown exceptions',
             '2033409' => 'Possibly a logical error at the authentication phase. The order chargeable for the Username is not found',
             '2033407' => 'Cannot enable domain privacy when AddWhoisguard is set to NO',
             '2033270' => 'Cannot enable domain privacy when AddWhoisguard is set to NO',
@@ -129,7 +129,6 @@ class Namecheap extends Integration
             '2528166' => 'Order creation failed',
             '3019166' => 'Domain not available',
             '4019166' => 'Domain not available',
-            '3031166' => 'Error while getting information from the provider',
             '3028166' => 'Error from Enom ( Errcount <> 0 )',
             '3031900' => 'Unknown response from the provider',
             '4023271' => 'Error while adding a free PositiveSSL for the domain',

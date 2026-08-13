@@ -7,8 +7,6 @@ use App\Support\Facades\Application;
 
 class CiviCRMStandaloneChart extends HelmChart
 {
-    private $database_server;
-
     public $chart_name = 'civicrm-standalone';
 
     public function values(): array
@@ -20,7 +18,6 @@ class CiviCRMStandaloneChart extends HelmChart
         if ($database_server = $app_instance->server('database')) {
             $database_server = $database_server->server;
         }
-        $this->database_server = $database_server;
 
         return [
             'affinity' => [

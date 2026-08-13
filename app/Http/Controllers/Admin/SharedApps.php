@@ -43,7 +43,7 @@ class SharedApps extends Controller
                     'id' => $app->id,
                     'name' => $app->name,
                     'label' => $app->label,
-                    'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
+                    'status' => $app->status === 'active' ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
             'plans' => $plans,

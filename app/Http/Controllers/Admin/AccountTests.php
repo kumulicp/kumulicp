@@ -120,23 +120,29 @@ class AccountTests extends Controller
         $base_plans = Plan::all();
 
         return inertia()->render('Admin/Tests/TestEdit', [
-            'apps' => $apps->map(function ($app) {
+            'apps' => $apps->map(function (Application $app) {
+                $plans = [];
+                foreach ($app->plans as $plan) {
+                    $plans[] = [
+                        'id' => $plan->id,
+                        'name' => $plan->name,
+                    ];
+                }
+
+                $versions = [];
+                foreach ($app->versions as $version) {
+                    $versions[] = [
+                        'id' => $version->id,
+                        'version' => $version->name,
+                    ];
+                }
+
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
                     'slug' => $app->slug,
-                    'plans' => $app->plans->map(function ($plan) {
-                        return [
-                            'id' => $plan->id,
-                            'name' => $plan->name,
-                        ];
-                    }),
-                    'versions' => $app->versions->map(function ($version) {
-                        return [
-                            'id' => $version->id,
-                            'version' => $version->name,
-                        ];
-                    }),
+                    'plans' => $plans,
+                    'versions' => $versions,
                 ];
             }),
             'base_plans' => $base_plans->map(function ($plan) {

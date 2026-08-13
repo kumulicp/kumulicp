@@ -3,6 +3,10 @@
 namespace App\Actions\Tests;
 
 use App\Actions\Action;
+use App\Actions\Apps\ApplicationActivate;
+use App\Actions\Apps\ApplicationDelete;
+use App\Actions\Apps\ApplicationUpdate;
+use App\Actions\Apps\ApplicationUpgrade;
 use App\AppInstance;
 use App\Server;
 use App\Support\Facades\Action as ActionFacade;
@@ -16,9 +20,9 @@ class ValidateServer extends Action
     {
         $test_app = AppInstance::where('test_app', 1)->first();
 
-        $task_activate = ActionFacade::execute(new ApplicationActivate($test_app));
+        $task_activate = ActionFacade::execute(new ApplicationActivate($test_app->organization, $test_app->application, $test_app->plan));
         $task_update = ActionFacade::execute(new ApplicationUpdate($test_app), $task_activate);
-        $task_upgrade = ActionFacade::execute(new ApplicationUpgrade($test_app), $task_activate);
+        $task_upgrade = ActionFacade::execute(new ApplicationUpgrade($test_app, $test_app->version), $task_activate);
         $task_delete = ActionFacade::execute(new ApplicationDelete($test_app), $task_activate);
 
         $this->description = __('actions.validate_server');
@@ -34,10 +38,11 @@ class ValidateServer extends Action
 
     public static function complete(Task $task)
     {
-        $values = $task->getValues();
-        foreach ($values as $value) {
-            $task = Task::find($value);
-            if ($task->status != 'complete') {
+        $values = $task->customValues();
+
+        foreach (['activate', 'update', 'upgrade', 'delete'] as $key) {
+            $sub_task = Task::find($values[$key]);
+            if (! $sub_task || $sub_task->status != 'complete') {
                 return;
             }
         }
@@ -47,6 +52,6 @@ class ValidateServer extends Action
         $server->save();
 
         $task->complete();
-        $task->notifyGroup();
+        $task->groupNotified();
     }
 }

@@ -29,7 +29,6 @@ class UpdateAppLdapGroups implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  ApplicationActivating  $event
      * @return void
      */
     public function handle(AppInstanceSubscriptionChanged $event)
@@ -44,10 +43,6 @@ class UpdateAppLdapGroups implements ShouldQueue
         $version = $app_instance->version;
 
         Organization::setOrganization($organization);
-
-        if ($app->permissions_type == 'none') {
-            return;
-        }
 
         if ($app_instance->parent_id == 0) {
             /** @LDAP **/

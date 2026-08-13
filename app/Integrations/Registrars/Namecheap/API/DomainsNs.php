@@ -19,13 +19,13 @@ class DomainsNs extends Namecheap
         $this->form()->post($this->basePath(), $this->postParameters());
     }
 
-    public function delete($sld, $tld, $nameserver)
+    public function deleteNameserver($sld, $tld, $nameserver)
     {
         $this->command = 'namecheap.domains.dn.delete';
         $this->parameters = [
             'SLD' => $sld,
             'TLD' => $tld,
-            'Nameserver' => $nameservers,
+            'Nameserver' => $nameserver,
         ];
 
         $this->form()->post($this->basePath(), $this->postParameters());

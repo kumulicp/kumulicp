@@ -28,7 +28,6 @@ class UpdateOrganization implements ShouldQueue
     /**
      * Handle the event.
      *
-     * @param  UpdateOrganization  $event
      * @return void
      */
     public function handle()

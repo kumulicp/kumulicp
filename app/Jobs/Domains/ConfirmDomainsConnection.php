@@ -29,7 +29,6 @@ class ConfirmDomainsConnection
     /**
      * Handle the event.
      *
-     * @param  ConfirmDomainsConnection  $event
      * @return void
      */
     public function handle()
