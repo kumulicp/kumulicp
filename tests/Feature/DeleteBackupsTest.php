@@ -63,3 +63,52 @@ it('deletes backups beyond the configured count across multiple scheduled runs',
     expect($backups[0]->fresh()->job_id)->toBe('job-123');
     expect($backups[1]->fresh()->job_id)->toBe('job-123');
 });
+
+it('keeps a full run intact when multiple app instances share one scheduled run', function () {
+    $organization = Organization::factory()->create();
+    $server = Server::factory()->create();
+
+    $recurringBackup = RecurringBackup::create([
+        'server_id' => $server->id,
+        'organization_id' => $organization->id,
+        'delete_after' => 2,
+        'delete_interval' => 'backups',
+        'status' => 'active',
+        'time' => '00:00',
+    ]);
+
+    // 2 scheduled runs, each backing up 3 app instances (3 OrgBackup rows per run).
+    $runs = [];
+    for ($i = 2; $i >= 1; $i--) {
+        $completedAt = now()->subDays($i);
+        $schedule = BackupSchedule::create([
+            'recurring_backup_id' => $recurringBackup->id,
+            'scheduled_at' => $completedAt,
+        ]);
+
+        $runs[] = collect(range(1, 3))->map(fn () => OrgBackup::create([
+            'organization_id' => $organization->id,
+            'scheduled_backup_id' => $schedule->id,
+            'action' => 'backup',
+            'type' => 'default',
+            'status' => 'completed',
+            'scheduled_at' => $completedAt,
+            'completed_at' => $completedAt,
+            'delete_at' => null,
+        ]));
+    }
+
+    Backup::shouldReceive('connect')->never();
+    Backup::shouldReceive('delete')->never();
+
+    (new DeleteBackups)();
+
+    // With delete_after=2 "backups" (runs), both runs are within the retention
+    // window even though they total 6 rows, so nothing should be deleted yet.
+    foreach ($runs as $run) {
+        foreach ($run as $backup) {
+            expect($backup->fresh()->status)->toBe('completed');
+            expect($backup->fresh()->job_id)->toBeNull();
+        }
+    }
+});

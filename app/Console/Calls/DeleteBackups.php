@@ -23,15 +23,22 @@ class DeleteBackups
             ->get();
 
         $delete_intervals = [];
-        $delete_ignores = [];
+        $kept_schedules = [];
 
         foreach ($backups as $backup) {
             if (is_null($backup->delete_at) && $backup->backup_schedule?->recurring_backup?->delete_interval === 'backups') {
                 $recurring_backup_id = $backup->backup_schedule->recurring_backup_id;
+                $scheduled_backup_id = $backup->scheduled_backup_id;
                 $delete_intervals[$recurring_backup_id] = Arr::get($delete_intervals, $recurring_backup_id, $backup->backup_schedule->recurring_backup->delete_after);
-                $delete_ignores[$recurring_backup_id] = Arr::get($delete_ignores, $recurring_backup_id, 0) + 1;
+                $kept_schedules[$recurring_backup_id] = Arr::get($kept_schedules, $recurring_backup_id, []);
 
-                if ($delete_ignores[$recurring_backup_id] <= $delete_intervals[$recurring_backup_id]) {
+                // Multiple OrgBackup rows can share the same scheduled_backup_id (one per app
+                // instance backed up in that run), so count distinct runs, not rows.
+                if (! in_array($scheduled_backup_id, $kept_schedules[$recurring_backup_id])) {
+                    $kept_schedules[$recurring_backup_id][] = $scheduled_backup_id;
+                }
+
+                if (count($kept_schedules[$recurring_backup_id]) <= $delete_intervals[$recurring_backup_id]) {
                     continue;
                 }
             }
