@@ -76,7 +76,7 @@ class AddLdapGroups implements ShouldQueue
 
             // If app has a default group, add cp admins to default admin group
             if (in_array($role->slug, $default_admin_roles)) {
-                $this->addDefaultAdminRole($app_instance, $role->slug, 'role');
+                $this->addDefaultAdminRole($app_instance, $role, 'role');
             }
 
             // Add implied groups
@@ -84,8 +84,8 @@ class AddLdapGroups implements ShouldQueue
                 $this->createRole($organization, $add_group_app, $implied_role->app_slug($add_group_app), $implied_role->label);
 
                 // If app has a default group, add cp admins to default admin group
-                if (in_array($role->slug, $default_admin_roles)) {
-                    $this->addDefaultAdminRole($app_instance, $role->slug, 'role');
+                if (in_array($implied_role->slug, $default_admin_roles)) {
+                    $this->addDefaultAdminRole($app_instance, $implied_role, 'role');
                 }
             }
         }
