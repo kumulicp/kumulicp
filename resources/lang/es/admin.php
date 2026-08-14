@@ -103,11 +103,9 @@ return [
         'apps' => [
             'updated' => ':app actualizada',
             'updating' => ':app actualizándose',
-            'upgraded' => 'Mejora de :app',
+            'upgrading' => ':app mejorándose',
             'deleting' => ':app eliminándose',
             'run_job' => ':app :job ejecutándose',
-            'upgraded' => 'Mejora de :app',
-            'upgraded' => 'Mejora de :app',
             'denied' => [
                 'version_exists' => 'La versión que seleccionaste no existe',
             ],
@@ -213,6 +211,7 @@ return [
         'archived' => ':plan archivado',
         'unarchived' => ':plan desarchivado',
         'order_updated' => 'Orden de planes actualizado',
+        'bulkEdit' => 'Edición Masiva',
     ],
     'servers' => [
         'servers' => 'Servidores',

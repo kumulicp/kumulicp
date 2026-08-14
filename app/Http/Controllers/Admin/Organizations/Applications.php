@@ -201,7 +201,7 @@ class Applications extends Controller
 
         Action::execute(new ApplicationUpgrade($app, $version, null, $notify));
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.upgrade', ['app' => $app->label]));
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.upgrading', ['app' => $app->label]));
 
     }
 

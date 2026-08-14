@@ -103,11 +103,9 @@ return [
         'apps' => [
             'updated' => ':app updated',
             'updating' => ':app updating',
-            'upgraded' => ':app upgrade',
+            'upgrading' => ':app upgrading',
             'deleting' => ':app deleting',
             'run_job' => ':app :job running',
-            'upgraded' => ':app upgrade',
-            'upgraded' => ':app upgrade',
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
             ],
@@ -242,6 +240,7 @@ return [
         'archived' => ':plan archived',
         'unarchived' => ':plan unarchived',
         'order_updated' => 'Plan order updated',
+        'bulkEdit' => 'Bulk Edit',
     ],
     'servers' => [
         'servers' => 'Servers',

@@ -1113,7 +1113,7 @@
       "filterAppRoles": "Filter app roles",
       "maxUsersReached": "Max users reached",
       "userAccessType": "User Access Type",
-      "adminWarning": "Admin Warning",
+      "adminWarning": "You are an admin and can't remove your own admin permissions.",
       "accessType": "Access Type",
       "roleDescriptions": "Role Descriptions",
       "updatePermissions": "Update Permissions",
