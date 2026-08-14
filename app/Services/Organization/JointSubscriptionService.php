@@ -2,9 +2,9 @@
 
 namespace App\Services\Organization;
 
+use App\Application;
 use App\Organization;
 use App\Services\SubscriptionService;
-use App\Support\Facades\Application;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
 
