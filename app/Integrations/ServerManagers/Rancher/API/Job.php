@@ -100,8 +100,10 @@ class Job extends Rancher
             }
         }
 
-        if ($errors = Arr::get($response, 'content.metadata.state.name') == 'failed') {
-            return $this->setError(__('messages.api.rancher.error.job', ['job' => $job_id, 'message' => Arr::get($response, 'content.status.conditions.0.message')]), 'job_fail');
+        if (Arr::get($response, 'content.metadata.state.error') === true) {
+            $this->setError(__('messages.api.rancher.error.job', ['job' => $job_id, 'message' => Arr::get($response, 'content.metadata.state.message')]), 'job_fail');
+
+            return 'failed';
         } elseif (Arr::get($response, 'content.status.active') == 1) {
             return 'running';
         }

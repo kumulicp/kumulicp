@@ -55,7 +55,9 @@ class ApplicationUpdateJob extends Action
         }
 
         if ($app_instance && $server = $app_instance->connect('web')) {
-            if ($server->jobStatus($task->getValue('job_id')) == 'success') {
+            $status = $server->jobStatus($task->getValue('job_id'));
+
+            if ($status == 'success') {
 
                 // Copmletes parent task faster
                 if ($parent_task_id = $task->getValue('parent_task_id')) {
@@ -63,6 +65,10 @@ class ApplicationUpdateJob extends Action
                 }
                 $task->complete();
                 $task->groupNotified();
+            } elseif ($status == 'failed') {
+                $task->error_message = __('messages.api.rancher.error.job', ['job' => $task->getValue('job_id'), 'message' => '']);
+                $task->status = 'failed';
+                $task->save();
             }
         }
     }
