@@ -102,4 +102,25 @@ class Chart
 
         return [];
     }
+
+    // The registry to pull the application's container image from
+    public function imageRegistry(): ?string
+    {
+        $version = $this->app_instance->version;
+
+        if ($version->pullSecret) {
+            return $version->pullSecret->registry;
+        }
+
+        return $version->setting('image_registry');
+    }
+
+    // The fully-qualified image reference (registry/repository:tag) for the application's container image
+    public function image(): string
+    {
+        $version = $this->app_instance->version;
+        $repository = $version->setting('image_repo_name').':'.$version->name;
+
+        return $this->imageRegistry() ? $this->imageRegistry().'/'.$repository : $repository;
+    }
 }

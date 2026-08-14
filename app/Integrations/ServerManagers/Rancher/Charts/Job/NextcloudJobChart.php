@@ -62,7 +62,7 @@ class NextcloudJobChart extends JobChart
                             'env' => $env,
                             'command' => $command,
                             'args' => $args,
-                            'image' => $app_instance->version->setting('image_repo_name').':'.$app_instance->version->name,
+                            'image' => $this->image(),
                             'imagePullPolicy' => 'Always',
                             'name' => 'nextcloud-job',
                             'ports' => [[
@@ -111,6 +111,7 @@ class NextcloudJobChart extends JobChart
                             ],
                         ]],
                         'dnsPolicy' => 'ClusterFirst',
+                        'imagePullSecrets' => array_map(fn ($name) => ['name' => $name], $this->imagePullSecrets()),
                         'restartPolicy' => 'Never',
                         'schedulerName' => 'default-scheduler',
                         'securityContext' => [

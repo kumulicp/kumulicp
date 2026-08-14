@@ -100,16 +100,4 @@ abstract class HelmChart extends Chart
     {
         return Str::replace('_', '-', $string);
     }
-
-    // The registry to pull the application's container image from
-    public function imageRegistry(): ?string
-    {
-        $version = $this->app_instance->version;
-
-        if ($version->pullSecret) {
-            return $version->pullSecret->registry;
-        }
-
-        return $version->setting('image_registry');
-    }
 }

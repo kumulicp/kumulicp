@@ -61,7 +61,7 @@ class WordpressJobChart extends JobChart
                         'containers' => [[
                             'env' => $env,
                             'command' => $command,
-                            'image' => $app_instance->version->setting('image_repo_name').':'.$app_instance->version->name,
+                            'image' => $this->image(),
                             'imagePullPolicy' => 'Always',
                             'name' => 'wordpress-job',
                             'ports' => [[
@@ -78,6 +78,7 @@ class WordpressJobChart extends JobChart
                             ]],
                         ]],
                         'dnsPolicy' => 'ClusterFirst',
+                        'imagePullSecrets' => array_map(fn ($name) => ['name' => $name], $this->imagePullSecrets()),
                         'restartPolicy' => 'Never',
                         'schedulerName' => 'default-scheduler',
                         'securityContext' => [
