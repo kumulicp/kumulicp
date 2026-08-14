@@ -25,6 +25,7 @@ use App\Integrations\SSO\Authentik\Listeners\SyncLDAP;
 use App\Integrations\SSO\Authentik\Listeners\UpdateAppInfo;
 use App\Listeners\NotifyCpAdminOfNewOrganization;
 use App\Jobs\Users\UpdateUserStorage;
+use App\Listeners\SendEmailVerificationNotification;
 use App\Listeners\UpdateAppLdapGroups;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -53,5 +54,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(DomainDeleted::class, UpdateIngressMiddleware::class);
 
         Event::listen(OrganizationCreated::class, NotifyCpAdminOfNewOrganization::class);
+
+        Event::listen(OrganizationRegistered::class, SendEmailVerificationNotification::class);
     }
 }
