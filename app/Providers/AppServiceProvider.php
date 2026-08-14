@@ -8,6 +8,7 @@ use App\Sso\OidcProvider;
 use App\Support\Facades\Application;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
@@ -51,6 +52,13 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('oidc', OidcProvider::class);
         });
 
+        // The 'applications' singleton (ApplicationService) memoizes AppInstance
+        // wrappers by ID for the life of the process. queue:work reuses one process
+        // across many jobs, so without this the cache can serve a stale AppInstance
+        // (wrong version_id) to a job that ran hours after the one that populated it.
+        Queue::before(function () {
+            Application::flushInstances();
+        });
     }
 
     /**

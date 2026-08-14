@@ -343,6 +343,14 @@ class ApplicationService
         return $this->instances[$app_id];
     }
 
+    // Queue workers reuse this singleton across many jobs without rebooting,
+    // so the instance() cache above must be cleared between jobs or it can
+    // hand back an AppInstance snapshot from a job processed hours earlier.
+    public function flushInstances(): void
+    {
+        $this->instances = [];
+    }
+
     // Needed here instead of AppInstanceService because some parent apps needed before app is activated
     public function availableParents(Application $app)
     {
