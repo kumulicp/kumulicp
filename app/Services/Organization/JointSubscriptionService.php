@@ -100,7 +100,7 @@ class JointSubscriptionService
     public function isAppLimitReached(Application $app): bool
     {
         foreach ($this->allSubscriptions() as $subscription) {
-            if ($subscription->isMaxApps($app)) {
+            if ($subscription->base()->isMaxApps($app)) {
                 return true;
             }
         }
