@@ -16,3 +16,8 @@ a:hover {
 .va-table {
     width: 100%;
 }
+
+table.va-table th,
+table.va-table td {
+    vertical-align: middle;
+}

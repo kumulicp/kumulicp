@@ -185,9 +185,6 @@ export default {
 </script>
 
 <style lang="scss">
-  .va-table td.vertical-middle {
-    vertical-align: middle
-  }
   .text-color-primary {
     color: var(--va-primary);
     text-align: center;

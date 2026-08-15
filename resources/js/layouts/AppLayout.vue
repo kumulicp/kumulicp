@@ -225,7 +225,7 @@ export default {
     margin-top: 100px
   }
 
-  .va-layout__area--content {
+  .va-layout {
     min-height: 100vh
   }
 </style>
