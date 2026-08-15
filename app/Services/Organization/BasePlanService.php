@@ -81,35 +81,25 @@ class BasePlanService
 
     public function enabledApps()
     {
-        $apps = [];
+        $app_plans = $this->app_plans ?? [];
 
-        $apps = Application::orderBy('slug');
-        $app_plans = $this->app_plans;
-        $apps->where(function ($query) use ($app_plans) {
-            if ($app_plans) {
-                foreach ($app_plans as $app_name => $settings) {
-                    if ($settings['plans'] != 'disabled') {
-                        $query->orWhere('slug', $app_name);
-                    }
-                }
-            }
-        });
+        $enabled_slugs = collect($app_plans)
+            ->filter(fn ($settings) => ! empty(Arr::get($settings, 'plans')))
+            ->keys();
 
-        $get_apps = $apps->where('enabled', 1)->get();
-
-        return $get_apps;
+        return Application::orderBy('slug')
+            ->where('enabled', 1)
+            ->whereIn('slug', $enabled_slugs)
+            ->get();
     }
 
     public function appEnabled(Application $app)
     {
-        if ($plan = $this->plan) {
-            $app_plans = $this->app_plans;
-            if (Arr::get($app_plans, $app->slug) != 'disabled') {
-                return true;
-            }
+        if (! $this->plan) {
+            return false;
         }
 
-        return false;
+        return ! empty(Arr::get($this->app_plans, "{$app->slug}.plans"));
     }
 
     public function appPlans(Application $app, $archived = true, $display_order = false)
