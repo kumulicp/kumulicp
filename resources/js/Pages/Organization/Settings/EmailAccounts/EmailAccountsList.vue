@@ -27,28 +27,30 @@ import { useForm } from '@inertiajs/vue3'
       </div>
     </template>
     <div v-else class="table-wrapper">
-      <table class="va-table va-table--hoverable mt-3">
-        <thead>
-          <tr>
-            <th style="width: 1%"></th>
-            <th style="width: 10%">{{ $t('organization.emailAccounts.name') }}</th>
-            <th style="width: 90%">{{ $t('organization.emailAccounts.email') }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="account in accounts.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="account.email">
-            <td>
-              <va-icon name="fa-edit" class="clickable-icon" color="primary" @click="showEditEmailAccountModal(account)" />
-            </td>
-            <td>{{ account.name }}</td>
-            <td>{{ account.email }}</td>
-            <td>
-              <va-icon name="entypo-cancel" class="clickable-icon" color="danger" @click="showRemoveEmailAccountModal(account.email)" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <va-scroll-container horizontal>
+        <table class="va-table va-table--hoverable mt-3">
+          <thead>
+            <tr>
+              <th style="width: 1%"></th>
+              <th style="width: 10%">{{ $t('organization.emailAccounts.name') }}</th>
+              <th style="width: 90%">{{ $t('organization.emailAccounts.email') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="account in accounts.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="account.email">
+              <td>
+                <va-icon name="fa-edit" class="clickable-icon" color="primary" @click="showEditEmailAccountModal(account)" />
+              </td>
+              <td>{{ account.name }}</td>
+              <td>{{ account.email }}</td>
+              <td>
+                <va-icon name="entypo-cancel" class="clickable-icon" color="danger" @click="showRemoveEmailAccountModal(account.email)" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </va-scroll-container>
 
       <va-pagination v-if="accounts.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="accounts.length" :direction-links="false" :page-size="pageSize" />
 

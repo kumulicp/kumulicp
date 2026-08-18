@@ -7,6 +7,7 @@ import PlanLayout from './PlanLayout.vue'
   <Head>
     <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
+  <va-scroll-container horizontal>
   <table>
     <thead>
       <tr>
@@ -225,6 +226,7 @@ import PlanLayout from './PlanLayout.vue'
       </template>
     </tbody>
   </table>
+  </va-scroll-container>
 </template>
 
 <script lang="ts">

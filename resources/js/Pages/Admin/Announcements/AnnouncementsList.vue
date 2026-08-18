@@ -42,31 +42,33 @@ import { Link, useForm } from '@inertiajs/vue3'
                   </form>
                 </template>
               </va-modal>
-              <table class="va-table va-table--hoverable mt-3">
-                <thead>
-                  <tr>
-                    <th style="width: 20%">{{ $t('admin.announcement.title') }}</th>
-                    <th>{{ $t('admin.announcement.summary') }}</th>
-                    <th style="width: 10px"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(announcement, index) in announcements.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
-                    <td>
-                      <Link :href="'/admin/service/announcements/'+announcement.id+'/edit'">{{ announcement.title }}</Link>
-                    </td>
-                    <td>
-                      {{ announcement.short_description }}
-                    </td>
-                    <td class="va-text-center">
-                      <va-button color="danger"
-                        @click="showRemoveAnnouncementModal(announcement)">
-                        {{ $t('common.remove') }}
-                      </va-button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <va-scroll-container horizontal>
+                <table class="va-table va-table--hoverable mt-3">
+                  <thead>
+                    <tr>
+                      <th style="width: 20%">{{ $t('admin.announcement.title') }}</th>
+                      <th>{{ $t('admin.announcement.summary') }}</th>
+                      <th style="width: 10px"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(announcement, index) in announcements.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
+                      <td>
+                        <Link :href="'/admin/service/announcements/'+announcement.id+'/edit'">{{ announcement.title }}</Link>
+                      </td>
+                      <td>
+                        {{ announcement.short_description }}
+                      </td>
+                      <td class="va-text-center">
+                        <va-button color="danger"
+                          @click="showRemoveAnnouncementModal(announcement)">
+                          {{ $t('common.remove') }}
+                        </va-button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </va-scroll-container>
               <va-pagination v-if="announcements.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="announcements.length" direction-links
                 :page-size="pageSize" />
           </va-card-content>

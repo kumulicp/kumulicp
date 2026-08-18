@@ -13,25 +13,27 @@ import { useForm } from '@inertiajs/vue3'
       <va-button v-model="showAddEmailForwarder" class="mb-3" @click="showAddEmailForwarder = !showAddEmailForwarder">{{ $t('organization.emailAccounts.addForwarder') }}</va-button>
     </div>
     <div class="table-wrapper">
-      <table class="va-table va-table--hoverable mt-3">
-        <thead>
-          <tr>
-            <th>{{ $t('organization.emailAccounts.forwarderEmail') }}</th>
-            <th>{{ $t('organization.emailAccounts.destinationEmail') }}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="forwarder in forwarders.slice((curPageValue - 1), (curPageValue - 1 + pageSize % 10))" :key="forwarder.address">
-            <td>{{ forwarder.address }}</td>
-            <td><span v-for="(destination, index) in forwarder.destinations" :key="index">{{ destination.address }}<br /></span></td>
-            <td>
-              <span class="clickable-icon"><va-icon name="entypo-cancel" color="danger"
-                  @click="showRemoveEmailForwarderModal(forwarder.address)" /></span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <va-scroll-container horizontal>
+        <table class="va-table va-table--hoverable mt-3">
+          <thead>
+            <tr>
+              <th>{{ $t('organization.emailAccounts.forwarderEmail') }}</th>
+              <th>{{ $t('organization.emailAccounts.destinationEmail') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="forwarder in forwarders.slice((curPageValue - 1), (curPageValue - 1 + pageSize % 10))" :key="forwarder.address">
+              <td>{{ forwarder.address }}</td>
+              <td><span v-for="(destination, index) in forwarder.destinations" :key="index">{{ destination.address }}<br /></span></td>
+              <td>
+                <span class="clickable-icon"><va-icon name="entypo-cancel" color="danger"
+                    @click="showRemoveEmailForwarderModal(forwarder.address)" /></span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </va-scroll-container>
 
       <va-pagination class="mt-3 mb-3" v-model="curPageValue" :total="forwarders.length" :direction-links="false"
         :page-size="pageSize" />

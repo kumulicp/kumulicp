@@ -60,27 +60,29 @@ import AppLayout from '@/layouts/AppLayout.vue'
             <div class="va-title text-align-center">
               {{ item.name }}
             </div>
-            <table class="va-table va-table--striped mb-2">
-              <thead>
-                <tr>
-                  <th>{{ $t('organization.subscription.description') }}</th>
-                  <th>{{ $t('organization.subscription.quantity') }}</th>
-                  <th>{{ $t('admin.plans.price') }}</th>
-                  <th>{{ $t('organization.subscription.forEvery') }}</th>
-                  <th>{{ $t('organization.subscription.total') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(stat, index) in item.stats"
-                  :key="index">
-                  <td style="width: 20rem">{{ stat.label }}</td>
-                  <td>{{ stat.quantity }}</td>
-                  <td><span v-if="stat.price">$</span>{{ stat.price }}</td>
-                  <td>{{ stat.unit }}</td>
-                  <td>${{ stat.total_price }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <va-scroll-container horizontal>
+              <table class="va-table va-table--striped mb-2">
+                <thead>
+                  <tr>
+                    <th>{{ $t('organization.subscription.description') }}</th>
+                    <th>{{ $t('organization.subscription.quantity') }}</th>
+                    <th>{{ $t('admin.plans.price') }}</th>
+                    <th>{{ $t('organization.subscription.forEvery') }}</th>
+                    <th>{{ $t('organization.subscription.total') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(stat, index) in item.stats"
+                    :key="index">
+                    <td style="width: 20rem">{{ stat.label }}</td>
+                    <td>{{ stat.quantity }}</td>
+                    <td><span v-if="stat.price">$</span>{{ stat.price }}</td>
+                    <td>{{ stat.unit }}</td>
+                    <td>${{ stat.total_price }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </va-scroll-container>
           </template>
           <div v-if="discount.type === 'amount' || discount.type === 'percent'"
             class="row">

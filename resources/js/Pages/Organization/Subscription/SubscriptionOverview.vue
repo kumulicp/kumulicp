@@ -57,23 +57,25 @@ import { Link } from '@inertiajs/vue3'
       <va-card class="mb-4">
         <va-card-title>{{ $t('organization.subscription.organizationSummary') }}</va-card-title>
         <va-card-content>
-          <table class="va-table va-table--striped mb-3">
-            <thead>
-              <tr>
-                <th>{{ $t('organization.organization') }}</th>
-                <th>{{ $t('organization.subscription.billed') }}</th>
-                <th style="20rem">{{ $t('organization.subscription.total') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(organization, index) in organizations"
-                :key="index">
-                <td><Link :href="'/subscription/'+organization.id">{{ organization.name }}</Link></td>
-                <td>{{ organization.billing_type }}</td>
-                <td>${{ organization.total }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <va-scroll-container horizontal>
+            <table class="va-table va-table--striped mb-3">
+              <thead>
+                <tr>
+                  <th>{{ $t('organization.organization') }}</th>
+                  <th>{{ $t('organization.subscription.billed') }}</th>
+                  <th style="20rem">{{ $t('organization.subscription.total') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(organization, index) in organizations"
+                  :key="index">
+                  <td><Link :href="'/subscription/'+organization.id">{{ organization.name }}</Link></td>
+                  <td>{{ organization.billing_type }}</td>
+                  <td>${{ organization.total }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </va-scroll-container>
         </va-card-content>
       </va-card>
     </div>

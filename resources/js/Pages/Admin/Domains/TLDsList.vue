@@ -33,33 +33,35 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       </form>
     </template>
   </va-modal>
-  <table class="va-table va-table--hoverable mt-3">
-    <thead>
-      <tr>
-        <th>{{ $t('admin.domains.tlds') }}</th>
-        <th>{{ $t('admin.domains.standardPrice') }}</th>
-        <th>{{ $t('admin.domains.registrationAllowed') }}</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(tld, index) in tlds" :key="index">
-        <td>
-          <Link :href="'/admin/service/domains/tlds/'+tld.id">{{ tld.name }}</Link>
-        </td>
-        <td>
-          {{ tld.standard_price }}
-        </td>
-        <td>
-          {{ tld.registration_allowed }}
-        </td>
-        <td class="va-text-center">
-          <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
-            @click="showRemoveTldModal(tld)" />
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <va-scroll-container horizontal>
+    <table class="va-table va-table--hoverable mt-3">
+      <thead>
+        <tr>
+          <th>{{ $t('admin.domains.tlds') }}</th>
+          <th>{{ $t('admin.domains.standardPrice') }}</th>
+          <th>{{ $t('admin.domains.registrationAllowed') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(tld, index) in tlds" :key="index">
+          <td>
+            <Link :href="'/admin/service/domains/tlds/'+tld.id">{{ tld.name }}</Link>
+          </td>
+          <td>
+            {{ tld.standard_price }}
+          </td>
+          <td>
+            {{ tld.registration_allowed }}
+          </td>
+          <td class="va-text-center">
+            <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
+              @click="showRemoveTldModal(tld)" />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </va-scroll-container>
   <va-pagination v-if="meta.total > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input @update:modelValue="changePage" />
   <va-modal v-model="showRemoveTld" hide-default-actions :title="$t('admin.domains.removeTitle', { name: removeTld.name })"
     :message="$t('admin.domains.removeMessage', { name: removeTld.name })">

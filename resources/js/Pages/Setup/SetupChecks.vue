@@ -10,29 +10,31 @@ import BlankLayout from '@/layouts/BlankLayout.vue'
           <va-card-title>{{ $t('setup.systemCheckFailed') }}</va-card-title>
           <va-card-content>
             <div class="table-wrapper">
-              <table class="va-table va-table--hoverable mt-3">
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      {{ $t('setup.checkName') }}
-                    </th>
-                    <th scope="col">
-                      Result
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(result, name) in checks" :key="name">
-                    <td scope="row">
-                      {{ name }}
-                    </td>
-                    <td>
-                      <div v-if="result" style="color: green">{{ $t('status.passed') }}</div>
-                      <div v-else style="color: red">{{ $t('status.failed') }}</div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <va-scroll-container horizontal>
+                <table class="va-table va-table--hoverable mt-3">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        {{ $t('setup.checkName') }}
+                      </th>
+                      <th scope="col">
+                        Result
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(result, name) in checks" :key="name">
+                      <td scope="row">
+                        {{ name }}
+                      </td>
+                      <td>
+                        <div v-if="result" style="color: green">{{ $t('status.passed') }}</div>
+                        <div v-else style="color: red">{{ $t('status.failed') }}</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </va-scroll-container>
             </div>
           </va-card-content>
         </va-card>
