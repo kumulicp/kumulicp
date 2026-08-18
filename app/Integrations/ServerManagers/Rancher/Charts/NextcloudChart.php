@@ -2,8 +2,6 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Charts;
 
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\NextcloudDavRedirect;
-use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
 use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
 
@@ -68,7 +66,7 @@ class NextcloudChart extends HelmChart
                 ] : ($ingress_enabled ? [
                     'traefik.ingress.kubernetes.io/router.middlewares' => $app_instance->configuration('ingress-annotation-router_middlewares'),
                 ] : []),
-                'enabled' => $app_instance->configuration('ingress-enabled', true) ?? $this->appEnabled(), // If app is disabled, also disable ingress so it's not accessible from intwordpresschernet without deleting app and losing data
+                'enabled' => $app_instance->configuration('ingress-enabled', true) ?? $this->appEnabled(), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
                 'tls' => $app_instance->configuration('ingress-tls') ? [
                     [
                         'hosts' => [$app_instance->domain()],
