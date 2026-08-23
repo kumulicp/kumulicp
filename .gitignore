@@ -26,7 +26,7 @@ auth.json
 # Octane / FrankenPHP (php artisan octane:install --server=frankenphp)
 **/caddy
 /frankenphp
-/frankenphp-worker.php
+/public/frankenphp-worker.php
 
 # /Modules
 modules_statuses.json
