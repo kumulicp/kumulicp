@@ -56,7 +56,8 @@ class FastCacheService
             return;
         }
 
-        $organization = $organization?->slug ?? Organization::account()?->slug;
+        $account = $organization ?? Organization::account();
+        $organization = $account?->slug;
 
         if (! $organization) {
             return;
