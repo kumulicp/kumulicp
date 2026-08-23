@@ -23,6 +23,10 @@ use Illuminate\Support\Str;
 
 class ApplicationService
 {
+    // $plans, $activated_apps and $instances memoize data for whichever
+    // organization/job is current. This class is bound as scoped() (see
+    // ActionServiceProvider), not singleton, so that memoized state does not
+    // survive past the current request/job under FrankenPHP or Octane.
     public $plans = [];
 
     private $applications = [];
@@ -341,14 +345,6 @@ class ApplicationService
         }
 
         return $this->instances[$app_id];
-    }
-
-    // Queue workers reuse this singleton across many jobs without rebooting,
-    // so the instance() cache above must be cleared between jobs or it can
-    // hand back an AppInstance snapshot from a job processed hours earlier.
-    public function flushInstances(): void
-    {
-        $this->instances = [];
     }
 
     // Needed here instead of AppInstanceService because some parent apps needed before app is activated

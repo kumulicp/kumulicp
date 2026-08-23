@@ -29,7 +29,11 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
             return new ActionService;
         });
 
-        $this->app->singleton('applications', function ($app) {
+        // Scoped, not singleton: ApplicationService memoizes AppInstance lookups
+        // (and its activate() calls) that are only valid for the organization
+        // handling the current request/job. A plain singleton would let that
+        // cache leak into the next request under FrankenPHP/Octane worker mode.
+        $this->app->scoped('applications', function ($app) {
             return new ApplicationService;
         });
 
@@ -45,11 +49,19 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
             return new BackupService;
         });
 
-        $this->app->singleton('subscription', function ($app) {
+        // Scoped: SubscriptionService resolves the current organization's plan
+        // at construction and memoizes it in $this->plans for the object's
+        // lifetime, so it must not survive past the request/job that built it.
+        $this->app->scoped('subscription', function ($app) {
             return new SubscriptionService;
         });
 
-        $this->app->singleton('organizations', function ($app) {
+        // Scoped: OrganizationService caches the authenticated user's
+        // organization (from Auth::user()) once in its constructor. Every
+        // controller resolves the "current organization" through this
+        // binding, so a plain singleton would leak org A's context into
+        // org B's request on the same worker.
+        $this->app->scoped('organizations', function ($app) {
             return new OrganizationService;
         });
 

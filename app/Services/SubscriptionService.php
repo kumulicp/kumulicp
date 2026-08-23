@@ -13,7 +13,6 @@ use App\Support\Facades\Application;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Cache;
 
 class SubscriptionService
 {
@@ -166,7 +165,11 @@ class SubscriptionService
         $this->plans = [];
         $this->app_instance_plans = [];
 
-        Cache::flush();
+        // Scoped to this organization only: a global Cache::flush() here
+        // would wipe every other tenant's cached plans/menus on what is
+        // often a per-request authorization check (see Gate::define calls
+        // in EmailServiceProvider/DomainServiceProvider).
+        FastCache::clear(organization: $this->organization);
 
         $this->all();
 
