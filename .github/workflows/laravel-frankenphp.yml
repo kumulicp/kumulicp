@@ -1,0 +1,105 @@
+name: Laravel (FrankenPHP)
+
+# Runs the same Pest suites as the "Laravel" workflow (laravel.yml), but with
+# Laravel Octane's FrankenPHP server installed and booted, instead of the
+# default PHP-FPM-style CLI test runner. laravel.yml is left untouched and
+# keeps testing the plain PHP-FPM path.
+#
+# Note: the Feature/AccountManagerLdap Pest suites call Laravel's in-process
+# test client (TestCase::get()/post()/...), which never actually routes
+# through whichever server (FPM or FrankenPHP) is configured - that part of
+# the test run is identical either way. What this workflow adds on top is
+# (a) proving the app boots cleanly under Octane + our config/octane.php and
+# the scoped() service bindings added for FrankenPHP worker-mode safety, and
+# (b) an actual smoke test against a live FrankenPHP worker via its /up
+# health check, which the FPM workflow never exercises.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  laravel-tests-frankenphp:
+    runs-on: ubuntu-latest
+    env:
+      TELESCOPE_ENABLED: false
+      OCTANE_SERVER: frankenphp
+    steps:
+    - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
+      with:
+        php-version: '8.4'
+        ini-values: memory_limit=512M
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - name: Start LDAP
+      run: |
+        docker run -d --name ldap \
+          -p 389:389 \
+          -e LDAP_ORGANISATION="Demo" \
+          -e LDAP_DOMAIN="example.com" \
+          -e LDAP_ADMIN_PASSWORD="admin" \
+          -v "${GITHUB_WORKSPACE}/.github/ldap/memberof.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/memberof.ldif" \
+          osixia/openldap:1.5.0 --copy-service
+        until docker exec ldap ldapsearch -x -H ldap://localhost -b dc=example,dc=com -D 'cn=admin,dc=example,dc=com' -w admin > /dev/null 2>&1; do
+          sleep 2
+        done
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.sample', '.env');"
+    - name: Install Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Install Node Dependencies
+      run: npm ci
+    - name: Build Assets
+      run: npm run build
+    - name: Directory Permissions
+      run: |
+        mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier
+        chmod -R 777 storage bootstrap/cache
+    - name: Generate key
+      run: php -r "file_put_contents('.env', preg_replace('/^APP_KEY=.*/m', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
+    - name: Create Database
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+    - name: Install FrankenPHP
+      run: php artisan octane:install --server=frankenphp --force
+    - name: Execute Feature tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=Feature
+    - name: Execute AccountManagerLdap tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+        ACCOUNTMANAGER_DRIVER: ldap
+        PROVIDER: ldap
+        LDAP_HOST: localhost
+        LDAP_PORT: 389
+        LDAP_USERNAME: "cn=admin,dc=example,dc=com"
+        LDAP_PASSWORD: admin
+        LDAP_BASE_DN: "dc=example,dc=com"
+        LDAP_TLS: false
+      run: php artisan test --testsuite=AccountManagerLdap
+    - name: Smoke test the live FrankenPHP worker
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: |
+        php artisan octane:start --server=frankenphp --host=127.0.0.1 --port=8000 --no-interaction &
+        OCTANE_PID=$!
+        for i in $(seq 1 30); do
+          if curl -sf http://127.0.0.1:8000/up > /dev/null; then
+            echo "FrankenPHP worker is up"
+            break
+          fi
+          if [ "$i" -eq 30 ]; then
+            echo "FrankenPHP worker never became healthy" >&2
+            kill "$OCTANE_PID" 2>/dev/null || true
+            exit 1
+          fi
+          sleep 1
+        done
+        curl -sf http://127.0.0.1:8000/up
+        php artisan octane:stop --server=frankenphp || kill "$OCTANE_PID"
