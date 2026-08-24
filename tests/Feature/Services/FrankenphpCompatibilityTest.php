@@ -31,8 +31,10 @@ use Tests\Support\TestSupports;
 it('resolves the current organization fresh for each simulated request instead of leaking the previous one', function () {
     $orgA = Organization::factory()->create();
     $orgB = Organization::factory()->create();
-    $userA = User::factory()->create(['organization_id' => $orgA->id]);
-    $userB = User::factory()->create(['organization_id' => $orgB->id]);
+    // Explicit usernames: the factory's default (fake()->word(), not unique)
+    // can collide when two users are created in the same test.
+    $userA = User::factory()->create(['organization_id' => $orgA->id, 'username' => 'frankenphp-test-user-a']);
+    $userB = User::factory()->create(['organization_id' => $orgB->id, 'username' => 'frankenphp-test-user-b']);
 
     $this->actingAs($userA);
     expect(OrganizationFacade::account()->id)->toBe($orgA->id);
@@ -55,8 +57,8 @@ it('demonstrates why the real binding must be scoped(), not singleton(), across 
 
     $orgA = Organization::factory()->create();
     $orgB = Organization::factory()->create();
-    $userA = User::factory()->create(['organization_id' => $orgA->id]);
-    $userB = User::factory()->create(['organization_id' => $orgB->id]);
+    $userA = User::factory()->create(['organization_id' => $orgA->id, 'username' => 'frankenphp-test-user-c']);
+    $userB = User::factory()->create(['organization_id' => $orgB->id, 'username' => 'frankenphp-test-user-d']);
 
     $this->actingAs($userA);
     expect(app('test.organization.singleton')->account()->id)->toBe($orgA->id);
