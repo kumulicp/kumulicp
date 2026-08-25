@@ -12,13 +12,25 @@ name: Laravel (FrankenPHP)
 # proving the app boots cleanly under Octane + our config/octane.php and the
 # scoped() service bindings added for FrankenPHP worker-mode safety.
 #
-# This intentionally does NOT boot a live FrankenPHP worker (php artisan
-# octane:start): the standalone frankenphp binary octane:install downloads
-# bundles its own PHP build, separate from the PHP this workflow otherwise
-# uses, and in CI its worker process fails to reach frankenphp_handle_request()
-# without a clear underlying error surfaced in the logs - a FrankenPHP/Octane
-# CI rough edge, not an application issue. Revisit if a real live-server smoke
-# test is needed later.
+# On top of that, the "Boot a live FrankenPHP worker" step below actually
+# starts php artisan octane:start and curls it, catching things the in-process
+# Pest client never can - e.g. two real bugs found this way that only surface
+# once a request actually round-trips through FrankenPHP's own bundled PHP
+# build (currently 8.5, independent of the 8.4 this workflow otherwise runs):
+#   - config/database.php referencing the PDO::MYSQL_ATTR_SSL_CA constant,
+#     deprecated in PHP 8.5. The resulting deprecation notice printed to
+#     stdout before the worker's first frankenphp_handle_request() call,
+#     which corrupted FrankenPHP's handshake ("worker has not reached
+#     frankenphp_handle_request()") - the exact failure this workflow used to
+#     avoid by never booting a live worker.
+#   - barryvdh/laravel-debugbar's storage.open config defaults to IP
+#     autodetection (Symfony IpUtils::isPrivateIp()), which throws when
+#     FrankenPHP's synthetic worker warm-up request has no REMOTE_ADDR.
+#     Fixed by setting DEBUGBAR_OPEN_STORAGE=true in .env.sample.
+#
+# --workers is pinned to a small fixed number rather than "auto": booting
+# with one worker thread per CPU core caused a one-off "zend_mm_heap
+# corrupted" crash on a 16-core dev machine during local testing.
 
 on:
   push:
@@ -69,7 +81,43 @@ jobs:
         mkdir -p database
         touch database/database.sqlite
     - name: Install FrankenPHP
-      run: php artisan octane:install --server=frankenphp --force
+      # No --force: that also forces `vendor:publish --tag=octane-config`,
+      # which would overwrite the repo's config/octane.php (the
+      # FlushApplicationFacadeState listener and the scoped-binding "flush"
+      # entries) with laravel/octane's stub. octane:install is otherwise
+      # idempotent and skips the binary download if it's already present.
+      run: php artisan octane:install --server=frankenphp --no-interaction
+    - name: Boot a live FrankenPHP worker and smoke test it
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: |
+        php artisan octane:start --server=frankenphp --host=127.0.0.1 --port=8000 --admin-port=2019 --workers=2 > octane.log 2>&1 &
+        echo $! > octane.pid
+
+        ready=0
+        for i in $(seq 1 30); do
+          if curl -sf -o /dev/null http://127.0.0.1:8000/up; then
+            ready=1
+            break
+          fi
+          sleep 1
+        done
+        if [ "$ready" -ne 1 ]; then
+          echo "FrankenPHP worker never became healthy"
+          cat octane.log
+          exit 1
+        fi
+
+        status=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/)
+        if [ "$status" != "200" ] && [ "$status" != "302" ]; then
+          echo "Unexpected status code from / : $status"
+          cat octane.log
+          exit 1
+        fi
+
+        kill "$(cat octane.pid)"
+        cat octane.log
     - name: Execute Feature tests
       env:
         DB_CONNECTION: sqlite
