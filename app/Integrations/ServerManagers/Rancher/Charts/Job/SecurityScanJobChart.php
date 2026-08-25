@@ -64,4 +64,9 @@ class SecurityScanJobChart extends JobChart
 
         return $this;
     }
+
+    public function imagePullSecrets(): array
+    {
+        return [];
+    }
 }
