@@ -5,14 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <!-- Scripts -->
-        @routes
+        @routes(nonce: \Illuminate\Support\Facades\Vite::cspNonce())
         @vite('resources/js/app.js')
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
         @inertia
-        @auth
-        <script src="https://js.stripe.com/v3"></script>
-        @endauth
     </body>
 </html>

@@ -138,6 +138,28 @@ import { StripeElements, StripeElement, useStripe } from "@vue-stripe/vue-stripe
 </template>
 
 <script>
+// This widget is the only consumer of the Stripe SDK, dynamically imported
+// only on the billing page (see PaymentMethod.vue) - so it loads js.stripe.com
+// itself instead of the app shell loading it unconditionally on every page.
+// https://js.stripe.com is already an allowed script-src host, so a plain
+// dynamically-created <script src> needs no CSP nonce to run.
+let stripeJsPromise = null
+function loadStripeJs () {
+  if (window.Stripe) {
+    return Promise.resolve()
+  }
+  if (!stripeJsPromise) {
+    stripeJsPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://js.stripe.com/v3'
+      script.onload = resolve
+      script.onerror = reject
+      document.head.appendChild(script)
+    })
+  }
+  return stripeJsPromise
+}
+
 export default {
   props: {
     hasDefaultPaymentMethod: Boolean,
@@ -193,10 +215,11 @@ export default {
           console.log(error)
         })
     },
-    mountStripe () {
+    async mountStripe () {
       if (this.stripeMounted) {
         return
       }
+      await loadStripeJs()
       // Style Object documentation here: https://stripe.com/docs/js/appendix/style
       const style = {
         base: {
