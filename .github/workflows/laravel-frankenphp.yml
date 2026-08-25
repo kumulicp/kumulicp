@@ -88,9 +88,20 @@ jobs:
       # provider (ActionServiceProvider -> SettingsService) queries the DB
       # on every request regardless of route, so an unmigrated sqlite file
       # 500s even on a route that doesn't otherwise touch the database.
+      #
+      # CACHE_DRIVER/SESSION_DRIVER forced to array: .env.sample defaults
+      # both to redis with no REDIS_HOST, which is fine for the Feature/
+      # AccountManagerLdap test steps below since phpunit.xml overrides both
+      # to array for anything run through php artisan test. This step (and
+      # the live-worker one after it) run plain artisan commands outside
+      # PHPUnit, so they get .env's real redis config with no Redis service
+      # available in this workflow to back it - e.g. this migration calls
+      # spatie/laravel-permission's cache-forget on install.
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
+        CACHE_DRIVER: array
+        SESSION_DRIVER: array
       run: php artisan migrate --force
     - name: Install FrankenPHP
       # No --force: that also forces `vendor:publish --tag=octane-config`,
@@ -103,6 +114,8 @@ jobs:
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
+        CACHE_DRIVER: array
+        SESSION_DRIVER: array
       run: |
         php artisan octane:start --server=frankenphp --host=127.0.0.1 --port=8000 --admin-port=2019 --workers=2 > octane.log 2>&1 &
         echo $! > octane.pid
