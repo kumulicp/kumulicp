@@ -80,6 +80,18 @@ jobs:
       run: |
         mkdir -p database
         touch database/database.sqlite
+    - name: Run Migrations
+      # Needed before the live-worker smoke test below, which hits the app
+      # over real HTTP outside of any test's RefreshDatabase trait. The
+      # Feature/AccountManagerLdap suites don't need this step themselves -
+      # Pest's RefreshDatabase handles schema per-test - but a service
+      # provider (ActionServiceProvider -> SettingsService) queries the DB
+      # on every request regardless of route, so an unmigrated sqlite file
+      # 500s even on a route that doesn't otherwise touch the database.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan migrate --force
     - name: Install FrankenPHP
       # No --force: that also forces `vendor:publish --tag=octane-config`,
       # which would overwrite the repo's config/octane.php (the
@@ -106,6 +118,7 @@ jobs:
         if [ "$ready" -ne 1 ]; then
           echo "FrankenPHP worker never became healthy"
           cat octane.log
+          tail -n 100 storage/logs/laravel.log 2>/dev/null
           exit 1
         fi
 
@@ -113,6 +126,7 @@ jobs:
         if [ "$status" != "200" ] && [ "$status" != "302" ]; then
           echo "Unexpected status code from / : $status"
           cat octane.log
+          tail -n 100 storage/logs/laravel.log 2>/dev/null
           exit 1
         fi
 
