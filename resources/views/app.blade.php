@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <!-- Scripts -->
-        @routes
+        @routes(group: \App\Support\Ziggy::groupFor(auth()->user()))
         @vite('resources/js/app.js')
         @inertiaHead
     </head>
