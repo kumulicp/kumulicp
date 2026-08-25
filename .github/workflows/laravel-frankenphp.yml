@@ -72,7 +72,7 @@ jobs:
       run: npm run build
     - name: Directory Permissions
       run: |
-        mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier
+        mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier storage/logs
         chmod -R 777 storage bootstrap/cache
     - name: Generate key
       run: php -r "file_put_contents('.env', preg_replace('/^APP_KEY=.*/m', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
