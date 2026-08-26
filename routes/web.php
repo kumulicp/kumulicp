@@ -396,6 +396,7 @@ Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
     });
 });
 
+// Prefix is also matched by string in SecurityHeaders::apply() - keep both in sync.
 Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['auth']], function () {
     Lfm::routes();
 });

@@ -14,6 +14,7 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -67,35 +68,55 @@ return Application::configure(basePath: dirname(__DIR__))
 
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            // SecurityHeaders (the 'web'-group middleware) never gets to run its
+            // post-$next() code for exception-driven responses - Laravel's
+            // pipeline unwinds straight past it. Reuse the nonce it already
+            // generated earlier in this request (or generate one, if the
+            // exception happened before that middleware ran) and reapply the
+            // same headers here so error pages aren't left unprotected.
+            $nonce = Vite::cspNonce() ?? Vite::useCspNonce();
+
             if (! app()->environment(['testing']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 if (Auth::check() && auth()?->user()?->hasVerifiedEmail()) {
                     try {
-                        return inertia('ErrorPage', [
-                            'status' => $response->getStatusCode(),
-                            'message' => $exception->getMessage(),
-                        ])
-                            ->toResponse($request)
-                            ->setStatusCode($response->getStatusCode());
+                        return SecurityHeaders::apply(
+                            inertia('ErrorPage', [
+                                'status' => $response->getStatusCode(),
+                                'message' => $exception->getMessage(),
+                            ])
+                                ->toResponse($request)
+                                ->setStatusCode($response->getStatusCode()),
+                            $request,
+                            $nonce,
+                        );
                     } catch (Throwable $e) {
                     }
                 } else {
                     try {
-                        return inertia('UnauthenticatedErrorPage', [
-                            'status' => $response->getStatusCode(),
-                            'message' => $exception->getMessage(),
-                        ])
-                            ->toResponse($request)
-                            ->setStatusCode($response->getStatusCode());
+                        return SecurityHeaders::apply(
+                            inertia('UnauthenticatedErrorPage', [
+                                'status' => $response->getStatusCode(),
+                                'message' => $exception->getMessage(),
+                            ])
+                                ->toResponse($request)
+                                ->setStatusCode($response->getStatusCode()),
+                            $request,
+                            $nonce,
+                        );
                     } catch (Throwable $e) {
                     }
                 }
             } elseif ($response->getStatusCode() === 419) {
-                return back()->with([
-                    'message' => 'The page expired, please try again.',
-                ]);
+                return SecurityHeaders::apply(
+                    back()->with([
+                        'message' => 'The page expired, please try again.',
+                    ]),
+                    $request,
+                    $nonce,
+                );
             }
 
-            return $response;
+            return SecurityHeaders::apply($response, $request, $nonce);
         });
         $exceptions->dontReportDuplicates();
         $exceptions->dontReport([
