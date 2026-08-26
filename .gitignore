@@ -17,6 +17,8 @@ auth.json
 /storage/app/addons/*
 /storage/app/apps/*
 /storage/app/purifier/*
+/storage/app/public/photos
+/storage/app/images/screenshots
 
 # handled by composer
 /vendor
@@ -28,7 +30,6 @@ modules_statuses.json
 /public/plugins
 /public/dist
 /public/fonts
-/public/vendor
 /public/js
 /public/css
 /public/build
