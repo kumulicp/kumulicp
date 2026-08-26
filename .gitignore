@@ -23,6 +23,11 @@ auth.json
 # handled by composer
 /vendor
 
+# Octane / FrankenPHP (php artisan octane:install --server=frankenphp)
+**/caddy
+/frankenphp
+/public/frankenphp-worker.php
+
 # /Modules
 modules_statuses.json
 /modules/*/*

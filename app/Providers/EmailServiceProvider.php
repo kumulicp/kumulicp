@@ -22,7 +22,11 @@ class EmailServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('email', function ($app) {
+        // Scoped: EmailService stores per-call DNS-check results (domain,
+        // dkim/spf/dmarc flags) on the instance rather than returning them,
+        // so a singleton risks one request reading state left behind by
+        // another under FrankenPHP/Octane worker mode.
+        $this->app->scoped('email', function ($app) {
             return new EmailService;
         });
     }
