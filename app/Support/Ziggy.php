@@ -24,7 +24,7 @@ class Ziggy
 
         $names = [];
 
-        foreach (Route::getRoutes() as $route) {
+        foreach (Route::getRoutes()->getRoutes() as $route) {
             if ($route->getName() && in_array('can:admin', $route->gatherMiddleware())) {
                 $names[] = '!'.$route->getName();
             }
