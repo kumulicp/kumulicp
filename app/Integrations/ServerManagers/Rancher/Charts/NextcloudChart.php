@@ -17,12 +17,6 @@ class NextcloudChart extends HelmChart
 
         $ingress_enabled = $app_instance->configuration('ingress-enabled', true);
 
-        if ($ingress_enabled) {
-            $middleware_service = new DomainMiddlewareService($organization, $app_instance->web_server, $this->app_instance);
-            $dav = new NextcloudDavRedirect($organization, $this->app_instance);
-            $middleware_service->updateChart($dav);
-        }
-
         $database_server = '';
         if ($organization_database_server = $app_instance->server('database')) {
             $database_server = $organization_database_server->serverInfo();
