@@ -2,9 +2,18 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Charts\Middleware;
 
+use App\AppInstance;
+use App\Organization;
+
 class RedirectChart extends MiddlewareChart
 {
     public $chart_name = 'redirect';
+
+    public function __construct(Organization $organization, AppInstance $app_instance)
+    {
+        parent::__construct($organization, $app_instance);
+        $this->name .= '-redirect';
+    }
 
     public function values(): array
     {

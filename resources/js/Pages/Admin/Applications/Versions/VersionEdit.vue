@@ -157,6 +157,16 @@ import { useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.image_repo_name"
                   :error-messages="$page.props.errors.image_repo_name"
                   />
+                <va-input v-model="form.port"
+                  type="number"
+                  :label="$t('admin.versions.servicePort')"
+                  id="port"
+                  class="my-2"
+                  immediateValidation
+                  :messages="$t('admin.versions.servicePortMessage')"
+                  :error="$page.props.errors.port"
+                  :error-messages="$page.props.errors.port"
+                  />
           </template>
         </AdminSettings>
         <va-list-separator v-if="can.helm_chart" class="my-1" fit />
@@ -290,6 +300,7 @@ export default {
         chart_name: this.version.chart_name,
         helm_repo_name: this.version.helm_repo_name,
         image_repo_name: this.version.image_repo_name,
+        port: this.version.port,
         pull_secret_id: this.version.pull_secret_id,
         announcement_location: this.version.announcement_location,
         announcement_id: this.version.announcement_id ? this.version.announcement_id : '',

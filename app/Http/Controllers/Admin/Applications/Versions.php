@@ -109,6 +109,7 @@ class Versions extends Controller
                 'pull_secret_id' => $version->pull_secret_id,
                 'chart_version' => $version->setting('chart_version'),
                 'chart_name' => $version->setting('chart_name'),
+                'port' => $version->setting('port'),
                 'admin_path' => $version->admin_path,
                 'announcement_location' => $version->announcement_location,
                 'announcement_id' => $version->announcement_id,
@@ -184,6 +185,7 @@ class Versions extends Controller
             'chart_version' => 'string|nullable',
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
+            'port' => 'nullable|integer|min:1|max:65535',
             'pull_secret_id' => 'nullable|integer|exists:pull_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
@@ -204,6 +206,7 @@ class Versions extends Controller
             'helm_repo_name' => $request->input('helm_repo_name'),
             'image_repo_name' => $request->input('image_repo_name'),
             'chart_name' => $request->input('chart_name'),
+            'port' => $request->input('port'),
         ]);
         $version->announcement_location = $request->input('announcement_location');
         $version->announcement_id = $request->input('announcement_id');

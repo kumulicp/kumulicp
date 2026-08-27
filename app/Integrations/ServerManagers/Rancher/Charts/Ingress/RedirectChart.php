@@ -2,11 +2,19 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Charts\Ingress;
 
+use App\AppInstance;
+use App\Organization;
 use App\Support\Facades\Application;
 
 class RedirectChart extends IngressChart
 {
     public $chart_name = 'redirect';
+
+    public function __construct(Organization $organization, AppInstance $app_instance)
+    {
+        parent::__construct($organization, $app_instance);
+        $this->name .= '-redirect';
+    }
 
     public function values(): array
     {
@@ -53,7 +61,7 @@ class RedirectChart extends IngressChart
                                 'service' => [
                                     'name' => $service_name,
                                     'port' => [
-                                        'number' => 8080,
+                                        'number' => (int) ($this->app_instance->version->setting('port') ?? 8080),
                                     ],
                                 ],
                             ],
