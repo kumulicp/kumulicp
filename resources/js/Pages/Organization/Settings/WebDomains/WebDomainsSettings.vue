@@ -140,7 +140,7 @@ import { Link, useForm } from '@inertiajs/vue3'
           <td>{{ subdomain.type }}</td>
           <td>{{ subdomain.host }}</td>
           <td>{{ subdomain.name }}</td>
-          <td>
+          <td style="max-width: 800px; overflow: auto">
             <Link v-if="subdomain.app !== null" :href="'/apps/'+subdomain.app.id+'/edit'">{{ subdomain.app.name }}</Link>
             <span v-else>{{ subdomain.value }}</span>
           </td>
