@@ -1,0 +1,125 @@
+name: Release
+
+# Builds a self-contained, deployable copy of the app and publishes it as a
+# GitHub Release asset. The package contains production PHP dependencies
+# (vendor/, no-dev) and compiled front-end assets (public/build/...), but
+# none of the raw JS/TS source, dev tooling, tests, CI config, or .git
+# metadata - just what a server needs to run the app after an .env is added.
+#
+# Trigger it either by pushing a "vX.Y.Z" tag, or manually via
+# workflow_dispatch (which creates and pushes that tag for you).
+
+on:
+  push:
+    tags:
+      # Tag filters here are glob patterns, not regex (no [0-9]+ support) -
+      # this loosely matches vX.Y.Z; the exact vX.Y.Z shape is enforced below
+      # for the workflow_dispatch path, where the tag doesn't exist yet.
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release, e.g. v1.4.0 (only used when running this manually)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.version }}"
+            if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "version must look like vX.Y.Z, got: $TAG" >&2
+              exit 1
+            fi
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists" >&2
+              exit 1
+            fi
+            git tag "$TAG"
+            git push origin "$TAG"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
+        with:
+          php-version: '8.4'
+          ini-values: memory_limit=512M
+          tools: composer:v2
+          coverage: none
+
+      - name: Export a clean copy of the tagged tree
+        # git archive only ever includes committed, tracked files, so this
+        # already drops .git itself, .gitignored build output (vendor/,
+        # node_modules/, public/build/...), and local-only files like .env.
+        run: git archive "${{ steps.tag.outputs.tag }}" --prefix=release/ | tar -x
+
+      - name: Copy .env
+        working-directory: release
+        run: php -r "file_exists('.env') || copy('.env.sample', '.env');"
+
+      - name: Prepare storage directories
+        # storage/framework/views etc. aren't tracked in git (see .gitignore),
+        # so the archive above doesn't create them. Without this, composer
+        # install's package:discover hook fails trying to write a view cache.
+        working-directory: release
+        run: mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier storage/logs
+
+      - name: Install PHP production dependencies
+        working-directory: release
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-ansi --no-progress --prefer-dist
+
+      - name: Install Node dependencies
+        working-directory: release
+        run: npm ci
+
+      - name: Build front-end assets
+        working-directory: release
+        run: npm run build
+
+      - name: Strip build-only and dev-only files
+        working-directory: release
+        run: |
+          rm -rf \
+            node_modules package.json package-lock.json \
+            resources/js resources/css \
+            vite.config.js vite.widgets.config.js vite.fake-widget.config.js vite-module-loader.js \
+            index.html tailwind.config.js tsconfig.json jsconfig.json eslint.config.mjs vuestic.config.js \
+            tests phpunit.xml phpstan.neon phpstan-bootstrap.php pint.json \
+            .claude .github .gitignore .gitattributes composer.json.tmp \
+            docker-compose.yml.sample docker-compose.yml.extras \
+            .env
+
+      - name: Package release archive
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          ASSET="kumulicp-${TAG}.zip"
+          (cd release && zip -rq "../${ASSET}" .)
+          sha256sum "${ASSET}" > "${ASSET}.sha256"
+          echo "asset=${ASSET}" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            ${{ env.asset }}
+            ${{ env.asset }}.sha256
