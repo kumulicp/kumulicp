@@ -89,29 +89,31 @@ import { Link, useForm, router } from '@inertiajs/vue3'
         </template>
       </va-modal>
     </div>
-    <table class="va-table va-table--hoverable mt-3">
-      <thead>
-        <tr>
-          <th style="width:200px">{{ $t('admin.backups.scheduledAt') }}</th>
-          <th>{{ $t('admin.backups.appsToBackup') }}</th>
-          <th style="width:50px"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(backup, index) in backups" :key="index">
-          <td>
-            <Link :href="'/admin/server/backup_scheduler/'+backup.id">{{ backup.scheduled_at }}</Link>
-          </td>
-          <td>
-            {{ backup.apps }}
-          </td>
-          <td class="va-text-center">
-            <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
-              @click="showRemoveBackupModal(backup)" />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <va-scroll-container horizontal>
+      <table class="va-table va-table--hoverable mt-3">
+        <thead>
+          <tr>
+            <th style="width:200px">{{ $t('admin.backups.scheduledAt') }}</th>
+            <th>{{ $t('admin.backups.appsToBackup') }}</th>
+            <th style="width:50px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(backup, index) in backups" :key="index">
+            <td>
+              <Link :href="'/admin/server/backup_scheduler/'+backup.id">{{ backup.scheduled_at }}</Link>
+            </td>
+            <td>
+              {{ backup.apps }}
+            </td>
+            <td class="va-text-center">
+              <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
+                @click="showRemoveBackupModal(backup)" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </va-scroll-container>
     <va-pagination v-if="meta.total > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input @update:modelValue="changePage" />
     <va-modal v-model="showRemoveBackup" hide-default-actions :title="$t('admin.backups.removeTitle', { name: removeBackup.name })"
       :message="$t('admin.backups.removeMessage', { date: removeBackup.scheduled_at })">

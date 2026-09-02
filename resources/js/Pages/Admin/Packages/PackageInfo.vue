@@ -92,64 +92,68 @@ import { defineComponent } from 'vue'
       <va-card class="mb-4">
         <va-card-title>{{ $t('admin.packages.packageDetails') }}</va-card-title>
         <va-card-content>
-          <table class="va-table w-full">
-            <tbody>
-              <tr>
-                <td class="font-semibold text-gray-500 w-40">{{ $t('admin.packages.package') }}</td>
-                <td class="font-mono">{{ package.name }}</td>
-              </tr>
-              <tr>
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.type') }}</td>
-                <td>{{ package.type }}</td>
-              </tr>
-              <tr>
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.latestVersion') }}</td>
-                <td class="font-mono">{{ package.latest ?? '—' }}</td>
-              </tr>
-              <tr v-if="package.installed">
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.installedVersion') }}</td>
-                <td class="font-mono">{{ package.version ?? '?' }}</td>
-              </tr>
-              <tr v-if="package.license.length">
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.license') }}</td>
-                <td>{{ package.license.join(', ') }}</td>
-              </tr>
-              <tr v-if="package.homepage">
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.homepage') }}</td>
-                <td>
-                  <a :href="package.homepage" target="_blank" class="text-primary hover:underline break-all">
-                    {{ package.homepage }}
-                  </a>
-                </td>
-              </tr>
-              <tr v-if="package.installed && package.path">
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.modulePath') }}</td>
-                <td class="font-mono text-sm break-all">{{ package.path }}</td>
-              </tr>
-              <tr v-if="package.installed">
-                <td class="font-semibold text-gray-500">{{ $t('admin.packages.moduleName') }}</td>
-                <td class="font-mono">{{ package.module_name }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <va-scroll-container horizontal>
+            <table class="va-table w-full">
+              <tbody>
+                <tr>
+                  <td class="font-semibold text-gray-500 w-40">{{ $t('admin.packages.package') }}</td>
+                  <td class="font-mono">{{ package.name }}</td>
+                </tr>
+                <tr>
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.type') }}</td>
+                  <td>{{ package.type }}</td>
+                </tr>
+                <tr>
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.latestVersion') }}</td>
+                  <td class="font-mono">{{ package.latest ?? '—' }}</td>
+                </tr>
+                <tr v-if="package.installed">
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.installedVersion') }}</td>
+                  <td class="font-mono">{{ package.version ?? '?' }}</td>
+                </tr>
+                <tr v-if="package.license.length">
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.license') }}</td>
+                  <td>{{ package.license.join(', ') }}</td>
+                </tr>
+                <tr v-if="package.homepage">
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.homepage') }}</td>
+                  <td>
+                    <a :href="package.homepage" target="_blank" class="text-primary hover:underline break-all">
+                      {{ package.homepage }}
+                    </a>
+                  </td>
+                </tr>
+                <tr v-if="package.installed && package.path">
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.modulePath') }}</td>
+                  <td class="font-mono text-sm break-all">{{ package.path }}</td>
+                </tr>
+                <tr v-if="package.installed">
+                  <td class="font-semibold text-gray-500">{{ $t('admin.packages.moduleName') }}</td>
+                  <td class="font-mono">{{ package.module_name }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </va-scroll-container>
         </va-card-content>
         <template v-if="Object.keys(package.require).length">
           <va-card-title>{{ $t('admin.packages.requirements') }}</va-card-title>
           <va-card-content>
-            <table class="va-table w-full">
-              <thead>
-                <tr>
-                  <th>{{ $t('admin.packages.package') }}</th>
-                  <th>{{ $t('admin.packages.constraint') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(constraint, dep) in package.require" :key="dep">
-                  <td class="font-mono text-sm">{{ dep }}</td>
-                  <td class="font-mono text-sm text-gray-500">{{ constraint }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <va-scroll-container horizontal>
+              <table class="va-table w-full">
+                <thead>
+                  <tr>
+                    <th>{{ $t('admin.packages.package') }}</th>
+                    <th>{{ $t('admin.packages.constraint') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(constraint, dep) in package.require" :key="dep">
+                    <td class="font-mono text-sm">{{ dep }}</td>
+                    <td class="font-mono text-sm text-gray-500">{{ constraint }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </va-scroll-container>
           </va-card-content>
         </template>
         <va-card-title>{{ $t('admin.packages.authors') }}</va-card-title>

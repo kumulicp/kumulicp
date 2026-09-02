@@ -111,37 +111,39 @@ import { useForm, Link } from '@inertiajs/vue3'
           >
             {{ $t('organization.users.adminWarning') }}
           </va-alert>
-          <table class="va-table va-table--striped mb-2">
-            <thead>
-              <tr>
-                <th style="width: 15rem">{{ $t('admin.apps.appWord') }}</th>
-                <th v-if="plan.type === 'app'">{{ $t('organization.users.accessType') }}</th>
-                <th>{{ $t('organization.users.permissions') }}</th>
-                <th style="width: 15rem"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(app, index) in filteredPermissions" :key="index">
-                <td>
-                  {{ app.name }} <a href="#" @click="showDescription(app)"><va-icon name="fa-circle-info" :title="$t('organization.users.roleDescriptions')" /></a>
-                </td>
-                <template v-if="plan.type === 'app'">
-                  <td>{{ accessTypes[appAccessType[app.id]] }}</td>
-                </template>
-                <td v-if="appAccessTypeFiltered[app.id] !== 'none'">
-                  <template v-for="(category, index) in app.categories" :key="index">
-                    <template v-if="form['permission'][app.id][category.id] !== 'none'">
-                      <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[form['permission'][app.id][category.id]] }}</va-chip>
-                    </template>
+          <va-scroll-container horizontal>
+            <table class="va-table va-table--striped mb-2">
+              <thead>
+                <tr>
+                  <th style="width: 15rem">{{ $t('admin.apps.appWord') }}</th>
+                  <th v-if="plan.type === 'app'">{{ $t('organization.users.accessType') }}</th>
+                  <th>{{ $t('organization.users.permissions') }}</th>
+                  <th style="width: 15rem"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(app, index) in filteredPermissions" :key="index">
+                  <td>
+                    {{ app.name }} <a href="#" @click="showDescription(app)"><va-icon name="fa-circle-info" :title="$t('organization.users.roleDescriptions')" /></a>
+                  </td>
+                  <template v-if="plan.type === 'app'">
+                    <td>{{ accessTypes[appAccessType[app.id]] }}</td>
                   </template>
-                </td>
-                <td v-else><va-chip outline class="mr-1">{{ $t('organization.users.noAccess') }}</va-chip></td>
-                <td>
-                  <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && app.categories && app.categories.length > 0)" :id="'open-permissions-' + app.id" href="#" @click="showAppPermissions(app)"><va-icon name="fa-lock" :title="$t('organization.users.updatePermissions')" /> {{ $t('organization.users.updatePermissions') }}</a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <td v-if="appAccessTypeFiltered[app.id] !== 'none'">
+                    <template v-for="(category, index) in app.categories" :key="index">
+                      <template v-if="form['permission'][app.id][category.id] !== 'none'">
+                        <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[form['permission'][app.id][category.id]] }}</va-chip>
+                      </template>
+                    </template>
+                  </td>
+                  <td v-else><va-chip outline class="mr-1">{{ $t('organization.users.noAccess') }}</va-chip></td>
+                  <td>
+                    <a v-if="plan.type === 'app' || (plan.type === 'package' && form.user.access_type !== 'none' && app.categories && app.categories.length > 0)" :id="'open-permissions-' + app.id" href="#" @click="showAppPermissions(app)"><va-icon name="fa-lock" :title="$t('organization.users.updatePermissions')" /> {{ $t('organization.users.updatePermissions') }}</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </va-scroll-container>
           <va-button type="submit" id="submit" class="mb-2 mr-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
           <va-button @click="resetPermissions" id="reset" class="mb-2" color="backgroundSecondary" :disabled="form.processing || !form.isDirty">{{ $t('form.reset') }}</va-button>
         </form>

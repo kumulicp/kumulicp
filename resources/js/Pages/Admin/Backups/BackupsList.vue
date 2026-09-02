@@ -14,35 +14,40 @@ import { Link, useForm } from '@inertiajs/vue3'
         <va-card class="mb-4">
           <va-card-title>{{ $t('admin.backups.scheduledBackups') }}</va-card-title>
           <va-card-content>
-            <table class="va-table va-table--hoverable mt-3">
-              <thead>
-                <tr>
-                  <th>{{ $t('organization.organization') }}</th>
-                  <th>{{ $t('admin.apps.appWord') }}</th>
-                  <th>{{ $t('admin.backups.type') }}</th>
-                  <th>{{ $t('admin.backups.scheduledAt') }}</th>
-                  <th>{{ $t('admin.backups.completedAt') }}</th>
-                  <th>{{ $t('admin.apps.status') }}</th>
-                  <th style="width:50px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(backup, index) in backups.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
-                  <td>
-                    <Link :href="'/admin/organizations/'+backup.organization.id">{{ backup.organization.name }}</Link>
-                  </td>
-                  <td>{{ backup.app.label }}</td>
-                  <td>{{ backup.type }}</td>
-                  <td>{{ backup.scheduled_at }}</td>
-                  <td>{{ backup.completed_at }}</td>
-                  <td>{{ backup.status }}</td>
-                  <td class="va-text-center">
-                    <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
-                      @click="showRemoveBackupModal(backup)" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <va-scroll-container
+              color="primary"
+              horizontal
+            >
+              <table class="va-table va-table--hoverable mt-3">
+                <thead>
+                  <tr>
+                    <th>{{ $t('organization.organization') }}</th>
+                    <th>{{ $t('admin.apps.appWord') }}</th>
+                    <th>{{ $t('admin.backups.type') }}</th>
+                    <th>{{ $t('admin.backups.scheduledAt') }}</th>
+                    <th>{{ $t('admin.backups.completedAt') }}</th>
+                    <th>{{ $t('admin.apps.status') }}</th>
+                    <th style="width:50px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(backup, index) in backups.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
+                    <td>
+                      <Link :href="'/admin/organizations/'+backup.organization.id">{{ backup.organization.name }}</Link>
+                    </td>
+                    <td>{{ backup.app.label }}</td>
+                    <td>{{ backup.type }}</td>
+                    <td>{{ backup.scheduled_at }}</td>
+                    <td>{{ backup.completed_at }}</td>
+                    <td>{{ backup.status }}</td>
+                    <td class="va-text-center">
+                      <va-icon name="entypo-cancel" color="danger" class="clickable-icon"
+                        @click="showRemoveBackupModal(backup)" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </va-scroll-container>
             <va-pagination v-if="backups.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="backups.length" boundary-numbers :page-size="pageSize" />
           </va-card-content>
         </va-card>

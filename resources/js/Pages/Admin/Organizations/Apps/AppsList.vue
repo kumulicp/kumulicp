@@ -8,24 +8,26 @@ import { Link } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('admin.apps.pageTitleShort') }} - Control Panel</title>
   </Head>
-  <table class="va-table va-table--hoverable mt-3">
-    <thead>
-      <tr>
-        <th>{{ $t('common.name') }}</th>
-        <th>{{ $t('admin.versions.version') }}</th>
-        <th>{{ $t('admin.apps.domainName') }}</th>
-        <th>{{ $t('admin.apps.status') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="app in apps.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="app.id" style="min-height:300px;">
-        <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link></td>
-        <td>{{ app.version }}</td>
-        <td>{{ app.domain.name }}</td>
-        <td>{{ app.status }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <va-scroll-container horizontal>
+    <table class="va-table va-table--hoverable mt-3">
+      <thead>
+        <tr>
+          <th>{{ $t('common.name') }}</th>
+          <th>{{ $t('admin.versions.version') }}</th>
+          <th>{{ $t('admin.apps.domainName') }}</th>
+          <th>{{ $t('admin.apps.status') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="app in apps.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="app.id" style="min-height:300px;">
+          <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link></td>
+          <td>{{ app.version }}</td>
+          <td>{{ app.domain.name }}</td>
+          <td>{{ app.status }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </va-scroll-container>
 
   <va-pagination v-if="apps.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="apps.length" :direction-links="false" :page-size="pageSize" />
 </template>

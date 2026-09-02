@@ -63,55 +63,59 @@ import draggable from 'vuedraggable'
         <div class="row">
           <div class="flex flex-col xs12 lg12">
             <form @submit.prevent="order.post('/admin/service/plans/update_order')">
-            <table class="va-table va-table--hoverable my-3">
-              <thead>
-                <tr>
-                  <th style="width: 50px">{{ $t('admin.plans.default') }}</th>
-                  <th>{{ $t('admin.plans.name') }}</th>
-                  <th>{{ $t('admin.plans.description') }}</th>
-                  <th>{{ $t('admin.plans.planType') }}</th>
-                  <th>{{ $t('admin.plans.organizationType') }}</th>
-                  <th>{{ $t('admin.plans.activeSubscribers') }}</th>
-                </tr>
-              </thead>
-              <draggable v-model="order.plans" tag="tbody" item-key="id">
-                <template  #item="{ element }">
-                  <tr style="min-height:300px;">
-                    <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
-                    <td><Link :href="'/admin/service/plans/'+element.id">{{ element.name }}</Link></td>
-                    <td>{{ element.description }}</td>
-                    <td>{{ element.type }}</td>
-                    <td>{{ element.org_type }}</td>
-                    <td>{{ element.active_subscribers }}</td>
+            <va-scroll-container horizontal>
+              <table class="va-table va-table--hoverable my-3">
+                <thead>
+                  <tr>
+                    <th style="width: 50px">{{ $t('admin.plans.default') }}</th>
+                    <th>{{ $t('admin.plans.name') }}</th>
+                    <th>{{ $t('admin.plans.description') }}</th>
+                    <th>{{ $t('admin.plans.planType') }}</th>
+                    <th>{{ $t('admin.plans.organizationType') }}</th>
+                    <th>{{ $t('admin.plans.activeSubscribers') }}</th>
                   </tr>
-                </template>
-              </draggable>
-            </table>
+                </thead>
+                <draggable v-model="order.plans" tag="tbody" item-key="id">
+                  <template  #item="{ element }">
+                    <tr style="min-height:300px;">
+                      <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
+                      <td><Link :href="'/admin/service/plans/'+element.id">{{ element.name }}</Link></td>
+                      <td>{{ element.description }}</td>
+                      <td>{{ element.type }}</td>
+                      <td>{{ element.org_type }}</td>
+                      <td>{{ element.active_subscribers }}</td>
+                    </tr>
+                  </template>
+                </draggable>
+              </table>
+            </va-scroll-container>
             <p class="va-text-secondary mb-3">
               {{ $t('admin.plans.changeOrder') }}
             </p>
             <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
             </form>
-            <table class="va-table va-table--hoverable my-3">
-              <thead>
-                <tr>
-                  <th>{{ $t('admin.plans.archivedPlan') }}</th>
-                  <th>{{ $t('admin.plans.description') }}</th>
-                  <th>{{ $t('admin.plans.planType') }}</th>
-                  <th>{{ $t('admin.plans.organizationType') }}</th>
-                  <th>{{ $t('admin.plans.activeSubscribers') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
-                  <td><Link :href="'/admin/service/plans/'+plan.id">{{ plan.name }}</Link></td>
-                  <td>{{ plan.description }}</td>
-                  <td>{{ plan.type }}</td>
-                  <td>{{ plan.org_type }}</td>
-                  <td>{{ plan.active_subscribers }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <va-scroll-container horizontal>
+              <table class="va-table va-table--hoverable my-3">
+                <thead>
+                  <tr>
+                    <th>{{ $t('admin.plans.archivedPlan') }}</th>
+                    <th>{{ $t('admin.plans.description') }}</th>
+                    <th>{{ $t('admin.plans.planType') }}</th>
+                    <th>{{ $t('admin.plans.organizationType') }}</th>
+                    <th>{{ $t('admin.plans.activeSubscribers') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
+                    <td><Link :href="'/admin/service/plans/'+plan.id">{{ plan.name }}</Link></td>
+                    <td>{{ plan.description }}</td>
+                    <td>{{ plan.type }}</td>
+                    <td>{{ plan.org_type }}</td>
+                    <td>{{ plan.active_subscribers }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </va-scroll-container>
           </div>
         </div>
       </div>

@@ -17,54 +17,18 @@ import { Link, useForm } from '@inertiajs/vue3'
           <div class="va-title text-align-center text-color-primary">
             {{ organization.name }}
           </div>
-          <table class="va-table va-table--hoverable mt-3">
-            <thead>
-              <tr>
-                <th>{{ $t('organization.subscription.baseAppName') }}</th>
-                <th>{{ $t('organization.subscription.plan') }}</th>
-                <th>{{ $t('admin.apps.status') }}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(plan, i) in plans" :key="i">
-                <td v-if="plan.entity.id" class="py-3 vertical-middle">
-                  <Link :href="'/apps/'+plan.entity.id+'/edit'">{{ plan.entity.name }}</Link>
-                </td>
-                <td v-else class="py-3 va-text-bold vertical-middle">
-                  {{ plan.entity.name }}
-                </td>
-                <td class="vertical-middle">
-                  {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
-                </td>
-                <td class="vertical-middle">
-                  {{ plan.status }}
-                </td>
-                <td class="va-text-right vertical-middle">
-                  <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ $t('plan.change') }}</va-button></Link>
-                  <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, organization)">{{ $t('plan.unsubscribe') }}</va-button>
-                  <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, organization)">{{ $t('plan.resubscribe') }}</va-button>
-                  <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, organization)">{{ $t('plan.deactivate') }}</va-button>
-                  <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, organization)">{{ $t('plan.reactivate') }}</va-button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <template v-for="(suborg, s) in suborgs" :key="s">
-            <div class="mt-3 va-title text-align-center text-color-primary">
-              {{ suborg.name }}
-            </div>
+          <va-scroll-container horizontal>
             <table class="va-table va-table--hoverable mt-3">
               <thead>
                 <tr>
-                  <th>Base/App Name</th>
-                  <th>Plan</th>
-                  <th>Status</th>
+                  <th>{{ $t('organization.subscription.baseAppName') }}</th>
+                  <th>{{ $t('organization.subscription.plan') }}</th>
+                  <th>{{ $t('admin.apps.status') }}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(plan, i) in suborg.plans" :key="i">
+                <tr v-for="(plan, i) in plans" :key="i">
                   <td v-if="plan.entity.id" class="py-3 vertical-middle">
                     <Link :href="'/apps/'+plan.entity.id+'/edit'">{{ plan.entity.name }}</Link>
                   </td>
@@ -79,14 +43,54 @@ import { Link, useForm } from '@inertiajs/vue3'
                   </td>
                   <td class="va-text-right vertical-middle">
                     <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ $t('plan.change') }}</va-button></Link>
-                    <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, suborg)">{{ $t('plan.unsubscribe') }}</va-button>
-                    <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, suborg)">{{ $t('plan.resubscribe') }}</va-button>
-                    <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, suborg)">{{ $t('plan.deactivate') }}</va-button>
-                    <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, suborg)">{{ $t('plan.reactivate') }}</va-button>
+                    <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, organization)">{{ $t('plan.unsubscribe') }}</va-button>
+                    <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, organization)">{{ $t('plan.resubscribe') }}</va-button>
+                    <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, organization)">{{ $t('plan.deactivate') }}</va-button>
+                    <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, organization)">{{ $t('plan.reactivate') }}</va-button>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </va-scroll-container>
+          <template v-for="(suborg, s) in suborgs" :key="s">
+            <div class="mt-3 va-title text-align-center text-color-primary">
+              {{ suborg.name }}
+            </div>
+            <va-scroll-container horizontal>
+              <table class="va-table va-table--hoverable mt-3">
+                <thead>
+                  <tr>
+                    <th>Base/App Name</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(plan, i) in suborg.plans" :key="i">
+                    <td v-if="plan.entity.id" class="py-3 vertical-middle">
+                      <Link :href="'/apps/'+plan.entity.id+'/edit'">{{ plan.entity.name }}</Link>
+                    </td>
+                    <td v-else class="py-3 va-text-bold vertical-middle">
+                      {{ plan.entity.name }}
+                    </td>
+                    <td class="vertical-middle">
+                      {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
+                    </td>
+                    <td class="vertical-middle">
+                      {{ plan.status }}
+                    </td>
+                    <td class="va-text-right vertical-middle">
+                      <Link v-if="plan.can.change_plan" :href="plan.plans_url"><va-button color="primary" size="small" class="mr-3">{{ $t('plan.change') }}</va-button></Link>
+                      <va-button v-if="plan.can.unsubscribe && plan.type === 'base'" color="danger" size="small" class="mr-3" @click="unsubscribe(plan, suborg)">{{ $t('plan.unsubscribe') }}</va-button>
+                      <va-button v-if="plan.can.resubscribe && plan.type === 'base'" color="success" size="small" class="mr-3" @click="resubscribe(plan, suborg)">{{ $t('plan.resubscribe') }}</va-button>
+                      <va-button v-if="plan.can.unsubscribe && plan.type === 'app'" color="danger" size="small" class="mr-3" @click="deactivate(plan, suborg)">{{ $t('plan.deactivate') }}</va-button>
+                      <va-button v-if="plan.can.resubscribe && plan.type === 'app'" color="success" size="small" class="mr-3" @click="reactivate(plan, suborg)">{{ $t('plan.reactivate') }}</va-button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </va-scroll-container>
           </template>
         </va-card-content>
       </va-card>
