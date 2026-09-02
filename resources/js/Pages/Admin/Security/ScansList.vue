@@ -98,8 +98,7 @@ import axios from 'axios'
               <td>
                 <div>
                   <va-badge
-                    v-for="(count, severity) in scan.summary"
-                    v-if="count > 0"
+                    v-for="[severity, count] in nonZeroSummary(scan.summary)"
                     :key="severity"
                     :color="severityColor(severity)"
                     :text="`${severity}: ${count}`"
@@ -326,6 +325,9 @@ export default {
     }
   },
   methods: {
+    nonZeroSummary (summary) {
+      return Object.entries(summary).filter(([, count]) => count > 0)
+    },
     emptyRunForm () {
       return {
         org_server_id: '',

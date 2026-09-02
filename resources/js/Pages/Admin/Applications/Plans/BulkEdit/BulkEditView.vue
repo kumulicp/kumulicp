@@ -198,13 +198,15 @@ import BulkEditLayout from './BulkEditLayout.vue'
           <tr v-if="feature.settings?.length">
             <td :colspan="plans.length + 1" class="px-4 va-text-secondary" style="font-size:0.85em">{{ feature.label }} {{ $t('admin.plans.settings') }}</td>
           </tr>
-          <template v-if="feature.settings?.length" v-for="(setting, si) in feature.settings" :key="si">
-            <tr>
-              <td class="setting-label pl-4">{{ setting.label }}</td>
-              <td v-for="plan in plans" :key="plan.id">
-                {{ plan.settings.features?.[feature.value]?.settings?.[setting.name] }}
-              </td>
-            </tr>
+          <template v-if="feature.settings?.length">
+            <template v-for="(setting, index) in feature.settings" :key="index">
+              <tr>
+                <td class="setting-label pl-4">{{ setting.label }}</td>
+                <td v-for="plan in plans" :key="plan.id">
+                  {{ plan.settings.features?.[feature.value]?.settings?.[setting.name] }}
+                </td>
+              </tr>
+            </template>
           </template>
           <tr>
             <td class="setting-label">{{ feature.label }} — {{ $t('admin.plans.price') }}</td>

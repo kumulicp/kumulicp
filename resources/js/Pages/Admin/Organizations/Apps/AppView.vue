@@ -18,7 +18,7 @@ import AppsLayout from './AppsLayout.vue'
       <va-list-item-section>
         <va-list-item-label>
           <va-input
-            v-model="app.password"
+            :model-value="app.password"
             :type="isPasswordVisible ? 'text' : 'password'"
             placeholder="#########"
             immediateValidation

@@ -1,7 +1,3 @@
-<script setup>
-import { Link } from '@inertiajs/vue3'
-import axios from 'axios'
-</script>
 <template>
   <div id="paymentMethodWidget"></div>
 </template>

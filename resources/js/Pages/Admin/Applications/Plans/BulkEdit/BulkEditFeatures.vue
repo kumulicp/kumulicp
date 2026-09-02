@@ -54,16 +54,18 @@ import { useForm } from '@inertiajs/vue3'
             </tr>
 
             <!-- Feature-specific settings -->
-            <template v-if="feature.settings?.length" v-for="(setting, si) in feature.settings" :key="si">
-              <tr>
-                <td class="setting-label pl-4">{{ setting.label }}</td>
-                <td v-for="plan in plans" :key="plan.id">
-                  <va-input
-                    v-model="form.plans[plan.id].features[feature.value].settings[setting.name]"
-                    immediateValidation
-                  />
-                </td>
-              </tr>
+            <template v-if="feature.settings?.length">
+              <template v-for="(setting, index) in feature.settings" :key="index">
+                <tr>
+                  <td class="setting-label pl-4">{{ setting.label }}</td>
+                  <td v-for="plan in plans" :key="plan.id">
+                    <va-input
+                      v-model="form.plans[plan.id].features[feature.value].settings[setting.name]"
+                      immediateValidation
+                    />
+                  </td>
+                </tr>
+              </template>
             </template>
 
             <!-- Price -->

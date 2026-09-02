@@ -1,7 +1,6 @@
 <script setup>
 import VuesticLogo from '../components/VuesticLogo.vue'
-import { Link, usePage } from '@inertiajs/vue3'
-import { useToast } from 'vuestic-ui'
+import { Link } from '@inertiajs/vue3'
 
 </script>
 <template>
