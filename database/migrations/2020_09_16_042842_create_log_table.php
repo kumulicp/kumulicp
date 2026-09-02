@@ -15,7 +15,7 @@ class CreateLogTable extends Migration
     {
         Schema::create('logs', function (Blueprint $table) {
             $table->id();
-            $table->integer('organization_id')->nullable();
+            $table->unsignedBigInteger('organization_id')->nullable()->index();
             $table->longText('message');
             $table->longText('context');
             $table->string('level')->index();
@@ -28,6 +28,7 @@ class CreateLogTable extends Migration
             $table->string('remote_addr')->nullable();
             $table->string('user_agent')->nullable();
             $table->timestamps();
+            $table->index('created_at');
         });
     }
 
