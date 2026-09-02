@@ -39,4 +39,8 @@ return [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
     ],
+
+    'plugin_registry' => [
+        'url' => env('PLUGIN_REGISTRY_URL'),
+    ],
 ];

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Organization;
+use App\Services\AppProfileRegistry;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
 use Illuminate\Pagination\Paginator;
@@ -25,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('menu', function ($app) {
             return new MenuService;
         });
+
+        $this->app->singleton(AppProfileRegistry::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);

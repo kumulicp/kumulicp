@@ -1,6 +1,7 @@
 <?php
 
 use App\Octane\Listeners\FlushApplicationFacadeState;
+use App\Octane\Listeners\FlushModuleRepositoryState;
 use Laravel\Octane\Contracts\OperationTerminated;
 use Laravel\Octane\Events\RequestHandled;
 use Laravel\Octane\Events\RequestReceived;
@@ -23,6 +24,9 @@ use Laravel\Octane\Listeners\FlushUploadedFiles;
 use Laravel\Octane\Listeners\ReportException;
 use Laravel\Octane\Listeners\StopWorkerIfNecessary;
 use Laravel\Octane\Octane;
+use Nwidart\Modules\Contracts\ActivatorInterface;
+use Nwidart\Modules\Contracts\RepositoryInterface;
+use Nwidart\Modules\ModuleManifest;
 
 return [
 
@@ -114,6 +118,11 @@ return [
             // EmailServiceProvider) would keep serving the first request's
             // organization/user for the entire life of the worker.
             FlushApplicationFacadeState::class,
+            // nwidart/laravel-modules caches scanned Module objects in a
+            // private static property (FileRepository::$modules), not in
+            // the container -- see FlushModuleRepositoryState for why the
+            // 'flush' entries below aren't enough on their own.
+            FlushModuleRepositoryState::class,
             // DisconnectFromDatabases::class,
             // CollectGarbage::class,
         ],
@@ -153,6 +162,16 @@ return [
         'applications',
         'billing',
         'email',
+
+        // nwidart/laravel-modules registers these as singletons that capture
+        // $app in their constructor (LaravelFileRepository, the activator,
+        // ModuleManifest). Left unflushed, they keep serving Module objects
+        // bound to the container from whichever request first resolved them,
+        // and calls like fireEvent() on those stale objects fail to resolve
+        // core bindings (e.g. "Target class [events] does not exist").
+        RepositoryInterface::class,
+        ActivatorInterface::class,
+        ModuleManifest::class,
     ],
 
     /*

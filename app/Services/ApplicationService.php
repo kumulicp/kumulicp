@@ -41,6 +41,13 @@ class ApplicationService
         $this->register(new NextcloudProfile);
         $this->register(new WordpressProfile);
         $this->register(new CiviCRMStandaloneProfile);
+
+        // Picks up profiles modules registered via their (one-time, boot-time)
+        // service providers -- see AppProfileRegistry for why this can't just
+        // rely on those boot() calls registering directly on this instance.
+        foreach (app(AppProfileRegistry::class)->all() as $profile) {
+            $this->register($profile);
+        }
     }
 
     public function isRegistered(string $app)
@@ -55,6 +62,8 @@ class ApplicationService
         if (! $this->isRegistered($name)) {
             $this->applications[$name] = $profile;
         }
+
+        app(AppProfileRegistry::class)->register($profile);
     }
 
     public function profile(Application|string $app)
