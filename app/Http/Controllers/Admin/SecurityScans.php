@@ -90,6 +90,9 @@ class SecurityScans extends Controller
             'tools_supporting_namespace_filter' => collect(SecurityTool::all())
                 ->filter(fn ($tool) => SecurityTool::profile($tool)->supportsNamespaceFilter())
                 ->values(),
+            'tools_with_single_namespace_filter' => collect(SecurityTool::all())
+                ->filter(fn ($tool) => SecurityTool::profile($tool)->supportsNamespaceFilter() && ! SecurityTool::profile($tool)->namespaceFilterAllowsMultiple())
+                ->values(),
             'severities' => TrivyTool::SEVERITIES,
             'breadcrumbs' => [
                 ['label' => __('admin.security.scans')],

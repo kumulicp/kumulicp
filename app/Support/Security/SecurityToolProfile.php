@@ -103,6 +103,19 @@ class SecurityToolProfile
         return false;
     }
 
+    /**
+     * Whether this tool can be scoped to several namespaces at once (e.g.
+     * Trivy's comma-separated --include-namespaces). Tools whose underlying
+     * CLI only accepts a single namespace value (e.g. Polaris's
+     * --namespace) should override this to return false, so the UI can
+     * warn that only one of the selected namespaces will actually be used.
+     * Meaningless when supportsNamespaceFilter() is false.
+     */
+    public function namespaceFilterAllowsMultiple(): bool
+    {
+        return true;
+    }
+
     public function parser(): Parser
     {
         return new $this->parser;

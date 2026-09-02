@@ -2,6 +2,7 @@
 
 use App\Support\Security\Tools\KubescapeTool;
 use App\Support\Security\Tools\NucleiTool;
+use App\Support\Security\Tools\PolarisTool;
 use App\Support\Security\Tools\TrivyTool;
 
 test('nuclei builds a -target flag pair for each selected domain', function () {
@@ -73,4 +74,24 @@ test('trivy supports the namespace filter and other tools do not', function () {
     expect((new TrivyTool)->supportsNamespaceFilter())->toBeTrue()
         ->and((new KubescapeTool)->supportsNamespaceFilter())->toBeFalse()
         ->and((new NucleiTool)->supportsNamespaceFilter())->toBeFalse();
+});
+
+test('polaris appends a --namespace flag for the first selected namespace', function () {
+    $command = (new PolarisTool)->command([], ['namespaces' => ['demo', 'kube-system']]);
+
+    expect($command)->toContain('--namespace', 'demo')
+        ->and(implode(' ', $command))->not->toContain('kube-system');
+});
+
+test('polaris command has no namespace flag when no namespaces are given', function () {
+    expect((new PolarisTool)->command())->not->toContain('--namespace');
+});
+
+test('polaris supports the namespace filter', function () {
+    expect((new PolarisTool)->supportsNamespaceFilter())->toBeTrue();
+});
+
+test('polaris only allows a single namespace at a time, unlike trivy', function () {
+    expect((new PolarisTool)->namespaceFilterAllowsMultiple())->toBeFalse()
+        ->and((new TrivyTool)->namespaceFilterAllowsMultiple())->toBeTrue();
 });

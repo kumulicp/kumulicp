@@ -239,6 +239,15 @@ import axios from 'axios'
       >
         {{ $t('admin.security.namespaceFilterWarning') }}
       </VaAlert>
+      <VaAlert
+        v-if="namespaceFilterIsSingleValue"
+        outline
+        icon="info"
+        color="info"
+        class="mb-3 mt-3"
+      >
+        {{ $t('admin.security.namespaceFilterSingleValueWarning') }}
+      </VaAlert>
     </template>
   </va-modal>
 
@@ -263,6 +272,7 @@ export default {
     tools_requiring_targets: Array,
     tools_supporting_severity_filter: Array,
     tools_supporting_namespace_filter: Array,
+    tools_with_single_namespace_filter: Array,
     severities: Array
   },
   data () {
@@ -295,6 +305,9 @@ export default {
     },
     supportsNamespaceFilter () {
       return this.tools_supporting_namespace_filter.includes(this.runForm.tool)
+    },
+    namespaceFilterIsSingleValue () {
+      return this.tools_with_single_namespace_filter.includes(this.runForm.tool)
     },
     severityMissing () {
       return this.supportsSeverityFilter && this.runForm.severity.length === 0
