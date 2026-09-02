@@ -21,6 +21,14 @@ class BillingService
     public function __construct(?Organization $organization = null)
     {
         $this->organization = $organization;
+
+        // Picks up drivers modules registered via their (one-time, boot-time)
+        // service providers -- see BillingDriverRegistry for why this can't
+        // just rely on those boot() calls registering directly on this
+        // instance.
+        foreach (app(BillingDriverRegistry::class)->all() as $driver => $class) {
+            $this->drivers[$driver] = $class;
+        }
     }
 
     private function driver()
@@ -48,6 +56,7 @@ class BillingService
     {
         if (class_exists($class)) {
             $this->drivers[$driver] = $class;
+            app(BillingDriverRegistry::class)->register($driver, $class);
         }
     }
 
