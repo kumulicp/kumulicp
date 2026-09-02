@@ -101,8 +101,8 @@ export default {
   data () {
     const apps = {}
     Object.values(this.apps).forEach((app) => {
-      let plan = this.test.settings.apps[app.slug]?.plan
-      let version = this.test.settings.apps[app.slug]?.version
+      const plan = this.test.settings.apps[app.slug]?.plan
+      const version = this.test.settings.apps[app.slug]?.version
       apps[app.slug] = {
         id: app.id,
         plan,

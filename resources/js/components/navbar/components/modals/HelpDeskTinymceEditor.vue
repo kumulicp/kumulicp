@@ -1,5 +1,4 @@
 <script setup>
-import tinymce from 'tinymce'
 import 'tinymce/themes/silver/theme'
 import 'tinymce/skins/ui/oxide/skin'
 import 'tinymce/skins/ui/oxide/content'
@@ -10,7 +9,7 @@ import 'tinymce/plugins/advlist'
 import 'tinymce/plugins/link'
 import Editor from '@tinymce/tinymce-vue'
 
-const props = defineProps({ modelValue: String })
+defineProps({ modelValue: String })
 const emit = defineEmits(['update:modelValue'])
 </script>
 <template>

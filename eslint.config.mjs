@@ -1,9 +1,14 @@
 import js from "@eslint/js";
 import globals from "globals";
 import pluginVue from "eslint-plugin-vue";
-import { defineConfig } from "eslint/config";
+import { defineConfigWithVueTs, vueTsConfigs, configureVueProject } from "@vue/eslint-config-typescript";
 
-export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,vue}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
+configureVueProject({ scriptLangs: ["ts", "js"] });
+
+export default defineConfigWithVueTs(
+  { ignores: ["resources/js/ziggy.js"] },
+  js.configs.recommended,
+  { files: ["**/*.{js,mjs,cjs,vue}"], languageOptions: { globals: globals.browser } },
   pluginVue.configs["flat/essential"],
-]);
+  vueTsConfigs.base,
+);

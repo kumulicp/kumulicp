@@ -1,3 +1,5 @@
+import tinymce from 'tinymce'
+
 tinymce.PluginManager.add('persistentgrid', function(editor) {
 
     const GRID_ATTR = 'data-tmce-grid';

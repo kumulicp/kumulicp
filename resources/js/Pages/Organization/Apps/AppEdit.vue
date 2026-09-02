@@ -36,7 +36,7 @@ import { useForm, Link } from '@inertiajs/vue3'
         <div v-if="app.admin_access" class="row">
           <div class="flex flex-col xs12 lg6">
             <va-input
-                v-model="app.admin_password"
+                :model-value="app.admin_password"
                 :type="isPasswordVisible ? 'text' : 'password'"
                 :label="$t('organization.apps.loginPassword')"
                 :messages="$t('organization.apps.recommendPasswordChange')"

@@ -1,8 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
-
-import { StripeElements, StripeElement, useStripe } from "@vue-stripe/vue-stripe"
 </script>
 <template>
   <div>
@@ -237,7 +235,7 @@ export default {
         }
       }
 
-      this.stripe = Stripe(this.stripeKey)
+      this.stripe = window.Stripe(this.stripeKey)
       const elements = this.stripe.elements()
       // this.cardElement = elements.create('card')
       // this.cardElement.mount('#card-element')
