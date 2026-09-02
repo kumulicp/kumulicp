@@ -9,7 +9,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Nwidart\Modules\Contracts\RepositoryInterface;
-use Symfony\Component\Process\Process;
 use ZipArchive;
 
 class PackageManagerService
@@ -17,9 +16,6 @@ class PackageManagerService
     protected string $registry_url;
 
     protected Client $http;
-
-    /** @var array<string,string>|null */
-    protected ?array $installedVersions = null;
 
     protected bool $allowUnstable;
 
@@ -66,6 +62,14 @@ class PackageManagerService
                 }
 
                 $latest = $this->resolveLatestVersion($versions);
+
+                // No version passes the current stability filter (e.g. every
+                // release is beta and "allow unstable" is off) -- nothing
+                // installable, so don't list the package at all.
+                if (empty($latest)) {
+                    continue;
+                }
+
                 $packages[$package_name] = [
                     'name' => $package_name,
                     'label' => $this->packageLabel($package_name),
@@ -140,7 +144,7 @@ class PackageManagerService
                 'name' => $module->getName(),
                 'composer_name' => $composer_name,
                 'description' => $composer_json['description'] ?? $module->getDescription(),
-                'version' => $this->installedComposerVersions()[$composer_name] ?? null,
+                'version' => $composer_json['version'] ?? null,
                 'enabled' => $module->isEnabled(),
                 'path' => $module->getPath(),
                 'vendor' => $composer_name ? explode('/', $composer_name)[0] : '',
@@ -205,95 +209,46 @@ class PackageManagerService
     }
 
     /**
-     * Install a package via composer require.
+     * Install a package by downloading its dist zip from the registry and
+     * extracting it straight into modules/ -- no composer require, no lock file.
      */
     public function install(string $package, ?string $version = null): array
     {
-        $spec = $version ? "{$package}:{$version}" : $package;
-        $process = new Process(
-            ['composer', 'require', $spec, '--no-interaction', '--no-ansi'],
-            base_path(),
-            $this->composerEnv(),
-            null,
-            300
-        );
-        $process->run();
-
-        if ($process->isSuccessful()) {
-            Artisan::call('optimize:clear');
-        }
-
-        return [
-            'success' => $process->isSuccessful(),
-            'output' => trim($process->getOutput()),
-            'error' => trim($process->getErrorOutput()),
-        ];
+        return $this->installFromRegistry($package, $version);
     }
 
     /**
-     * Uninstall a package via composer remove, then delete its module directory.
+     * Disable the module (if active) and delete its directory from modules/.
      */
     public function uninstall(string $package): array
     {
-        // Disable the module first if it is active
         $moduleName = $this->packageToModuleName($package);
-        if ($moduleName && $this->modules()->find($moduleName)?->isEnabled()) {
+        if (! $moduleName) {
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $package])];
+        }
+
+        if ($this->modules()->find($moduleName)?->isEnabled()) {
             $this->disable($moduleName);
         }
 
-        $process = new Process(
-            ['composer', 'remove', $package, '--no-interaction', '--no-ansi'],
-            base_path(),
-            $this->composerEnv(),
-            null,
-            300
-        );
-        $process->run();
-
-        // Remove leftover module directory from modules/
-        if ($moduleName) {
-            $modulePath = base_path("modules/{$moduleName}");
-            if (File::isDirectory($modulePath)) {
-                File::deleteDirectory($modulePath);
-            }
+        $modulePath = base_path("modules/{$moduleName}");
+        if (File::isDirectory($modulePath)) {
+            File::deleteDirectory($modulePath);
         }
 
-        if ($process->isSuccessful()) {
-            Artisan::call('optimize:clear');
-        }
+        Artisan::call('optimize:clear');
+        $this->reloadOctane();
 
-        return [
-            'success' => $process->isSuccessful(),
-            'output' => trim($process->getOutput()),
-            'error' => trim($process->getErrorOutput()),
-        ];
+        return ['success' => true];
     }
 
     /**
-     * Upgrade a package to its latest version via composer require.
+     * Upgrade a package to a newer version. Since installing overwrites the
+     * module directory in place, this is the same operation as install().
      */
     public function upgrade(string $package, ?string $version = null): array
     {
-        $spec = $version ? "{$package}:{$version}" : $package;
-        $process = new Process(
-            ['composer', 'require', $spec, '--no-interaction', '--no-ansi'],
-            base_path(),
-            $this->composerEnv(),
-            null,
-            300
-        );
-        $process->run();
-
-        if ($process->isSuccessful()) {
-            $this->installedVersions = null; // bust the cache
-            Artisan::call('optimize:clear');
-        }
-
-        return [
-            'success' => $process->isSuccessful(),
-            'output' => trim($process->getOutput()),
-            'error' => trim($process->getErrorOutput()),
-        ];
+        return $this->installFromRegistry($package, $version);
     }
 
     /**
@@ -303,11 +258,98 @@ class PackageManagerService
      */
     public function installFromZip(UploadedFile $file): array
     {
-        $tmpDir = sys_get_temp_dir().'/module_upload_'.uniqid();
+        return $this->installModuleZip($file->getRealPath());
+    }
+
+    /**
+     * Resolve a package/version to a registry dist URL, download it, and
+     * extract it into modules/ via installModuleZip().
+     *
+     * @return array{success: bool, error?: string, module?: string}
+     */
+    protected function installFromRegistry(string $package, ?string $version = null): array
+    {
+        [$vendor, $name] = array_pad(explode('/', $package, 2), 2, null);
+        if (! $vendor || ! $name) {
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $package])];
+        }
+
+        $version = $version ?: $this->resolveInstallableVersion($vendor, $name);
+        if (! $version) {
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $package])];
+        }
+
+        $distUrl = $this->findRegistryVersion($package, $version)['dist']['url'] ?? null;
+        if (! $distUrl) {
+            return ['success' => false, 'error' => __('admin.packages.error_module_not_found', ['module' => $package])];
+        }
+
+        $zipPath = sys_get_temp_dir().'/module_dist_'.uniqid().'.zip';
+
+        try {
+            $this->downloadDist($distUrl, $zipPath);
+
+            return $this->installModuleZip($zipPath, $version);
+        } catch (RequestException $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        } finally {
+            if (File::exists($zipPath)) {
+                File::delete($zipPath);
+            }
+        }
+    }
+
+    /**
+     * Look up the full registry metadata (including dist.url) for one exact version.
+     */
+    protected function findRegistryVersion(string $package_name, string $version): ?array
+    {
+        try {
+            $response = $this->http->get('p2/'.$package_name.'.json');
+            $versions = json_decode((string) $response->getBody(), true)['packages'][$package_name] ?? [];
+        } catch (RequestException $e) {
+            return null;
+        }
+
+        foreach ($versions as $v) {
+            if (($v['version'] ?? null) === $version) {
+                return $v;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Download a dist archive to a local path. Registry auth is only sent when
+     * the dist URL is on the registry's own host, so the bearer token never
+     * leaks to third-party hosts (e.g. a VCS-backed dist mirror).
+     */
+    protected function downloadDist(string $url, string $destination): void
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $registryHost = parse_url($this->registry_url, PHP_URL_HOST);
+
+        $client = ($host && $host === $registryHost) ? $this->http : new Client(['timeout' => 60]);
+
+        $client->get($url, ['sink' => $destination]);
+    }
+
+    /**
+     * Extract, validate, and move a module zip archive into modules/{ModuleName}.
+     * When $version is given it is written into the module's own composer.json,
+     * which is the sole source of truth for installed version -- there is no
+     * shared composer.lock to keep in sync across instances.
+     *
+     * @return array{success: bool, error?: string, module?: string}
+     */
+    protected function installModuleZip(string $zipPath, ?string $version = null): array
+    {
+        $tmpDir = sys_get_temp_dir().'/module_extract_'.uniqid();
 
         try {
             $zip = new ZipArchive;
-            if ($zip->open($file->getRealPath()) !== true) {
+            if ($zip->open($zipPath) !== true) {
                 return ['success' => false, 'error' => __('admin.packages.error_zip_open')];
             }
 
@@ -335,6 +377,13 @@ class PackageManagerService
             $moduleJson = json_decode(File::get("{$moduleRoot}/module.json"), true);
             $moduleDirName = $moduleJson['name'] ?? basename($moduleRoot);
 
+            if ($version) {
+                $composerJsonPath = "{$moduleRoot}/composer.json";
+                $composerJson = json_decode(File::get($composerJsonPath), true) ?? [];
+                $composerJson['version'] = $version;
+                File::put($composerJsonPath, json_encode($composerJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
+
             // Move into the modules path (overwrite if exists)
             $destination = base_path("modules/{$moduleDirName}");
             if (File::isDirectory($destination)) {
@@ -343,6 +392,7 @@ class PackageManagerService
 
             File::copyDirectory($moduleRoot, $destination);
             Artisan::call('optimize:clear');
+            $this->reloadOctane();
 
             return ['success' => true, 'module' => $moduleDirName];
         } finally {
@@ -421,6 +471,7 @@ class PackageManagerService
 
         Artisan::call('module:enable', ['module' => $moduleName]);
         Artisan::call('optimize:clear');
+        $this->reloadOctane();
 
         return ['success' => true];
     }
@@ -437,6 +488,7 @@ class PackageManagerService
 
         Artisan::call('module:disable', ['module' => $moduleName]);
         Artisan::call('optimize:clear');
+        $this->reloadOctane();
 
         return ['success' => true];
     }
@@ -447,12 +499,12 @@ class PackageManagerService
     public function getPackageInfo(string $vendor, string $name): array
     {
         $registry_info = $this->getRegistryPackageInfo($vendor, $name);
-        $moduleName = ucfirst($name);
-        $module = $this->modules()->find($moduleName);
+        $moduleName = $this->packageToModuleName("{$vendor}/{$name}");
+        $module = $moduleName ? $this->modules()->find($moduleName) : null;
 
         $installed = (bool) $module;
         $enabled = $module?->isEnabled() ?? false;
-        $version = $this->installedComposerVersions()["{$vendor}/{$name}"] ?? null;
+        $version = $module ? ($this->readModuleComposer($module)['version'] ?? null) : null;
         $path = $module?->getPath() ?? null;
 
         return [
@@ -525,25 +577,7 @@ class PackageManagerService
 
     protected function resolveRegistryUrl(): string
     {
-        $composer = json_decode(File::get(base_path('composer.json')), true);
-
-        foreach ($composer['repositories'] ?? [] as $repo) {
-            if (($repo['name'] ?? '') === 'kumulicp') {
-                return $repo['url'] ?? '';
-            }
-        }
-
-        return '';
-    }
-
-    protected function composerEnv(): array
-    {
-        $env = getenv();
-        if (empty($env['HOME']) && empty($env['COMPOSER_HOME'])) {
-            $env['HOME'] = posix_getpwuid(posix_getuid())['dir'] ?? '/root';
-        }
-
-        return $env;
+        return config('services.plugin_registry.url') ?? '';
     }
 
     protected function packageLabel(string $name): string
@@ -611,18 +645,6 @@ class PackageManagerService
         return version_compare(ltrim($latest, 'v'), ltrim($installed, 'v'), '>');
     }
 
-    protected function installedComposerVersions(): array
-    {
-        if ($this->installedVersions === null) {
-            $path = base_path('vendor/composer/installed.json');
-            $data = File::exists($path) ? json_decode(File::get($path), true) ?? [] : [];
-            $packages = $data['packages'] ?? $data; // Composer 2 nests under 'packages'; v1 is a flat array
-            $this->installedVersions = collect($packages)->keyBy('name')->map(fn ($p) => $p['version'])->all();
-        }
-
-        return $this->installedVersions;
-    }
-
     protected function readModuleComposer($module): array
     {
         $path = $module->getPath().'/composer.json';
@@ -640,5 +662,23 @@ class PackageManagerService
         }
 
         return null;
+    }
+
+    /**
+     * Reload Octane workers so a module's ServiceProvider (routes, config,
+     * boot()-time registrations like Application::register()/ServerInterface::
+     * register()) actually takes effect. Octane only boots providers once per
+     * worker process -- module install/enable/disable/uninstall/upgrade change
+     * which providers *should* be booted, but nothing here retroactively
+     * re-runs the framework boot cycle for the already-running worker without
+     * this. A no-op when Octane isn't the active runtime (e.g. plain php-fpm).
+     */
+    protected function reloadOctane(): void
+    {
+        if (! config('octane.server')) {
+            return;
+        }
+
+        Artisan::call('octane:reload');
     }
 }
