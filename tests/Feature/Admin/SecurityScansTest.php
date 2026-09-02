@@ -283,7 +283,8 @@ class SecurityScansTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Security/ScansList')
                 ->where('tools_supporting_severity_filter', ['trivy'])
-                ->where('tools_supporting_namespace_filter', ['trivy'])
+                ->where('tools_supporting_namespace_filter', ['trivy', 'polaris'])
+                ->where('tools_with_single_namespace_filter', ['polaris'])
                 ->where('severities', ['UNKNOWN', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
             );
     }
