@@ -1,4 +1,5 @@
 <script setup>
+import 'tinymce'
 import 'tinymce/themes/silver/theme'
 import 'tinymce/skins/ui/oxide/skin'
 import 'tinymce/skins/ui/oxide/content'
