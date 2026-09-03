@@ -17,6 +17,7 @@ use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use App\Task;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 
@@ -107,10 +108,10 @@ class CreateTests extends Action
             }
 
             foreach ($test_account->settings['apps'] as $name => $app) {
-                if ($app['plan']) {
+                if (Arr::get($app, 'plan')) {
                     $application = Application::where('slug', $name)->first();
                     $plan = AppPlan::find($app['plan']);
-                    $version = $app['version'] ? AppVersion::find($app['version']) : $application->active_version();
+                    $version = Arr::get($app, 'version') ? AppVersion::find($app['version']) : $application->active_version();
                     $app = ActionFacade::execute(new ApplicationActivate(
                         organization: $organization,
                         app: $application,

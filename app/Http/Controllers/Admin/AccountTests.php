@@ -66,13 +66,13 @@ class AccountTests extends Controller
         $app_plans = [];
 
         foreach ($apps as $slug => $app) {
-            $application = Application::find($app['id']);
-            $version = AppVersion::find($app['version']);
-            $plan = AppPlan::find($app['plan']);
+            $application = Application::find(Arr::get($app, 'id'));
+            $version = AppVersion::find(Arr::get($app, 'version'));
+            $plan = AppPlan::find(Arr::get($app, 'plan'));
             $app_plans[] = [
                 'app' => [
-                    'id' => $application->id,
-                    'name' => $application->name,
+                    'id' => $application ? $application->id : '',
+                    'name' => $application ? $application->name : '',
                 ],
                 'version' => [
                     'id' => $version ? $version->id : '',
