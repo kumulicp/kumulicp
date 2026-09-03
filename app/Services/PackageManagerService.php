@@ -8,7 +8,10 @@ use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Nwidart\Modules\Contracts\RepositoryInterface;
+use Symfony\Component\Process\PhpExecutableFinder;
 use ZipArchive;
 
 class PackageManagerService
@@ -672,6 +675,11 @@ class PackageManagerService
      * which providers *should* be booted, but nothing here retroactively
      * re-runs the framework boot cycle for the already-running worker without
      * this. A no-op when Octane isn't the active runtime (e.g. plain php-fpm).
+     *
+     * Octane only registers its own Artisan commands when running in a
+     * console process (see OctaneServiceProvider), so Artisan::call() fails
+     * with CommandNotFoundException when this runs inside a web request.
+     * Shelling out spins up a real console process where the command exists.
      */
     protected function reloadOctane(): void
     {
@@ -679,6 +687,15 @@ class PackageManagerService
             return;
         }
 
-        Artisan::call('octane:reload');
+        $php = (new PhpExecutableFinder())->find(false) ?: 'php';
+
+        $result = Process::path(base_path())->run([$php, 'artisan', 'octane:reload']);
+
+        if ($result->failed()) {
+            Log::warning('Failed to reload Octane workers.', [
+                'exitCode' => $result->exitCode(),
+                'errorOutput' => $result->errorOutput(),
+            ]);
+        }
     }
 }
