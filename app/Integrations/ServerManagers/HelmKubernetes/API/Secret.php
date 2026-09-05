@@ -3,19 +3,19 @@
 namespace App\Integrations\ServerManagers\HelmKubernetes\API;
 
 use App\Integrations\ServerManagers\HelmKubernetes\Kubernetes;
-use App\PullSecret;
+use App\RepoSecret;
 use Illuminate\Support\Facades\Log;
 
 class Secret extends Kubernetes
 {
-    public function isActive(string $namespace, PullSecret $pull_secret): int
+    public function isActive(string $namespace, RepoSecret $pull_secret): int
     {
         $result = $this->kubectl()->get('secret', $pull_secret->k8sSecretName(), $namespace);
 
         return $result['success'] ? 1 : 0;
     }
 
-    public function create(string $namespace, PullSecret $pull_secret)
+    public function create(string $namespace, RepoSecret $pull_secret)
     {
         $result = $this->kubectl()->apply($this->manifest($namespace, $pull_secret), $namespace);
 
@@ -27,7 +27,7 @@ class Secret extends Kubernetes
         ];
     }
 
-    public function remove(string $namespace, PullSecret $pull_secret)
+    public function remove(string $namespace, RepoSecret $pull_secret)
     {
         $result = $this->kubectl()->delete('secret', $pull_secret->k8sSecretName(), $namespace);
 
@@ -36,7 +36,7 @@ class Secret extends Kubernetes
         return ['status' => 'success', 'response' => $result['output']];
     }
 
-    public function ensure(string $namespace, PullSecret $pull_secret)
+    public function ensure(string $namespace, RepoSecret $pull_secret)
     {
         if ($this->isActive($namespace, $pull_secret) === 1) {
             return ['status' => 'success', 'response' => null];
@@ -45,7 +45,7 @@ class Secret extends Kubernetes
         return $this->create($namespace, $pull_secret);
     }
 
-    private function manifest(string $namespace, PullSecret $pull_secret): array
+    private function manifest(string $namespace, RepoSecret $pull_secret): array
     {
         return [
             'apiVersion' => 'v1',
