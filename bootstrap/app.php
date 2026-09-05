@@ -76,6 +76,18 @@ return Application::configure(basePath: dirname(__DIR__))
             // same headers here so error pages aren't left unprotected.
             $nonce = Vite::cspNonce() ?? Vite::useCspNonce();
 
+            // In debug mode this $response is already Ignition's rendered
+            // page. It relies on inline <script> tags it has no way to tag
+            // with our CSP nonce, so applying the app's strict script-src
+            // (nonce-only, no 'unsafe-inline') to it blocks every script and
+            // leaves a blank page - surfaced as an empty modal, since
+            // Inertia shows non-Inertia responses like this one in a modal.
+            // Debug pages are dev-only by definition, so skip the app's CSP
+            // for them entirely rather than try to patch Ignition's markup.
+            if (config('app.debug') && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
+                return $response;
+            }
+
             if (! app()->environment(['testing']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 if (Auth::check() && auth()?->user()?->hasVerifiedEmail()) {
                     try {

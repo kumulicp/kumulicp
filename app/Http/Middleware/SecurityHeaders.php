@@ -51,7 +51,19 @@ class SecurityHeaders
             ])
             : implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'nonce-{$nonce}' https://js.stripe.com",
+                // Ignition's error page - shown inline via an iframe with
+                // srcdoc, which per spec inherits the CSP of *this* page,
+                // not any header on the failed request/response - injects
+                // its own inline <script> tags with no way to carry our
+                // nonce. A nonce present in this directive makes browsers
+                // ignore 'unsafe-inline' entirely (that's intentional, to
+                // stop exactly this kind of "just add it as a fallback"
+                // pattern), so the nonce has to be dropped in debug mode
+                // for 'unsafe-inline' to actually take effect. Debug mode
+                // is dev-only, so this never reaches production.
+                config('app.debug')
+                    ? "script-src 'self' 'unsafe-inline' https://js.stripe.com"
+                    : "script-src 'self' 'nonce-{$nonce}' https://js.stripe.com",
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "font-src 'self' data:",
