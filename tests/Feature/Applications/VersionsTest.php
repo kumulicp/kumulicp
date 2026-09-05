@@ -1,7 +1,7 @@
 <?php
 
 use App\AppVersion;
-use App\PullSecret;
+use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
 use Tests\Support\Applications\DemoAppProfile;
@@ -122,7 +122,7 @@ it('rejects an invalid copy_from value', function () {
 it('updates version settings and default roles', function () {
     $roles = $this->demoApp->roles()->pluck('id')->toArray();
 
-    $pull_secret = PullSecret::factory()->create(['registry' => 'registry2.example.com']);
+    $pull_secret = RepoSecret::factory()->create(['registry' => 'registry2.example.com']);
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
