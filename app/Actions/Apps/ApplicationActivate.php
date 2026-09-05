@@ -29,6 +29,8 @@ class ApplicationActivate extends Action
 {
     public $slug = 'application_activate';
 
+    public static bool $long_running = true;
+
     private $sso_task;
 
     private $plan;

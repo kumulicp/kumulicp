@@ -13,6 +13,8 @@ class ApplicationUpdateJob extends Action
 {
     public $slug = 'application_update_job';
 
+    public static bool $long_running = true;
+
     public function __construct(AppInstance $app_instance, string $job)
     {
         $this->organization = $app_instance->organization;
