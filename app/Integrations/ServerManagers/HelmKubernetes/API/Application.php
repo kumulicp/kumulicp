@@ -31,7 +31,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        [$chart_ref, $repo_args] = $this->chartReference($app_instance);
+        [$chart_ref, $repo_args, $oci_registry_host] = $this->chartReference($app_instance);
 
         $values_yaml = Yaml::dump($chart->valuesWithAdditionalConfigs(), 10);
 
@@ -43,7 +43,13 @@ class Application extends Kubernetes
 
         array_push($subcommand, '-f', '-', '--wait', '--timeout', '720s');
 
-        $result = $this->helm()->run($subcommand, $namespace, $values_yaml);
+        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->helmRepoSecret : null;
+
+        if ($oci_registry_host && $secret) {
+            $result = $this->helm()->runWithOciLogin($subcommand, $namespace, $values_yaml, $oci_registry_host, $secret->username, $secret->password);
+        } else {
+            $result = $this->helm()->run($subcommand, $namespace, $values_yaml);
+        }
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
@@ -103,23 +109,74 @@ class Application extends Kubernetes
         };
     }
 
+    /**
+     * Deletes the release's Helm secret revision(s) currently stuck in a
+     * pending-* state -- e.g. because the process running `helm upgrade
+     * --wait` was killed (container restart) before it could write the
+     * final deployed/failed status back. Helm refuses any further
+     * operation on a release while its latest revision reads pending-*, so
+     * without this it's stuck forever; deleting just that revision's
+     * secret (not the underlying k8s resources) makes the release read as
+     * "not found" again, which installOrUpgrade() already treats as a
+     * fresh install to fall back to.
+     */
+    public function deleteStuckReleaseSecrets(HelmChart $chart): void
+    {
+        $namespace = $chart->namespace();
+        $release_name = $chart->chartName();
+
+        $result = $this->kubectl()->run(['get', 'secret', '-l', "owner=helm,name={$release_name}", '-o', 'json'], $namespace);
+
+        if (! $result['success']) {
+            return;
+        }
+
+        $secrets = json_decode($result['output'], true)['items'] ?? [];
+
+        foreach ($secrets as $secret) {
+            $status = $secret['metadata']['labels']['status'] ?? '';
+            $name = $secret['metadata']['name'] ?? null;
+
+            if ($name && str_starts_with($status, 'pending-')) {
+                $this->kubectl()->delete('secret', $name, $namespace);
+            }
+        }
+    }
+
     // AppVersion::setting('helm_repo_name') holds the chart repository
     // location for this driver — a plain https URL, or an oci:// reference.
     // (For Rancher it instead holds a pre-registered ClusterRepo name; both
     // interpretations are compatible since it's a per-version, admin-set field.)
+    //
+    // Returns [$chart_ref, $repo_args, $oci_registry_host]. OCI auth needs a
+    // `helm registry login` step first (see HelmCli::runWithOciLogin()), so
+    // the registry host is returned separately rather than folded into
+    // $repo_args like the classic-repo --username/--password flags are.
     private function chartReference(AppInstance $app_instance): array
     {
         $chart_name = $app_instance->version->setting('chart_name');
         $repo = $app_instance->version->setting('helm_repo_name');
+        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->helmRepoSecret : null;
 
         if ($repo && str_starts_with($repo, 'oci://')) {
-            return [rtrim($repo, '/').'/'.$chart_name, []];
+            $chart_ref = rtrim($repo, '/').'/'.$chart_name;
+            $host = parse_url($repo, PHP_URL_HOST) ?: '';
+            if ($port = parse_url($repo, PHP_URL_PORT)) {
+                $host .= ":{$port}";
+            }
+
+            return [$chart_ref, [], $secret ? $host : null];
         }
 
         if ($repo) {
-            return [$chart_name, ['--repo', $repo]];
+            $repo_args = ['--repo', $repo];
+            if ($secret) {
+                array_push($repo_args, '--username', $secret->username, '--password', $secret->password);
+            }
+
+            return [$chart_name, $repo_args, null];
         }
 
-        return [$chart_name, []];
+        return [$chart_name, [], null];
     }
 }
