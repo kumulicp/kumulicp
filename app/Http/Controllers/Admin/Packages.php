@@ -149,7 +149,7 @@ class Packages extends Controller
      */
     public function enable(string $vendor, string $package)
     {
-        $moduleName = $this->moduleNameFrom($package);
+        $moduleName = $this->manager->packageToModuleName("{$vendor}/{$package}");
         $result = $this->manager->enable($moduleName);
 
         if ($result['success']) {
@@ -164,7 +164,7 @@ class Packages extends Controller
      */
     public function disable(string $vendor, string $package)
     {
-        $moduleName = $this->moduleNameFrom($package);
+        $moduleName = $this->manager->packageToModuleName("{$vendor}/{$package}");
         $result = $this->manager->disable($moduleName);
 
         if ($result['success']) {
@@ -172,12 +172,5 @@ class Packages extends Controller
         }
 
         return redirect()->back()->with('error', $result['error']);
-    }
-
-    // -------------------------------------------------------------------------
-
-    protected function moduleNameFrom(string $packageSlug): string
-    {
-        return str_replace(['-', '_'], '', ucwords($packageSlug, '-_'));
     }
 }

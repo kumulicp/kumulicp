@@ -6,12 +6,10 @@ use App\Support\Facades\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 use Nwidart\Modules\Contracts\RepositoryInterface;
-use Symfony\Component\Process\PhpExecutableFinder;
 use ZipArchive;
 
 class PackageManagerService
@@ -237,6 +235,13 @@ class PackageManagerService
         $modulePath = base_path("modules/{$moduleName}");
         if (File::isDirectory($modulePath)) {
             File::deleteDirectory($modulePath);
+
+            // deleteDirectory() swallows individual unlink/rmdir failures and
+            // always returns true, so the only reliable signal that the
+            // directory is actually gone is checking for it afterward.
+            if (File::isDirectory($modulePath)) {
+                return ['success' => false, 'error' => __('admin.packages.error_module_delete_failed', ['module' => $package])];
+            }
         }
 
         Artisan::call('optimize:clear');
@@ -655,9 +660,27 @@ class PackageManagerService
         return File::exists($path) ? json_decode(File::get($path), true) ?? [] : [];
     }
 
-    protected function packageToModuleName(string $package): ?string
+    /**
+     * Resolve a "vendor/package" name to its installed module directory name.
+     * The module's own module.json declares its real name (e.g. "ERPNextApp",
+     * casing that a naive PascalCase-of-slug guess can't reproduce), so an
+     * installed module must be matched by its actual composer.json "name"
+     * rather than derived from the slug -- otherwise lookups silently miss
+     * the real directory (e.g. "erpnext-app" guesses "ErpnextApp", not the
+     * real "ERPNextApp") and callers like uninstall() no-op instead of failing.
+     */
+    public function packageToModuleName(string $package): ?string
     {
-        // "vendor/my-module" => "MyModule"  (PascalCase of the package slug)
+        $installed = collect($this->modules()->all())->first(
+            fn ($module) => strcasecmp($this->readModuleComposer($module)['name'] ?? '', $package) === 0
+        );
+
+        if ($installed) {
+            return $installed->getName();
+        }
+
+        // Not installed yet -- fall back to a best-effort guess (e.g. used to
+        // predict the destination path before a module.json exists on disk).
         if (str_contains($package, '/')) {
             $slug = explode('/', $package)[1];
 
@@ -668,18 +691,15 @@ class PackageManagerService
     }
 
     /**
-     * Reload Octane workers so a module's ServiceProvider (routes, config,
-     * boot()-time registrations like Application::register()/ServerInterface::
-     * register()) actually takes effect. Octane only boots providers once per
-     * worker process -- module install/enable/disable/uninstall/upgrade change
-     * which providers *should* be booted, but nothing here retroactively
-     * re-runs the framework boot cycle for the already-running worker without
-     * this. A no-op when Octane isn't the active runtime (e.g. plain php-fpm).
+     * Reload Octane workers so a module's ServiceProvider actually takes
+     * effect on the already-running worker. A no-op outside Octane.
      *
-     * Octane only registers its own Artisan commands when running in a
-     * console process (see OctaneServiceProvider), so Artisan::call() fails
-     * with CommandNotFoundException when this runs inside a web request.
-     * Shelling out spins up a real console process where the command exists.
+     * Deferred via App::terminating() rather than called inline: FrankenPHP's
+     * reload gracefully recycles the worker handling the *current* request,
+     * so calling it before the response is sent deadlocks the request
+     * against its own reload. Octane's Worker::handle() sends the response,
+     * then calls terminate() -- by then this worker is no longer "in
+     * flight" from FrankenPHP's point of view, so the reload can proceed.
      */
     protected function reloadOctane(): void
     {
@@ -687,15 +707,6 @@ class PackageManagerService
             return;
         }
 
-        $php = (new PhpExecutableFinder())->find(false) ?: 'php';
-
-        $result = Process::path(base_path())->run([$php, 'artisan', 'octane:reload']);
-
-        if ($result->failed()) {
-            Log::warning('Failed to reload Octane workers.', [
-                'exitCode' => $result->exitCode(),
-                'errorOutput' => $result->errorOutput(),
-            ]);
-        }
+        App::terminating(fn () => Artisan::call('octane:reload'));
     }
 }

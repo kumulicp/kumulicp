@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Casts\EmptyStringAsNullEncrypted;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,13 @@ class Server extends Model
     protected $casts = [
         'settings' => 'array',
         'is_backup_server' => 'boolean',
+        'api_key' => EmptyStringAsNullEncrypted::class,
+        'api_secret' => EmptyStringAsNullEncrypted::class,
+    ];
+
+    protected $hidden = [
+        'api_key',
+        'api_secret',
     ];
 
     /**
