@@ -4,6 +4,7 @@
 # environment config
 .env*
 !.env.sample
+kubeconfig.yaml
 
 #composer auth
 auth.json
