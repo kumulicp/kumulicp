@@ -16,7 +16,7 @@ interface AppInterface
      * Per-chart deployment status, for surfacing to the user while polling
      * for completion (e.g. a task's error_message) rather than just a bool.
      *
-     * @return array{active: bool, message: string}
+     * @return array{active: bool, pending: bool, message: string}
      */
     public function checkStatus(): array;
 
