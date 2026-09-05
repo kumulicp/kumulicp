@@ -7,16 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
+ * @property string $type 'image', 'helm', or 'both'
  * @property string $name
  * @property string $registry
  * @property string|null $username
  * @property string|null $password
  */
-class PullSecret extends Model
+class RepoSecret extends Model
 {
     use HasFactory;
 
+    const TYPE_IMAGE = 'image';
+
+    const TYPE_HELM = 'helm';
+
+    const TYPE_BOTH = 'both';
+
     protected $fillable = [
+        'type',
         'name',
         'registry',
         'username',
@@ -33,7 +41,14 @@ class PullSecret extends Model
 
     public function versions()
     {
-        return $this->hasMany(AppVersion::class, 'pull_secret_id');
+        return AppVersion::where(function ($query) {
+            if ($this->type !== self::TYPE_HELM) {
+                $query->orWhere('pull_secret_id', $this->id);
+            }
+            if ($this->type !== self::TYPE_IMAGE) {
+                $query->orWhere('helm_repo_secret_id', $this->id);
+            }
+        });
     }
 
     public function requiresAuth(): bool
@@ -62,7 +77,7 @@ class PullSecret extends Model
     public function inUse(): bool
     {
         return AppInstance::whereHas('version', function ($query) {
-            $query->where('pull_secret_id', $this->id);
+            $query->where('pull_secret_id', $this->id)->orWhere('helm_repo_secret_id', $this->id);
         })->exists();
     }
 }

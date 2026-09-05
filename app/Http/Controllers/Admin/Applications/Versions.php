@@ -7,7 +7,7 @@ use App\Announcement;
 use App\Application;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
-use App\PullSecret;
+use App\RepoSecret;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Http\Request;
@@ -107,6 +107,7 @@ class Versions extends Controller
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
                 'pull_secret_id' => $version->pull_secret_id,
+                'helm_repo_secret_id' => $version->helm_repo_secret_id,
                 'chart_version' => $version->setting('chart_version'),
                 'chart_name' => $version->setting('chart_name'),
                 'port' => $version->setting('port'),
@@ -126,11 +127,18 @@ class Versions extends Controller
                 'name' => $app->name,
                 'id' => $app->id,
             ],
-            'pull_secrets' => PullSecret::orderBy('name')->get()->map(function ($pull_secret) {
+            'pull_secrets' => RepoSecret::whereIn('type', [RepoSecret::TYPE_IMAGE, RepoSecret::TYPE_BOTH])->orderBy('name')->get()->map(function ($pull_secret) {
                 return [
                     'id' => $pull_secret->id,
                     'name' => $pull_secret->name,
                     'registry' => $pull_secret->registry,
+                ];
+            }),
+            'helm_repo_secrets' => RepoSecret::whereIn('type', [RepoSecret::TYPE_HELM, RepoSecret::TYPE_BOTH])->orderBy('name')->get()->map(function ($helm_repo_secret) {
+                return [
+                    'id' => $helm_repo_secret->id,
+                    'name' => $helm_repo_secret->name,
+                    'registry' => $helm_repo_secret->registry,
                 ];
             }),
             'recommendations' => collect(ApplicationFacade::profile($app)->recommendations())->map(function (string $value, string $key) {
@@ -186,7 +194,8 @@ class Versions extends Controller
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
-            'pull_secret_id' => 'nullable|integer|exists:pull_secrets,id',
+            'pull_secret_id' => 'nullable|integer|exists:repo_secrets,id',
+            'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
             'announcement_url' => 'required_if:announcement_location,remote|url:http,https|nullable',
@@ -201,6 +210,7 @@ class Versions extends Controller
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
         $version->pull_secret_id = $request->input('pull_secret_id') ?: null;
+        $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
             'helm_repo_name' => $request->input('helm_repo_name'),

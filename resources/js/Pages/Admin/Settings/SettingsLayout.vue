@@ -46,8 +46,8 @@ export default {
         url: basePath + '/sso-providers'
       },
       {
-        title: this.$t('settings.pullSecrets'),
-        url: basePath + '/pull-secrets'
+        title: this.$t('settings.repoSecrets'),
+        url: basePath + '/repo-secrets'
       },
       {
         title: this.$t('settings.selfRegistration'),

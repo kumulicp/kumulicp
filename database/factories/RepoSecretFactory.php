@@ -2,14 +2,16 @@
 
 namespace Database\Factories;
 
-use App\PullSecret;
+use App\RepoSecret;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<PullSecret>
+ * @extends Factory<RepoSecret>
  */
-class PullSecretFactory extends Factory
+class RepoSecretFactory extends Factory
 {
+    protected $model = RepoSecret::class;
+
     /**
      * Define the model's default state.
      *
@@ -18,10 +20,21 @@ class PullSecretFactory extends Factory
     public function definition()
     {
         return [
+            'type' => RepoSecret::TYPE_IMAGE,
             'name' => fake()->unique()->domainWord(),
             'registry' => fake()->domainName(),
             'username' => null,
             'password' => null,
         ];
+    }
+
+    public function helm()
+    {
+        return $this->state(['type' => RepoSecret::TYPE_HELM]);
+    }
+
+    public function both()
+    {
+        return $this->state(['type' => RepoSecret::TYPE_BOTH]);
     }
 }

@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use App\AppVersion;
 use App\Organization;
 use App\Plan;
-use App\PullSecret;
+use App\RepoSecret;
 use App\Support\Facades\Settings;
 use Illuminate\Console\Command;
 
@@ -90,7 +90,7 @@ class Upgrade extends Command
             }
 
             if (! array_key_exists($registry, $pull_secrets_by_registry)) {
-                $pull_secrets_by_registry[$registry] = PullSecret::firstOrCreate(
+                $pull_secrets_by_registry[$registry] = RepoSecret::firstOrCreate(
                     ['registry' => $registry],
                     ['name' => $registry]
                 );
