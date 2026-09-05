@@ -42,6 +42,8 @@ return [
 
     'plugin_registry' => [
         'url' => env('PLUGIN_REGISTRY_URL'),
+    ],
+
     'helm' => [
         'binary_path' => env('HELM_BINARY_PATH', 'helm'),
     ],
