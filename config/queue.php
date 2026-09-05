@@ -15,6 +15,10 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'sync'),
 
+    // Connection RunAction routes $long_running actions to. Unset by default
+    // (no override) so sync/testing behavior is untouched.
+    'long_running_connection' => env('QUEUE_LONG_CONNECTION'),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections
@@ -39,6 +43,15 @@ return [
             'table' => 'jobs',
             'queue' => 'default',
             'retry_after' => 90,
+        ],
+
+        // For $long_running actions (helm --wait can take minutes). Needs its
+        // own worker: `queue:work database-long`.
+        'database-long' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'long',
+            'retry_after' => 960,
         ],
 
         'beanstalkd' => [
