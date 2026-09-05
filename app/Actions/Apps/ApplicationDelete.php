@@ -17,6 +17,8 @@ class ApplicationDelete extends Action
 {
     public $slug = 'application_delete';
 
+    public static bool $long_running = true;
+
     public function __construct(AppInstance $app_instance, ?string $start_time = null, ?string $end_time = null)
     {
         $this->organization = $app_instance->organization;
@@ -46,8 +48,12 @@ class ApplicationDelete extends Action
 
         // Delete App
         if ($app_profile->activationType() === 'chart') {  // Delete via chart
-            $web_server = $app_instance->connect('web');
-            $web_server->delete();
+            try {
+                $web_server = $app_instance->connect('web');
+                $web_server->delete();
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } elseif ($app_profile->activationType() === 'job') {  // Delete via job
             if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
                 // Need to wait until this new job task is complete
@@ -108,8 +114,10 @@ class ApplicationDelete extends Action
         if ($app_instance->parent) {
             $complete = true;
         } else {
-            $server = $app_instance->connect('web');
-            if (! $server->isActive()) {
+            try {
+                $complete = ! $app_instance->connect('web')->isActive();
+            } catch (\Throwable $e) {
+                // No web server assigned -- nothing to wait on.
                 $complete = true;
             }
         }

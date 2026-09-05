@@ -33,6 +33,9 @@ class Action
 
     public $slug = '';
 
+    // Routes RunAction onto the 'database-long' queue connection (longer retry_after).
+    public static bool $long_running = false;
+
     protected $application;
 
     protected $version;

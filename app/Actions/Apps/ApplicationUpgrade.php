@@ -18,6 +18,8 @@ class ApplicationUpgrade extends Action
 {
     public $slug = 'application_upgrade';
 
+    public static bool $long_running = true;
+
     public $background = false;
 
     public function __construct(AppInstance $app_instance, AppVersion $version, ?Prerequisites $prerequisites = null, bool $notify = true)
@@ -104,7 +106,9 @@ class ApplicationUpgrade extends Action
             return;
         }
 
-        if ($server->isActive()) {
+        $status = $server->checkStatus();
+
+        if ($status['active']) {
             // Set app status to active
             $app_instance->version_id = $task->version_id;
             $app_instance->status = 'active';
@@ -116,6 +120,13 @@ class ApplicationUpgrade extends Action
                 $task->organization->notifyAdmins(new ApplicationUpgraded($task));
                 $task->groupNotified();
             }
+        } else {
+            // Not an actual failure -- surfaces the live chart status (e.g.
+            // "myapp: pending-upgrade") on the task while polling for
+            // completion continues, so it's visible instead of the task
+            // just looking stuck with no explanation.
+            $task->error_message = $status['message'];
+            $task->save();
         }
     }
 }
