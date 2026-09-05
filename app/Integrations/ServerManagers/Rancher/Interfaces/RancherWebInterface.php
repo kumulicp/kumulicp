@@ -110,6 +110,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         }
 
         $active = true;
+        $pending = false;
         $labels = [];
 
         foreach ($charts as $chart) {
@@ -119,9 +120,13 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
             if ($status !== 1) {
                 $active = false;
             }
+
+            if ($status === 2) {
+                $pending = true;
+            }
         }
 
-        return ['active' => $active, 'message' => implode(', ', $labels)];
+        return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
     }
 
     private function statusLabel(int $status): string
