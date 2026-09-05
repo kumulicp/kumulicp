@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\DummyAction;
 use App\Application;
 use App\Http\Controllers\Controller;
+use App\Jobs\RunSchedule;
 use App\Support\Facades\Action;
 use App\Support\TaskHelpers;
 use App\Support\Time;
@@ -125,7 +126,7 @@ class Tasks extends Controller
 
     public function run_schedule()
     {
-        Artisan::call('schedule:run');
+        RunSchedule::dispatch();
 
         return redirect('/admin/server/tasks')->with('success', __('admin.tasks.run_schedule'));
     }
