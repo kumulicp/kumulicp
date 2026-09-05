@@ -141,8 +141,22 @@ services:
     k3s:
         image: rancher/k3s:v1.31.5-k3s1
         container_name: k-k3s-1
+        hostname: k3s
         privileged: true
-        command: server --tls-san=localhost
+        # k3s checks for a default route on the interface at startup and
+        # exits fatally if it's not there yet - a real risk when it starts
+        # alongside a dozen other services and Docker hasn't finished
+        # attaching the network. Upstream's own docker-compose.yml sets this
+        # for the same reason; it just retries until the network is ready.
+        restart: unless-stopped
+        # "k3s" (the compose service name) is the SAN kumulicp actually needs:
+        # it runs inside laravel.test and must reach this over the `sail`
+        # Docker network, not via the host's localhost:6443 mapping.
+        # --node-name is pinned so container recreates rejoin the same node
+        # identity instead of registering as a new node each time (the
+        # k3s-server volume persists node state across restarts, so without
+        # this every recreate leaves a stale NotReady node behind).
+        command: server --tls-san=localhost --tls-san=k3s --node-name=k3s
         tmpfs:
         - /run
         - /var/run
@@ -154,13 +168,58 @@ services:
         # kubectl/helm from the host.
         - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
         - K3S_KUBECONFIG_MODE=666
+        # 80/443 (not 8090/8443) so app URLs built by kumulicp
+        # (AppInstance::address()/domain()) resolve with no port suffix,
+        # matching production ingress topology. Conflicts with the `rancher`
+        # service's own `443:443` above if you run both at once - pick one,
+        # or remap one of them. If kumulicp's own laravel.test is also on
+        # host port 80, move it (APP_PORT in .env) before using these.
         ports:
         - '6443:6443'
-        - '8090:80'
-        - '8443:443'
+        - '80:80'
+        - '443:443'
         volumes:
         - k3s-server:/var/lib/rancher/k3s
         - k3s-output:/output
+        networks:
+        - sail
+
+    # Lightweight web UI for the k3s cluster above - a much smaller footprint
+    # than importing the cluster into the `rancher` service for this purpose.
+    # See https://headlamp.dev.
+    headlamp-kubeconfig:
+        image: busybox:1.36
+        container_name: k-headlamp-kubeconfig-1
+        depends_on:
+        - k3s
+        volumes:
+        - k3s-output:/k3s-output:ro
+        - headlamp-kubeconfig:/headlamp-kubeconfig
+        # k3s writes its kubeconfig with `server: https://127.0.0.1:6443`,
+        # which is only reachable from inside the k3s container itself.
+        # Rewrite it to the `k3s` service name so other containers on the
+        # `sail` network (e.g. headlamp) can reach the API server.
+        entrypoint: ['sh', '-c']
+        command:
+        - |
+          until [ -f /k3s-output/kubeconfig.yaml ]; do sleep 1; done
+          sed 's#https://127.0.0.1:6443#https://k3s:6443#' /k3s-output/kubeconfig.yaml > /headlamp-kubeconfig/kubeconfig.yaml
+        networks:
+        - sail
+    headlamp:
+        image: ghcr.io/headlamp-k8s/headlamp:latest
+        container_name: k-headlamp-1
+        depends_on:
+            headlamp-kubeconfig:
+                condition: service_completed_successfully
+        ports:
+        - '8091:4466'
+        volumes:
+        - headlamp-kubeconfig:/kubeconfig:ro
+        command:
+        - -kubeconfig
+        - /kubeconfig/kubeconfig.yaml
+        - -enable-helm
         networks:
         - sail
 
@@ -172,3 +231,4 @@ volumes:
     wordpress-db:
     k3s-server:
     k3s-output:
+    headlamp-kubeconfig:
