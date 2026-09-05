@@ -46,11 +46,16 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function isActive(): bool
     {
+        return $this->checkStatus()['active'];
+    }
+
+    public function checkStatus(): array
+    {
         if ($this->app_instance && in_array($this->app_instance->id, self::$deleted_instances)) {
-            return false;
+            return ['active' => false, 'message' => 'not found'];
         }
 
-        return true;
+        return ['active' => true, 'message' => 'deployed'];
     }
 
     public function add(): bool

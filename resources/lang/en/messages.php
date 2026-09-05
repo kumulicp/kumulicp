@@ -47,6 +47,7 @@ return [
         'no_billing_driver' => 'Billing driver doesn\'t exist',
         'app_not_found_on_server' => ':app could not be found on the server. :guidance',
         'app_not_found_rancher' => 'Please review the error in Rancher.',
+        'helm_operation_failed' => 'Helm operation for :chart failed: :error',
     ],
     'sso' => [
         'denied' => [

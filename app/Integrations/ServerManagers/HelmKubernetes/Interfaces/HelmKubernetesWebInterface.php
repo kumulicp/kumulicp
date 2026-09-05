@@ -98,19 +98,65 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function isActive()
     {
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
-            $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($this->app_instance)->charts();
-        }
+        return $this->checkStatus()['active'];
+    }
 
-        foreach ($charts as $chart) {
-            if ($this->application->isActive($this->app_instance, $chart) !== 1) {
-                return false;
+    public function checkStatus(): array
+    {
+        $active = true;
+        $pending = false;
+        $labels = [];
+
+        foreach ($this->chartsForStatus() as $chart) {
+            $status = $this->application->isActive($this->app_instance, $chart);
+            $labels[] = $chart->chartName().': '.$this->statusLabel($status);
+
+            if ($status !== 1) {
+                $active = false;
+            }
+
+            if ($status === 2) {
+                $pending = true;
             }
         }
 
-        return true;
+        return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
+    }
+
+    /**
+     * Deletes the release secret for any chart currently stuck pending --
+     * see Application::deleteStuckReleaseSecrets(). Called when a task's
+     * completion check finds the release has sat pending longer than the
+     * long queue's worker timeout, implying the process that ran `helm
+     * upgrade --wait` was killed (e.g. the container restarted) before it
+     * could finish, rather than the operation genuinely still running.
+     */
+    public function recoverStuckRelease(): void
+    {
+        foreach ($this->chartsForStatus() as $chart) {
+            if ($this->application->isActive($this->app_instance, $chart) === 2) {
+                $this->application->deleteStuckReleaseSecrets($chart);
+            }
+        }
+    }
+
+    private function chartsForStatus(): array
+    {
+        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
+            return ApplicationFacade::instance($this->app_instance->parent)->charts();
+        }
+
+        return ApplicationFacade::instance($this->app_instance)->charts();
+    }
+
+    private function statusLabel(int $status): string
+    {
+        return match ($status) {
+            1 => 'deployed',
+            2 => 'pending',
+            3 => 'failed',
+            default => 'not found',
+        };
     }
 
     public function add()
@@ -124,7 +170,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
                 if ($this->application->isActive($this->app_instance, $chart) === 1) {
                     $this->update();
                 } else {
-                    $this->application->create($this->app_instance, $chart);
+                    $this->assertSuccessful($this->application->create($this->app_instance, $chart), $chart);
 
                     $this->app_instance->refresh();
                 }
@@ -145,8 +191,10 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
         foreach ($charts as $chart) {
             $is_active = $this->application->isActive($this->app_instance, $chart);
 
-            if ($is_active === 1 || $is_active === 3) {
-                $this->application->update($this->app_instance, $chart);
+            // 0 = not found -- e.g. release record deleted/lost -- falls back
+            // to a fresh install rather than silently no-op'ing forever.
+            if (in_array($is_active, [0, 1, 3], true)) {
+                $this->assertSuccessful($this->application->update($this->app_instance, $chart), $chart);
 
                 $this->app_instance->refresh();
                 $this->updateRedirectDomains();
@@ -154,6 +202,21 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
         }
 
         return true;
+    }
+
+    // create()/update() return ['status' => 'failed', 'response' => <helm
+    // error text>] rather than throwing (they're also used for polling via
+    // isActive()), so callers that need the queue/task error-reporting
+    // machinery to see a helm failure (RunAction::failed() -> task's
+    // error_message + Laravel log) must check the result explicitly.
+    private function assertSuccessful(array $result, $chart): void
+    {
+        if ($result['status'] === 'failed') {
+            throw new \Exception(__('messages.exception.helm_operation_failed', [
+                'chart' => $chart->chartName(),
+                'error' => $result['response'],
+            ]));
+        }
     }
 
     public function delete()
