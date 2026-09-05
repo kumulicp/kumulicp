@@ -182,11 +182,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::put('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@update');
                 Route::delete('{provider}', 'App\Http\Controllers\Admin\Settings\SsoProviders@destroy');
             });
-            Route::prefix('pull-secrets')->group(function () {
-                Route::get('/', 'App\Http\Controllers\Admin\Settings\PullSecrets@index');
-                Route::post('/', 'App\Http\Controllers\Admin\Settings\PullSecrets@store');
-                Route::post('mass-migrate', 'App\Http\Controllers\Admin\Settings\PullSecrets@massMigrate');
-                Route::delete('{pullSecret}', 'App\Http\Controllers\Admin\Settings\PullSecrets@destroy');
+            Route::prefix('repo-secrets')->group(function () {
+                Route::get('/', 'App\Http\Controllers\Admin\Settings\RepoSecrets@index');
+                Route::post('/', 'App\Http\Controllers\Admin\Settings\RepoSecrets@store');
+                Route::post('mass-migrate', 'App\Http\Controllers\Admin\Settings\RepoSecrets@massMigrate');
+                Route::delete('{repoSecret}', 'App\Http\Controllers\Admin\Settings\RepoSecrets@destroy');
             });
             Route::prefix('system-checks')->group(function () {
                 Route::get('', 'Admin\Settings\SystemChecks@index')->name('settings.system_checks');

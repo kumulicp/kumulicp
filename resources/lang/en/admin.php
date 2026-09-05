@@ -71,8 +71,6 @@ return [
         'validated' => ':server validated',
         'is_default' => 'Server is set as default',
         'chart' => 'Chart',
-        'leaveBlankToKeep' => 'Leave blank to keep the current value',
-        'caCert' => 'CA Certificate',
     ],
     'denied' => 'You must be an administrator to continue',
     'applications' => [
@@ -167,12 +165,13 @@ return [
         'invoice_settings' => 'Invoice Settings',
         'system_checks_settings' => 'System Checks',
     ],
-    'pullSecrets' => [
-        'pullSecrets' => 'Image Pull Secrets',
-        'added' => 'Pull secret added',
-        'deleted' => 'Pull secret deleted',
-        'inUse' => 'This pull secret cannot be deleted because it is required by one or more app instances',
-        'migrated' => 'App versions migrated to the new pull secret',
+    'repoSecrets' => [
+        'repoSecrets' => 'Repo Secrets',
+        'added' => 'Repo secret added',
+        'deleted' => 'Repo secret deleted',
+        'inUse' => 'This repo secret cannot be deleted because it is required by one or more app instances',
+        'migrateTypeMismatch' => 'Both repo secrets must be the same type',
+        'migrated' => 'App versions migrated to the new repo secret',
     ],
     'tasks' => [
         'tasks' => 'Tasks',

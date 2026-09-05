@@ -3,13 +3,13 @@
 namespace App\Integrations\ServerManagers\Rancher\API;
 
 use App\Integrations\ServerManagers\Rancher\Rancher;
-use App\PullSecret;
+use App\RepoSecret;
 use Illuminate\Support\Facades\Log;
 
 class Secret extends Rancher
 {
     // Check if the pull secret exists(1) or does not exist(0) in the given namespace
-    public function isActive(string $namespace, PullSecret $pull_secret): int
+    public function isActive(string $namespace, RepoSecret $pull_secret): int
     {
         $address = $this->org_server->server->address;
         $name = $pull_secret->k8sSecretName();
@@ -25,7 +25,7 @@ class Secret extends Rancher
         return 1;
     }
 
-    public function create(string $namespace, PullSecret $pull_secret)
+    public function create(string $namespace, RepoSecret $pull_secret)
     {
         $address = $this->org_server->server->address;
 
@@ -50,7 +50,7 @@ class Secret extends Rancher
         ];
     }
 
-    public function remove(string $namespace, PullSecret $pull_secret)
+    public function remove(string $namespace, RepoSecret $pull_secret)
     {
         $address = $this->org_server->server->address;
         $name = $pull_secret->k8sSecretName();
@@ -75,7 +75,7 @@ class Secret extends Rancher
     }
 
     // Make sure the pull secret exists in the namespace, creating it if necessary
-    public function ensure(string $namespace, PullSecret $pull_secret)
+    public function ensure(string $namespace, RepoSecret $pull_secret)
     {
         if ($this->isActive($namespace, $pull_secret) === 1) {
             return [
@@ -87,7 +87,7 @@ class Secret extends Rancher
         return $this->create($namespace, $pull_secret);
     }
 
-    private function values(string $namespace, PullSecret $pull_secret): array
+    private function values(string $namespace, RepoSecret $pull_secret): array
     {
         return [
             'kind' => 'Secret',
