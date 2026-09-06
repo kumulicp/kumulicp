@@ -73,7 +73,7 @@ import { Link } from '@inertiajs/vue3'
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
-              {{ server.api_key }}
+              {{ server.has_api_key ? '********************************************' : '—' }}
             </va-list-item-section>
           </va-list-item>
 

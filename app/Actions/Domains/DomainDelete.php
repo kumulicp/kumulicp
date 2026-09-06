@@ -14,6 +14,8 @@ class DomainDelete extends Action
 {
     public $slug = 'domain_delete';
 
+    public static bool $long_running = true;
+
     public $domain;
 
     public function __construct(Organization $organization, OrgDomain $domain)

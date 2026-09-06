@@ -114,7 +114,7 @@ class Task extends Model
     public function restart()
     {
         $this->status = 'pending';
-        $this->job_id = null;
+        $this->job_id = 0;
         $this->save();
     }
 

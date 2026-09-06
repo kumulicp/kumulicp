@@ -108,9 +108,20 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error="$page.props.errors.address"
         :error-messages="$page.props.errors.address"
       />
+      <va-textarea v-model="form.ca_cert"
+        :label="$t('admin.servers.caCert')"
+        :messages="server.description.ca_cert"
+        id="caCert"
+        class="mb-2"
+        min-rows="3"
+        immediateValidation
+        :error="$page.props.errors.ca_cert"
+        :error-messages="$page.props.errors.ca_cert"
+      />
       <va-input v-model="form.api_key"
         :label="$t('admin.servers.apiKey')"
         :messages="server.description.api_key"
+        :placeholder="server.has_api_key ? $t('admin.servers.leaveBlankToKeep') : ''"
         id="apiKey"
         class="mb-2"
         immediateValidation
@@ -120,6 +131,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       <va-input v-model="form.api_secret"
         :label="$t('admin.servers.apiSecret')"
         :messages="server.description.api_secret"
+        :placeholder="server.has_api_secret ? $t('admin.servers.leaveBlankToKeep') : ''"
         id="apiSecret"
         class="mb-2"
         immediateValidation
@@ -251,8 +263,11 @@ export default {
         default_email_server: this.server.default_email_server,
         default_web_server: this.server.default_web_server,
         settings: this.server.settings,
-        api_key: this.server.api_key,
-        api_secret: this.server.api_secret,
+        ca_cert: this.server.ca_cert,
+        // Secrets are never sent from the backend after saving — these
+        // start blank; submitting blank means "leave unchanged".
+        api_key: '',
+        api_secret: '',
         default_backup_server: this.server.default_backup_server,
         is_backup_server: this.server.is_backup_server
       })

@@ -15,7 +15,8 @@ use Illuminate\Support\Arr;
  * @property array $roles
  * @property array $settings
  * @property-read \App\Application $application
- * @property-read \App\PullSecret|null $pullSecret
+ * @property-read \App\RepoSecret|null $pullSecret
+ * @property-read \App\RepoSecret|null $helmRepoSecret
  */
 class AppVersion extends Model
 {
@@ -35,12 +36,22 @@ class AppVersion extends Model
 
     public function pullSecret()
     {
-        return $this->belongsTo('App\PullSecret', 'pull_secret_id');
+        return $this->belongsTo('App\RepoSecret', 'pull_secret_id');
     }
 
     public function requiresPullSecret(): bool
     {
         return $this->pull_secret_id !== null && $this->pullSecret && $this->pullSecret->requiresAuth();
+    }
+
+    public function helmRepoSecret()
+    {
+        return $this->belongsTo('App\RepoSecret', 'helm_repo_secret_id');
+    }
+
+    public function requiresHelmRepoAuth(): bool
+    {
+        return $this->helm_repo_secret_id !== null && $this->helmRepoSecret && $this->helmRepoSecret->requiresAuth();
     }
 
     public function roles(string|array|null $type = null, $all = true)

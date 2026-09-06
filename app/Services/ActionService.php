@@ -106,6 +106,11 @@ class ActionService
         return $this;
     }
 
+    public function classFor(Task $task): ?string
+    {
+        return Arr::get($this->actions, $task->action());
+    }
+
     public function exists(Organization $organization, string $category, string $action)
     {
         $tasks = $organization->tasks()

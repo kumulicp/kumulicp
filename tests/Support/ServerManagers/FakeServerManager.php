@@ -19,9 +19,25 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 {
     private static array $deleted_instances = [];
 
+    private static array $pending_instances = [];
+
+    public static int $recover_stuck_release_calls = 0;
+
     public static function reset(): void
     {
         self::$deleted_instances = [];
+        self::$pending_instances = [];
+        self::$recover_stuck_release_calls = 0;
+    }
+
+    public static function markPending(int $app_instance_id): void
+    {
+        self::$pending_instances[] = $app_instance_id;
+    }
+
+    public static function clearPending(int $app_instance_id): void
+    {
+        self::$pending_instances = array_diff(self::$pending_instances, [$app_instance_id]);
     }
 
     public function __construct(
@@ -46,11 +62,29 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function isActive(): bool
     {
+        return $this->checkStatus()['active'];
+    }
+
+    public function checkStatus(): array
+    {
         if ($this->app_instance && in_array($this->app_instance->id, self::$deleted_instances)) {
-            return false;
+            return ['active' => false, 'pending' => false, 'message' => 'not found'];
         }
 
-        return true;
+        if ($this->app_instance && in_array($this->app_instance->id, self::$pending_instances)) {
+            return ['active' => false, 'pending' => true, 'message' => 'pending-upgrade'];
+        }
+
+        return ['active' => true, 'pending' => false, 'message' => 'deployed'];
+    }
+
+    public function recoverStuckRelease(): void
+    {
+        self::$recover_stuck_release_calls++;
+
+        if ($this->app_instance) {
+            self::$pending_instances = array_diff(self::$pending_instances, [$this->app_instance->id]);
+        }
     }
 
     public function add(): bool

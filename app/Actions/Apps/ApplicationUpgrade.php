@@ -18,6 +18,8 @@ class ApplicationUpgrade extends Action
 {
     public $slug = 'application_upgrade';
 
+    public static bool $long_running = true;
+
     public $background = false;
 
     public function __construct(AppInstance $app_instance, AppVersion $version, ?Prerequisites $prerequisites = null, bool $notify = true)
@@ -104,7 +106,9 @@ class ApplicationUpgrade extends Action
             return;
         }
 
-        if ($server->isActive()) {
+        $status = $server->checkStatus();
+
+        if ($status['active']) {
             // Set app status to active
             $app_instance->version_id = $task->version_id;
             $app_instance->status = 'active';
@@ -116,6 +120,78 @@ class ApplicationUpgrade extends Action
                 $task->organization->notifyAdmins(new ApplicationUpgraded($task));
                 $task->groupNotified();
             }
+
+            return;
         }
+
+        if ($status['pending'] ?? false) {
+            if (method_exists($server, 'recoverStuckRelease') && static::recoverStuckPendingRelease($task, $server)) {
+                return;
+            }
+        } else {
+            static::forgetPendingSince($task);
+        }
+
+        // Not an actual failure -- surfaces the live chart status (e.g.
+        // "myapp: pending-upgrade") on the task while polling for
+        // completion continues, so it's visible instead of the task
+        // just looking stuck with no explanation.
+        $task->error_message = $status['message'];
+        $task->save();
+    }
+
+    /**
+     * If the release has sat pending (helm status pending-install/-upgrade/
+     * -rollback) longer than the long queue's worker timeout, the process
+     * running `helm upgrade --wait` was almost certainly killed mid-operation
+     * (e.g. the container restarted) rather than the operation still
+     * genuinely running -- helm refuses any further action on a release
+     * stuck like that, so it can never recover on its own. Deletes the
+     * stuck release secret and restarts the task so the next attempt runs
+     * `helm upgrade --install` fresh.
+     *
+     * @return bool true if recovery was triggered (caller should stop)
+     */
+    protected static function recoverStuckPendingRelease(Task $task, $server): bool
+    {
+        $pending_since = $task->getValue('helm_pending_since');
+
+        if (! $pending_since) {
+            static::rememberPendingSince($task);
+
+            return false;
+        }
+
+        $threshold = config('queue.connections.database-long.retry_after', 960);
+
+        if (now()->diffInSeconds(\Illuminate\Support\Carbon::parse($pending_since), absolute: true) < $threshold) {
+            return false;
+        }
+
+        $server->recoverStuckRelease();
+        static::forgetPendingSince($task);
+        $task->restart();
+
+        return true;
+    }
+
+    protected static function rememberPendingSince(Task $task): void
+    {
+        $custom_values = $task->custom_values ?? [];
+        $custom_values['helm_pending_since'] = now()->toISOString();
+        $task->custom_values = $custom_values;
+        $task->save();
+    }
+
+    protected static function forgetPendingSince(Task $task): void
+    {
+        if (! array_key_exists('helm_pending_since', $task->custom_values ?? [])) {
+            return;
+        }
+
+        $custom_values = $task->custom_values;
+        unset($custom_values['helm_pending_since']);
+        $task->custom_values = $custom_values;
+        $task->save();
     }
 }

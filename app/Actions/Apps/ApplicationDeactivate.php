@@ -17,6 +17,8 @@ class ApplicationDeactivate extends Action
 {
     public $slug = 'application_deactivate';
 
+    public static bool $long_running = true;
+
     public function __construct(AppInstance $app_instance)
     {
         $this->organization = $app_instance->organization;

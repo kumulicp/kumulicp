@@ -98,19 +98,45 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
     public function isActive()
     {
+        return $this->checkStatus()['active'];
+    }
+
+    public function checkStatus(): array
+    {
         if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
             $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
         } else {
             $charts = ApplicationFacade::instance($this->app_instance)->charts();
         }
 
+        $active = true;
+        $pending = false;
+        $labels = [];
+
         foreach ($charts as $chart) {
-            if ($this->application->isActive($this->app_instance, $chart) !== 1) {
-                return false;
+            $status = $this->application->isActive($this->app_instance, $chart);
+            $labels[] = $chart->chartName().': '.$this->statusLabel($status);
+
+            if ($status !== 1) {
+                $active = false;
+            }
+
+            if ($status === 2) {
+                $pending = true;
             }
         }
 
-        return true;
+        return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
+    }
+
+    private function statusLabel(int $status): string
+    {
+        return match ($status) {
+            1 => 'deployed',
+            2 => 'pending',
+            3 => 'failed',
+            default => 'not found',
+        };
     }
 
     public function add()
@@ -150,7 +176,9 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         foreach ($charts as $chart) {
             $is_active = $this->application->isActive($this->app_instance, $chart);
 
-            if ($is_active === 1 || $is_active === 3) {
+            // 0 = not found -- e.g. release record deleted/lost -- falls back
+            // to a fresh install rather than silently no-op'ing forever.
+            if (in_array($is_active, [0, 1, 3], true)) {
                 $this->application->update($this->app_instance, $chart);
 
                 $this->app_instance->refresh();

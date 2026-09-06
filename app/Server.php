@@ -27,8 +27,8 @@ class Server extends Model
     protected $casts = [
         'settings' => 'array',
         'is_backup_server' => 'boolean',
-        'api_key' => EmptyStringAsNullEncrypted::class,
-        'api_secret' => EmptyStringAsNullEncrypted::class,
+        'api_key' => 'encrypted',
+        'api_secret' => 'encrypted',
     ];
 
     protected $hidden = [
