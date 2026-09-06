@@ -97,6 +97,28 @@ class Tasks extends Controller
         return redirect('/admin/server/tasks');
     }
 
+    public function bulk_restart(Request $request)
+    {
+        $tasks = Task::whereIn('id', $request->input('tasks', []))->get();
+
+        foreach ($tasks as $task) {
+            Action::retry($task);
+        }
+
+        return [
+            'status' => 'success',
+        ];
+    }
+
+    public function bulk_delete(Request $request)
+    {
+        Task::whereIn('id', $request->input('tasks', []))->delete();
+
+        return [
+            'status' => 'success',
+        ];
+    }
+
     public function retrieve()
     {
         $organization = auth()->user()->organization;
