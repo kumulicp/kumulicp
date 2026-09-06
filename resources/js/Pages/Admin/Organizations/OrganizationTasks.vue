@@ -59,6 +59,38 @@ import axios from 'axios'
       </div>
     </div>
   </div>
+  <div class="row" v-if="selectedItems.length > 0">
+    <div class="flex flex-col" style="flex-grow:1">
+      <div class="item">
+        {{ $t('admin.tasks.selectedCount', { count: selectedItems.length }) }}
+      </div>
+    </div>
+    <div class="flex flex-col">
+      <div class="item">
+        <VaButton
+          preset="secondary"
+          icon="fa-trash-restore"
+          color="primary"
+          :disabled="liveMode"
+          :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
+          @click="bulkRestart"
+        >
+          {{ $t('admin.tasks.restartSelected') }}
+        </VaButton>
+        <VaButton
+          preset="secondary"
+          icon="delete"
+          color="danger"
+          class="ml-2"
+          :disabled="liveMode"
+          :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
+          @click="bulkDelete"
+        >
+          {{ $t('admin.tasks.deleteSelected') }}
+        </VaButton>
+      </div>
+    </div>
+  </div>
   <VaDataTable
       v-model="selectedItems"
       :items="task_list"
@@ -138,6 +170,7 @@ export default {
     return {
       meta: {},
       task_list: [],
+      selectedItems: [],
       filterApp: '',
       filterStatus: '',
       liveMode: true,
@@ -204,6 +237,33 @@ export default {
       const task = this.task_list[id]
       axios.delete('/admin/server/tasks/' + task.id)
         .then(function () {
+          vueState.updateTaskList()
+        })
+    },
+    bulkRestart () {
+      const vueState = this
+      const ids = this.selectedItems.map(task => task.id)
+      if (ids.length === 0) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/restart', { tasks: ids })
+        .then(function () {
+          vueState.selectedItems = []
+          vueState.updateTaskList()
+        })
+    },
+    bulkDelete () {
+      const vueState = this
+      const ids = this.selectedItems.map(task => task.id)
+      if (ids.length === 0) {
+        return
+      }
+      if (!window.confirm(this.$t('admin.tasks.confirmBulkDelete', { count: ids.length }))) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/delete', { tasks: ids })
+        .then(function () {
+          vueState.selectedItems = []
           vueState.updateTaskList()
         })
     },

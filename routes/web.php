@@ -123,6 +123,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('', 'Admin\Tasks@index')->name('tasks');
                 Route::post('api', 'Admin\Tasks@api')->name('tasks.api');
                 Route::delete('{task}', 'Admin\Tasks@delete_api')->name('tasks.delete.api');
+                Route::post('bulk/restart', 'Admin\Tasks@bulk_restart')->name('tasks.bulk.restart');
+                Route::post('bulk/delete', 'Admin\Tasks@bulk_delete')->name('tasks.bulk.delete');
                 Route::get('pending', 'Admin\Tasks@pending')->name('tasks.pending');
                 Route::get('{task}/restart', 'Admin\Tasks@restart')->name('tasks.restart');
                 Route::get('{task}/delete', 'Admin\Tasks@delete')->name('tasks.delete');

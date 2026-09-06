@@ -560,7 +560,11 @@
       "failed": "Failed",
       "pending": "Pending",
       "inProgress": "In Progress",
-      "completed": "Completed"
+      "completed": "Completed",
+      "selectedCount": "{count} selected",
+      "restartSelected": "Restart Selected",
+      "deleteSelected": "Delete Selected",
+      "confirmBulkDelete": "Are you sure you want to delete {count} selected task(s)?"
     },
     "ssoProviders": {
       "ssoProviders": "SSO Providers",

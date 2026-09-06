@@ -560,7 +560,11 @@
       "failed": "Fallida",
       "pending": "Pendiente",
       "inProgress": "En Progreso",
-      "completed": "Completada"
+      "completed": "Completada",
+      "selectedCount": "{count} seleccionada(s)",
+      "restartSelected": "Reiniciar Seleccionadas",
+      "deleteSelected": "Eliminar Seleccionadas",
+      "confirmBulkDelete": "¿Está seguro de que desea eliminar {count} tarea(s) seleccionada(s)?"
     },
     "ssoProviders": {
       "ssoProviders": "Proveedores SSO",
