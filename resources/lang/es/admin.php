@@ -241,5 +241,6 @@ return [
         'error_missing_providers' => 'Falta el directorio Providers o no se encontraron archivos de proveedor.',
         'error_missing_routes' => 'Falta el directorio Routes.',
         'error_module_not_found' => "Módulo ':module' no encontrado.",
+        'error_module_delete_failed' => "No se pudo eliminar por completo el módulo ':module'. Es posible que algunos archivos aún estén en uso; inténtalo de nuevo.",
     ],
 ];

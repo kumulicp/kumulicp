@@ -235,13 +235,13 @@ class PackageManagerService
         $modulePath = base_path("modules/{$moduleName}");
         if (File::isDirectory($modulePath)) {
             File::deleteDirectory($modulePath);
+        }
 
-            // deleteDirectory() swallows individual unlink/rmdir failures and
-            // always returns true, so the only reliable signal that the
-            // directory is actually gone is checking for it afterward.
-            if (File::isDirectory($modulePath)) {
-                return ['success' => false, 'error' => __('admin.packages.error_module_delete_failed', ['module' => $package])];
-            }
+        // deleteDirectory() swallows individual unlink/rmdir failures and
+        // always returns true, so the only reliable signal that the
+        // directory is actually gone is checking for it again afterward.
+        if (File::isDirectory($modulePath)) {
+            return ['success' => false, 'error' => __('admin.packages.error_module_delete_failed', ['module' => $package])];
         }
 
         Artisan::call('optimize:clear');

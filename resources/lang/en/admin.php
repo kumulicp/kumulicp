@@ -270,6 +270,7 @@ return [
         'error_missing_providers' => 'Missing Providers directory or no provider files found.',
         'error_missing_routes' => 'Missing Routes directory.',
         'error_module_not_found' => "Module ':module' not found.",
+        'error_module_delete_failed' => "Could not fully delete module ':module'. Some files may still be in use; try again.",
         'settingsUpdated' => 'Package manager settings updated.',
     ],
 ];
