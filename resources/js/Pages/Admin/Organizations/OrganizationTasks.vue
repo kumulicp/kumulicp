@@ -59,7 +59,7 @@ import axios from 'axios'
       </div>
     </div>
   </div>
-  <div class="row" v-if="selectedItems.length > 0">
+  <div class="row" v-if="!liveMode && selectedItems.length > 0">
     <div class="flex flex-col" style="flex-grow:1">
       <div class="item">
         {{ $t('admin.tasks.selectedCount', { count: selectedItems.length }) }}
@@ -71,8 +71,6 @@ import axios from 'axios'
           preset="secondary"
           icon="fa-trash-restore"
           color="primary"
-          :disabled="liveMode"
-          :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
           @click="bulkRestart"
         >
           {{ $t('admin.tasks.restartSelected') }}
@@ -82,8 +80,6 @@ import axios from 'axios'
           icon="delete"
           color="danger"
           class="ml-2"
-          :disabled="liveMode"
-          :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
           @click="bulkDelete"
         >
           {{ $t('admin.tasks.deleteSelected') }}
@@ -281,6 +277,7 @@ export default {
     },
     changeLiveMode () {
       if (this.liveMode) {
+        this.selectedItems = []
         this.interval = setInterval(this.updateTaskList, 3000)
       } else {
         clearInterval(this.interval)
