@@ -51,4 +51,9 @@ return [
     'kubectl' => [
         'binary_path' => env('KUBECTL_BINARY_PATH', 'kubectl'),
     ],
+
+    // Local-dev only: see Integration::devIngressResolve(). Set to
+    // host.docker.internal when running app instances against a local
+    // cluster (e.g. k3s) whose ingress is only reachable via the host.
+    'dev_ingress_gateway' => env('DEV_INGRESS_GATEWAY'),
 ];
