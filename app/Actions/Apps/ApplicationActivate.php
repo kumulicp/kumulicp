@@ -118,7 +118,7 @@ class ApplicationActivate extends Action
     {
         $plan = AppPlan::find($task->getValue('app_plan'));
         $app_instance = Application::instance($task->app_instance);
-        $app_activate = new self($task->organization, $task->application, $plan, $task->customValues(), version: $task->version));
+        $app_activate = new self($task->organization, $task->application, $plan, $task->customValues(), version: $task->version);
         $app_profile = Application::profile($app_instance->application->slug);
 
         // Add ldap groups
