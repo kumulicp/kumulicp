@@ -277,7 +277,13 @@ class Integration
 
         $this->buildClient();
 
-        $response = $this->client()->$request_type($url, $data);
+        $client = $this->client();
+
+        if ($resolve = $this->devIngressResolve($url)) {
+            $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
+        }
+
+        $response = $client->$request_type($url, $data);
         $this->storeCookies($response->cookies());
 
         $this->status_code = $response->getStatusCode();
@@ -295,6 +301,40 @@ class Integration
         if (! $this->save_session) {
             $this->resetClient();
         }
+    }
+
+    /**
+     * In local dev, deployed app domains (e.g. *.127.0.0.1.nip.io) resolve
+     * to an IP that's only reachable from the browser -- from inside this
+     * container that same IP is its own loopback, so a request silently
+     * hits this app instead of the actual deployed one. When
+     * DEV_INGRESS_GATEWAY is set (e.g. host.docker.internal, which reaches
+     * the host machine where the local cluster's ingress ports are
+     * published), this overrides just the connection target for the
+     * request's host, leaving the Host header/TLS SNI untouched.
+     */
+    private function devIngressResolve(string $url): ?string
+    {
+        $gateway = config('services.dev_ingress_gateway');
+
+        if (! $gateway) {
+            return null;
+        }
+
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! $host) {
+            return null;
+        }
+
+        $port = parse_url($url, PHP_URL_PORT) ?? (parse_url($url, PHP_URL_SCHEME) === 'https' ? 443 : 80);
+        $ip = filter_var($gateway, FILTER_VALIDATE_IP) ? $gateway : gethostbyname($gateway);
+
+        if (! filter_var($ip, FILTER_VALIDATE_IP)) {
+            return null;
+        }
+
+        return "{$host}:{$port}:{$ip}";
     }
 
     private function testConnection(string $url): bool
