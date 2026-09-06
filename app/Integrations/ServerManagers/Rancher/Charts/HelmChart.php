@@ -14,6 +14,8 @@ abstract class HelmChart extends Chart
 
     public $chart_name = '';
 
+    abstract public function values(): array;
+
     public function chartName()
     {
         if ($this->name === $this->app_instance->application->name) {
