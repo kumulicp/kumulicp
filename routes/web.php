@@ -106,6 +106,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     Route::prefix('{app}')->group(function () {
                         Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
+                        Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
                         Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');

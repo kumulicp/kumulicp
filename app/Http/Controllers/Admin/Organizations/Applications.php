@@ -9,6 +9,7 @@ use App\AppInstance;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
 use App\Organization;
+use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
 use Illuminate\Http\Request;
 
@@ -138,6 +139,47 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
+            'breadcrumbs' => [
+                [
+                    'label' => __('admin.organizations.organizations'),
+                    'url' => '/admin/organizations',
+                ],
+                [
+                    'label' => $organization->name,
+                    'url' => '/admin/organizations/'.$organization->id,
+                ],
+                [
+                    'label' => __('admin.applications.apps'),
+                    'url' => '/admin/organizations/'.$organization->id.'/apps',
+                ],
+                [
+                    'label' => $app->application->name,
+                ],
+            ],
+        ]);
+    }
+
+    public function helmValues(Organization $organization, AppInstance $app)
+    {
+        $charts = (new AppInstanceService($app))->charts();
+
+        return inertia()->render('Admin/Organizations/Apps/AppHelmValues', [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+            'app' => [
+                'id' => $app->id,
+                'name' => $app->application->name,
+                'version' => [
+                    'id' => $app->version->id,
+                    'name' => $app->version->name,
+                ],
+            ],
+            'charts' => collect($charts)->map(fn ($chart) => [
+                'name' => $chart->chartName(),
+                'values' => $chart->values(),
+            ])->values(),
             'breadcrumbs' => [
                 [
                     'label' => __('admin.organizations.organizations'),

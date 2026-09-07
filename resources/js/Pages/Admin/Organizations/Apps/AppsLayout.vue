@@ -42,6 +42,10 @@ export default {
         {
           title: this.$t('common.edit'),
           url: basePath + '/edit'
+        },
+        {
+          title: this.$t('admin.apps.helmValues'),
+          url: basePath + '/helm-values'
         }
       ]
     }
