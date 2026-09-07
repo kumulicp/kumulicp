@@ -79,7 +79,7 @@ export default {
       unread: false,
       form: useForm({}),
       windowWidth: window.innerWidth,
-      interval: '',
+      interval: null,
       num: 1
     }
   },
@@ -106,14 +106,33 @@ export default {
     window.addEventListener('resize', () => {
       this.windowWidth = window.innerWidth
     })
-    // Request updated notifications json every 15s
-    this.interval = setInterval(this.updateNotifications, 15000)
+    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+    this.startPolling()
     this.updateNotifications()
   },
   unmounted () {
-    clearInterval(this.interval)
+    this.stopPolling()
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
   },
   methods: {
+    startPolling () {
+      if (!this.interval) {
+        // Request updated notifications json every 30s while the tab is visible
+        this.interval = setInterval(this.updateNotifications, 30000)
+      }
+    },
+    stopPolling () {
+      clearInterval(this.interval)
+      this.interval = null
+    },
+    handleVisibilityChange () {
+      if (document.hidden) {
+        this.stopPolling()
+      } else {
+        this.startPolling()
+        this.updateNotifications()
+      }
+    },
     getStatusIcon (notification) {
       switch (notification.status) {
         case 'Complete':

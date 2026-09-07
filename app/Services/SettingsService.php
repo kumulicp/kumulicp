@@ -4,14 +4,23 @@ namespace App\Services;
 
 use App\ServerSetting;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 
 class SettingsService
 {
+    /**
+     * Server settings are global (not organization-scoped), so they're kept
+     * in the default cache store rather than FastCache - FastCache tags
+     * entries per-organization, which would leave every other organization's
+     * copy stale after an admin update here.
+     */
+    private const CACHE_KEY = 'server_settings';
+
     private $settings = [];
 
     public function __construct()
     {
-        $server_settings = ServerSetting::all();
+        $server_settings = Cache::remember(self::CACHE_KEY, now()->addHour(), fn () => ServerSetting::all());
         $setting = [];
 
         foreach ($server_settings as $server_setting) {
@@ -36,6 +45,7 @@ class SettingsService
             }
 
             Arr::set($this->settings, $key, $value);
+            Cache::forget(self::CACHE_KEY);
         } elseif (array_key_exists($key, $this->settings)) {
             $this->remove($key);
         }
@@ -55,6 +65,7 @@ class SettingsService
         if (array_key_exists($key, $this->settings)) {
             $setting = ServerSetting::where('key', $key)->first();
             $setting->delete();
+            Cache::forget(self::CACHE_KEY);
         }
     }
 }
