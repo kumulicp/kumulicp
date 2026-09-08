@@ -551,6 +551,7 @@
       "status": "Status",
       "all": "All",
       "liveUpdates": "Live Updates",
+      "perPage": "Per Page",
       "actions": "Actions",
       "runScheduledTasks": "Run Scheduled Tasks",
       "restartQueue": "Restart Queue",

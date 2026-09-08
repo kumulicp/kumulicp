@@ -50,7 +50,8 @@ class Tasks extends Controller
         if ($request->app_instance) {
             $tasks->where('app_instance_id', $request->app_instance);
         }
-        $tasks = $tasks->with(['application', 'version', 'organization', 'app_instance'])->paginate(20);
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $tasks = $tasks->with(['application', 'version', 'organization', 'app_instance'])->paginate($perPage);
 
         return [
             'tasks' => $tasks->map(function ($task) {
