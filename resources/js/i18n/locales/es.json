@@ -73,6 +73,7 @@
     "orgRegisterCompleteSubmit": "Crear Cuenta"
   },
   "common": {
+    "none": "Ninguno",
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "create": "Crear",
@@ -189,7 +190,9 @@
       "removeMessage": "¿Estás seguro de que quieres eliminar {name}? Esta acción es permanente.",
       "edit": "Editar",
       "helmChartValues": "Valores del Helm Chart",
-      "serverValues": "Servidor - Valores"
+      "serverValues": "Servidor - Valores",
+      "secretStore": "Almacén de Secretos",
+      "secretStoreMessage": "De dónde se leen/escriben los secretos operativos de este servidor (contraseña de enlace LDAP, contraseña de administrador inicial, contraseña de base de datos, etc.). Por defecto usa el almacén predeterminado del sistema si no se establece."
     },
     "sharedApps": {
       "apps": "Aplicaciones",
@@ -671,6 +674,36 @@
       "migrateFrom": "Desde",
       "migrateTo": "Hasta",
       "migrated": "Versiones de la aplicación migradas al nuevo secreto de extracción"
+    },
+    "secretStores": {
+      "secretStores": "Almacenes de Secretos",
+      "description": "Configure dónde se almacenan los secretos operativos (contraseñas de enlace LDAP, contraseñas de administrador inicial, contraseñas de base de datos, etc.) usados por los despliegues de helm chart. Cada servidor puede apuntar a un almacén de secretos diferente.",
+      "addSecretStore": "Agregar Almacén de Secretos",
+      "editSecretStore": "Editar Almacén de Secretos",
+      "name": "Nombre",
+      "driver": "Controlador",
+      "driverDatabase": "Base de datos (predeterminado)",
+      "driverOpenbao": "OpenBao",
+      "address": "Dirección",
+      "addressMessage": "La URL base del servidor OpenBao, p. ej. https://openbao.example.com",
+      "roleId": "AppRole Role ID",
+      "secretId": "AppRole Secret ID",
+      "secretIdEditMessage": "Déjelo en blanco para mantener el secret ID actual",
+      "mountPath": "Ruta de Montaje",
+      "mountPathMessage": "La ruta de montaje del motor de secretos KV v2 (por defecto \"secret\")",
+      "namespace": "Espacio de Nombres",
+      "default": "Predeterminado",
+      "usedBy": "Usado por {count} servidor(es)",
+      "testConnection": "Probar Conexión",
+      "testSucceeded": "Conexión exitosa",
+      "testFailed": "Conexión fallida",
+      "added": "Almacén de secretos agregado",
+      "updated": "Almacén de secretos actualizado",
+      "deleted": "Almacén de secretos eliminado",
+      "inUse": "Este almacén de secretos no se puede eliminar porque está asignado a uno o más servidores",
+      "cannotDeleteDefault": "El almacén de secretos predeterminado no se puede eliminar",
+      "removeTitle": "¿Eliminar {name}?",
+      "removeMessage": "¿Está seguro de que desea eliminar {name}? Esta acción es permanente y no se puede deshacer."
     },
     "security": {
       "scans": "Escaneos de Seguridad",
@@ -1221,6 +1254,7 @@
       "publicFacingLabel": "Etiqueta visible al público"
     },
     "pullSecrets": "Secretos de Extracción",
+    "secretStores": "Almacenes de Secretos",
     "selfRegistration": "Autorregistro",
     "captcha": "CAPTCHA",
     "captchaDescription": "Agrega protección CAPTCHA al formulario de autorregistro para evitar spam y envíos automatizados.",

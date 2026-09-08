@@ -73,6 +73,7 @@
     "orgRegisterCompleteSubmit": "Create Account"
   },
   "common": {
+    "none": "None",
     "cancel": "Cancel",
     "delete": "Delete",
     "create": "Create",
@@ -189,7 +190,9 @@
       "removeMessage": "Are you sure you want to remove {name}? This action is permanent.",
       "edit": "Edit",
       "helmChartValues": "Helm Chart Values",
-      "serverValues": "Server - Values"
+      "serverValues": "Server - Values",
+      "secretStore": "Secret Store",
+      "secretStoreMessage": "Where this server's operational secrets (LDAP bind password, initial admin password, database password, etc.) are read from/written to. Defaults to the system default store when not set."
     },
     "sharedApps": {
       "apps": "Apps",
@@ -674,6 +677,36 @@
       "migrateFrom": "From",
       "migrateTo": "To",
       "migrated": "App versions migrated to the new pull secret"
+    },
+    "secretStores": {
+      "secretStores": "Secret Stores",
+      "description": "Configure where operational secrets (LDAP bind passwords, initial admin passwords, database passwords, etc.) used by helm chart deployments are stored. Each server can be pointed at a different secret store.",
+      "addSecretStore": "Add Secret Store",
+      "editSecretStore": "Edit Secret Store",
+      "name": "Name",
+      "driver": "Driver",
+      "driverDatabase": "Database (default)",
+      "driverOpenbao": "OpenBao",
+      "address": "Address",
+      "addressMessage": "The base URL of the OpenBao server, e.g. https://openbao.example.com",
+      "roleId": "AppRole Role ID",
+      "secretId": "AppRole Secret ID",
+      "secretIdEditMessage": "Leave blank to keep the current secret ID",
+      "mountPath": "Mount Path",
+      "mountPathMessage": "The KV v2 secrets engine mount path (defaults to \"secret\")",
+      "namespace": "Namespace",
+      "default": "Default",
+      "usedBy": "Used by {count} server(s)",
+      "testConnection": "Test Connection",
+      "testSucceeded": "Connection succeeded",
+      "testFailed": "Connection failed",
+      "added": "Secret store added",
+      "updated": "Secret store updated",
+      "deleted": "Secret store deleted",
+      "inUse": "This secret store cannot be deleted because it is assigned to one or more servers",
+      "cannotDeleteDefault": "The default secret store cannot be deleted",
+      "removeTitle": "Remove {name}?",
+      "removeMessage": "Are you sure you want to remove {name}? This action is permanent and cannot be undone."
     },
     "security": {
       "scans": "Security Scans",
@@ -1229,6 +1262,7 @@
       "publicFacingLabel": "Public facing label"
     },
     "pullSecrets": "Pull Secrets",
+    "secretStores": "Secret Stores",
     "systemChecks": "System Checks",
     "selfRegistration": "Self-Registration",
     "captcha": "CAPTCHA",

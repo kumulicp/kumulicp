@@ -4,6 +4,7 @@ namespace App\Integrations\ServerManagers\Rancher\Charts;
 
 use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 class NextcloudChart extends HelmChart
 {
@@ -40,7 +41,11 @@ class NextcloudChart extends HelmChart
                 'enabled' => $database_server ? true : false,
                 'database' => $database_server ? $app_instance->databasename : '',
                 'host' => $database_server ? $database_server->internal_address : '',
-                'password' => $database_server ? $organization->secretpw : '',
+                'password' => $database_server ? $database_server->secretStore()->getOrCreate(
+                    "app-instance/{$this->app_instance->id}/db-password",
+                    'password',
+                    fn () => Str::password(20)
+                ) : '',
                 'user' => $database_server ? $app_instance->databasename : '',
             ],
             'hpa' => [

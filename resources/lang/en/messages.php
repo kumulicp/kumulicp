@@ -28,6 +28,7 @@ return [
         'database_failed' => "Database couldn't be created",
         'sso_failed' => "SSO couldn't be created",
         'account_manager_driver_fail' => "Account manager driver doesn't exist",
+        'secret_store_driver_fail' => "Secret store driver doesn't exist",
         'action_not_subclass' => ':action is not a subclass of Action',
         'no_configuration' => 'Could not obtain :app configuration :configuration',
         'no_backup_driver' => ':driver doesn\'t exist',

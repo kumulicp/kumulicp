@@ -148,6 +148,17 @@ return [
         'inUse' => 'Este secreto de extracción no se puede eliminar porque es requerido por una o más instancias de aplicación',
         'migrated' => 'Versiones de la aplicación migradas al nuevo secreto de extracción',
     ],
+    'secretStores' => [
+        'secretStores' => 'Almacenes de Secretos',
+        'default' => 'Predeterminado',
+        'added' => 'Almacén de secretos agregado',
+        'updated' => 'Almacén de secretos actualizado',
+        'deleted' => 'Almacén de secretos eliminado',
+        'inUse' => 'Este almacén de secretos no se puede eliminar porque está asignado a uno o más servidores',
+        'cannotDeleteDefault' => 'El almacén de secretos predeterminado no se puede eliminar',
+        'testSucceeded' => 'Conexión exitosa',
+        'testFailed' => 'Conexión fallida',
+    ],
     'tasks' => [
         'tasks' => 'Tareas',
         'restarted' => 'La tarea intentará ejecutarse de nuevo',

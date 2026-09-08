@@ -3,6 +3,8 @@
 namespace App;
 
 use App\Casts\EmptyStringAsNullEncrypted;
+use App\Contracts\SecretStore\SecretStoreContract;
+use App\Support\Facades\SecretStore;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,9 +18,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property array|null $settings
  * @property bool $is_backup_server
  * @property int|null $app_instance_id
+ * @property int|null $secret_store_id
  * @property-read \App\AppInstance|null $app_instance
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $org_servers
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
+ * @property-read \App\SecretStore|null $secret_store
  */
 class Server extends Model
 {
@@ -52,6 +56,25 @@ class Server extends Model
     public function app_instances()
     {
         return $this->hasManyThrough('App\AppInstance', 'App\OrgServer');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\SecretStore, $this>
+     */
+    public function secret_store(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo('App\SecretStore');
+    }
+
+    /**
+     * The secret store driver this server's operational secrets (LDAP bind
+     * password, initial admin password, database password, etc.) should be
+     * read from/written to - falls back to the system default store when
+     * this server has none explicitly assigned.
+     */
+    public function secretStore(): SecretStoreContract
+    {
+        return SecretStore::for($this);
     }
 
     public function tests()

@@ -3,6 +3,8 @@
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\Contracts\SecretStore\SecretStoreContract;
+use App\SecretStore;
 use App\Services\AccountManagerService;
 use App\Services\AdditionalStorageService;
 use App\Services\UserPermissionsService;
@@ -13,6 +15,7 @@ use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Tests\Support\Billing\FakeBillingGateway;
 use Tests\Support\Registrars\FakeRegistrar;
 use Tests\Support\ServerManagers\FakeServerManagerProfile;
@@ -40,6 +43,7 @@ uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Registrars');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/ServerManagers');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/SecretStore');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Services');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Settings');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/SSO');
@@ -212,6 +216,85 @@ function skipUnlessSSO(string $driver, string $required): void
     if ($driver !== $required) {
         test()->markTestSkipped("Requires '{$required}' SSO driver");
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Secret Store Driver Helpers
+|--------------------------------------------------------------------------
+|
+| Tests under tests/Feature/SecretStore/ run the same contract assertions
+| against both the 'database' and 'openbao' drivers using the
+| 'secret_store_drivers' dataset. The 'openbao' driver is exercised against
+| an in-memory fake KV v2 store via Http::fake(), not a real OpenBao server.
+|
+*/
+
+// Named dataset — use ->with('secret_store_drivers') on any test.
+dataset('secret_store_drivers', ['database', 'openbao']);
+
+/**
+ * Create a SecretStore of the given driver (faking OpenBao's HTTP API when
+ * needed) and return its resolved driver contract alongside the model.
+ *
+ * @return array{0: SecretStoreContract, 1: SecretStore}
+ */
+function makeSecretStore(string $driver): array
+{
+    $store = $driver === 'openbao'
+        ? SecretStore::factory()->openbao()->create()
+        : SecretStore::factory()->create();
+
+    if ($driver === 'openbao') {
+        fakeOpenBao();
+    }
+
+    return [app('secret_store')->driver($store), $store];
+}
+
+/**
+ * Fake an OpenBao/Vault-compatible KV v2 + AppRole login API in-memory, so
+ * the OpenBao driver can be exercised without a real server. State (the
+ * fake KV store) persists across calls within the same test.
+ */
+function fakeOpenBao(): void
+{
+    $kv = [];
+
+    Http::fake(function ($request) use (&$kv) {
+        $url = $request->url();
+        $method = $request->method();
+
+        if (str_contains($url, '/v1/auth/approle/login')) {
+            return Http::response(['auth' => ['client_token' => 'fake-token']], 200);
+        }
+
+        if (preg_match('#/v1/secret/data/(.+)$#', $url, $matches)) {
+            $path = $matches[1];
+
+            if ($method === 'GET') {
+                if (! array_key_exists($path, $kv)) {
+                    return Http::response([], 404);
+                }
+
+                return Http::response(['data' => ['data' => $kv[$path]]], 200);
+            }
+
+            if ($method === 'POST') {
+                $kv[$path] = $request->data()['data'] ?? [];
+
+                return Http::response(['data' => ['version' => 1]], 200);
+            }
+
+            if ($method === 'DELETE') {
+                unset($kv[$path]);
+
+                return Http::response([], 204);
+            }
+        }
+
+        return Http::response([], 404);
+    });
 }
 
 /*

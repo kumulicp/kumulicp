@@ -163,6 +163,19 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error="$page.props.errors.is_backup_server"
         :error-messages="$page.props.errors.is_backup_server"
       />
+      <va-select v-model="form.secret_store_id"
+        :label="$t('admin.servers.secretStore')"
+        :messages="$t('admin.servers.secretStoreMessage')"
+        id="secretStore"
+        :options="secret_store_options"
+        immediateValidation
+        value-by="id"
+        class="mb-2"
+        text-by="name"
+        clearable
+        :error="$page.props.errors.secret_store_id"
+        :error-messages="$page.props.errors.secret_store_id"
+      />
     </template>
   </AdminSettings>
   <va-list-separator class="my-1" fit />
@@ -220,7 +233,8 @@ export default {
     server: Object,
     errors: Object,
     can: Object,
-    backup_servers: Object
+    backup_servers: Object,
+    secret_stores: Array
   },
   data () {
     const settings = []
@@ -241,6 +255,10 @@ export default {
         { value: 'database', text: this.$t('admin.servers.database') },
         { value: 'email', text: this.$t('admin.servers.email') }
       ],
+      secret_store_options: [
+        { id: null, name: this.$t('common.none') },
+        ...this.secret_stores
+      ],
       form: useForm({
         name: this.server.name,
         host: this.server.host,
@@ -254,7 +272,8 @@ export default {
         api_key: this.server.api_key,
         api_secret: this.server.api_secret,
         default_backup_server: this.server.default_backup_server,
-        is_backup_server: this.server.is_backup_server
+        is_backup_server: this.server.is_backup_server,
+        secret_store_id: this.server.secret_store_id
       })
     }
   },

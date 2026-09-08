@@ -6,6 +6,7 @@ use App\Actions\Servers\ServerActivate;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
+use App\SecretStore;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\Facades\ServerInterface;
@@ -140,6 +141,7 @@ class Servers extends Controller
                 ] : [],
                 'default_backup_server' => $server->default_backup_server_id,
                 'is_backup_server' => $server->is_backup_server,
+                'secret_store_id' => $server->secret_store_id,
             ],
             'backup_servers' => Server::where('is_backup_server', true)->where('type', $server->type)->whereNot('id', $server->id)->get()->map(function ($server) {
                 return [
@@ -153,6 +155,12 @@ class Servers extends Controller
                 'id' => null,
                 'name' => 'None',
             ]),
+            'secret_stores' => SecretStore::orderBy('name')->get()->map(function ($secret_store) {
+                return [
+                    'id' => $secret_store->id,
+                    'name' => $secret_store->name.($secret_store->is_default ? ' ('.__('admin.secretStores.default', []).')' : ''),
+                ];
+            }),
             'can' => [
                 'activate' => $successful_test_count > 0,
             ],
@@ -182,6 +190,7 @@ class Servers extends Controller
             'settings' => 'array|nullable',
             'default_backup_server' => 'nullable|exists:servers,id',
             'is_backup_server' => 'nullable|boolean',
+            'secret_store_id' => 'nullable|exists:secret_stores,id',
         ]);
 
         $server->name = $validated['name'];
@@ -194,6 +203,7 @@ class Servers extends Controller
         $server->settings = $validated['settings'];
         $server->default_backup_server_id = $validated['default_backup_server'];
         $server->is_backup_server = $validated['is_backup_server'];
+        $server->secret_store_id = $validated['secret_store_id'] ?? null;
         $server->save();
 
         return redirect('/admin/server/servers/'.$server->id)->with('success', __('admin.servers.updated', ['server' => $server->name]));

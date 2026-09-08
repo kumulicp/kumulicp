@@ -50,6 +50,10 @@ export default {
         url: basePath + '/pull-secrets'
       },
       {
+        title: this.$t('settings.secretStores'),
+        url: basePath + '/secret-stores'
+      },
+      {
         title: this.$t('settings.selfRegistration'),
         url: basePath + '/registration'
       },

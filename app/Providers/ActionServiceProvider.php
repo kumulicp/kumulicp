@@ -8,6 +8,7 @@ use App\Services\ApplicationService;
 use App\Services\BackupService;
 use App\Services\FastCacheService;
 use App\Services\OrganizationService;
+use App\Services\SecretStoreService;
 use App\Services\SecurityToolService;
 use App\Services\ServerInterfaceService;
 use App\Services\SettingsService;
@@ -69,6 +70,10 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
             return new AccountManagerService;
         });
 
+        $this->app->singleton('secret_store', function ($app) {
+            return new SecretStoreService;
+        });
+
         $this->app->singleton('settings', function ($app) {
             return new SettingsService;
         });
@@ -92,6 +97,6 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
      */
     public function provides()
     {
-        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
+        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'secret_store', 'fastcache', 'settings'];
     }
 }

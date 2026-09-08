@@ -188,6 +188,13 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('mass-migrate', 'App\Http\Controllers\Admin\Settings\PullSecrets@massMigrate');
                 Route::delete('{pullSecret}', 'App\Http\Controllers\Admin\Settings\PullSecrets@destroy');
             });
+            Route::prefix('secret-stores')->group(function () {
+                Route::get('/', 'App\Http\Controllers\Admin\Settings\SecretStores@index');
+                Route::post('/', 'App\Http\Controllers\Admin\Settings\SecretStores@store');
+                Route::put('{secretStore}', 'App\Http\Controllers\Admin\Settings\SecretStores@update');
+                Route::delete('{secretStore}', 'App\Http\Controllers\Admin\Settings\SecretStores@destroy');
+                Route::post('{secretStore}/test', 'App\Http\Controllers\Admin\Settings\SecretStores@testConnection');
+            });
             Route::prefix('system-checks')->group(function () {
                 Route::get('', 'Admin\Settings\SystemChecks@index')->name('settings.system_checks');
                 Route::post('ldap-models', 'Admin\Settings\SystemChecks@ldapModels')->name('settings.system_checks.ldap_models');

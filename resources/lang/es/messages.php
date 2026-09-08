@@ -28,6 +28,7 @@ return [
         'database_failed' => 'No se pudo crear la base de datos',
         'sso_failed' => 'No se pudo crear el SSO',
         'account_manager_driver_fail' => 'El controlador del gestor de cuentas no existe',
+        'secret_store_driver_fail' => 'El controlador del almacén de secretos no existe',
         'action_not_subclass' => ':action no es una subclase de Action',
         'no_configuration' => 'No se pudo obtener la configuración :configuration de :app',
         'no_backup_driver' => ':driver no existe',

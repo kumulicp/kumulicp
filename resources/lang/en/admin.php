@@ -149,6 +149,17 @@ return [
         'inUse' => 'This pull secret cannot be deleted because it is required by one or more app instances',
         'migrated' => 'App versions migrated to the new pull secret',
     ],
+    'secretStores' => [
+        'secretStores' => 'Secret Stores',
+        'default' => 'Default',
+        'added' => 'Secret store added',
+        'updated' => 'Secret store updated',
+        'deleted' => 'Secret store deleted',
+        'inUse' => 'This secret store cannot be deleted because it is assigned to one or more servers',
+        'cannotDeleteDefault' => 'The default secret store cannot be deleted',
+        'testSucceeded' => 'Connection succeeded',
+        'testFailed' => 'Connection failed',
+    ],
     'tasks' => [
         'tasks' => 'Tasks',
         'restarted' => 'Task will attempt to run again',
