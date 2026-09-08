@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
+use App\Support\Redactor;
 use Illuminate\Http\Request;
 
 class Applications extends Controller
@@ -178,7 +179,7 @@ class Applications extends Controller
             ],
             'charts' => collect($charts)->map(fn ($chart) => [
                 'name' => $chart->chartName(),
-                'values' => $chart->values(),
+                'values' => Redactor::redact($chart->values()),
             ])->values(),
             'breadcrumbs' => [
                 [
