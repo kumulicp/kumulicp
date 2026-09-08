@@ -565,6 +565,7 @@
       "status": "Estado",
       "all": "Todo",
       "liveUpdates": "Actualizaciones en Vivo",
+      "perPage": "Por Página",
       "actions": "Acciones",
       "runScheduledTasks": "Ejecutar Tareas Programadas",
       "restartQueue": "Reiniciar Cola",

@@ -40,6 +40,16 @@ import axios from 'axios'
             />
           </div>
         </div>
+        <div class="flex flex-col">
+          <div class="item">
+            <VaSelect
+              v-model="perPage"
+              :label="$t('admin.tasks.perPage')"
+              :options="perPageOptions"
+              @update:modelValue="changePerPage"
+            />
+          </div>
+        </div>
         <div class="flex flex-col" style="flex-grow:1">
           <div class="item va-text-right">
             <VaSwitch v-model="liveMode"
@@ -180,6 +190,8 @@ export default {
       selectedItems: [],
       filterApp: '',
       filterStatus: '',
+      perPage: 20,
+      perPageOptions: [10, 20, 50, 100],
       liveMode: true,
       columns: [
         { key: 'id', sortable: true },
@@ -216,7 +228,8 @@ export default {
 
       axios.post('/admin/server/tasks/api?page=' + vueState.meta.page, {
         app: vueState.filterApp,
-        status: vueState.filterStatus.value
+        status: vueState.filterStatus.value,
+        per_page: vueState.perPage
       })
         .then(function (response) {
           vueState.task_list = response.data.tasks
@@ -299,6 +312,10 @@ export default {
           class: ['error-alert']
         }
       }
+    },
+    changePerPage () {
+      this.meta.page = 1
+      this.updateTaskList()
     },
     changeLiveMode () {
       if (this.liveMode) {
