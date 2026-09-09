@@ -165,7 +165,7 @@ class ApplicationUpgrade extends Action
 
         $threshold = config('queue.connections.database-long.retry_after', 960);
 
-        if (now()->diffInSeconds(\Illuminate\Support\Carbon::parse($pending_since), absolute: true) < $threshold) {
+        if (now()->diffInSeconds(Carbon::parse($pending_since), absolute: true) < $threshold) {
             return false;
         }
 

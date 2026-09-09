@@ -14,9 +14,9 @@ use Illuminate\Support\Arr;
  * @property string|null $admin_path
  * @property array $roles
  * @property array $settings
- * @property-read \App\Application $application
- * @property-read \App\RepoSecret|null $pullSecret
- * @property-read \App\RepoSecret|null $helmRepoSecret
+ * @property-read Application $application
+ * @property-read RepoSecret|null $pullSecret
+ * @property-read RepoSecret|null $helmRepoSecret
  */
 class AppVersion extends Model
 {

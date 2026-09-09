@@ -1,5 +1,7 @@
 <?php
 
+use App\Application;
+use App\AppVersion;
 use App\RepoSecret;
 
 it('builds a k8s secret name from its id', function () {
@@ -46,10 +48,10 @@ it('defaults to the image type', function () {
 it('scopes versions() by type', function () {
     $image_secret = RepoSecret::factory()->create();
     $helm_secret = RepoSecret::factory()->helm()->create();
-    $application = App\Application::factory()->create();
+    $application = Application::factory()->create();
 
-    App\AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $image_secret->id]);
-    App\AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $helm_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $image_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $helm_secret->id]);
 
     expect($image_secret->versions()->count())->toBe(1);
     expect($helm_secret->versions()->count())->toBe(1);
@@ -57,10 +59,10 @@ it('scopes versions() by type', function () {
 
 it('matches versions() via either column for the both type', function () {
     $both_secret = RepoSecret::factory()->both()->create();
-    $application = App\Application::factory()->create();
+    $application = Application::factory()->create();
 
-    App\AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $both_secret->id]);
-    App\AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $both_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $both_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $both_secret->id]);
 
     expect($both_secret->versions()->count())->toBe(2);
 });
