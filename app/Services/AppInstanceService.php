@@ -197,8 +197,8 @@ class AppInstanceService
         ) {
             return Arr::get($settings, "configurations.$configuration");
             //  Check if plan has configuration set
-        } elseif ($plan_setting = $this->app_instance->plan?->setting("configurations.$configuration")) {
-            return $plan_setting;
+        } elseif ($this->app_instance->plan && Arr::has($this->app_instance->plan->settings ?? [], "configurations.$configuration")) {
+            return $this->app_instance->plan->setting("configurations.$configuration");
             // If all else fails, get the default from the app's profiles
         } elseif (Arr::has($config, 'default')) {
             return Arr::get($config, 'default');
