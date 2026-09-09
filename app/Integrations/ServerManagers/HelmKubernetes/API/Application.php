@@ -9,10 +9,14 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Installs/upgrades/removes app releases. install/upgrade/uninstall run as
+ * Installs/upgrades/removes app releases. install/upgrade/uninstall start
  * an in-cluster Job (see HelmInstaller) under the per-namespace
  * kumulicp-helm-installer identity, since those are the operations that
- * touch whatever arbitrary resource kinds a chart's subcharts create.
+ * touch whatever arbitrary resource kinds a chart's subcharts create --
+ * HelmInstaller returns as soon as the Job is accepted, it does not wait
+ * for the install itself to finish (see its class docblock for why).
+ * Actual completion is tracked separately via isActive(), on the normal
+ * task-completion polling schedule (ApplicationUpgrade::complete() etc).
  * Read-only/Helm's-own-bookkeeping operations (retrieve, isActive,
  * deleteStuckReleaseSecrets) stay as direct `helm`/`kubectl` CLI calls
  * under kumulicp-deployer. Reuses the same Chart value-array builders
@@ -48,7 +52,7 @@ class Application extends Kubernetes
 
         array_push($subcommand, '-f', '/values/values.yaml', '--wait', '--timeout', '720s');
 
-        $result = $this->helmInstaller()->runAndWait($namespace, $release_name, $subcommand, $values_yaml, $secret_env);
+        $result = $this->helmInstaller()->create($namespace, $release_name, $subcommand, $values_yaml, $secret_env);
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
@@ -79,7 +83,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $result = $this->helmInstaller()->runAndWait($namespace, $release_name, ['uninstall', $release_name, '--ignore-not-found']);
+        $result = $this->helmInstaller()->create($namespace, $release_name, ['uninstall', $release_name, '--ignore-not-found']);
 
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 

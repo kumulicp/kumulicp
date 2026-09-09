@@ -17,7 +17,10 @@ it('builds a Job manifest using the per-namespace installer identity, not kumuli
     expect($manifest['spec']['template']['spec']['restartPolicy'])->toBe('Never');
     expect($manifest['spec']['backoffLimit'])->toBe(0);
     expect($manifest['spec']['template']['spec']['containers'][0]['image'])->toBe('test-registry/kumulicp-helm-runner:1.0.0');
-    expect($manifest['spec']['template']['spec']['containers'][0]['args'])
+    expect($manifest['spec']['template']['spec']['containers'][0]['command'])->toBe(['/bin/sh', '-c']);
+    // args[0] is the entrypoint script, args[1] is $0 (the "sh" convention
+    // for `sh -c script argv0 args...`), the actual helm subcommand follows.
+    expect(array_slice($manifest['spec']['template']['spec']['containers'][0]['args'], 2))
         ->toBe(['upgrade', '--install', 'nextcloud-5iy7z', 'nextcloud']);
 });
 
@@ -53,7 +56,20 @@ it('builds a credentials Secret and wires it via envFrom when secretEnv is given
     expect($secret['kind'])->toBe('Secret');
     expect($secret['stringData'])->toBe(['HELM_REPO_USERNAME' => 'deploy', 'HELM_REPO_PASSWORD' => 'secret']);
     expect($manifest['spec']['template']['spec']['containers'][0]['envFrom'][0]['secretRef']['name'])->toBe($job->secretName());
-    expect(json_encode($manifest['spec']['template']['spec']['containers'][0]['args']))->not->toContain('secret');
+    expect(json_encode($manifest['spec']['template']['spec']['containers'][0]['args']))->not->toContain('deploy');
+    expect(json_encode($manifest['spec']['template']['spec']['containers'][0]['args']))->not->toContain('"secret"');
+});
+
+it('embeds the credential-injection script so no custom image is needed', function () {
+    $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+
+    $script = $job->jobManifest()['spec']['template']['spec']['containers'][0]['args'][0];
+
+    expect($script)->toContain('set -e');
+    expect($script)->toContain('helm registry login');
+    expect($script)->toContain('OCI_REGISTRY_HOST');
+    expect($script)->toContain('HELM_REPO_USERNAME');
+    expect($script)->toContain('exec helm "$@"');
 });
 
 it('omits the Secret entirely when there are no credentials', function () {
@@ -69,4 +85,28 @@ it('generates a unique job name per instance so concurrent installs cannot colli
 
     expect($a->jobName)->not->toBe($b->jobName);
     expect($a->labelSelector())->toBe("job-name={$a->jobName}");
+});
+
+it('omits ownerReferences when no Job uid is given yet', function () {
+    $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", [
+        'HELM_REPO_USERNAME' => 'deploy',
+    ]);
+
+    expect($job->configMapManifest())->not->toHaveKey('metadata.ownerReferences');
+    expect($job->secretManifest())->not->toHaveKey('metadata.ownerReferences');
+});
+
+it('adds an ownerReference pointing at the Job once its uid is given', function () {
+    $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", [
+        'HELM_REPO_USERNAME' => 'deploy',
+    ]);
+
+    $configMapOwner = $job->configMapManifest('job-uid-123')['metadata']['ownerReferences'][0];
+    $secretOwner = $job->secretManifest('job-uid-123')['metadata']['ownerReferences'][0];
+
+    foreach ([$configMapOwner, $secretOwner] as $owner) {
+        expect($owner['kind'])->toBe('Job');
+        expect($owner['name'])->toBe($job->jobName);
+        expect($owner['uid'])->toBe('job-uid-123');
+    }
 });

@@ -5,7 +5,6 @@ use App\Organization;
 use App\OrgServer;
 use App\Server;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Sleep;
 
 function makeHelmInstaller(): HelmInstaller
 {
@@ -27,76 +26,171 @@ function makeHelmInstaller(): HelmInstaller
     return new HelmInstaller($organization, $org_server);
 }
 
-it('reports success once the Job reports succeeded, and never sleeps once already done', function () {
-    Sleep::fake(syncWithCarbon: true);
+// Note: Process::fake()'s array keys support wildcard (Str::is()) matching,
+// but Process::assertRan()/assertRanTimes()/assertNotRan() do NOT -- a
+// plain string there is compared with strict equality against the whole
+// $process->command array, so a literal '*apply*' string never matches
+// anything. Assertions below use closures inspecting $process->command
+// (and ->input, for the piped manifest JSON) instead.
+function isApplyCommand($process): bool
+{
+    return in_array('apply', (array) $process->command, true);
+}
 
+function isDeleteCommand($process, string $kind): bool
+{
+    return in_array('delete', (array) $process->command, true)
+        && in_array($kind, (array) $process->command, true);
+}
+
+// Returns the applied manifest's own metadata.name in the response, and a
+// uid only for the Job -- mirroring how kubectl apply -o json actually
+// echoes back the created/updated object.
+function fakeApplyReturningUid(string $uid): \Closure
+{
+    return function ($process) use ($uid) {
+        $manifest = json_decode($process->input, true);
+        $metadata = ['name' => $manifest['metadata']['name'] ?? 'x'];
+
+        if (($manifest['kind'] ?? null) === 'Job') {
+            $metadata['uid'] = $uid;
+        }
+
+        return Process::result(json_encode(['metadata' => $metadata]));
+    };
+}
+
+it('creates the Job and returns success once it is accepted, without waiting for it to finish', function () {
     Process::fake([
-        '*apply*' => Process::result(json_encode(['metadata' => ['name' => 'x']])),
-        '*get*job*' => Process::result(json_encode(['status' => ['succeeded' => 1]])),
-        '*logs*' => Process::result('helm output: deployed'),
-        '*delete*' => Process::result(''),
+        '*apply*' => fakeApplyReturningUid('job-uid-123'),
     ]);
 
     $installer = makeHelmInstaller();
-    $result = $installer->runAndWait('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
 
     expect($result['success'])->toBeTrue();
-    expect($result['output'])->toBe('helm output: deployed');
+    expect($result['output'])->toContain('nextcloud-5iy7z');
     expect($result['exit_code'])->toBe(0);
 
-    Sleep::assertNeverSlept();
+    Process::assertNotRan(fn ($process) => in_array('get', (array) $process->command, true));
+    Process::assertNotRan(fn ($process) => in_array('logs', (array) $process->command, true));
 });
 
-it('polls until the Job reports failed, then returns the pod logs as the error', function () {
-    Sleep::fake(syncWithCarbon: true);
-
+it('attaches an ownerReference to the values ConfigMap once the Job uid is known', function () {
     Process::fake([
-        '*apply*' => Process::result(json_encode(['metadata' => ['name' => 'x']])),
-        '*get*job*' => Process::sequence()
-            ->push(json_encode(['status' => ['active' => 1]]))
-            ->push(json_encode(['status' => ['active' => 1]]))
-            ->push(json_encode(['status' => ['failed' => 1]])),
-        '*logs*' => Process::result('Error: could not render templates'),
-        '*delete*' => Process::result(''),
+        '*apply*' => fakeApplyReturningUid('job-uid-123'),
     ]);
 
     $installer = makeHelmInstaller();
-    $result = $installer->runAndWait('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
+    $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
 
-    expect($result['success'])->toBeFalse();
-    expect($result['error'])->toBe('Error: could not render templates');
+    Process::assertRan(function ($process) {
+        $manifest = json_decode($process->input, true);
 
-    Sleep::assertSlept(fn ($duration) => $duration->total('seconds') === 5.0, times: 2);
+        return ($manifest['kind'] ?? null) === 'ConfigMap'
+            && ($manifest['metadata']['ownerReferences'][0]['uid'] ?? null) === 'job-uid-123'
+            && ($manifest['metadata']['ownerReferences'][0]['kind'] ?? null) === 'Job';
+    });
 });
 
-it('gives up and reports failure once the deadline passes without the Job ever finishing', function () {
-    Sleep::fake(syncWithCarbon: true);
-
+it('never creates a values ConfigMap or credentials Secret for a plain uninstall', function () {
     Process::fake([
-        '*apply*' => Process::result(json_encode(['metadata' => ['name' => 'x']])),
-        '*get*job*' => Process::result(json_encode(['status' => ['active' => 1]])),
-        '*logs*' => Process::result(''),
-        '*delete*' => Process::result(''),
+        '*apply*' => fakeApplyReturningUid('job-uid-123'),
     ]);
 
     $installer = makeHelmInstaller();
-    $result = $installer->runAndWait('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", null, timeoutSeconds: 20);
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['uninstall', 'nextcloud-5iy7z', '--ignore-not-found']);
 
-    expect($result['success'])->toBeFalse();
-    expect($result['error'])->toContain('did not complete within 20s');
+    expect($result['success'])->toBeTrue();
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 1);
+});
+
+it('wires credentials into a Secret via envFrom and attaches its ownerReference too', function () {
+    Process::fake([
+        '*apply*' => fakeApplyReturningUid('job-uid-123'),
+    ]);
+
+    $installer = makeHelmInstaller();
+    $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", [
+        'HELM_REPO_USERNAME' => 'deploy',
+        'HELM_REPO_PASSWORD' => 'secret',
+    ]);
+
+    // ConfigMap + Secret + Job, then ConfigMap + Secret re-applied with owner refs.
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 5);
+
+    Process::assertRan(function ($process) {
+        $manifest = json_decode($process->input, true);
+
+        return ($manifest['kind'] ?? null) === 'Secret'
+            && ($manifest['metadata']['ownerReferences'][0]['uid'] ?? null) === 'job-uid-123';
+    });
 });
 
 it('bails out without creating the Job if the values ConfigMap apply fails', function () {
-    Sleep::fake(syncWithCarbon: true);
-
     Process::fake([
         '*apply*' => Process::result(output: '', errorOutput: 'namespace not found', exitCode: 1),
     ]);
 
     $installer = makeHelmInstaller();
-    $result = $installer->runAndWait('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
+
+    expect($result['success'])->toBeFalse();
+    expect($result['error'])->toContain('namespace not found');
+
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 1);
+});
+
+it('rolls back the ConfigMap if the credentials Secret apply fails', function () {
+    Process::fake([
+        '*apply*' => function ($process) {
+            $manifest = json_decode($process->input, true);
+
+            if (($manifest['kind'] ?? null) === 'Secret') {
+                return Process::result(output: '', errorOutput: 'forbidden', exitCode: 1);
+            }
+
+            return Process::result(json_encode(['metadata' => ['name' => $manifest['metadata']['name'] ?? 'x']]));
+        },
+        '*delete*' => Process::result(''),
+    ]);
+
+    $installer = makeHelmInstaller();
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", [
+        'HELM_REPO_USERNAME' => 'deploy',
+        'HELM_REPO_PASSWORD' => 'secret',
+    ]);
 
     expect($result['success'])->toBeFalse();
 
-    Process::assertNotRan('*get*job*');
+    // ConfigMap (succeeded) + Secret (failed) -- never reaches the Job apply.
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 2);
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'configmap'));
+});
+
+it('rolls back the ConfigMap and Secret if the Job apply itself fails', function () {
+    Process::fake([
+        '*apply*' => function ($process) {
+            $manifest = json_decode($process->input, true);
+
+            if (($manifest['kind'] ?? null) === 'Job') {
+                return Process::result(output: '', errorOutput: 'forbidden', exitCode: 1);
+            }
+
+            return Process::result(json_encode(['metadata' => ['name' => $manifest['metadata']['name'] ?? 'x']]));
+        },
+        '*delete*' => Process::result(''),
+    ]);
+
+    $installer = makeHelmInstaller();
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n", [
+        'HELM_REPO_USERNAME' => 'deploy',
+        'HELM_REPO_PASSWORD' => 'secret',
+    ]);
+
+    expect($result['success'])->toBeFalse();
+    expect($result['error'])->toBe('forbidden');
+
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'configmap'));
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'secret'));
 });
