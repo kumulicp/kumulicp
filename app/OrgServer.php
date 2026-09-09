@@ -26,6 +26,14 @@ class OrgServer extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'organization_id',
+        'server_id',
+        'backup_server_id',
+        'server_customer_id',
+        'backup_driver',
+    ];
+
     /**
      * @return BelongsTo<Organization, $this>
      */
