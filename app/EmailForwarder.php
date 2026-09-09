@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $domain_id
  * @property string $email
  * @property string $destination
- * @property-read \App\OrgDomain $domain
+ * @property-read OrgDomain $domain
  */
 class EmailForwarder extends Model
 {

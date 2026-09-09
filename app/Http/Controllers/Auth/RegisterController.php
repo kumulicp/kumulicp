@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\View\View;
+use Inertia\Response;
 use Symfony\Component\Mailer\Exception\UnexpectedResponseException;
 
 class RegisterController extends Controller
@@ -66,7 +66,7 @@ class RegisterController extends Controller
     /**
      * Show the application registration form.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
     public function showRegistrationForm()
     {

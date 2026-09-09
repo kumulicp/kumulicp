@@ -43,7 +43,7 @@ class Support extends Controller
 
         try {
             throw new \Exception('Support email not set');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 

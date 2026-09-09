@@ -3,8 +3,10 @@
 namespace App;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -21,14 +23,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $is_primary
  * @property int $email_enabled
  * @property string|null $email_status
- * @property-read \App\Organization|null $organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $subdomains
- * @property-read \App\AppInstance|null $app_instance
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
- * @property-read \App\OrgDomain|null $parent_domain
- * @property-read \App\AppInstance|null $primary_app_instance
- * @property-read \App\Tld|null $tld
- * @property-read \App\OrgServer|null $email_server
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, OrgSubdomain> $subdomains
+ * @property-read AppInstance|null $app_instance
+ * @property-read Collection<int, AppInstance> $app_instances
+ * @property-read OrgDomain|null $parent_domain
+ * @property-read AppInstance|null $primary_app_instance
+ * @property-read Tld|null $tld
+ * @property-read OrgServer|null $email_server
  */
 class OrgDomain extends Model
 {
@@ -41,9 +43,9 @@ class OrgDomain extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }

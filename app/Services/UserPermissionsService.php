@@ -13,6 +13,7 @@ use App\Support\Facades\Action;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
+use App\User;
 use Illuminate\Support\Facades\Gate;
 
 class UserPermissionsService
@@ -172,7 +173,7 @@ class UserPermissionsService
             $permissions->addControlPanelAccess(organization: $organization_give_access);
         } elseif ($organization_give_access) {
             // $control_panel_access is guaranteed true here
-            if ($database_user instanceof \App\User && $database_user->organization_id !== $organization_access) {
+            if ($database_user instanceof User && $database_user->organization_id !== $organization_access) {
                 $database_user->organization()->associate($organization_give_access)->save();
             }
         } elseif ($control_panel_access) {

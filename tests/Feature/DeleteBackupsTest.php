@@ -2,8 +2,8 @@
 
 use App\BackupSchedule;
 use App\Console\Calls\DeleteBackups;
-use App\OrgBackup;
 use App\Organization;
+use App\OrgBackup;
 use App\RecurringBackup;
 use App\Server;
 use App\Support\Facades\Backup;

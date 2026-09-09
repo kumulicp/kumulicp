@@ -7,19 +7,21 @@ use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\Organization\BasePlanService;
 use App\Support\Facades\Subscription;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
  * @property int $application_id
  * @property string $name
  * @property string $slug
- * @property \App\Enums\AccessType $access_type
+ * @property AccessType $access_type
  * @property array|null $required_features
  * @property bool $ignore_role
- * @property-read \App\Application|null $application
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppRole> $implied_roles
+ * @property-read Application|null $application
+ * @property-read Collection<int, AppRole> $implied_roles
  */
 class AppRole extends Model
 {
@@ -37,9 +39,9 @@ class AppRole extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\AppRole, $this>
+     * @return BelongsToMany<AppRole, $this>
      */
-    public function implied_roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function implied_roles(): BelongsToMany
     {
         return $this->belongsToMany('App\AppRole', 'app_implied_roles', 'primary_app_role_id', 'implied_app_role_id');
     }

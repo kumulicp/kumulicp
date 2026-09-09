@@ -9,18 +9,17 @@ use App\Notifications\OrgRegistrationComplete;
 use App\Notifications\OrgRegistrationVerification;
 use App\Organization;
 use App\OrgUserRegistration;
-use App\Rules\EmailAddressExists;
 use App\Rules\UserNotExists;
 use App\SuborgUser;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Register extends Controller
 {
@@ -42,7 +41,7 @@ class Register extends Controller
     {
         $this->abortIfDisabled($organization);
 
-        $key = 'org-register:' . $organization->slug . ':' . $request->ip();
+        $key = 'org-register:'.$organization->slug.':'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
             throw ValidationException::withMessages([

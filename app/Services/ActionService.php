@@ -27,10 +27,12 @@ use App\Actions\Organizations\InvoiceOrganization;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Actions\Organizations\UpdateSubscriptionSettings;
 use App\Actions\Prerequisites;
+use App\Actions\Security\RunSecurityScan;
 use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearTestAccounts;
 use App\Actions\Tests\CreateTests;
 use App\AppInstance;
+use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
 use App\Integrations\Applications\DemoApp\Actions\ProcessGroupOptions as DemoAppProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ManageAddon;
@@ -38,12 +40,10 @@ use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
 use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
-use App\Actions\Security\RunSecurityScan;
 use App\Jobs\RunAction;
 use App\Organization;
 use App\Task;
 use Illuminate\Support\Arr;
-use App\Exceptions\ConnectionFailedException;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -257,7 +257,7 @@ class ActionService
 
             try {
                 $action->postGenerate($task);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 report($e);
                 $task->error_message = $e->getMessage();
                 $task->status = 'failed';
@@ -281,7 +281,7 @@ class ActionService
             try {
                 $action = new $action(...$params);
                 $action->action_group = $category;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 report($e);
 
                 return;

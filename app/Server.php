@@ -2,10 +2,11 @@
 
 namespace App;
 
-use App\Casts\EmptyStringAsNullEncrypted;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -16,9 +17,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property array|null $settings
  * @property bool $is_backup_server
  * @property int|null $app_instance_id
- * @property-read \App\AppInstance|null $app_instance
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $org_servers
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
+ * @property-read AppInstance|null $app_instance
+ * @property-read Collection<int, OrgServer> $org_servers
+ * @property-read Collection<int, AppInstance> $app_instances
  */
 class Server extends Model
 {
@@ -37,9 +38,9 @@ class Server extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppInstance, $this>
+     * @return BelongsTo<AppInstance, $this>
      */
-    public function app_instance(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
     }

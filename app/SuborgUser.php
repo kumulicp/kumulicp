@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $organization_id
  * @property string $username
- * @property-read \App\Organization $organization
+ * @property-read Organization $organization
  */
 class SuborgUser extends Model
 {

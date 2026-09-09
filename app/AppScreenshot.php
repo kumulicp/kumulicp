@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $application_id
  * @property string $filename
  * @property int $display_order
- * @property-read \App\Application $application
+ * @property-read Application $application
  */
 class AppScreenshot extends Model
 {

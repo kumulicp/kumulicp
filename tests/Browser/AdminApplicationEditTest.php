@@ -1,7 +1,7 @@
 <?php
 
-use App\AppScreenshot;
 use App\Application;
+use App\AppScreenshot;
 use App\User;
 
 describe('Admin Application Edit', function () {

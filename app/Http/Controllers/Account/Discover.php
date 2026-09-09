@@ -377,7 +377,7 @@ class Discover extends Controller
         }
 
         $allowedKeys = array_map(
-            fn($k) => str_replace('configurations.', '', $k),
+            fn ($k) => str_replace('configurations.', '', $k),
             array_keys(ApplicationFacade::validateConfigurations($app, true))
         );
 

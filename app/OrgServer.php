@@ -3,8 +3,10 @@
 namespace App;
 
 use App\Support\Facades\ServerInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -13,21 +15,21 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $backup_server_id
  * @property string|null $name
  * @property string|null $status
- * @property-read \App\Organization|null $organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $application_webs
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $application_databases
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgDomain> $domain_email
- * @property-read \App\Server|null $server
- * @property-read \App\OrgServer|null $backup_server
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, AppInstance> $application_webs
+ * @property-read Collection<int, AppInstance> $application_databases
+ * @property-read Collection<int, OrgDomain> $domain_email
+ * @property-read Server|null $server
+ * @property-read OrgServer|null $backup_server
  */
 class OrgServer extends Model
 {
     use HasFactory;
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
@@ -48,9 +50,9 @@ class OrgServer extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Server, $this>
+     * @return BelongsTo<Server, $this>
      */
-    public function server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function server(): BelongsTo
     {
         return $this->belongsTo('App\Server', 'server_id');
     }

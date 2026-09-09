@@ -2,6 +2,7 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -13,9 +14,9 @@ use Illuminate\Support\Arr;
  * @property string|null $name
  * @property string|null $status
  * @property array $settings
- * @property-read \App\Organization|null $organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $organizations
- * @property-read \App\User|null $created_by
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, Organization> $organizations
+ * @property-read User|null $created_by
  */
 class AccountTest extends Model
 {

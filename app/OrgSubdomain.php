@@ -12,10 +12,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $parent_domain_id
  * @property string $host
  * @property string|null $status
- * @property-read \App\Organization $organization
- * @property-read \App\AppInstance|null $app_instance
- * @property-read \App\OrgDomain|null $domain
- * @property-read \App\AppInstance|null $primary_app_instance
+ * @property-read Organization $organization
+ * @property-read AppInstance|null $app_instance
+ * @property-read OrgDomain|null $domain
+ * @property-read AppInstance|null $primary_app_instance
  */
 class OrgSubdomain extends Model
 {

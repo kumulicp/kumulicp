@@ -11,7 +11,6 @@ use App\Server;
 use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Backup;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 class BackupScheduler extends Controller

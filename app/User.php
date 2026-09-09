@@ -3,7 +3,9 @@
 namespace App;
 
 use App\Enums\AccessType;
+use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -20,15 +22,15 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $password
  * @property string|null $guid
  * @property int|null $organization_id
- * @property \App\Enums\AccessType|null $access_type
- * @property \Carbon\Carbon|null $email_verified_at
+ * @property AccessType|null $access_type
+ * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property string|null $locale
- * @property \Carbon\Carbon|null $deleted_at
- * @property-read \App\Organization|null $organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\UserSsoAccount> $ssoAccounts
- * @property-read \App\GroupMember $pivot
+ * @property Carbon|null $deleted_at
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, Group> $groups
+ * @property-read Collection<int, UserSsoAccount> $ssoAccounts
+ * @property-read GroupMember $pivot
  */
 class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEmail
 {

@@ -3,13 +3,18 @@
 namespace Tests\Feature\Admin;
 
 use App\AppInstance;
+use App\Application;
+use App\AppVersion;
+use App\Organization;
 use App\OrgDomain;
+use App\OrgServer;
 use App\SecurityFinding;
 use App\SecurityScan;
 use App\SecurityScanSavedValue;
 use App\Support\Facades\AccountManager;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -289,28 +294,28 @@ class SecurityScansTest extends TestCase
             );
     }
 
-    private function makeOrgServer(): \App\OrgServer
+    private function makeOrgServer(): OrgServer
     {
-        $organization = \App\Organization::factory()->create();
+        $organization = Organization::factory()->create();
 
-        \Illuminate\Support\Facades\DB::table('org_servers')->insert([
+        DB::table('org_servers')->insert([
             'organization_id' => $organization->id,
             'server_id' => 1,
         ]);
 
-        return \App\OrgServer::where('organization_id', $organization->id)->firstOrFail();
+        return OrgServer::where('organization_id', $organization->id)->firstOrFail();
     }
 
     private function makeAppInstance(array $attributes): AppInstance
     {
-        $application = \App\Application::factory()->create();
+        $application = Application::factory()->create();
 
         $app = new AppInstance;
         $app->forceFill(array_merge([
             'api_password' => '',
             'status' => 'active',
             'application_id' => $application->id,
-            'version_id' => \App\AppVersion::factory()->create(['application_id' => $application->id])->id,
+            'version_id' => AppVersion::factory()->create(['application_id' => $application->id])->id,
         ], $attributes));
         $app->save();
 
@@ -451,5 +456,4 @@ class SecurityScansTest extends TestCase
 
         $this->assertDatabaseCount('security_scan_saved_values', 2);
     }
-
 }

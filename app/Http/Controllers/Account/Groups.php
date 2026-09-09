@@ -8,8 +8,8 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 
 class Groups extends Controller
 {

@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Contracts\View\Factory;
 use Illuminate\Foundation\Auth\ResetsPasswords;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Inertia\Response;
 
 class ResetPasswordController extends Controller
 {
@@ -39,7 +39,7 @@ class ResetPasswordController extends Controller
      *
      * If no token is present, display the link request form.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
     public function showResetForm(Request $request)
     {

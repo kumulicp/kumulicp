@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\ConfirmsPasswords;
+use Inertia\Response;
 
 class ConfirmPasswordController extends Controller
 {
@@ -40,7 +41,7 @@ class ConfirmPasswordController extends Controller
     /**
      * Display the password confirmation view.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
     public function showConfirmForm()
     {

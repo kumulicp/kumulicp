@@ -5,7 +5,9 @@ namespace App;
 use App\Jobs\Accounts\UpdateOrganization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Settings as SettingsFacade;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -33,32 +35,32 @@ use function Illuminate\Events\queueable;
  * @property string|null $billing_currency
  * @property array|null $settings
  * @property string|null $default_locale
- * @property \Carbon\Carbon|null $deactivate_at
+ * @property Carbon|null $deactivate_at
  * @property int|null $primary_domain_id
  * @property int|null $plan_id
  * @property int|null $primary_contact_id
  * @property int|null $account_test_id
  * @property int|null $parent_organization_id
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgDomain> $domains
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $subdomains
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgBackup> $backups
- * @property-read \App\OrgDomain|null $primary_domain
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\EmailForwarder> $email_forwarders
- * @property-read \App\Plan|null $plan
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgServer> $servers
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\User> $users
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Log> $logs
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Application> $applications
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $app_instances
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AdditionalStorage> $additional_storage
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Task> $tasks
- * @property-read \App\User|null $primary_contact
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\NewUserCode> $new_user_codes
- * @property-read \App\AccountTest|null $account_test
- * @property-read \App\Organization|null $parent_organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $suborganizations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\SuborgUser> $suborg_users
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Group> $groups
+ * @property-read Collection<int, OrgDomain> $domains
+ * @property-read Collection<int, OrgSubdomain> $subdomains
+ * @property-read Collection<int, OrgBackup> $backups
+ * @property-read OrgDomain|null $primary_domain
+ * @property-read Collection<int, EmailForwarder> $email_forwarders
+ * @property-read Plan|null $plan
+ * @property-read Collection<int, OrgServer> $servers
+ * @property-read Collection<int, User> $users
+ * @property-read Collection<int, Log> $logs
+ * @property-read Collection<int, Application> $applications
+ * @property-read Collection<int, AppInstance> $app_instances
+ * @property-read Collection<int, AdditionalStorage> $additional_storage
+ * @property-read Collection<int, Task> $tasks
+ * @property-read User|null $primary_contact
+ * @property-read Collection<int, NewUserCode> $new_user_codes
+ * @property-read AccountTest|null $account_test
+ * @property-read Organization|null $parent_organization
+ * @property-read Collection<int, Organization> $suborganizations
+ * @property-read Collection<int, SuborgUser> $suborg_users
+ * @property-read Collection<int, Group> $groups
  */
 class Organization extends Model
 {

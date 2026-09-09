@@ -4,6 +4,7 @@ use App\OrgDomain;
 use App\OrgServer;
 use App\OrgSubdomain;
 use App\Server;
+use App\Services\DomainService;
 use App\User;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\TestSupports;
@@ -123,7 +124,7 @@ it('rejects a subdomain that is already taken', function () {
 it('updates the primary domain to an existing connected subdomain', function () {
     Queue::fake();
 
-    app()->instance('domain', new class extends \App\Services\DomainService
+    app()->instance('domain', new class extends DomainService
     {
         public function ipPointsToServer(OrgSubdomain $domain, $server)
         {

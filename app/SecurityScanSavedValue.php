@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $organization_id
  * @property string $type
  * @property string $value
- * @property-read \App\Organization|null $organization
+ * @property-read Organization|null $organization
  */
 class SecurityScanSavedValue extends Model
 {

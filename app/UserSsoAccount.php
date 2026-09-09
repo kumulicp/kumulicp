@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $access_token
  * @property string|null $refresh_token
  * @property string|null $token_expires_at
- * @property-read \App\User $user
- * @property-read \App\SsoProvider $provider
+ * @property-read User $user
+ * @property-read SsoProvider $provider
  */
 class UserSsoAccount extends Model
 {

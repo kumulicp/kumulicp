@@ -5,6 +5,7 @@ use App\Support\Security\Parsers\KubeBenchParser;
 use App\Support\Security\Parsers\KubeHunterParser;
 use App\Support\Security\Parsers\KubescapeParser;
 use App\Support\Security\Parsers\NucleiParser;
+use App\Support\Security\Parsers\Parser;
 use App\Support\Security\Parsers\ParserFactory;
 use App\Support\Security\Parsers\PolarisParser;
 use App\Support\Security\Parsers\TrivyParser;
@@ -458,7 +459,7 @@ test('trivy parser still reads findings when only a single resource object was r
 
 test('parser factory resolves a parser for every registered tool', function () {
     foreach (SecurityTool::all() as $tool) {
-        expect(ParserFactory::make($tool))->toBeInstanceOf(\App\Support\Security\Parsers\Parser::class);
+        expect(ParserFactory::make($tool))->toBeInstanceOf(Parser::class);
     }
 });
 

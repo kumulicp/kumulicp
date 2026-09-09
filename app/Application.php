@@ -3,8 +3,10 @@
 namespace App;
 
 use App\Enums\AccessType;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -13,17 +15,17 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $parent_app_id
  * @property string|null $description
  * @property array $domain_option
- * @property \App\Enums\AccessType $access_type
+ * @property AccessType $access_type
  * @property bool $primary_domain_allowed
  * @property bool $can_update_domain
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $organizations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $instances
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Application> $children
- * @property-read \App\Application|null $parent_app
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppVersion> $versions
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppPlan> $plans
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppRole> $roles
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppScreenshot> $screenshots
+ * @property-read Collection<int, Organization> $organizations
+ * @property-read Collection<int, AppInstance> $instances
+ * @property-read Collection<int, Application> $children
+ * @property-read Application|null $parent_app
+ * @property-read Collection<int, AppVersion> $versions
+ * @property-read Collection<int, AppPlan> $plans
+ * @property-read Collection<int, AppRole> $roles
+ * @property-read Collection<int, AppScreenshot> $screenshots
  */
 class Application extends Model
 {
@@ -76,9 +78,9 @@ class Application extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppInstance, $this>
+     * @return HasMany<AppInstance, $this>
      */
-    public function instances(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function instances(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'application_id');
     }
@@ -99,17 +101,17 @@ class Application extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppVersion, $this>
+     * @return HasMany<AppVersion, $this>
      */
-    public function versions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function versions(): HasMany
     {
         return $this->hasMany('App\AppVersion', 'application_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppPlan, $this>
+     * @return HasMany<AppPlan, $this>
      */
-    public function plans(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function plans(): HasMany
     {
         return $this->hasMany('App\AppPlan', 'application_id');
     }
@@ -129,9 +131,9 @@ class Application extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppRole, $this>
+     * @return HasMany<AppRole, $this>
      */
-    public function roles(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function roles(): HasMany
     {
         return $this->hasMany('App\AppRole', 'application_id');
     }

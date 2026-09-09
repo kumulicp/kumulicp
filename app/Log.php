@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $level
  * @property string|null $message
  * @property string|null $created_at
- * @property-read \App\Organization|null $organization
+ * @property-read Organization|null $organization
  */
 class Log extends Model
 {
@@ -27,9 +28,9 @@ class Log extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization');
     }

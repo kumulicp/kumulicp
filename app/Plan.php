@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Support\Facades\Settings as SettingsFacade;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -19,8 +20,8 @@ use Illuminate\Support\Arr;
  * @property bool $domain_enabled
  * @property bool $email_enabled
  * @property bool $archive
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Organization> $subscribers
- * @property-read \App\Server|null $email_server
+ * @property-read Collection<int, Organization> $subscribers
+ * @property-read Server|null $email_server
  */
 class Plan extends Model
 {

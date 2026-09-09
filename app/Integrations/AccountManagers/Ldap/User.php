@@ -17,7 +17,7 @@ use LdapRecord\Container;
 use LdapRecord\Models\OpenLDAP\Entry;
 
 /**
- * @mixin \App\Ldap\Models\User
+ * @mixin LdapUser
  */
 class User extends UserManager
 {

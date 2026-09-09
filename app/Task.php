@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 
 /**
@@ -19,10 +20,10 @@ use Illuminate\Support\Arr;
  * @property string|null $task_group
  * @property int $notified
  * @property array|null $custom_values
- * @property-read \App\Application|null $application
- * @property-read \App\AppVersion|null $version
- * @property-read \App\Organization|null $organization
- * @property-read \App\AppInstance|null $app_instance
+ * @property-read Application|null $application
+ * @property-read AppVersion|null $version
+ * @property-read Organization|null $organization
+ * @property-read AppInstance|null $app_instance
  */
 class Task extends Model
 {
@@ -33,33 +34,33 @@ class Task extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     * @return BelongsTo<Application, $this>
      */
-    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppVersion, $this>
+     * @return BelongsTo<AppVersion, $this>
      */
-    public function version(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function version(): BelongsTo
     {
         return $this->belongsTo('App\AppVersion', 'version_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppInstance, $this>
+     * @return BelongsTo<AppInstance, $this>
      */
-    public function app_instance(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
     }

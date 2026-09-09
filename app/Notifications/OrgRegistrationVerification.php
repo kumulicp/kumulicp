@@ -2,8 +2,8 @@
 
 namespace App\Notifications;
 
-use App\OrgUserRegistration;
 use App\Organization;
+use App\OrgUserRegistration;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;

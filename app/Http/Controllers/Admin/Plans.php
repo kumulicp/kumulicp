@@ -136,7 +136,7 @@ class Plans extends Controller
                     'transfer' => $plan->setting('domains.transfer'),
                 ],
             ],
-            'apps' => $apps->map(function (\App\Application $app) {
+            'apps' => $apps->map(function (Application $app) {
                 $plans = [];
                 foreach ($app->plans as $plan) {
                     $plans[] = [

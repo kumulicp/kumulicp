@@ -14,8 +14,8 @@ use App\Support\Facades\Settings;
 use App\Support\Facades\Subscription;
 use App\Support\Organizations;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class Suborganization extends Controller
 {

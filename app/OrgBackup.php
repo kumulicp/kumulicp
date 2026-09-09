@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -13,10 +14,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $scheduled_backup_id
  * @property string|null $status
  * @property string|null $completed_at
- * @property-read \App\Organization $organization
- * @property-read \App\AppInstance|null $app_instance
- * @property-read \App\OrgServer|null $org_server
- * @property-read \App\BackupSchedule|null $backup_schedule
+ * @property-read Organization $organization
+ * @property-read AppInstance|null $app_instance
+ * @property-read OrgServer|null $org_server
+ * @property-read BackupSchedule|null $backup_schedule
  */
 class OrgBackup extends Model
 {
@@ -42,9 +43,9 @@ class OrgBackup extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'organization_id');
     }

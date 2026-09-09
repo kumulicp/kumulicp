@@ -2,7 +2,6 @@
 
 use App\OrgDomain;
 use App\OrgServer;
-use App\OrgSubdomain;
 use App\Plan;
 use App\Server;
 use App\User;

@@ -2,6 +2,7 @@
 
 namespace App\Support\Facades;
 
+use App\Services\SettingsService;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static void update(string $key, mixed $value = null)
  * @method static void remove(string $key)
  *
- * @see \App\Services\SettingsService
+ * @see SettingsService
  */
 class Settings extends Facade
 {

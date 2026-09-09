@@ -6,7 +6,7 @@ use Tests\Support\TestSupports;
 
 describe('App Activation', function () {
     beforeEach(function () {
-        $support = new TestSupports();
+        $support = new TestSupports;
         ['app' => $application, 'plan' => $plan] = $support->prepareDemoApp();
 
         $application->enabled = true;

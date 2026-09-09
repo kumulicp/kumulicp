@@ -11,7 +11,7 @@ use App\User as UserModel;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * @mixin \App\User
+ * @mixin UserModel
  */
 class User extends UserManager
 {

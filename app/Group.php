@@ -2,6 +2,7 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $name
  * @property string|null $type
  * @property string|null $description
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\User> $members
+ * @property-read Collection<int, User> $members
  */
 class Group extends Model
 {

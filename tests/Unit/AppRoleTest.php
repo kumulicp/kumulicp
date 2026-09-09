@@ -8,9 +8,7 @@ function fakeAppRoleSubscription(array $available_access_types): BasePlanService
 {
     return new class($available_access_types) extends BasePlanService
     {
-        public function __construct(private array $available_access_types)
-        {
-        }
+        public function __construct(private array $available_access_types) {}
 
         public function availableAccessTypesList()
         {

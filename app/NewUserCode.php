@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
  * @property int $organization_id
  * @property string $username
  * @property string $code
- * @property-read \App\Organization $organization
+ * @property-read Organization $organization
  */
 class NewUserCode extends Model
 {

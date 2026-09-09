@@ -3,6 +3,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -16,8 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $remediation
  * @property string|null $rule_id
  * @property array|null $metadata
- * @property \Illuminate\Support\Carbon|null $resolved_at
- * @property-read \App\SecurityScan|null $scan
+ * @property Carbon|null $resolved_at
+ * @property-read SecurityScan|null $scan
  */
 class SecurityFinding extends Model
 {

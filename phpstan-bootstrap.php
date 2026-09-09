@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\User;
 
 /*
  * Larastan infers Auth::user()'s return type from
@@ -30,4 +31,4 @@ declare(strict_types=1);
 
 require __DIR__.'/vendor/larastan/larastan/bootstrap.php';
 
-config(['auth.providers.ldap.model' => \App\User::class]);
+config(['auth.providers.ldap.model' => User::class]);

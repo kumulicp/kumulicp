@@ -18,7 +18,7 @@ class UserStorageUpdated
      * Create a new event instance.
      *
      * @param  string|null  $user_id  Limit the storage update to a single user. Null updates every user with storage in scope.
-     * @param  \App\AppInstance|null  $app_instance  Limit the storage update to a single app instance. Null updates every app instance in the organization.
+     * @param  AppInstance|null  $app_instance  Limit the storage update to a single app instance. Null updates every app instance in the organization.
      * @return void
      */
     public function __construct(

@@ -1,11 +1,19 @@
 <?php
 
+use App\Providers\ActionServiceProvider;
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\BillingServiceProvider;
+use App\Providers\DomainServiceProvider;
+use App\Providers\EmailServiceProvider;
+use App\Providers\EventServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\AuthServiceProvider::class,
-    App\Providers\EventServiceProvider::class,
-    App\Providers\ActionServiceProvider::class,
-    App\Providers\DomainServiceProvider::class,
-    App\Providers\EmailServiceProvider::class,
-    App\Providers\BillingServiceProvider::class,
+    AppServiceProvider::class,
+    AuthServiceProvider::class,
+    EventServiceProvider::class,
+    ActionServiceProvider::class,
+    DomainServiceProvider::class,
+    EmailServiceProvider::class,
+    BillingServiceProvider::class,
 ];

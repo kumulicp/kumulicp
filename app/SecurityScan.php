@@ -2,7 +2,11 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -14,11 +18,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property array|null $summary
  * @property string|null $raw_output
  * @property string|null $error_message
- * @property \Illuminate\Support\Carbon|null $started_at
- * @property \Illuminate\Support\Carbon|null $finished_at
- * @property-read \App\OrgServer|null $org_server
- * @property-read \App\Task|null $task
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\SecurityFinding> $findings
+ * @property Carbon|null $started_at
+ * @property Carbon|null $finished_at
+ * @property-read OrgServer|null $org_server
+ * @property-read Task|null $task
+ * @property-read Collection<int, SecurityFinding> $findings
  */
 class SecurityScan extends Model
 {
@@ -31,9 +35,9 @@ class SecurityScan extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\OrgServer, $this>
+     * @return BelongsTo<OrgServer, $this>
      */
-    public function org_server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function org_server(): BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'org_server_id');
     }
@@ -44,9 +48,9 @@ class SecurityScan extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\SecurityFinding, $this>
+     * @return HasMany<SecurityFinding, $this>
      */
-    public function findings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function findings(): HasMany
     {
         return $this->hasMany('App\SecurityFinding', 'security_scan_id');
     }

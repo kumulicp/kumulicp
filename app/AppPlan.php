@@ -3,8 +3,10 @@
 namespace App;
 
 use App\Support\Facades\Settings as SettingsFacade;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -22,12 +24,12 @@ use Illuminate\Support\Str;
  * @property int|null $database_server_id
  * @property int|null $sso_server_id
  * @property int|null $global_app_id
- * @property-read \App\Application|null $application
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $subscribers
- * @property-read \App\Server|null $web_server
- * @property-read \App\Server|null $database_server
- * @property-read \App\Server|null $sso_server
- * @property-read \App\AppInstance|null $shared_app
+ * @property-read Application|null $application
+ * @property-read Collection<int, AppInstance> $subscribers
+ * @property-read Server|null $web_server
+ * @property-read Server|null $database_server
+ * @property-read Server|null $sso_server
+ * @property-read AppInstance|null $shared_app
  */
 class AppPlan extends Model
 {
@@ -45,9 +47,9 @@ class AppPlan extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     * @return BelongsTo<Application, $this>
      */
-    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }

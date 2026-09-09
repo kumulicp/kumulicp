@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -17,8 +19,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $enabled
  * @property string|null $access_token
  * @property string|null $refresh_token
- * @property \Carbon\Carbon|null $token_expires_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\UserSsoAccount> $accounts
+ * @property Carbon|null $token_expires_at
+ * @property-read Collection<int, UserSsoAccount> $accounts
  */
 class SsoProvider extends Model
 {

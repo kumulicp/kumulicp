@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
-use App\AppScreenshot;
 use App\Application;
+use App\AppScreenshot;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

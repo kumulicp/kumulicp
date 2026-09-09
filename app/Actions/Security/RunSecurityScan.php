@@ -7,7 +7,6 @@ use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\Pod;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\SecurityScanJobChart;
 use App\OrgServer;
-use App\SecurityFinding;
 use App\SecurityScan;
 use App\Support\Security\Parsers\ParserFactory;
 use App\Task;
@@ -162,7 +161,7 @@ class RunSecurityScan extends Action
             return $raw_output;
         }
 
-        return substr($raw_output, 0, $limit)."\n\n[... output truncated, ".number_format(strlen($raw_output))." bytes total]";
+        return substr($raw_output, 0, $limit)."\n\n[... output truncated, ".number_format(strlen($raw_output)).' bytes total]';
     }
 
     public static function retry(Task $task)

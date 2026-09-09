@@ -5,8 +5,12 @@ namespace App;
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
 use App\Support\Facades\Settings;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -27,23 +31,23 @@ use Illuminate\Support\Str;
  * @property string|null $status
  * @property string|null $api_password
  * @property array|null $settings
- * @property \Carbon\Carbon|null $deactivate_at
- * @property \Carbon\Carbon|null $trial_ends_at
- * @property-read \App\Application|null $application
- * @property-read \App\AppVersion|null $version
- * @property-read \App\Organization|null $organization
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AppInstance> $children
- * @property-read \App\AppInstance|null $parent
- * @property-read \App\OrgServer|null $database_server
- * @property-read \App\OrgServer|null $web_server
- * @property-read \App\OrgServer|null $sso_server
- * @property-read \App\Server|null $server
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Task> $tasks
- * @property-read \App\AppPlan|null $subscription
- * @property-read \App\AppPlan|null $plan
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\AdditionalStorage> $additional_storage
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\OrgSubdomain> $domains
- * @property-read \App\OrgSubdomain|null $primary_domain
+ * @property Carbon|null $deactivate_at
+ * @property Carbon|null $trial_ends_at
+ * @property-read Application|null $application
+ * @property-read AppVersion|null $version
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, AppInstance> $children
+ * @property-read AppInstance|null $parent
+ * @property-read OrgServer|null $database_server
+ * @property-read OrgServer|null $web_server
+ * @property-read OrgServer|null $sso_server
+ * @property-read Server|null $server
+ * @property-read Collection<int, Task> $tasks
+ * @property-read AppPlan|null $subscription
+ * @property-read AppPlan|null $plan
+ * @property-read Collection<int, AdditionalStorage> $additional_storage
+ * @property-read Collection<int, OrgSubdomain> $domains
+ * @property-read OrgSubdomain|null $primary_domain
  */
 class AppInstance extends Model
 {
@@ -61,33 +65,33 @@ class AppInstance extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Application, $this>
+     * @return BelongsTo<Application, $this>
      */
-    public function application(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\AppVersion, $this>
+     * @return BelongsTo<AppVersion, $this>
      */
-    public function version(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function version(): BelongsTo
     {
         return $this->belongsTo('App\AppVersion', 'version_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Organization, $this>
+     * @return BelongsTo<Organization, $this>
      */
-    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\AppInstance, $this>
+     * @return HasMany<AppInstance, $this>
      */
-    public function children(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function children(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'parent_id');
     }
@@ -103,9 +107,9 @@ class AppInstance extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\OrgServer, $this>
+     * @return BelongsTo<OrgServer, $this>
      */
-    public function web_server(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function web_server(): BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'web_server_id');
     }

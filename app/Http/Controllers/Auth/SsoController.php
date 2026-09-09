@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
 use LdapRecord\Laravel\Import\Importer;
 use LdapRecord\Query\Collection;
 
@@ -29,7 +30,7 @@ class SsoController extends Controller
 
         $socialite_driver = Socialite::driver($provider->driver);
 
-        if ($socialite_driver instanceof \Laravel\Socialite\Two\AbstractProvider) {
+        if ($socialite_driver instanceof AbstractProvider) {
             $socialite_driver->scopes($provider->scopes ? explode(' ', $provider->scopes) : []);
         }
 

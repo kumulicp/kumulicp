@@ -8,15 +8,16 @@ use App\Support\ByteConversion;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
-use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
+use Inertia\Response;
 
 class HomeController extends Controller
 {
     /**
      * Show the application dashboard.
      *
-     * @return \Inertia\Response|\Illuminate\Http\RedirectResponse
+     * @return Response|RedirectResponse
      */
     public function index()
     {

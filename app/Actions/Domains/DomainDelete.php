@@ -37,7 +37,7 @@ class DomainDelete extends Action
             foreach ($domain->subdomains as $subdomain) {
                 if ($subdomain->app_instance) {
                     $server = Application::instance($subdomain->app_instance)->connect('web');
-                    
+
                     if (is_object($server) && method_exists($server, 'existsDomain')) {
                         if ($server->existsDomain()) {
                             $server->deleteDomain();

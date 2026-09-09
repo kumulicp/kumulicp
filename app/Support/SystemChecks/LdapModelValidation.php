@@ -11,6 +11,7 @@ use App\Ldap\Models\Group;
 use App\Ldap\Models\Organization;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Ldap\Models\User;
+use LdapRecord\Models\Model;
 use LdapRecord\Models\OpenLDAP\Entry;
 
 /**
@@ -25,7 +26,7 @@ class LdapModelValidation
     /**
      * The LDAP models an entry is expected to satisfy the requirements of.
      *
-     * @var array<class-string<\LdapRecord\Models\Model>>
+     * @var array<class-string<Model>>
      */
     protected array $models = [
         EmailUser::class,
