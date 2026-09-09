@@ -58,4 +58,9 @@ class KubectlCli
     {
         return $this->run(['delete', $kind, $name, '--ignore-not-found=true', '-o', 'json'], $namespace);
     }
+
+    public function logs(string $labelSelector, string $namespace, int $tail = -1): array
+    {
+        return $this->run(['logs', '-l', $labelSelector, '--tail='.$tail, '--all-containers=true'], $namespace);
+    }
 }

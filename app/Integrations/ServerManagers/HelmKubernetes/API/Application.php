@@ -9,9 +9,14 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Installs/upgrades/removes app releases via the `helm` CLI directly against
- * the cluster, reusing the same Chart value-array builders Rancher uses
- * (NextcloudChart, WordpressChart, CiviCRMStandaloneChart, ...).
+ * Installs/upgrades/removes app releases. install/upgrade/uninstall run as
+ * an in-cluster Job (see HelmInstaller) under the per-namespace
+ * kumulicp-helm-installer identity, since those are the operations that
+ * touch whatever arbitrary resource kinds a chart's subcharts create.
+ * Read-only/Helm's-own-bookkeeping operations (retrieve, isActive,
+ * deleteStuckReleaseSecrets) stay as direct `helm`/`kubectl` CLI calls
+ * under kumulicp-deployer. Reuses the same Chart value-array builders
+ * Rancher uses (NextcloudChart, WordpressChart, CiviCRMStandaloneChart, ...).
  */
 class Application extends Kubernetes
 {
@@ -31,7 +36,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        [$chart_ref, $repo_args, $oci_registry_host] = $this->chartReference($app_instance);
+        [$chart_ref, $repo_args, $secret_env] = $this->chartReference($app_instance);
 
         $values_yaml = Yaml::dump($chart->valuesWithAdditionalConfigs(), 10);
 
@@ -41,15 +46,9 @@ class Application extends Kubernetes
             array_push($subcommand, '--version', (string) $version);
         }
 
-        array_push($subcommand, '-f', '-', '--wait', '--timeout', '720s');
+        array_push($subcommand, '-f', '/values/values.yaml', '--wait', '--timeout', '720s');
 
-        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->helmRepoSecret : null;
-
-        if ($oci_registry_host && $secret) {
-            $result = $this->helm()->runWithOciLogin($subcommand, $namespace, $values_yaml, $oci_registry_host, $secret->username, $secret->password);
-        } else {
-            $result = $this->helm()->run($subcommand, $namespace, $values_yaml);
-        }
+        $result = $this->helmInstaller()->runAndWait($namespace, $release_name, $subcommand, $values_yaml, $secret_env);
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
@@ -80,7 +79,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $result = $this->helm()->run(['uninstall', $release_name, '--ignore-not-found'], $namespace);
+        $result = $this->helmInstaller()->runAndWait($namespace, $release_name, ['uninstall', $release_name, '--ignore-not-found']);
 
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
@@ -148,10 +147,14 @@ class Application extends Kubernetes
     // (For Rancher it instead holds a pre-registered ClusterRepo name; both
     // interpretations are compatible since it's a per-version, admin-set field.)
     //
-    // Returns [$chart_ref, $repo_args, $oci_registry_host]. OCI auth needs a
-    // `helm registry login` step first (see HelmCli::runWithOciLogin()), so
-    // the registry host is returned separately rather than folded into
-    // $repo_args like the classic-repo --username/--password flags are.
+    // Returns [$chart_ref, $repo_args, $secret_env]. $secret_env is a
+    // name => value map materialized as a Kubernetes Secret and injected
+    // into the install Job as env vars (see HelmInstallJob) -- credentials
+    // never go into $repo_args/Job args, since those are visible via
+    // `kubectl describe pod`. The helm-runner image's entrypoint reads
+    // OCI_REGISTRY_HOST/OCI_USERNAME/OCI_PASSWORD to `helm registry login`
+    // before the main command, or HELM_REPO_USERNAME/HELM_REPO_PASSWORD to
+    // append --username/--password for classic repos.
     private function chartReference(AppInstance $app_instance): array
     {
         $chart_name = $app_instance->version->setting('chart_name');
@@ -165,16 +168,22 @@ class Application extends Kubernetes
                 $host .= ":{$port}";
             }
 
-            return [$chart_ref, [], $secret ? $host : null];
+            $secret_env = $secret ? [
+                'OCI_REGISTRY_HOST' => $host,
+                'OCI_USERNAME' => $secret->username,
+                'OCI_PASSWORD' => $secret->password,
+            ] : null;
+
+            return [$chart_ref, [], $secret_env];
         }
 
         if ($repo) {
-            $repo_args = ['--repo', $repo];
-            if ($secret) {
-                array_push($repo_args, '--username', $secret->username, '--password', $secret->password);
-            }
+            $secret_env = $secret ? [
+                'HELM_REPO_USERNAME' => $secret->username,
+                'HELM_REPO_PASSWORD' => $secret->password,
+            ] : null;
 
-            return [$chart_name, $repo_args, null];
+            return [$chart_name, ['--repo', $repo], $secret_env];
         }
 
         return [$chart_name, [], null];

@@ -52,6 +52,13 @@ return [
         'binary_path' => env('KUBECTL_BINARY_PATH', 'kubectl'),
     ],
 
+    // Image the in-cluster helm install Job runs (see HelmInstaller,
+    // docker/helm-runner). Must be reachable/pullable from the target
+    // cluster, not just from wherever this app runs.
+    'helm_runner' => [
+        'image' => env('HELM_RUNNER_IMAGE'),
+    ],
+
     // Local-dev only: see Integration::devIngressResolve(). Set to
     // host.docker.internal when running app instances against a local
     // cluster (e.g. k3s) whose ingress is only reachable via the host.

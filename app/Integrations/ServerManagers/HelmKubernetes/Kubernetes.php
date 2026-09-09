@@ -2,6 +2,7 @@
 
 namespace App\Integrations\ServerManagers\HelmKubernetes;
 
+use App\Integrations\ServerManagers\HelmKubernetes\API\HelmInstaller;
 use App\Integrations\ServerManagers\HelmKubernetes\Support\HelmCli;
 use App\Integrations\ServerManagers\HelmKubernetes\Support\KubectlCli;
 use App\Organization;
@@ -53,5 +54,10 @@ class Kubernetes
     public function kubectl(): KubectlCli
     {
         return new KubectlCli($this->server());
+    }
+
+    public function helmInstaller(): HelmInstaller
+    {
+        return new HelmInstaller($this->organization, $this->org_server);
     }
 }

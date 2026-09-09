@@ -3,6 +3,24 @@
 # can be granted to KumuliCP for a given cluster. Adjust the namespace/role
 # rules to match what your apps actually need.
 #
+# kumulicp-deployer is the long-lived identity the app itself authenticates
+# to the cluster as. It only manages namespaces, its own supporting objects
+# (ConfigMaps/Secrets/ServiceAccounts for the install Job, Job objects
+# themselves, RoleBindings), and the domain/ingress redirect middleware
+# (DomainMiddlewareService) -- it never touches resources a chart itself
+# creates.
+#
+# kumulicp-helm-installer is a separate, deliberately broad ClusterRole that
+# is NEVER bound cluster-wide -- KubernetesNamespace::create() binds it via a
+# namespace-scoped RoleBinding for each organization's namespace as that
+# namespace is provisioned. The actual `helm upgrade --install`/`uninstall`
+# runs as a short-lived Job under that per-namespace identity (see
+# HelmInstaller), so a chart's subcharts can create any resource kind
+# (NetworkPolicy, PodDisruptionBudget, Role, HorizontalPodAutoscaler, ...)
+# without this ClusterRole ever needing to be edited again -- its blast
+# radius is capped by being namespace-scoped per RoleBinding, not the whole
+# cluster.
+#
 # Usage:
 #   kubectl apply -f docs/k8s-rbac-sample.yaml
 #   kubectl create token kumulicp-deployer -n kumulicp-system --duration=87600h
@@ -33,29 +51,23 @@ rules:
     resources: ["namespaces"]
     verbs: ["get", "list", "create", "delete"]
   - apiGroups: [""]
-    resources: ["services", "secrets", "configmaps", "persistentvolumeclaims", "pods", "pods/log", "serviceaccounts"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "replicasets"]
+    resources: ["configmaps", "secrets", "serviceaccounts", "pods", "pods/log"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["batch"]
     resources: ["jobs"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # DomainMiddlewareService (app/Integrations/ServerManagers/HelmKubernetes/API/Ingress.php,
+  # Middleware.php) manages these directly under kumulicp-deployer -- a
+  # separate code path from chart installs, so these stay here.
   - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses", "networkpolicies"]
+    resources: ["ingresses"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["traefik.io"]
     resources: ["middlewares"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["rbac.authorization.k8s.io"]
-    resources: ["roles", "rolebindings"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+    resources: ["rolebindings"]
+    verbs: ["get", "list", "create", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -69,3 +81,16 @@ roleRef:
   kind: ClusterRole
   name: kumulicp-deployer
   apiGroup: rbac.authorization.k8s.io
+---
+# Deliberately wildcard: the whole point is that a chart's subcharts can
+# create any resource kind without this ever needing another rule added.
+# Never bound cluster-wide -- see KubernetesNamespace::create(), which binds
+# this per-namespace via a RoleBinding as each org's namespace is created.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kumulicp-helm-installer
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]

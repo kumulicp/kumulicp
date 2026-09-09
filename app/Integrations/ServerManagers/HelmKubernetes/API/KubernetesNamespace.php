@@ -18,6 +18,21 @@ class KubernetesNamespace extends Kubernetes
             return ['status' => 'failed', 'response' => $result['error']];
         }
 
+        // Per-namespace identity the in-cluster helm install Job runs under
+        // (see HelmInstaller) -- broad permissions, but scoped to just this
+        // namespace via the RoleBinding, unlike kumulicp-deployer's own
+        // ClusterRole. A namespace without this can't run Job-mode installs
+        // at all, so treat either apply failing as fatal to create().
+        $sa_result = $this->kubectl()->apply($this->serviceAccountManifest($namespace), $namespace);
+        if (! $sa_result['success']) {
+            return ['status' => 'failed', 'response' => $sa_result['error']];
+        }
+
+        $binding_result = $this->kubectl()->apply($this->roleBindingManifest($namespace), $namespace);
+        if (! $binding_result['success']) {
+            return ['status' => 'failed', 'response' => $binding_result['error']];
+        }
+
         return ['status' => 'success', 'response' => json_decode($result['output'], true)];
     }
 
@@ -68,6 +83,44 @@ class KubernetesNamespace extends Kubernetes
             'kind' => 'Namespace',
             'metadata' => [
                 'name' => $namespace,
+            ],
+        ];
+    }
+
+    private function serviceAccountManifest(string $namespace): array
+    {
+        return [
+            'apiVersion' => 'v1',
+            'kind' => 'ServiceAccount',
+            'metadata' => [
+                'name' => 'kumulicp-helm-installer',
+                'namespace' => $namespace,
+            ],
+        ];
+    }
+
+    // References the cluster-scoped kumulicp-helm-installer ClusterRole
+    // (see docs/k8s-rbac-sample.yaml), but this RoleBinding is itself
+    // namespaced -- the standard way to scope one ClusterRole's rules to a
+    // single namespace without duplicating a Role definition per org.
+    private function roleBindingManifest(string $namespace): array
+    {
+        return [
+            'apiVersion' => 'rbac.authorization.k8s.io/v1',
+            'kind' => 'RoleBinding',
+            'metadata' => [
+                'name' => 'kumulicp-helm-installer',
+                'namespace' => $namespace,
+            ],
+            'subjects' => [[
+                'kind' => 'ServiceAccount',
+                'name' => 'kumulicp-helm-installer',
+                'namespace' => $namespace,
+            ]],
+            'roleRef' => [
+                'kind' => 'ClusterRole',
+                'name' => 'kumulicp-helm-installer',
+                'apiGroup' => 'rbac.authorization.k8s.io',
             ],
         ];
     }
