@@ -6,14 +6,15 @@ beforeEach(function () {
     config(['services.helm_runner.image' => 'test-registry/kumulicp-helm-runner:1.0.0']);
 });
 
-it('builds a Job manifest using the per-namespace installer identity, not kumulicp-deployer', function () {
+it('builds a Job manifest using its own fresh per-release ServiceAccount, not kumulicp-deployer', function () {
     $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install', 'nextcloud-5iy7z', 'nextcloud']);
 
     $manifest = $job->jobManifest();
 
     expect($manifest['kind'])->toBe('Job');
     expect($manifest['metadata']['namespace'])->toBe('kumuli-demo');
-    expect($manifest['spec']['template']['spec']['serviceAccountName'])->toBe('kumulicp-helm-installer');
+    expect($manifest['spec']['template']['spec']['serviceAccountName'])->toBe($job->serviceAccountName());
+    expect($job->serviceAccountName())->not->toBe('kumulicp-deployer');
     expect($manifest['spec']['template']['spec']['restartPolicy'])->toBe('Never');
     expect($manifest['spec']['backoffLimit'])->toBe(0);
     expect($manifest['spec']['template']['spec']['containers'][0]['image'])->toBe('test-registry/kumulicp-helm-runner:1.0.0');
@@ -103,10 +104,51 @@ it('adds an ownerReference pointing at the Job once its uid is given', function 
 
     $configMapOwner = $job->configMapManifest('job-uid-123')['metadata']['ownerReferences'][0];
     $secretOwner = $job->secretManifest('job-uid-123')['metadata']['ownerReferences'][0];
+    $serviceAccountOwner = $job->serviceAccountManifest('job-uid-123')['metadata']['ownerReferences'][0];
+    $roleBindingOwner = $job->roleBindingManifest('job-uid-123')['metadata']['ownerReferences'][0];
 
-    foreach ([$configMapOwner, $secretOwner] as $owner) {
+    foreach ([$configMapOwner, $secretOwner, $serviceAccountOwner, $roleBindingOwner] as $owner) {
         expect($owner['kind'])->toBe('Job');
         expect($owner['name'])->toBe($job->jobName);
         expect($owner['uid'])->toBe('job-uid-123');
     }
+});
+
+it('names the ServiceAccount and RoleBinding after the job so each release gets its own fresh identity', function () {
+    $a = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+    $b = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+
+    expect($a->serviceAccountName())->toBe($a->jobName);
+    expect($a->serviceAccountName())->not->toBe($b->serviceAccountName());
+});
+
+it('builds a ServiceAccount manifest without ownerReferences until a Job uid is given', function () {
+    $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+
+    $manifest = $job->serviceAccountManifest();
+
+    expect($manifest['kind'])->toBe('ServiceAccount');
+    expect($manifest['metadata']['name'])->toBe($job->serviceAccountName());
+    expect($manifest['metadata']['namespace'])->toBe('kumuli-demo');
+    expect($manifest['metadata'])->not->toHaveKey('ownerReferences');
+});
+
+it('builds a RoleBinding manifest binding the per-release ServiceAccount to the shared installer ClusterRole', function () {
+    $job = new HelmInstallJob('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+
+    $manifest = $job->roleBindingManifest();
+
+    expect($manifest['kind'])->toBe('RoleBinding');
+    expect($manifest['metadata']['name'])->toBe($job->serviceAccountName());
+    expect($manifest['metadata']['namespace'])->toBe('kumuli-demo');
+    expect($manifest['subjects'][0])->toBe([
+        'kind' => 'ServiceAccount',
+        'name' => $job->serviceAccountName(),
+        'namespace' => 'kumuli-demo',
+    ]);
+    expect($manifest['roleRef'])->toBe([
+        'kind' => 'ClusterRole',
+        'name' => 'kumulicp-helm-installer',
+        'apiGroup' => 'rbac.authorization.k8s.io',
+    ]);
 });

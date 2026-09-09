@@ -46,7 +46,7 @@ function isDeleteCommand($process, string $kind): bool
 // Returns the applied manifest's own metadata.name in the response, and a
 // uid only for the Job -- mirroring how kubectl apply -o json actually
 // echoes back the created/updated object.
-function fakeApplyReturningUid(string $uid): \Closure
+function fakeApplyReturningUid(string $uid): Closure
 {
     return function ($process) use ($uid) {
         $manifest = json_decode($process->input, true);
@@ -93,7 +93,7 @@ it('attaches an ownerReference to the values ConfigMap once the Job uid is known
     });
 });
 
-it('never creates a values ConfigMap or credentials Secret for a plain uninstall', function () {
+it('always creates a fresh per-release ServiceAccount and RoleBinding, even for a plain uninstall', function () {
     Process::fake([
         '*apply*' => fakeApplyReturningUid('job-uid-123'),
     ]);
@@ -102,7 +102,15 @@ it('never creates a values ConfigMap or credentials Secret for a plain uninstall
     $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['uninstall', 'nextcloud-5iy7z', '--ignore-not-found']);
 
     expect($result['success'])->toBeTrue();
-    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 1);
+
+    // ServiceAccount + RoleBinding + Job, then ServiceAccount + RoleBinding re-applied with owner refs.
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 5);
+
+    Process::assertNotRan(function ($process) {
+        $manifest = json_decode($process->input, true);
+
+        return in_array($manifest['kind'] ?? null, ['ConfigMap', 'Secret'], true);
+    });
 });
 
 it('wires credentials into a Secret via envFrom and attaches its ownerReference too', function () {
@@ -116,8 +124,9 @@ it('wires credentials into a Secret via envFrom and attaches its ownerReference 
         'HELM_REPO_PASSWORD' => 'secret',
     ]);
 
-    // ConfigMap + Secret + Job, then ConfigMap + Secret re-applied with owner refs.
-    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 5);
+    // ServiceAccount + RoleBinding + ConfigMap + Secret + Job, then all four
+    // re-applied with owner refs (Job doesn't own itself).
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 9);
 
     Process::assertRan(function ($process) {
         $manifest = json_decode($process->input, true);
@@ -127,7 +136,7 @@ it('wires credentials into a Secret via envFrom and attaches its ownerReference 
     });
 });
 
-it('bails out without creating the Job if the values ConfigMap apply fails', function () {
+it('bails out without creating anything else if the ServiceAccount apply fails', function () {
     Process::fake([
         '*apply*' => Process::result(output: '', errorOutput: 'namespace not found', exitCode: 1),
     ]);
@@ -141,7 +150,31 @@ it('bails out without creating the Job if the values ConfigMap apply fails', fun
     Process::assertRanTimes(fn ($process) => isApplyCommand($process), 1);
 });
 
-it('rolls back the ConfigMap if the credentials Secret apply fails', function () {
+it('rolls back the ServiceAccount if the RoleBinding apply fails', function () {
+    Process::fake([
+        '*apply*' => function ($process) {
+            $manifest = json_decode($process->input, true);
+
+            if (($manifest['kind'] ?? null) === 'RoleBinding') {
+                return Process::result(output: '', errorOutput: 'forbidden', exitCode: 1);
+            }
+
+            return Process::result(json_encode(['metadata' => ['name' => $manifest['metadata']['name'] ?? 'x']]));
+        },
+        '*delete*' => Process::result(''),
+    ]);
+
+    $installer = makeHelmInstaller();
+    $result = $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install'], "replicaCount: 1\n");
+
+    expect($result['success'])->toBeFalse();
+
+    // ServiceAccount (succeeded) + RoleBinding (failed) -- never reaches the ConfigMap/Job applies.
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 2);
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'serviceaccount'));
+});
+
+it('rolls back the ServiceAccount, RoleBinding, and ConfigMap if the credentials Secret apply fails', function () {
     Process::fake([
         '*apply*' => function ($process) {
             $manifest = json_decode($process->input, true);
@@ -163,12 +196,14 @@ it('rolls back the ConfigMap if the credentials Secret apply fails', function ()
 
     expect($result['success'])->toBeFalse();
 
-    // ConfigMap (succeeded) + Secret (failed) -- never reaches the Job apply.
-    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 2);
+    // ServiceAccount + RoleBinding + ConfigMap (succeeded) + Secret (failed) -- never reaches the Job apply.
+    Process::assertRanTimes(fn ($process) => isApplyCommand($process), 4);
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'serviceaccount'));
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'rolebinding'));
     Process::assertRan(fn ($process) => isDeleteCommand($process, 'configmap'));
 });
 
-it('rolls back the ConfigMap and Secret if the Job apply itself fails', function () {
+it('rolls back the ServiceAccount, RoleBinding, ConfigMap, and Secret if the Job apply itself fails', function () {
     Process::fake([
         '*apply*' => function ($process) {
             $manifest = json_decode($process->input, true);
@@ -191,6 +226,31 @@ it('rolls back the ConfigMap and Secret if the Job apply itself fails', function
     expect($result['success'])->toBeFalse();
     expect($result['error'])->toBe('forbidden');
 
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'serviceaccount'));
+    Process::assertRan(fn ($process) => isDeleteCommand($process, 'rolebinding'));
     Process::assertRan(fn ($process) => isDeleteCommand($process, 'configmap'));
     Process::assertRan(fn ($process) => isDeleteCommand($process, 'secret'));
+});
+
+it('attaches an ownerReference to the ServiceAccount and RoleBinding once the Job uid is known', function () {
+    Process::fake([
+        '*apply*' => fakeApplyReturningUid('job-uid-123'),
+    ]);
+
+    $installer = makeHelmInstaller();
+    $installer->create('kumuli-demo', 'nextcloud-5iy7z', ['upgrade', '--install']);
+
+    Process::assertRan(function ($process) {
+        $manifest = json_decode($process->input, true);
+
+        return ($manifest['kind'] ?? null) === 'ServiceAccount'
+            && ($manifest['metadata']['ownerReferences'][0]['uid'] ?? null) === 'job-uid-123';
+    });
+
+    Process::assertRan(function ($process) {
+        $manifest = json_decode($process->input, true);
+
+        return ($manifest['kind'] ?? null) === 'RoleBinding'
+            && ($manifest['metadata']['ownerReferences'][0]['uid'] ?? null) === 'job-uid-123';
+    });
 });

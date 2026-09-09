@@ -5,10 +5,12 @@ namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
 use Illuminate\Support\Str;
 
 /**
- * Builds the ConfigMap/Secret/Job manifests for running a single helm
- * upgrade/uninstall as an in-cluster Job, under the per-namespace
- * kumulicp-helm-installer identity rather than the long-lived
- * kumulicp-deployer used for everything else -- see HelmInstaller.
+ * Builds the ServiceAccount/RoleBinding/ConfigMap/Secret/Job manifests for
+ * one helm upgrade/uninstall run as an in-cluster Job. The ServiceAccount
+ * is fresh per install (not one shared SA per namespace) so a leaked token
+ * is only valid for that one install, and audit logs attribute actions to
+ * the specific release. Bound to the same shared kumulicp-helm-installer
+ * ClusterRole either way -- see HelmInstaller.
  *
  * Pure manifest builder: no I/O, no kubectl/Process calls.
  */
@@ -38,6 +40,11 @@ class HelmInstallJob
     public function secretName(): string
     {
         return "helm-creds-{$this->jobName}";
+    }
+
+    public function serviceAccountName(): string
+    {
+        return $this->jobName;
     }
 
     public function labelSelector(): string
@@ -90,6 +97,48 @@ class HelmInstallJob
                 'ownerReferences' => $this->ownerReferences($ownerJobUid) ?: null,
             ]),
             'stringData' => $this->secretEnv,
+        ];
+    }
+
+    public function serviceAccountManifest(?string $ownerJobUid = null): array
+    {
+        return [
+            'apiVersion' => 'v1',
+            'kind' => 'ServiceAccount',
+            'metadata' => array_filter([
+                'name' => $this->serviceAccountName(),
+                'namespace' => $this->namespace,
+                'labels' => $this->labels(),
+                'ownerReferences' => $this->ownerReferences($ownerJobUid) ?: null,
+            ]),
+        ];
+    }
+
+    // Namespaced RoleBinding referencing the shared, cluster-scoped
+    // kumulicp-helm-installer ClusterRole -- standard way to scope one
+    // ClusterRole's rules to a single namespace without duplicating a
+    // Role definition per install.
+    public function roleBindingManifest(?string $ownerJobUid = null): array
+    {
+        return [
+            'apiVersion' => 'rbac.authorization.k8s.io/v1',
+            'kind' => 'RoleBinding',
+            'metadata' => array_filter([
+                'name' => $this->serviceAccountName(),
+                'namespace' => $this->namespace,
+                'labels' => $this->labels(),
+                'ownerReferences' => $this->ownerReferences($ownerJobUid) ?: null,
+            ]),
+            'subjects' => [[
+                'kind' => 'ServiceAccount',
+                'name' => $this->serviceAccountName(),
+                'namespace' => $this->namespace,
+            ]],
+            'roleRef' => [
+                'kind' => 'ClusterRole',
+                'name' => 'kumulicp-helm-installer',
+                'apiGroup' => 'rbac.authorization.k8s.io',
+            ],
         ];
     }
 
@@ -175,7 +224,7 @@ class HelmInstallJob
                         'labels' => $this->labels(),
                     ],
                     'spec' => array_filter([
-                        'serviceAccountName' => 'kumulicp-helm-installer',
+                        'serviceAccountName' => $this->serviceAccountName(),
                         'restartPolicy' => 'Never',
                         'terminationGracePeriodSeconds' => 30,
                         'containers' => [$container],

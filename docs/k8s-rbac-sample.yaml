@@ -11,15 +11,19 @@
 # creates.
 #
 # kumulicp-helm-installer is a separate, deliberately broad ClusterRole that
-# is NEVER bound cluster-wide -- KubernetesNamespace::create() binds it via a
-# namespace-scoped RoleBinding for each organization's namespace as that
-# namespace is provisioned. The actual `helm upgrade --install`/`uninstall`
-# runs as a short-lived Job under that per-namespace identity (see
-# HelmInstaller), so a chart's subcharts can create any resource kind
+# is NEVER bound cluster-wide -- HelmInstaller mints a fresh ServiceAccount
+# and namespace-scoped RoleBinding for each individual install/upgrade/
+# uninstall Job (see HelmInstallJob::serviceAccountManifest()/
+# roleBindingManifest()), not one static identity shared by a whole
+# namespace. Both are torn down (via ownerReferences to the Job, or directly
+# on failure) once that one run is done, so a leaked token is only ever
+# valid for that single install. The actual `helm upgrade --install`/
+# `uninstall` runs as that short-lived Job under its own per-release
+# identity, so a chart's subcharts can create any resource kind
 # (NetworkPolicy, PodDisruptionBudget, Role, HorizontalPodAutoscaler, ...)
 # without this ClusterRole ever needing to be edited again -- its blast
-# radius is capped by being namespace-scoped per RoleBinding, not the whole
-# cluster.
+# radius is capped by being namespace-scoped per RoleBinding and torn down
+# per release, not the whole cluster for the namespace's lifetime.
 #
 # Usage:
 #   kubectl apply -f docs/k8s-rbac-sample.yaml
@@ -65,6 +69,9 @@ rules:
   - apiGroups: ["traefik.io"]
     resources: ["middlewares"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Needed by HelmInstaller to provision (and tear down) each release's own
+  # ServiceAccount/RoleBinding -- see the kumulicp-helm-installer comment
+  # above.
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["rolebindings"]
     verbs: ["get", "list", "create", "delete"]
@@ -84,8 +91,8 @@ roleRef:
 ---
 # Deliberately wildcard: the whole point is that a chart's subcharts can
 # create any resource kind without this ever needing another rule added.
-# Never bound cluster-wide -- see KubernetesNamespace::create(), which binds
-# this per-namespace via a RoleBinding as each org's namespace is created.
+# Never bound cluster-wide -- see HelmInstaller, which binds this via a
+# fresh namespace-scoped RoleBinding for each individual install Job.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

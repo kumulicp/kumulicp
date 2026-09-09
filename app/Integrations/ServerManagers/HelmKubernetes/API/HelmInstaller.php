@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Starts a helm upgrade/uninstall as a short-lived Job inside the target
- * cluster (mirroring Rancher's own chart-install mechanism), under the
- * per-namespace kumulicp-helm-installer identity rather than the
+ * cluster (mirroring Rancher's own chart-install mechanism), under a
+ * ServiceAccount fresh-minted for this one release rather than the
  * long-lived kumulicp-deployer used elsewhere in this driver. This is
  * what lets a chart create arbitrary resource kinds (NetworkPolicy, PDB,
  * Role, HPA, ...) without kumulicp-deployer's ClusterRole ever needing to
@@ -41,10 +41,29 @@ class HelmInstaller extends Kubernetes
     ): array {
         $job = new HelmInstallJob($namespace, $releaseName, $helmSubcommand, $valuesYaml, $secretEnv);
 
+        // The Job's pod references this ServiceAccount by name, so it has
+        // to exist (and be bound to the installer ClusterRole) before the
+        // Job itself is created.
+        $result = $this->kubectl()->apply($job->serviceAccountManifest(), $namespace);
+
+        if (! $result['success']) {
+            return $this->failure("Failed to create ServiceAccount for release {$releaseName}: {$result['error']}");
+        }
+
+        $result = $this->kubectl()->apply($job->roleBindingManifest(), $namespace);
+
+        if (! $result['success']) {
+            $this->deleteSupportingResources($job, $namespace);
+
+            return $this->failure("Failed to create RoleBinding for release {$releaseName}: {$result['error']}");
+        }
+
         if ($manifest = $job->configMapManifest()) {
             $result = $this->kubectl()->apply($manifest, $namespace);
 
             if (! $result['success']) {
+                $this->deleteSupportingResources($job, $namespace);
+
                 return $this->failure("Failed to create values ConfigMap for release {$releaseName}: {$result['error']}");
             }
         }
@@ -84,12 +103,13 @@ class HelmInstaller extends Kubernetes
         return ['success' => false, 'output' => '', 'error' => $message, 'exit_code' => 1];
     }
 
-    // Re-applies the ConfigMap/Secret with an ownerReference to the now-
-    // created Job, so Kubernetes' garbage collector deletes them once the
-    // Job itself is reaped (ttlSecondsAfterFinished) -- cleanup no longer
-    // depends on any PHP process running to completion. The Job has to
-    // exist first to get its uid, so this always happens as a follow-up
-    // apply rather than being included in the original manifest.
+    // Re-applies the ServiceAccount/RoleBinding/ConfigMap/Secret with an
+    // ownerReference to the now-created Job, so Kubernetes' garbage
+    // collector deletes them once the Job itself is reaped
+    // (ttlSecondsAfterFinished) -- cleanup no longer depends on any PHP
+    // process running to completion. The Job has to exist first to get
+    // its uid, so this always happens as a follow-up apply rather than
+    // being included in the original manifest.
     private function attachOwnerReferences(HelmInstallJob $job, string $namespace, array $job_result): void
     {
         $uid = Arr::get(json_decode($job_result['output'], true) ?? [], 'metadata.uid');
@@ -97,6 +117,9 @@ class HelmInstaller extends Kubernetes
         if (! $uid) {
             return;
         }
+
+        $this->kubectl()->apply($job->serviceAccountManifest($uid), $namespace);
+        $this->kubectl()->apply($job->roleBindingManifest($uid), $namespace);
 
         if ($manifest = $job->configMapManifest($uid)) {
             $this->kubectl()->apply($manifest, $namespace);
@@ -109,8 +132,13 @@ class HelmInstaller extends Kubernetes
 
     // Only reached when the Job itself never got created, so there's no
     // owner to eventually garbage-collect these -- clean them up directly.
+    // KubectlCli::delete() ignores "not found", so it's safe to always
+    // attempt all four regardless of which ones actually got created.
     private function deleteSupportingResources(HelmInstallJob $job, string $namespace): void
     {
+        $this->kubectl()->delete('rolebinding', $job->serviceAccountName(), $namespace);
+        $this->kubectl()->delete('serviceaccount', $job->serviceAccountName(), $namespace);
+
         if ($job->configMapManifest()) {
             $this->kubectl()->delete('configmap', $job->configMapName(), $namespace);
         }
