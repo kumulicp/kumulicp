@@ -562,6 +562,8 @@
       "errorMessage": "Error message",
       "failed": "Failed",
       "pending": "Pending",
+      "queued": "Queued",
+      "ready": "Ready",
       "inProgress": "In Progress",
       "completed": "Completed"
     },

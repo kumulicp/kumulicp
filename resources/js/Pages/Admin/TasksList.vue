@@ -77,6 +77,9 @@ import axios from 'axios'
             :row-bind="getRowBind"
             :current-page="meta.page"
         >
+          <template #cell(status)="{ value }">
+            <va-badge :color="statusColor(value)" :text="statusLabel(value)" />
+          </template>
           <template #cell(actions)="{ row, rowIndex, isExpanded }">
             <VaButton
               preset="plain"
@@ -162,6 +165,8 @@ export default {
         { text: this.$t('admin.tasks.all'), value: '' },
         { text: this.$t('admin.tasks.failed'), value: 'failed' },
         { text: this.$t('admin.tasks.pending'), value: 'pending' },
+        { text: this.$t('admin.tasks.queued'), value: 'queued' },
+        { text: this.$t('admin.tasks.ready'), value: 'ready' },
         { text: this.$t('admin.tasks.inProgress'), value: 'in_progress' },
         { text: this.$t('admin.tasks.completed'), value: 'complete' }
       ],
@@ -218,6 +223,19 @@ export default {
       const task = this.task_list[id]
 
       return task.error_message !== null && task.error_message !== ''
+    },
+    statusLabel (status) {
+      return this.statuses.find((option) => option.value === status)?.text || status
+    },
+    statusColor (status) {
+      return {
+        complete: 'success',
+        failed: 'danger',
+        in_progress: 'info',
+        ready: 'info',
+        pending: 'warning',
+        queued: 'warning'
+      }[status] || 'secondary'
     },
     getRowBind (row) {
       if (row.error_message !== null && row.error_message !== '') {
