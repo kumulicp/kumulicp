@@ -19,32 +19,28 @@ import { Link } from '@inertiajs/vue3'
 <script lang="ts">
 
 export default {
-  data () {
-    const app = this.$page.props.app
-    const version = this.$page.props.version
-    const pathname = (new URL(window.location.href)).pathname
-    const basePath = '/admin/apps/' + app.slug + '/versions/' + version.version
-    const tabs = [
-      {
-        title: this.$t('common.edit'),
-        url: basePath
-      },
-      {
-        title: this.$t('admin.roles.roles'),
-        url: basePath + '/roles'
-      }
-    ]
-
-    let value = this.$t('common.edit')
-    Object.values(tabs).forEach((tab) => {
-      if (tab.url === pathname) {
-        value = tab.title
-      }
-    })
-
-    return {
-      tabs,
-      value
+  computed: {
+    basePath () {
+      const app = this.$page.props.app
+      const version = this.$page.props.version
+      return '/admin/apps/' + app.slug + '/versions/' + version.version
+    },
+    tabs () {
+      return [
+        {
+          title: this.$t('common.edit'),
+          url: this.basePath
+        },
+        {
+          title: this.$t('admin.roles.roles'),
+          url: this.basePath + '/roles'
+        }
+      ]
+    },
+    value () {
+      const pathname = (new URL(window.location.href)).pathname
+      const active = this.tabs.find((tab) => tab.url === pathname)
+      return active ? active.title : this.$t('common.edit')
     }
   }
 }
