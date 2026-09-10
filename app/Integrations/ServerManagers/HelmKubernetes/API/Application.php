@@ -85,6 +85,10 @@ class Application extends Kubernetes
 
         $result = $this->helmInstaller()->create($namespace, $release_name, ['uninstall', $release_name, '--ignore-not-found']);
 
+        if (! $result['success']) {
+            return ['status' => 'failed', 'response' => $result['error']];
+        }
+
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
         return ['status' => 'success', 'response' => $result['output']];
