@@ -270,14 +270,18 @@ class ApplicationService
 
     public function runJob(AppInstance $app_instance, string $job_name)
     {
-        $app_name = $app_instance->application->slug;
         $job_class = $this->profile($app_instance->application)->jobs();
         $job_command = Str::camel($job_name);
 
         if ($job_class && class_exists($job_class) && method_exists($job_class, $job_command)) {
+            // For a shared-app child, the Job has to run against the hub's own
+            // release (same namespace/cluster as the shared bench), not the
+            // child's own organization -- the child may not even have a web
+            // release of its own.
+            $target = $app_instance->sharedPlanParent() ?? $app_instance;
             $job = new $job_class($app_instance->organization, $app_instance);
 
-            return $this->instance($app_instance)->connect('web')->runJob($job->$job_command());
+            return $this->instance($target)->connect('web')->runJob($job->$job_command());
         }
 
         return null;
