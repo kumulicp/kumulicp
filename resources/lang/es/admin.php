@@ -141,12 +141,13 @@ return [
         'ldap_settings' => 'Configuración de LDAP',
         'invoice_settings' => 'Configuración de facturación',
     ],
-    'pullSecrets' => [
-        'pullSecrets' => 'Secretos de extracción de imágenes',
-        'added' => 'Secreto de extracción agregado',
-        'deleted' => 'Secreto de extracción eliminado',
-        'inUse' => 'Este secreto de extracción no se puede eliminar porque es requerido por una o más instancias de aplicación',
-        'migrated' => 'Versiones de la aplicación migradas al nuevo secreto de extracción',
+    'repoSecrets' => [
+        'repoSecrets' => 'Secretos de repositorio',
+        'added' => 'Secreto de repositorio agregado',
+        'deleted' => 'Secreto de repositorio eliminado',
+        'inUse' => 'Este secreto de repositorio no se puede eliminar porque es requerido por una o más instancias de aplicación',
+        'migrateTypeMismatch' => 'Ambos secretos de repositorio deben ser del mismo tipo',
+        'migrated' => 'Versiones de la aplicación migradas al nuevo secreto de repositorio',
     ],
     'tasks' => [
         'tasks' => 'Tareas',

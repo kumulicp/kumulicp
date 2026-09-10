@@ -1,0 +1,115 @@
+# Sample RBAC bootstrap for the direct helm/kubectl "helm_k8s" server manager
+# driver. Creates a narrowly-scoped ServiceAccount — NOT cluster-admin — that
+# can be granted to KumuliCP for a given cluster. Adjust the namespace/role
+# rules to match what your apps actually need.
+#
+# kumulicp-deployer is the long-lived identity the app itself authenticates
+# to the cluster as. It only manages namespaces, its own supporting objects
+# (ConfigMaps/Secrets/ServiceAccounts for the install Job, Job objects
+# themselves, RoleBindings), and the domain/ingress redirect middleware
+# (DomainMiddlewareService) -- it never touches resources a chart itself
+# creates.
+#
+# kumulicp-helm-installer is a separate, deliberately broad ClusterRole that
+# is NEVER bound cluster-wide -- HelmInstaller mints a fresh ServiceAccount
+# and namespace-scoped RoleBinding for each individual install/upgrade/
+# uninstall Job (see HelmInstallJob::serviceAccountManifest()/
+# roleBindingManifest()), not one static identity shared by a whole
+# namespace. Both are torn down (via ownerReferences to the Job, or directly
+# on failure) once that one run is done, so a leaked token is only ever
+# valid for that single install. The actual `helm upgrade --install`/
+# `uninstall` runs as that short-lived Job under its own per-release
+# identity, so a chart's subcharts can create any resource kind
+# (NetworkPolicy, PodDisruptionBudget, Role, HorizontalPodAutoscaler, ...)
+# without this ClusterRole ever needing to be edited again -- its blast
+# radius is capped by being namespace-scoped per RoleBinding and torn down
+# per release, not the whole cluster for the namespace's lifetime.
+#
+# Usage:
+#   kubectl apply -f docs/k8s-rbac-sample.yaml
+#   kubectl create token kumulicp-deployer -n kumulicp-system --duration=87600h
+#
+# Then register a Server in the control panel with interface=helm_k8s using:
+#   - Address: the cluster's API server URL (`kubectl cluster-info`)
+#   - CA Certificate: `kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d`
+#   - Settings: {"k8s_auth_type": "bearer_token"}
+#   - Api Secret: the token created above
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kumulicp-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kumulicp-deployer
+  namespace: kumulicp-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kumulicp-deployer
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets", "serviceaccounts", "pods", "pods/log"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # DomainMiddlewareService (app/Integrations/ServerManagers/HelmKubernetes/API/Ingress.php,
+  # Middleware.php) manages these directly under kumulicp-deployer -- a
+  # separate code path from chart installs, so these stay here.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["traefik.io"]
+    resources: ["middlewares"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Needed by HelmInstaller to provision (and tear down) each release's own
+  # ServiceAccount/RoleBinding -- see the kumulicp-helm-installer comment
+  # above.
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get", "list", "create", "delete"]
+  # Kubernetes' RBAC privilege-escalation check refuses to let any identity
+  # create a RoleBinding granting a ClusterRole it doesn't itself hold --
+  # without this, the RoleBinding above is rejected with "attempting to
+  # grant RBAC permissions not currently held", even though kumulicp-deployer
+  # is only ever binding it into other ServiceAccounts, never using those
+  # permissions itself. `bind` on this one specific ClusterRole (via
+  # resourceNames) is the documented, minimal way to allow that delegation
+  # without giving kumulicp-deployer the wildcard permissions directly.
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    verbs: ["bind"]
+    resourceNames: ["kumulicp-helm-installer"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kumulicp-deployer
+subjects:
+  - kind: ServiceAccount
+    name: kumulicp-deployer
+    namespace: kumulicp-system
+roleRef:
+  kind: ClusterRole
+  name: kumulicp-deployer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Deliberately wildcard: the whole point is that a chart's subcharts can
+# create any resource kind without this ever needing another rule added.
+# Never bound cluster-wide -- see HelmInstaller, which binds this via a
+# fresh namespace-scoped RoleBinding for each individual install Job.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kumulicp-helm-installer
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]

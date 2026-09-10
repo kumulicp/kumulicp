@@ -6,6 +6,7 @@ use App\Actions\Servers\ServerActivate;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateServerRequest;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\Facades\ServerInterface;
@@ -55,9 +56,10 @@ class Servers extends Controller
                 'name' => $server->name,
                 'host' => $server->host,
                 'address' => $server->address,
-                'api_key' => $server->api_key,
+                'has_api_key' => (bool) $server->api_key,
                 'ip' => $server->ip,
                 'internal_address' => $server->internal_address,
+                'ca_cert' => $server->ca_cert,
                 'type' => $server->type,
                 'interface' => $server->interface,
                 'default_web_server' => $server->default_web_server,
@@ -123,10 +125,11 @@ class Servers extends Controller
                 'name' => $server->name,
                 'host' => $server->host,
                 'address' => $server->address,
-                'api_key' => $server->api_key,
-                'api_secret' => $server->api_secret,
+                'has_api_key' => (bool) $server->api_key,
+                'has_api_secret' => (bool) $server->api_secret,
                 'ip' => $server->ip,
                 'internal_address' => $server->internal_address,
+                'ca_cert' => $server->ca_cert,
                 'type' => $server->type,
                 'interface' => $server->interface,
                 'default' => ($server->default_web_server || $server->default_email_server || $server->default_database_server),
@@ -169,31 +172,29 @@ class Servers extends Controller
         ]);
     }
 
-    public function update(Request $request, Server $server)
+    public function update(UpdateServerRequest $request, Server $server)
     {
-        $validated = $request->validate([
-            'name' => 'string|required',
-            'host' => 'string|required',
-            'address' => 'string|required',
-            'api_key' => 'string|required',
-            'api_secret' => 'string|required',
-            'ip' => 'string|required',
-            'internal_address' => 'string|required',
-            'settings' => 'array|nullable',
-            'default_backup_server' => 'nullable|exists:servers,id',
-            'is_backup_server' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $server->name = $validated['name'];
         $server->host = $validated['host'];
         $server->address = $validated['address'];
-        $server->api_key = $validated['api_key']; // Needs to be encrypted
-        $server->api_secret = $validated['api_secret']; // Needs to be encrypted
         $server->ip = $validated['ip'];
         $server->internal_address = $validated['internal_address'];
-        $server->settings = $validated['settings'];
-        $server->default_backup_server_id = $validated['default_backup_server'];
-        $server->is_backup_server = $validated['is_backup_server'];
+        $server->ca_cert = $validated['ca_cert'] ?? null;
+        $server->settings = $validated['settings'] ?? null;
+        $server->default_backup_server_id = $validated['default_backup_server'] ?? null;
+        $server->is_backup_server = $validated['is_backup_server'] ?? false;
+
+        // Blank means "leave unchanged" — secrets are never sent back to the
+        // frontend, so only overwrite when a new value was submitted.
+        if (! empty($validated['api_key'])) {
+            $server->api_key = $validated['api_key'];
+        }
+        if (! empty($validated['api_secret'])) {
+            $server->api_secret = $validated['api_secret'];
+        }
+
         $server->save();
 
         return redirect('/admin/server/servers/'.$server->id)->with('success', __('admin.servers.updated', ['server' => $server->name]));

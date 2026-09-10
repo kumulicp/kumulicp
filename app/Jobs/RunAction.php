@@ -25,7 +25,13 @@ class RunAction implements ShouldQueue
      */
     public function __construct(
         public Task $task
-    ) {}
+    ) {
+        $action = Action::classFor($task);
+
+        if ($action && $action::$long_running && $connection = config('queue.long_running_connection')) {
+            $this->onConnection($connection)->onQueue('long');
+        }
+    }
 
     /**
      * Handle the event.

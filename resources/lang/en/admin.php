@@ -27,8 +27,8 @@ return [
         'rancher' => [
             'host' => 'Address to connect to Rancher (eg. https://rancher.example.com)',
             'address' => 'Address to connect to Racher (eg. https://rancher.example.com)',
-            'api_key' => 'Must login to Rancher, go to "Accounts and API Keys", then create a new API with No scope',
-            'api_secret' => 'Use the Secret key that comes with the API key created above',
+            'api_key' => 'Must login to Rancher, go to "Accounts and API Keys", then create a new API with No scope. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
+            'api_secret' => 'Use the Secret key that comes with the API key created above. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
             'ip' => 'IP address of the domain used in the address',
             'internal_address' => 'This is used for apps that need to add a proxy server as a trusted IP',
             'settings' => 'Requires creating a new project for organizations to be stored. Add the settings: project_id',
@@ -48,6 +48,29 @@ return [
                 'instructions' => 'Install ERPNext as a database. This will allow you to share one Frappe server with all the instances.',
             ],
         ],
+        'helm_k8s' => [
+            'general_1' => 'Connects directly to a Kubernetes cluster using helm and kubectl — no Rancher required. Works with any standard cluster (vanilla Kubernetes, EKS, GKE, AKS, k3s, etc).',
+            'host' => 'Not used by this driver — any value is fine (e.g. the same as the API Server Address below).',
+            'address' => 'The Kubernetes API server URL, e.g. https://cluster.example.com:6443. Find it via `kubectl cluster-info` or your cloud provider\'s console.',
+            'ca_cert' => 'The cluster\'s CA certificate (PEM). Not secret — it only verifies the API server\'s identity. From `certificate-authority-data` in a kubeconfig (base64-decoded) or your provider\'s console.',
+            'ip' => 'Not used by this driver.',
+            'internal_address' => 'Not used by this driver.',
+            'api_key' => 'Meaning depends on the "k8s_auth_type" setting below. Bearer Token auth: not used, any value is fine. Client Certificate auth: the client private key (PEM). Stored encrypted; not shown again after saving — leave blank to keep the current value.',
+            'api_secret' => 'Meaning depends on the "k8s_auth_type" setting below. Bearer Token auth: the ServiceAccount token (create with `kubectl create token <service-account>` or a long-lived Secret-backed token). Client Certificate auth: the client certificate (PEM). Stored encrypted; not shown again after saving — leave blank to keep the current value.',
+            'settings' => 'Additional driver settings (JSON). Use this template: { "k8s_auth_type": "bearer_token", "k8s_tls_verify": "true", "k8s_ingress_class": "traefik", "k8s_impersonate_user": "", "k8s_impersonate_group": "", "storage_class": "" }.
+        "k8s_auth_type": "bearer_token" (recommended) or "client_cert" — controls how the Api Key/Api Secret fields above are interpreted.
+        "k8s_tls_verify": "true" or "false" (default true) — verify the API server\'s TLS certificate against the CA Certificate field. Only set to "false" for local/dev clusters with self-signed certificates you cannot otherwise verify.
+        "k8s_ingress_class": the ingress controller installed on this cluster, if any. Set to "traefik" to enable domain-redirect support (uses Traefik\'s Middleware CRD). Leave unset, or set to another value (e.g. "nginx"), to skip redirect-rule management.
+        "k8s_impersonate_user" / "k8s_impersonate_group": optional Kubernetes user/group impersonation.
+        "storage_class": optional StorageClass name to use for app data volumes, overriding the cluster default.',
+        ],
+        'servers' => 'Servers',
+        'added' => ':server added',
+        'updated' => ':server updated',
+        'deleted' => 'Server deleted',
+        'validated' => ':server validated',
+        'is_default' => 'Server is set as default',
+        'chart' => 'Chart',
     ],
     'denied' => 'You must be an administrator to continue',
     'applications' => [
@@ -142,12 +165,13 @@ return [
         'invoice_settings' => 'Invoice Settings',
         'system_checks_settings' => 'System Checks',
     ],
-    'pullSecrets' => [
-        'pullSecrets' => 'Image Pull Secrets',
-        'added' => 'Pull secret added',
-        'deleted' => 'Pull secret deleted',
-        'inUse' => 'This pull secret cannot be deleted because it is required by one or more app instances',
-        'migrated' => 'App versions migrated to the new pull secret',
+    'repoSecrets' => [
+        'repoSecrets' => 'Repo Secrets',
+        'added' => 'Repo secret added',
+        'deleted' => 'Repo secret deleted',
+        'inUse' => 'This repo secret cannot be deleted because it is required by one or more app instances',
+        'migrateTypeMismatch' => 'Both repo secrets must be the same type',
+        'migrated' => 'App versions migrated to the new repo secret',
     ],
     'tasks' => [
         'tasks' => 'Tasks',
@@ -241,15 +265,6 @@ return [
         'unarchived' => ':plan unarchived',
         'order_updated' => 'Plan order updated',
         'bulkEdit' => 'Bulk Edit',
-    ],
-    'servers' => [
-        'servers' => 'Servers',
-        'added' => ':server added',
-        'updated' => ':server updated',
-        'deleted' => 'Server deleted',
-        'validated' => ':server validated',
-        'is_default' => 'Server is set as default',
-        'chart' => 'Chart',
     ],
     'packages' => [
         'installed' => "Package ':package' installed successfully.",
