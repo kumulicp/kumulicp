@@ -75,6 +75,18 @@ rules:
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["rolebindings"]
     verbs: ["get", "list", "create", "delete"]
+  # Kubernetes' RBAC privilege-escalation check refuses to let any identity
+  # create a RoleBinding granting a ClusterRole it doesn't itself hold --
+  # without this, the RoleBinding above is rejected with "attempting to
+  # grant RBAC permissions not currently held", even though kumulicp-deployer
+  # is only ever binding it into other ServiceAccounts, never using those
+  # permissions itself. `bind` on this one specific ClusterRole (via
+  # resourceNames) is the documented, minimal way to allow that delegation
+  # without giving kumulicp-deployer the wildcard permissions directly.
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    verbs: ["bind"]
+    resourceNames: ["kumulicp-helm-installer"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
