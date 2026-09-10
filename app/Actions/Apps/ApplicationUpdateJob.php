@@ -3,6 +3,7 @@
 namespace App\Actions\Apps;
 
 use App\Actions\Action;
+use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
@@ -23,6 +24,27 @@ class ApplicationUpdateJob extends Action
         $job_title = ucwords(str_replace('_', ' ', $job));
 
         $this->description = "$job_title: {$app_instance->label}";
+
+        // Multiple children of the same shared-app hub can have their own
+        // site-provisioning jobs dispatched around the same time -- queue
+        // behind any job already in flight against the same hub instead of
+        // firing a second Kubernetes Job concurrently against the same
+        // release/bench. A failed sibling still blocks (not just complete):
+        // it needs to be investigated and resolved before any other
+        // create/migrate/drop-site job against this hub should proceed.
+        $hub = $app_instance->sharedPlanParent() ?? $app_instance;
+        $sibling_instance_ids = $hub->children()->pluck('id')->push($hub->id);
+
+        $existing_task = Task::where('action_slug', $this->slug)
+            ->whereIn('app_instance_id', $sibling_instance_ids)
+            ->where('app_instance_id', '!=', $app_instance->id)
+            ->where('status', '!=', 'complete')
+            ->latest('id')
+            ->first();
+
+        if ($existing_task) {
+            $this->prerequisites = (new Prerequisites)->add_waiting_for($existing_task)->get();
+        }
     }
 
     public static function run(Task $task)
