@@ -42,7 +42,6 @@ modules_statuses.json
 
 docker-compose.yml
 docker-data
-docker
 
 .phpunit.result.cache
 .phpunit.cache
