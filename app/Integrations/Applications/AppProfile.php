@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Applications;
 
+use App\AppInstance;
 use Illuminate\Support\Arr;
 
 class AppProfile
@@ -116,7 +117,7 @@ class AppProfile
         return $this->recommendations;
     }
 
-    public function activationType()
+    public function activationType(?AppInstance $app_instance = null)
     {
         return $this->activation_type;
     }

@@ -41,7 +41,7 @@ class ApplicationUpgrade extends Action
         $app_instance->save();
         $this->app_instance = $app_instance;
 
-        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
+        if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
             $this->addCustomValue(['waiting_for' => [$job->id]]);
         }
     }
@@ -51,7 +51,7 @@ class ApplicationUpgrade extends Action
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
         $app_instance = Application::instance($task->app_instance);
-        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $parent_app = Application::instance($app_instance->parent)) {
+        if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
             $server = $app_instance->connect('web')->update();
