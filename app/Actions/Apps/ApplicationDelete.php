@@ -47,14 +47,14 @@ class ApplicationDelete extends Action
         RemoveLDAPGroups::dispatch($task->app_instance);
 
         // Delete App
-        if ($app_profile->activationType() === 'chart') {  // Delete via chart
+        if ($app_profile->activationType($app_instance->get()) === 'chart') {  // Delete via chart
             try {
                 $web_server = $app_instance->connect('web');
                 $web_server->delete();
             } catch (\Throwable $e) {
                 report($e);
             }
-        } elseif ($app_profile->activationType() === 'job') {  // Delete via job
+        } elseif ($app_profile->activationType($app_instance->get()) === 'job') {  // Delete via job
             if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
                 // Need to wait until this new job task is complete
                 $app_delete->addCustomValue(['waiting_for' => [$job->id]]);

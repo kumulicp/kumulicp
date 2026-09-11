@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  * @property int|null $web_server_id
  * @property int|null $database_server_id
  * @property int|null $sso_server_id
- * @property int|null $global_app_id
+ * @property int|null $shared_app_id
  * @property-read Application|null $application
  * @property-read Collection<int, AppInstance> $subscribers
  * @property-read Server|null $web_server
@@ -76,7 +76,7 @@ class AppPlan extends Model
 
     public function shared_app()
     {
-        return $this->belongsTo('App\AppInstance', 'global_app_id');
+        return $this->belongsTo('App\AppInstance', 'shared_app_id');
     }
 
     public function displayFeatures()

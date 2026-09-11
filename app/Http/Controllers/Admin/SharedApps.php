@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Apps\ApplicationActivate;
 use App\Actions\Domains\UpdateDnsRecords;
 use App\AppInstance;
 use App\Application;
@@ -78,15 +79,26 @@ class SharedApps extends Controller
 
         $organization = Organization::where('type', 'shared')->first();
         $application = Application::find($validated['app']);
+        $plan = AppPlan::find($validated['plan']);
         $version = $application->versions()->where('status', 'active')->first();
-        $app_instance = ApplicationFacade::activate(
-            organization: $organization,
-            application: $application,
-            version: $version,
-            plan: AppPlan::find($validated['plan']),
-            label: $validated['label']
-        );
-        AddLdapGroups::dispatch($app_instance->get());
+
+        if ($validated['activate'] ?? false) {
+            // Dispatches the same deploy-and-track-to-completion flow as a
+            // normal app activation, instead of just creating an inert
+            // AppInstance row.
+            $task = Action::execute(new ApplicationActivate($organization, $application, $plan, version: $version, label: $validated['label']));
+            $app_instance = $task->app_instance;
+        } else {
+            $app_instance = ApplicationFacade::activate(
+                organization: $organization,
+                application: $application,
+                version: $version,
+                plan: $plan,
+                label: $validated['label']
+            )->get();
+        }
+
+        AddLdapGroups::dispatch($app_instance);
 
         return redirect("/admin/service/shared-apps/{$app_instance->id}");
     }

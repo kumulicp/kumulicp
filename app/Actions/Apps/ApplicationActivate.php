@@ -132,7 +132,7 @@ class ApplicationActivate extends Action
         }
 
         // Only parent app is responsible for activating app
-        if ($app_profile->activationType() === 'chart') {
+        if ($app_profile->activationType($app_instance->get()) === 'chart') {
             $server = $app_instance->connect('web');
             if ($server->existsOrganization()) {
                 $server->add();
@@ -140,7 +140,7 @@ class ApplicationActivate extends Action
                 $server->addOrganization();
                 $task->restart();
             }
-        } elseif ($app_profile->activationType() === 'job') {
+        } elseif ($app_profile->activationType($app_instance->get()) === 'job') {
             $waiting_for = [];
             $new_task = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'activate'), $task, background: true);
             $parent_app_task = ActionFacade::execute(new ApplicationUpgrade($app_instance->parent, $app_instance->parent->version), $task, background: true);

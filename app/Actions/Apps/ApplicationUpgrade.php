@@ -41,7 +41,7 @@ class ApplicationUpgrade extends Action
         $app_instance->save();
         $this->app_instance = $app_instance;
 
-        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
+        if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
             $this->addCustomValue(['waiting_for' => [$job->id]]);
         }
     }
@@ -51,7 +51,7 @@ class ApplicationUpgrade extends Action
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
         $app_instance = Application::instance($task->app_instance);
-        if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $parent_app = Application::instance($app_instance->parent)) {
+        if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
             $server = $app_instance->connect('web')->update();
@@ -94,7 +94,12 @@ class ApplicationUpgrade extends Action
     public static function complete(Task $task)
     {
         $app_instance = Application::instance($task->app_instance);
-        $server = $app_instance->connect('web');
+
+        // A shared child has no web release of its own to poll -- same
+        // hub redirect as run() above.
+        $server = (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = $app_instance->parent)
+            ? Application::instance($parent_app)->connect('web')
+            : $app_instance->connect('web');
 
         if ($app_instance->setting('expand_storage')) {
             if ($task->updated_at < now()->subMinutes(5)) {
