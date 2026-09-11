@@ -94,7 +94,12 @@ class ApplicationUpgrade extends Action
     public static function complete(Task $task)
     {
         $app_instance = Application::instance($task->app_instance);
-        $server = $app_instance->connect('web');
+
+        // A shared child has no web release of its own to poll -- same
+        // hub redirect as run() above.
+        $server = (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = $app_instance->parent)
+            ? Application::instance($parent_app)->connect('web')
+            : $app_instance->connect('web');
 
         if ($app_instance->setting('expand_storage')) {
             if ($task->updated_at < now()->subMinutes(5)) {
