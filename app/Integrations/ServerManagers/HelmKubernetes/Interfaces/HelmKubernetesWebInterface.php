@@ -61,7 +61,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
     {
         $app = new Application($this->organization, $this->server);
 
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
+        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
             $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
         } else {
             $charts = ApplicationFacade::instance($this->app_instance)->charts();
@@ -86,7 +86,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
     public function get()
     {
         $app_instance = $this->app_instance;
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
+        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
             $app_instance = $this->app_instance->parent;
             $charts = ApplicationFacade::instance($app_instance)->charts();
         } else {
@@ -142,7 +142,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
 
     private function chartsForStatus(): array
     {
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType() === 'job') {
+        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
             return ApplicationFacade::instance($this->app_instance->parent)->charts();
         }
 
