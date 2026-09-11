@@ -195,12 +195,20 @@ class AppInstance extends Model
         return $http.$this->domain();
     }
 
+    // Whether a shared-plan child's site lives under its parent's domain
+    // (e.g. B1Church -- every child is a subdomain of the hub) or keeps
+    // whatever domain its own org admin picked on activation (e.g. ERPNext,
+    // which supports any domain) is an application-level choice, not
+    // something implied by server_type=shared alone -- see
+    // Application::hasDomainOption() / the 'parent' domain_option, set per
+    // app via the admin Applications screen.
     public function domain()
     {
-        $shared = $this->plan->setting('server_type') === 'shared';
-        if ($shared || $this->application->hasDomainOption('parent')) {
+        if ($this->application->hasDomainOption('parent')) {
             return $this->parent ? $this->parent->domain() : null;
-        } elseif ($this->primary_domain) {
+        }
+
+        if ($this->primary_domain) {
             return $this->primary_domain->name;
         }
 
