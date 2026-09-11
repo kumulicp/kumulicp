@@ -21,6 +21,14 @@ class ApplicationDelete extends Action
 
     public function __construct(AppInstance $app_instance, ?string $start_time = null, ?string $end_time = null)
     {
+        // Other instances' parent_id points here (shared-app children, or a
+        // type-level "same org" parent) -- deleting it out from under them
+        // orphans the FK and breaks anything that assumes a shared child's
+        // ->parent still resolves (e.g. LdapSupport::getAppRoleGroup()).
+        if ($app_instance->children()->notDeactivated()->exists()) {
+            throw new \Exception(__('messages.exception.shared_app_has_children', ['app' => $app_instance->label]));
+        }
+
         $this->organization = $app_instance->organization;
         $this->app_instance = Application::instance($app_instance);
 

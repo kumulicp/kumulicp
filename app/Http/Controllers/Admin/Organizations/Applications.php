@@ -259,7 +259,11 @@ class Applications extends Controller
         $start = $validated['when'] === 'later' ? $validated['start_time'] : null;
         $end = $validated['when'] === 'later' ? $validated['end_time'] : null;
 
-        $task = Action::execute(new ApplicationDelete($app, start_time: $start, end_time: $end));
+        try {
+            $task = Action::execute(new ApplicationDelete($app, start_time: $start, end_time: $end));
+        } catch (\Throwable $e) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', $e->getMessage());
+        }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.deleting', ['app' => $app->label]));
     }

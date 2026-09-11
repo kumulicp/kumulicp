@@ -48,6 +48,7 @@ return [
         'app_not_found_on_server' => ':app could not be found on the server. :guidance',
         'app_not_found_rancher' => 'Please review the error in Rancher.',
         'helm_operation_failed' => 'Helm operation for :chart failed: :error',
+        'shared_app_has_children' => ':app is a shared app with other organizations still registered against it -- remove or reassign them before deleting it.',
     ],
     'sso' => [
         'denied' => [
