@@ -51,12 +51,28 @@ class ApplicationUpdateJob extends Action
     {
         $job = Application::runJob($task->app_instance, $task->getValue('job_name'));
 
-        // If no job returned, do nothing
+        // No job class registered for this app/action -- nothing to run.
         if (! $job) {
             $task->delete();
 
             return;
         }
+
+        // Job/JobChart::create() (both the Rancher and HelmKubernetes
+        // drivers) return this shape without throwing even when the
+        // create/apply itself failed -- has to be checked explicitly, or a
+        // failed creation silently proceeds with a null job_id.
+        if (Arr::get($job, 'status') !== 'success') {
+            $task->error_message = __('messages.api.rancher.error.job', [
+                'job' => $task->getValue('job_name'),
+                'message' => is_string($job['response'] ?? null) ? $job['response'] : json_encode($job['response'] ?? null),
+            ]);
+            $task->status = 'failed';
+            $task->save();
+
+            return;
+        }
+
         $action = new self($task->app_instance, $task->getValue('job_name'));
         $action->addCustomValue(['job_id' => Arr::get($job, 'response.metadata.name')]);
 
