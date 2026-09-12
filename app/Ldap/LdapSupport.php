@@ -45,20 +45,57 @@ class LdapSupport
 
     public static function getAppRoleGroup(AppInstance $app_instance, AppRole $role)
     {
+        // Kept distinct from $app_instance below: the group DN must stay
+        // scoped under the child's own org (matching AddLdapGroups::createRole())
+        // so each org gets its own group -- reassigning $app_instance to the
+        // shared-app parent before building the DN would put every child's
+        // group under the hub's org instead, collapsing them into one shared
+        // group across all orgs.
+        $organization = $app_instance->organization;
         $app_instance_id = self::getAppInstanceID($app_instance);
+        $is_shared_child = (bool) $app_instance->sharedPlanParent();
+
         if ($app_instance->plan->setting('server_type') === 'shared') {
             $app_instance = $app_instance->parent;
         }
         $role_slug = $role->app_slug($app_instance);
-        $role_dn = Dn::create($app_instance->organization, 'applications', [$role_slug, $app_instance_id]);
+        $role_dn = Dn::create($organization, 'applications', [$role_slug, $app_instance_id]);
         $group = Group::find($role_dn);
 
         if (! $group) {
             $group = new Group;
-            $group->inside(Dn::create($app_instance->organization, 'applications', $app_instance_id));
-            $group->setAttribute('cn', $role_slug);
-            $group->setAttribute('description', $role->name);
-            $group->setAttribute('member', Dn::create($app_instance->organization));
+            $group->inside(dump(Dn::create($organization, 'applications', $app_instance_id)));
+            $group->setAttribute('cn', dump($role_slug));
+            // For a shared-app child, the org name (not the generic role
+            // name) is what lets this group be told apart from every other
+            // org's group in the shared app's own group picker/sharing UI.
+            $group->setAttribute('description', dump($is_shared_child ? $organization->name : $role->name));
+            $group->setAttribute('member', dump(Dn::create($organization)));
+            dd();
+            $group->save();
+        }
+
+        return $group;
+    }
+
+    // One per shared-app hub -- every group folder a shared Nextcloud
+    // provisions is nominally attached to this (Nextcloud requires a group
+    // folder to have *some* group), and it's what LOGIN_FILTER/USER_FILTER
+    // gate basic access to the shared instance on. It is NOT what enforces
+    // per-org exclusivity -- that's each folder's own ACL, scoped to that
+    // org's users. Callers keep this group's membership in sync with each
+    // child's own per-org role group (see AddLdapGroups, Permissions).
+    public static function centralAccessGroup(AppInstance $hub)
+    {
+        $dn = Dn::create($hub->organization, 'applications', ['access', $hub->name]);
+        $group = Group::find($dn);
+
+        if (! $group) {
+            $group = new Group;
+            $group->inside(Dn::create($hub->organization, 'applications', $hub->name));
+            $group->setAttribute('cn', 'access');
+            $group->setAttribute('description', $hub->label);
+            $group->setAttribute('member', Dn::create($hub->organization));
             $group->save();
         }
 

@@ -224,6 +224,9 @@ return [
                 'add_to_group' => 'Add user to :group group',
                 'remove_from_group' => 'Remove user from :group group',
             ],
+            'groups' => [
+                'add' => 'Add group :group',
+            ],
         ],
         'wordpress' => [
             'update_user_roles' => 'Update User Roles (:roles)',

@@ -166,32 +166,43 @@ class Discover extends Controller
 
         $number_of_domains = count($domains);
 
-        if ($app->hasDomainOption('base')) {
-            $domains->push([
-                'text' => __('labels.system_provided_domain'),
-                'value' => 'base',
-            ]);
-        }
-
-        if ($organization->domains()->active()->primary()->count() > 0 && $app->hasDomainOption('subdomains')) {
-            $domains->push([
-                'text' => __('labels.add_subdomain'),
-                'value' => 'new',
-            ]);
-        }
-
-        if ($app->hasDomainOption('parent')) {
+        // A shared-plan child whose app opts into parent-domain behavior
+        // (Application::hasDomainOption('parent') -- e.g. Nextcloud/
+        // B1Church) always resolves to the hub's domain regardless of
+        // anything picked here (see AppInstance::domain()), so 'parent' is
+        // the only sensible choice -- offering base/subdomains alongside it
+        // would just be a domain pick that silently gets ignored. An app
+        // that doesn't opt in (e.g. ERPNext, which supports any domain even
+        // when shared) keeps its normal single-mode options instead.
+        if ($this->sharedParentOnlyDomain($app, $plan)) {
             $domains->push([
                 'text' => __('labels.parent_app_domain'),
                 'value' => 'parent',
             ]);
-        }
+        } else {
+            if ($app->hasDomainOption('base')) {
+                $domains->push([
+                    'text' => __('labels.system_provided_domain'),
+                    'value' => 'base',
+                ]);
+            }
 
-        if ($plan->setting('server_type') === 'shared') {
-            $domains->push([
-                'text' => __('labels.parent_app_domain'),
-                'value' => 'parent',
-            ]);
+            if ($organization->domains()->active()->primary()->count() > 0 && $app->hasDomainOption('subdomains')) {
+                $domains->push([
+                    'text' => __('labels.add_subdomain'),
+                    'value' => 'new',
+                ]);
+            }
+
+            // Same-org "type-level parent app" dependency (Application::parent_app)
+            // -- unrelated to cross-org shared plans above, still offered
+            // independently of server_type.
+            if ($app->parent_app && $app->hasDomainOption('parent')) {
+                $domains->push([
+                    'text' => __('labels.parent_app_domain'),
+                    'value' => 'parent',
+                ]);
+            }
         }
 
         $settings = ApplicationFacade::personalizedConfigurations($app, $plan)->values();
@@ -268,8 +279,13 @@ class Discover extends Controller
             'domain' => [
                 'required',
                 function (string $attribute, mixed $value, \Closure $fail) use ($plan, $app) {
+                    // Mirrors review()'s domain-option list via the same
+                    // helper, so what's accepted here can't drift from what
+                    // the review screen actually offered.
+                    $shared_parent_only = $this->sharedParentOnlyDomain($app, $plan);
+
                     if ($value === 'base') {
-                        if (! $app->hasDomainOption('base')) {
+                        if ($shared_parent_only || ! $app->hasDomainOption('base')) {
                             $fail(__('organization.domain.denied.type'));
                         }
 
@@ -277,7 +293,7 @@ class Discover extends Controller
                     }
 
                     if ($value === 'new') {
-                        if (! $app->hasDomainOption('subdomains')) {
+                        if ($shared_parent_only || ! $app->hasDomainOption('subdomains')) {
                             $fail(__('organization.domain.denied.type'));
                         }
 
@@ -285,7 +301,11 @@ class Discover extends Controller
                     }
 
                     if ($value === 'parent') {
-                        if (! $app->hasDomainOption('parent')) {
+                        // Valid for a shared-plan child (server_type=shared)
+                        // or a same-org type-level parent-app dependency
+                        // (Application::parent_app) -- see review()'s
+                        // equivalent branches.
+                        if (! $app->hasDomainOption('parent') || ! ($shared_parent_only || $app->parent_app)) {
                             $fail(__('organization.domain.denied.type'));
                         }
 
@@ -296,7 +316,7 @@ class Discover extends Controller
                         return;
                     }
 
-                    if (! $app->hasDomainOption(['primary', 'subdomains'])) {
+                    if ($shared_parent_only || ! $app->hasDomainOption(['primary', 'subdomains'])) {
                         $fail(__('organization.domain.denied.type'));
 
                         return;
@@ -368,6 +388,18 @@ class Discover extends Controller
         }
 
         return redirect('/apps')->with('success', __('organization.app.activating', ['app' => $validatedData['label']]));
+    }
+
+    // Whether this app+plan combo only allows the 'parent' domain choice --
+    // see AppInstance::domain(): a shared-plan child whose app opts into
+    // parent-domain behavior (Application::hasDomainOption('parent')) always
+    // resolves to the hub's domain regardless of what's picked here, so any
+    // other choice would be silently ignored at deploy time. Single source
+    // of truth for review() (which options to display) and activate()
+    // (which to actually accept), so they can't drift apart.
+    private function sharedParentOnlyDomain(Application $app, AppPlan $plan): bool
+    {
+        return $plan->setting('server_type') === 'shared' && $app->hasDomainOption('parent');
     }
 
     private function personalizedConfigurations(Application $app, ?array $configurations): ?array

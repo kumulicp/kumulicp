@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Applications;
 
+use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
@@ -317,13 +318,23 @@ class Plans extends Controller
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
+        $web_server = $request->web_server;
+        $database_server = $request->database_server;
+        $sso_server = $request->sso_server;
+
+        if ($request->server_type === 'shared' && $shared_app = AppInstance::find($request->shared_app)) {
+            $web_server = $shared_app->plan->web_server_id;
+            $database_server = $shared_app->plan->database_server_id;
+            $sso_server = $shared_app->plan->sso_server_id;
+        }
+
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->features = $request->displayed_features;
         $plan->payment_enabled = $request->payment_enabled;
-        $plan->web_server_id = $request->web_server;
-        $plan->database_server_id = $request->database_server;
-        $plan->sso_server_id = $request->sso_server;
+        $plan->web_server_id = $web_server;
+        $plan->database_server_id = $database_server;
+        $plan->sso_server_id = $sso_server;
         $plan->shared_app_id = $request->shared_app;
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;

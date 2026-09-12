@@ -15,7 +15,7 @@ class NextcloudProfile extends AppProfile
 
     protected $activation_type = 'chart';
 
-    protected $compatibility = ['rancher', 'openid', 'ldap', 'additional_user_storage', 'additional_storage', 'helm_chart'];
+    protected $compatibility = ['rancher', 'openid', 'ldap', 'additional_user_storage', 'additional_storage', 'helm_chart', 'shareable'];
 
     protected $helm_chart = NextcloudChart::class;
 
