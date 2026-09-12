@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Nextcloud;
 use App\AppInstance;
 use App\Integrations\Applications\EnvVar;
 use App\Ldap\Actions\Dn;
+use App\Ldap\LdapSupport;
 use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
 
@@ -13,7 +14,16 @@ class NextcloudEnvVars extends EnvVar
     public function get(AppInstance $app_instance)
     {
         $app_instance = Application::instance($app_instance);
-        $base_dn = Dn::create($app_instance->organization);
+
+        // RancherWebInterface reroutes any child's add/update/delete to a
+        // rebuild of the hub's own chart (see sharedPlanParent()), so
+        // $app_instance here is always either the hub or a genuinely
+        // standalone instance -- never a child directly. Having any
+        // (non-deactivated) child at all is what distinguishes the two.
+        $is_shared_hub = $app_instance->children()->notDeactivated()->exists();
+        $global_base = config('ldap.connections.default.base_dn');
+
+        $base_dn = $is_shared_hub ? $global_base : Dn::create($app_instance->organization);
         $admin_dn = 'cn=admin,'.Dn::create($app_instance->organization);
         $group_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
         $secretpw = $app_instance->organization->secretpw;
@@ -22,7 +32,11 @@ class NextcloudEnvVars extends EnvVar
         $standard = $app_instance->name.'-standard';
         $basic = $app_instance->name.'-basic';
 
-        $group_base = "ou=groups,$base_dn\n$group_dn";
+        // For a shared hub, every registered child org's own per-org role
+        // group (LdapSupport::getAppRoleGroup()) lives under that org's own
+        // branch, not this instance's -- widen the group search base to the
+        // whole shared LDAP tree so they're all visible.
+        $group_base = $is_shared_hub ? "ou=groups,$global_base\n$global_base" : "ou=groups,$base_dn\n$group_dn";
 
         $default_settings = [
             'IS_PROXY' => 'true',
@@ -34,7 +48,13 @@ class NextcloudEnvVars extends EnvVar
             'PHP_MEMORY_LIMIT' => $app_instance->configuration('nextcloud-php-memory-limit'),
             'PHP_UPLOAD_LIMIT' => $app_instance->configuration('nextcloud-php-upload-limit'),
             'PHP_OPCACHE_MEMORY_CONSUMPTION' => (string) $app_instance->configuration('nextcloud-php-opcache-memory-consumption'),
+            'SHARED_INSTANCE' => $is_shared_hub ? 'true' : 'false',
         ];
+
+        // For a shared hub, login is gated on the central access group
+        // instead of this instance's own standard/basic role groups -- those
+        // only ever covered the hub's own org, never a registered child's.
+        $login_group_dn = $is_shared_hub ? LdapSupport::centralAccessGroup($app_instance->get())->getDn() : null;
 
         $ldap_settings = config('account_manager.driver') === 'ldap' ? [
             'USE_LDAP' => 'true',
@@ -44,8 +64,12 @@ class NextcloudEnvVars extends EnvVar
             'LDAP_AGENT_PASSWORD' => $secretpw,
             'LDAP_BASE' => $base_dn,
             'LDAP_GROUP_BASE' => $group_base,
-            'LOGIN_FILTER' => "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn))(|(cn=%uid)(mail=%uid)))",
-            'USER_FILTER' => "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)))",
+            'LOGIN_FILTER' => $is_shared_hub
+                ? "(&(objectclass=inetOrgPerson)(memberof=$login_group_dn)(|(cn=%uid)(mail=%uid)))"
+                : "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn))(|(cn=%uid)(mail=%uid)))",
+            'USER_FILTER' => $is_shared_hub
+                ? "(&(objectclass=inetOrgPerson)(memberof=$login_group_dn))"
+                : "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)))",
         ] : [];
 
         $sso_settings = $app_instance->configuration('enable-sso') ? [

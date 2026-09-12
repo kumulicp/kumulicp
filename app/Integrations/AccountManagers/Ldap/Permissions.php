@@ -6,6 +6,9 @@ use App\AppInstance;
 use App\AppRole;
 use App\Contracts\AccountManager\PermissionsContract;
 use App\Integrations\AccountManagers\Ldap\User as LdapAccountUser;
+use App\Integrations\Applications\Nextcloud\API\GroupFolders as NextcloudGroupFolders;
+use App\Integrations\Applications\Nextcloud\API\Groups as NextcloudGroups;
+use App\Integrations\Applications\Nextcloud\API\Users as NextcloudUsers;
 use App\Ldap\Actions\Dn;
 use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
@@ -13,6 +16,7 @@ use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Ldap\Models\User as LdapUser;
 use App\Organization;
+use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\PermissionsManager;
 use App\Support\AccountManager\UserManager;
 use App\User;
@@ -118,6 +122,9 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
             $this->addChange('add', $app_instance, $role);
         }
+
+        $this->syncCentralAccessGroup($app_instance, granting: true);
+        $this->syncOrgGroupFolder($app_instance, granting: true);
     }
 
     public function removeAppRole(AppInstance $app_instance, AppRole $role)
@@ -129,6 +136,90 @@ class Permissions extends PermissionsManager implements PermissionsContract
             Arr::set($this->roles, $role, $role_group->getDn());
 
             $this->addChange('remove', $app_instance, $role);
+        }
+
+        $this->syncCentralAccessGroup($app_instance, granting: false);
+        $this->syncOrgGroupFolder($app_instance, granting: false);
+    }
+
+    // Shared Nextcloud only: keeps membership in the hub's central access
+    // group (LdapSupport::centralAccessGroup() -- what LOGIN_FILTER/
+    // USER_FILTER gate basic instance login on) in sync with this app
+    // instance's own per-org role group. Granting a role always ensures
+    // membership; revoking one only strips it once no role remains for this
+    // app instance at all, so losing one of several roles doesn't lock the
+    // user out of the whole shared instance.
+    private function syncCentralAccessGroup(AppInstance $app_instance, bool $granting): void
+    {
+        if ($app_instance->application->slug !== 'nextcloud' || ! $hub = $app_instance->sharedPlanParent()) {
+            return;
+        }
+
+        $central_group = LdapSupport::centralAccessGroup($hub);
+
+        if ($granting) {
+            if (! $this->ldapUser->groups()->exists($central_group)) {
+                $this->ldapUser->groups()->attach($central_group);
+            }
+
+            return;
+        }
+
+        $app_name = LdapSupport::getAppInstanceID($app_instance);
+        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
+
+        if ($remaining === 0 && $this->ldapUser->groups()->exists($central_group)) {
+            $this->ldapUser->groups()->detach($central_group);
+        }
+    }
+
+    // Shared Nextcloud only: the actual per-org exclusivity boundary for the
+    // org's one group folder. Deliberately not the LDAP groups above --
+    // Nextcloud's LDAP group identity is UUID-based (ldapUuidGroupAttribute
+    // auto), so the same-CN-per-org groups getAppRoleGroup() creates can't
+    // be passed directly to the group folders API without risking an
+    // unverified/incorrect id mapping. Uses a dedicated Nextcloud-native
+    // group instead (Provisioning API, deterministic id), synced the same
+    // way NextcloudExtensions/Users already manage group membership
+    // elsewhere in this codebase. Folder + group are created lazily on the
+    // first role grant (no other natural "child just registered" hook, since
+    // Nextcloud has no per-child site-provisioning step). Revoking access
+    // never deletes the folder or its data -- only group membership.
+    private function syncOrgGroupFolder(AppInstance $app_instance, bool $granting): void
+    {
+        if ($app_instance->application->slug !== 'nextcloud' || ! $hub = $app_instance->sharedPlanParent()) {
+            return;
+        }
+
+        $organization = $app_instance->organization;
+        $group_id = 'org-'.$organization->slug;
+        $username = $this->user->attribute('username');
+
+        $nextcloud_user = new NextcloudUsers($hub);
+        $nextcloud_user->find($username);
+
+        if ($granting) {
+            (new NextcloudGroups($hub))->ensure($group_id, $organization->name);
+
+            $group_folder = new NextcloudGroupFolders($hub);
+            $group_folder->findByName($organization->name);
+
+            if (! $group_folder->exists()) {
+                $additional_storage = new AdditionalStorageService($organization, 'group', $organization->name, $app_instance);
+                $group_folder->add($organization->name, $additional_storage);
+                $group_folder->addGroup($group_id);
+            }
+
+            $nextcloud_user->addToGroup($group_id);
+
+            return;
+        }
+
+        $app_name = LdapSupport::getAppInstanceID($app_instance);
+        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
+
+        if ($remaining === 0) {
+            $nextcloud_user->removeFromGroup($group_id);
         }
     }
 

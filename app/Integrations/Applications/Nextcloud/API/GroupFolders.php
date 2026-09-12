@@ -153,6 +153,19 @@ class GroupFolders extends Nextcloud
         return $this->delete($path);
     }
 
+    // A newly-added group defaults to full permissions (31) on the folder --
+    // used to zero out a group's access without removing it entirely (e.g.
+    // the central access group a shared Nextcloud folder is nominally
+    // attached to, which should never itself grant real access).
+    public function setGroupPermissions($group, int $permissions)
+    {
+        $path = $this->baseURI().'/apps/groupfolders/folders/'.$this->data->id.'/groups/'.$group;
+        $data = ['permissions' => $permissions];
+        $this->action_description = __('messages.api.nextcloud.team_folders.add_group');
+
+        return $this->form()->post($path, $data);
+    }
+
     public function addManager($manager)
     {
         $path = $this->baseURI().'/apps/groupfolders/folders/'.$this->data->id.'/manageACL';

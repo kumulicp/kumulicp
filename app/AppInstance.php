@@ -196,16 +196,21 @@ class AppInstance extends Model
     }
 
     // Whether a shared-plan child's site lives under its parent's domain
-    // (e.g. B1Church -- every child is a subdomain of the hub) or keeps
-    // whatever domain its own org admin picked on activation (e.g. ERPNext,
-    // which supports any domain) is an application-level choice, not
-    // something implied by server_type=shared alone -- see
-    // Application::hasDomainOption() / the 'parent' domain_option, set per
-    // app via the admin Applications screen.
+    // (e.g. B1Church/Nextcloud -- every child is addressed via the hub) or
+    // keeps whatever domain its own org admin picked on activation (e.g.
+    // ERPNext, which supports any domain) is an application-level choice --
+    // see Application::hasDomainOption() / the 'parent' domain_option, set
+    // per app via the admin Applications screen.
+    //
+    // hasDomainOption('parent') alone isn't enough to decide that, though:
+    // it's the same flag for every instance of the app, hub and children
+    // alike. Gating on $this->parent too is what keeps the hub (and any
+    // standalone instance) resolving its own domain normally instead of
+    // redirecting to a parent it doesn't have and returning null.
     public function domain()
     {
-        if ($this->application->hasDomainOption('parent')) {
-            return $this->parent ? $this->parent->domain() : null;
+        if ($this->parent && $this->application->hasDomainOption('parent')) {
+            return $this->parent->domain();
         }
 
         if ($this->primary_domain) {
