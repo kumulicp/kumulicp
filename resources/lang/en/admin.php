@@ -115,6 +115,45 @@ return [
         'denied' => [
             'enable' => 'This application cannot be enabled yet. You must first enable a default version.',
         ],
+        'compatibility' => [
+            'compatibility' => 'Compatibility',
+            'rancher' => [
+                'label' => 'Rancher',
+                'description' => 'Deployed and managed as a chart via Rancher.',
+            ],
+            'helm_chart' => [
+                'label' => 'Helm Chart',
+                'description' => 'Installed and upgraded using a Helm chart.',
+            ],
+            'openid' => [
+                'label' => 'OpenID Connect',
+                'description' => 'Supports OpenID Connect single sign-on.',
+            ],
+            'sso' => [
+                'label' => 'Single Sign-On',
+                'description' => 'Supports single sign-on login.',
+            ],
+            'ldap' => [
+                'label' => 'LDAP',
+                'description' => 'Supports LDAP-based accounts and permissions.',
+            ],
+            'shareable' => [
+                'label' => 'Shareable',
+                'description' => 'Can be shared as one instance across multiple organizations.',
+            ],
+            'multisite' => [
+                'label' => 'Multisite',
+                'description' => 'Keeps its own separate site and settings even when shared across multiple organizations.',
+            ],
+            'additional_user_storage' => [
+                'label' => 'Additional User Storage',
+                'description' => 'Users can purchase extra personal storage.',
+            ],
+            'additional_storage' => [
+                'label' => 'Additional Storage',
+                'description' => 'Supports add-on storage beyond the plan default.',
+            ],
+        ],
     ],
     'organizations' => [
         'organizations' => 'Organizations',

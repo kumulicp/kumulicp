@@ -99,6 +99,11 @@
     "reset": "Restablecer"
   },
   "admin": {
+    "applications": {
+      "compatibility": {
+        "compatibility": "Compatibilidad"
+      }
+    },
     "announcement": {
       "title": "Anuncios",
       "pageTitle": "Anuncio",

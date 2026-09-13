@@ -142,6 +142,37 @@ class AppProfile
         return $this->compatibility;
     }
 
+    /**
+     * Every compatibility flag any app profile can declare, with a human
+     * label + brief description -- used to show admins which of these a
+     * given app actually supports.
+     */
+    public static function compatibilityCatalog(): array
+    {
+        $flags = [
+            'rancher',
+            'helm_chart',
+            'openid',
+            'sso',
+            'ldap',
+            'shareable',
+            'multisite',
+            'additional_user_storage',
+            'additional_storage',
+        ];
+
+        $catalog = [];
+
+        foreach ($flags as $flag) {
+            $catalog[$flag] = [
+                'label' => __("admin.applications.compatibility.$flag.label"),
+                'description' => __("admin.applications.compatibility.$flag.description"),
+            ];
+        }
+
+        return $catalog;
+    }
+
     public function replaceJobs($jobs)
     {
         if (class_exists($jobs)) {

@@ -92,6 +92,45 @@ return [
         'denied' => [
             'enable' => 'Esta aplicación aún no se puede habilitar. Primero debes habilitar una versión predeterminada.',
         ],
+        'compatibility' => [
+            'compatibility' => 'Compatibilidad',
+            'rancher' => [
+                'label' => 'Rancher',
+                'description' => 'Se implementa y administra como un chart a través de Rancher.',
+            ],
+            'helm_chart' => [
+                'label' => 'Helm Chart',
+                'description' => 'Se instala y actualiza mediante un Helm chart.',
+            ],
+            'openid' => [
+                'label' => 'OpenID Connect',
+                'description' => 'Admite inicio de sesión único mediante OpenID Connect.',
+            ],
+            'sso' => [
+                'label' => 'Inicio de sesión único',
+                'description' => 'Admite inicio de sesión único.',
+            ],
+            'ldap' => [
+                'label' => 'LDAP',
+                'description' => 'Admite cuentas y permisos basados en LDAP.',
+            ],
+            'shareable' => [
+                'label' => 'Compartible',
+                'description' => 'Se puede compartir como una sola instancia entre varias organizaciones.',
+            ],
+            'multisite' => [
+                'label' => 'Multisitio',
+                'description' => 'Mantiene su propio sitio y configuración incluso cuando se comparte entre varias organizaciones.',
+            ],
+            'additional_user_storage' => [
+                'label' => 'Almacenamiento adicional de usuario',
+                'description' => 'Los usuarios pueden comprar almacenamiento personal adicional.',
+            ],
+            'additional_storage' => [
+                'label' => 'Almacenamiento adicional',
+                'description' => 'Admite almacenamiento adicional más allá del predeterminado del plan.',
+            ],
+        ],
     ],
     'organizations' => [
         'organizations' => 'Organizaciones',

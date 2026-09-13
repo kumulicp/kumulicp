@@ -29,6 +29,33 @@ import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
         <screenshot-gallery :screenshots="app.screenshots" class="mt-3" />
       </div>
     </div>
+    <div class="row">
+      <div class="flex flex-col xs12">
+        <h3 class="va-h6 mb-2">{{ $t('admin.applications.compatibility.compatibility') }}</h3>
+        <div class="compatibility-list">
+          <va-popover
+            v-for="item in app.compatibility"
+            :key="item.key"
+            :message="item.description"
+          >
+            <va-chip
+              size="small"
+              :color="item.available ? 'success' : 'secondary'"
+              :outline="!item.available"
+              class="mr-2 mb-2"
+            >
+              <va-icon
+                v-if="item.available"
+                name="fa-check"
+                size="small"
+                class="mr-1"
+              />
+              {{ item.label }}
+            </va-chip>
+          </va-popover>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -46,5 +73,10 @@ export default {
 <style>
 .full-width {
   width: 100%
+}
+
+.compatibility-list {
+  display: flex;
+  flex-wrap: wrap;
 }
 </style>
