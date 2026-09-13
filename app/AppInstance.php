@@ -280,6 +280,21 @@ class AppInstance extends Model
             : null;
     }
 
+    public function usesMultisitePermissions(): bool
+    {
+        return \App\Support\Facades\Application::profile($this->application)->isCompatible('multisite');
+    }
+
+    // False for a shared-plan child without multisite (e.g. Nextcloud) --
+    // it has no release/site/permissions of its own and defers entirely to
+    // its parent. True for a standalone/hub instance, or a shared-plan
+    // child that IS multisite (e.g. ERPNext), which keeps its own identity
+    // even when shared.
+    public function usesOwnResources(): bool
+    {
+        return ! $this->sharedPlanParent() || $this->usesMultisitePermissions();
+    }
+
     public function canEnableSelfRegistration(): bool
     {
         return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;

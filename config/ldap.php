@@ -39,6 +39,22 @@ return [
             'use_tls' => env('LDAP_TLS', true),
         ],
 
+        // Read-only, scoped to every org's subtree (never a write, never
+        // password hashes) -- for handing to a deployed app's own pod (e.g.
+        // a shared Nextcloud hub) that needs to see users across orgs. Never
+        // use 'default' above for that: it's the LDAP rootDN and bypasses
+        // ACLs entirely.
+        'directory_reader' => [
+            'hosts' => [env('LDAP_HOST', '127.0.0.1')],
+            'username' => env('LDAP_DIRECTORY_READER_USERNAME'),
+            'password' => env('LDAP_DIRECTORY_READER_PASSWORD'),
+            'port' => env('LDAP_PORT', 387),
+            'base_dn' => env('LDAP_BASE_DN'),
+            'timeout' => env('LDAP_TIMEOUT', 0),
+            'use_ssl' => env('LDAP_SSL', false),
+            'use_tls' => env('LDAP_TLS', true),
+        ],
+
     ],
 
     /*

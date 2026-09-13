@@ -54,8 +54,9 @@ class LdapSupport
         $organization = $app_instance->organization;
         $app_instance_id = self::getAppInstanceID($app_instance);
         $is_shared_child = (bool) $app_instance->sharedPlanParent();
+        $app_label = $app_instance->application->name;
 
-        if ($app_instance->plan->setting('server_type') === 'shared') {
+        if ($is_shared_child && ! $app_instance->usesMultisitePermissions()) {
             $app_instance = $app_instance->parent;
         }
         $role_slug = $role->app_slug($app_instance);
@@ -63,19 +64,42 @@ class LdapSupport
         $group = Group::find($role_dn);
 
         if (! $group) {
+            // The hub's own activation only ever creates the app-level
+            // container (cn=$app_instance_id,ou=applications,...) under its
+            // own org -- a shared-app child's org never gets one, so the
+            // very first role group for a new org would otherwise fail to
+            // save with "No such object".
+            self::ensureAppContainer($organization, $app_instance_id, $app_label);
+
             $group = new Group;
-            $group->inside(dump(Dn::create($organization, 'applications', $app_instance_id)));
-            $group->setAttribute('cn', dump($role_slug));
+            $group->inside(Dn::create($organization, 'applications', $app_instance_id));
+            $group->setAttribute('cn', $role_slug);
             // For a shared-app child, the org name (not the generic role
             // name) is what lets this group be told apart from every other
             // org's group in the shared app's own group picker/sharing UI.
-            $group->setAttribute('description', dump($is_shared_child ? $organization->name : $role->name));
-            $group->setAttribute('member', dump(Dn::create($organization)));
-            dd();
+            $group->setAttribute('description', $is_shared_child ? $organization->name : $role->name);
+            $group->setAttribute('member', Dn::create($organization));
             $group->save();
         }
 
         return $group;
+    }
+
+    public static function ensureAppContainer(Organization $organization, string $app_instance_id, ?string $description = null): Group
+    {
+        $dn = Dn::create($organization, 'applications', $app_instance_id);
+        $container = Group::find($dn);
+
+        if (! $container) {
+            $container = new Group;
+            $container->inside(Dn::create($organization, 'applications'));
+            $container->setAttribute('cn', $app_instance_id);
+            $container->setAttribute('description', $description ?? $app_instance_id);
+            $container->setAttribute('member', Dn::create($organization));
+            $container->save();
+        }
+
+        return $container;
     }
 
     // One per shared-app hub -- every group folder a shared Nextcloud
@@ -104,7 +128,7 @@ class LdapSupport
 
     public static function getAppInstanceID(AppInstance $app_instance)
     {
-        if (! $app_instance->parent) {
+        if (! $app_instance->parent || $app_instance->usesMultisitePermissions()) {
             return $app_instance->name;
         } else {
             return $app_instance->parent->name;
