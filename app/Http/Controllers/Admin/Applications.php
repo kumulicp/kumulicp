@@ -8,6 +8,7 @@ use App\AppScreenshot;
 use App\AppVersion;
 use App\Enums\AccessType;
 use App\Http\Controllers\Controller;
+use App\Integrations\Applications\AppProfile;
 use App\Support\Facades\Application as ApplicationFacade;
 use Closure;
 use Illuminate\Http\Request;
@@ -96,6 +97,19 @@ class Applications extends Controller
 
     public function show(Application $app)
     {
+        $profile_compatibility = ApplicationFacade::profile($app)->compatibility();
+
+        $compatibility = collect(AppProfile::compatibilityCatalog())
+            ->map(function ($flag, $key) use ($profile_compatibility) {
+                return [
+                    'key' => $key,
+                    'label' => $flag['label'],
+                    'description' => $flag['description'],
+                    'available' => in_array($key, $profile_compatibility),
+                ];
+            })
+            ->values();
+
         return inertia()->render('Admin/Applications/AppView', [
             'app' => [
                 'id' => $app->id,
@@ -109,6 +123,7 @@ class Applications extends Controller
                 'short_description' => $app->short_description,
                 'description' => $app->description,
                 'enabled' => $app->enabled == 1 ? true : false,
+                'compatibility' => $compatibility,
                 'screenshots' => $app->screenshots->map(function ($screenshot) {
                     return [
                         'id' => $screenshot->id,

@@ -99,6 +99,11 @@
     "reset": "Reset"
   },
   "admin": {
+    "applications": {
+      "compatibility": {
+        "compatibility": "Compatibility"
+      }
+    },
     "announcement": {
       "title": "Announcements",
       "pageTitle": "Announcement",
