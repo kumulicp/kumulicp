@@ -24,9 +24,16 @@ class NextcloudEnvVars extends EnvVar
         $global_base = config('ldap.connections.default.base_dn');
 
         $base_dn = $is_shared_hub ? $global_base : Dn::create($app_instance->organization);
-        $admin_dn = 'cn=admin,'.Dn::create($app_instance->organization);
+        // Each org's own admin DN is ACL-restricted to just that org's
+        // subtree -- widening LDAP_BASE above is useless for a shared hub
+        // unless the bind account can actually read across every child
+        // org's branch too. Use the dedicated, read-only "directory reader"
+        // service account (o=server) for that -- never the app's own
+        // default/rootDN connection, which has unrestricted read/write to
+        // the entire directory and must never be handed to a third-party pod.
+        $admin_dn = $is_shared_hub ? config('ldap.connections.directory_reader.username') : 'cn=admin,'.Dn::create($app_instance->organization);
         $group_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
-        $secretpw = $app_instance->organization->secretpw;
+        $secretpw = $is_shared_hub ? config('ldap.connections.directory_reader.password') : $app_instance->organization->secretpw;
         $sso_server = $app_instance->server('sso')?->serverInfo();
         $sso_slug = $app_instance->setting('sso.slug') ?? "{$app_instance->id}-{$app_instance->organization->slug}-{$app_instance->name}";
         $standard = $app_instance->name.'-standard';

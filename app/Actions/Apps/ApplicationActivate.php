@@ -82,7 +82,7 @@ class ApplicationActivate extends Action
         }
 
         $prereqs->add_subscription_active();
-        if (! Arr::has($custom_values, 'sso_task_id') && $this->plan->sso_server) {
+        if (! Arr::has($custom_values, 'sso_task_id') && $this->plan->sso_server && $application->usesOwnResources()) {
             if ($this->sso_task = ActionFacade::execute(new ApplicationSSOSetup($application->get()), background: true)) {
                 $prereqs->add_waiting_for($this->sso_task);
                 $this->addCustomValue(['sso_task_id' => $this->sso_task->id]);
@@ -97,13 +97,12 @@ class ApplicationActivate extends Action
 
         if ($is_shared_app) {
             $this->status = 'in_progress';
-            $this->addCustomValue(['shared_app' => true]);
         }
     }
 
     public function postGenerate(Task $task)
     {
-        if (! $task->getValue('shared_app')) {
+        if ($task->app_instance->usesOwnResources()) {
             // Add ldap groups
             AddLdapGroups::dispatch($task->app_instance);
 
@@ -126,13 +125,17 @@ class ApplicationActivate extends Action
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
 
-        if ($plan->database_server && ! $app_instance->databasename) {
+        // Only parent app is responsible for activating app -- unless this
+        // app is multisite (e.g. ERPNext), which keeps its own site/LDAP
+        // identity even when shared.
+        $uses_own_permissions = $app_instance->usesOwnResources();
+
+        if ($uses_own_permissions && $plan->database_server && ! $app_instance->databasename) {
             // Add app database
             CreateApplicationDatabase::dispatch($task->app_instance, $task);
         }
 
-        // Only parent app is responsible for activating app
-        if ($app_profile->activationType($app_instance->get()) === 'chart') {
+        if ($uses_own_permissions && $app_profile->activationType($app_instance->get()) === 'chart') {
             $server = $app_instance->connect('web');
             if ($server->existsOrganization()) {
                 $server->add();
@@ -173,8 +176,15 @@ class ApplicationActivate extends Action
     {
         OrganizationFacade::setOrganization($task->organization);
         $app_instance = Application::instance($task->app_instance);
+        // A shared child normally defers entirely to its parent, but a
+        // multisite app (e.g. ERPNext) keeps its own LDAP/site identity even
+        // when shared, so it still needs default admin roles granted here --
+        // connect('web')->isActive() already resolves to the parent's
+        // chart/job status for a 'job' activation type (see
+        // RancherWebInterface), so no further branching is needed below.
+        $uses_own_permissions = $app_instance->usesOwnResources();
         $task_complete = false;
-        if ($app_instance && ! $task->getValue('shared_app')) {
+        if ($app_instance && $uses_own_permissions) {
             $server = $app_instance->connect('web');
 
             if (! $server->exists()) {
@@ -222,7 +232,7 @@ class ApplicationActivate extends Action
 
                 $task_complete = true;
             }
-        } elseif ($task->getValue('shared_app')) {
+        } elseif (! $uses_own_permissions) {
             $task_complete = true;
         }
 

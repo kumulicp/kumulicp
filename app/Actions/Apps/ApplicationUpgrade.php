@@ -48,9 +48,16 @@ class ApplicationUpgrade extends Action
 
     public static function run(Task $task)
     {
+        $app_instance = Application::instance($task->app_instance);
+
+        // A shared child without multisite has no release of its own to
+        // upgrade -- the hub's own upgrade covers it entirely.
+        if (! $app_instance->usesOwnResources()) {
+            return;
+        }
+
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
-        $app_instance = Application::instance($task->app_instance);
         if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
@@ -95,8 +102,20 @@ class ApplicationUpgrade extends Action
     {
         $app_instance = Application::instance($task->app_instance);
 
-        // A shared child has no web release of its own to poll -- same
-        // hub redirect as run() above.
+        // A shared child without multisite has nothing of its own to wait
+        // on -- the hub's own upgrade task tracks completion for it.
+        if (! $app_instance->usesOwnResources()) {
+            $app_instance->version_id = $task->version_id;
+            $app_instance->status = 'active';
+            $app_instance->save();
+
+            $task->complete();
+
+            return;
+        }
+
+        // A multisite shared child (e.g. ERPNext) has no web release of its
+        // own to poll -- same hub redirect as run() above.
         $server = (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = $app_instance->parent)
             ? Application::instance($parent_app)->connect('web')
             : $app_instance->connect('web');

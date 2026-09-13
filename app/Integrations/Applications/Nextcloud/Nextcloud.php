@@ -52,7 +52,14 @@ class Nextcloud extends Application
                 if ($body->meta->status == 'ok') {
                     $this->setResponse($body->data);
                 } elseif ($body->meta->status == 'failure') {
-                    $this->setError($body->meta->message, $body->meta->statuscode, true);
+                    // Nextcloud's OCS API reports failures like "user not
+                    // found" via meta.statuscode inside a 200 response, not
+                    // an HTTP status code -- so callers that opted out via
+                    // ignoreErrorCode() (e.g. Users::find()) need that
+                    // respected here too, or every "not found" throws
+                    // regardless of what they asked to ignore.
+                    $fatal = in_array((int) $body->meta->statuscode, $this->error_codes);
+                    $this->setError($body->meta->message, $body->meta->statuscode, $fatal);
                 }
             } else {
                 $this->setError('unknown error', 'unknown');

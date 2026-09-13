@@ -64,7 +64,9 @@ class AppRole extends Model
 
     public function app_slug(AppInstance $app)
     {
-        $app = $app->parent ?? $app;
+        if ($app->parent && ! $app->usesMultisitePermissions()) {
+            $app = $app->parent;
+        }
 
         return $app->name.'-'.$this->slug;
     }

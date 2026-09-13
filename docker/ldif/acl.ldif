@@ -1,0 +1,5 @@
+dn: olcDatabase={1}mdb,cn=config
+changetype: modify
+add: olcAccess
+olcAccess: {1}to dn.regex="o=([^,]+),dc=dev,dc=local$" attrs=userPassword by dn.regex="^cn=admin,o=$1,dc=dev,dc=local$$" write by anonymous auth by * none
+olcAccess: {2}to dn.regex="o=([^,]+),dc=dev,dc=local$" by dn.regex="^cn=admin,o=$1,dc=dev,dc=local$$" write by dn.exact="cn=directory-reader,o=server,dc=dev,dc=local" read by anonymous auth by * none

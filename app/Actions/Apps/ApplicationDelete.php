@@ -54,18 +54,22 @@ class ApplicationDelete extends Action
         $app_profile = Application::profile($app_instance->application->slug);
         RemoveLDAPGroups::dispatch($task->app_instance);
 
-        // Delete App
-        if ($app_profile->activationType($app_instance->get()) === 'chart') {  // Delete via chart
-            try {
-                $web_server = $app_instance->connect('web');
-                $web_server->delete();
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        } elseif ($app_profile->activationType($app_instance->get()) === 'job') {  // Delete via job
-            if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
-                // Need to wait until this new job task is complete
-                $app_delete->addCustomValue(['waiting_for' => [$job->id]]);
+        // A shared child without multisite has no release/site of its own
+        // to delete -- deleting the LDAP groups above is all it needs.
+        if ($app_instance->usesOwnResources()) {
+            // Delete App
+            if ($app_profile->activationType($app_instance->get()) === 'chart') {  // Delete via chart
+                try {
+                    $web_server = $app_instance->connect('web');
+                    $web_server->delete();
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            } elseif ($app_profile->activationType($app_instance->get()) === 'job') {  // Delete via job
+                if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
+                    // Need to wait until this new job task is complete
+                    $app_delete->addCustomValue(['waiting_for' => [$job->id]]);
+                }
             }
         }
 
@@ -119,10 +123,17 @@ class ApplicationDelete extends Action
         $app_instance = Application::instance($task->app_instance);
         $complete = false;
 
-        if ($app_instance->parent) {
+        if (! $app_instance->usesOwnResources()) {
+            // A shared child without multisite had nothing of its own
+            // deleted in run() above beyond its LDAP groups -- nothing left
+            // to wait on.
             $complete = true;
         } else {
             try {
+                // connect('web')->isActive() already resolves to the
+                // parent's chart/job status for a 'job' activation type
+                // (see RancherWebInterface), so a multisite child (e.g.
+                // ERPNext) polls its own deactivate job correctly here too.
                 $complete = ! $app_instance->connect('web')->isActive();
             } catch (\Throwable $e) {
                 // No web server assigned -- nothing to wait on.
