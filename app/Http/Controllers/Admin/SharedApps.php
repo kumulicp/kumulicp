@@ -29,14 +29,6 @@ class SharedApps extends Controller
         $shared = Organization::where('type', 'shared')->first();
         $apps = $shared?->applications()->paginate(20);
 
-        $plans = [];
-        foreach (AppPlan::with('application')->get() as $plan) {
-            $plans[$plan->application->id][] = [
-                'id' => $plan->id,
-                'name' => $plan->name,
-            ];
-        }
-
         return inertia()->render('Admin/SharedApps/SharedAppsList', [
             'enabled' => $shared ? true : false,
             'apps' => $shared?->app_instances->map(function ($app) {
@@ -47,7 +39,6 @@ class SharedApps extends Controller
                     'status' => $app->status === 'active' ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
-            'plans' => $plans,
             'available_apps' => Application::all()->map(function ($app) {
                 return [
                     'id' => $app->id,
@@ -72,15 +63,32 @@ class SharedApps extends Controller
         /* Validate */
         $validated = $request->validate([
             'app' => 'required|exists:applications,id',
-            'plan' => 'required|exists:app_plans,id',
             'label' => 'required|string',
             'activate' => 'boolean',
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
         $application = Application::find($validated['app']);
-        $plan = AppPlan::find($validated['plan']);
         $version = $application->versions()->where('status', 'active')->first();
+
+        // Every shared app gets its own dedicated, hidden plan -- it's not
+        // meant to be picked by organizations subscribing to the app, just
+        // to hold the settings/features/configurations for this one shared
+        // instance.
+        $plan = new AppPlan;
+        $plan->application_id = $application->id;
+        $plan->name = $validated['label'];
+        $plan->description = __('admin.shared_apps.plan_description', ['app' => $application->name]);
+        $plan->hidden = true;
+        $plan->features = [];
+        $plan->settings = [
+            'base' => [],
+            'standard' => [],
+            'basic' => [],
+            'storage' => [],
+            'application' => [],
+        ];
+        $plan->save();
 
         if ($validated['activate'] ?? false) {
             // Dispatches the same deploy-and-track-to-completion flow as a
@@ -112,16 +120,12 @@ class SharedApps extends Controller
                 'id' => $shared_app->id,
                 'label' => $shared_app->label,
                 'plan' => $shared_app->plan_id,
+                'app_slug' => $shared_app->application->slug,
                 'name' => $shared_app->name,
                 'version' => $shared_app->version_id,
                 'domain' => $shared_app->primary_domain_id ?? 0,
+                'active' => $shared_app->status === 'active',
             ],
-            'plans' => AppPlan::where('application_id', $shared_app->application_id)->get()->map(function ($plan) {
-                return [
-                    'id' => $plan->id,
-                    'name' => $plan->name,
-                ];
-            }),
             'versions' => AppVersion::where('application_id', $shared_app->application_id)->get()->map(function ($version) {
                 return [
                     'id' => $version->id,

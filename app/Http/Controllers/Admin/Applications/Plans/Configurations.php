@@ -25,6 +25,8 @@ class Configurations extends Controller
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
             ],
             'configs' => array_merge($configs, $additionalConfigs),
             'breadcrumbs' => [

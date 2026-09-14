@@ -28,6 +28,8 @@ class Features extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'settings' => $settings,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
             ],
             'features' => $features->map(function ($feature) {
                 return [

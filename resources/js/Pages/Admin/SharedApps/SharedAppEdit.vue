@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, Link } from '@inertiajs/vue3'
 
 </script>
 
@@ -11,6 +11,12 @@ import { useForm } from '@inertiajs/vue3'
   </Head>
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.sharedApps.appLabelSettings', { label: app.label }) }} </va-card-title>
+    <va-card-content class="pt-0">
+      <Link v-for="(tab, index) in planTabs" :href="tab.url" :key="index" class="mr-2">
+        <va-button preset="secondary">{{ tab.title }}</va-button>
+      </Link>
+      <va-separator />
+    </va-card-content>
     <va-card-content>
       <form @submit.prevent="form.put('/admin/service/shared-apps/'+app.id, {onSuccess: () => appUpdated()})">
         <AdminSettings>
@@ -71,18 +77,6 @@ import { useForm } from '@inertiajs/vue3'
               :error="$page.props.errors.version"
               :error-messages="$page.props.errors.version"
             />
-            <va-select
-              v-model="form.plan"
-              :label="$t('admin.sharedApps.plan')"
-              :options="plans"
-              text-by="name"
-              value-by="id"
-              placement="auto"
-              class="mb-3"
-              immediateValidation
-              :error="$page.props.errors.plan"
-              :error-messages="$page.props.errors.plan"
-            />
           </template>
         </AdminSettings>
         <div class="row">
@@ -110,17 +104,29 @@ export default {
     domains: Object,
     errors: Object,
     versions: Object,
-    plans: Object,
     parent_domains: Object
   },
   data () {
+    const basePath = '/admin/apps/' + this.app.app_slug + '/plans/' + this.app.plan
+    const planTabs = [
+      { title: this.$t('common.view'), url: basePath },
+      { title: this.$t('common.edit'), url: basePath + '/edit' }
+    ]
+
+    // The connected plan's features/configurations describe the shared
+    // app's actual deployment, so they aren't meaningful until it's active.
+    if (this.app.active) {
+      planTabs.push({ title: this.$t('admin.plans.features'), url: basePath + '/features' })
+      planTabs.push({ title: this.$t('admin.plans.serverConfigurations'), url: basePath + '/configurations' })
+    }
+
     return {
+      planTabs,
       form: useForm({
         domain: this.app.domain,
         label: this.app.label,
         parent_domain: null,
         subdomain: '',
-        plan: this.app.plan,
         version: this.app.version
       })
     }

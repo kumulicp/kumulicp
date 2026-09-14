@@ -25,20 +25,8 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   text-by="name"
                   class="mb-3"
                   immediateValidation
-                  @update:modelValue="form.plan = null"
                   :error="$page.props.errors.app"
                   :error-messages="$page.props.errors.app"
-                />
-                <va-select v-if="form.app" v-model="form.plan"
-                  :label="$t('admin.sharedApps.plan')"
-                  :options="plans[form.app]"
-                  id="plan"
-                  value-by="id"
-                  text-by="name"
-                  class="mb-3"
-                  immediateValidation
-                  :error="$page.props.errors.plan"
-                  :error-messages="$page.props.errors.plan"
                 />
                 <va-input v-model="form.label"
                   id="label"
@@ -113,7 +101,6 @@ export default {
   props: {
     enabled: Boolean,
     available_apps: Array,
-    plans: Object,
     apps: Object,
     meta: Object,
     errors: Object
@@ -126,7 +113,6 @@ export default {
       showAddApp: false,
       form: useForm({
         app: null,
-        plan: null,
         label: '',
         activate: false
       })

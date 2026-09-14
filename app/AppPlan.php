@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
  * @property bool $payment_enabled
  * @property bool $domain_enabled
  * @property bool $archive
+ * @property bool $hidden
  * @property array|null $features
  * @property int|null $web_server_id
  * @property int|null $database_server_id
@@ -30,6 +31,7 @@ use Illuminate\Support\Str;
  * @property-read Server|null $database_server
  * @property-read Server|null $sso_server
  * @property-read AppInstance|null $shared_app
+ * @property-read AppInstance|null $instance
  */
 class AppPlan extends Model
 {
@@ -43,6 +45,7 @@ class AppPlan extends Model
         'payment_enabled' => 'boolean',
         'domain_enabled' => 'boolean',
         'archive' => 'boolean',
+        'hidden' => 'boolean',
         'features' => 'array',
     ];
 
@@ -77,6 +80,19 @@ class AppPlan extends Model
     public function shared_app()
     {
         return $this->belongsTo('App\AppInstance', 'shared_app_id');
+    }
+
+    // The single AppInstance this plan was auto-generated for when a shared
+    // app is added (see SharedApps::store()). Only meaningful for a hidden
+    // plan -- a regular, user-facing plan can have many subscribers.
+    public function instance()
+    {
+        return $this->hasOne('App\AppInstance', 'plan_id');
+    }
+
+    public function isSharedAppActive(): bool
+    {
+        return $this->hidden && $this->instance?->status === 'active';
     }
 
     public function displayFeatures()
@@ -256,5 +272,10 @@ class AppPlan extends Model
     public function scopeActive($query)
     {
         return $query->where('archive', 0);
+    }
+
+    public function scopeVisible($query)
+    {
+        return $query->where('hidden', 0);
     }
 }
