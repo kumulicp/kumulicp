@@ -19,11 +19,13 @@ class Plans extends Controller
     {
         $organization = auth()->user()->organization;
         $plans = AppPlan::where('archive', 0)
+            ->visible()
             ->where('application_id', $app->id)
             ->orderBy('display_order', 'asc')
             ->get();
 
         $archived = AppPlan::where('archive', 1)
+            ->visible()
             ->where('application_id', $app->id)
             ->get();
 
@@ -105,6 +107,8 @@ class Plans extends Controller
                 'parent_server' => $plan->setting('parent_server_id'),
                 'settings' => $settings,
                 'archived' => $plan->archive,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -222,6 +226,8 @@ class Plans extends Controller
                 'shared_app' => $plan->shared_app_id,
                 'settings' => $settings,
                 'archived' => $plan->archive,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -418,7 +424,7 @@ class Plans extends Controller
 
     public function retrieve(Application $app)
     {
-        return response()->json($app->plans->map(function ($plan) {
+        return response()->json($app->plans->where('hidden', false)->map(function ($plan) {
             return [
                 'value' => $plan->id,
                 'text' => $plan->name,

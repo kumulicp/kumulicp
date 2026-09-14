@@ -38,16 +38,22 @@ export default {
       {
         title: this.$t('admin.plans.settings'),
         url: basePath + '/edit'
-      },
-      {
-        title: this.$t('admin.plans.features'),
-        url: basePath + '/features'
-      },
-      {
-        title: this.$t('admin.plans.serverConfigurations'),
-        url: basePath + '/configurations'
       }
     ]
+
+    // A plan auto-created for a shared app is hidden from the normal plans
+    // list, and doesn't have anything meaningful to configure until the
+    // shared app has actually finished activating.
+    if (!plan.hidden || plan.shared_app_active) {
+      tabs.push({
+        title: this.$t('admin.plans.features'),
+        url: basePath + '/features'
+      })
+      tabs.push({
+        title: this.$t('admin.plans.serverConfigurations'),
+        url: basePath + '/configurations'
+      })
+    }
 
     let value = this.$t('common.view')
     Object.values(tabs).forEach((tab) => {
