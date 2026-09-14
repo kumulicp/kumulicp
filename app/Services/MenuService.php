@@ -19,6 +19,14 @@ class MenuService
         $admin = Gate::allows('admin');
 
         $this->admin = [
+            'dashboard' => [
+                'name' => __('labels.dashboard'),
+                'url' => '/admin',
+                'icon' => 'fa-gauge-high',
+                'perm' => $admin,
+                'external' => false,
+                'order' => 50,
+            ],
             'organizations' => [
                 'name' => __('labels.organizations'),
                 'url' => '/admin/organizations',
