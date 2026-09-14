@@ -24,6 +24,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
     });
 
     Route::prefix('admin')->middleware('can:admin')->group(function () {
+        Route::get('', 'Admin\Dashboard@index')->name('admin.dashboard');
+
         Route::prefix('apps')->group(function () {
             Route::get('', 'Admin\Applications@index')->name('app.index');
             Route::get('create', 'Admin\Applications@create')->name('app.create');
