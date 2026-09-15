@@ -65,6 +65,28 @@ trait TestsApplicationLifecycle
         Mail::fake();
     }
 
+    /**
+     * AppInstance doesn't use HasFactory (and is fully guarded by default),
+     * so a child instance for parent/child cascade or shared-app-hub tests
+     * is built by hand rather than via AppInstance::factory()/::create().
+     */
+    protected function makeChildInstance(AppInstance $parent, string $name, string $status = 'active'): AppInstance
+    {
+        $child = new AppInstance;
+        $child->application_id = $parent->application_id;
+        $child->organization_id = $parent->organization_id;
+        $child->version_id = $parent->version_id;
+        $child->plan_id = $parent->plan_id;
+        $child->parent_id = $parent->id;
+        $child->name = $name;
+        $child->label = $name;
+        $child->api_password = '';
+        $child->status = $status;
+        $child->save();
+
+        return $child;
+    }
+
     protected function pollUntilDone(Task &$task, callable $completeCallback): void
     {
         $iterations = 0;

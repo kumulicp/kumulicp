@@ -302,12 +302,12 @@ class Applications extends Controller
     {
         Gate::authorize('deactivate-app', $app);
 
-        if (Billing::isBillable()) {
-            $period_end = Billing::periodEnds();
-            $app->deactivate_at = $period_end;
-        } else {
-            $app->deactivate_at = now();
-        }
+        // periodEnds() can legitimately return null (e.g. no upcoming
+        // invoice yet) -- falling back to now() keeps deactivate_at always
+        // set, since DeactivatedAppInstanceCheck's sweep only ever matches
+        // a non-null date and a null value would leave the app stuck in
+        // 'deactivating' forever.
+        $app->deactivate_at = (Billing::isBillable() ? Billing::periodEnds() : null) ?? now();
 
         $app->status = 'deactivating';
         $app->save();
