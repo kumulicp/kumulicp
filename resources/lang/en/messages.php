@@ -18,6 +18,7 @@ return [
     'expired' => 'The page expired, please try again.',
     'failed' => 'Failed',
     'action' => [
+        'tech_difficulties' => 'Experiencing technical difficulties. Resolving issues in progress.',
         'waiting_for' => 'Waiting for other tasks to complete',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',

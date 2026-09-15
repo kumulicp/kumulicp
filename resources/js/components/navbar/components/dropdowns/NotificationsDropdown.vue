@@ -34,7 +34,7 @@ import axios from 'axios'
 
             <va-list-item-label caption lines=3>
               <div v-if="notification.title">{{ notification.description }}</div>
-              <div v-else>{{ notification.status }}</div>
+              <div v-else>{{ notification.message || notification.status }}</div>
 
             </va-list-item-label>
           </va-list-item-section>

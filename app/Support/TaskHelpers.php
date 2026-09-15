@@ -31,15 +31,17 @@ class TaskHelpers
 
         $response = [];
         foreach ($tasks as $task) {
-            $time = '';
             $status = 'In Progress';
-            if ($task->status == 'failed') {
+            $message = 'In Progress';
+            if ($task->status == 'failed' || $task->attempts > 1) {
                 $status = 'Failed';
+                $message = __('messages.action.tech_difficulties');
             }
             $response[] = [
                 'id' => $task->id,
                 'description' => $task->description,
                 'status' => $status,
+                'message' => $message,
             ];
         }
 
