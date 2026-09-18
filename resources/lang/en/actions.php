@@ -41,6 +41,7 @@ return [
     'process_permissions' => 'Processing :app Permissions',
     'process_groups' => 'Process Group Options',
     'process_user' => 'Process User Options',
+    'process_user_removal' => 'Remove User',
     'get_started' => 'Get Started Here!',
     'visit_website' => 'Visit your website!',
     'dummy' => [

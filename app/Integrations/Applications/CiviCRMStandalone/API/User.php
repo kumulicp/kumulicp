@@ -14,7 +14,7 @@ class User extends CiviCRMStandalone
 
         $this->form()->post($path, $this->data([
             'where' => [['username', '=', $username]],
-            'select' => ['id', 'name', 'username', 'roles:name'],
+            'select' => ['id', 'name', 'username', 'contact_id', 'roles:name', 'is_active'],
         ]));
 
         $response = $this->response_content();
@@ -61,6 +61,42 @@ class User extends CiviCRMStandalone
 
         $this->form()->post($path, $this->data([
             'values' => ['roles:name' => $roles],
+            'where' => [['username', '=', $this->user['username']]],
+        ]));
+
+        return $this;
+    }
+
+    public function updateContact(array $fields): static
+    {
+        if (! $this->user || empty($fields)) {
+            return $this;
+        }
+
+        $path = $this->basePath().'/ajax/api4/Contact/update';
+
+        $this->action_description = __('messages.api.civicrm.users.update_contact', ['name' => $this->user['username']]);
+
+        $this->form()->post($path, $this->data([
+            'values' => $fields,
+            'where' => [['id', '=', $this->user['contact_id']]],
+        ]));
+
+        return $this;
+    }
+
+    public function deactivate(): static
+    {
+        if (! $this->user) {
+            return $this;
+        }
+
+        $path = $this->basePath().'/ajax/api4/User/update';
+
+        $this->action_description = __('messages.api.civicrm.users.deactivate', ['name' => $this->user['username']]);
+
+        $this->form()->post($path, $this->data([
+            'values' => ['is_active' => false],
             'where' => [['username', '=', $this->user['username']]],
         ]));
 

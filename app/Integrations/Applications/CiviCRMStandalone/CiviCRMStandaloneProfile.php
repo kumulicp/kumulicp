@@ -10,9 +10,15 @@ class CiviCRMStandaloneProfile extends AppProfile
 
     protected $activation_type = 'chart';
 
-    protected $compatibility = ['helm_chart', 'rancher'];
+    protected $compatibility = ['helm_chart', 'rancher', 'ldap'];
 
     protected $helm_chart = CiviCRMStandaloneChart::class;
+
+    protected $jobs = CiviCRMStandaloneJobs::class;
+
+    protected $envs = [
+        CiviCRMStandaloneEnvVars::class,
+    ];
 
     protected $recommendations = [
         'image_repo' => 'images/civicrm-standalone',

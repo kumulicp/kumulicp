@@ -232,6 +232,8 @@ return [
             'users' => [
                 'update_roles' => 'Update user roles (:roles)',
                 'create_user' => 'Create user :name',
+                'update_contact' => 'Update user info for :name',
+                'deactivate' => 'Deactivate user :name',
             ],
         ],
         'rancher' => [

@@ -441,6 +441,12 @@ class Users extends Controller
 
         $organization = auth()->user()->organization;
 
+        // Process user removal on an app-by-app basis to make necessary adjustments directly through the apps API
+        $active_apps = $organization->active_apps();
+        foreach ($active_apps as $app) {
+            Action::dispatch($app->application->slug, 'process_user_removal', [$app, $user->attribute('username')]);
+        }
+
         event(new DeletingUser($user));
         $user->delete();
 

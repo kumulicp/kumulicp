@@ -34,6 +34,8 @@ use App\Actions\Tests\CreateTests;
 use App\AppInstance;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
+use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessUserOptions as CiviCRMProcessUserOptions;
+use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessUserRemoval as CiviCRMProcessUserRemoval;
 use App\Integrations\Applications\DemoApp\Actions\ProcessGroupOptions as DemoAppProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ManageAddon;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
@@ -89,6 +91,8 @@ class ActionService
         ],
         'civicrm-standalone' => [
             'process_permissions' => ActionsProcessPermissions::class,
+            'process_user_options' => CiviCRMProcessUserOptions::class,
+            'process_user_removal' => CiviCRMProcessUserRemoval::class,
         ],
         'demo_app' => [
             'process_group_options' => DemoAppProcessGroupOptions::class,
