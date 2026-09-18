@@ -15,7 +15,7 @@ import { Link } from '@inertiajs/vue3'
           </va-sidebar-item-title>
         </va-sidebar-item-content>
       </va-sidebar-item>
-      <va-sidebar-item v-else :active="(route.url !== '/' && pathname.startsWith(route.url) || pathname === route.url)">
+      <va-sidebar-item v-else :active="isRouteActive(route)">
         <Link class="va-sidebar__item va-sidebar-item" :href="route.url" @click="updatePath(route)">
             <va-sidebar-item-content>
               <va-icon :name="route.icon" />
@@ -54,7 +54,7 @@ import { Link } from '@inertiajs/vue3'
                 </va-sidebar-item-title>
               </va-sidebar-item-content>
             </va-sidebar-item>
-            <va-sidebar-item v-else :active="pathname.startsWith(child.url)">
+            <va-sidebar-item v-else :active="isRouteActive(child)">
               <a v-if="route.external" class="va-sidebar__item va-sidebar-item" :href="child.url">
                 <va-sidebar-item-content>
                   <div class="va-sidebar-item__icon" />
@@ -98,11 +98,36 @@ export default {
   computed: {
     menuItems () {
       return this.$page.props.items
+    },
+    // Several menu urls can share a common prefix (eg. Dashboard's "/admin" is a
+    // prefix of every other admin route), so only the most specific match should
+    // be highlighted rather than every url that happens to match as a prefix.
+    activeUrl () {
+      const urls = []
+      for (const item of this.items) {
+        urls.push(item.url)
+        if (item.submenu) {
+          for (const child of item.submenu) {
+            urls.push(child.url)
+          }
+        }
+      }
+
+      let best = null
+      for (const url of urls) {
+        if (this.pathname === url || this.pathname.startsWith(url + '/')) {
+          if (best === null || url.length > best.length) {
+            best = url
+          }
+        }
+      }
+
+      return best
     }
   },
   methods: {
     isRouteActive (item) {
-      return this.pathname.startsWith(item.url)
+      return item.url === this.activeUrl
     },
     isItemExpanded (item) {
       if (!item.submenu) {
