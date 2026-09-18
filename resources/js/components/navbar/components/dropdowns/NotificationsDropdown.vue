@@ -93,7 +93,7 @@ export default {
     },
     getBellColor () {
       if (this.warnings) {
-        return 'danger'
+        return 'warning'
       }
       if (this.countNotifications > 0) {
         return 'secondary'
@@ -121,7 +121,7 @@ export default {
         case 'In Progress':
           return 'fa-arrow-right'
         case 'Failed':
-          return 'fa-times-circle'
+          return 'fa-triangle-exclamation'
         default:
           return 'fa-question'
       }
@@ -133,7 +133,7 @@ export default {
         case 'In Progress':
           return 'primary'
         case 'Failed':
-          return 'danger'
+          return 'warning'
         default:
           return 'primary'
       }
@@ -192,7 +192,7 @@ export default {
       const vueState = this
 
       const notifications = []
-      for (const notification of Object.entries(this.notifications)) {
+      for (const [, notification] of Object.entries(this.notifications)) {
         notifications.push(notification.id)
       }
 
