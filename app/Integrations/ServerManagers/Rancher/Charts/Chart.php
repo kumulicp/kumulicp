@@ -5,7 +5,6 @@ namespace App\Integrations\ServerManagers\Rancher\Charts;
 use App\AppInstance;
 use App\Organization;
 use App\Support\Facades\Application;
-use Illuminate\Support\Arr;
 
 class Chart
 {
@@ -81,7 +80,7 @@ class Chart
         $sidecars = [];
 
         $app = Application::profile($name)->sidecars();
-        foreach (Arr::get($app, 'sidecars', []) as $sidecar_class) {
+        foreach ($app as $sidecar_class) {
             $sidecar = new $sidecar_class;
             if ($get_sidecar = $sidecar->get($this->app_instance)) {
                 $sidecars[] = $sidecar->get($this->app_instance);
