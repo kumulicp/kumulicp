@@ -78,10 +78,12 @@ class NextcloudChart extends HelmChart
                 'https' => $app_instance->configuration('metrics-https', true),
             ],
             'nextcloud' => [
-                // 'configs' => (object) [],
-                // 'defaultConfigs' => [
-                //     'imaginary.config.php' => $app_instance->configuration('imaginary-enabled'),
-                // ],
+                'configs' => [
+                    'previews.config.php' => $this->previewsConfig(),
+                ],
+                'defaultConfigs' => [
+                    'imaginary.config.php' => $app_instance->configuration('imaginary-enabled'),
+                ],
                 'host' => $app_instance->domain(),
                 // 'existingSecret' => [
                 //     'enabled' => true,
@@ -149,5 +151,34 @@ class NextcloudChart extends HelmChart
                 ],
             ],
         ];
+    }
+
+    // Raw config.php contents mounted at config/previews.config.php -- see
+    // https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/config_sample_php_parameters.html#previews
+    // Kept separate from the chart's own imaginary.config.php (activated via
+    // 'defaultConfigs' above) so the two don't fight over the same keys --
+    // that one already sets preview_imaginary_url/enable_previews/enabledPreviewProviders.
+    private function previewsConfig(): string
+    {
+        $app_instance = Application::instance($this->app_instance);
+
+        $max_x = $app_instance->configuration('preview-max-x');
+        $max_y = $app_instance->configuration('preview-max-y');
+        $max_filesize_image = $app_instance->configuration('preview-max-filesize-image');
+        $max_memory = $app_instance->configuration('preview-max-memory');
+        $concurrency_new = $app_instance->configuration('preview-concurrency-new');
+        $concurrency_all = $app_instance->configuration('preview-concurrency-all');
+
+        return <<<PHP
+        <?php
+        \$CONFIG = array (
+          'preview_max_x' => {$max_x},
+          'preview_max_y' => {$max_y},
+          'preview_max_filesize_image' => {$max_filesize_image},
+          'preview_max_memory' => {$max_memory},
+          'preview_concurrency_new' => {$concurrency_new},
+          'preview_concurrency_all' => {$concurrency_all},
+        );
+        PHP;
     }
 }
