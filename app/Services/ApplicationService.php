@@ -37,17 +37,21 @@ class ApplicationService
 
     public function __construct()
     {
+        // Picks up profiles modules registered via their (one-time, boot-time)
+        // service providers -- see AppProfileRegistry for why this can't just
+        // rely on those boot() calls registering directly on this instance.
+        // Must run before the built-in registrations below, so an
+        // already-mutated profile (e.g. Nextcloud with module-contributed
+        // sidecars/features) from a previous scoped instance isn't clobbered
+        // by a fresh bare one.
+        foreach (app(AppProfileRegistry::class)->all() as $profile) {
+            $this->register($profile);
+        }
+
         $this->register(new GenericAppProfile);
         $this->register(new NextcloudProfile);
         $this->register(new WordpressProfile);
         $this->register(new CiviCRMStandaloneProfile);
-
-        // Picks up profiles modules registered via their (one-time, boot-time)
-        // service providers -- see AppProfileRegistry for why this can't just
-        // rely on those boot() calls registering directly on this instance.
-        foreach (app(AppProfileRegistry::class)->all() as $profile) {
-            $this->register($profile);
-        }
     }
 
     public function isRegistered(string $app)
@@ -61,9 +65,13 @@ class ApplicationService
 
         if (! $this->isRegistered($name)) {
             $this->applications[$name] = $profile;
-        }
 
-        app(AppProfileRegistry::class)->register($profile);
+            // Only write through when this is actually new to this instance --
+            // otherwise a fresh bare profile constructed here (e.g. `new
+            // NextcloudProfile` above) would clobber the already-mutated one
+            // the replay loop just restored from the registry.
+            app(AppProfileRegistry::class)->register($profile);
+        }
     }
 
     public function profile(Application|string $app)
