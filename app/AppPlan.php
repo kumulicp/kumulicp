@@ -90,9 +90,19 @@ class AppPlan extends Model
         return $this->hasOne('App\AppInstance', 'plan_id');
     }
 
+    // A hidden plan only has anything meaningful to configure once it was
+    // actually deployed through kumulicp -- an admin can also create a
+    // shared app as just a pointer to an independently installed instance,
+    // which never gets a web_server_id assigned since kumulicp never
+    // deployed it.
+    //
+    // Uses getAttribute() rather than $this->hidden: the "hidden" column
+    // collides with Eloquent Model's own protected $hidden property (used
+    // for array/JSON serialization), so a direct property access here would
+    // silently read that instead of the database column.
     public function isSharedAppActive(): bool
     {
-        return $this->hidden && $this->instance?->status === 'active';
+        return $this->getAttribute('hidden') && $this->web_server_id !== null;
     }
 
     public function displayFeatures()

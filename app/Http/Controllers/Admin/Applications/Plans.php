@@ -284,7 +284,9 @@ class Plans extends Controller
             'expires_after' => 'nullable|numeric',
             'trial_for' => 'nullable|numeric',
             'shared_app' => 'numeric|nullable|exists:app_instances,id',
-            'server_type' => 'required|in:separate,shared',
+            // A shared app's own hidden plan isn't itself a "separate" or
+            // "shared" subscription option -- it's the thing being shared.
+            'server_type' => $plan->hidden ? 'nullable|in:separate,shared' : 'required|in:separate,shared',
             'self_registration_enabled' => 'nullable|bool',
         ], $currencyRules));
         // Get bottom display order number
@@ -301,7 +303,6 @@ class Plans extends Controller
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;
         $settingsToUpdate = [
-            'server_type' => $request->input('server_type'),
             'admin_access' => $request->input('admin_access'),
             'base.storage' => (int) $request->input('base.storage'),
             'base.max' => (int) $request->input('base.max'),
@@ -323,6 +324,10 @@ class Plans extends Controller
                 $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
                 $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
             }
+        }
+
+        if (! $plan->hidden) {
+            $settingsToUpdate['server_type'] = $request->input('server_type');
         }
 
         $plan->updateSettings($settingsToUpdate);

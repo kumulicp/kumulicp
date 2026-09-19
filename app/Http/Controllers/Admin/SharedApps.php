@@ -14,6 +14,7 @@ use App\Organization;
 use App\OrgDomain;
 use App\OrgSubdomain;
 use App\Rules\OrgSubdomainAvailable;
+use App\Server;
 use App\Services\SubscriptionService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
@@ -21,6 +22,7 @@ use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Domain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class SharedApps extends Controller
 {
@@ -45,6 +47,24 @@ class SharedApps extends Controller
                     'name' => $app->name,
                 ];
             }),
+            'web_servers' => Server::where('type', 'web')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
+                ];
+            }),
+            'database_servers' => Server::where('type', 'database')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
+                ];
+            }),
+            'sso_servers' => Server::where('type', 'sso')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
+                ];
+            }),
             'meta' => $apps ? [
                 'total' => $apps->total(),
                 'pages' => $apps->lastPage(),
@@ -65,6 +85,9 @@ class SharedApps extends Controller
             'app' => 'required|exists:applications,id',
             'label' => 'required|string',
             'activate' => 'boolean',
+            'web_server' => [Rule::requiredIf($request->boolean('activate')), 'nullable', 'numeric', 'exists:servers,id'],
+            'database_server' => 'nullable|numeric|exists:servers,id',
+            'sso_server' => 'nullable|numeric|exists:servers,id',
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
@@ -88,6 +111,16 @@ class SharedApps extends Controller
             'storage' => [],
             'application' => [],
         ];
+
+        // A web server is only ever set when we're actually deploying this
+        // shared app through kumulicp -- it's what tells a hidden plan apart
+        // from one that's just a pointer to an independently installed app.
+        if ($validated['activate'] ?? false) {
+            $plan->web_server_id = $validated['web_server'] ?? null;
+            $plan->database_server_id = $validated['database_server'] ?? null;
+            $plan->sso_server_id = $validated['sso_server'] ?? null;
+        }
+
         $plan->save();
 
         if ($validated['activate'] ?? false) {

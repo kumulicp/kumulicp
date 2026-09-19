@@ -312,6 +312,7 @@
       "maxDomains": "Max Domains",
       "maxEmails": "Max Email Accounts",
       "serverSettings": "Server Settings",
+      "independentlyInstalled": "This app is independently installed and isn't managed by Kumuli CP.",
       "serverType": "Server Type",
       "serverTypeCaption": "Separate Activation: each organization will activate their own app. Shared App: all users connect to a single app",
       "serverTypeSeparate": "Separate Activation",

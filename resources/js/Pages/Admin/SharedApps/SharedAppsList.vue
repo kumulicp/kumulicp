@@ -44,6 +44,41 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   class="mb-3"
                   :error="$page.props.errors.activate"
                   :error-messages="$page.props.errors.activate" />
+                <template v-if="form.activate">
+                  <va-select v-model="form.web_server"
+                    id="webServer"
+                    required-mark
+                    immediateValidation
+                    :label="$t('admin.plans.webServer')"
+                    class="mb-3"
+                    value-by="value"
+                    text-by="text"
+                    :options="web_servers"
+                    :error="$page.props.errors.web_server"
+                    :error-messages="$page.props.errors.web_server" />
+                  <va-select v-model="form.database_server"
+                    id="databaseServer"
+                    immediateValidation
+                    :label="$t('admin.plans.databaseServer')"
+                    class="mb-3"
+                    clearable
+                    value-by="value"
+                    text-by="text"
+                    :options="database_servers"
+                    :error="$page.props.errors.database_server"
+                    :error-messages="$page.props.errors.database_server" />
+                  <va-select v-model="form.sso_server"
+                    id="ssoServer"
+                    immediateValidation
+                    :label="$t('admin.plans.ssoServer')"
+                    class="mb-3"
+                    clearable
+                    value-by="value"
+                    text-by="text"
+                    :options="sso_servers"
+                    :error="$page.props.errors.sso_server"
+                    :error-messages="$page.props.errors.sso_server" />
+                </template>
               </va-card-content>
               <va-card-actions align="right" class="">
                 <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
@@ -101,6 +136,9 @@ export default {
   props: {
     enabled: Boolean,
     available_apps: Array,
+    web_servers: Array,
+    database_servers: Array,
+    sso_servers: Array,
     apps: Object,
     meta: Object,
     errors: Object
@@ -114,8 +152,20 @@ export default {
       form: useForm({
         app: null,
         label: '',
-        activate: false
+        activate: false,
+        web_server: null,
+        database_server: null,
+        sso_server: null
       })
+    }
+  },
+  watch: {
+    'form.activate' (activate) {
+      if (!activate) {
+        this.form.web_server = null
+        this.form.database_server = null
+        this.form.sso_server = null
+      }
     }
   },
   methods: {

@@ -201,6 +201,35 @@ it('breadcrumbs a hidden shared-app plan back to the shared app', function () {
     );
 });
 
+// ---------------------------------------------------------------------------
+// Hidden (shared-app) plan update tests
+// ---------------------------------------------------------------------------
+
+it('does not require server_type when updating a hidden shared-app plan', function () {
+    $hiddenPlan = AppPlan::factory()->create([
+        'name' => 'My Shared CRM',
+        'application_id' => $this->demoApp->id,
+        'hidden' => true,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$hiddenPlan->id}",
+        appPlanUpdatePayload(['name' => 'Renamed Shared CRM', 'server_type' => null])
+    )->assertSessionDoesntHaveErrors('server_type');
+
+    $this->assertDatabaseHas('app_plans', [
+        'id' => $hiddenPlan->id,
+        'name' => 'Renamed Shared CRM',
+    ]);
+});
+
+it('still requires server_type when updating a normal, non-hidden plan', function () {
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload(['server_type' => null])
+    )->assertSessionHasErrors('server_type');
+});
+
 it('rejects a currency amount that is not numeric for the app plan', function () {
     Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
 

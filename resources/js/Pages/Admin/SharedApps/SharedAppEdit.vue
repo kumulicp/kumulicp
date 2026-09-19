@@ -10,7 +10,6 @@ import { useForm, Link } from '@inertiajs/vue3'
     <title>{{ $t('admin.sharedApps.appSettings') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ $t('admin.sharedApps.appLabelSettings', { label: app.label }) }} </va-card-title>
     <va-card-content class="pt-0">
       <Link v-for="(tab, index) in planTabs" :href="tab.url" :key="index" class="mr-2">
         <va-button preset="secondary">{{ tab.title }}</va-button>

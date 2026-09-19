@@ -312,6 +312,7 @@
       "maxDomains": "Dominios Máximos",
       "maxEmails": "Cuentas de Correo Máximas",
       "serverSettings": "Configuración del Servidor",
+      "independentlyInstalled": "Esta aplicación se instala de forma independiente y no está gestionada por Kumuli CP.",
       "serverType": "Tipo de Servidor",
       "serverTypeCaption": "Activación Separada: cada organización activará su propia aplicación. Aplicación Compartida: todos los usuarios se conectan a una sola aplicación",
       "serverTypeSeparate": "Activación Separada",
