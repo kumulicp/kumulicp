@@ -106,6 +106,7 @@ class NextcloudChart extends HelmChart
                 'strategy' => [
                     'type' => $app_instance->configuration('nextcloud-strategy-type', true),
                 ],
+                'extraSidecarContainers' => $this->sidecars(),
             ],
             'persistence' => [
                 'enabled' => $app_instance->configuration('persistence-enabled', true),
@@ -147,7 +148,6 @@ class NextcloudChart extends HelmChart
                     ],
                 ],
             ],
-            'extraSidecarContainers' => $this->sidecars(),
         ];
     }
 }
