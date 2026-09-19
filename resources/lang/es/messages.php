@@ -18,6 +18,7 @@ return [
     'expired' => 'La página expiró, por favor inténtalo de nuevo.',
     'failed' => 'Fallido',
     'action' => [
+        'tech_difficulties' => 'Estamos experimentando dificultades técnicas. Resolución de problemas en curso.',
         'waiting_for' => 'Esperando a que finalicen otras tareas',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',

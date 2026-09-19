@@ -34,7 +34,7 @@ import axios from 'axios'
 
             <va-list-item-label caption lines=3>
               <div v-if="notification.title">{{ notification.description }}</div>
-              <div v-else>{{ notification.status }}</div>
+              <div v-else>{{ notification.message || notification.status }}</div>
 
             </va-list-item-label>
           </va-list-item-section>
@@ -93,7 +93,7 @@ export default {
     },
     getBellColor () {
       if (this.warnings) {
-        return 'danger'
+        return 'warning'
       }
       if (this.countNotifications > 0) {
         return 'secondary'
@@ -121,7 +121,7 @@ export default {
         case 'In Progress':
           return 'fa-arrow-right'
         case 'Failed':
-          return 'fa-times-circle'
+          return 'fa-triangle-exclamation'
         default:
           return 'fa-question'
       }
@@ -133,7 +133,7 @@ export default {
         case 'In Progress':
           return 'primary'
         case 'Failed':
-          return 'danger'
+          return 'warning'
         default:
           return 'primary'
       }
@@ -192,7 +192,7 @@ export default {
       const vueState = this
 
       const notifications = []
-      for (const notification of Object.entries(this.notifications)) {
+      for (const [, notification] of Object.entries(this.notifications)) {
         notifications.push(notification.id)
       }
 
