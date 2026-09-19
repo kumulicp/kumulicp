@@ -9,6 +9,7 @@ use App\Organization;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\Support\PlanBreadcrumbs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -124,24 +125,7 @@ class Plans extends Controller
                 ];
             }),
             'configs' => $configs,
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/apps',
-                    'label' => __('admin.applications.apps'),
-                ],
-                [
-                    'label' => $app->name,
-                    'url' => '/admin/apps/'.$app->slug,
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => __('admin.applications.plans.plans'),
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
-                    'label' => $plan->name,
-                ],
-            ],
+            'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
 
@@ -256,24 +240,7 @@ class Plans extends Controller
                     'name' => $app->label,
                 ];
             }),
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/apps',
-                    'label' => __('admin.applications.apps'),
-                ],
-                [
-                    'label' => $app->name,
-                    'url' => '/admin/apps/'.$app->slug,
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => __('admin.applications.plans.plans'),
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
-                    'label' => $plan->name,
-                ],
-            ],
+            'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
 

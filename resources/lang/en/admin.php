@@ -281,6 +281,7 @@ return [
         'enabled' => 'Shared apps are enabled',
         'updated' => ':app updated',
         'plan_description' => 'Auto-generated plan for the :app shared app',
+        'plan_settings' => 'Plan Settings',
     ],
     'domains' => [
         'domains' => 'Domains',

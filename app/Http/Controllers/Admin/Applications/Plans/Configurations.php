@@ -6,6 +6,7 @@ use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\PlanBreadcrumbs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
@@ -29,24 +30,7 @@ class Configurations extends Controller
                 'shared_app_active' => $plan->isSharedAppActive(),
             ],
             'configs' => array_merge($configs, $additionalConfigs),
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/apps',
-                    'label' => __('admin.applications.apps'),
-                ],
-                [
-                    'label' => $app->name,
-                    'url' => '/admin/apps/'.$app->slug,
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => __('admin.applications.plans.plans'),
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
-                    'label' => $plan->name,
-                ],
-            ],
+            'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
 

@@ -229,6 +229,7 @@ return [
         'enabled' => 'Las aplicaciones compartidas están habilitadas',
         'updated' => ':app actualizada',
         'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
+        'plan_settings' => 'Configuración del plan',
     ],
     'domains' => [
         'domains' => 'Dominios',
