@@ -13,4 +13,9 @@ class AppFeature
     public $description = '';
 
     public ?AppInstance $app_instance = null;
+
+    public function admin_settings()
+    {
+        return [];
+    }
 }
