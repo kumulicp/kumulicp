@@ -158,6 +158,7 @@ class SharedApps extends Controller
                 'version' => $shared_app->version_id,
                 'domain' => $shared_app->primary_domain_id ?? 0,
                 'active' => $shared_app->status === 'active',
+                'organization_id' => $shared_app->organization_id,
             ],
             'versions' => AppVersion::where('application_id', $shared_app->application_id)->get()->map(function ($version) {
                 return [

@@ -10,13 +10,11 @@ import { useForm, Link } from '@inertiajs/vue3'
     <title>{{ $t('admin.sharedApps.appSettings') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-content class="pt-0">
+    <va-card-content>
       <Link v-for="(tab, index) in planTabs" :href="tab.url" :key="index" class="mr-2">
         <va-button preset="secondary">{{ tab.title }}</va-button>
       </Link>
       <va-separator />
-    </va-card-content>
-    <va-card-content>
       <form @submit.prevent="form.put('/admin/service/shared-apps/'+app.id, {onSuccess: () => appUpdated()})">
         <AdminSettings>
           <template #name>{{ $t('admin.sharedApps.aboutApp') }}</template>
@@ -106,18 +104,11 @@ export default {
     parent_domains: Object
   },
   data () {
-    const basePath = '/admin/apps/' + this.app.app_slug + '/plans/' + this.app.plan
     const planTabs = [
-      { title: this.$t('common.view'), url: basePath },
-      { title: this.$t('common.edit'), url: basePath + '/edit' }
+      { title: this.$t('common.view'), url: '/admin/service/shared-apps/' + this.app.id },
+      { title: this.$t('common.edit'), url: '/admin/organizations/' + this.app.organization_id + '/apps/' + this.app.id + '/edit' },
+      { title: this.$t('admin.plans.plan'), url: '/admin/apps/' + this.app.app_slug + '/plans/' + this.app.plan }
     ]
-
-    // The connected plan's features/configurations describe the shared
-    // app's actual deployment, so they aren't meaningful until it's active.
-    if (this.app.active) {
-      planTabs.push({ title: this.$t('admin.plans.features'), url: basePath + '/features' })
-      planTabs.push({ title: this.$t('admin.plans.serverConfigurations'), url: basePath + '/configurations' })
-    }
 
     return {
       planTabs,

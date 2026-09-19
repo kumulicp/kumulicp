@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
+use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use Illuminate\Http\Request;
 
@@ -86,23 +87,7 @@ class Applications extends Controller
                 'id' => $org_server->server->id,
                 'name' => $org_server->server->name,
             ])->values(),
-            'breadcrumbs' => [
-                [
-                    'label' => __('admin.organizations.organizations'),
-                    'url' => '/admin/organizations',
-                ],
-                [
-                    'label' => $organization->name,
-                    'url' => '/admin/organizations/'.$organization->id,
-                ],
-                [
-                    'label' => __('admin.applications.apps'),
-                    'url' => '/admin/organizations/'.$organization->id.'/apps',
-                ],
-                [
-                    'label' => $app->application->name,
-                ],
-            ],
+            'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
     }
 
@@ -140,23 +125,7 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
-            'breadcrumbs' => [
-                [
-                    'label' => __('admin.organizations.organizations'),
-                    'url' => '/admin/organizations',
-                ],
-                [
-                    'label' => $organization->name,
-                    'url' => '/admin/organizations/'.$organization->id,
-                ],
-                [
-                    'label' => __('admin.applications.apps'),
-                    'url' => '/admin/organizations/'.$organization->id.'/apps',
-                ],
-                [
-                    'label' => $app->application->name,
-                ],
-            ],
+            'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
     }
 
@@ -181,23 +150,7 @@ class Applications extends Controller
                 'name' => $chart->chartName(),
                 'values' => Redactor::redact($chart->values()),
             ])->values(),
-            'breadcrumbs' => [
-                [
-                    'label' => __('admin.organizations.organizations'),
-                    'url' => '/admin/organizations',
-                ],
-                [
-                    'label' => $organization->name,
-                    'url' => '/admin/organizations/'.$organization->id,
-                ],
-                [
-                    'label' => __('admin.applications.apps'),
-                    'url' => '/admin/organizations/'.$organization->id.'/apps',
-                ],
-                [
-                    'label' => $app->application->name,
-                ],
-            ],
+            'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
     }
 
