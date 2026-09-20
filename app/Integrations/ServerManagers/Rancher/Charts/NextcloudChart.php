@@ -79,6 +79,13 @@ class NextcloudChart extends HelmChart
             ],
             'nextcloud' => [
                 'configs' => [
+                    // Always non-empty on purpose: the chart's own templates only
+                    // create the config ConfigMap/volume, and mount 'defaultConfigs'
+                    // entries (e.g. imaginary.config.php below), when
+                    // nextcloud.configs itself is non-empty -- so this acts as a
+                    // guaranteed placeholder even if every other entry here becomes
+                    // conditional later.
+                    'blank.config.php' => "<?php\n\$CONFIG = array (\n);\n",
                     'previews.config.php' => $this->previewsConfig(),
                 ],
                 'defaultConfigs' => [
