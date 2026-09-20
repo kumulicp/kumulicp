@@ -11,8 +11,8 @@ import axios from 'axios'
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.tasks.tasks') }}</va-card-title>
     <va-card-content>
-      <div class="row">
-        <div class="flex flex-col md4">
+      <div class="row no-wrap">
+        <div class="flex flex-col md3">
           <div class="item">
             <VaSelect
               v-model="filterApp"
@@ -27,7 +27,7 @@ import axios from 'axios'
             />
           </div>
         </div>
-        <div class="flex flex-col md4">
+        <div class="flex flex-col md3">
           <div class="item">
             <VaSelect
               v-model="filterStatus"
@@ -40,7 +40,7 @@ import axios from 'axios'
             />
           </div>
         </div>
-        <div class="flex flex-col">
+        <div class="flex flex-col md2">
           <div class="item">
             <VaSelect
               v-model="perPage"
