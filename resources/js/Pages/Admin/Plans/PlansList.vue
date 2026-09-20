@@ -77,7 +77,7 @@ import draggable from 'vuedraggable'
                 </thead>
                 <draggable v-model="order.plans" tag="tbody" item-key="id">
                   <template  #item="{ element }">
-                    <tr style="min-height:300px;">
+                    <tr>
                       <td style="text-align: center"><va-icon name="fa-check" color="success" v-if="element.is_default" /></td>
                       <td><Link :href="'/admin/service/plans/'+element.id">{{ element.name }}</Link></td>
                       <td>{{ element.description }}</td>
@@ -106,7 +106,7 @@ import draggable from 'vuedraggable'
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
+                  <tr v-for="(plan, index) in archived" :key="index">
                     <td><Link :href="'/admin/service/plans/'+plan.id">{{ plan.name }}</Link></td>
                     <td>{{ plan.description }}</td>
                     <td>{{ plan.type }}</td>

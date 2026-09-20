@@ -38,7 +38,7 @@ import NewDomainModal from './modals/NewDomainModal.vue'
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="domain in domains" :key="domain.name" style="min-height:300px;">
+                <tr v-for="domain in domains" :key="domain.name">
                   <td>
                     <Link :href="'/settings/domains/'+domain.name">{{ domain.name }}</Link>
                     <span v-if="domain.email_status === 'activating'" style="color: var(--va-list-item-label-caption-color)"> - {{ $t('organization.webDomains.emailActivating') }}<span v-if="domain.type === 'custom'">. {{ $t('organization.webDomains.confirmDnsSettings') }}</span></span>

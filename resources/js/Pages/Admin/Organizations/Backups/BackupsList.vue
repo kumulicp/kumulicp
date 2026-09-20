@@ -93,7 +93,7 @@ import { useForm } from '@inertiajs/vue3'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="backup in backups" :key="backup.id" style="min-height:300px;">
+        <tr v-for="backup in backups" :key="backup.id">
           <td>{{ backup.action }}</td>
           <td>{{ backup.scheduled_at }}</td>
           <td>{{ backup.name }}</td>

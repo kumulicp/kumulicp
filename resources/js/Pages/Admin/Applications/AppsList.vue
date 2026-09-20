@@ -71,7 +71,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(app, index) in apps" :key="index" style="min-height:300px;">
+          <tr v-for="(app, index) in apps" :key="index">
             <td><Link :href="'/admin/apps/'+app.slug">{{ app.name }}</Link></td>
             <td>{{ app.status }}</td>
           </tr>

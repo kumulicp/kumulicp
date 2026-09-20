@@ -136,7 +136,7 @@ import { Link, useForm } from '@inertiajs/vue3'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="subdomain in subdomains.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="subdomain.name" style="min-height:300px;">
+        <tr v-for="subdomain in subdomains.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="subdomain.name">
           <td>{{ subdomain.type }}</td>
           <td>{{ subdomain.host }}</td>
           <td>{{ subdomain.name }}</td>

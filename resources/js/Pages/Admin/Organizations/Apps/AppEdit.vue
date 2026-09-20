@@ -26,7 +26,7 @@ import AppsLayout from './AppsLayout.vue'
             </tr>
         </thead>
         <tbody>
-            <tr v-for="(version, index) in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index" style="min-height:300px;">
+            <tr v-for="(version, index) in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
             <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+version.id">{{ version.version }}</Link></td>
             </tr>
         </tbody>

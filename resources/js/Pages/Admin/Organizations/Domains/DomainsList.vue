@@ -22,7 +22,7 @@ import { useForm } from '@inertiajs/vue3'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="domain in domains.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="domain.id" style="min-height:300px;">
+        <tr v-for="domain in domains.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="domain.id">
           <td>{{ domain.name }}</td>
           <td>{{ domain.app.name }}</td>
           <td>{{ domain.type }}</td>

@@ -71,7 +71,7 @@ import { Link, useForm } from '@inertiajs/vue3'
               </tr>
             </thead>
             <tbody>
-              <tr v-for="version in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="version.name" style="min-height:300px;">
+              <tr v-for="version in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="version.name">
                 <td style="text-align: center"><va-icon name="fa-circle" :color="version.status == 'active' ? 'success' : 'backgroundElement'" /></td>
                 <td><Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version">{{ version.version }}</Link></td>
                 <td>{{ version.updated_at }}</td>

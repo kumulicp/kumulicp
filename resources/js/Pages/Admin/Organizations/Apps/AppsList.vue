@@ -19,7 +19,7 @@ import { Link } from '@inertiajs/vue3'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="app in apps.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="app.id" style="min-height:300px;">
+        <tr v-for="app in apps.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="app.id">
           <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link></td>
           <td>{{ app.version }}</td>
           <td>{{ app.domain.name }}</td>

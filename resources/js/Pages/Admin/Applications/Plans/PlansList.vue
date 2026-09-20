@@ -112,7 +112,7 @@ import draggable from 'vuedraggable'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(plan, index) in archived" style="min-height:300px;" :key="index">
+        <tr v-for="(plan, index) in archived" :key="index">
           <td><Link :href="'/admin/apps/'+app.slug+'/plans/'+plan.id">{{ plan.name }}</Link></td>
           <td>{{ plan.description }}</td>
           <td>{{ plan.active_subscribers }}</td>

@@ -89,7 +89,7 @@ import { Link, useForm } from '@inertiajs/vue3'
               </tr>
             </thead>
             <tbody>
-              <tr v-for="role in roles.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="role.name" style="min-height:300px;">
+              <tr v-for="role in roles.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="role.name">
                 <td><Link :href="'/admin/apps/'+app.slug+'/roles/'+role.id+'/edit'">{{ role.name }}</Link></td>
                 <td>{{ role.access_type }}</td>
                 <td>{{ role.status }}</td>

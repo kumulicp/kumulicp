@@ -101,7 +101,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(app, index) in apps" :key="index" style="min-height:300px;">
+          <tr v-for="(app, index) in apps" :key="index">
             <td><Link :href="'/admin/service/shared-apps/'+app.id">{{ app.label }}</Link></td>
             <td>{{ app.status }}</td>
           </tr>

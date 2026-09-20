@@ -24,7 +24,7 @@ import { Link } from '@inertiajs/vue3'
             </tr>
           </thead>
           <tbody>
-            <tr v-for="organization in organizations.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="organization.name" style="min-height:300px;">
+            <tr v-for="organization in organizations.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="organization.name">
               <td><Link :href="'/admin/organizations/'+organization.id">{{ organization.name }}</Link> <span v-if="organization.is_suborg" class="secondary">({{ $t('admin.organizations.suborganization') }})</span></td>
               <td>{{ organization.contact_name}}</td>
               <td><Link :href="'mailto:'+organization.contact_email">{{ organization.contact_email}}</Link></td>

@@ -24,7 +24,7 @@ import { router } from '@inertiajs/vue3'
               </tr>
           </thead>
           <tbody>
-              <tr v-for="log in logs" :key="log.name" style="min-height:300px;">
+              <tr v-for="log in logs" :key="log.name">
               <td>{{ log.level }}</td>
               <td>{{ log.organization }}</td>
               <td>{{ log.message }}</td>
