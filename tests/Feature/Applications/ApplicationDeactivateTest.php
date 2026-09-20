@@ -6,7 +6,6 @@ use App\AppInstance;
 use App\Notifications\ApplicationDeactivated;
 use App\Organization;
 use App\Support\Facades\Action;
-use App\User;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -68,7 +67,7 @@ it('deactivates an active app instance and notifies admins', function () {
     $instance->refresh();
     expect($instance->status)->toBe('deactivated');
 
-    $admin = User::where('username', 'demo')->firstOrFail();
+    $admin = $task->organization->admins()->first()->get();
     Notification::assertSentTo($admin, ApplicationDeactivated::class);
 });
 

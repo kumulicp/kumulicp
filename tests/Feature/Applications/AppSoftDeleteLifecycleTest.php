@@ -6,6 +6,7 @@ use App\Organization;
 use App\Support\Facades\Action;
 use App\Task;
 use App\User;
+use Illuminate\Support\Facades\Exceptions;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\ServerManagers\FakeServerManager;
@@ -150,6 +151,12 @@ it('does not touch app instances whose grace period has not passed yet', functio
 });
 
 it('does not let one blocked shared-app hub stop the rest of the sweep', function () {
+    // The blocked hub's exception is expected -- DeactivatedAppInstanceCheck
+    // swallows and report()s it rather than letting it stop the sweep. Fake
+    // exception reporting so that expected failure doesn't spam the real
+    // log during the test run, and assert it was reported instead.
+    Exceptions::fake();
+
     $hub = softDeleteTestInstance();
     $hub->status = 'deactivating';
     $hub->deactivate_at = now()->subDay();
@@ -170,6 +177,8 @@ it('does not let one blocked shared-app hub stop the rest of the sweep', functio
     $otherInstance->save();
 
     (new DeactivatedAppInstanceCheck)();
+
+    Exceptions::assertReported(fn (\Exception $e) => str_contains($e->getMessage(), $hub->label));
 
     $hub->refresh();
     expect($hub->status)->toBe('deactivating');

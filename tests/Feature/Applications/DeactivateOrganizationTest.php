@@ -6,7 +6,6 @@ use App\Notifications\OrganizationDeactivated;
 use App\Organization;
 use App\Support\Facades\Action;
 use App\Task;
-use App\User;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -65,7 +64,7 @@ it('deactivates the organization and all of its app instances', function () {
 
     expect($task->status)->toBe('complete');
 
-    $admin = User::where('username', 'demo')->firstOrFail();
+    $admin = $org->admins()->first()->get();
     Notification::assertSentTo($admin, ApplicationDeactivated::class);
     Notification::assertSentTo($admin, OrganizationDeactivated::class);
 });
