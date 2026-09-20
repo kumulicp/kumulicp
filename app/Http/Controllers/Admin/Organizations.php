@@ -18,7 +18,10 @@ class Organizations extends Controller
     public function index()
     {
         $organization = auth()->user()->organization;
-        $organizations = Organization::paginate(20);
+        // The "shared" organization only exists to host shared app instances
+        // -- it's not a real customer, so it's managed from the Shared Apps
+        // page instead of showing up here.
+        $organizations = Organization::where('type', '!=', 'shared')->paginate(20);
 
         return inertia()->render('Admin/Organizations/OrganizationsList', [
             'organizations' => $organizations->map(function ($organization) {

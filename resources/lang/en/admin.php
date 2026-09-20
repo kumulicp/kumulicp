@@ -280,6 +280,8 @@ return [
         'shared_apps_description' => 'Contains apps that any organization can sign up to use',
         'enabled' => 'Shared apps are enabled',
         'updated' => ':app updated',
+        'plan_description' => 'Auto-generated plan for the :app shared app',
+        'plan_settings' => 'Plan Settings',
     ],
     'domains' => [
         'domains' => 'Domains',

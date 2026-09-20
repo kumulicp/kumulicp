@@ -14,6 +14,7 @@ use App\Organization;
 use App\OrgDomain;
 use App\OrgSubdomain;
 use App\Rules\OrgSubdomainAvailable;
+use App\Server;
 use App\Services\SubscriptionService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
@@ -21,6 +22,7 @@ use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Domain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class SharedApps extends Controller
 {
@@ -28,14 +30,6 @@ class SharedApps extends Controller
     {
         $shared = Organization::where('type', 'shared')->first();
         $apps = $shared?->applications()->paginate(20);
-
-        $plans = [];
-        foreach (AppPlan::with('application')->get() as $plan) {
-            $plans[$plan->application->id][] = [
-                'id' => $plan->id,
-                'name' => $plan->name,
-            ];
-        }
 
         return inertia()->render('Admin/SharedApps/SharedAppsList', [
             'enabled' => $shared ? true : false,
@@ -47,11 +41,28 @@ class SharedApps extends Controller
                     'status' => $app->status === 'active' ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
-            'plans' => $plans,
             'available_apps' => Application::all()->map(function ($app) {
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
+                ];
+            }),
+            'web_servers' => Server::where('type', 'web')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
+                ];
+            }),
+            'database_servers' => Server::where('type', 'database')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
+                ];
+            }),
+            'sso_servers' => Server::where('type', 'sso')->get()->map(function ($server) {
+                return [
+                    'value' => $server->id,
+                    'text' => $server->name.' ('.$server->status.')',
                 ];
             }),
             'meta' => $apps ? [
@@ -72,15 +83,45 @@ class SharedApps extends Controller
         /* Validate */
         $validated = $request->validate([
             'app' => 'required|exists:applications,id',
-            'plan' => 'required|exists:app_plans,id',
             'label' => 'required|string',
             'activate' => 'boolean',
+            'web_server' => [Rule::requiredIf($request->boolean('activate')), 'nullable', 'numeric', 'exists:servers,id'],
+            'database_server' => 'nullable|numeric|exists:servers,id',
+            'sso_server' => 'nullable|numeric|exists:servers,id',
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
         $application = Application::find($validated['app']);
-        $plan = AppPlan::find($validated['plan']);
         $version = $application->versions()->where('status', 'active')->first();
+
+        // Every shared app gets its own dedicated, hidden plan -- it's not
+        // meant to be picked by organizations subscribing to the app, just
+        // to hold the settings/features/configurations for this one shared
+        // instance.
+        $plan = new AppPlan;
+        $plan->application_id = $application->id;
+        $plan->name = $validated['label'];
+        $plan->description = __('admin.shared_apps.plan_description', ['app' => $application->name]);
+        $plan->hidden = true;
+        $plan->features = [];
+        $plan->settings = [
+            'base' => [],
+            'standard' => [],
+            'basic' => [],
+            'storage' => [],
+            'application' => [],
+        ];
+
+        // A web server is only ever set when we're actually deploying this
+        // shared app through kumulicp -- it's what tells a hidden plan apart
+        // from one that's just a pointer to an independently installed app.
+        if ($validated['activate'] ?? false) {
+            $plan->web_server_id = $validated['web_server'] ?? null;
+            $plan->database_server_id = $validated['database_server'] ?? null;
+            $plan->sso_server_id = $validated['sso_server'] ?? null;
+        }
+
+        $plan->save();
 
         if ($validated['activate'] ?? false) {
             // Dispatches the same deploy-and-track-to-completion flow as a
@@ -112,16 +153,13 @@ class SharedApps extends Controller
                 'id' => $shared_app->id,
                 'label' => $shared_app->label,
                 'plan' => $shared_app->plan_id,
+                'app_slug' => $shared_app->application->slug,
                 'name' => $shared_app->name,
                 'version' => $shared_app->version_id,
                 'domain' => $shared_app->primary_domain_id ?? 0,
+                'active' => $shared_app->status === 'active',
+                'organization_id' => $shared_app->organization_id,
             ],
-            'plans' => AppPlan::where('application_id', $shared_app->application_id)->get()->map(function ($plan) {
-                return [
-                    'id' => $plan->id,
-                    'name' => $plan->name,
-                ];
-            }),
             'versions' => AppVersion::where('application_id', $shared_app->application_id)->get()->map(function ($version) {
                 return [
                     'id' => $version->id,

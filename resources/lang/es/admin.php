@@ -228,6 +228,8 @@ return [
         'shared_apps_description' => 'Contiene aplicaciones a las que cualquier organización puede suscribirse para usar',
         'enabled' => 'Las aplicaciones compartidas están habilitadas',
         'updated' => ':app actualizada',
+        'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
+        'plan_settings' => 'Configuración del plan',
     ],
     'domains' => [
         'domains' => 'Dominios',

@@ -9,6 +9,7 @@ use App\Organization;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\Support\PlanBreadcrumbs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -19,11 +20,13 @@ class Plans extends Controller
     {
         $organization = auth()->user()->organization;
         $plans = AppPlan::where('archive', 0)
+            ->visible()
             ->where('application_id', $app->id)
             ->orderBy('display_order', 'asc')
             ->get();
 
         $archived = AppPlan::where('archive', 1)
+            ->visible()
             ->where('application_id', $app->id)
             ->get();
 
@@ -105,6 +108,8 @@ class Plans extends Controller
                 'parent_server' => $plan->setting('parent_server_id'),
                 'settings' => $settings,
                 'archived' => $plan->archive,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -120,24 +125,7 @@ class Plans extends Controller
                 ];
             }),
             'configs' => $configs,
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/apps',
-                    'label' => __('admin.applications.apps'),
-                ],
-                [
-                    'label' => $app->name,
-                    'url' => '/admin/apps/'.$app->slug,
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => __('admin.applications.plans.plans'),
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
-                    'label' => $plan->name,
-                ],
-            ],
+            'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
 
@@ -222,6 +210,8 @@ class Plans extends Controller
                 'shared_app' => $plan->shared_app_id,
                 'settings' => $settings,
                 'archived' => $plan->archive,
+                'hidden' => $plan->hidden,
+                'shared_app_active' => $plan->isSharedAppActive(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -250,24 +240,7 @@ class Plans extends Controller
                     'name' => $app->label,
                 ];
             }),
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/apps',
-                    'label' => __('admin.applications.apps'),
-                ],
-                [
-                    'label' => $app->name,
-                    'url' => '/admin/apps/'.$app->slug,
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans',
-                    'label' => __('admin.applications.plans.plans'),
-                ],
-                [
-                    'url' => '/admin/apps/'.$app->slug.'/plans/'.$plan->id,
-                    'label' => $plan->name,
-                ],
-            ],
+            'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
 
@@ -311,7 +284,9 @@ class Plans extends Controller
             'expires_after' => 'nullable|numeric',
             'trial_for' => 'nullable|numeric',
             'shared_app' => 'numeric|nullable|exists:app_instances,id',
-            'server_type' => 'required|in:separate,shared',
+            // A shared app's own hidden plan isn't itself a "separate" or
+            // "shared" subscription option -- it's the thing being shared.
+            'server_type' => $plan->hidden ? 'nullable|in:separate,shared' : 'required|in:separate,shared',
             'self_registration_enabled' => 'nullable|bool',
         ], $currencyRules));
         // Get bottom display order number
@@ -328,7 +303,6 @@ class Plans extends Controller
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;
         $settingsToUpdate = [
-            'server_type' => $request->input('server_type'),
             'admin_access' => $request->input('admin_access'),
             'base.storage' => (int) $request->input('base.storage'),
             'base.max' => (int) $request->input('base.max'),
@@ -350,6 +324,10 @@ class Plans extends Controller
                 $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
                 $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
             }
+        }
+
+        if (! $plan->hidden) {
+            $settingsToUpdate['server_type'] = $request->input('server_type');
         }
 
         $plan->updateSettings($settingsToUpdate);
@@ -418,7 +396,7 @@ class Plans extends Controller
 
     public function retrieve(Application $app)
     {
-        return response()->json($app->plans->map(function ($plan) {
+        return response()->json($app->plans->where('hidden', false)->map(function ($plan) {
             return [
                 'value' => $plan->id,
                 'text' => $plan->name,

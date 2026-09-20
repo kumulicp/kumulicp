@@ -1,5 +1,6 @@
 <?php
 
+use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Support\Facades\Settings;
@@ -152,6 +153,81 @@ it('passes all enabled currencies to the app plan edit page', function () {
     );
 
     $response->assertInertia(fn ($page) => $page->where('enabled_currencies', ['USD', 'CAD', 'EUR']));
+});
+
+// ---------------------------------------------------------------------------
+// Breadcrumb tests
+// ---------------------------------------------------------------------------
+
+it('breadcrumbs a normal plan through the apps plan list', function () {
+    $response = $this->actingAs($this->user)->get(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}"
+    );
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('breadcrumbs.1.label', $this->demoApp->name)
+        ->where('breadcrumbs.2.label', __('admin.applications.plans.plans'))
+        ->where('breadcrumbs.3.label', $this->appPlan->name)
+    );
+});
+
+it('breadcrumbs a hidden shared-app plan back to the shared app', function () {
+    $hiddenPlan = AppPlan::factory()->create([
+        'name' => 'My Shared CRM',
+        'application_id' => $this->demoApp->id,
+        'hidden' => true,
+    ]);
+
+    $sharedAppInstance = new AppInstance;
+    $sharedAppInstance->application_id = $this->demoApp->id;
+    $sharedAppInstance->organization_id = $this->user->organization_id;
+    $sharedAppInstance->version_id = 1;
+    $sharedAppInstance->plan_id = $hiddenPlan->id;
+    $sharedAppInstance->name = 'shared-crm';
+    $sharedAppInstance->label = 'My Shared CRM';
+    $sharedAppInstance->status = 'active';
+    $sharedAppInstance->save();
+
+    $response = $this->actingAs($this->user)->get(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$hiddenPlan->id}"
+    );
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('breadcrumbs.0.label', __('admin.shared_apps.shared_apps'))
+        ->where('breadcrumbs.0.url', '/admin/service/shared-apps')
+        ->where('breadcrumbs.1.label', $sharedAppInstance->label)
+        ->where('breadcrumbs.1.url', '/admin/service/shared-apps/'.$sharedAppInstance->id)
+        ->where('breadcrumbs.2.label', __('admin.shared_apps.plan_settings'))
+    );
+});
+
+// ---------------------------------------------------------------------------
+// Hidden (shared-app) plan update tests
+// ---------------------------------------------------------------------------
+
+it('does not require server_type when updating a hidden shared-app plan', function () {
+    $hiddenPlan = AppPlan::factory()->create([
+        'name' => 'My Shared CRM',
+        'application_id' => $this->demoApp->id,
+        'hidden' => true,
+    ]);
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$hiddenPlan->id}",
+        appPlanUpdatePayload(['name' => 'Renamed Shared CRM', 'server_type' => null])
+    )->assertSessionDoesntHaveErrors('server_type');
+
+    $this->assertDatabaseHas('app_plans', [
+        'id' => $hiddenPlan->id,
+        'name' => 'Renamed Shared CRM',
+    ]);
+});
+
+it('still requires server_type when updating a normal, non-hidden plan', function () {
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload(['server_type' => null])
+    )->assertSessionHasErrors('server_type');
 });
 
 it('rejects a currency amount that is not numeric for the app plan', function () {

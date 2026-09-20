@@ -124,72 +124,78 @@ import { currencyByCode } from '@/constants/currencies'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>
-        <va-select
-          v-model="form.server_type"
-          class="my-2"
-          :label="$t('admin.plans.serverType')"
-          :messages="$t('admin.plans.serverTypeCaption')"
-          immediateValidation
-          clearable
-          value-by="value"
-          text-by="text"
-          :options="serverTypes"
-          :error="$page.props.errors.server_type"
-          :error-messages="$page.props.errors.server_type"
-        />
-        <template v-if="form.server_type == 'shared'">
-          <va-select
-            v-if="app.can.shareable && $page.props.flags.sharedApps"
-            v-model="form.shared_app"
-            class="my-2"
-            :label="$t('admin.plans.sharedApp')"
-            :messages="$t('admin.plans.sharedAppCaption')"
-            immediateValidation
-            value-by="id"
-            text-by="name"
-            :options="shared_apps"
-            :error="$page.props.errors.shared_app"
-            :error-messages="$page.props.errors.shared_app"
-          />
-        </template>
+        <p v-if="plan.hidden && !plan.web_server" class="my-2">
+          {{ $t('admin.plans.independentlyInstalled') }}
+        </p>
         <template v-else>
           <va-select
-            v-model="form.web_server"
+            v-if="!plan.hidden"
+            v-model="form.server_type"
             class="my-2"
-            :label="$t('admin.plans.webServer')"
+            :label="$t('admin.plans.serverType')"
+            :messages="$t('admin.plans.serverTypeCaption')"
             immediateValidation
             clearable
             value-by="value"
             text-by="text"
-            :options="web_servers"
-            :error="$page.props.errors.web_server"
-            :error-messages="$page.props.errors.web_server"
+            :options="serverTypes"
+            :error="$page.props.errors.server_type"
+            :error-messages="$page.props.errors.server_type"
           />
-          <va-select
-            v-model="form.database_server"
-            class="my-2"
-            :label="$t('admin.plans.databaseServer')"
-            immediateValidation
-            clearable
-            value-by="value"
-            text-by="text"
-            :options="database_servers"
-            :error="$page.props.errors.database_server"
-            :error-messages="$page.props.errors.database_server"
-          />
-          <va-select
-            v-if="app.can.sso"
-            v-model="form.sso_server"
-            class="my-2"
-            :label="$t('admin.plans.ssoServer')"
-            immediateValidation
-            clearable
-            value-by="value"
-            text-by="text"
-            :options="sso_servers"
-            :error="$page.props.errors.sso_server"
-            :error-messages="$page.props.errors.sso_server"
-          />
+          <template v-if="form.server_type == 'shared'">
+            <va-select
+              v-if="app.can.shareable && $page.props.flags.sharedApps"
+              v-model="form.shared_app"
+              class="my-2"
+              :label="$t('admin.plans.sharedApp')"
+              :messages="$t('admin.plans.sharedAppCaption')"
+              immediateValidation
+              value-by="id"
+              text-by="name"
+              :options="shared_apps"
+              :error="$page.props.errors.shared_app"
+              :error-messages="$page.props.errors.shared_app"
+            />
+          </template>
+          <template v-else>
+            <va-select
+              v-model="form.web_server"
+              class="my-2"
+              :label="$t('admin.plans.webServer')"
+              immediateValidation
+              clearable
+              value-by="value"
+              text-by="text"
+              :options="web_servers"
+              :error="$page.props.errors.web_server"
+              :error-messages="$page.props.errors.web_server"
+            />
+            <va-select
+              v-model="form.database_server"
+              class="my-2"
+              :label="$t('admin.plans.databaseServer')"
+              immediateValidation
+              clearable
+              value-by="value"
+              text-by="text"
+              :options="database_servers"
+              :error="$page.props.errors.database_server"
+              :error-messages="$page.props.errors.database_server"
+            />
+            <va-select
+              v-if="app.can.sso"
+              v-model="form.sso_server"
+              class="my-2"
+              :label="$t('admin.plans.ssoServer')"
+              immediateValidation
+              clearable
+              value-by="value"
+              text-by="text"
+              :options="sso_servers"
+              :error="$page.props.errors.sso_server"
+              :error-messages="$page.props.errors.sso_server"
+            />
+          </template>
         </template>
       </template>
     </AdminSettings>
