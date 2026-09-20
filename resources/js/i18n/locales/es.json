@@ -565,6 +565,7 @@
       "status": "Estado",
       "all": "Todo",
       "liveUpdates": "Actualizaciones en Vivo",
+      "perPage": "Por Página",
       "actions": "Acciones",
       "runScheduledTasks": "Ejecutar Tareas Programadas",
       "restartQueue": "Reiniciar Cola",
@@ -576,7 +577,11 @@
       "queued": "En Cola",
       "ready": "Lista",
       "inProgress": "En Progreso",
-      "completed": "Completada"
+      "completed": "Completada",
+      "selectedCount": "{count} seleccionada(s)",
+      "restartSelected": "Reiniciar Seleccionadas",
+      "deleteSelected": "Eliminar Seleccionadas",
+      "confirmBulkDelete": "¿Está seguro de que desea eliminar {count} tarea(s) seleccionada(s)?"
     },
     "ssoProviders": {
       "ssoProviders": "Proveedores SSO",

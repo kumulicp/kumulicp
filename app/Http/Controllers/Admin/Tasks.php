@@ -50,7 +50,8 @@ class Tasks extends Controller
         if ($request->app_instance) {
             $tasks->where('app_instance_id', $request->app_instance);
         }
-        $tasks = $tasks->with(['application', 'version', 'organization', 'app_instance'])->paginate(20);
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $tasks = $tasks->with(['application', 'version', 'organization', 'app_instance'])->paginate($perPage);
 
         return [
             'tasks' => $tasks->map(function ($task) {
@@ -95,6 +96,28 @@ class Tasks extends Controller
         Action::retry($task);
 
         return redirect('/admin/server/tasks');
+    }
+
+    public function bulk_restart(Request $request)
+    {
+        $tasks = Task::whereIn('id', $request->input('tasks', []))->get();
+
+        foreach ($tasks as $task) {
+            Action::retry($task);
+        }
+
+        return [
+            'status' => 'success',
+        ];
+    }
+
+    public function bulk_delete(Request $request)
+    {
+        Task::whereIn('id', $request->input('tasks', []))->delete();
+
+        return [
+            'status' => 'success',
+        ];
     }
 
     public function retrieve()

@@ -11,8 +11,8 @@ import axios from 'axios'
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.tasks.tasks') }}</va-card-title>
     <va-card-content>
-      <div class="row">
-        <div class="flex flex-col md4">
+      <div class="row no-wrap">
+        <div class="flex flex-col md3">
           <div class="item">
             <VaSelect
               v-model="filterApp"
@@ -27,7 +27,7 @@ import axios from 'axios'
             />
           </div>
         </div>
-        <div class="flex flex-col md4">
+        <div class="flex flex-col md3">
           <div class="item">
             <VaSelect
               v-model="filterStatus"
@@ -37,6 +37,16 @@ import axios from 'axios'
               @update:modelValue="updateTaskList"
               clearable
               :placeholder="$t('admin.tasks.all')"
+            />
+          </div>
+        </div>
+        <div class="flex flex-col md2">
+          <div class="item">
+            <VaSelect
+              v-model="perPage"
+              :label="$t('admin.tasks.perPage')"
+              :options="perPageOptions"
+              @update:modelValue="changePerPage"
             />
           </div>
         </div>
@@ -59,6 +69,34 @@ import axios from 'axios'
               <Link href="/admin/server/tasks/restart_queue"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
               <Link href="/admin/server/tasks/dummy"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
             </VaButtonDropdown>
+          </div>
+        </div>
+      </div>
+      <div class="row" v-if="!liveMode && selectedItems.length > 0">
+        <div class="flex flex-col" style="flex-grow:1">
+          <div class="item">
+            {{ $t('admin.tasks.selectedCount', { count: selectedItems.length }) }}
+          </div>
+        </div>
+        <div class="flex flex-col">
+          <div class="item">
+            <VaButton
+              preset="secondary"
+              icon="fa-trash-restore"
+              color="primary"
+              @click="bulkRestart"
+            >
+              {{ $t('admin.tasks.restartSelected') }}
+            </VaButton>
+            <VaButton
+              preset="secondary"
+              icon="delete"
+              color="danger"
+              class="ml-2"
+              @click="bulkDelete"
+            >
+              {{ $t('admin.tasks.deleteSelected') }}
+            </VaButton>
           </div>
         </div>
       </div>
@@ -149,8 +187,11 @@ export default {
     return {
       meta: {},
       task_list: [],
+      selectedItems: [],
       filterApp: '',
       filterStatus: '',
+      perPage: 20,
+      perPageOptions: [10, 20, 50, 100],
       liveMode: true,
       columns: [
         { key: 'id', sortable: true },
@@ -187,7 +228,8 @@ export default {
 
       axios.post('/admin/server/tasks/api?page=' + vueState.meta.page, {
         app: vueState.filterApp,
-        status: vueState.filterStatus.value
+        status: vueState.filterStatus.value,
+        per_page: vueState.perPage
       })
         .then(function (response) {
           vueState.task_list = response.data.tasks
@@ -219,6 +261,33 @@ export default {
           vueState.updateTaskList()
         })
     },
+    bulkRestart () {
+      const vueState = this
+      const ids = this.selectedItems.map(task => task.id)
+      if (ids.length === 0) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/restart', { tasks: ids })
+        .then(function () {
+          vueState.selectedItems = []
+          vueState.updateTaskList()
+        })
+    },
+    bulkDelete () {
+      const vueState = this
+      const ids = this.selectedItems.map(task => task.id)
+      if (ids.length === 0) {
+        return
+      }
+      if (!window.confirm(this.$t('admin.tasks.confirmBulkDelete', { count: ids.length }))) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/delete', { tasks: ids })
+        .then(function () {
+          vueState.selectedItems = []
+          vueState.updateTaskList()
+        })
+    },
     hasError (id) {
       const task = this.task_list[id]
 
@@ -244,8 +313,13 @@ export default {
         }
       }
     },
+    changePerPage () {
+      this.meta.page = 1
+      this.updateTaskList()
+    },
     changeLiveMode () {
       if (this.liveMode) {
+        this.selectedItems = []
         this.interval = setInterval(this.updateTaskList, 3000)
       } else {
         clearInterval(this.interval)
