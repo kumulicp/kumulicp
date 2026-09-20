@@ -21,12 +21,15 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     private static array $pending_instances = [];
 
+    private static array $inactive_instances = [];
+
     public static int $recover_stuck_release_calls = 0;
 
     public static function reset(): void
     {
         self::$deleted_instances = [];
         self::$pending_instances = [];
+        self::$inactive_instances = [];
         self::$recover_stuck_release_calls = 0;
     }
 
@@ -38,6 +41,19 @@ class FakeServerManager implements AppInterface, OrganizationInterface
     public static function clearPending(int $app_instance_id): void
     {
         self::$pending_instances = array_diff(self::$pending_instances, [$app_instance_id]);
+    }
+
+    // Simulates a release that's been scaled/stopped without being deleted
+    // -- e.g. what ApplicationDeactivate::complete() polls for (isActive()
+    // going false) as distinct from ApplicationDelete's "release is gone".
+    public static function markInactive(int $app_instance_id): void
+    {
+        self::$inactive_instances[] = $app_instance_id;
+    }
+
+    public static function clearInactive(int $app_instance_id): void
+    {
+        self::$inactive_instances = array_diff(self::$inactive_instances, [$app_instance_id]);
     }
 
     public function __construct(
@@ -73,6 +89,10 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
         if ($this->app_instance && in_array($this->app_instance->id, self::$pending_instances)) {
             return ['active' => false, 'pending' => true, 'message' => 'pending-upgrade'];
+        }
+
+        if ($this->app_instance && in_array($this->app_instance->id, self::$inactive_instances)) {
+            return ['active' => false, 'pending' => false, 'message' => 'stopped'];
         }
 
         return ['active' => true, 'pending' => false, 'message' => 'deployed'];
