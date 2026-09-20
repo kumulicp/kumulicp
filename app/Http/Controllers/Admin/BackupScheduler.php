@@ -12,13 +12,14 @@ use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Backup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Inertia\Response;
 
 class BackupScheduler extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
     public function index()
     {
