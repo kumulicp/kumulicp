@@ -10,7 +10,7 @@ class CiviCRMStandaloneProfile extends AppProfile
 
     protected $activation_type = 'chart';
 
-    protected $compatibility = ['helm_chart', 'rancher'];
+    protected $compatibility = ['helm_chart', 'rancher', 'ldap', 'sso', 'openid'];
 
     protected $helm_chart = CiviCRMStandaloneChart::class;
 
@@ -383,6 +383,48 @@ class CiviCRMStandaloneProfile extends AppProfile
             'default' => false,
             'persistent' => false,
             'validations' => 'required|boolean',
+        ],
+        'enable-sso' => [
+            'name' => 'enable-sso',
+            'type' => 'bool',
+            'default' => false,
+            'persistent' => false,
+            'validations' => 'nullable|boolean',
+        ],
+        'oidc-mode' => [
+            'name' => 'oidc-mode',
+            'type' => 'string',
+            'default' => 'optional',
+            'persistent' => false,
+            'validations' => 'nullable|in:disabled,optional,required',
+        ],
+        'oidc-auto-provision' => [
+            'name' => 'oidc-auto-provision',
+            'type' => 'bool',
+            'default' => true,
+            'persistent' => false,
+            'validations' => 'nullable|boolean',
+        ],
+        'oidc-username-claim' => [
+            'name' => 'oidc-username-claim',
+            'type' => 'string',
+            'default' => 'preferred_username',
+            'persistent' => false,
+            'validations' => 'nullable|string',
+        ],
+        'oidc-email-claim' => [
+            'name' => 'oidc-email-claim',
+            'type' => 'string',
+            'default' => 'email',
+            'persistent' => false,
+            'validations' => 'nullable|string',
+        ],
+        'oidc-default-roles' => [
+            'name' => 'oidc-default-roles',
+            'type' => 'string',
+            'default' => 'staff',
+            'persistent' => false,
+            'validations' => 'nullable|string',
         ],
     ];
 }

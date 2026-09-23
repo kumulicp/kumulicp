@@ -5,15 +5,25 @@ return [
         'authentik' => [
             'host' => 'Set the domain name here: authentik.example.com. This will override the default hostname for the app instance. (Requires manual app upgrade)',
             'address' => 'Address to connect to Authentik (eg. https://authentik.example.com)',
-            'api_key' => 'Must login to Authentik: (1) go to Users, (2) create a service account (3) make an API Token (4) give correct permissions (5) make this spot "Bearer"',
-            'api_secret' => 'Use the Secret key that comes with the API key created above',
+            'api_key' => 'Enter the literal word "Bearer" here — nothing else. Not the token, not the service account name. (Setup: (1) go to Users, (2) create a service account, (3) create an API Token for it with the correct permissions, (4) put that token\'s value in Api Secret below.)',
+            'api_secret' => 'The token value from the API Token you created above (not the service account name). Paste only the token string — do not include "Bearer" or any extra spaces.',
             'ip' => 'IP address of the domain used in the address',
             'internal_address' => 'Internal address isn\'t used',
-            'settings' => 'Use this template. **The signing_key, encryption_key, invalidation_flow, property_mappings, and authentication_flow require manual editing.**
-        { "sub_mode": "hashed_user_id", "client_type": "confidential", "issuer_mode": "global", "signing_key": "d53b2317-4b85-417c-a690-f080cc97eab9", "encryption_key": null, "invalidation_flow": "9954b8c0-3ee2-40fb-888c-00994e39ace7", "property_mappings": [ "d3982c85-94ab-4350-96d9-bdae20f678d6", "7a620954-645e-47f5-b4e5-b01f1e4fe70f", "be0200ee-1a71-4f6d-9a87-99c3a362a1d5", "bc42db72-bf9a-45df-a296-0d2f6866b9ba" ], "authorization_flow": "922c7b62-a50d-4848-8dad-baa8b3791747", "authentication_flow": null, "access_code_validity": "minutes=1", "access_token_validity": "minutes=5", "jwt_federation_sources": [], "refresh_token_validity": "days=30", "jwt_federation_providers": [], "include_claims_in_id_token": false }',
+            'settings' => 'Added automatically when the server is created: sub_mode, client_type, issuer_mode, access_code_validity, access_token_validity, refresh_token_validity, include_claims_in_id_token, encryption_key (blank), jwt_federation_sources (empty), jwt_federation_providers (empty).
+
+        You still need to add these yourself — look up each one\'s ID in Authentik: signing_key, invalidation_flow, property_mappings (one or more property mapping IDs), authorization_flow, authentication_flow.',
             'general_1' => '0. If activating up Authentik through the control panel, first you must go here to set your first user: https://<example.com>/if/flow/initial-setup/',
-            'general_2' => '1. Next, collect all the ID\'s for the various keys & flows: signing_key, encryption_key, invalidation_flow, property_mappings, and authentication_flow',
+            'general_2' => '1. Next, collect all the IDs for the various keys & flows: signing_key, invalidation_flow, property_mappings, authorization_flow, and authentication_flow',
             'general_3' => '2. Add a serviceaccount for API access',
+            'test_success' => 'Success — created and deleted a test provider, application, group, and policy binding in Authentik.',
+            'test_failed' => 'Test failed at :reason',
+            'test_missing_credentials' => 'Set the address, API key, and API secret before running a test.',
+            'test_step' => [
+                'provider' => 'creating the test provider',
+                'application' => 'creating the test application',
+                'group' => 'creating the test group',
+                'policy_binding' => 'creating the test policy binding',
+            ],
         ],
         'mailserver' => [
             'host' => 'Address that users will connect to from their email clients (eg. mail.example.com)',
@@ -65,6 +75,8 @@ return [
         "storage_class": optional StorageClass name to use for app data volumes, overriding the cluster default.',
         ],
         'servers' => 'Servers',
+        'testSettings' => 'Test Settings',
+        'noConfigTest' => 'This server type doesn\'t have a config test available.',
         'added' => ':server added',
         'updated' => ':server updated',
         'deleted' => 'Server deleted',
