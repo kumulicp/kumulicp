@@ -64,15 +64,16 @@ class Group extends GroupManager
         $this->group->members()->detach($members);
         foreach ($managers as $manager) {
             $user = UserModel::where('username', $manager)->first();
-            if ($user) {
-                if ($member = $this->group->members()->where('user_id', $user->id)->first()) {
-                    if ($member->pivot->role === 'member') {
-                        $member->pivot->role = 'manager';
-                        $member->pivot->save();
-                    }
-                } else {
-                    $this->group->members()->attach($user, ['role' => 'manager']);
+            if (! $user || ! $this->belongsToGroupOrganization($user)) {
+                continue;
+            }
+            if ($member = $this->group->members()->where('user_id', $user->id)->first()) {
+                if ($member->pivot->role === 'member') {
+                    $member->pivot->role = 'manager';
+                    $member->pivot->save();
                 }
+            } else {
+                $this->group->members()->attach($user, ['role' => 'manager']);
             }
         }
     }
@@ -81,11 +82,24 @@ class Group extends GroupManager
     {
         foreach ($members as $member) {
             $user = UserModel::where('username', $member)->first();
-            $member = $this->group->members()->where('user_id', $user->id)->first();
-            if ($user && ! $member) {
+            if (! $user || ! $this->belongsToGroupOrganization($user)) {
+                continue;
+            }
+            if (! $this->group->members()->where('user_id', $user->id)->first()) {
                 $this->group->members()->attach($user, ['role' => 'member']);
             }
         }
+    }
+
+    /**
+     * Only the group's own organization or its suborganizations may
+     * manage/belong to a group — mirrors the org/suborg rule used by the
+     * view-user/edit-user gates in AuthServiceProvider.
+     */
+    private function belongsToGroupOrganization(UserModel $user): bool
+    {
+        return $user->organization_id === $this->organization->id
+            || $user->organization?->parent_organization_id === $this->organization->id;
     }
 
     // Update to new name
