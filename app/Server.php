@@ -133,6 +133,27 @@ class Server extends Model
         return null;
     }
 
+    // Like setting(), but decodes JSON-array strings — the Settings editor
+    // only stores plain strings, so array values round-trip as JSON text.
+    public function settingArray(string $setting, array $default = []): array
+    {
+        $value = $this->setting($setting);
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return $default;
+    }
+
     public function updateSetting($setting, $value)
     {
         $settings = $this->settings ?? [];

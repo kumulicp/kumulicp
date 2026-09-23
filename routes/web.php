@@ -161,6 +161,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{server}/confirm', 'Admin\Servers@confirm')->name('server.servers.confirm');
                 Route::get('{server}/set_default', 'Admin\Servers@set_default')->name('server.servers.set_default');
                 Route::get('{server}/chart', 'Admin\Servers@chart')->name('server.servers.chart');
+                Route::post('{server}/test-settings', 'Admin\Servers@testSettings')->name('server.servers.test_settings');
             });
             Route::resource('backup_scheduler', 'Admin\BackupScheduler');
         });

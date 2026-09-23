@@ -64,7 +64,7 @@ class Providers extends Authentik
             'authentication_flow' => $server->setting('authentication_flow'),
             'authorization_flow' => $server->setting('authorization_flow'),
             'invalidation_flow' => $server->setting('invalidation_flow'),
-            'property_mappings' => $server->setting('property_mappings'),
+            'property_mappings' => $server->settingArray('property_mappings'),
             'client_type' => $server->setting('client_type'),
             'client_id' => $client_id,
             'client_secret' => $client_secret,
@@ -77,8 +77,8 @@ class Providers extends Authentik
             'redirect_uris' => [$redirect_uri],
             'sub_mode' => $server->setting('sub_mode'),
             'issuer_mode' => $server->setting('issuer_mode'),
-            'jwt_federation_sources' => $server->setting('jwt_federation_sources'),
-            'jwt_federation_providers' => $server->setting('jwt_federation_providers'),
+            'jwt_federation_sources' => $server->settingArray('jwt_federation_sources'),
+            'jwt_federation_providers' => $server->settingArray('jwt_federation_providers'),
         ]);
 
         return Arr::get($provider, 'content');
