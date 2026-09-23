@@ -186,6 +186,7 @@
       "interface": "Interfaz",
       "settings": "Configuración",
       "addSetting": "Agregar Configuración",
+      "testSettings": "Probar Configuración",
       "web": "Web",
       "database": "Base de Datos",
       "email": "Correo Electrónico",

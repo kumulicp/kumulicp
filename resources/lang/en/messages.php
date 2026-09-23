@@ -234,6 +234,12 @@ return [
                 'update_roles' => 'Update user roles (:roles)',
                 'create_user' => 'Create user :name',
             ],
+            'ldap' => [
+                'update_settings' => 'Update LDAP settings',
+            ],
+            'sso' => [
+                'update_settings' => 'Update SSO settings',
+            ],
         ],
         'rancher' => [
             'log' => [

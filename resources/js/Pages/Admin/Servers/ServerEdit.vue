@@ -219,6 +219,16 @@ import { Link, useForm } from '@inertiajs/vue3'
   >
     {{ $t('common.update') }}
   </va-button>
+  <va-button type="button"
+    id="testSettings"
+    preset="secondary"
+    :disabled="!can.test_settings || testForm.processing"
+    :loading="testForm.processing"
+    class="mr-2 mb-2"
+    @click="testForm.post('/admin/server/servers/'+server.id+'/test-settings')"
+  >
+    {{ $t('admin.servers.testSettings') }}
+  </va-button>
 </form>
 </template>
 
@@ -270,7 +280,8 @@ export default {
         api_secret: '',
         default_backup_server: this.server.default_backup_server,
         is_backup_server: this.server.is_backup_server
-      })
+      }),
+      testForm: useForm({})
     }
   },
   methods: {
