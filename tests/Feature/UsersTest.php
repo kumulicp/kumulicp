@@ -122,4 +122,11 @@ class UsersTest extends TestCase
             AccountManager::users()->find('otherusr')?->delete();
         }
     }
+
+    public function test_denies_triggering_a_password_reset_for_a_user_outside_the_callers_organization(): void
+    {
+        $otherOrgUser = User::factory()->create(['username' => 'other-org-user']);
+
+        $this->get('/users/other-org-user/reset_password')->assertForbidden();
+    }
 }

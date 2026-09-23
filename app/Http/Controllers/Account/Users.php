@@ -494,7 +494,7 @@ class Users extends Controller
     public function resetPassword(string $username)
     {
         $user = AccountManager::users()->find($username);
-        Gate::authorize('view-user', $user);
+        Gate::authorize('edit-user', $user);
 
         $new_user_code = NewUserCode::where('username', $username)->first();
 
