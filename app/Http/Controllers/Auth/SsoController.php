@@ -77,7 +77,7 @@ class SsoController extends Controller
         } elseif ($provider_driver === 'eloquent') {
             $user = User::where('email', $social_user->getEmail())->first();
 
-            if (! $user->is_allowed) {
+            if (! $user || ! $user->is_allowed) {
                 throw ValidationException::withMessages([
                     'email' => [__('auth.sso_failed')],
                 ])->redirectTo('/login');
