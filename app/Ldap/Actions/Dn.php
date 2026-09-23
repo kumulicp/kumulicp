@@ -3,59 +3,47 @@
 namespace App\Ldap\Actions;
 
 use App\Organization;
+use LdapRecord\Models\Attributes\DistinguishedName;
+use LdapRecord\Models\Attributes\EscapedValue;
 
 class Dn
 {
     public static function split($dn)
     {
-        $dnArray = [];
-        $explode = explode(',', $dn);
+        $components = array_map(
+            fn ($values) => array_map(fn ($value) => EscapedValue::unescape($value), $values),
+            DistinguishedName::make($dn)->assoc()
+        );
 
-        foreach ($explode as $var) {
-            $split = explode('=', $var);
-
-            if (! array_key_exists($split[0], $dnArray)) {
-                $n = 0;
-            }
-
-            $dnArray[$split[0]][$n] = $split[1];
-
-            $n++;
-        }
-
-        foreach ($dnArray as $key => $value) {
-            $final_array[$key] = array_reverse($value);
-        }
-
-        return $final_array;
+        return array_map('array_reverse', $components);
     }
 
     public static function create(Organization|string $o, string|array|null $ou = null, string|array|null $cn = null)
     {
         $n = 0;
         if (is_array($cn) && count($cn) > 1) {
-            $implode = implode(',cn=', $cn);
+            $implode = implode(',cn=', array_map(fn ($v) => self::escape($v), $cn));
             $dn[$n] = 'cn='.$implode;
             $n++;
         } elseif ($cn) {
-            $dn[$n] = 'cn='.$cn;
+            $dn[$n] = 'cn='.self::escape($cn);
             $n++;
         }
         if (is_array($ou) && count($ou) > 1) {
-            $implode = implode(',ou=', $ou);
+            $implode = implode(',ou=', array_map(fn ($v) => self::escape($v), $ou));
             $dn[$n] = 'ou='.$implode;
             $n++;
         } elseif ($ou) {
-            $dn[$n] = 'ou='.$ou;
+            $dn[$n] = 'ou='.self::escape($ou);
             $n++;
         }
         if ($o) {
             if (is_string($o)) {
-                $dn[$n] = 'o='.$o;
+                $dn[$n] = 'o='.self::escape($o);
             } elseif ($o->parent_organization) {
-                $dn[$n] = 'o='.$o->parent_organization->slug;
+                $dn[$n] = 'o='.self::escape($o->parent_organization->slug);
             } else {
-                $dn[$n] = 'o='.$o->slug;
+                $dn[$n] = 'o='.self::escape($o->slug);
             }
             $n++;
         }
@@ -64,5 +52,10 @@ class Dn
         $fullDn = implode(',', $dn);
 
         return $fullDn;
+    }
+
+    private static function escape($value): string
+    {
+        return (new DistinguishedName)->escape((string) $value)->forDn()->get();
     }
 }
