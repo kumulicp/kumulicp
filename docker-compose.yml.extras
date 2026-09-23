@@ -93,6 +93,59 @@ services:
         - WORDPRESS_SKIP_BOOTSTRAP=yes
         networks:
         - sail
+    # Local Authentik instance so SSO (OIDC) can be tested end-to-end against
+    # app instances installed to the local k3s cluster, without depending on
+    # an external identity provider. Register it in Admin > Servers as an
+    # "Authentik" server once it's up (see AUTHENTIK_HOST in .env.sample).
+    authentik-db:
+        image: docker.io/library/postgres:16-alpine
+        container_name: k-authentik-db-1
+        restart: unless-stopped
+        environment:
+        - POSTGRES_DB=authentik
+        - POSTGRES_USER=authentik
+        - POSTGRES_PASSWORD=${AUTHENTIK_DB_PASSWORD}
+        volumes:
+        - authentik-db:/var/lib/postgresql/data
+        networks:
+        - sail
+    authentik:
+        image: ghcr.io/goauthentik/server:2026.8.3
+        container_name: ${AUTHENTIK_HOST}
+        command: server
+        restart: unless-stopped
+        depends_on:
+        - authentik-db
+        environment:
+        - AUTHENTIK_POSTGRESQL__HOST=k-authentik-db-1
+        - AUTHENTIK_POSTGRESQL__NAME=authentik
+        - AUTHENTIK_POSTGRESQL__USER=authentik
+        - AUTHENTIK_POSTGRESQL__PASSWORD=${AUTHENTIK_DB_PASSWORD}
+        - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}
+        ports:
+        - '8092:9000'
+        volumes:
+        - authentik-media:/data
+        networks:
+        - sail
+    authentik-worker:
+        image: ghcr.io/goauthentik/server:2026.8.3
+        container_name: k-authentik-worker-1
+        command: worker
+        restart: unless-stopped
+        depends_on:
+        - authentik-db
+        environment:
+        - AUTHENTIK_POSTGRESQL__HOST=k-authentik-db-1
+        - AUTHENTIK_POSTGRESQL__NAME=authentik
+        - AUTHENTIK_POSTGRESQL__USER=authentik
+        - AUTHENTIK_POSTGRESQL__PASSWORD=${AUTHENTIK_DB_PASSWORD}
+        - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}
+        volumes:
+        - authentik-media:/data
+        networks:
+        - sail
+
     mailserver:
         image: ghcr.io/docker-mailserver/docker-mailserver:latest
         container_name: k-mailserver-1
@@ -229,6 +282,8 @@ volumes:
     nextcloud-db:
     wordpress-data:
     wordpress-db:
+    authentik-db:
+    authentik-media:
     k3s-server:
     k3s-output:
     headlamp-kubeconfig:
