@@ -46,4 +46,9 @@ class Application extends Integration
 
         return end($class);
     }
+
+    protected function useDevIngressResolve(): bool
+    {
+        return true;
+    }
 }
