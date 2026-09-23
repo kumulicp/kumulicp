@@ -5,7 +5,7 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 > [!CAUTION]
 > This is currently in the Alpha stage of development and should not be used in production. Breaking changes are all I can guarantee right now. Please provide feedback, bug reports, feature requests or even code so this can be the best control panel out there.
 
-## ✨ Features
+## Features
 
 ### Admin
 
