@@ -1,0 +1,6 @@
+apiVersion: v2
+name: generic-app
+description: Generic, image-only Helm chart for deploying any containerized application via kumulicp
+type: application
+version: 0.1.0
+appVersion: "1.0"
