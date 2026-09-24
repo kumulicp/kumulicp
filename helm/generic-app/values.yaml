@@ -1,0 +1,43 @@
+replicaCount: 1
+
+fullnameOverride: ""
+
+image:
+  registry: ""
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Single container port, also used by the Service and (when enabled) the Ingress.
+port: 8080
+
+# List of {name, value} pairs, same shape produced by GenericChart::values().
+env: []
+
+podAnnotations: {}
+
+resources: {}
+
+livenessProbe:
+  enabled: false
+  path: /
+
+readinessProbe:
+  enabled: false
+  path: /
+
+persistence:
+  enabled: false
+  size: 1Gi
+  storageClass: ""
+  existingClaim: ""
+  accessMode: ReadWriteOnce
+  mountPath: /data
+
+ingress:
+  enabled: false
+  hostname: ""
+  tls: false
+  className: ""
+  annotations: {}
