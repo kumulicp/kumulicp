@@ -105,7 +105,7 @@ class MenuService
                         'name' => __('labels.backups'),
                         'url' => '/admin/server/backup_scheduler',
                         'icon' => 'fa-download',
-                        'perm' => $admin,
+                        'perm' => $admin && Toggle::active('app-backups'),
                         'external' => false,
                         'order' => 400,
                     ],
