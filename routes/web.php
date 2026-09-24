@@ -128,9 +128,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
                 Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
-                Route::resource('backups', 'Admin\Organizations\BackupRestore');
-                Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore');
-                Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore');
+                Route::resource('backups', 'Admin\Organizations\BackupRestore')->middleware('toggle:app-backups');
+                Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore')->middleware('toggle:app-backups');
+                Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->middleware('toggle:app-backups');
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
@@ -183,8 +183,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::delete('{scan}', 'Admin\SecurityScans@destroy')->name('security.scans.destroy');
                 Route::patch('{scan}/findings/{finding}', 'Admin\SecurityScans@updateFinding')->name('security.scans.findings.update');
             });
-            Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups');
-            Route::prefix('backup_scheduler/recurring')->group(function () {
+            Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups')->middleware('toggle:app-backups');
+            Route::prefix('backup_scheduler/recurring')->middleware('toggle:app-backups')->group(function () {
                 Route::get('{recurrence}/activate', 'Admin\RecurringBackups@activate')->name('server.backup.recurring.activate');
                 Route::get('{recurrence}/deactivate', 'Admin\RecurringBackups@deactivate')->name('server.backup.recurring.deactivate');
             });
@@ -195,7 +195,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{server}/chart', 'Admin\Servers@chart')->name('server.servers.chart');
                 Route::post('{server}/test-settings', 'Admin\Servers@testSettings')->name('server.servers.test_settings');
             });
-            Route::resource('backup_scheduler', 'Admin\BackupScheduler');
+            Route::resource('backup_scheduler', 'Admin\BackupScheduler')->middleware('toggle:app-backups');
         });
 
         Route::prefix('settings')->group(function () {
