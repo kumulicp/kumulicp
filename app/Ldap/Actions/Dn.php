@@ -54,7 +54,7 @@ class Dn
         return $fullDn;
     }
 
-    private static function escape($value): string
+    public static function escape($value): string
     {
         return (new DistinguishedName)->escape((string) $value)->forDn()->get();
     }

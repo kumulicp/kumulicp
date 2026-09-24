@@ -107,7 +107,7 @@ class Group extends GroupManager
 
             $this->auto_save();
 
-            $this->group->rename("cn=$name");
+            $this->group->rename('cn='.Dn::escape($name));
         }
     }
 

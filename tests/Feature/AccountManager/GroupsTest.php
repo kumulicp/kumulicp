@@ -50,3 +50,35 @@ it('creates, edits, and deletes a group', function (string $driver) {
 
     expect(AccountManager::accounts($user->organization)->groups()->find($new_name))->toBeNull();
 })->with('account_manager_drivers');
+
+it('renames a group to a name containing a comma without corrupting the entry', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    setupAccountManagerDriver($driver);
+    $support = new TestSupports;
+    $support->seed();
+
+    $this->withoutExceptionHandling();
+    $user = User::where('username', 'demo')->firstOrFail();
+    $this->actingAs($user);
+
+    $name = fake()->word;
+
+    $this->post('/groups', ['name' => $name, 'category' => 'others'])
+        ->assertRedirectContains($name);
+
+    $new_name = 'Sales, EMEA';
+
+    $this->put('/groups/'.$name, [
+        'original_name' => $name,
+        'name' => $new_name,
+        'category' => 'others',
+        'managers' => [],
+        'members' => [],
+    ])->assertValid(['original_name', 'name', 'category']);
+
+    expect(AccountManager::accounts($user->organization)->groups()->find($name))->toBeNull();
+
+    $renamed = AccountManager::accounts($user->organization)->groups()->find($new_name);
+    expect($renamed)->not->toBeNull()
+        ->and($renamed->name())->toBe($new_name);
+})->with('account_manager_drivers');
