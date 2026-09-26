@@ -3,6 +3,7 @@
 namespace App\Integrations\AccountManagers\Ldap;
 
 use App\AppInstance;
+use App\Exceptions\AccountManagerException;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group;
 use App\Ldap\Models\OrganizationalUnit;
@@ -13,6 +14,7 @@ use App\Services\AppInstanceService;
 use App\Support\Facades\Organization;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Mail;
+use LdapRecord\LdapRecordException;
 
 class Users
 {
@@ -69,7 +71,13 @@ class Users
 
     public function find(string $username)
     {
-        if (($user = LdapUser::find(Dn::create($this->organization, 'users', $username))) instanceof LdapUser) {
+        try {
+            $user = LdapUser::find(Dn::create($this->organization, 'users', $username));
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_unavailable'), previous: $e);
+        }
+
+        if ($user instanceof LdapUser) {
             return new User($user);
         }
     }

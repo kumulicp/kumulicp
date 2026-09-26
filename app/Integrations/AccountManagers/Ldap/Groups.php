@@ -2,41 +2,48 @@
 
 namespace App\Integrations\AccountManagers\Ldap;
 
+use App\Exceptions\AccountManagerException;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Support\Facades\Organization;
+use LdapRecord\LdapRecordException;
 
 class Groups
 {
     public function add($data)
     {
         $organization = Organization::account();
-        // Check if groups ou exists and create if not
-        $group_ou = OrganizationalUnit::find(Dn::create($organization, 'groups'));
 
-        if (! $group_ou) {
-            $group_ou = new OrganizationalUnit;
-            $group_ou->ou = 'groups';
-            $group_ou->setDn(Dn::create($organization, 'groups'));
-            $group_ou->save();
+        try {
+            // Check if groups ou exists and create if not
+            $group_ou = OrganizationalUnit::find(Dn::create($organization, 'groups'));
+
+            if (! $group_ou) {
+                $group_ou = new OrganizationalUnit;
+                $group_ou->ou = 'groups';
+                $group_ou->setDn(Dn::create($organization, 'groups'));
+                $group_ou->save();
+            }
+
+            $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$data['category'], 'groups']));
+
+            if (! $group_category_ou) {
+                $group_ou = new OrganizationalUnit;
+                $group_ou->ou = $data['category'];
+                $group_ou->setDn(Dn::create($organization, [$data['category'], 'groups']));
+                $group_ou->save();
+            }
+
+            $group = new LdapGroup;
+            $group->setAttribute('cn', $data['name']);
+            $group->setAttribute('description', $data['name']);
+            $group->setAttribute('member', Dn::create($organization));
+            $group->setDn(Dn::create($organization, [$data['category'], 'groups'], $data['name']));
+            $group->save();
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
         }
-
-        $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$data['category'], 'groups']));
-
-        if (! $group_category_ou) {
-            $group_ou = new OrganizationalUnit;
-            $group_ou->ou = $data['category'];
-            $group_ou->setDn(Dn::create($organization, [$data['category'], 'groups']));
-            $group_ou->save();
-        }
-
-        $group = new LdapGroup;
-        $group->setAttribute('cn', $data['name']);
-        $group->setAttribute('description', $data['name']);
-        $group->setAttribute('member', Dn::create($organization));
-        $group->setDn(Dn::create($organization, [$data['category'], 'groups'], $data['name']));
-        $group->save();
 
         return $this->get($group);
     }
@@ -44,10 +51,15 @@ class Groups
     public function find(string $group_name, ?string $category = null)
     {
         $organization = Organization::account();
-        if ($category) {
-            $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $group_name));
-        } else {
-            $group = LdapGroup::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
+
+        try {
+            if ($category) {
+                $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $group_name));
+            } else {
+                $group = LdapGroup::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
+            }
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_unavailable'), previous: $e);
         }
 
         if ($group instanceof LdapGroup) {

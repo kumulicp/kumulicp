@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\Exceptions\AccountManagerException;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Services\UserPermissionsService;
@@ -15,7 +16,11 @@ class Permissions extends Controller
 {
     public function edit($userid)
     {
-        $user = AccountManager::users()->find($userid);
+        try {
+            $user = AccountManager::users()->find($userid);
+        } catch (AccountManagerException $e) {
+            return redirect('/users')->with('error', $e->getMessage());
+        }
 
         Gate::authorize('edit-user', $user);
 
@@ -63,7 +68,12 @@ class Permissions extends Controller
 
     public function update(Request $request, $userid)
     {
-        $user = AccountManager::users()->find($userid);
+        try {
+            $user = AccountManager::users()->find($userid);
+        } catch (AccountManagerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $organization = auth()->user()->organization;
 
         Gate::authorize('edit-user', $user);
@@ -86,7 +96,11 @@ class Permissions extends Controller
 
         $permissions_input = $request->input('permission', []);
 
-        app(UserPermissionsService::class)->updatePermissions($user, $userid, $organization, $permissions_input);
+        try {
+            app(UserPermissionsService::class)->updatePermissions($user, $userid, $organization, $permissions_input);
+        } catch (AccountManagerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect('/users/'.$userid)->with('success', __('organization.user.permissions.updated', ['user' => $user->attribute('first_name')]));
     }

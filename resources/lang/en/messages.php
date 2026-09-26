@@ -29,6 +29,8 @@ return [
         'database_failed' => "Database couldn't be created",
         'sso_failed' => "SSO couldn't be created",
         'account_manager_driver_fail' => "Account manager driver doesn't exist",
+        'account_manager_write_failed' => 'Unable to update the account directory right now. Please try again, and contact support if the problem continues.',
+        'account_manager_unavailable' => 'The account directory is temporarily unavailable. Please try again in a moment.',
         'action_not_subclass' => ':action is not a subclass of Action',
         'no_configuration' => 'Could not obtain :app configuration :configuration',
         'no_backup_driver' => ':driver doesn\'t exist',

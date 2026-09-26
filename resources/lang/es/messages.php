@@ -29,6 +29,8 @@ return [
         'database_failed' => 'No se pudo crear la base de datos',
         'sso_failed' => 'No se pudo crear el SSO',
         'account_manager_driver_fail' => 'El controlador del gestor de cuentas no existe',
+        'account_manager_write_failed' => 'No se pudo actualizar el directorio de la cuenta en este momento. Inténtalo de nuevo y contacta con soporte si el problema continúa.',
+        'account_manager_unavailable' => 'El directorio de la cuenta no está disponible temporalmente. Inténtalo de nuevo en unos momentos.',
         'action_not_subclass' => ':action no es una subclase de Action',
         'no_configuration' => 'No se pudo obtener la configuración :configuration de :app',
         'no_backup_driver' => ':driver no existe',

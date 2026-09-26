@@ -5,6 +5,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 use App\AppInstance;
 use App\AppRole;
 use App\Contracts\AccountManager\PermissionsContract;
+use App\Exceptions\AccountManagerException;
 use App\Integrations\AccountManagers\Ldap\User as LdapAccountUser;
 use App\Ldap\Actions\Dn;
 use App\Ldap\LdapSupport;
@@ -18,6 +19,7 @@ use App\Support\AccountManager\UserManager;
 use App\User;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
+use LdapRecord\LdapRecordException;
 use Illuminate\Support\Str;
 use LdapRecord\Models\Attributes\DistinguishedName;
 
@@ -214,10 +216,14 @@ class Permissions extends PermissionsManager implements PermissionsContract
         $user->is_allowed = true;
         $user->save();
 
-        LdapSupport::orgAdminGroup()->members()->attach($this->ldapUser->get());
+        try {
+            LdapSupport::orgAdminGroup()->members()->attach($this->ldapUser->get());
 
-        // Update user type; used by plan settings to determine which users will add to the price
-        $this->updateUserAccessType();
+            // Update user type; used by plan settings to determine which users will add to the price
+            $this->updateUserAccessType();
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
+        }
 
         $this->changes['added'][] = [
             'role' => [

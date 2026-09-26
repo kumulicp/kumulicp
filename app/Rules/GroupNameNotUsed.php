@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Exceptions\AccountManagerException;
 use App\Support\Facades\AccountManager;
 use Illuminate\Contracts\Validation\Rule;
 
@@ -28,8 +29,13 @@ class GroupNameNotUsed implements Rule
     {
         $organization = auth()->user()->organization;
 
-        return is_null(AccountManager::groups()->find($value));
-
+        try {
+            return is_null(AccountManager::groups()->find($value));
+        } catch (AccountManagerException) {
+            // Can't verify uniqueness right now — let the write attempt
+            // fail (and report) instead of blocking the request.
+            return true;
+        }
     }
 
     /**
