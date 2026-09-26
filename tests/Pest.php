@@ -167,6 +167,38 @@ function skipUnlessDriver(string $required, ?string $driver = null): void
     }
 }
 
+/**
+ * Swap the registered 'default' LDAP connection for one pointed at a closed
+ * local port, simulating an unreachable LDAP server. LdapRecord's Container
+ * caches connections built from config at boot, so changing config() alone
+ * after boot has no effect — the connection itself must be replaced.
+ */
+function breakLdapConnection(): void
+{
+    $config = array_merge(config('ldap.connections.default'), [
+        'hosts' => ['127.0.0.1'],
+        'port' => 1,
+        'timeout' => 1,
+        'use_ssl' => false,
+        'use_tls' => false,
+    ]);
+
+    \LdapRecord\Container::addConnection(new \LdapRecord\Connection($config), 'default');
+}
+
+/**
+ * Undo breakLdapConnection() by rebuilding the 'default' connection from the
+ * real config. Call this at the end of any test that breaks the connection,
+ * so later tests (and framework LDAP cleanup) hit the real container again.
+ */
+function restoreLdapConnection(): void
+{
+    \LdapRecord\Container::addConnection(
+        new \LdapRecord\Connection(config('ldap.connections.default')),
+        'default'
+    );
+}
+
 /*
 |--------------------------------------------------------------------------
 | Server Interface Helpers

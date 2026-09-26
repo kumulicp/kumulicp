@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Enums\AccessType;
+use App\Exceptions\AccountManagerException;
 use App\Events\OrganizationCreated;
 use App\Events\OrganizationRegistered;
 use App\Http\Controllers\Controller;
@@ -189,10 +190,32 @@ class RegisterController extends Controller
             $plan = (new SubscriptionService($organization))->all()->updateBase($default_plan);
 
             Action::execute(new SubscriptionUpdate($organization, $plan), background: true);
+        } catch (AccountManagerException $e) {
+            report($e);
+            if (isset($organization)) {
+                try {
+                    AccountManager::account($organization)->destroy();
+                } catch (AccountManagerException $cleanup_exception) {
+                    report($cleanup_exception);
+                }
+                $organization->domains()->delete();
+            }
+            if (isset($user)) {
+                $user->delete();
+            }
+            if (isset($organization)) {
+                $organization->delete();
+            }
+
+            return back()->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             report($e);
             if (isset($organization)) {
-                AccountManager::account($organization)->destroy();
+                try {
+                    AccountManager::account($organization)->destroy();
+                } catch (AccountManagerException $cleanup_exception) {
+                    report($cleanup_exception);
+                }
                 $organization->domains()->delete();
             }
             if (isset($user)) {
