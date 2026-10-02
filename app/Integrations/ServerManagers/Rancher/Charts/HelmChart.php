@@ -25,6 +25,31 @@ abstract class HelmChart extends Chart
         }
     }
 
+    protected function secretsName(): string
+    {
+        return Str::slug($this->chartName().'-secrets');
+    }
+
+    protected function secretsRelease(): ?string
+    {
+        return Str::slug($this->chartName());
+    }
+
+    // Whether this chart can take its secrets from $this->secrets() instead of
+    // plaintext values: the web server's driver has to create the Secret
+    // (only helm_k8s does) and the deployed chart release has to be new enough
+    // to read it ($min_chart_version). Charts keep their plaintext path for
+    // anything older, so an upgrade never ships a reference the chart ignores.
+    protected function secretsSupported(string $min_chart_version): bool
+    {
+        $driver = $this->app_instance->web_server?->server?->interface;
+        $chart_version = $this->app_instance->version?->setting('chart_version');
+
+        return $driver === 'helm_k8s'
+            && $chart_version
+            && version_compare((string) $chart_version, $min_chart_version, '>=');
+    }
+
     // The Helm values array for this chart, merged with the plan's additional
     // configs. Shared by any server-manager driver — not Rancher-specific.
     public function valuesWithAdditionalConfigs(): array

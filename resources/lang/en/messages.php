@@ -264,6 +264,8 @@ return [
                 'persistent_volume_claim_deleted' => 'Persistent Volume Claim deleted for :organization',
                 'secret_created' => 'Pull secret :name created in namespace :namespace',
                 'secret_deleted' => 'Pull secret :name deleted from namespace :namespace',
+                'chart_secret_applied' => 'Chart secret :name applied in namespace :namespace',
+                'chart_secret_deleted' => 'Chart secret :name deleted from namespace :namespace',
             ],
             'error' => [
                 'job' => 'Rancher Job - :job - :message',

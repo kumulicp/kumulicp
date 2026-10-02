@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\HelmKubernetes\API;
 
 use App\Integrations\ServerManagers\HelmKubernetes\Kubernetes;
+use App\Integrations\ServerManagers\Rancher\Charts\ChartSecrets;
 use App\RepoSecret;
 use Illuminate\Support\Facades\Log;
 
@@ -34,6 +35,37 @@ class Secret extends Kubernetes
         Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
         return ['status' => 'success', 'response' => $result['output']];
+    }
+
+    // Applies a chart's collected secrets as a standard Secret. Must run before
+    // the workload that references it is created. No-op for an empty store.
+    // $ownerJob (name, uid) is for job stores, so the Secret is garbage-collected
+    // with its Job.
+    public function applyStore(ChartSecrets $store, ?array $ownerJob = null): array
+    {
+        if ($store->isEmpty()) {
+            return ['status' => 'success', 'response' => null];
+        }
+
+        $manifest = $store->manifest($ownerJob['uid'] ?? null, $ownerJob['name'] ?? null);
+        $result = $this->kubectl()->apply($manifest, $store->namespace());
+
+        // Only the name is logged: the manifest and its values must never reach logs.
+        Log::info(__('messages.api.rancher.log.chart_secret_applied', ['namespace' => $store->namespace(), 'name' => $store->name()]), ['organization_id' => $this->organization->id]);
+
+        return [
+            'status' => $result['success'] ? 'success' : 'failed',
+            'response' => $result['success'] ? null : $result['error'],
+        ];
+    }
+
+    public function removeStore(ChartSecrets $store): array
+    {
+        $result = $this->kubectl()->delete('secret', $store->name(), $store->namespace());
+
+        Log::info(__('messages.api.rancher.log.chart_secret_deleted', ['namespace' => $store->namespace(), 'name' => $store->name()]), ['organization_id' => $this->organization->id]);
+
+        return ['status' => $result['success'] ? 'success' : 'failed', 'response' => $result['output']];
     }
 
     public function ensure(string $namespace, RepoSecret $pull_secret)

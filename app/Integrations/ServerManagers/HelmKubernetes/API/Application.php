@@ -42,7 +42,16 @@ class Application extends Kubernetes
 
         [$chart_ref, $repo_args, $secret_env] = $this->chartReference($app_instance);
 
+        // values() fills $chart->secrets() as a side effect, so the Secret is
+        // only applied after the values are built, and before the install Job
+        // that references it starts.
         $values_yaml = Yaml::dump($chart->valuesWithAdditionalConfigs(), 10);
+
+        $secret_result = $this->secret()->applyStore($chart->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
+        }
 
         $subcommand = array_merge(['upgrade', '--install', $release_name, $chart_ref], $repo_args);
 
@@ -88,6 +97,8 @@ class Application extends Kubernetes
         if (! $result['success']) {
             return ['status' => 'failed', 'response' => $result['error']];
         }
+
+        $this->secret()->removeStore($chart->secrets());
 
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 

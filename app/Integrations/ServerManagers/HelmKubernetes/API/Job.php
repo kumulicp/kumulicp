@@ -12,7 +12,18 @@ class Job extends Kubernetes
     public function create(JobChart $job)
     {
         $namespace = $this->namespace();
+
+        $secret_result = $this->secret()->applyStore($job->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
+        }
+
         $result = $this->kubectl()->apply($job->chart, $namespace);
+
+        if (! $job->secrets()->isEmpty()) {
+            $this->settleJobSecret($job, $result);
+        }
 
         Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
@@ -61,5 +72,23 @@ class Job extends Kubernetes
         }
 
         return 'running';
+    }
+
+    // A job's Secret is owned by the Job: gone with it on success, and removed
+    // straight away if the Job was never created.
+    private function settleJobSecret(JobChart $job, array $result): void
+    {
+        if (! $result['success']) {
+            $this->secret()->removeStore($job->secrets());
+
+            return;
+        }
+
+        // Re-apply with an ownerReference now the Job's uid is known.
+        $uid = Arr::get(json_decode($result['output'], true) ?? [], 'metadata.uid');
+
+        if ($uid) {
+            $this->secret()->applyStore($job->secrets(), ['name' => Arr::get($job->chart, 'metadata.name'), 'uid' => $uid]);
+        }
     }
 }
