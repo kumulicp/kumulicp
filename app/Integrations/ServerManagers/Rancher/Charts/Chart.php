@@ -26,6 +26,8 @@ class Chart
         return $this->app_instance->name.'-redirect';
     }
 
+    private ?ChartSecrets $secrets = null;
+
     public function namespace()
     {
         return $this->namespace ?? $this->organization->slug;
@@ -52,6 +54,25 @@ class Chart
         $value = Str::limit(preg_replace('/[^A-Za-z0-9_.-]+/', '-', $value), 63, '');
 
         return trim($value, '-_.');
+    }
+
+    // Everything sensitive this chart needs goes in here rather than into the
+    // values/env as plaintext. Memoized so values() and the driver that later
+    // applies the Secret to the cluster see the same store.
+    public function secrets(): ChartSecrets
+    {
+        return $this->secrets ??= new ChartSecrets($this->namespace(), $this->secretsName(), $this->secretsRelease());
+    }
+
+    protected function secretsName(): string
+    {
+        return Str::slug("{$this->organization->slug}-{$this->name}-secrets");
+    }
+
+    // Release label on the Secret, so it can be found/cleaned up with its release.
+    protected function secretsRelease(): ?string
+    {
+        return null;
     }
 
     public function extraEnv()

@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes;
 
 use App\Integrations\ServerManagers\Kubernetes\API\HelmInstaller;
+use App\Integrations\ServerManagers\Kubernetes\API\Secret;
 use App\Integrations\ServerManagers\Kubernetes\Support\HelmReleases;
 use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
 use App\Organization;
@@ -62,5 +63,10 @@ class Kubernetes
     public function helmInstaller(): HelmInstaller
     {
         return new HelmInstaller($this->organization, $this->org_server);
+    }
+
+    public function secret(): Secret
+    {
+        return new Secret($this->organization, $this->org_server);
     }
 }

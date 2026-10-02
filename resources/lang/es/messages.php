@@ -267,6 +267,8 @@ return [
                 'persistent_volume_claim_deleted' => 'Persistent Volume Claim eliminado para :organization',
                 'secret_created' => 'Secreto de registro de imágenes :name creado en el namespace :namespace',
                 'secret_deleted' => 'Secreto de registro de imágenes :name eliminado del namespace :namespace',
+                'chart_secret_applied' => 'Secreto de chart :name aplicado en el namespace :namespace',
+                'chart_secret_deleted' => 'Secreto de chart :name eliminado del namespace :namespace',
             ],
             'error' => [
                 'job' => 'Tarea de Rancher - :job - :message',
