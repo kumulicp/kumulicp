@@ -19,9 +19,9 @@ class CiviCRMStandaloneChart extends HelmChart
             $database_server = $database_server->server;
         }
 
-        // civicrm-standalone >= 0.4.2 reads its passwords from existing Secrets,
-        // so they never appear in the values.
-        $use_secrets = $this->secretsSupported('0.4.2');
+        // The chart reads its passwords from existing Secrets, so they never
+        // appear in the values.
+        $use_secrets = $this->secretsDelivered();
         $secrets = $this->secrets();
 
         if ($use_secrets) {
