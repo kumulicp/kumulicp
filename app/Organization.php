@@ -372,7 +372,10 @@ class Organization extends Model
     public function reactivate()
     {
         $this->status = 'active';
-        $this->save();
+        // Quiet: this only touches an internal status flag, not any of the
+        // contact/profile fields synced to Stripe — no need to trigger the
+        // customer-detail sync on every activate/deactivate call.
+        $this->saveQuietly();
 
         UpdateOrganization::dispatch($this);
     }
@@ -380,7 +383,7 @@ class Organization extends Model
     public function deactivate()
     {
         $this->status = 'deactivated';
-        $this->save();
+        $this->saveQuietly();
 
         UpdateOrganization::dispatch($this);
     }
