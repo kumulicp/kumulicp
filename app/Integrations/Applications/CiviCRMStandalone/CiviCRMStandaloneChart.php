@@ -19,6 +19,16 @@ class CiviCRMStandaloneChart extends HelmChart
             $database_server = $database_server->server;
         }
 
+        // civicrm-standalone >= 0.4.2 reads its passwords from existing Secrets,
+        // so they never appear in the values.
+        $use_secrets = $this->secretsSupported('0.4.2');
+        $secrets = $this->secrets();
+
+        if ($use_secrets) {
+            $secrets->set('civicrm-password', $app_instance->api_password());
+            $secrets->set('mariadb-password', $this->app_instance->dbPassword());
+        }
+
         return [
             'affinity' => [
                 'podAffinity' => [
@@ -45,7 +55,8 @@ class CiviCRMStandaloneChart extends HelmChart
             'externalDatabase' => [
                 'database' => $app_instance->databasename,
                 'host' => $database_server ? $database_server->internal_address : '',
-                'password' => $this->app_instance->dbPassword(),
+                'password' => $use_secrets ? '' : $this->app_instance->dbPassword(),
+                'existingSecret' => $use_secrets ? $secrets->ref('mariadb-password')['name'] : '',
                 'user' => $app_instance->databasename,
             ],
             'ingress' => [
@@ -102,7 +113,8 @@ class CiviCRMStandaloneChart extends HelmChart
             ],
             'sidecars' => Application::profile('civicrm-standalone')->sidecars(),
             'civicrmEmail' => $app_instance->configuration('civicrm-email'),
-            'civicrmPassword' => $app_instance->api_password(),
+            'civicrmPassword' => $use_secrets ? '' : $app_instance->api_password(),
+            'existingSecret' => $use_secrets ? $secrets->ref('civicrm-password')['name'] : '',
             'civicrmExtensions' => $app_instance->configuration('civicrm-extensions'),
             'civicrmUsername' => $app_instance->configuration('civicrm-username'),
             'civicrmSkipInstall' => false,
