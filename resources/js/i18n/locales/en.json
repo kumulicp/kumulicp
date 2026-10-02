@@ -186,6 +186,7 @@
       "interface": "Interface",
       "settings": "Settings",
       "addSetting": "Add Setting",
+      "testSettings": "Test Settings",
       "web": "Web",
       "database": "Database",
       "email": "Email",

@@ -279,7 +279,7 @@ class Integration
 
         $client = $this->client();
 
-        if ($resolve = $this->devIngressResolve($url)) {
+        if ($this->useDevIngressResolve() && $resolve = $this->devIngressResolve($url)) {
             $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
         }
 
@@ -301,6 +301,14 @@ class Integration
         if (! $this->save_session) {
             $this->resetClient();
         }
+    }
+
+    // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite below.
+    // Server integrations (Authentik, Rancher, etc.) are plain docker-compose
+    // siblings and shouldn't have it applied.
+    protected function useDevIngressResolve(): bool
+    {
+        return false;
     }
 
     /**

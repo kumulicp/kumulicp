@@ -102,6 +102,12 @@ class Servers extends Controller
         $server->type = $validated['type'];
         $server->interface = $validated['interface'];
         $server->status = 'active';
+
+        $profile = ServerInterface::profile($server);
+        if (method_exists($profile, 'defaultSettings')) {
+            $server->settings = $profile->defaultSettings();
+        }
+
         $server->save();
 
         $app = Application::where('slug', $validated['app'])->first();
@@ -117,7 +123,9 @@ class Servers extends Controller
     public function edit(Server $server)
     {
         $successful_test_count = $server->type == 'email' ? $server->successfulBaseTests()->count() : $server->successfulAppTests()->count();
-        $server_description = ServerInterface::profile($server)->description();
+        $profile = ServerInterface::profile($server);
+        $server_description = $profile->description();
+        $has_config_test = method_exists($profile, 'configTest') && $profile->configTest();
 
         return inertia()->render('Admin/Servers/ServerEdit', [
             'server' => [
@@ -158,6 +166,7 @@ class Servers extends Controller
             ]),
             'can' => [
                 'activate' => $successful_test_count > 0,
+                'test_settings' => (bool) $has_config_test,
             ],
             'breadcrumbs' => [
                 [
@@ -210,6 +219,20 @@ class Servers extends Controller
         }
 
         return redirect("/admin/server/servers/{$server->id}")->with('error', 'No successfully run tests found. You must successfully run a test before you can enable this server.');
+    }
+
+    public function testSettings(Server $server)
+    {
+        $profile = ServerInterface::profile($server);
+        $test_class = method_exists($profile, 'configTest') ? $profile->configTest() : null;
+
+        if (! $test_class) {
+            return back()->with('error', __('admin.servers.noConfigTest'));
+        }
+
+        $result = (new $test_class($server))->run();
+
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function set_default($server)
