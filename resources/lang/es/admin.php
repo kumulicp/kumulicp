@@ -216,6 +216,7 @@ return [
     'namespace_security' => [
         'title' => 'Seguridad del namespace',
         'updated' => 'Niveles de seguridad del namespace actualizados.',
+        'preflight_blocked' => 'Aplicar :level bloquearía cargas de trabajo existentes en :count namespace(s): :details. Elija "Aplicar de todos modos" para continuar igualmente.',
         'tier_in_use' => 'El nivel ":tier" aún lo usa el plan ":plan". Mueva ese plan a otro nivel antes de quitarlo.',
     ],
 

@@ -253,6 +253,7 @@ return [
     'namespace_security' => [
         'title' => 'Namespace Security',
         'updated' => 'Namespace security tiers updated.',
+        'preflight_blocked' => 'Enforcing :level would block existing workloads in :count namespace(s): :details. Choose "Apply anyway" to proceed regardless.',
         'tier_in_use' => 'The tier ":tier" is still used by the plan ":plan". Move that plan to another tier before removing it.',
     ],
 

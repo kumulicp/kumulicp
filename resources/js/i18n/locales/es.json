@@ -786,7 +786,9 @@
         "observe": "Avisar y auditar con restricted. Señala problemas sin bloquear nada.",
         "baseline": "Aplicar baseline; avisar y auditar con restricted.",
         "restricted": "Aplicar, avisar y auditar con restricted."
-      }
+      },
+      "overridePreflight": "Aplicar de todos modos",
+      "overridePreflightHint": "Aplicar aunque la comprobación previa encuentre cargas de trabajo existentes que se bloquearían."
     }
   },
   "language": {

@@ -789,7 +789,9 @@
         "observe": "Warn and audit at restricted. Flags problems without blocking anything.",
         "baseline": "Enforce baseline; warn and audit at restricted.",
         "restricted": "Enforce, warn and audit at restricted."
-      }
+      },
+      "overridePreflight": "Apply anyway",
+      "overridePreflightHint": "Apply even if the preflight finds existing workloads that would be blocked."
     }
   },
   "language": {

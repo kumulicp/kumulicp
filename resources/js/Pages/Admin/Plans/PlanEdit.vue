@@ -489,6 +489,13 @@ import { currencyByCode } from '@/constants/currencies'
             :error="$page.props.errors['security.tier']"
             :error-messages="$page.props.errors['security.tier']"
           />
+          <va-checkbox
+            v-if="$page.props.errors['security.tier']"
+            v-model="form.security.override_preflight"
+            :label="$t('admin.namespaceSecurity.overridePreflight')"
+            :messages="$t('admin.namespaceSecurity.overridePreflightHint')"
+            class="my-2"
+          />
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />
@@ -586,7 +593,8 @@ export default {
       })),
       form: useForm({
         security: {
-          tier: this.plan.security_tier || 'none'
+          tier: this.plan.security_tier || 'none',
+          override_preflight: false
         },
         name: this.plan.name,
         description: this.plan.description,

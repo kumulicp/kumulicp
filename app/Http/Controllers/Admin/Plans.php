@@ -11,6 +11,7 @@ use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\Organizations;
 use App\Support\Security\NamespaceSecurityPolicy;
 use App\Support\Security\SecurityTier;
+use App\Support\Security\TierPreflightGate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -240,12 +241,30 @@ class Plans extends Controller
             'domain_max' => 'numeric|nullable',
             'email_server' => 'required_if_accepted:email_enabled|numeric|nullable|exists:servers,id',
             'security.tier' => ['nullable', 'string', Rule::in(array_keys(NamespaceSecurityPolicy::tiers()))],
+            'security.override_preflight' => 'nullable|boolean',
         ], $currencyRules));
         // Get bottom display order number
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
         $plan = Plan::where('id', $plan_id)->first();
         $previous_security_tier = $plan->setting('security.tier');
+
+        // A stricter enforce level must not reach namespaces whose running
+        // workloads it would block (unless the admin overrides)
+        $new_tier = NamespaceSecurityPolicy::tier($request->input('security.tier'));
+        if ($new_tier->raisesEnforceFrom(NamespaceSecurityPolicy::tier($previous_security_tier)) && ! $request->boolean('security.override_preflight')) {
+            $blockers = TierPreflightGate::blockers($plan->subscribers()->with('servers.server')->get(), $new_tier);
+
+            if ($blockers !== []) {
+                return back()->withInput()->withErrors([
+                    'security.tier' => __('admin.namespace_security.preflight_blocked', [
+                        'level' => $new_tier->enforce,
+                        'count' => count($blockers),
+                        'details' => TierPreflightGate::summary($blockers),
+                    ]),
+                ]);
+            }
+        }
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->org_type = $request->org_type;

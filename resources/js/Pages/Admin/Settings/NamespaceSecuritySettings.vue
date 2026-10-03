@@ -92,6 +92,14 @@ import { useForm } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
 
+        <va-checkbox
+          v-if="$page.props.errors.tiers"
+          v-model="form.override_preflight"
+          :label="$t('admin.namespaceSecurity.overridePreflight')"
+          :messages="$t('admin.namespaceSecurity.overridePreflightHint')"
+          class="my-3"
+        />
+
         <va-button type="button" preset="secondary" @click="addTier()">
           {{ $t('admin.namespaceSecurity.addTier') }}
         </va-button>
@@ -116,6 +124,7 @@ export default {
     return {
       modes: ['enforce', 'warn', 'audit'],
       form: useForm({
+        override_preflight: false,
         tiers: this.tiers.map((tier) => ({ ...tier, existing: true })),
       }),
     }

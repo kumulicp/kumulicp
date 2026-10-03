@@ -14,8 +14,10 @@ use Illuminate\Http\Client\Response;
  * K8sCredentialContext).
  *
  * Every method returns ['success' => bool, 'status' => int, 'data' => ?array,
- * 'error' => string] rather than throwing on an API error, so callers can
- * map failures onto their own result shapes.
+ * 'error' => string, 'warnings' => string[]] rather than throwing on an API
+ * error, so callers can map failures onto their own result shapes. `warnings`
+ * are the API server's `Warning` response headers (e.g. Pod Security
+ * Admission telling you a change would violate the namespace's policy).
  *
  * apply() mirrors the permissions `kubectl apply` needed (get + create, or
  * get + patch for an object that already differs), rather than using
@@ -110,6 +112,28 @@ class KubernetesApiClient
         });
     }
 
+    /**
+     * Applies a JSON merge patch to an existing object (null removes a key).
+     * Unlike apply() this always issues the write, which is what $dry_run
+     * needs: with it, the API server validates and runs admission (so its
+     * warnings come back in ['warnings']) without persisting anything — like
+     * `kubectl patch --dry-run=server`.
+     */
+    public function patch(string $api_version, string $kind, string $name, array $patch, ?string $namespace = null, bool $dry_run = false): array
+    {
+        return $this->request(function (PendingRequest $http) use ($api_version, $kind, $name, $patch, $namespace, $dry_run) {
+            $resource = $this->resolve($http, $api_version, $kind);
+
+            if (! $resource) {
+                return $this->failure("Unknown resource kind {$kind} ({$api_version})");
+            }
+
+            $path = $this->path($resource, $namespace, $name).($dry_run ? '?dryRun=All' : '');
+
+            return $this->result($http->withBody(json_encode($patch), 'application/merge-patch+json')->patch($path));
+        });
+    }
+
     public function get(string $api_version, string $kind, string $name, ?string $namespace = null): array
     {
         return $this->request(function (PendingRequest $http) use ($api_version, $kind, $name, $namespace) {
@@ -167,7 +191,7 @@ class KubernetesApiClient
             $response = $http->delete($this->path($resource, $namespace, $name), ['propagationPolicy' => 'Background']);
 
             if ($response->status() === 404) {
-                return ['success' => true, 'status' => 404, 'data' => null, 'error' => ''];
+                return ['success' => true, 'status' => 404, 'data' => null, 'error' => '', 'warnings' => []];
             }
 
             return $this->result($response);
@@ -216,7 +240,7 @@ class KubernetesApiClient
                 $logs[] = rtrim($response->body(), "\n");
             }
 
-            return ['success' => true, 'status' => 200, 'data' => implode("\n", $logs), 'error' => ''];
+            return ['success' => true, 'status' => 200, 'data' => implode("\n", $logs), 'error' => '', 'warnings' => []];
         });
     }
 
@@ -352,7 +376,36 @@ class KubernetesApiClient
             'status' => $response->status(),
             'data' => is_array($data) ? $data : null,
             'error' => $response->successful() ? '' : $this->errorMessage($response),
+            'warnings' => $this->warnings($response),
         ];
+    }
+
+    /**
+     * The text of each `Warning` header (RFC 7234: `299 - "text"`), in
+     * order. The API server sends one header per warning; a comma-joined list
+     * in a single header is handled too.
+     *
+     * @return list<string>
+     */
+    private function warnings(Response $response): array
+    {
+        $warnings = [];
+
+        foreach ($response->headers() as $name => $values) {
+            if (strcasecmp($name, 'Warning') !== 0) {
+                continue;
+            }
+
+            foreach ((array) $values as $value) {
+                if (preg_match_all('/\d{3}\s+\S+\s+"((?:[^"\\\\]|\\\\.)*)"/', $value, $matches)) {
+                    foreach ($matches[1] as $text) {
+                        $warnings[] = str_replace(['\\"', '\\\\'], ['"', '\\'], $text);
+                    }
+                }
+            }
+        }
+
+        return $warnings;
     }
 
     // Kubernetes error responses are a Status object with a `message`.
@@ -369,6 +422,6 @@ class KubernetesApiClient
 
     private function failure(string $error): array
     {
-        return ['success' => false, 'status' => 0, 'data' => null, 'error' => $error];
+        return ['success' => false, 'status' => 0, 'data' => null, 'error' => $error, 'warnings' => []];
     }
 }
