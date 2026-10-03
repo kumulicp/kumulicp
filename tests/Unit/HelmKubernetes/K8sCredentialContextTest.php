@@ -2,11 +2,22 @@
 
 use App\Integrations\ServerManagers\HelmKubernetes\Support\K8sCredentialContext;
 use App\Server;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 
-it('writes an ephemeral 0600 CA file for bearer-token auth and cleans it up', function () {
-    $server = Server::factory()->create([
+function makeK8sServer(array $attributes = []): Server
+{
+    return Server::factory()->create(array_merge([
         'interface' => 'helm_k8s',
         'address' => 'https://cluster.example.com:6443',
+        'ca_cert' => 'fake-ca',
+        'api_secret' => 'token',
+        'settings' => ['k8s_auth_type' => 'bearer_token'],
+    ], $attributes));
+}
+
+it('writes an ephemeral 0600 CA file for bearer-token auth and cleans it up', function () {
+    $server = makeK8sServer([
         'ca_cert' => "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----",
         'api_secret' => 'super-secret-token',
         'settings' => ['k8s_auth_type' => 'bearer_token', 'k8s_tls_verify' => 'true'],
@@ -15,39 +26,26 @@ it('writes an ephemeral 0600 CA file for bearer-token auth and cleans it up', fu
     $context = new K8sCredentialContext($server);
     $capturedPath = null;
 
-    $context->withAuthArgs('demo', function (array $helm_args) use (&$capturedPath, $server) {
-        $ca_index = array_search('--kube-ca-file', $helm_args);
-        expect($ca_index)->not->toBeFalse();
+    $context->withCredentialFiles(function (array $options) use (&$capturedPath, $server) {
+        $capturedPath = $options['verify'];
 
-        $capturedPath = $helm_args[$ca_index + 1];
-
+        expect($capturedPath)->toBeString();
         expect(file_exists($capturedPath))->toBeTrue();
         expect(substr(sprintf('%o', fileperms($capturedPath)), -4))->toBe('0600');
         expect(file_get_contents($capturedPath))->toBe($server->ca_cert);
-
-        expect($helm_args)->toContain('--kube-apiserver', $server->address);
-        expect($helm_args)->toContain('--kube-token', 'super-secret-token');
+        expect($options)->not->toHaveKeys(['cert', 'ssl_key']);
     });
 
     expect(file_exists($capturedPath))->toBeFalse();
 });
 
 it('cleans up the ephemeral file even if the callback throws', function () {
-    $server = Server::factory()->create([
-        'interface' => 'helm_k8s',
-        'address' => 'https://cluster.example.com:6443',
-        'ca_cert' => 'fake-ca',
-        'api_secret' => 'token',
-        'settings' => ['k8s_auth_type' => 'bearer_token'],
-    ]);
-
-    $context = new K8sCredentialContext($server);
+    $context = new K8sCredentialContext(makeK8sServer());
     $capturedPath = null;
 
     try {
-        $context->withAuthArgs('demo', function (array $helm_args) use (&$capturedPath) {
-            $ca_index = array_search('--kube-ca-file', $helm_args);
-            $capturedPath = $helm_args[$ca_index + 1];
+        $context->withCredentialFiles(function (array $options) use (&$capturedPath) {
+            $capturedPath = $options['verify'];
 
             throw new Exception('boom');
         });
@@ -55,30 +53,48 @@ it('cleans up the ephemeral file even if the callback throws', function () {
         expect($e->getMessage())->toBe('boom');
     }
 
+    expect($capturedPath)->toBeString();
     expect(file_exists($capturedPath))->toBeFalse();
 });
 
-it('builds an inline kubeconfig for client-cert auth using api_key/api_secret as key/cert', function () {
-    $server = Server::factory()->create([
-        'interface' => 'helm_k8s',
-        'address' => 'https://cluster.example.com:6443',
-        'ca_cert' => 'fake-ca',
+it('writes the client certificate and key to ephemeral files for client-cert auth', function () {
+    $server = makeK8sServer([
         'api_key' => 'fake-key',
         'api_secret' => 'fake-cert',
         'settings' => ['k8s_auth_type' => 'client_cert'],
     ]);
 
     $context = new K8sCredentialContext($server);
-    expect($context->needsKubeconfig())->toBeTrue();
+    expect($context->usesClientCert())->toBeTrue();
 
-    $context->withAuthArgs('demo', function (array $helm_args) {
-        expect($helm_args)->toContain('--kubeconfig');
-        $path = $helm_args[array_search('--kubeconfig', $helm_args) + 1];
+    $paths = [];
 
-        expect(file_exists($path))->toBeTrue();
-        $contents = file_get_contents($path);
-        expect($contents)->toContain('client-certificate-data');
-        expect($contents)->toContain('client-key-data');
+    $context->withCredentialFiles(function (array $options) use (&$paths) {
+        $paths = [$options['cert'], $options['ssl_key']];
+
+        expect(file_get_contents($options['cert']))->toBe('fake-cert');
+        expect(file_get_contents($options['ssl_key']))->toBe('fake-key');
+        expect(substr(sprintf('%o', fileperms($options['ssl_key'])), -4))->toBe('0600');
+    });
+
+    foreach ($paths as $path) {
+        expect(file_exists($path))->toBeFalse();
+    }
+});
+
+it('skips the CA file and disables verification when k8s_tls_verify is false', function () {
+    $server = makeK8sServer(['settings' => ['k8s_auth_type' => 'bearer_token', 'k8s_tls_verify' => 'false']]);
+
+    (new K8sCredentialContext($server))->withCredentialFiles(function (array $options) {
+        expect($options['verify'])->toBeFalse();
+    });
+});
+
+it('falls back to the system trust store when no CA cert is set', function () {
+    $server = makeK8sServer(['ca_cert' => null]);
+
+    (new K8sCredentialContext($server))->withCredentialFiles(function (array $options) {
+        expect($options['verify'])->toBeTrue();
     });
 });
 
@@ -89,4 +105,43 @@ it('defaults k8s_tls_verify to true when unset', function () {
     ]);
 
     expect((new K8sCredentialContext($server))->tlsVerify())->toBeTrue();
+});
+
+it('sends bearer-token requests to the API server address with an Authorization header', function () {
+    Http::fake();
+
+    $context = new K8sCredentialContext(makeK8sServer(['address' => 'https://cluster.example.com:6443/']));
+    $context->withRequest(fn ($http) => $http->get('/version'));
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://cluster.example.com:6443/version'
+        && $request->hasHeader('Authorization', 'Bearer token'));
+});
+
+it('sends no bearer token for client-cert auth', function () {
+    Http::fake();
+
+    $server = makeK8sServer([
+        'api_key' => 'fake-key',
+        'api_secret' => 'fake-cert',
+        'settings' => ['k8s_auth_type' => 'client_cert'],
+    ]);
+
+    (new K8sCredentialContext($server))->withRequest(fn ($http) => $http->get('/version'));
+
+    Http::assertSent(fn (Request $request) => ! $request->hasHeader('Authorization'));
+});
+
+it('adds impersonation headers when configured', function () {
+    Http::fake();
+
+    $server = makeK8sServer(['settings' => [
+        'k8s_auth_type' => 'bearer_token',
+        'k8s_impersonate_user' => 'deploy-bot',
+        'k8s_impersonate_group' => 'kumulicp',
+    ]]);
+
+    (new K8sCredentialContext($server))->withRequest(fn ($http) => $http->get('/version'));
+
+    Http::assertSent(fn (Request $request) => $request->hasHeader('Impersonate-User', 'deploy-bot')
+        && $request->hasHeader('Impersonate-Group', 'kumulicp'));
 });

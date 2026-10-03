@@ -32,7 +32,7 @@ policy with another tool must be able to opt out of ours.
 | Deployer RBAC | `kumulicp-deployer` can only `get/list/create/delete` namespaces. It cannot `patch`/`update`, so relabeling existing namespaces fails until the ClusterRole is extended. | `docs/k8s-rbac-sample.yaml` |
 | Chart values | None of `NextcloudChart`, `WordpressChart` or `CiviCRMStandaloneChart` set any `securityContext`/`podSecurityContext`/`containerSecurityContext`. What runs is exactly the chart default. Phase 0 rendered those defaults (see the report). | `.../Rancher/Charts/*`, `Applications/CiviCRMStandalone/CiviCRMStandaloneChart.php` |
 | Helm install Job | `HelmInstallJob::jobManifest()` runs `alpine/helm` with no `securityContext`: root, writable root FS. Only applies to the `helm_k8s` driver. Rancher runs its own install pods. | `.../HelmKubernetes/Support/HelmInstallJob.php` |
-| Other KumuliCP Jobs | `NextcloudJobChart` sets `fsGroup 33` and `runAsUser 33` at pod level, plus `allowPrivilegeEscalation: true` in the **pod** securityContext, which is a container-level field. It is either ignored or rejected under strict validation. `WordpressJobChart` sets `fsGroup 0`. `MySQLJobChart` and `Nextcloud/Commands/RancherJob.php` set little or nothing. | `.../Rancher/Charts/Job/*` |
+| Other KumuliCP Jobs | `NextcloudJobChart` sets `fsGroup 33` and `runAsUser 33` at pod level, plus `allowPrivilegeEscalation: true` in the **pod** securityContext, which is a container-level field. It is ignored: the API server only warns about unknown fields by default, and the `helm_k8s` driver posts raw JSON through its REST client. `WordpressJobChart` sets `fsGroup 0`. `MySQLJobChart` and `Nextcloud/Commands/RancherJob.php` set little or nothing. | `.../Rancher/Charts/Job/*` |
 | Security scans | `RunSecurityScan` runs the scan Job in the org namespace with no host access. `kube-bench` can't audit nodes without host mounts and `hostPID`, so today it is largely ineffective. `kube-hunter` runs in `--pod` mode and needs no host access. | `app/Actions/Security/RunSecurityScan.php`, `SecurityScanJobChart.php`, `Support/Security/Tools/*` |
 | Compatibility flags | `AppProfile::$compatibility` is a list of flags. `compatibilityCatalog()` lists the known flags, and `Admin\Applications::show()` renders them as chips in `AppView.vue`. Adding a flag needs a catalog entry plus `applications.compatibility.<flag>.{label,description}` strings in `resources/lang/{en,es}/admin.php`. | `app/Integrations/Applications/AppProfile.php` |
 | App configurations | `AppProfile::$configurations` (name/type/default/validations) are mapped into chart values via `$app_instance->configuration('x')`. Plans can also define `additionalConfigs`. `HelmChart::valuesWithAdditionalConfigs()` applies them with the `a-b` → `a.b` key convention. This is the hook for exposing chart settings. | `HelmChart.php`, `AppPlan::additionalConfigs()` |
@@ -119,11 +119,12 @@ Ordering during rollout: harden workloads → verify no `warn` output → only t
   Rancher, the chart install runs in Rancher's own operation pods, so the equivalent is the Rancher app/operation
   status plus the preflight below.
 - `audit` goes to the API server audit log, which most admins can't see. Treat it as an admin-side extra.
-- **Preflight**: `kubectl label --dry-run=server --overwrite ns <ns> pod-security.kubernetes.io/enforce=<level>`
-  returns warnings listing every existing pod that would violate. Wrap it as `PodSecurityPreflight` and store the
-  result as a `SecurityScan` (tool `pod-security`) with `SecurityFinding` rows, reusing the existing UI. For
-  Rancher, run it against the cluster through the same kubectl identity the Rancher driver already needs for
-  scans, or fall back to the static checker on `helm template` output.
+- **Preflight**: a server-side dry-run of the label change (a `PATCH` of the namespace with `?dryRun=All`
+  setting `pod-security.kubernetes.io/enforce=<level>`) returns warnings, in the response's `Warning` headers,
+  listing every existing pod that would violate. The `KubernetesApiClient` doesn't expose response headers or a
+  dry-run option yet, so Phase 1.5 adds both. Wrap it as `PodSecurityPreflight` and store the result as a
+  `SecurityScan` (tool `pod-security`) with `SecurityFinding` rows, reusing the existing UI. For Rancher, use the
+  same call through Rancher's Kubernetes proxy, or fall back to the static checker on rendered manifests.
 - **Static check**: `scripts/security/psa-check.py` (Phase 0) evaluates rendered manifests offline. Phase 2 ports
   its rule table to a PHP `RestrictedPodSpecAssertion` for CI.
 
@@ -171,11 +172,11 @@ Jobs, and per-plan overrides stored as app plan configurations (`security-capabi
 
 | Concern | `helm_k8s` driver | Rancher driver |
 |---|---|---|
-| Namespace labels | `kubectl apply` of the manifest | `PUT/PATCH /v1/namespaces/{name}` with `metadata.labels` (confirm verb in Phase 1) |
-| Reconcile permission | `patch`/`update` on `namespaces` for `kumulicp-deployer` | The Rancher API user must be allowed to update namespaces; check in `ValidateServer` |
+| Namespace labels | `KubernetesApiClient::apply()` (create, or JSON merge patch) | `PUT/PATCH /v1/namespaces/{name}` with `metadata.labels` (confirm verb in Phase 1) |
+| Reconcile permission | `get` + `patch` on `namespaces` for `kumulicp-deployer` | The Rancher API user must be allowed to update namespaces |
 | Project-level policy | n/a | Rancher PSACT can set defaults and exemptions per project; `observe` mode is the right choice when it is in use |
 | Install Job hardening | `HelmInstallJob` | Not applicable: Rancher's own operation pods run the install |
-| Helper/scan Jobs | `Job/*JobChart` via `kubectl` | The same `Job/*JobChart` manifests via the Rancher Job API, so one hardening change covers both |
+| Helper/scan Jobs | `Job/*JobChart` via `KubernetesApiClient::apply()` | The same `Job/*JobChart` manifests via the Rancher Job API, so one hardening change covers both |
 | Install-time warnings | Job logs | Rancher operation status + preflight |
 | Chart values | Shared `HelmChart` classes | Shared `HelmChart` classes, so Phase 3 covers both with no duplication |
 
@@ -208,8 +209,9 @@ What shipped, all inert until an admin turns it on:
   currently behaves like `off` and is reserved for the preflight reporting in §2.5.
 - **Both drivers**: `KubernetesNamespace::create()` adds the labels and a `kumulicp.io/security-tier` ownership
   annotation, and `update()` reconciles an existing namespace (shared `ReconcilesNamespaceSecurity` trait,
-  pure `NamespaceSecurityReconciler` for the diff). `helm_k8s` uses `kubectl patch --type merge` (needs only the
-  `patch` verb). Rancher reads the namespace and PUTs it back with the label changes; **that path hasn't been run
+  pure `NamespaceSecurityReconciler` for the diff). `helm_k8s` uses `KubernetesApiClient::apply()`, which is a
+  JSON merge patch for an object that already exists (a `null` value removes a label), so it needs only `get` and
+  `patch` on namespaces. No `kubectl` or `helm` binary is involved. Rancher reads the namespace and PUTs it back with the label changes; **that path hasn't been run
   against a live Rancher**, so confirm it before relying on it. Unmanaged servers make no cluster call at all.
   The ownership annotation means a plan moving back to `none` removes only the labels KumuliCP set, never labels
   an admin put on a namespace it never managed.
@@ -229,15 +231,24 @@ What shipped, all inert until an admin turns it on:
 Not done yet, deliberately: the `on_incompatible_app` and `harden_system_jobs` system settings. Nothing reads
 them until Phase 2/3, and a setting with no effect would mislead admins. They land with the code that uses them.
 
-Tests: unit tests for tiers, the reconciler, the policy and the warning parser; driver tests with `Process::fake`
-(`tests/Unit/HelmKubernetes/NamespaceSecurityTest.php`) and `Http::fake`
-(`tests/Unit/Rancher/NamespaceSecurityTest.php`); feature tests for the settings page, plan tier and
+Tests: unit tests for tiers, the reconciler, the policy and the warning parser; driver tests with `Http::fake`
+(`tests/Unit/HelmKubernetes/NamespaceSecurityTest.php`, `tests/Unit/Rancher/NamespaceSecurityTest.php`); feature tests for the settings page, plan tier and
 server mode (`tests/Feature/Admin/NamespaceSecurityTest.php`). **These were written but not run**: the project
 needs PHP 8.4 and the authoring environment has 8.3. The pure logic (tier, reconciler, warning parser) was
 exercised with plain PHP scripts, Pint passes, and the Vue pages compile.
 
 Exit: with a plan on `observe` and a `managed` server, its namespaces carry warn/audit `restricted` and
 violations per app are visible. With defaults, nothing changes.
+
+### Phase 1.5 — Preflight over the REST client (next)
+
+The `helm_k8s` driver no longer shells out to `kubectl` or `helm` (branch
+`claude/kubectl-helm-removal-k8s-api-g24bd9`, which Phase 1 is now built on), so the dry-run preflight in §2.5
+needs two small additions to `KubernetesApiClient`: an optional `dryRun` query parameter on writes, and the
+response's `Warning` headers returned alongside `data` (e.g. as `warnings`). On top of that:
+`PodSecurityPreflight` (dry-run the target `enforce` label, store the warnings as a `SecurityScan` with findings),
+and the gate that blocks raising a tier's `enforce` level while the preflight lists violations, with an admin
+override.
 
 ### Phase 2 — Make KumuliCP's own workloads hardenable
 
@@ -294,12 +305,15 @@ Exit: every KumuliCP-created pod spec passes `restricted` when the setting is on
    recommended (only when the admin accepts the recommendation) → plan override. Because the `HelmChart` classes
    are shared, this covers Rancher and `helm_k8s` at once. Overrides are validated against the tier's `enforce`
    level and the PSA ceiling.
-5. **Discovery**: `ChartSecurityInspector` runs `helm show values` (via `HelmCli`) when an AppVersion's chart
-   name or version is saved. It scans for keys like `securityContext`, `podSecurityContext`,
+5. **Discovery**: `ChartSecurityInspector` reads the chart's `values.yaml` when an AppVersion's chart name or
+   version is saved. There's no `helm` binary any more (the REST-client change removed `HelmCli`), so a
+   `ChartValuesReader` fetches it over HTTP: for a classic repository, `index.yaml` then the chart `.tgz`; for an
+   `oci://` repository, the registry's token, manifest and chart layer blob. It reuses the AppVersion's repo
+   secret for private repositories and extracts `values.yaml` in PHP. It scans for keys like `securityContext`, `podSecurityContext`,
    `containerSecurityContext`, `networkPolicy`, `serviceAccount.automount*` and `readOnlyRootFilesystem`, and
    stores the paths and chart defaults on the AppVersion. The Version page lists each as
    **Managed / Available / Unknown**. "Manage" creates a plan `additionalConfig` through the existing mechanism.
-   For Rancher servers, `helm show values` runs on the KumuliCP host, since it only needs repository access.
+   It only needs repository access, so it works the same for Rancher servers.
 6. **Highlighting**: a posture badge per app version and plan: *Restricted-ready*, *Baseline-ready*, *Unknown*,
    or *Not compatible*. Show recommendations inline ("This chart supports `runAsNonRoot`. Enable it").
 

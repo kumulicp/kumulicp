@@ -17,7 +17,7 @@ cluster.
 | KumuliCP values | KumuliCP sets no security values for any chart, so chart defaults equal what is deployed for security fields. Non-security values were approximated (external database, Redis, cron, Imaginary and metrics on). |
 | Capability probing | Not run (needs Docker). The probe script is written and syntax-checked only. |
 | Rancher | No Rancher instance. Rancher parity is analysed from code in the plan (§2.7). |
-| Tooling | `helm` v3.16.4 was built from source in a scratch directory. It is not committed. |
+| Tooling | `helm` v3.16.4 was built from source in a scratch directory to render the charts. It is authoring tooling only (the app itself no longer needs `helm` or `kubectl`) and is not committed. |
 
 ## 2. Rendered chart results
 
@@ -79,8 +79,8 @@ Read from the actual `values.yaml`/templates, not assumed.
 ## 4. Findings worth acting on
 
 1. **Misplaced field**: `NextcloudJobChart` (and `Nextcloud/Commands/RancherJob.php`) put `allowPrivilegeEscalation`
-   in the pod `securityContext`. With `kubectl` strict field validation (`helm_k8s` driver) this can fail the
-   apply. Fix in Phase 2 regardless of the toggle, since it is a bug rather than a security-posture change.
+   in the pod `securityContext`. The `helm_k8s` driver posts raw JSON through its REST client, where the API
+   server only warns about unknown fields by default, so the field is silently ignored rather than failing. Fix in Phase 2 regardless of the toggle, since it is a bug rather than a security-posture change.
 2. **`kube-bench` can't do its job**: its Job has no `hostPID` or host mounts, so it can't read node config.
    Matches decision 3 (give it privileges in a dedicated namespace). `kube-hunter` in `--pod` mode needs none.
 3. **WordPress already ships a NetworkPolicy** (Bitnami default `networkPolicy.enabled: true`). Phase 5's

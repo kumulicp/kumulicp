@@ -44,18 +44,10 @@ return [
         'url' => env('PLUGIN_REGISTRY_URL'),
     ],
 
-    'helm' => [
-        'binary_path' => env('HELM_BINARY_PATH', 'helm'),
-    ],
-
-    'kubectl' => [
-        'binary_path' => env('KUBECTL_BINARY_PATH', 'kubectl'),
-    ],
-
     // Image the in-cluster helm install Job runs (see HelmInstaller).
-    // Defaults to the official alpine/helm image, version-pinned to match
-    // this app's own direct-CLI helm version. Must be pullable from the
-    // target cluster, not just from wherever this app runs.
+    // Defaults to the official alpine/helm image, version-pinned. This is
+    // the only place `helm` runs -- inside the target cluster, not where
+    // this app runs -- so it must be pullable from the target cluster.
     'helm_runner' => [
         'image' => env('HELM_RUNNER_IMAGE', 'alpine/helm:3.16.4'),
     ],
