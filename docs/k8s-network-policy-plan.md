@@ -245,7 +245,7 @@ example) accepts the objects and silently ignores them. So verification is activ
 |---|---|---|
 | Write policies | `KubernetesApiClient::apply()`/`delete()`; add `NetworkPolicy` to `RESOURCES` | Steve `/v1/networking.k8s.io.networkpolicies` POST/PUT/DELETE |
 | Permission | `networkpolicies` get/list/create/patch/delete in the deployer ClusterRole; `get` on `endpointslices` in `default` for API server discovery | The Rancher API user needs the same on the KumuliCP project's namespaces |
-| Project isolation | n/a | Project network isolation is on in at least one cluster. Planned: one Rancher project per organization (§2.11), so Rancher's own intra-project allow covers only that org's namespace. Until a cluster is migrated, `managed` refuses to claim isolation there and records a finding |
+| Project isolation | n/a | `rancher_project_mode` (§2.11): `single` (default, warns when project isolation is on), `per_org`, or `none` |
 | L7 CRDs | `KubernetesApiClient` via discovery (CRD kinds are already discovered) | Steve paths per CRD |
 | Probes | Jobs/Pods via `KubernetesApiClient` | The same manifests via the Rancher Job API |
 | Chart policy neutralizing | Shared `HelmChart` value merge | Shared `HelmChart` value merge |
@@ -273,25 +273,35 @@ Target clusters run k3s (decision 8). What that means for this plan:
   restarts pods to inject, needs native sidecars for Jobs, has thinner egress control, and since 2024 only its
   edge releases are open source. The provider contract still allows a Linkerd provider later.
 
-### 2.11 Rancher: one project per organization (draft, pending decision)
+### 2.11 Rancher project mode
 
-Rancher's project network isolation allows traffic between all namespaces of a project, and KumuliCP puts every
-organization in the one project named by the server's `project_id`. Policies are additive, so our deny rules
-can't close that. The fix is one Rancher project per organization:
+Rancher's project network isolation is a cluster-wide setting. When it is on, Rancher allows traffic between all
+namespaces of a project, and policies are additive, so our deny rules can't close that. Today KumuliCP puts every
+organization in the one project named by the server's `project_id`. A new Rancher-only server setting,
+`rancher_project_mode`, lets the admin choose:
 
-- **New server setting** `project_per_org` (default off, per rule 1). When on, `KubernetesNamespace::create()`
-  creates (or reuses) a project named after the organization in the cluster and puts the namespace in it, instead
-  of using `project_id`. The project id is stored on the organization's `OrgServer` settings.
-- **Migration**: `php artisan servers:migrate-rancher-projects [--dry-run] [--organization=] [--server=]` moves
-  existing namespaces by updating their `field.cattle.io/projectId` annotation, then waits for Rancher to
-  recreate its project policies. Moving a namespace between projects briefly re-runs Rancher's policy sync, so the
-  command runs per org, checks connectivity afterwards (N2), and can move an org back.
-- **Shared organization** gets its own project too; other orgs reach it through Traefik, as today.
-- **Permissions**: the Rancher API user needs to create projects in the cluster. Projects also carry Rancher's
-  PSACT, so per-org projects interact with the hardening plan's §2.7; the default stays "no PSACT on new
-  projects", and `observe` mode remains the answer for admins who use PSACT.
-- **Detection**: until a cluster is migrated, the inventory finds Rancher's project policies (they allow ingress
-  from the project's namespaces) and `managed` reports "not isolated" for that server.
+| Mode | Namespaces go to | Isolation with project isolation on | Notes |
+|---|---|---|---|
+| `single` (default, today's behavior) | The one project in `project_id` | **None between orgs.** The server form, the server page and every network-policy reconcile show a warning, and `managed` records a high-severity finding saying tenants on this cluster can reach each other. | Unchanged default, per rule 1. Fine when project isolation is off on the cluster. |
+| `per_org` | A project per organization, named after it | Each org's namespace is only opened to itself | Recommended when project isolation is on. |
+| `none` | No project (no `field.cattle.io/projectId` annotation) | Rancher's project policies don't apply, so only KumuliCP's policies decide | `project_id` isn't required. Org namespaces won't appear under any project in Rancher's UI, and Rancher project-level settings (PSACT, quotas, members) don't reach them. |
+
+Details:
+
+- **Namespace creation**: `KubernetesNamespace::create()` picks the project from the mode. For `per_org` it
+  creates (or reuses) the org's project through the Rancher API and stores its id on the organization's
+  `OrgServer` settings.
+- **Changing mode**: `php artisan servers:migrate-rancher-projects <mode> [--dry-run] [--organization=]
+  [--server=]` moves existing namespaces by setting or removing their `field.cattle.io/projectId` annotation. It
+  runs one org at a time, runs the N2 connectivity check afterwards, and can move an org back. The server form
+  only changes the mode for new namespaces and points at the command for existing ones.
+- **Shared organization** follows the same mode; other orgs reach it through Traefik, as today.
+- **Permissions**: `per_org` needs the Rancher API user to create projects in the cluster; `none` needs it to
+  create namespaces outside a project. Neither is needed for `single`.
+- **PSACT**: per-org projects get no PSACT unless the admin adds one, and `observe` mode remains the answer for
+  admins who use PSACT (hardening plan §2.7).
+- **Detection**: on every reconcile the inventory looks for Rancher's project policies in the namespace. In
+  `single` mode with them present, `managed` reports the server as "not isolated" rather than claiming isolation.
 
 ---
 
@@ -321,7 +331,7 @@ Exit: a findings report `docs/k8s-network-policy-phase0.md` and the answers to t
 - Profile `network` declarations for Nextcloud and WordPress, and WordPress chart policy neutralizing.
 - Policy inventory findings.
 - RBAC sample and Rancher permission notes.
-- Rancher: `project_per_org` and the project migration command (§2.11), pending the decision on open question 3.
+- Rancher: `rancher_project_mode` (`single`/`per_org`/`none`), its warning, and the project migration command (§2.11).
 
 Tests: intent builder and renderer golden tests, reconciler unit tests, driver tests with `Http::fake`, feature
 tests for tier/plan/server settings. Default output must be unchanged.
@@ -390,9 +400,8 @@ Exit: a plan on an Istio-backed tier gets mTLS and identity-based allow rules, w
 1. ~~**CNIs in use.**~~ Resolved: k3s with its default flannel and built-in policy controller (decision 8).
 2. **Istio shape.** Ambient (my default) or sidecar? And should ingress stay on Traefik (which then has to join
    the mesh for `STRICT` mTLS) or move to an Istio gateway?
-3. **Rancher project isolation.** It is on in at least one cluster. Draft answer, pending your pick on the decision
-   card: one Rancher project per organization (§2.11). The alternative is for `managed` to refuse to claim
-   isolation on those clusters.
+3. ~~**Rancher project isolation.**~~ Resolved: it is on in at least one cluster, and Rancher servers get a
+   `rancher_project_mode` setting with `single` (default, with a warning), `per_org` and `none` (§2.11).
 4. **KumuliCP's own location.** Does the control panel run inside the cluster and call app pods directly, or only
    through public URLs (my assumption)? If directly, its namespace needs an allow.
 5. **Cross-org calls.** Do any org apps call shared-org apps from the server side (Collabora, for example)? Through
