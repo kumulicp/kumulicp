@@ -239,6 +239,17 @@ example) accepts the objects and silently ignores them. So verification is activ
 - **Rollback**: deleting `kumulicp-default-deny-*` restores the previous behavior instantly, and the allow
   policies are harmless on their own. The sync command gets `--remove-deny` for emergencies.
 
+### 2.9 Rancher parity
+
+| Concern | `helm_k8s` driver | Rancher driver |
+|---|---|---|
+| Write policies | `KubernetesApiClient::apply()`/`delete()`; add `NetworkPolicy` to `RESOURCES` | Steve `/v1/networking.k8s.io.networkpolicies` POST/PUT/DELETE |
+| Permission | `networkpolicies` get/list/create/patch/delete in the deployer ClusterRole; `get` on `endpointslices` in `default` for API server discovery | The Rancher API user needs the same on the KumuliCP project's namespaces |
+| Project isolation | n/a | Project network isolation is on in at least one cluster. Planned: one Rancher project per organization (§2.11), so Rancher's own intra-project allow covers only that org's namespace. Until a cluster is migrated, `managed` refuses to claim isolation there and records a finding |
+| L7 CRDs | `KubernetesApiClient` via discovery (CRD kinds are already discovered) | Steve paths per CRD |
+| Probes | Jobs/Pods via `KubernetesApiClient` | The same manifests via the Rancher Job API |
+| Chart policy neutralizing | Shared `HelmChart` value merge | Shared `HelmChart` value merge |
+
 ### 2.10 k3s and the Istio choice
 
 Target clusters run k3s (decision 8). What that means for this plan:
@@ -261,17 +272,6 @@ Target clusters run k3s (decision 8). What that means for this plan:
   egress controls cover the N3 phase. Linkerd is lighter, but needs `linkerd-cni` to stay within `baseline`,
   restarts pods to inject, needs native sidecars for Jobs, has thinner egress control, and since 2024 only its
   edge releases are open source. The provider contract still allows a Linkerd provider later.
-
-### 2.9 Rancher parity
-
-| Concern | `helm_k8s` driver | Rancher driver |
-|---|---|---|
-| Write policies | `KubernetesApiClient::apply()`/`delete()`; add `NetworkPolicy` to `RESOURCES` | Steve `/v1/networking.k8s.io.networkpolicies` POST/PUT/DELETE |
-| Permission | `networkpolicies` get/list/create/patch/delete in the deployer ClusterRole; `get` on `endpointslices` in `default` for API server discovery | The Rancher API user needs the same on the KumuliCP project's namespaces |
-| Project isolation | n/a | Project network isolation is on in at least one cluster. Planned: one Rancher project per organization (§2.11), so Rancher's own intra-project allow covers only that org's namespace. Until a cluster is migrated, `managed` refuses to claim isolation there and records a finding |
-| L7 CRDs | `KubernetesApiClient` via discovery (CRD kinds are already discovered) | Steve paths per CRD |
-| Probes | Jobs/Pods via `KubernetesApiClient` | The same manifests via the Rancher Job API |
-| Chart policy neutralizing | Shared `HelmChart` value merge | Shared `HelmChart` value merge |
 
 ### 2.11 Rancher: one project per organization (draft, pending decision)
 
