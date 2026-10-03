@@ -1,7 +1,7 @@
 # Kubernetes security hardening plan
 
-Status: decisions resolved, Phase 0 complete (see `docs/k8s-security-phase0.md`). No application code has been
-changed yet; Phase 0 added only the tooling in `scripts/security/`.
+Status: decisions resolved. Phase 0 (see `docs/k8s-security-phase0.md`) and Phase 1 (namespace labels, opt-in) are
+done. Everything defaults to off, so with no settings changed the app behaves exactly as before.
 
 Goal: let admins run every organization namespace KumuliCP creates, and every app activated in it, under
 Kubernetes Pod Security Admission (PSA) at the level each app can handle. Observe first (`warn`/`audit`), fix the
@@ -195,25 +195,49 @@ Report: `docs/k8s-security-phase0.md`. Deliverables:
 - Still to do on a machine with a cluster/runtime: confirm the matrix with `warn=restricted` on `kind`, run the
   capability probe per image, and obtain the CiviCRM chart (`repo.kumuli.dev` wasn't reachable).
 
-### Phase 1 — Namespace labels (opt-in)
+### Phase 1 — Namespace labels (opt-in) ✅ done
 
-- Add `SecurityTier`, the tier store in system settings, the base-plan tier selector, and the resolver.
-- Both drivers' `KubernetesNamespace`: add labels from the resolved tier to create, and implement `update()` to
-  re-apply them. With `mode=off` or tier `none`, create and update emit exactly today's payload.
-- Reconcile existing namespaces: artisan `kumulicp:security:sync-namespaces {--dry-run}`, plus re-sync when an
-  organization's plan, apps or the tier definition changes.
-- RBAC: add `patch`/`update` on `namespaces` to `kumulicp-deployer` in `docs/k8s-rbac-sample.yaml`. Add a
-  `ValidateServer` check so a missing permission is reported rather than silent (and the equivalent for the
-  Rancher API user).
-- Admin UI: Server "Security" tab (mode, preflight status), Settings page (tiers, `on_incompatible_app`,
-  `harden_system_jobs`), base plan editor (tier selector).
-- Parse install-Job warnings (§2.5) and show them on the app view.
+What shipped, all inert until an admin turns it on:
 
-Tests: Pest + `Process::fake` (pattern in `tests/Unit/HelmKubernetes/KubernetesNamespaceTest.php`) for label
-rendering, resolution, `mode=off` writing nothing, and the Rancher payload.
+- **Tiers**: `App\Support\Security\SecurityTier` (value object, presets `none`/`observe`/`baseline`/`restricted`),
+  admin-defined tiers stored as JSON in the system setting `security_tiers`, and `NamespaceSecurityPolicy` which
+  resolves `organization → plan → tier` (`Plan::settings['security']['tier']`). An unknown or removed tier falls
+  back to `none`.
+- **Server mode**: the flat server setting `security_mode` (`off` default, `managed`, `observe`), validated on
+  the server edit form and documented in each driver's settings help. Only `managed` writes anything. `observe`
+  currently behaves like `off` and is reserved for the preflight reporting in §2.5.
+- **Both drivers**: `KubernetesNamespace::create()` adds the labels and a `kumulicp.io/security-tier` ownership
+  annotation, and `update()` reconciles an existing namespace (shared `ReconcilesNamespaceSecurity` trait,
+  pure `NamespaceSecurityReconciler` for the diff). `helm_k8s` uses `kubectl patch --type merge` (needs only the
+  `patch` verb). Rancher reads the namespace and PUTs it back with the label changes; **that path hasn't been run
+  against a live Rancher**, so confirm it before relying on it. Unmanaged servers make no cluster call at all.
+  The ownership annotation means a plan moving back to `none` removes only the labels KumuliCP set, never labels
+  an admin put on a namespace it never managed.
+- **Reconcile**: `OrganizationServices::updateOrganization()` now calls the namespace `update()`, so the existing
+  `UpdateOrganization` job covers it. It also runs when an app is activated, and when an admin changes a plan's
+  tier (all subscribers are re-synced). Backfill: `php artisan servers:sync-namespace-security [--dry-run]
+  [--organization=slug] [--server=id]`, which prints a table and exits non-zero on failure.
+- **RBAC**: `docs/k8s-rbac-sample.yaml` adds `patch` on namespaces (only needed for `managed`). A "forbidden"
+  failure is logged and surfaced by the sync command with a pointer to the RBAC sample. (I used that instead of
+  a `ValidateServer` check, which is an end-to-end activation test, not a permission probe.)
+- **Admin UI**: Settings → "Namespace Security" (custom tiers; a tier a plan still uses can't be removed), a tier
+  select on the plan editor, and `security_mode` in the server settings.
+- **Install-time warnings** (`helm_k8s` only): after an activate/upgrade completes, if the namespace is managed and
+  its tier warns or enforces, the latest install Job's logs are parsed for `would violate PodSecurity` and shown on
+  the organization's app page. Rancher has no equivalent yet; its installs run in Rancher's own pods.
 
-Exit: with a plan set to `observe`, its namespaces carry warn/audit `restricted`, and violations per app are
-visible. With defaults, nothing changes.
+Not done yet, deliberately: the `on_incompatible_app` and `harden_system_jobs` system settings. Nothing reads
+them until Phase 2/3, and a setting with no effect would mislead admins. They land with the code that uses them.
+
+Tests: unit tests for tiers, the reconciler, the policy and the warning parser; driver tests with `Process::fake`
+(`tests/Unit/HelmKubernetes/NamespaceSecurityTest.php`) and `Http::fake`
+(`tests/Unit/Rancher/NamespaceSecurityTest.php`); feature tests for the settings page, plan tier and
+server mode (`tests/Feature/Admin/NamespaceSecurityTest.php`). **These were written but not run**: the project
+needs PHP 8.4 and the authoring environment has 8.3. The pure logic (tier, reconciler, warning parser) was
+exercised with plain PHP scripts, Pint passes, and the Vue pages compile.
+
+Exit: with a plan on `observe` and a `managed` server, its namespaces carry warn/audit `restricted` and
+violations per app are visible. With defaults, nothing changes.
 
 ### Phase 2 — Make KumuliCP's own workloads hardenable
 

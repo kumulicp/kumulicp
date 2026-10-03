@@ -135,6 +135,9 @@ class ApplicationActivate extends Action
         if ($app_profile->activationType($app_instance->get()) === 'chart') {
             $server = $app_instance->connect('web');
             if ($server->existsOrganization()) {
+                // Keep the namespace's security labels in step with the plan
+                // (a no-op unless the server's security_mode is `managed`)
+                $server->updateOrganization();
                 $server->add();
             } else {
                 $server->addOrganization();
@@ -189,6 +192,10 @@ class ApplicationActivate extends Action
             }
 
             if ($server->isActive()) {
+                if (method_exists($server, 'collectPodSecurityWarnings')) {
+                    $server->collectPodSecurityWarnings();
+                }
+
                 // Get roles if any
 
                 $default_admin_roles = $task->version->defaultAdminRoleSlugs();

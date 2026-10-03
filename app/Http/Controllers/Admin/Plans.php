@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Application;
 use App\Http\Controllers\Controller;
+use App\Jobs\Accounts\UpdateOrganization;
 use App\Plan;
 use App\Server;
 use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\Organizations;
+use App\Support\Security\NamespaceSecurityPolicy;
+use App\Support\Security\SecurityTier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 class Plans extends Controller
 {
@@ -114,6 +118,14 @@ class Plans extends Controller
 
         return inertia()->render('Admin/Plans/PlanEdit', [
             'enabled_currencies' => $enabledCurrencies,
+            'security_tiers' => collect(NamespaceSecurityPolicy::tiers())->map(fn (SecurityTier $tier) => [
+                'key' => $tier->key,
+                'label' => $tier->label,
+                'preset' => $tier->preset,
+                'enforce' => $tier->enforce,
+                'warn' => $tier->warn,
+                'audit' => $tier->audit,
+            ])->values(),
             'plan' => [
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -127,6 +139,7 @@ class Plans extends Controller
                 'email_enabled' => $plan->email_enabled,
                 'email_server' => $plan->email_server ? $plan->email_server->id : null,
                 'settings' => $plan->settings ?? [],
+                'security_tier' => NamespaceSecurityPolicy::tier($plan->setting('security.tier'))->key,
                 'app_plans' => $app_plans,
                 'archived' => $plan->archive,
                 'org_type' => $plan->org_type,
@@ -226,11 +239,13 @@ class Plans extends Controller
             'email_enabled' => 'boolean',
             'domain_max' => 'numeric|nullable',
             'email_server' => 'required_if_accepted:email_enabled|numeric|nullable|exists:servers,id',
+            'security.tier' => ['nullable', 'string', Rule::in(array_keys(NamespaceSecurityPolicy::tiers()))],
         ], $currencyRules));
         // Get bottom display order number
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
         $plan = Plan::where('id', $plan_id)->first();
+        $previous_security_tier = $plan->setting('security.tier');
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->org_type = $request->org_type;
@@ -268,6 +283,8 @@ class Plans extends Controller
             'domains.connect' => $request->input('domains.connect'),
             'domains.register' => $request->input('domains.register'),
             'domains.transfer' => $request->input('domains.transfer'),
+            // `none` is the default, so store nothing rather than a value
+            'security.tier' => $request->input('security.tier') === SecurityTier::NONE ? null : $request->input('security.tier'),
         ];
 
         foreach ($enabledCurrencies as $currency) {
@@ -300,6 +317,14 @@ class Plans extends Controller
         $plan->save();
 
         Cache::flush();
+
+        // Namespaces follow their plan's security tier; only does anything on
+        // servers whose security_mode is `managed`
+        if ($plan->setting('security.tier') !== $previous_security_tier) {
+            foreach ($plan->subscribers as $organization) {
+                UpdateOrganization::dispatch($organization);
+            }
+        }
 
         return redirect('/admin/service/plans')->with('success', __('admin.plans.updated', ['plan' => $plan->name]));
     }
