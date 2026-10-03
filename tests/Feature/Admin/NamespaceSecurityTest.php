@@ -4,13 +4,16 @@ namespace Tests\Feature\Admin;
 
 use App\Jobs\Accounts\UpdateOrganization;
 use App\Organization;
+use App\OrgServer;
 use App\Plan;
+use App\SecurityScan;
 use App\Server;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Settings;
 use App\Support\Security\NamespaceSecurityPolicy;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -217,6 +220,123 @@ class NamespaceSecurityTest extends TestCase
                 ->has('security_tiers', 4)
                 ->where('plan.security_tier', 'observe')
             );
+    }
+
+    // ---------------------------------------------------------------------------
+    // Preflight gate
+    // ---------------------------------------------------------------------------
+
+    private function managedOrganization(Plan $plan): Organization
+    {
+        $server = Server::factory()->create([
+            'interface' => 'helm_k8s',
+            'address' => 'https://cluster.example.com:6443',
+            'ca_cert' => 'fake-ca',
+            'api_secret' => 'token',
+            'settings' => ['k8s_auth_type' => 'bearer_token', 'security_mode' => 'managed'],
+        ]);
+        $organization = Organization::factory()->create(['plan_id' => $plan->id]);
+        OrgServer::create(['organization_id' => $organization->id, 'server_id' => $server->id]);
+
+        return $organization;
+    }
+
+    private function fakeViolatingCluster(): void
+    {
+        Http::fake(['*' => Http::response([], 200, ['Warning' => [
+            '299 - "existing pods in namespace \"x\" violate the new PodSecurity enforce level \"baseline:latest\""',
+            '299 - "web-1: privileged (container \"c\" must not set securityContext.privileged=true)"',
+        ]])]);
+    }
+
+    public function test_raising_a_plan_s_enforce_level_is_blocked_when_it_would_break_running_workloads()
+    {
+        Queue::fake();
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create();
+        $organization = $this->managedOrganization($plan);
+        $this->fakeViolatingCluster();
+
+        $this->actingAs($user)
+            ->from("/admin/service/plans/{$plan->id}")
+            ->post("/admin/service/plans/{$plan->id}", $this->planPayload(['security' => ['tier' => 'baseline']]))
+            ->assertSessionHasErrors('security.tier');
+
+        $this->assertNull($plan->fresh()->setting('security.tier'));
+        $this->assertStringContainsString($organization->slug, session('errors')->first('security.tier'));
+        $this->assertSame(1, SecurityScan::where('tool', 'pod-security')->count());
+        Queue::assertNotPushed(UpdateOrganization::class);
+    }
+
+    public function test_the_admin_can_override_the_preflight()
+    {
+        Queue::fake();
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create();
+        $this->managedOrganization($plan);
+        $this->fakeViolatingCluster();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->planPayload(['security' => ['tier' => 'baseline', 'override_preflight' => true]]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertSame('baseline', $plan->fresh()->setting('security.tier'));
+        Http::assertNothingSent();
+    }
+
+    public function test_a_clean_preflight_lets_the_tier_change_through()
+    {
+        Queue::fake();
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create();
+        $this->managedOrganization($plan);
+        Http::fake(['*' => Http::response([])]);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->planPayload(['security' => ['tier' => 'baseline']]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertSame('baseline', $plan->fresh()->setting('security.tier'));
+    }
+
+    public function test_lowering_or_keeping_the_enforce_level_is_not_preflighted()
+    {
+        Queue::fake();
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['settings' => ['security' => ['tier' => 'restricted']]]);
+        $this->managedOrganization($plan);
+        Http::fake();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->planPayload(['security' => ['tier' => 'baseline']]))
+            ->assertRedirect('/admin/service/plans');
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->planPayload(['security' => ['tier' => 'baseline']]))
+            ->assertRedirect('/admin/service/plans');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_raising_a_custom_tier_s_enforce_level_is_preflighted_for_the_plans_using_it()
+    {
+        $user = $this->adminUser();
+        $tier = array_merge($this->customTier(), ['enforce' => null]);
+        Settings::update(NamespaceSecurityPolicy::TIERS_SETTING, json_encode(['mine' => $tier]));
+        $plan = Plan::factory()->create(['settings' => ['security' => ['tier' => 'mine']]]);
+        $this->managedOrganization($plan);
+        $this->fakeViolatingCluster();
+
+        $this->actingAs($user)
+            ->put('/admin/settings/namespace-security', ['tiers' => [array_merge($this->customTier(), ['enforce' => 'baseline'])]])
+            ->assertSessionHasErrors('tiers');
+
+        $this->assertNull(NamespaceSecurityPolicy::tier('mine')->enforce);
+
+        $this->actingAs($user)
+            ->put('/admin/settings/namespace-security', ['override_preflight' => true, 'tiers' => [array_merge($this->customTier(), ['enforce' => 'baseline'])]])
+            ->assertRedirect('/admin/settings/namespace-security');
+
+        $this->assertSame('baseline', NamespaceSecurityPolicy::tier('mine')->enforce);
     }
 
     // ---------------------------------------------------------------------------
