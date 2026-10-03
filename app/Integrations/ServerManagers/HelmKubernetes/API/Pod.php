@@ -10,13 +10,13 @@ class Pod extends Kubernetes
     {
         $namespace = $this->namespace();
 
-        $result = $this->kubectl()->run(['logs', '-l', "job-name={$job_name}", '--tail=-1'], $namespace);
+        $result = $this->api()->podLogs("job-name={$job_name}", $namespace);
 
-        if (! $result['success'] || $result['output'] === '') {
+        if (! $result['success'] || $result['data'] === '') {
             return null;
         }
 
-        return $result['output'];
+        return $result['data'];
     }
 
     // Logs of the most recent install/upgrade/uninstall Job for a release

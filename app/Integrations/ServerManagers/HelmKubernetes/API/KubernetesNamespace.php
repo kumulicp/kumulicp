@@ -14,7 +14,7 @@ class KubernetesNamespace extends Kubernetes
     public function create()
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->apply($this->manifest($namespace), $namespace);
+        $result = $this->api()->apply($this->manifest($namespace));
 
         Log::info(__('messages.api.rancher.log.namespace_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
@@ -22,7 +22,7 @@ class KubernetesNamespace extends Kubernetes
             return ['status' => 'failed', 'response' => $result['error']];
         }
 
-        return ['status' => 'success', 'response' => json_decode($result['output'], true)];
+        return ['status' => 'success', 'response' => $result['data']];
     }
 
     // Brings the namespace's Pod Security labels in line with its plan's
@@ -62,7 +62,7 @@ class KubernetesNamespace extends Kubernetes
     public function remove()
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->delete('namespace', $namespace, $namespace);
+        $result = $this->api()->delete('v1', 'Namespace', $namespace);
 
         Log::info(__('messages.api.rancher.log.namespace_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
@@ -70,20 +70,20 @@ class KubernetesNamespace extends Kubernetes
             return ['status' => 'failed', 'response' => $result['error']];
         }
 
-        return ['status' => 'success', 'response' => json_decode($result['output'], true)];
+        return ['status' => 'success', 'response' => $result['data']];
     }
 
     // Check if the namespace is active(1), non existant (0), or transitioning (2)
     public function isActive(): int
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->get('namespace', $namespace, $namespace);
+        $result = $this->api()->get('v1', 'Namespace', $namespace);
 
         if (! $result['success']) {
             return 0;
         }
 
-        $data = json_decode($result['output'], true);
+        $data = $result['data'];
         $phase = $data['status']['phase'] ?? null;
 
         if ($phase === 'Active') {

@@ -3,24 +3,27 @@
 namespace App\Integrations\ServerManagers\HelmKubernetes;
 
 use App\Integrations\ServerManagers\HelmKubernetes\API\HelmInstaller;
-use App\Integrations\ServerManagers\HelmKubernetes\Support\HelmCli;
-use App\Integrations\ServerManagers\HelmKubernetes\Support\KubectlCli;
+use App\Integrations\ServerManagers\HelmKubernetes\Support\HelmReleases;
+use App\Integrations\ServerManagers\HelmKubernetes\Support\KubernetesApiClient;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
 
 /**
- * Base class for the direct helm/kubectl driver, sibling to
+ * Base class for the direct Kubernetes/Helm driver, sibling to
  * App\Integrations\ServerManagers\Rancher\Rancher. Holds the org/server
  * context and namespace convention (one namespace per organization, same as
- * Rancher) and exposes helm()/kubectl() CLI helpers that authenticate
- * per-invocation from the Server's stored k8s_* credential fields.
+ * Rancher) and exposes api()/helmReleases() helpers that talk to the
+ * Kubernetes API directly, authenticating per-call from the Server's stored
+ * k8s_* credential fields. No kubectl or helm binary is involved.
  */
 class Kubernetes
 {
     public $name = 'Kubernetes';
 
     private ?string $namespace = null;
+
+    private ?KubernetesApiClient $api = null;
 
     public function __construct(
         public Organization $organization,
@@ -46,14 +49,14 @@ class Kubernetes
         return $this->namespace;
     }
 
-    public function helm(): HelmCli
+    public function api(): KubernetesApiClient
     {
-        return new HelmCli($this->server());
+        return $this->api ??= new KubernetesApiClient($this->server());
     }
 
-    public function kubectl(): KubectlCli
+    public function helmReleases(): HelmReleases
     {
-        return new KubectlCli($this->server());
+        return new HelmReleases($this->api());
     }
 
     public function helmInstaller(): HelmInstaller
