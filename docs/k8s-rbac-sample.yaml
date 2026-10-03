@@ -51,9 +51,13 @@ kind: ClusterRole
 metadata:
   name: kumulicp-deployer
 rules:
+  # `patch` is only used when a server's security_mode setting is `managed`:
+  # it lets KumuliCP add/update/remove the Pod Security Admission labels on
+  # existing namespaces (KubernetesNamespace::update()). Leave it out if you
+  # never enable that. Existing clusters must re-apply this ClusterRole.
   - apiGroups: [""]
     resources: ["namespaces"]
-    verbs: ["get", "list", "create", "delete"]
+    verbs: ["get", "list", "create", "delete", "patch"]
   - apiGroups: [""]
     resources: ["configmaps", "secrets", "serviceaccounts", "pods", "pods/log"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

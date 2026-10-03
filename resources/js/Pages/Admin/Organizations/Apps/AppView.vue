@@ -66,6 +66,40 @@ import AppsLayout from './AppsLayout.vue'
     </va-list-item>
     <va-list-separator class="my-1" fit />
 
+    <template v-if="pod_security">
+      <va-list-separator class="my-1" fit />
+      <va-list-item class="py-3">
+        <va-list-item-section label>
+          <va-list-item-label>
+            <h5>{{ $t('admin.apps.podSecurityWarnings') }}</h5>
+          </va-list-item-label>
+        </va-list-item-section>
+        <va-list-item-section>
+          <va-list-item-label>
+            <va-alert v-if="!pod_security.warnings || pod_security.warnings.length === 0" color="success" outline>
+              {{ $t('admin.apps.podSecurityNone', { date: collectedAt }) }}
+            </va-alert>
+            <template v-else>
+              <p class="mb-2">{{ $t('admin.apps.podSecurityWarningsDescription', { date: collectedAt }) }}</p>
+              <va-alert
+                v-for="(warning, index) in pod_security.warnings"
+                :key="index"
+                color="warning"
+                outline
+                class="mb-2"
+              >
+                <strong>{{ warning.profile }}</strong>
+                <ul class="pod-security-violations">
+                  <li v-for="(violation, vIndex) in warning.violations" :key="vIndex">{{ violation }}</li>
+                </ul>
+              </va-alert>
+            </template>
+          </va-list-item-label>
+        </va-list-item-section>
+      </va-list-item>
+    </template>
+    <va-list-separator class="my-1" fit />
+
     <va-list-item v-for="server in servers" :key="server.type" class="py-3">
       <va-list-item-section label>
         <va-list-item-label>
@@ -90,7 +124,11 @@ export default {
     app: Object,
     organization: Object,
     versions: Object,
-    servers: Array
+    servers: Array,
+    pod_security: {
+      type: Object,
+      default: null
+    }
   },
   data () {
     const settings = this.app.settings ? JSON.stringify(this.app.settings, '', 2) : '{}'
@@ -103,11 +141,21 @@ export default {
       }),
       isPasswordVisible: false
     }
+  },
+  computed: {
+    collectedAt () {
+      return this.pod_security?.collected_at ? new Date(this.pod_security.collected_at).toLocaleString() : ''
+    }
   }
 }
 </script>
 
 <style lang="scss">
+.pod-security-violations {
+  margin: 0.25rem 0 0 1.25rem;
+  list-style: disc;
+}
+
 .clickable-icon {
   transition: 0.3s;
 

@@ -16,9 +16,11 @@ trait OrganizationServices
         return $this->namespace->create();
     }
 
+    // Reconciles the namespace's Pod Security labels with its plan's tier.
+    // A no-op unless the server's security_mode is `managed`.
     public function updateOrganization()
     {
-        return null;
+        return $this->namespace->update();
     }
 
     public function deleteOrganization()

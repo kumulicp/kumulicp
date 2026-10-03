@@ -49,6 +49,15 @@ class KubectlCli
         return $this->run(['apply', '-f', '-', '-o', 'json'], $namespace, json_encode($manifest));
     }
 
+    /**
+     * `kubectl patch --type merge`: null values in $patch remove that key.
+     * Only needs the `patch` verb on the resource.
+     */
+    public function mergePatch(string $kind, string $name, array $patch, string $namespace): array
+    {
+        return $this->run(['patch', $kind, $name, '--type', 'merge', '-p', json_encode($patch), '-o', 'json'], $namespace);
+    }
+
     public function get(string $kind, string $name, string $namespace): array
     {
         return $this->run(['get', $kind, $name, '-o', 'json'], $namespace);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\Security\NamespaceSecurityPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +26,7 @@ class UpdateServerRequest extends FormRequest
             'internal_address' => 'string|required',
             'ca_cert' => 'nullable|string',
             'settings' => 'array|nullable',
+            'settings.'.NamespaceSecurityPolicy::MODE_SETTING => ['nullable', 'string', Rule::in(NamespaceSecurityPolicy::MODES)],
             'default_backup_server' => 'nullable|exists:servers,id',
             'is_backup_server' => 'nullable|boolean',
             // Blank means "leave unchanged" once a value has been saved —
