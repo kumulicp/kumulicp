@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
  * the specific release. Bound to the same shared kumulicp-helm-installer
  * ClusterRole either way -- see HelmInstaller.
  *
- * Pure manifest builder: no I/O, no kubectl/Process calls.
+ * Pure manifest builder: no I/O, no API calls.
  */
 class HelmInstallJob
 {
@@ -163,7 +163,7 @@ class HelmInstallJob
     // entrypoint. OCI_REGISTRY_HOST/OCI_USERNAME/OCI_PASSWORD and
     // HELM_REPO_USERNAME/HELM_REPO_PASSWORD arrive as env vars sourced from
     // a Secret (see secretManifest()), never as args, so they don't show up
-    // in `kubectl describe pod`. `set -e` so a failed registry login aborts
+    // in `kubectl describe pod` output. `set -e` so a failed registry login aborts
     // instead of silently running helm without it.
     private const ENTRYPOINT_SCRIPT = <<<'SH'
         set -e
