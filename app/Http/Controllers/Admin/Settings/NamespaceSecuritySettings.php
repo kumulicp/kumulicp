@@ -7,6 +7,7 @@ use App\Plan;
 use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\Security\NamespaceSecurityPolicy;
 use App\Support\Security\SecurityTier;
+use App\Support\Security\TierPreflightGate;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +40,7 @@ class NamespaceSecuritySettings extends Controller
         $version = ['nullable', 'string', 'regex:/^(latest|v1\.\d{1,3})$/'];
 
         $validated = $request->validate([
+            'override_preflight' => 'nullable|boolean',
             'tiers' => 'array|max:20',
             'tiers.*.key' => [
                 'required', 'string', 'regex:/^[a-z0-9][a-z0-9_-]{0,39}$/', 'distinct',
@@ -60,6 +62,10 @@ class NamespaceSecuritySettings extends Controller
 
         $this->ensureRemovedTiersUnused(array_keys($tiers));
 
+        if (! $request->boolean('override_preflight')) {
+            $this->ensureRaisedTiersPreflight($tiers);
+        }
+
         if ($tiers === []) {
             SettingsFacade::remove(NamespaceSecurityPolicy::TIERS_SETTING);
         } else {
@@ -67,6 +73,37 @@ class NamespaceSecuritySettings extends Controller
         }
 
         return redirect('/admin/settings/namespace-security')->with('success', __('admin.namespace_security.updated'));
+    }
+
+    // Raising a tier's enforce level re-labels every namespace on a plan that
+    // uses it, so check those namespaces' running workloads first
+    private function ensureRaisedTiersPreflight(array $tiers): void
+    {
+        $blockers = [];
+        $level = null;
+
+        foreach (NamespaceSecurityPolicy::customTiers() as $key => $previous) {
+            if (! isset($tiers[$key])) {
+                continue;
+            }
+
+            $tier = SecurityTier::fromArray($key, $tiers[$key]);
+
+            if ($tier->raisesEnforceFrom($previous)) {
+                $level = $tier->enforce;
+                $blockers = array_merge($blockers, TierPreflightGate::blockers(TierPreflightGate::organizationsOnTier($key), $tier));
+            }
+        }
+
+        if ($blockers !== []) {
+            throw ValidationException::withMessages([
+                'tiers' => __('admin.namespace_security.preflight_blocked', [
+                    'level' => $level,
+                    'count' => count($blockers),
+                    'details' => TierPreflightGate::summary($blockers),
+                ]),
+            ]);
+        }
     }
 
     // Removing a tier a plan still selects would silently drop that plan's

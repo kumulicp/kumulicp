@@ -1,7 +1,8 @@
 # Kubernetes security hardening plan
 
-Status: decisions resolved. Phase 0 (see `docs/k8s-security-phase0.md`) and Phase 1 (namespace labels, opt-in) are
-done. Everything defaults to off, so with no settings changed the app behaves exactly as before.
+Status: decisions resolved. Phase 0 (see `docs/k8s-security-phase0.md`), Phase 1 (namespace labels, opt-in) and
+Phase 1.5 (dry-run preflight) are done. Everything defaults to off, so with no settings changed the app behaves
+exactly as before.
 
 Goal: let admins run every organization namespace KumuliCP creates, and every app activated in it, under
 Kubernetes Pod Security Admission (PSA) at the level each app can handle. Observe first (`warn`/`audit`), fix the
@@ -119,11 +120,11 @@ Ordering during rollout: harden workloads → verify no `warn` output → only t
   Rancher, the chart install runs in Rancher's own operation pods, so the equivalent is the Rancher app/operation
   status plus the preflight below.
 - `audit` goes to the API server audit log, which most admins can't see. Treat it as an admin-side extra.
-- **Preflight**: `kubectl label --dry-run=server --overwrite ns <ns> pod-security.kubernetes.io/enforce=<level>`
-  returns warnings listing every existing pod that would violate. Wrap it as `PodSecurityPreflight` and store the
-  result as a `SecurityScan` (tool `pod-security`) with `SecurityFinding` rows, reusing the existing UI. For
-  Rancher, run it against the cluster through the same kubectl identity the Rancher driver already needs for
-  scans, or fall back to the static checker on `helm template` output.
+- **Preflight**: a server-side dry-run of the label change (a `PATCH` of the namespace with `?dryRun=All`
+  setting `pod-security.kubernetes.io/enforce=<level>`) returns warnings, in the response's `Warning` headers,
+  listing every existing pod that would violate. Implemented in Phase 1.5 as `PodSecurityPreflight`, which stores
+  the result as a `SecurityScan` (tool `pod-security`) with `SecurityFinding` rows, reusing the existing UI.
+  Rancher isn't covered yet (see Phase 1.5); the static checker on rendered manifests is the fallback.
 - **Static check**: `scripts/security/psa-check.py` (Phase 0) evaluates rendered manifests offline. Phase 2 ports
   its rule table to a PHP `RestrictedPodSpecAssertion` for CI.
 
@@ -175,8 +176,9 @@ Jobs, and per-plan overrides stored as app plan configurations (`security-capabi
 | Reconcile permission | `patch`/`update` on `namespaces` for `kumulicp-deployer` | The Rancher API user must be allowed to update namespaces; check in `ValidateServer` |
 | Project-level policy | n/a | Rancher PSACT can set defaults and exemptions per project; `observe` mode is the right choice when it is in use |
 | Install Job hardening | `HelmInstallJob` | Not applicable: Rancher's own operation pods run the install |
-| Helper/scan Jobs | `Job/*JobChart` via `kubectl` | The same `Job/*JobChart` manifests via the Rancher Job API, so one hardening change covers both |
-| Install-time warnings | Job logs | Rancher operation status + preflight |
+| Helper/scan Jobs | `Job/*JobChart` via `KubernetesApiClient::apply()` | The same `Job/*JobChart` manifests via the Rancher Job API, so one hardening change covers both |
+| Install-time warnings | Job logs | Rancher operation status (not yet implemented) |
+| Preflight (dry-run) | `PodSecurityPreflight` over `KubernetesApiClient` | `unsupported` until the Rancher namespace API is verified to return the warnings |
 | Chart values | Shared `HelmChart` classes | Shared `HelmChart` classes, so Phase 3 covers both with no duplication |
 
 ---
@@ -238,6 +240,36 @@ exercised with plain PHP scripts, Pint passes, and the Vue pages compile.
 
 Exit: with a plan on `observe` and a `managed` server, its namespaces carry warn/audit `restricted` and
 violations per app are visible. With defaults, nothing changes.
+
+### Phase 1.5 — Preflight over the REST client ✅ done
+
+The `helm_k8s` driver no longer shells out to `kubectl` or `helm`, so the preflight uses the REST client:
+
+- **`KubernetesApiClient`**: new `patch(..., dry_run: true)` (a JSON merge patch with `?dryRun=All`), and every
+  result now carries `warnings`, the API server's `Warning` response headers.
+- **`PodSecurityPreflight::check()`**: dry-runs `pod-security.kubernetes.io/enforce=<level>` on the organization's
+  namespace. The server's admission warnings list every existing pod that would violate the new level (a headline,
+  then one warning per group of similar pods, "name (and N other pods): violations"); `PreflightWarnings` parses
+  them. A missing namespace counts as clean. A failed check is an **error, not a pass**. `record()` keeps each
+  result as a `SecurityScan` (tool `pod-security`) with one high-severity `SecurityFinding` per pod group, so it
+  appears with the other scans. (Those scans don't show in that page's tool filter yet, which is built from the
+  scan-tool registry.)
+- **Gate** (`TierPreflightGate`): a plan can't move to a stricter `enforce` level, and a custom tier's `enforce`
+  can't be raised, while preflight finds workloads in affected namespaces that would be blocked or the check
+  couldn't run. Only namespaces KumuliCP would relabel are checked (web servers in `managed` mode). The admin
+  can tick "Apply anyway". Lowering or keeping the level never preflights. At most 25 namespaces are checked per
+  request, since it runs synchronously. Beyond that it asks for the batch command.
+- **Batch command**: `php artisan servers:preflight-pod-security <level> [--organization=slug] [--server=id]
+  [--pss-version=v1.30] [--no-record]` reports the same without changing anything, and exits non-zero on
+  violations or errors.
+- **Rancher**: reports `unsupported` (and never blocks). Rancher's namespace API is a different surface and hasn't
+  been verified to return these warnings. Use the batch command's output or Rancher's own tooling for those
+  clusters until that's confirmed.
+- **Tests** (written, not run: PHP 8.3 here, project needs 8.4): `KubernetesApiClientPreflightTest`,
+  `PodSecurityPreflightTest`, `TierPreflightGateTest`, `PreflightWarningsTest`, and gate cases in
+  `tests/Feature/Admin/NamespaceSecurityTest.php`. The warning-header regex and the parser were run with plain
+  PHP. The header format is from Kubernetes' documented behavior, not from a live cluster, so confirm against a
+  real one.
 
 ### Phase 2 — Make KumuliCP's own workloads hardenable
 

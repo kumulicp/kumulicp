@@ -86,6 +86,20 @@ class SecurityTier
         return is_string($value) && preg_match('/^(latest|v1\.\d{1,3})$/', $value) ? $value : 'latest';
     }
 
+    // Strictness of a level: -1 for none, then privileged < baseline < restricted
+    public static function rank(?string $level): int
+    {
+        $index = $level === null ? false : array_search($level, self::LEVELS, true);
+
+        return $index === false ? -1 : $index;
+    }
+
+    // Whether moving from $previous to this tier makes `enforce` stricter
+    public function raisesEnforceFrom(self $previous): bool
+    {
+        return self::rank($this->enforce) > self::rank($previous->enforce);
+    }
+
     public function isActive(): bool
     {
         return $this->enforce !== null || $this->warn !== null || $this->audit !== null;
