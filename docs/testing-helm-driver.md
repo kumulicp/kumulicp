@@ -1,7 +1,11 @@
-# Testing the direct helm/kubectl server manager driver
+# Testing the direct Kubernetes/Helm server manager driver
 
-This driver (`interface = helm_k8s`) talks to `helm` and `kubectl` directly
-against any standard Kubernetes cluster, with no Rancher dependency. Use the
+This driver (`interface = helm_k8s`) talks to the Kubernetes API directly
+against any standard Kubernetes cluster, with no Rancher dependency. Neither
+`kubectl` nor `helm` needs to be installed where kumulicp runs: resources are
+managed over the REST API, release state is read from Helm's own release
+Secrets, and installs/upgrades/uninstalls run `helm` inside the cluster as a
+Job (the `HELM_RUNNER_IMAGE` image). Use the
 `k3s` service in `docker-compose.yml.extras` to exercise it end to end
 against a real cluster running alongside Sail.
 
@@ -35,8 +39,9 @@ kumulicp runs inside the `laravel.test` container and reaches `k3s` over the
 API_SERVER=https://k3s:6443
 ```
 
-`laravel.test`'s image already has `helm`/`kubectl` installed (see
-`docker/8.4/Dockerfile`), so no extra setup is needed there.
+`laravel.test` needs nothing extra installed — it only has to reach the API
+server over the network. (The `docker exec k-k3s-1 kubectl ...` commands in
+this guide run inside the `k3s` container, which ships its own `kubectl`.)
 
 ## 2. Register a Server in the control panel
 
@@ -57,11 +62,12 @@ dedicated columns):
 
 1. Create an Organization and assign it to the new server.
 2. Deploy Nextcloud through the normal UI flow.
-3. Verify (via `docker exec k-k3s-1 kubectl ...`/`helm ...`, or `sail exec
-   laravel.test kubectl ...`/`helm ...` to check exactly what the driver
-   itself sees):
+3. Verify (via `docker exec k-k3s-1 kubectl ...`, which is cluster-admin
+   and independent of what the driver itself can see):
    - `kubectl get ns` shows the organization's namespace.
-   - `helm list -n <namespace>` shows the release as `deployed`.
+   - `kubectl get secrets -n <namespace> -l owner=helm` shows the release's
+     `sh.helm.release.v1.*` Secret with `status=deployed` (this is what the
+     driver reads for release status).
    - `kubectl get pods -n <namespace>` shows running pods.
    - The ingress (if domains are configured) resolves. `k3s`'s Traefik is
      published on the host at `80`/`443` — if `laravel.test` is also bound to
@@ -70,8 +76,9 @@ dedicated columns):
      ingress terminates on standard ports, so app URLs won't include a port.
    - Optional: browse the cluster in Headlamp at `http://localhost:8091` if
      you brought up the `headlamp`/`headlamp-kubeconfig` services too.
-4. Delete the app instance and confirm `helm uninstall` ran and the release
-   is gone (`helm list -n <namespace>`).
+4. Delete the app instance and confirm the uninstall Job ran
+   (`kubectl get jobs -n <namespace>`) and the release's Secrets are gone
+   (`kubectl get secrets -n <namespace> -l owner=helm`).
 
 ### Resetting the cluster
 
@@ -89,8 +96,8 @@ nodes and stuck `Terminating` pods behind.
 
 ## 4. Automated tests
 
-Unit tests for the CLI-invocation layer (`HelmCli`, `KubectlCli`,
-`K8sCredentialContext`) use `Illuminate\Support\Facades\Process::fake()` and
+Unit tests for the API layer (`KubernetesApiClient`, `HelmReleases`,
+`K8sCredentialContext`) use `Illuminate\Support\Facades\Http::fake()` and
 don't require a real cluster — see `tests/Unit/HelmKubernetes/`. A real-cluster
 feature test is not included by default; wire one up against the `k3s`
 compose service (or a CI-provisioned cluster) if you want full end-to-end

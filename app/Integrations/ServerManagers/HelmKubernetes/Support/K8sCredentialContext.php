@@ -3,11 +3,11 @@
 namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
 
 use App\Server;
-use Symfony\Component\Yaml\Yaml;
+use Illuminate\Support\Facades\Http;
 
 /**
- * Builds helm/kubectl authentication CLI args from a Server's stored
- * connection details, without ever mounting a persistent kubeconfig file.
+ * Builds the HTTP client used to talk to a Server's Kubernetes API, from its
+ * stored connection details, without ever mounting a persistent kubeconfig.
  *
  * The helm_k8s driver reuses the Server model's existing generic fields
  * rather than dedicated columns:
@@ -20,11 +20,9 @@ use Symfony\Component\Yaml\Yaml;
  *     (api_secret only) or client key/cert (api_key/api_secret) depending
  *     on k8s_auth_type — see HelmKubernetesProfile::description().
  *
- * Bearer-token auth is passed entirely as CLI flags (only the CA cert,
- * which is not secret, needs an ephemeral file — helm/kubectl require a
- * file path for it). Client-certificate auth has no CLI-flag equivalent in
- * helm/kubectl, so a full kubeconfig is generated inline (client cert/key
- * embedded as base64 `-data` fields) and written to a single ephemeral file.
+ * Bearer-token auth is just an Authorization header. The CA certificate and
+ * the client certificate/key (client_cert auth) are the only things that
+ * need to exist as files, because libcurl takes file paths for them.
  *
  * Any ephemeral file is written with 0600 permissions under the system temp
  * directory, scoped to a single invocation, and always deleted afterward —
@@ -39,7 +37,7 @@ class K8sCredentialContext
         return $this->server->setting('k8s_auth_type') ?? 'bearer_token';
     }
 
-    public function needsKubeconfig(): bool
+    public function usesClientCert(): bool
     {
         return $this->authType() === 'client_cert';
     }
@@ -52,30 +50,53 @@ class K8sCredentialContext
     }
 
     /**
-     * Runs $callback(array $helmArgs, array $kubectlArgs) with the CLI auth
-     * args for this server, having written whatever ephemeral file(s) are
-     * required. Returns the callback's return value.
+     * Runs $callback(PendingRequest $http) with a client pointed at the API
+     * server and authenticated for this server. Returns the callback's
+     * return value.
      */
-    public function withAuthArgs(string $namespace, callable $callback)
+    public function withRequest(callable $callback, int $timeout = 30)
+    {
+        return $this->withCredentialFiles(function (array $options, array $headers) use ($callback, $timeout) {
+            $http = Http::baseUrl(rtrim((string) $this->server->address, '/'))
+                ->acceptJson()
+                ->timeout($timeout)
+                ->withHeaders($headers)
+                ->withOptions($options);
+
+            if (! $this->usesClientCert()) {
+                $http->withToken((string) $this->server->api_secret);
+            }
+
+            return $callback($http);
+        });
+    }
+
+    /**
+     * Runs $callback(array $guzzleOptions, array $headers) having written
+     * whatever ephemeral file(s) the server's TLS/auth settings need.
+     */
+    public function withCredentialFiles(callable $callback)
     {
         $paths = [];
 
         try {
-            if ($this->needsKubeconfig()) {
-                $paths['kubeconfig'] = $this->writeEphemeralFile($this->buildKubeconfig($namespace));
+            $options = ['verify' => $this->tlsVerify()];
 
-                $helm_args = ['--kubeconfig', $paths['kubeconfig'], '--kube-context', 'kumulicp', '--namespace', $namespace];
-                $kubectl_args = ['--kubeconfig', $paths['kubeconfig'], '--context', 'kumulicp', '--namespace', $namespace];
-            } else {
-                if ($this->server->ca_cert) {
-                    $paths['ca'] = $this->writeEphemeralFile($this->server->ca_cert);
-                }
-
-                $helm_args = $this->bearerTokenArgs('helm', $paths['ca'] ?? null, $namespace);
-                $kubectl_args = $this->bearerTokenArgs('kubectl', $paths['ca'] ?? null, $namespace);
+            if ($this->tlsVerify() && $this->server->ca_cert) {
+                $paths['ca'] = $this->writeEphemeralFile($this->server->ca_cert);
+                $options['verify'] = $paths['ca'];
             }
 
-            return $callback($helm_args, $kubectl_args);
+            if ($this->usesClientCert()) {
+                // client-cert auth: api_secret holds the client
+                // certificate, api_key holds the client private key.
+                $paths['cert'] = $this->writeEphemeralFile((string) $this->server->api_secret);
+                $paths['key'] = $this->writeEphemeralFile((string) $this->server->api_key);
+                $options['cert'] = $paths['cert'];
+                $options['ssl_key'] = $paths['key'];
+            }
+
+            return $callback($options, $this->impersonationHeaders());
         } finally {
             foreach ($paths as $path) {
                 if (file_exists($path)) {
@@ -85,94 +106,12 @@ class K8sCredentialContext
         }
     }
 
-    private function bearerTokenArgs(string $tool, ?string $ca_path, string $namespace): array
+    private function impersonationHeaders(): array
     {
-        $verify_flag = $this->tlsVerify() ? 'false' : 'true';
-        $token = (string) $this->server->api_secret;
-        $impersonate_user = $this->server->setting('k8s_impersonate_user');
-        $impersonate_group = $this->server->setting('k8s_impersonate_group');
-
-        if ($tool === 'helm') {
-            $args = [
-                '--kube-apiserver', $this->server->address,
-                '--kube-token', $token,
-                '--kube-insecure-skip-tls-verify='.$verify_flag,
-                '--namespace', $namespace,
-            ];
-
-            if ($ca_path) {
-                array_push($args, '--kube-ca-file', $ca_path);
-            }
-
-            if ($impersonate_user) {
-                array_push($args, '--kube-as-user', $impersonate_user);
-            }
-
-            if ($impersonate_group) {
-                array_push($args, '--kube-as-group', $impersonate_group);
-            }
-
-            return $args;
-        }
-
-        $args = [
-            '--server', $this->server->address,
-            '--token', $token,
-            '--insecure-skip-tls-verify='.$verify_flag,
-            '--namespace', $namespace,
-        ];
-
-        if ($ca_path) {
-            array_push($args, '--certificate-authority', $ca_path);
-        }
-
-        if ($impersonate_user) {
-            array_push($args, '--as', $impersonate_user);
-        }
-
-        if ($impersonate_group) {
-            array_push($args, '--as-group', $impersonate_group);
-        }
-
-        return $args;
-    }
-
-    private function buildKubeconfig(string $namespace): string
-    {
-        $cluster = array_filter([
-            'server' => $this->server->address,
-            'certificate-authority-data' => $this->server->ca_cert ? base64_encode($this->server->ca_cert) : null,
-            'insecure-skip-tls-verify' => $this->tlsVerify() ? null : true,
-        ], fn ($value) => $value !== null);
-
-        $config = [
-            'apiVersion' => 'v1',
-            'kind' => 'Config',
-            'clusters' => [[
-                'name' => 'kumulicp',
-                'cluster' => $cluster,
-            ]],
-            'users' => [[
-                'name' => 'kumulicp',
-                'user' => [
-                    // client-cert auth: api_secret holds the client
-                    // certificate, api_key holds the client private key.
-                    'client-certificate-data' => base64_encode((string) $this->server->api_secret),
-                    'client-key-data' => base64_encode((string) $this->server->api_key),
-                ],
-            ]],
-            'contexts' => [[
-                'name' => 'kumulicp',
-                'context' => [
-                    'cluster' => 'kumulicp',
-                    'user' => 'kumulicp',
-                    'namespace' => $namespace,
-                ],
-            ]],
-            'current-context' => 'kumulicp',
-        ];
-
-        return Yaml::dump($config, 6);
+        return array_filter([
+            'Impersonate-User' => $this->server->setting('k8s_impersonate_user'),
+            'Impersonate-Group' => $this->server->setting('k8s_impersonate_group'),
+        ]);
     }
 
     private function writeEphemeralFile(string $contents): string

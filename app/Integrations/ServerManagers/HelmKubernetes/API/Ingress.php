@@ -18,17 +18,17 @@ class Ingress extends Kubernetes
             return ['status' => 'success', 'response' => []];
         }
 
-        $result = $this->kubectl()->apply($data, $namespace);
+        $result = $this->api()->apply($data, $namespace);
 
         Log::info(__('messages.api.rancher.log.ingress_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
-            'response' => $result['success'] ? json_decode($result['output'], true) : $result['error'],
+            'response' => $result['success'] ? $result['data'] : $result['error'],
         ];
     }
 
-    // kubectl apply is idempotent, so update is the same as create
+    // apply is idempotent, so update is the same as create
     public function update(IngressChart $chart)
     {
         return $this->create($chart);
@@ -37,17 +37,17 @@ class Ingress extends Kubernetes
     public function remove(IngressChart $chart)
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->delete('ingress', $chart->name, $namespace);
+        $result = $this->api()->delete('networking.k8s.io/v1', 'Ingress', $chart->name, $namespace);
 
         Log::info(__('messages.api.rancher.log.ingress_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
-        return ['status' => 'success', 'response' => $result['output']];
+        return ['status' => 'success', 'response' => $result['data']];
     }
 
     public function isActive(IngressChart $chart): int
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->get('ingress', $chart->name, $namespace);
+        $result = $this->api()->get('networking.k8s.io/v1', 'Ingress', $chart->name, $namespace);
 
         return $result['success'] ? 1 : 0;
     }

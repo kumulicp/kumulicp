@@ -6,9 +6,6 @@ ARG WWWGROUP
 ARG NODE_VERSION=24
 ARG MYSQL_CLIENT="mysql-client"
 ARG POSTGRES_VERSION=18
-ARG TARGETARCH
-ARG KUBECTL_VERSION=v1.31.5
-ARG HELM_VERSION=v3.16.4
 
 WORKDIR /var/www/html
 
@@ -75,12 +72,6 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-RUN curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
-    && chmod +x /usr/local/bin/kubectl \
-    && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" | tar -xz -C /tmp \
-    && mv /tmp/linux-${TARGETARCH}/helm /usr/local/bin/helm \
-    && rm -rf /tmp/linux-${TARGETARCH}
 
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.4
 

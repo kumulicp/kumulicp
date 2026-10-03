@@ -44,13 +44,13 @@ class HelmInstaller extends Kubernetes
         // The Job's pod references this ServiceAccount by name, so it has
         // to exist (and be bound to the installer ClusterRole) before the
         // Job itself is created.
-        $result = $this->kubectl()->apply($job->serviceAccountManifest(), $namespace);
+        $result = $this->api()->apply($job->serviceAccountManifest(), $namespace);
 
         if (! $result['success']) {
             return $this->failure("Failed to create ServiceAccount for release {$releaseName}: {$result['error']}");
         }
 
-        $result = $this->kubectl()->apply($job->roleBindingManifest(), $namespace);
+        $result = $this->api()->apply($job->roleBindingManifest(), $namespace);
 
         if (! $result['success']) {
             $this->deleteSupportingResources($job, $namespace);
@@ -59,7 +59,7 @@ class HelmInstaller extends Kubernetes
         }
 
         if ($manifest = $job->configMapManifest()) {
-            $result = $this->kubectl()->apply($manifest, $namespace);
+            $result = $this->api()->apply($manifest, $namespace);
 
             if (! $result['success']) {
                 $this->deleteSupportingResources($job, $namespace);
@@ -69,7 +69,7 @@ class HelmInstaller extends Kubernetes
         }
 
         if ($manifest = $job->secretManifest()) {
-            $result = $this->kubectl()->apply($manifest, $namespace);
+            $result = $this->api()->apply($manifest, $namespace);
 
             if (! $result['success']) {
                 $this->deleteSupportingResources($job, $namespace);
@@ -78,7 +78,7 @@ class HelmInstaller extends Kubernetes
             }
         }
 
-        $job_result = $this->kubectl()->apply($job->jobManifest(), $namespace);
+        $job_result = $this->api()->apply($job->jobManifest(), $namespace);
 
         if (! $job_result['success']) {
             $this->deleteSupportingResources($job, $namespace);
@@ -112,39 +112,39 @@ class HelmInstaller extends Kubernetes
     // being included in the original manifest.
     private function attachOwnerReferences(HelmInstallJob $job, string $namespace, array $job_result): void
     {
-        $uid = Arr::get(json_decode($job_result['output'], true) ?? [], 'metadata.uid');
+        $uid = Arr::get($job_result['data'] ?? [], 'metadata.uid');
 
         if (! $uid) {
             return;
         }
 
-        $this->kubectl()->apply($job->serviceAccountManifest($uid), $namespace);
-        $this->kubectl()->apply($job->roleBindingManifest($uid), $namespace);
+        $this->api()->apply($job->serviceAccountManifest($uid), $namespace);
+        $this->api()->apply($job->roleBindingManifest($uid), $namespace);
 
         if ($manifest = $job->configMapManifest($uid)) {
-            $this->kubectl()->apply($manifest, $namespace);
+            $this->api()->apply($manifest, $namespace);
         }
 
         if ($manifest = $job->secretManifest($uid)) {
-            $this->kubectl()->apply($manifest, $namespace);
+            $this->api()->apply($manifest, $namespace);
         }
     }
 
     // Only reached when the Job itself never got created, so there's no
     // owner to eventually garbage-collect these -- clean them up directly.
-    // KubectlCli::delete() ignores "not found", so it's safe to always
+    // KubernetesApiClient::delete() ignores "not found", so it's safe to always
     // attempt all four regardless of which ones actually got created.
     private function deleteSupportingResources(HelmInstallJob $job, string $namespace): void
     {
-        $this->kubectl()->delete('rolebinding', $job->serviceAccountName(), $namespace);
-        $this->kubectl()->delete('serviceaccount', $job->serviceAccountName(), $namespace);
+        $this->api()->delete('rbac.authorization.k8s.io/v1', 'RoleBinding', $job->serviceAccountName(), $namespace);
+        $this->api()->delete('v1', 'ServiceAccount', $job->serviceAccountName(), $namespace);
 
         if ($job->configMapManifest()) {
-            $this->kubectl()->delete('configmap', $job->configMapName(), $namespace);
+            $this->api()->delete('v1', 'ConfigMap', $job->configMapName(), $namespace);
         }
 
         if ($job->secretManifest()) {
-            $this->kubectl()->delete('secret', $job->secretName(), $namespace);
+            $this->api()->delete('v1', 'Secret', $job->secretName(), $namespace);
         }
     }
 }
