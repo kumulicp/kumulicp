@@ -54,7 +54,8 @@ return [
             'ip' => 'IP address of the domain used in the address',
             'internal_address' => 'This is used for apps that need to add a proxy server as a trusted IP',
             'settings' => 'Requires creating a new project for organizations to be stored. Add the settings: project_id.
-        Optional: "rancher_cluster_id" (default "local") names the cluster whose Kubernetes API is reached through Rancher\'s proxy (/k8s/clusters/<id>) to create Secrets for charts and jobs. Not needed if the Address already points at a cluster (…/k8s/clusters/<id>). The Rancher API key must be allowed to create Secrets in the organization namespaces.',
+        Optional: "rancher_cluster_id" (default "local") names the cluster whose Kubernetes API is reached through Rancher\'s proxy (/k8s/clusters/<id>) to create Secrets for charts and jobs. Not needed if the Address already points at a cluster (…/k8s/clusters/<id>). The Rancher API key must be allowed to create Secrets in the organization namespaces.
+        Optional: security_mode ("off" by default, "managed" or "observe") — with "managed", KumuliCP applies Pod Security Admission labels to organization namespaces according to each plan\'s security tier.',
             'test_success' => 'Success — created and deleted a test namespace and secret in Rancher.',
             'test_failed' => 'Test failed at :reason',
             'test_missing_credentials' => 'Set the address, API key, and API secret before running a test.',
@@ -93,7 +94,8 @@ return [
         "k8s_tls_verify": "true" or "false" (default true) — verify the API server\'s TLS certificate against the CA Certificate field. Only set to "false" for local/dev clusters with self-signed certificates you cannot otherwise verify.
         "k8s_ingress_class": the ingress controller installed on this cluster, if any. Set to "traefik" to enable domain-redirect support (uses Traefik\'s Middleware CRD). Leave unset, or set to another value (e.g. "nginx"), to skip redirect-rule management.
         "k8s_impersonate_user" / "k8s_impersonate_group": optional Kubernetes user/group impersonation.
-        "storage_class": optional StorageClass name to use for app data volumes, overriding the cluster default.',
+        "storage_class": optional StorageClass name to use for app data volumes, overriding the cluster default.
+        "security_mode": "off" (default), "managed" or "observe". With "managed", KumuliCP applies Pod Security Admission labels to organization namespaces according to each plan\'s security tier, and needs permission to patch namespaces (see docs/k8s-rbac-sample.yaml). "off" and "observe" never change namespace labels — use "observe" if another tool (e.g. Kyverno or Rancher\'s Pod Security templates) enforces policy.',
         ],
         'servers' => 'Servers',
         'testSettings' => 'Test Settings',
@@ -371,6 +373,12 @@ return [
     'logs' => [
         'logs' => 'Logs',
     ],
+    'namespace_security' => [
+        'title' => 'Namespace Security',
+        'updated' => 'Namespace security tiers updated.',
+        'tier_in_use' => 'The tier ":tier" is still used by the plan ":plan". Move that plan to another tier before removing it.',
+    ],
+
     'security' => [
         'scans' => 'Security Scans',
         'runScan' => 'Run New Scan',

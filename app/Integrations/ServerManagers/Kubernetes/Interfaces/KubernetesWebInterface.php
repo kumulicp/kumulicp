@@ -17,6 +17,11 @@ use App\Integrations\ServerManagers\Kubernetes\Services\OrganizationServices;
 use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Security\PodSecurityWarnings;
+use App\Support\Security\SecurityTier;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Built to be extended: a driver layered on Kubernetes (e.g. Rancher)
@@ -182,6 +187,47 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
         }
 
         return $this->app_instance;
+    }
+
+    /**
+     * Reads the Pod Security warnings `helm` printed during the latest
+     * install/upgrade and stores them on the app instance, so admins can see
+     * what a namespace's `warn` label flagged. Only does anything when
+     * KumuliCP manages this namespace's labels and its tier warns or
+     * enforces, so by default it makes no cluster calls. Never throws: this is
+     * diagnostics, not part of the install.
+     */
+    public function collectPodSecurityWarnings(): void
+    {
+        $labels = array_keys($this->namespace->desiredSecurity()['labels'] ?? []);
+
+        if (! array_intersect($labels, [SecurityTier::LABEL_PREFIX.'warn', SecurityTier::LABEL_PREFIX.'enforce'])) {
+            return;
+        }
+
+        try {
+            $pod = new Pod($this->organization, $this->server);
+            $warnings = [];
+            $read_logs = false;
+
+            foreach ($this->chartsForStatus() as $chart) {
+                $log = $pod->latestInstallLogs(Str::slug($chart->chartName()));
+
+                if ($log !== null) {
+                    $read_logs = true;
+                    $warnings = array_merge($warnings, PodSecurityWarnings::parse($log));
+                }
+            }
+
+            if ($read_logs) {
+                $this->app_instance->updateSetting('security.pod_security_warnings', [
+                    'collected_at' => now()->toIso8601String(),
+                    'warnings' => array_values(array_unique($warnings, SORT_REGULAR)),
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::warning("Couldn't collect Pod Security warnings for {$this->organization->slug}: {$e->getMessage()}", ['organization_id' => $this->organization->id]);
+        }
     }
 
     protected function chartsForStatus(): array

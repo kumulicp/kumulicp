@@ -563,7 +563,10 @@
       "secretCopyFailed": "The value could not be copied",
       "addSecret": "Add Secret",
       "removeSecret": "Remove this secret",
-      "settings": "Settings"
+      "serverConfigurations": "Server Configurations",
+      "settings": "Settings",
+      "securityTier": "Security tier",
+      "securityTierDescription": "Pod Security tier applied to the namespaces of organizations on this plan. Only takes effect on servers whose security_mode setting is \"managed\"."
     },
     "versions": {
       "versions": "Versions",
@@ -717,7 +720,10 @@
       "filterStatusAll": "All",
       "filterTags": "Filter by tags",
       "resetFilters": "Reset filters",
-      "noApps": "No apps match these filters"
+      "noApps": "No apps match these filters",
+      "podSecurityWarnings": "Pod Security warnings",
+      "podSecurityWarningsDescription": "What the namespace's Pod Security level flagged during the latest install or upgrade (as of {date}). These workloads would be blocked if the namespace enforced that level.",
+      "podSecurityNone": "No Pod Security warnings during the latest install or upgrade (as of {date})."
     },
     "backups": {
       "action": "Action",
@@ -1194,6 +1200,42 @@
       "stepTypes": {
         "fresh_install": "fresh install",
         "upgrade": "upgrade"
+      }
+    },
+    "namespaceSecurity": {
+      "title": "Namespace Security",
+      "description": "Pod Security tiers that base plans can select. A tier sets the Kubernetes Pod Security Admission levels applied to each organization's namespace. Nothing is applied unless a server's security_mode setting is \"managed\" and a plan selects a tier.",
+      "warning": "Start with a tier that only warns and audits, and check that your apps run without warnings before enforcing. Enforcing a level blocks workloads that don't meet it.",
+      "presetTiers": "Built-in tiers",
+      "customTiers": "Custom tiers",
+      "noCustomTiers": "No custom tiers yet.",
+      "addTier": "Add tier",
+      "removeTier": "Remove tier",
+      "tierKey": "Key",
+      "tierKeyHint": "Lowercase letters, numbers, dashes and underscores. Can't be changed after saving.",
+      "tierLabel": "Name",
+      "enforce": "Enforce",
+      "warn": "Warn",
+      "audit": "Audit",
+      "version": "Version",
+      "versionHint": "latest, or a Kubernetes version such as v1.30",
+      "levelOff": "Off",
+      "levels": {
+        "privileged": "Privileged",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierNames": {
+        "none": "None",
+        "observe": "Observe",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierDescriptions": {
+        "none": "No Pod Security labels. Namespaces are left exactly as they are.",
+        "observe": "Warn and audit at restricted. Flags problems without blocking anything.",
+        "baseline": "Enforce baseline; warn and audit at restricted.",
+        "restricted": "Enforce, warn and audit at restricted."
       }
     }
   },
@@ -1874,7 +1916,8 @@
     "featuresDescription": "Turn major parts of the control panel on or off. A feature that is off is hidden from the menus and its pages cannot be reached.",
     "featuresEnvNote": "Starting values come from the TOGGLE_* environment variables. Once saved here, the value in the control panel is used instead of the environment variable.",
     "betaBadge": "Beta",
-    "betaWarning": "Features marked Beta are still being finished. They may change, have rough edges, and are not recommended for production data yet."
+    "betaWarning": "Features marked Beta are still being finished. They may change, have rough edges, and are not recommended for production data yet.",
+    "namespaceSecurity": "Namespace Security"
   },
   "systemChecks": {
     "ldapModelValidation": "LDAP Model Validation",

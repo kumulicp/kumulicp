@@ -12,8 +12,8 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
 use App\Services\AppInstanceService;
-use App\Support\Facades\Action;
 use App\Support\AdminAppDomain;
+use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
@@ -88,6 +88,8 @@ class Applications extends Controller
                 ],
             ],
             'updates' => app(PendingUpdates::class)->forInstance($app),
+            // Pod Security warnings captured at the latest install/upgrade, if any
+            'pod_security' => $app->setting('security.pod_security_warnings'),
             'servers' => collect([
                 'web' => $app->web_server,
                 'database' => $app->database_server,
