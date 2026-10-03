@@ -1,6 +1,6 @@
 # Kubernetes network policy plan
 
-Status: plan only, nothing implemented. Builds on the security hardening work in `docs/k8s-security-plan.md`
+Status: plan only, nothing implemented. Target platform: k3s; L7 provider: Istio ambient. Builds on the security hardening work in `docs/k8s-security-plan.md`
 (tiers on base plans, `security_mode`, the namespace reconciler, preflight-as-a-`SecurityScan`) and replaces the
 NetworkPolicy bullet of that plan's Phase 5. Everything defaults to off, so with no settings changed the app
 behaves exactly as before.
@@ -34,7 +34,8 @@ These carry over from the hardening plan, or are defaults picked for this plan. 
 | 4 | Nextcloud stays at PSA `baseline`. | An L7 provider that would inject privileged init containers can't push Nextcloud's namespace above or below what the PSA plan allows; see §2.7. |
 | 5 | Base layer is provider-neutral and always present. (default picked) | L7 providers add to it; they never replace it. Removing a provider leaves the base layer working. |
 | 6 | Ingress isolation ships before egress restriction. (default picked) | Ingress is low-risk and gives tenant isolation. Egress breaks things more easily, so it is a separate tier switch and a later phase. |
-| 7 | Istio is the first L7 provider, ambient mode preferred. (default picked) | Ambient keeps PSA levels intact (no `istio-init` with `NET_ADMIN`). Sidecar mode is supported only with the Istio CNI node agent. |
+| 7 | Istio is the first L7 provider, ambient mode preferred. (chosen over Linkerd, see §2.10) | Ambient keeps PSA levels intact (no `istio-init` with `NET_ADMIN`). Sidecar mode is supported only with the Istio CNI node agent. |
+| 8 | Target clusters run **k3s**. | k3s's default flannel comes with its built-in policy controller (kube-router), so the base layer is enforced without changing the CNI, unless a cluster was started with `--disable-network-policy`. The N2 probe catches that case. Bundled Traefik runs in `kube-system`, which becomes the suggested `network_ingress_namespaces` value on k3s (§2.10). |
 
 ---
 
@@ -238,6 +239,29 @@ example) accepts the objects and silently ignores them. So verification is activ
 - **Rollback**: deleting `kumulicp-default-deny-*` restores the previous behavior instantly, and the allow
   policies are harmless on their own. The sync command gets `--remove-deny` for emergencies.
 
+### 2.10 k3s and the Istio choice
+
+Target clusters run k3s (decision 8). What that means for this plan:
+
+- **Base layer**: k3s's embedded kube-router policy controller enforces standard `NetworkPolicy` on top of
+  flannel. Nothing to install. A cluster started with `--disable-network-policy` (or `--flannel-backend=none` with
+  no replacement CNI) won't enforce, which the N2 enforcement probe reports as `not_enforced`.
+- **Ingress**: bundled Traefik lives in `kube-system`, and k3s's ServiceLB (`svclb-*` pods) forwards to it. The
+  server form suggests `["kube-system"]` for `network_ingress_namespaces` on k3s, but the admin still confirms it;
+  allowing all of `kube-system` is broader than allowing Traefik alone, so N1 should select Traefik's pods
+  (`app.kubernetes.io/name: traefik`) inside that namespace rather than the whole namespace. Check in N0 whether
+  `externalTrafficPolicy: Local` changes the source address seen by app pods.
+- **Istio on k3s**: k3s keeps its CNI config and binaries in non-standard paths
+  (`/var/lib/rancher/k3s/agent/etc/cni/net.d`, `/var/lib/rancher/k3s/data/current/bin`). Istio's install has a
+  k3s platform setting for this (`global.platform=k3s`); ambient's CNI node agent needs it. KumuliCP doesn't
+  install Istio, so this goes in the admin docs, and `detect()` checks that the `istio-cni` DaemonSet is ready.
+- **Why Istio ambient over Linkerd** (both were considered): ambient is turned on by a namespace label with no pod
+  restarts, which fits the existing namespace reconciler; it adds no per-pod init container, so PSA levels
+  (Nextcloud at `baseline`) are unaffected; it has no per-pod proxy, so KumuliCP's Jobs still complete; and its
+  egress controls cover the N3 phase. Linkerd is lighter, but needs `linkerd-cni` to stay within `baseline`,
+  restarts pods to inject, needs native sidecars for Jobs, has thinner egress control, and since 2024 only its
+  edge releases are open source. The provider contract still allows a Linkerd provider later.
+
 ### 2.9 Rancher parity
 
 | Concern | `helm_k8s` driver | Rancher driver |
@@ -308,9 +332,11 @@ the internet; installs, upgrades and scans still work.
 - Istio provider (ambient first, sidecar with Istio CNI second), `network_l7_providers` server setting, tier
   `l7_provider` and `l7_mtls`, and `podSecurityImpact()` wired into the PSA clamp.
 - Connectivity check extended to assert mTLS and identity rules (a plaintext call must fail under `STRICT`).
+- Admin docs for installing Istio ambient on k3s (`global.platform=k3s`), and `detect()` checking the `istio-cni`
+  and `ztunnel` DaemonSets.
 
-Tests: provider golden manifests, detection with faked discovery responses, and an optional `kind` job with Istio
-ambient.
+Tests: provider golden manifests, detection with faked discovery responses, and an optional `k3d` (k3s in Docker) job with
+Istio ambient, so CI matches the target clusters.
 
 Exit: a plan on an Istio-backed tier gets mTLS and identity-based allow rules, with the base layer still in place.
 
@@ -334,14 +360,13 @@ Exit: a plan on an Istio-backed tier gets mTLS and identity-based allow rules, w
 
 - **CI, no cluster**: renderer golden files for every preset, intent-builder tests over app combinations,
   `netpol-inventory.py` over rendered charts, and admin UI feature tests.
-- **CI, optional e2e**: `kind` with Calico (enforcing CNI) running the probe and connectivity check against two
+- **CI, optional e2e**: `k3d` (k3s in Docker, whose built-in policy controller enforces) running the probe and connectivity check against two
   org namespaces; a second job with Istio ambient for Phase N4.
 - **Runtime**: the connectivity check after each release and on demand from the scans page.
 
 ## 5. Open questions
 
-1. **CNIs in use.** Which CNI runs on your clusters (k3s's built-in policy controller, Calico, Canal, Cilium,
-   something else)? It decides whether the base layer is enforced and which quirks to plan for.
+1. ~~**CNIs in use.**~~ Resolved: k3s with its default flannel and built-in policy controller (decision 8).
 2. **Istio shape.** Ambient (my default) or sidecar? And should ingress stay on Traefik (which then has to join
    the mesh for `STRICT` mTLS) or move to an Istio gateway?
 3. **Rancher project isolation.** Is it on anywhere? If so, would you accept one Rancher project per organization,
