@@ -474,6 +474,24 @@ import { currencyByCode } from '@/constants/currencies'
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />
+      <AdminSettings>
+        <template #name>{{ $t('admin.plans.securityTier') }}</template>
+        <template #description>{{ $t('admin.plans.securityTierDescription') }}</template>
+        <template #settings>
+          <va-select
+            id="securityTier"
+            v-model="form.security.tier"
+            :label="$t('admin.plans.securityTier')"
+            :options="securityTierOptions"
+            value-by="value"
+            text-by="text"
+            class="my-2"
+            :error="$page.props.errors['security.tier']"
+            :error-messages="$page.props.errors['security.tier']"
+          />
+        </template>
+      </AdminSettings>
+      <va-list-separator class="my-1" fit />
       <h1 class="va-h1">{{ $t('admin.plans.appSettings') }}</h1>
       <AdminSettings v-for="(app, index) in apps" :key="index">
         <template #name>{{ app.name }}</template>
@@ -517,6 +535,10 @@ export default {
     apps: Object,
     org_types: Array,
     control_panel: Object,
+    security_tiers: {
+      type: Array,
+      default: () => []
+    },
     enabled_currencies: {
       type: Array,
       default: () => ['USD']
@@ -558,7 +580,14 @@ export default {
           value: 'app'
         }
       ],
+      securityTierOptions: this.security_tiers.map((tier) => ({
+        value: tier.key,
+        text: tier.preset ? this.$t('admin.namespaceSecurity.tierNames.' + tier.key) : (tier.label || tier.key)
+      })),
       form: useForm({
+        security: {
+          tier: this.plan.security_tier || 'none'
+        },
         name: this.plan.name,
         description: this.plan.description,
         payment_enabled: this.plan.payment_enabled,

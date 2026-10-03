@@ -3,11 +3,18 @@
 namespace App\Integrations\ServerManagers\Rancher\API;
 
 use App\Integrations\ServerManagers\Rancher\Rancher;
+use App\Support\Security\Concerns\ReconcilesNamespaceSecurity;
+use App\Support\Security\NamespaceSecurityReconciler;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 class KubernetesNamespace extends Rancher
 {
+    use ReconcilesNamespaceSecurity;
+
+    // The namespace as last read, kept so applyNamespaceMetadata() can PUT it back
+    private ?array $current_object = null;
+
     public function create()
     {
         $namespace = $this->organization->slug;
@@ -35,7 +42,64 @@ class KubernetesNamespace extends Rancher
         ];
     }
 
-    public function update() {}
+    // Brings the namespace's Pod Security labels in line with its plan's
+    // tier. Does nothing (and makes no Rancher calls) unless the server's
+    // security_mode is `managed`.
+    public function update()
+    {
+        return $this->reconcileSecurity();
+    }
+
+    protected function currentNamespaceMetadata(): array
+    {
+        $url = $this->org_server->server->address.'/v1/namespaces/'.$this->organization->slug;
+
+        $this->ignoreErrorCode(404)->get($url);
+        $response = $this->response();
+
+        if (in_array($response['status_code'], [404, 403]) || ! is_array($response['content'] ?? null)) {
+            return ['error' => Arr::get($response, 'error.message') ?: "Namespace not found ({$response['status_code']})"];
+        }
+
+        $this->current_object = $response['content'];
+
+        return [
+            'labels' => Arr::get($this->current_object, 'metadata.labels', []),
+            'annotations' => Arr::get($this->current_object, 'metadata.annotations', []),
+        ];
+    }
+
+    // Rancher's API replaces the whole resource on PUT, so write back the
+    // object read by currentNamespaceMetadata() with only the changes applied.
+    protected function applyNamespaceMetadata(array $changes): array
+    {
+        $object = $this->current_object;
+
+        foreach (['labels', 'annotations'] as $kind) {
+            $values = Arr::get($object, "metadata.$kind", []);
+
+            foreach ($changes[$kind] as $key => $value) {
+                if ($value === null) {
+                    unset($values[$key]);
+                } else {
+                    $values[$key] = $value;
+                }
+            }
+
+            // An empty PHP array would encode as a JSON list, not a map
+            Arr::set($object, "metadata.$kind", $values ?: (object) []);
+        }
+
+        $url = $this->org_server->server->address.'/v1/namespaces/'.$this->organization->slug;
+
+        $this->json()->put($url, $object);
+
+        if ($this->hasError()) {
+            return ['success' => false, 'error' => (string) $this->error()];
+        }
+
+        return ['success' => true, 'error' => ''];
+    }
 
     public function remove()
     {
@@ -100,6 +164,7 @@ class KubernetesNamespace extends Rancher
     private function values(string $namespace): array
     {
         $project_id = $this->org_server->server->setting('project_id');
+        $security = NamespaceSecurityReconciler::metadataForCreate($this->desiredSecurity());
 
         return [
             'kind' => 'Namespace',
@@ -107,10 +172,10 @@ class KubernetesNamespace extends Rancher
                 'name' => $namespace,
                 'annotations' => [
                     'field.cattle.io/projectId' => 'local:'.$project_id,
-                ],
+                ] + $security['annotations'],
                 'labels' => [
                     'field.cattle.io/projectId' => $project_id,
-                ],
+                ] + $security['labels'],
             ],
             'disableOpenApiValidation' => false,
             'name' => $namespace,

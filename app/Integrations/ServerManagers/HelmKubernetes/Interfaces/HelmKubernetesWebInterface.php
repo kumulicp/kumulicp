@@ -8,6 +8,7 @@ use App\Contracts\ServerManager\AppInterface;
 use App\Integrations\ServerManagers\HelmKubernetes\API\Application;
 use App\Integrations\ServerManagers\HelmKubernetes\API\Job;
 use App\Integrations\ServerManagers\HelmKubernetes\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\HelmKubernetes\API\Pod;
 use App\Integrations\ServerManagers\HelmKubernetes\API\Secret;
 use App\Integrations\ServerManagers\HelmKubernetes\Services\DomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
@@ -18,6 +19,11 @@ use App\Integrations\ServerManagers\Rancher\Services\OrganizationServices;
 use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Security\PodSecurityWarnings;
+use App\Support\Security\SecurityTier;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Throwable;
 
 class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
 {
@@ -137,6 +143,47 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
             if ($this->application->isActive($this->app_instance, $chart) === 2) {
                 $this->application->deleteStuckReleaseSecrets($chart);
             }
+        }
+    }
+
+    /**
+     * Reads the Pod Security warnings `helm` printed during the latest
+     * install/upgrade and stores them on the app instance, so admins can see
+     * what a namespace's `warn` label flagged. Only does anything when
+     * KumuliCP manages this namespace's labels and its tier warns or
+     * enforces, so by default it makes no cluster calls. Never throws: this is
+     * diagnostics, not part of the install.
+     */
+    public function collectPodSecurityWarnings(): void
+    {
+        $labels = array_keys($this->namespace->desiredSecurity()['labels'] ?? []);
+
+        if (! array_intersect($labels, [SecurityTier::LABEL_PREFIX.'warn', SecurityTier::LABEL_PREFIX.'enforce'])) {
+            return;
+        }
+
+        try {
+            $pod = new Pod($this->organization, $this->server);
+            $warnings = [];
+            $read_logs = false;
+
+            foreach ($this->chartsForStatus() as $chart) {
+                $log = $pod->latestInstallLogs(Str::slug($chart->chartName()));
+
+                if ($log !== null) {
+                    $read_logs = true;
+                    $warnings = array_merge($warnings, PodSecurityWarnings::parse($log));
+                }
+            }
+
+            if ($read_logs) {
+                $this->app_instance->updateSetting('security.pod_security_warnings', [
+                    'collected_at' => now()->toIso8601String(),
+                    'warnings' => array_values(array_unique($warnings, SORT_REGULAR)),
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::warning("Couldn't collect Pod Security warnings for {$this->organization->slug}: {$e->getMessage()}", ['organization_id' => $this->organization->id]);
         }
     }
 

@@ -115,6 +115,10 @@ class ApplicationUpgrade extends Action
         $status = $server->checkStatus();
 
         if ($status['active']) {
+            if (method_exists($server, 'collectPodSecurityWarnings')) {
+                $server->collectPodSecurityWarnings();
+            }
+
             // Set app status to active
             $app_instance->version_id = $task->version_id;
             $app_instance->status = 'active';

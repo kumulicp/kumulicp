@@ -78,6 +78,8 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
             ],
+            // Pod Security warnings captured at the latest install/upgrade, if any
+            'pod_security' => $app->setting('security.pod_security_warnings'),
             'servers' => collect([
                 'web' => $app->web_server,
                 'database' => $app->database_server,

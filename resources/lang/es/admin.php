@@ -31,7 +31,7 @@ return [
             'api_secret' => 'Usa la clave secreta que viene con la clave de API creada anteriormente',
             'ip' => 'Dirección IP del dominio usado en la dirección',
             'internal_address' => 'Se usa para aplicaciones que necesitan agregar un servidor proxy como IP de confianza',
-            'settings' => 'Requiere crear un nuevo proyecto para que se almacenen las organizaciones. Agrega la configuración: project_id',
+            'settings' => 'Requiere crear un nuevo proyecto para que se almacenen las organizaciones. Agrega la configuración: project_id. Opcional: security_mode ("off" por defecto, "managed" u "observe") — con "managed", KumuliCP aplica etiquetas de Pod Security Admission a los namespaces de las organizaciones según el nivel de seguridad de cada plan.',
         ],
         'app_database' => [
             'host' => 'IP o dominio usado por el Panel de Control para conectarse a esta base de datos',
@@ -213,6 +213,12 @@ return [
     'logs' => [
         'logs' => 'Registros',
     ],
+    'namespace_security' => [
+        'title' => 'Seguridad del namespace',
+        'updated' => 'Niveles de seguridad del namespace actualizados.',
+        'tier_in_use' => 'El nivel ":tier" aún lo usa el plan ":plan". Mueva ese plan a otro nivel antes de quitarlo.',
+    ],
+
     'security' => [
         'tool_descriptions' => [
             'kube-hunter' => 'Busca debilidades de seguridad sondeando el clúster desde dentro de un pod, tal como lo haría un atacante que ya tiene acceso a la red. Útil para encontrar APIs expuestas, puertos abiertos y otros problemas de superficie de ataque.',

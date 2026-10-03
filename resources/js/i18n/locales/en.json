@@ -391,7 +391,9 @@
       "plans": "Plans",
       "removeConfig": "Remove Config",
       "serverConfigurations": "Server Configurations",
-      "settings": "Settings"
+      "settings": "Settings",
+      "securityTier": "Security tier",
+      "securityTierDescription": "Pod Security tier applied to the namespaces of organizations on this plan. Only takes effect on servers whose security_mode setting is \"managed\"."
     },
     "versions": {
       "versions": "Versions",
@@ -492,7 +494,10 @@
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
       "description": "Page Description",
       "screenshots": "Screenshots",
-      "screenshotsMessage": "Shown on the app view and Discover pages"
+      "screenshotsMessage": "Shown on the app view and Discover pages",
+      "podSecurityWarnings": "Pod Security warnings",
+      "podSecurityWarningsDescription": "What the namespace's Pod Security level flagged during the latest install or upgrade (as of {date}). These workloads would be blocked if the namespace enforced that level.",
+      "podSecurityNone": "No Pod Security warnings during the latest install or upgrade (as of {date})."
     },
     "backups": {
       "action": "Action",
@@ -749,6 +754,42 @@
       "resolvedCount": "{resolved} / {total} resolved",
       "resolved": "Resolved",
       "unresolved": "Unresolved"
+    },
+    "namespaceSecurity": {
+      "title": "Namespace Security",
+      "description": "Pod Security tiers that base plans can select. A tier sets the Kubernetes Pod Security Admission levels applied to each organization's namespace. Nothing is applied unless a server's security_mode setting is \"managed\" and a plan selects a tier.",
+      "warning": "Start with a tier that only warns and audits, and check that your apps run without warnings before enforcing. Enforcing a level blocks workloads that don't meet it.",
+      "presetTiers": "Built-in tiers",
+      "customTiers": "Custom tiers",
+      "noCustomTiers": "No custom tiers yet.",
+      "addTier": "Add tier",
+      "removeTier": "Remove tier",
+      "tierKey": "Key",
+      "tierKeyHint": "Lowercase letters, numbers, dashes and underscores. Can't be changed after saving.",
+      "tierLabel": "Name",
+      "enforce": "Enforce",
+      "warn": "Warn",
+      "audit": "Audit",
+      "version": "Version",
+      "versionHint": "latest, or a Kubernetes version such as v1.30",
+      "levelOff": "Off",
+      "levels": {
+        "privileged": "Privileged",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierNames": {
+        "none": "None",
+        "observe": "Observe",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierDescriptions": {
+        "none": "No Pod Security labels. Namespaces are left exactly as they are.",
+        "observe": "Warn and audit at restricted. Flags problems without blocking anything.",
+        "baseline": "Enforce baseline; warn and audit at restricted.",
+        "restricted": "Enforce, warn and audit at restricted."
+      }
     }
   },
   "language": {
@@ -1272,7 +1313,8 @@
     "securityToolsDescription": "Each security scan tool runs from a pinned, known-good image version by default. You can override the image tag used for a tool below.",
     "securityToolsWarning": "Overriding the default version is usually safe, but you are responsible for verifying the image you specify. Untrusted or unverified tags (including \"latest\") can introduce supply-chain risk. Use a custom version at your own risk.",
     "securityToolDefaultImage": "Default",
-    "securityToolImageOverride": "Image Override"
+    "securityToolImageOverride": "Image Override",
+    "namespaceSecurity": "Namespace Security"
   },
   "systemChecks": {
     "ldapModelValidation": "LDAP Model Validation",

@@ -391,7 +391,9 @@
       "plans": "Planes",
       "removeConfig": "Eliminar Configuración",
       "serverConfigurations": "Configuraciones del Servidor",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "securityTier": "Nivel de seguridad",
+      "securityTierDescription": "Nivel de seguridad de pods aplicado a los namespaces de las organizaciones de este plan. Solo tiene efecto en servidores cuya configuración security_mode sea \"managed\"."
     },
     "versions": {
       "versions": "Versiones",
@@ -492,7 +494,10 @@
       "status": "Estado",
       "shortDescription": "Descripción Corta",
       "shortDescriptionMessage": "Aparece en la lista de Descubrir y debe mantenerse breve",
-      "description": "Descripción de la Página"
+      "description": "Descripción de la Página",
+      "podSecurityWarnings": "Avisos de Pod Security",
+      "podSecurityWarningsDescription": "Lo que el nivel de Pod Security del namespace señaló durante la última instalación o actualización (a fecha de {date}). Estas cargas de trabajo se bloquearían si el namespace aplicara ese nivel.",
+      "podSecurityNone": "Sin avisos de Pod Security durante la última instalación o actualización (a fecha de {date})."
     },
     "backups": {
       "action": "Acción",
@@ -746,6 +751,42 @@
       "resolvedCount": "{resolved} / {total} resueltos",
       "resolved": "Resuelto",
       "unresolved": "Sin Resolver"
+    },
+    "namespaceSecurity": {
+      "title": "Seguridad del namespace",
+      "description": "Niveles de seguridad de pods que los planes base pueden seleccionar. Un nivel define los niveles de Pod Security Admission de Kubernetes aplicados al namespace de cada organización. No se aplica nada a menos que la configuración security_mode de un servidor sea \"managed\" y un plan seleccione un nivel.",
+      "warning": "Empiece con un nivel que solo avise y audite, y compruebe que sus aplicaciones funcionan sin avisos antes de aplicar. Aplicar un nivel bloquea las cargas de trabajo que no lo cumplan.",
+      "presetTiers": "Niveles integrados",
+      "customTiers": "Niveles personalizados",
+      "noCustomTiers": "Aún no hay niveles personalizados.",
+      "addTier": "Añadir nivel",
+      "removeTier": "Quitar nivel",
+      "tierKey": "Clave",
+      "tierKeyHint": "Letras minúsculas, números, guiones y guiones bajos. No se puede cambiar después de guardar.",
+      "tierLabel": "Nombre",
+      "enforce": "Aplicar",
+      "warn": "Avisar",
+      "audit": "Auditar",
+      "version": "Versión",
+      "versionHint": "latest, o una versión de Kubernetes como v1.30",
+      "levelOff": "Desactivado",
+      "levels": {
+        "privileged": "Privileged",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierNames": {
+        "none": "Ninguno",
+        "observe": "Observar",
+        "baseline": "Baseline",
+        "restricted": "Restricted"
+      },
+      "tierDescriptions": {
+        "none": "Sin etiquetas de seguridad de pods. Los namespaces quedan exactamente como están.",
+        "observe": "Avisar y auditar con restricted. Señala problemas sin bloquear nada.",
+        "baseline": "Aplicar baseline; avisar y auditar con restricted.",
+        "restricted": "Aplicar, avisar y auditar con restricted."
+      }
     }
   },
   "language": {
@@ -1263,7 +1304,8 @@
     "securityToolsDescription": "Cada herramienta de escaneo de seguridad se ejecuta de forma predeterminada desde una versión de imagen fijada y verificada. Puede anular la etiqueta de imagen utilizada para una herramienta a continuación.",
     "securityToolsWarning": "Anular la versión predeterminada suele ser seguro, pero usted es responsable de verificar la imagen que especifique. Las etiquetas no confiables o no verificadas (incluida \"latest\") pueden introducir riesgos en la cadena de suministro. Use una versión personalizada bajo su propio riesgo.",
     "securityToolDefaultImage": "Predeterminado",
-    "securityToolImageOverride": "Anulación de Imagen"
+    "securityToolImageOverride": "Anulación de Imagen",
+    "namespaceSecurity": "Seguridad del namespace"
   },
   "other": {
     "initialSetup": "Configuración Inicial",
