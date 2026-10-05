@@ -65,12 +65,12 @@ class Chart
     }
 
     // Whether the web server's driver creates this chart's Secret before the
-    // workload starts. Only helm_k8s does; anything else has to keep using
+    // workload starts. Only the kubernetes driver does; anything else has to keep using
     // plaintext values, or the secretKeyRef would point at a Secret that
     // never exists.
     protected function secretsDelivered(): bool
     {
-        return $this->app_instance->web_server?->server?->interface === 'helm_k8s';
+        return $this->app_instance->web_server?->server?->interface === 'kubernetes';
     }
 
     // A container env entry for a secret value: read from the chart's Secret
