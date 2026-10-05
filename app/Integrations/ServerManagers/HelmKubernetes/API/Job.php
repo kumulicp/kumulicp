@@ -13,6 +13,9 @@ class Job extends Kubernetes
     {
         $namespace = $this->namespace();
 
+        // The Job's own manifest decides where it runs; its Secret must be there too.
+        $job->secrets()->setNamespace(Arr::get($job->chart, 'metadata.namespace', $namespace));
+
         $secret_result = $this->secret()->applyStore($job->secrets());
 
         if ($secret_result['status'] !== 'success') {

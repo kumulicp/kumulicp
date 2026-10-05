@@ -46,6 +46,16 @@ class ChartSecrets
         return $this->namespace;
     }
 
+    // A Secret is only visible to workloads in its own namespace, so a driver
+    // that runs a workload somewhere other than the chart's default namespace
+    // (e.g. a shared-app child's job running in the hub's) retargets the store.
+    public function setNamespace(string $namespace): static
+    {
+        $this->namespace = $namespace;
+
+        return $this;
+    }
+
     // Stores $value under $key. null is stored as '' so a secretKeyRef to the
     // key never dangles (a missing required key stops the pod from starting).
     public function set(string $key, string|int|float|null $value): static

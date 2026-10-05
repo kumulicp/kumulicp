@@ -35,6 +35,31 @@ class Chart
         return $this->secrets ??= new ChartSecrets($this->namespace(), $this->secretsName(), $this->secretsRelease());
     }
 
+    // Whether the web server's driver creates this chart's Secret before the
+    // workload starts. Only helm_k8s does; anything else has to keep using
+    // plaintext values, or the secretKeyRef would point at a Secret that
+    // never exists.
+    protected function secretsDelivered(): bool
+    {
+        return $this->app_instance->web_server?->server?->interface === 'helm_k8s';
+    }
+
+    // A container env entry for a secret value: read from the chart's Secret
+    // when the driver delivers it, plain {name, value} otherwise. The Secret
+    // key defaults to the env name in kebab-case (NO_REPLY_PASSWORD ->
+    // no-reply-password).
+    public function secretEnv(string $name, string|int|float|null $value, ?string $key = null): array
+    {
+        if (! $this->secretsDelivered()) {
+            return ['name' => $name, 'value' => $value];
+        }
+
+        $key ??= str_replace('_', '-', Str::lower($name));
+        $this->secrets()->set($key, $value);
+
+        return $this->secrets()->envVar($name, $key);
+    }
+
     protected function secretsName(): string
     {
         return Str::slug("{$this->organization->slug}-{$this->name}-secrets");
@@ -54,11 +79,11 @@ class Chart
         $app = Application::profile($name);
         foreach (Application::profile($name)->envs() as $env_class) {
             $env = new $env_class;
+            $secret_names = $env->secretNames();
             foreach ($env->get($this->app_instance) as $name => $value) {
-                $env_vars[] = [
-                    'name' => $name,
-                    'value' => $value,
-                ];
+                $env_vars[] = in_array($name, $secret_names, true)
+                    ? $this->secretEnv($name, $value)
+                    : ['name' => $name, 'value' => $value];
             }
         }
 

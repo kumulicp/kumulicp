@@ -18,6 +18,16 @@ class WordpressChart extends HelmChart
             $database_server = $database_server->server;
         }
 
+        // The chart reads its passwords from existing Secrets, so they never
+        // appear in the values.
+        $use_secrets = $this->secretsDelivered();
+        $secrets = $this->secrets();
+
+        if ($use_secrets) {
+            $secrets->set('wordpress-password', $app_instance->api_password());
+            $secrets->set('mariadb-password', $this->app_instance->dbPassword());
+        }
+
         return [
             'affinity' => [
                 'podAffinity' => [
@@ -45,7 +55,8 @@ class WordpressChart extends HelmChart
                 'enabled' => $database_server ? true : false,
                 'database' => $app_instance->databasename,
                 'host' => $database_server ? $database_server->internal_address : '',
-                'password' => $this->app_instance->dbPassword(),
+                'password' => $use_secrets ? '' : $this->app_instance->dbPassword(),
+                'existingSecret' => $use_secrets ? $secrets->ref('mariadb-password')['name'] : '',
                 'user' => $app_instance->databasename,
             ],
             'ingress' => [
@@ -91,7 +102,8 @@ class WordpressChart extends HelmChart
             'wordpressEmail' => $app_instance->configuration('wordpress-email'),
             'wordpressFirstName' => $app_instance->configuration('wordpress-firstname'),
             'wordpressLastName' => $app_instance->configuration('wordpress-lastname'),
-            'wordpressPassword' => $app_instance->api_password(),
+            'wordpressPassword' => $use_secrets ? '' : $app_instance->api_password(),
+            'existingSecret' => $use_secrets ? $secrets->ref('wordpress-password')['name'] : '',
             'wordpressPlugins' => $app_instance->configuration('wordpress-plugins'),
             'wordpressUsername' => $app_instance->configuration('wordpress-username'),
             'wordpressScheme' => $app_instance->configuration('ingress-tls') ? 'https' : 'http',
