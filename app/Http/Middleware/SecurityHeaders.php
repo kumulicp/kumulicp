@@ -67,7 +67,7 @@ class SecurityHeaders
                 "style-src 'self' 'unsafe-inline'",
                 "img-src 'self' data: blob:",
                 "font-src 'self' data:",
-                "connect-src 'self' https://api.countrystatecity.in https://api.stripe.com",
+                "connect-src 'self' https://api.stripe.com",
                 'worker-src blob:',
                 "object-src 'none'",
                 "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",

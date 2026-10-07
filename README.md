@@ -72,6 +72,9 @@ sail artisan key:generate
 # Setup the database tables
 sail artisan migrate
 
+# Load the country/state data used by the address dropdowns (required, one-off)
+sail artisan db:seed --class=WorldSeeder
+
 # Build the frontend
 sail npm install
 sail npm run build
