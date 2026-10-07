@@ -17,5 +17,8 @@ jobs:
         cache: 'npm'
     - name: Install Node Dependencies
       run: npm ci
+    # Production dependencies only: dev tooling (e.g. the eslint config's
+    # fast-glob -> braces chain, GHSA-vfj7-8cjw-p6xm, no patched release yet)
+    # never ships and must not block merges.
     - name: NPM Security Audit
-      run: npm audit --audit-level=high
+      run: npm audit --omit=dev --audit-level=high

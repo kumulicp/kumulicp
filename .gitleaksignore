@@ -1,0 +1,46 @@
+# Reviewed gitleaks findings; none are live secrets.
+# Each group notes why it was cleared and when.
+
+# Authentik example JSON: signing_key is an object UUID, not a secret
+49eec640655e0d772709d5c0d4c28ccfb77a1c78:resources/lang/es/admin.php:generic-api-key:13
+594d1d40ff954dcec0ffd46293071f2880da59b6:app/Integrations/SSO/Authentik/AuthentikProfile.php:generic-api-key:17
+c7ca8f0e7bf3193eebce1c71951c31bed02177cf:resources/lang/en/admin.php:generic-api-key:13
+d909929f33ec3b7e895c82de1bbc4be9eb07e6eb:resources/lang/en/admin.php:generic-api-key:13
+
+# documentation placeholder
+766c3388054ebcf4f618b336b572a89d9ccdc0c3:.claude/skills/laravel-best-practices/rules/config.md:generic-api-key:30
+
+# demo seed placeholder password
+bfc973de188926286305a7ef264b84397eb864f1:database/seeders/DemoSeeder.php:generic-api-key:182
+
+# Stripe live keys from 2021; rolled, no longer valid (verified Oct 2026)
+a556fabde9f8363f9cac6a09ab1619f1a661ee9a:.env:generic-api-key:30
+a556fabde9f8363f9cac6a09ab1619f1a661ee9a:.env:stripe-access-token:31
+
+# working-tree copies of the false positives above
+.claude/skills/laravel-best-practices/rules/config.md:generic-api-key:30
+resources/lang/es/admin.php:generic-api-key:13
+
+# Country/State API key (countrystatecity.in): free-tier key, account inaccessible, no longer used (reviewed 2026-10-07)
+0827371a4ff80613c3efdb4c0c7195f712e2d878:resources/js/organization.js:generic-api-key:19
+15d385c0046b7dc0b0f8b2f7baef5df4bc2b43f9:resources/js/register.js:generic-api-key:6
+93c19b5557a1ee3e6c84e29c9bf472540e366351:resources/js/components/FormInputs/CountryDropdown.vue:generic-api-key:49
+93c19b5557a1ee3e6c84e29c9bf472540e366351:resources/js/components/FormInputs/StateDropdown.vue:generic-api-key:57
+941b887959940a192d1eda18e160bd82fe778ce5:resources/js/components/FormInputs/CountryDropdown.vue:generic-api-key:47
+941b887959940a192d1eda18e160bd82fe778ce5:resources/js/components/FormInputs/StateDropdown.vue:generic-api-key:55
+97360b3b27caf31c9bf0dcdad2bef0b5bb8662e1:resources/js/register.js:generic-api-key:18
+c7ca8f0e7bf3193eebce1c71951c31bed02177cf:resources/js/components/FormInputs/CountryDropdown.vue:generic-api-key:51
+c7ca8f0e7bf3193eebce1c71951c31bed02177cf:resources/js/components/FormInputs/StateDropdown.vue:generic-api-key:59
+e087a766e7cf6550f53dc8c9d60f8dc2d50635b0:resources/views/auth/register.blade.php:generic-api-key:238
+
+# Matrix Authentication Service keys from the removed MASChart template; the instance no longer exists (reviewed 2026-10-07)
+90436a9771d594774a027b732b35b3d9041a707a:modules/Kumuli/Entities/Applications/Matrix/MASChart.php:private-key:126
+90436a9771d594774a027b732b35b3d9041a707a:modules/Kumuli/Entities/Applications/Matrix/MASChart.php:private-key:155
+90436a9771d594774a027b732b35b3d9041a707a:modules/Kumuli/Entities/Applications/Matrix/MASChart.php:private-key:162
+90436a9771d594774a027b732b35b3d9041a707a:modules/Kumuli/Entities/Applications/Matrix/MASChart.php:private-key:170
+
+# 2021 dev DB password for a decommissioned private host (192.168.0.18); dead for years (reviewed 2026-10-07)
+a556fabde9f8363f9cac6a09ab1619f1a661ee9a:.env:generic-api-key:16
+
+# Stripe test secret key from phpunit.xml; rotated (reviewed 2026-10-07)
+1ab0f1497580beb9928428e8b7ba009f1c7906d3:phpunit.xml:stripe-access-token:31
