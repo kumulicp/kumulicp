@@ -5,12 +5,13 @@ name: Laravel (FrankenPHP)
 # default PHP-FPM-style CLI test runner. laravel.yml is left untouched and
 # keeps testing the plain PHP-FPM path.
 #
-# Note: the Feature/AccountManagerLdap Pest suites call Laravel's in-process
-# test client (TestCase::get()/post()/...), which never actually routes
-# through whichever server (FPM or FrankenPHP) is configured - that part of
-# the test run is identical either way. What this workflow adds on top is
-# proving the app boots cleanly under Octane + our config/octane.php and the
-# scoped() service bindings added for FrankenPHP worker-mode safety.
+# Note: all the Pest suites run below (Feature, AccountManagerLdap, Unit,
+# ApplicationsIntegration, RegistrarIntegration, SSOIntegration) call
+# Laravel's in-process test client (TestCase::get()/post()/...), which never
+# actually routes through whichever server (FPM or FrankenPHP) is configured -
+# that part of the test run is identical either way. What this workflow adds
+# on top is proving the app boots cleanly under Octane + our config/octane.php
+# and the scoped() service bindings added for FrankenPHP worker-mode safety.
 #
 # On top of that, the "Boot a live FrankenPHP worker" step below actually
 # starts php artisan octane:start and curls it, catching things the in-process
@@ -163,3 +164,29 @@ jobs:
         LDAP_BASE_DN: "dc=example,dc=com"
         LDAP_TLS: false
       run: php artisan test --testsuite=AccountManagerLdap
+    - name: Execute Unit tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=Unit
+    - name: Execute Applications integration tests
+      # Uses FakeServerManager/FakeSSO and the DemoApp fixture - no real
+      # Kubernetes/Rancher cluster required.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=ApplicationsIntegration
+    - name: Execute Registrar integration tests
+      # Only exercises the 'fake' driver here; 'namecheap' iterations
+      # self-skip unless REGISTRAR_DRIVER=namecheap is set.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=RegistrarIntegration
+    - name: Execute SSO integration tests
+      # Only exercises the 'fake' driver here; 'authentik' iterations
+      # self-skip unless SSO_DRIVER=authentik is set.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=SSOIntegration

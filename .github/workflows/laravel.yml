@@ -65,3 +65,29 @@ jobs:
         LDAP_BASE_DN: "dc=example,dc=com"
         LDAP_TLS: false
       run: php artisan test --testsuite=AccountManagerLdap
+    - name: Execute Unit tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=Unit
+    - name: Execute Applications integration tests
+      # Uses FakeServerManager/FakeSSO and the DemoApp fixture - no real
+      # Kubernetes/Rancher cluster required.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=ApplicationsIntegration
+    - name: Execute Registrar integration tests
+      # Only exercises the 'fake' driver here; 'namecheap' iterations
+      # self-skip unless REGISTRAR_DRIVER=namecheap is set.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=RegistrarIntegration
+    - name: Execute SSO integration tests
+      # Only exercises the 'fake' driver here; 'authentik' iterations
+      # self-skip unless SSO_DRIVER=authentik is set.
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+      run: php artisan test --testsuite=SSOIntegration
