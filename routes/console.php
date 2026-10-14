@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Calls\ActivateBackup;
+use App\Console\Calls\CheckVersionUpdates;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Console\Calls\DeleteBackups;
 use App\Console\Calls\ExpiredSubscriptionsCheck;
@@ -37,6 +38,7 @@ Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
 Schedule::call(new ExpiredSubscriptionsCheck)->everyMinute();
 Schedule::call(new DeactivatedAppInstanceCheck)->everyMinute();
+Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();
