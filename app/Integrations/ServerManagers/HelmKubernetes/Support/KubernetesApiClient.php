@@ -85,7 +85,7 @@ class KubernetesApiClient
                 return $this->failure("Unknown resource kind {$kind} ({$api_version})");
             }
 
-            if ($resource[1] && ! $namespace) {
+            if ($resource[2] && ! $namespace) {
                 return $this->failure("{$kind} {$name} requires a namespace");
             }
 
@@ -139,7 +139,7 @@ class KubernetesApiClient
             }
 
             if ($metadata_only) {
-                $http->accept('application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1, application/json');
+                $http->replaceHeaders(['Accept' => 'application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1, application/json']);
             }
 
             return $this->result($http->get(
@@ -203,8 +203,8 @@ class KubernetesApiClient
                     ?? $pod['spec']['containers'][0]['name']
                     ?? null;
 
-                // log endpoint serves text/plain, not JSON
-                $response = (clone $http)->accept('text/plain')->get(
+                // log endpoint serves text/plain, but 406s an explicit text/plain Accept
+                $response = (clone $http)->replaceHeaders(['Accept' => '*/*'])->get(
                     "{$pods_path}/".rawurlencode($name).'/log',
                     array_filter(['container' => $container]),
                 );
