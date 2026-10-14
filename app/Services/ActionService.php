@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Actions\Action;
 use App\Actions\AddWebDomain;
 use App\Actions\Apps\ApplicationActivate;
+use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDeactivate;
 use App\Actions\Apps\ApplicationDelete;
 use App\Actions\Apps\ApplicationDomainChecks;
@@ -57,6 +58,7 @@ class ActionService
             'subscription_update' => SubscriptionUpdate::class,
             'application_activate' => ApplicationActivate::class,
             'application_update' => ApplicationUpdate::class,
+            'application_database_migrate' => ApplicationDatabaseMigrate::class,
             'application_upgrade' => ApplicationUpgrade::class,
             'application_delete' => ApplicationDelete::class,
             'application_domain_checks' => ApplicationDomainChecks::class,

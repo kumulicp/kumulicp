@@ -17,8 +17,12 @@ class DatabaseInterface implements DatabaseContract
     public function __construct(OrgServer $server, private ?AppInstance $app_instance = null)
     {
         $this->organization = $server->organization;
-        $this->database = $this->app_instance->database_name ?? $this->organization->slug.'_'.$app_instance->name;
+        $this->database = $this->app_instance->databasename ?: $this->organization->slug.'_'.$app_instance->name;
         $password = $this->organization->secretpw;
+
+        // The connection is cached by name; a second server in the same
+        // process (e.g. a migration's source, then its target) needs a fresh one.
+        DB::purge('app_db');
 
         Config::set('database.connections.app_db', [
             'driver' => 'mysql',
@@ -47,14 +51,21 @@ class DatabaseInterface implements DatabaseContract
 
     public function get() {}
 
+    /**
+     * Idempotent: safe to call again on a server where an earlier attempt left
+     * the database and/or user behind (e.g. a retried database migration).
+     * The user's password is always reset to the organization's, which is the
+     * one the app's chart is configured with.
+     */
     public function add()
     {
-        if (! $this->exists()) {
-            $password = $this->organization->secretpw;
-            DB::connection('app_db')->select("CREATE DATABASE `{$this->database}`");
-            DB::connection('app_db')->select("CREATE USER `{$this->database}`@'%' IDENTIFIED BY '$password'");
-            DB::connection('app_db')->select("GRANT ALL PRIVILEGES ON `{$this->database}`.* TO `{$this->database}`@'%'");
-        }
+        $connection = DB::connection('app_db');
+        $password = $connection->getPdo()->quote($this->organization->secretpw);
+
+        $connection->statement("CREATE DATABASE IF NOT EXISTS `{$this->database}`");
+        $connection->statement("CREATE USER IF NOT EXISTS `{$this->database}`@'%' IDENTIFIED BY $password");
+        $connection->statement("ALTER USER `{$this->database}`@'%' IDENTIFIED BY $password");
+        $connection->statement("GRANT ALL PRIVILEGES ON `{$this->database}`.* TO `{$this->database}`@'%'");
 
         return [
             'id' => null,

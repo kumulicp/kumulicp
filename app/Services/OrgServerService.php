@@ -5,6 +5,7 @@ namespace App\Services;
 use App\AppInstance;
 use App\Organization;
 use App\OrgServer;
+use App\Server;
 use App\Support\Facades\ServerInterface;
 
 class OrgServerService
@@ -109,6 +110,30 @@ class OrgServerService
         }
 
         return null;
+    }
+
+    /**
+     * The organization's OrgServer for an explicit Server (as opposed to
+     * add(), which picks the server from the plan), created if the
+     * organization isn't on that server yet.
+     */
+    public static function forServer(Organization $organization, Server $server): self
+    {
+        $org_server = OrgServer::where('organization_id', $organization->id)->where('server_id', $server->id)->first();
+
+        if (! $org_server) {
+            $org_server = new OrgServer;
+            $org_server->organization_id = $organization->id;
+            $org_server->server_id = $server->id;
+            $org_server->save();
+
+            $service = new self($org_server);
+            $service->backupServer();
+
+            return $service;
+        }
+
+        return new self($org_server);
     }
 
     public function serverInfo()

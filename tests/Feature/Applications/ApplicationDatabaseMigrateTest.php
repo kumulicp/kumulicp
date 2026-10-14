@@ -1,0 +1,242 @@
+<?php
+
+use App\Actions\Apps\ApplicationDatabaseMigrate;
+use App\AppInstance;
+use App\Organization;
+use App\OrgBackup;
+use App\OrgServer;
+use App\Server;
+use App\Support\Facades\Action;
+use App\Support\Facades\Backup;
+use App\Task;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
+use Tests\Support\TestSupports;
+
+/**
+ * Moving an app's database to another database server: fresh backup, restore
+ * into the new server, point the app at it, standard app update -- and back
+ * to the old server if any of that fails. The actual mysqldump / mysql calls
+ * are BackupInterface's; here the Backup facade stands in for them so what's
+ * under test is the sequencing and the rollback.
+ */
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+
+beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+});
+
+afterEach(function () {
+    $this->restoreServerInterfaces();
+});
+
+function databaseServer(string $name): Server
+{
+    return Server::factory()->create([
+        'name' => $name,
+        'type' => 'database',
+        'interface' => 'app_database',
+        'host' => "{$name}.db.internal",
+        'internal_address' => "{$name}.db.svc",
+        'default_web_server' => 0,
+    ]);
+}
+
+/**
+ * An active app whose database lives on a database server called "old-db".
+ *
+ * @return array{AppInstance, OrgServer}
+ */
+function appOnDatabaseServer(): array
+{
+    $support = new TestSupports;
+    $support->seed();
+    ['app' => $app, 'plan' => $plan] = $support->prepareDemoApp();
+    $org = Organization::find(1);
+    $instance = test()->runActivate($plan, $org, $app);
+
+    $old = OrgServer::create(['organization_id' => $org->id, 'server_id' => databaseServer('old-db')->id]);
+    $old->backup_server_id = $old->id;
+    $old->save();
+
+    $instance->database_server_id = $old->id;
+    $instance->databasename = 'org_demo';
+    $instance->save();
+
+    return [$instance->fresh(), $old];
+}
+
+/**
+ * Stands in for BackupInterface: records what it's asked to do (returned log),
+ * names the backup file when dumping and can be told to fail the restore.
+ */
+function fakeBackupDriver(?string $restore_failure = null): ArrayObject
+{
+    $log = new ArrayObject;
+
+    Backup::shouldReceive('connect')->andReturnUsing(function (OrgBackup $backup) use ($log, $restore_failure) {
+        return new class($backup, $log, $restore_failure) {
+            public function __construct(private OrgBackup $backup, private ArrayObject $log, private ?string $restore_failure) {}
+
+            public function run()
+            {
+                $this->log[] = 'backup';
+                $this->backup->backup_name = 'dump-file';
+                $this->backup->save();
+            }
+
+            public function restore()
+            {
+                $this->log[] = 'restore';
+
+                if ($this->restore_failure) {
+                    throw new \Exception($this->restore_failure);
+                }
+            }
+        };
+    });
+
+    return $log;
+}
+
+function startMigration(AppInstance $instance, Server $target): Task
+{
+    // execute() runs the task on the sync queue in tests, including the
+    // standard ApplicationUpdate it schedules for the cutover.
+    return Action::execute(new ApplicationDatabaseMigrate($instance, $target))->fresh();
+}
+
+it('backs up, restores to the new server, switches the app and runs a standard update', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    $calls = fakeBackupDriver();
+
+    $task = startMigration($instance, $target);
+
+    expect($calls->getArrayCopy())->toBe(['backup', 'restore']);
+
+    $new = OrgServer::where('organization_id', $instance->organization_id)->where('server_id', $target->id)->first();
+    expect($new)->not->toBeNull();
+    expect($instance->fresh()->database_server_id)->toBe($new->id);
+
+    // The dump is taken from the app's own server and loaded into the new one
+    $backup = OrgBackup::where('action', 'backup')->sole();
+    expect($backup->settings)->toBe(['source_org_server_id' => $old->id]);
+    expect($backup->status)->toBe('completed');
+    expect($backup->delete_at)->not->toBeNull();
+
+    $restore = OrgBackup::where('action', 'restore')->sole();
+    expect($restore->settings)->toBe(['target_org_server_id' => $new->id]);
+    expect($restore->backup_name)->toBe('dump-file');
+    expect($restore->status)->toBe('completed');
+
+    // The standard update, in the same task group, is what carries the new host into the chart
+    $update = Task::find($task->getValue('update_task_id'));
+    expect($update->action_slug)->toBe('application_update');
+    expect($update->task_group)->toBe($task->task_group);
+    expect($task->status)->toBe('in_progress');
+
+    // Completes once the update does
+    Action::complete($update);
+
+    expect($task->fresh()->status)->toBe('complete');
+    expect($instance->fresh()->status)->toBe('active');
+    expect($instance->fresh()->database_server_id)->toBe($new->id);
+});
+
+it('leaves the app on its current server when the restore fails', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    fakeBackupDriver(restore_failure: 'mysql: connection refused');
+
+    $task = startMigration($instance, $target);
+
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect($instance->fresh()->status)->toBe('active');
+    expect($task->status)->toBe('failed');
+    expect($task->error_message)->toContain('mysql: connection refused')->toContain('old-db');
+
+    // Never got as far as the update
+    expect(Task::where('action_slug', 'application_update')->count())->toBe(0);
+});
+
+it('rolls back to the old server when the app update fails', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    fakeBackupDriver();
+
+    $task = startMigration($instance, $target);
+    $update = Task::find($task->getValue('update_task_id'));
+    $update->status = 'failed';
+    $update->error_message = 'helm upgrade failed';
+    $update->save();
+
+    Action::complete($task);
+
+    $task->refresh();
+    expect($task->status)->toBe('failed');
+    expect($task->error_message)->toContain('helm upgrade failed')->toContain('old-db');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+
+    // A new standard update puts the chart back on the old database
+    $rollback_update = Task::where('action_slug', 'application_update')->sole();
+    expect($rollback_update->id)->not->toBe($update->id);
+    expect($instance->fresh()->status)->toBe('updating');
+
+    Action::complete($rollback_update);
+    expect($instance->fresh()->status)->toBe('active');
+});
+
+it('rolls back when the app does not come back up in time', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    fakeBackupDriver();
+
+    $task = startMigration($instance, $target);
+    $task->custom_values = array_merge($task->customValues(), [
+        'cutover_at' => now()->subMinutes(ApplicationDatabaseMigrate::UPDATE_TIMEOUT_MINUTES + 1)->toIso8601String(),
+    ]);
+    $task->save();
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('failed');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+});
+
+it('keeps waiting while the update is still running', function () {
+    [$instance] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    fakeBackupDriver();
+
+    $task = startMigration($instance, $target);
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('in_progress');
+    expect($instance->fresh()->database_server_id)->toBe($task->getValue('target_org_server_id'));
+});
+
+it('only offers other database servers that can be backed up and restored', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    $no_driver = Server::factory()->create(['name' => 'odd-db', 'type' => 'database', 'interface' => 'something_else', 'host' => 'odd', 'internal_address' => 'odd']);
+
+    expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->values()->all())->toBe([$target->id]);
+    expect(ApplicationDatabaseMigrate::blocker($instance, $old->server))->toBe(__('messages.database_migration.same_server'));
+    expect(ApplicationDatabaseMigrate::blocker($instance, $no_driver))->toBe(__('messages.database_migration.invalid_server'));
+    expect(ApplicationDatabaseMigrate::blocker($instance, Server::find(1)))->toBe(__('messages.database_migration.invalid_server'));
+});
+
+it('refuses to migrate an app that is not active or has no database', function () {
+    [$instance] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+
+    $instance->status = 'updating';
+    expect(ApplicationDatabaseMigrate::blocker($instance, $target))->toBe(__('messages.database_migration.not_active'));
+
+    $instance->status = 'active';
+    $instance->databasename = null;
+    expect(ApplicationDatabaseMigrate::blocker($instance, $target))->toBe(__('messages.database_migration.no_database'));
+});

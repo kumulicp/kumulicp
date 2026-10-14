@@ -16,7 +16,7 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 - Domain registration: Integration with Namecheap built-in
 - LDAP: Built-in integration with LDAP for user and groups management
 - SSO: Add multiple SSO providers
-- Backups/Restore: Basic scheduled backup and restore available for MySQL databases
+- Backups/Restore: Basic scheduled backup and restore available for MySQL databases, including restoring a backup to a different database server and migrating an app to a new database server (fresh backup, restore, switch, standard app update, automatic rollback on failure)
 - Shared apps: Allow different clients to login to the same app by making it shared.
 
 ### End-users

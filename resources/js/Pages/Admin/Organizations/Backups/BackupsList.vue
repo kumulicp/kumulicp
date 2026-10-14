@@ -118,10 +118,21 @@ import { useForm } from '@inertiajs/vue3'
       <va-card-title class="m-0"> {{ $t('admin.backups.restoreBackup') }} </va-card-title>
       <va-card-content class="m-0">
         {{ $t('admin.backups.restoreConfirm', { org: organization.name, app: selected_backup.app.name, type: selected_backup.type, scheduled: selected_backup.scheduled_at }) }}
+        <template v-if="selected_backup.type === 'database' && database_servers.length > 0">
+          <va-select
+            v-model="restore_to"
+            class="mt-3"
+            :label="$t('admin.backups.restoreTo')"
+            :options="restore_to_options"
+            text-by="text"
+            value-by="value"
+          />
+          <p v-if="restore_to !== 'original'" class="mt-2">{{ $t('admin.backups.restoreToNote') }}</p>
+        </template>
       </va-card-content>
       <va-card-actions align="right" class="">
         <va-button color="textInverted" @click="showRestore = false">{{ $t('common.cancel') }}</va-button>
-        <va-button :href="'/admin/organizations/'+organization.id+'/backups/'+selected_backup.id+'/restore'" class="mr-2 mb-2" @click="showRestore = false">{{ $t('admin.backups.restore') }}</va-button>
+        <va-button class="mr-2 mb-2" @click="restoreBackup(selected_backup.id)">{{ $t('admin.backups.restore') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -149,6 +160,10 @@ export default {
     organization: Object,
     apps: Object,
     backups: Object,
+    database_servers: {
+      type: Array,
+      default: () => []
+    },
     errors: Object,
     meta: Object
   },
@@ -171,11 +186,15 @@ export default {
         { text: this.$t('admin.backups.appDatabase'), value: 'database' }
       ],
       selected_backup: '',
+      restore_to: 'original',
       showRestore: false,
       showDelete: false
     }
   },
   computed: {
+    restore_to_options () {
+      return [{ value: 'original', text: this.$t('admin.backups.restoreToOriginal') }, ...this.database_servers]
+    },
     backup_options () {
       this.form.backup = ''
       if (this.form.backup_type === 'email') {
@@ -193,6 +212,13 @@ export default {
     showRestoreModal (backup) {
       this.showRestore = true
       this.selected_backup = backup
+      this.restore_to = 'original'
+    },
+    restoreBackup (backup) {
+      this.showRestore = false
+      this.$inertia.post('/admin/organizations/' + this.organization.id + '/backups/' + backup + '/restore', {
+        database_server_id: this.restore_to === 'original' ? null : this.restore_to
+      })
     },
     showDeleteModal (backup) {
       this.showDelete = true

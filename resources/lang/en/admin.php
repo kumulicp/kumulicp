@@ -180,8 +180,10 @@ return [
             'upgrading' => ':app upgrading',
             'deleting' => ':app deleting',
             'run_job' => ':app :job running',
+            'migrating_database' => ':app\'s database is being migrated to :server',
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
+                'migration_running' => 'A database migration to that server is already running or needs attention -- check the Tasks page',
             ],
         ],
     ],
@@ -190,6 +192,7 @@ return [
         'added' => 'Backup for :time added',
         'scheduled' => 'Backup has been scheduled',
         'restoring' => 'Backup will be restored',
+        'restoring_to' => 'Backup will be restored to :server',
         'cancelled' => 'Backup scheduled for :time was cancelled',
         'recurring' => [
             'added' => 'Recurring backup added',
@@ -200,6 +203,7 @@ return [
         'denied' => [
             'exists' => 'Backup type does not exist',
             'delete' => 'Backup scheduled for :time cannot be deleted',
+            'restore_server' => 'This backup cannot be restored to the selected database server',
         ],
     ],
     'settings' => [

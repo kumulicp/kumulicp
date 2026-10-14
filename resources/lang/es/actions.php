@@ -7,6 +7,7 @@ return [
     'emails_from' => 'Correos de',
     'deactivating_app' => 'Desactivando :app',
     'deleting_app' => 'Eliminando :app',
+    'migrating_app_database' => 'Migrando la base de datos de :app a :server',
     'updating_app' => 'Actualizando :app',
     'upgrading_app' => 'Mejorando :app',
     'upgrading_all_apps' => 'Actualizando todas las :app a :version',

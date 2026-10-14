@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $org_server_id
  * @property int|null $scheduled_backup_id
  * @property string|null $status
+ * @property array|null $settings
  * @property string|null $completed_at
  * @property-read Organization $organization
  * @property-read AppInstance|null $app_instance
@@ -24,6 +25,10 @@ class OrgBackup extends Model
     use HasFactory;
 
     protected $table = 'org_backups';
+
+    protected $casts = [
+        'settings' => 'array',
+    ];
 
     protected $fillable = [
         'organization_id',

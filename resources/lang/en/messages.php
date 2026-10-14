@@ -51,6 +51,18 @@ return [
         'helm_operation_failed' => 'Helm operation for :chart failed: :error',
         'shared_app_has_children' => ':app is a shared app with other organizations still registered against it -- remove or reassign them before deleting it.',
     ],
+    'database_migration' => [
+        'no_database' => 'This app has no database to migrate',
+        'not_active' => 'The app must be active before its database can be migrated',
+        'invalid_server' => 'That server cannot be used as a database server for backups and restores',
+        'same_server' => 'The app is already using that database server',
+        'update_not_scheduled' => 'The app update that applies the new database could not be scheduled',
+        'update_failed' => 'The app did not come back up on the new database',
+        'rolled_back' => 'The database migration failed and the app was returned to :server: :reason',
+        'copy_left' => 'The partial copy on :server was left in place and can be removed manually.',
+        'rollback_failed' => 'The database migration failed (:reason) and returning the app to its previous database also failed: :error. Check the app\'s database server and run an app update.',
+        'migrated' => ':app is now using the :server database server',
+    ],
     'sso' => [
         'denied' => [
             'groups_missing' => 'Some groups don\'t exist',

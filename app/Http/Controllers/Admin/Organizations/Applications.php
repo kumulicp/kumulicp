@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Organizations;
 
+use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDelete;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
@@ -9,6 +10,7 @@ use App\AppInstance;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
 use App\Organization;
+use App\Server;
 use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
@@ -111,6 +113,7 @@ class Applications extends Controller
                     'id' => $app->version->id,
                     'name' => $app->version->name,
                 ],
+                'database_server' => $app->database_server?->server?->name,
                 'settings' => $app->settings,
                 'status' => $app->status,
                 'password' => $app->api_password(),
@@ -125,6 +128,10 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
+            'database_servers' => ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
+                'value' => $server->id,
+                'text' => $server->name,
+            ])->values(),
             'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
     }
@@ -171,6 +178,29 @@ class Applications extends Controller
         $task = Action::execute(new ApplicationUpdate($app));
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.updating', ['app' => $app->label]));
+    }
+
+    public function migrate_database(Request $request, Organization $organization, AppInstance $app)
+    {
+        $validated = $request->validate([
+            'database_server_id' => 'required|integer|exists:servers,id',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $server = Server::findOrFail($validated['database_server_id']);
+
+        if ($blocker = ApplicationDatabaseMigrate::blocker($app, $server)) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', $blocker);
+        }
+
+        $task = Action::execute(new ApplicationDatabaseMigrate($app, $server));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.migration_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.migrating_database', ['app' => $app->label, 'server' => $server->name]));
     }
 
     public function run(Organization $organization, AppInstance $app, $action)

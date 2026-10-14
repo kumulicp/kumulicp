@@ -12,6 +12,7 @@ import AppsLayout from './AppsLayout.vue'
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
         <va-button @click="showUpgradeAppModal = true">{{ $t('admin.apps.upgrade') }}</va-button>
+        <va-button v-if="app.database_server" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
         <va-button color="danger" @click="showDeleteAppModal = true">{{ $t('admin.apps.delete') }}</va-button>
         </VaButtonGroup>
     </div>
@@ -117,6 +118,40 @@ import AppsLayout from './AppsLayout.vue'
         </va-card-actions>
       </template>
     </va-modal>
+    <va-modal v-model="showMigrateDatabaseModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="migrateForm.post('/admin/organizations/'+organization.id+'/apps/'+app.id+'/migrate-database', { onSuccess: () => { showMigrateDatabaseModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.migrateDatabaseTitle') }}</va-card-title>
+          <va-card-content class="m-0 p-0">
+            <p v-if="app.database_server" class="mb-2">{{ $t('admin.apps.migrateDatabaseCurrent', { server: app.database_server }) }}</p>
+            <p>{{ $t('admin.apps.migrateDatabaseDescription') }}</p>
+            <p class="mt-2"><strong>{{ $t('admin.apps.migrateDatabaseWarning') }}</strong></p>
+            <p v-if="app.status !== 'active'" class="mt-2">{{ $t('admin.apps.migrateDatabaseNotActive') }}</p>
+            <p v-else-if="database_servers.length === 0" class="mt-2">{{ $t('admin.apps.migrateDatabaseNoServers') }}</p>
+            <va-select
+              v-else
+              v-model="migrateForm.database_server_id"
+              class="mt-3"
+              :label="$t('admin.apps.migrateDatabaseTarget')"
+              :options="database_servers"
+              text-by="text"
+              value-by="value"
+              required-mark
+              :error="!!$page.props.errors.database_server_id"
+              :error-messages="$page.props.errors.database_server_id"
+            />
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="migrateForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" class="mr-2" :disabled="migrateForm.processing || !migrateForm.database_server_id || app.status !== 'active'">{{ $t('admin.apps.migrateDatabase') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showDeleteAppModal"
     hide-default-actions
     no-padding
@@ -164,7 +199,8 @@ export default {
   props: {
     app: Object,
     organization: Object,
-    versions: Object
+    versions: Object,
+    database_servers: Array
   },
   data () {
     const settings = this.app.settings ? JSON.stringify(this.app.settings, '', 2) : '{}'
@@ -179,6 +215,10 @@ export default {
       showUpdateAppModal: false,
       showUpgradeAppModal: false,
       showDeleteAppModal: false,
+      showMigrateDatabaseModal: false,
+      migrateForm: useForm({
+        database_server_id: null
+      }),
       deleteApp: useForm({
         when: 'later',
         start_time: '',
