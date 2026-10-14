@@ -6,6 +6,7 @@ use App\Actions\Apps\MassApplicationUpgrade;
 use App\Announcement;
 use App\Application;
 use App\AppVersion;
+use App\Console\Calls\CheckVersionUpdates;
 use App\Http\Controllers\Controller;
 use App\RepoSecret;
 use App\Support\Facades\Action;
@@ -34,6 +35,7 @@ class Versions extends Controller
                     'status' => $version->status,
                     'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d h:m:s'),
                     'created_at' => (new Carbon($version->created_at))->format('Y-m-d h:m:s'),
+                    'updates' => $this->updates($version),
                 ];
             }),
             'breadcrumbs' => [
@@ -50,6 +52,40 @@ class Versions extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function checkUpdates(Application $app)
+    {
+        (new CheckVersionUpdates($app->id))();
+
+        return redirect('/admin/apps/'.$app->slug.'/versions')->with('success', __('admin.applications.versions.updates_checked'));
+    }
+
+    // What the last update check found for a version, for the Versions page
+    private function updates(AppVersion $version): ?array
+    {
+        $check = $version->update_check;
+
+        if (! $check) {
+            return null;
+        }
+
+        $incompatible = $version->incompatibleChart();
+
+        return [
+            'checked_at' => (new Carbon($check['checked_at']))->format('Y-m-d H:i'),
+            'image' => $version->newerImageTag(),
+            'image_error' => Arr::get($check, 'image.error'),
+            'chart_current' => $version->setting('chart_version'),
+            'chart' => $version->newerChartVersion(),
+            'chart_error' => Arr::get($check, 'chart.error'),
+            'chart_incompatible' => $incompatible ? [
+                'version' => $incompatible['version'],
+                'status' => $incompatible['status'],
+                'issues' => $incompatible['issues'],
+            ] : null,
+            'chart_warnings' => Arr::get($check, 'chart.compatibility.warnings', []),
+        ];
     }
 
     public function store(Request $request, Application $app)

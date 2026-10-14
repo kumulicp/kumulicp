@@ -4,6 +4,8 @@ use App\AppVersion;
 use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
+use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 
@@ -234,4 +236,71 @@ it('saves role order — clears all roles when order is empty', function () {
 
     $version->refresh();
     expect($version->roles['order'])->toBe([]);
+});
+
+// ─── Update check ─────────────────────────────────────────────────────────────
+
+it('shows newer images and compatible charts on the versions page', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.1',
+        'settings' => ['chart_version' => '9.0.0'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'chart' => [
+                'current' => '9.0.0',
+                'latest' => '9.1.0',
+                'latest_compatible' => '9.0.1',
+                'compatibility' => ['version' => '9.1.0', 'status' => 'incompatible', 'issues' => ['The chart no longer has the value image.tag, which Kumulicp sets.'], 'warnings' => [], 'targets' => []],
+                'error' => null,
+            ],
+        ],
+    ]);
+
+    $this->withoutVite()
+        ->get("/admin/apps/{$this->demoApp->slug}/versions")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Admin/Applications/Versions/VersionsList')
+            ->where('versions', fn ($versions) => collect($versions)->contains(fn ($row) => $row['id'] === $version->id
+                && $row['updates']['image'] === '33.0.2'
+                && $row['updates']['chart'] === '9.0.1'
+                && $row['updates']['chart_incompatible']['version'] === '9.1.0'))
+        );
+});
+
+it('hides stored updates once the version has caught up', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.2',
+        'settings' => ['chart_version' => '9.0.1'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'chart' => ['current' => '9.0.0', 'latest' => '9.0.1', 'latest_compatible' => '9.0.1', 'compatibility' => null, 'error' => null],
+        ],
+    ]);
+
+    expect($version->newerImageTag())->toBeNull()
+        ->and($version->newerChartVersion())->toBeNull()
+        ->and($version->incompatibleChart())->toBeNull();
+});
+
+it('checks for updates on demand from the versions page', function () {
+    AppVersion::where('application_id', $this->demoApp->id)->update(['status' => 'deactivated']);
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '1.0.0',
+        'status' => 'active',
+        'settings' => ['image_registry' => 'registry.example.com', 'image_repo_name' => 'demo/app'],
+    ]);
+
+    Http::fake(['registry.example.com/v2/demo/app/tags/list*' => Http::response(['tags' => ['1.0.0', '1.0.1', 'latest']])]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions/check-updates")
+        ->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions");
+
+    expect($version->refresh()->newerImageTag())->toBe('1.0.1')
+        ->and($version->update_check['chart'])->toBeNull();
 });
