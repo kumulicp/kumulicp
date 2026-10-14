@@ -431,7 +431,21 @@
       "addPullSecret": "Agregar Secreto de Extracción",
       "helmChartRepoAuth": "Autenticación del Repositorio de Helm Chart",
       "helmRepoSecretNone": "Ninguno (repositorio público)",
-      "addHelmRepoSecret": "Agregar Secreto de Repositorio"
+      "addHelmRepoSecret": "Agregar Secreto de Repositorio",
+      "checkNow": "Buscar actualizaciones",
+      "updates": "Actualizaciones",
+      "newerImage": "Hay una imagen más reciente para {version}: {latest}.",
+      "newerChart": "Hay un chart de Helm más reciente: {latest} (actual {current}). Pasó las comprobaciones de compatibilidad con Helm y Rancher.",
+      "adoptUpdate": "Agrega una nueva versión para adoptarlo.",
+      "chartIncompatible": "El chart de Helm {latest} está disponible pero no pasó las comprobaciones de compatibilidad:",
+      "chartUnverified": "El chart de Helm {latest} está disponible pero no se pudo verificar:",
+      "imageCheckFailed": "Falló la comprobación de actualizaciones de la imagen: {error}",
+      "chartCheckFailed": "Falló la comprobación de actualizaciones del chart: {error}",
+      "imageBadge": "Imagen {latest}",
+      "chartBadge": "Chart {latest}",
+      "chartBlockedBadge": "Chart {latest} incompatible",
+      "lastChecked": "Comprobado {date}",
+      "notChecked": "Aún no comprobado"
     },
     "apps": {
       "appSettings": "Configuración de la Aplicación",

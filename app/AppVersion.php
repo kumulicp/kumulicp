@@ -2,6 +2,8 @@
 
 namespace App;
 
+use App\Support\VersionUpdates\ChartCompatibilityChecker;
+use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +16,7 @@ use Illuminate\Support\Arr;
  * @property string|null $admin_path
  * @property array $roles
  * @property array $settings
+ * @property array|null $update_check
  * @property-read Application $application
  * @property-read RepoSecret|null $pullSecret
  * @property-read RepoSecret|null $helmRepoSecret
@@ -27,6 +30,7 @@ class AppVersion extends Model
     protected $casts = [
         'roles' => 'array',
         'settings' => 'array',
+        'update_check' => 'array',
     ];
 
     public function application()
@@ -263,5 +267,37 @@ class AppVersion extends Model
 
         $this->settings = $settings;
         $this->save();
+    }
+
+    // The newest image tag found by the update check, if still newer than this version's tag
+    public function newerImageTag(): ?string
+    {
+        $latest = Arr::get($this->update_check ?? [], 'image.latest');
+
+        return (new VersionComparator)->isNewer($latest, $this->name) ? $latest : null;
+    }
+
+    // The newest chart version that passed the compatibility check, if still newer than the one in use
+    public function newerChartVersion(): ?string
+    {
+        $latest = Arr::get($this->update_check ?? [], 'chart.latest_compatible');
+
+        return (new VersionComparator)->isNewer($latest, $this->setting('chart_version')) ? $latest : null;
+    }
+
+    // The newest chart release when it failed the compatibility check, with its issues
+    public function incompatibleChart(): ?array
+    {
+        $compatibility = Arr::get($this->update_check ?? [], 'chart.compatibility');
+
+        if (! $compatibility || $compatibility['status'] === ChartCompatibilityChecker::COMPATIBLE) {
+            return null;
+        }
+
+        if (! (new VersionComparator)->isNewer($compatibility['version'] ?? null, $this->setting('chart_version'))) {
+            return null;
+        }
+
+        return $compatibility;
     }
 }
