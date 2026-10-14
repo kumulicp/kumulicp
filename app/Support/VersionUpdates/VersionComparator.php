@@ -33,8 +33,11 @@ class VersionComparator
 
         $allow_prerelease = $this->isPrerelease($current);
 
-        $candidates = array_values(array_unique(array_filter($tags, function ($tag) use ($current, $current_shape, $allow_prerelease) {
-            if (! is_string($tag) || $this->shape($tag) !== $current_shape) {
+        // Registries and repo indexes can return numeric-looking tags as numbers
+        $tags = array_map('strval', $tags);
+
+        $candidates = array_values(array_unique(array_filter($tags, function (string $tag) use ($current, $current_shape, $allow_prerelease) {
+            if ($this->shape($tag) !== $current_shape) {
                 return false;
             }
 
