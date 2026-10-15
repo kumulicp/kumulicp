@@ -7,7 +7,6 @@ use App\AppInstance;
 use App\OrgBackup;
 use App\OrgServer;
 use App\Server;
-use App\Services\BackupService;
 use App\Services\OrgServerService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Backup;
@@ -83,9 +82,9 @@ class ApplicationDatabaseMigrate extends Action
             return __('messages.database_migration.invalid_server');
         }
 
-        // Both ends need a backup driver: the old server is dumped, the new one restored into.
-        $backups = new BackupService;
-        if (! $backups->driverExistsFor($target_server) || ! $backups->driverExistsFor($current->server)) {
+        // Both ends need a backup driver that can work against a named server:
+        // the old server is dumped, the new one restored into.
+        if (! Backup::supportsServerTargets($target_server) || ! Backup::supportsServerTargets($current->server)) {
             return __('messages.database_migration.invalid_server');
         }
 

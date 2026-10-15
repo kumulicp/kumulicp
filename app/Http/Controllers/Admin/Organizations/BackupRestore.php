@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\OrgBackup;
 use App\Server;
-use App\Services\BackupService;
 use App\Services\OrgServerService;
 use App\Support\Facades\Backup;
 use Illuminate\Http\Request;
@@ -33,7 +32,7 @@ class BackupRestore extends Controller
             'database_servers' => Server::where('type', 'database')
                 ->orderBy('name')
                 ->get()
-                ->filter(fn (Server $server) => (new BackupService)->driverExistsFor($server))
+                ->filter(fn (Server $server) => Backup::supportsServerTargets($server))
                 ->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])
                 ->values(),
             'backups' => $backups->map(function ($backup) {
@@ -139,7 +138,7 @@ class BackupRestore extends Controller
         if ($validated['database_server_id'] ?? null) {
             $server = Server::findOrFail($validated['database_server_id']);
 
-            if ($backup->type !== 'database' || ! $backup->app_instance || $server->type !== 'database' || ! $server->host || ! (new BackupService)->driverExistsFor($server)) {
+            if ($backup->type !== 'database' || ! $backup->app_instance || $server->type !== 'database' || ! $server->host || ! Backup::supportsServerTargets($server)) {
                 return redirect($redirect)->with('error', __('admin.backups.denied.restore_server'));
             }
 

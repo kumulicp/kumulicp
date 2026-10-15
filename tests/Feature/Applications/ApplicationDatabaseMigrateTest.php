@@ -2,10 +2,13 @@
 
 use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\AppInstance;
+use App\Contracts\BackupContract;
+use App\Contracts\BackupServerTargetContract;
 use App\Organization;
 use App\OrgBackup;
 use App\OrgServer;
 use App\Server;
+use App\Services\BackupService;
 use App\Support\Facades\Action;
 use App\Support\Facades\Backup;
 use App\Task;
@@ -75,8 +78,11 @@ function fakeBackupDriver(?string $restore_failure = null): ArrayObject
 {
     $log = new ArrayObject;
 
+    // Only connect() is faked; which servers qualify stays the real thing.
+    Backup::shouldReceive('supportsServerTargets')->andReturnUsing(fn (Server $server) => (new BackupService)->supportsServerTargets($server));
     Backup::shouldReceive('connect')->andReturnUsing(function (OrgBackup $backup) use ($log, $restore_failure) {
-        return new class($backup, $log, $restore_failure) {
+        return new class($backup, $log, $restore_failure)
+        {
             public function __construct(private OrgBackup $backup, private ArrayObject $log, private ?string $restore_failure) {}
 
             public function run()
@@ -91,7 +97,7 @@ function fakeBackupDriver(?string $restore_failure = null): ArrayObject
                 $this->log[] = 'restore';
 
                 if ($this->restore_failure) {
-                    throw new \Exception($this->restore_failure);
+                    throw new Exception($this->restore_failure);
                 }
             }
         };
@@ -227,6 +233,55 @@ it('only offers other database servers that can be backed up and restored', func
     expect(ApplicationDatabaseMigrate::blocker($instance, $old->server))->toBe(__('messages.database_migration.same_server'));
     expect(ApplicationDatabaseMigrate::blocker($instance, $no_driver))->toBe(__('messages.database_migration.invalid_server'));
     expect(ApplicationDatabaseMigrate::blocker($instance, Server::find(1)))->toBe(__('messages.database_migration.invalid_server'));
+});
+
+it('only allows drivers that declare they can work against a named server', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+
+    // A remote driver (kmanager) that runs jobs asynchronously and has no
+    // say over which server it talks to, and one that has opted in.
+    $remote = new class implements BackupContract
+    {
+        public function exists() {}
+
+        public function get() {}
+
+        public function run() {}
+
+        public function update() {}
+
+        public function restore() {}
+
+        public function delete() {}
+    };
+    $capable = new class implements BackupServerTargetContract
+    {
+        public function exists() {}
+
+        public function get() {}
+
+        public function run() {}
+
+        public function update() {}
+
+        public function restore() {}
+
+        public function delete() {}
+    };
+    Backup::register('database', 'remote', $remote::class);
+    Backup::register('database', 'capable', $capable::class);
+
+    $remote_db = Server::factory()->create(['name' => 'remote-db', 'type' => 'database', 'interface' => 'remote', 'host' => 'remote', 'internal_address' => 'remote']);
+    $capable_db = Server::factory()->create(['name' => 'capable-db', 'type' => 'database', 'interface' => 'capable', 'host' => 'capable', 'internal_address' => 'capable']);
+
+    expect(Backup::driverExistsFor($remote_db))->toBeTrue();
+    expect(Backup::supportsServerTargets($remote_db))->toBeFalse();
+    expect(Backup::supportsServerTargets($capable_db))->toBeTrue();
+
+    expect(ApplicationDatabaseMigrate::blocker($instance, $remote_db))->toBe(__('messages.database_migration.invalid_server'));
+    expect(ApplicationDatabaseMigrate::blocker($instance, $capable_db))->toBeNull();
+    expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->sort()->values()->all())->toBe([$target->id, $capable_db->id]);
 });
 
 it('refuses to migrate an app that is not active or has no database', function () {

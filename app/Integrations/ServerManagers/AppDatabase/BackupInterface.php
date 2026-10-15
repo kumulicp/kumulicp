@@ -2,7 +2,7 @@
 
 namespace App\Integrations\ServerManagers\AppDatabase;
 
-use App\Contracts\BackupContract;
+use App\Contracts\BackupServerTargetContract;
 use App\OrgBackup;
 use App\OrgServer;
 use App\Support\Facades\ServerInterface;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Spatie\DbDumper\Databases\MySql;
 
-class BackupInterface implements BackupContract
+class BackupInterface implements BackupServerTargetContract
 {
     private string $database = '';
 

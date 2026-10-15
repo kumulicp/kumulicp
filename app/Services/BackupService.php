@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AppInstance;
 use App\BackupSchedule;
+use App\Contracts\BackupServerTargetContract;
 use App\Integrations\ServerManagers\AppDatabase\BackupInterface;
 use App\Organization;
 use App\OrgBackup;
@@ -60,6 +61,16 @@ class BackupService
         }
 
         return array_key_exists($driver, $this->drivers[$type] ?? []) && class_exists($this->drivers[$type][$driver]);
+    }
+
+    /**
+     * Whether backups can be dumped from / restored into this specific server
+     * (see BackupServerTargetContract), as database server moves need.
+     */
+    public function supportsServerTargets(Server $server): bool
+    {
+        return $this->driverExistsFor($server)
+            && is_subclass_of($this->drivers[$server->type][$server->interface], BackupServerTargetContract::class);
     }
 
     private function driver(OrgServer $org_server)

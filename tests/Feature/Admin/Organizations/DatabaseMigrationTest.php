@@ -34,7 +34,7 @@ class DatabaseMigrationTest extends TestCase
 
     private Organization $organization;
 
-    private AppInstance $app;
+    private AppInstance $appInstance;
 
     private OrgServer $old;
 
@@ -59,17 +59,17 @@ class DatabaseMigrationTest extends TestCase
         $this->old->backup_server_id = $this->old->id;
         $this->old->save();
 
-        $this->app = new AppInstance;
-        $this->app->application_id = $demoApp->id;
-        $this->app->organization_id = $this->organization->id;
-        $this->app->version_id = 1;
-        $this->app->plan_id = $plan->id;
-        $this->app->name = 'demo-app-instance';
-        $this->app->label = 'Demo App Instance';
-        $this->app->status = 'active';
-        $this->app->databasename = 'org_demo';
-        $this->app->database_server_id = $this->old->id;
-        $this->app->save();
+        $this->appInstance = new AppInstance;
+        $this->appInstance->application_id = $demoApp->id;
+        $this->appInstance->organization_id = $this->organization->id;
+        $this->appInstance->version_id = 1;
+        $this->appInstance->plan_id = $plan->id;
+        $this->appInstance->name = 'demo-app-instance';
+        $this->appInstance->label = 'Demo App Instance';
+        $this->appInstance->status = 'active';
+        $this->appInstance->databasename = 'org_demo';
+        $this->appInstance->database_server_id = $this->old->id;
+        $this->appInstance->save();
     }
 
     private function databaseServer(string $name): Server
@@ -88,7 +88,7 @@ class DatabaseMigrationTest extends TestCase
     {
         return OrgBackup::create([
             'organization_id' => $this->organization->id,
-            'app_instance_id' => $this->app->id,
+            'app_instance_id' => $this->appInstance->id,
             'org_server_id' => $this->old->id,
             'action' => 'backup',
             'type' => 'database',
@@ -115,11 +115,11 @@ class DatabaseMigrationTest extends TestCase
         $restore = OrgBackup::where('action', 'restore')->sole();
         $this->assertSame('scheduled', $restore->status);
         $this->assertSame('dump-file', $restore->backup_name);
-        $this->assertSame($this->app->id, $restore->app_instance_id);
+        $this->assertSame($this->appInstance->id, $restore->app_instance_id);
         $this->assertSame(['target_org_server_id' => $new->id], $restore->settings);
 
         // Restoring doesn't move the app; that's what migrating is for
-        $this->assertSame($this->old->id, $this->app->fresh()->database_server_id);
+        $this->assertSame($this->old->id, $this->appInstance->fresh()->database_server_id);
     }
 
     public function test_a_backup_restores_to_its_original_server_by_default()
@@ -161,7 +161,7 @@ class DatabaseMigrationTest extends TestCase
         $new = $this->databaseServer('new-db');
 
         $this->actingAs($this->admin)
-            ->get("/admin/organizations/{$this->organization->id}/apps/{$this->app->id}/edit")
+            ->get("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}/edit")
             ->assertInertia(fn ($page) => $page
                 ->where('app.database_server', 'old-db')
                 ->has('database_servers', 1)
@@ -180,8 +180,8 @@ class DatabaseMigrationTest extends TestCase
             ->andReturn(new Task);
 
         $this->actingAs($this->admin)
-            ->post("/admin/organizations/{$this->organization->id}/apps/{$this->app->id}/migrate-database", ['database_server_id' => $new->id])
-            ->assertRedirect("/admin/organizations/{$this->organization->id}/apps/{$this->app->id}")
+            ->post("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}/migrate-database", ['database_server_id' => $new->id])
+            ->assertRedirect("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}")
             ->assertSessionHas('success');
     }
 
@@ -190,7 +190,7 @@ class DatabaseMigrationTest extends TestCase
         Action::shouldReceive('execute')->never();
 
         $this->actingAs($this->admin)
-            ->post("/admin/organizations/{$this->organization->id}/apps/{$this->app->id}/migrate-database", ['database_server_id' => $this->old->server_id])
+            ->post("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}/migrate-database", ['database_server_id' => $this->old->server_id])
             ->assertSessionHas('error', __('messages.database_migration.same_server'));
     }
 
@@ -202,7 +202,7 @@ class DatabaseMigrationTest extends TestCase
         Action::shouldReceive('execute')->never();
 
         $this->actingAs($this->admin)
-            ->post("/admin/organizations/{$other->id}/apps/{$this->app->id}/migrate-database", ['database_server_id' => $new->id])
+            ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/migrate-database", ['database_server_id' => $new->id])
             ->assertNotFound();
     }
 
