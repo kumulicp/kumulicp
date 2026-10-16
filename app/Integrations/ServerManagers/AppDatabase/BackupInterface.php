@@ -28,7 +28,7 @@ class BackupInterface implements BackupServerTargetContract
         $this->host = $this->resolveHost();
         $this->database = $backup->app_instance->databasename;
         $this->username = $backup->app_instance->databasename;
-        $this->password = $backup->organization->secretpw;
+        $this->password = $backup->app_instance->dbPassword();
     }
 
     /**

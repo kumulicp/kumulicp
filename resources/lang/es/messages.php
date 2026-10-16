@@ -30,6 +30,8 @@ return [
         'not_active' => 'La aplicación debe estar activa antes de migrar su base de datos',
         'invalid_server' => 'Ese servidor no se puede usar como servidor de base de datos para copias de seguridad y restauraciones',
         'same_server' => 'La aplicación ya usa ese servidor de base de datos',
+        'copy_failed' => 'Falló: :step',
+        'copy_timed_out' => ':step no terminó a tiempo',
         'update_not_scheduled' => 'No se pudo programar la actualización de la aplicación que aplica la nueva base de datos',
         'update_failed' => 'La aplicación no volvió a iniciarse con la nueva base de datos',
         'rolled_back' => 'La migración de la base de datos falló y la aplicación volvió a :server: :reason',

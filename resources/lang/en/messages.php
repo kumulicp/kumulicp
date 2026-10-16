@@ -56,6 +56,8 @@ return [
         'not_active' => 'The app must be active before its database can be migrated',
         'invalid_server' => 'That server cannot be used as a database server for backups and restores',
         'same_server' => 'The app is already using that database server',
+        'copy_failed' => ':step failed',
+        'copy_timed_out' => ':step did not finish in time',
         'update_not_scheduled' => 'The app update that applies the new database could not be scheduled',
         'update_failed' => 'The app did not come back up on the new database',
         'rolled_back' => 'The database migration failed and the app was returned to :server: :reason',
