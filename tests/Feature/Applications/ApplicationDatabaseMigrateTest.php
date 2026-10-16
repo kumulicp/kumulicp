@@ -90,6 +90,8 @@ function fakeBackupDriver(?string $restore_failure = null): ArrayObject
                 $this->log[] = 'backup';
                 $this->backup->backup_name = 'dump-file';
                 $this->backup->save();
+
+                return ['job_id' => '', 'status' => 'completed'];
             }
 
             public function restore()
@@ -99,11 +101,58 @@ function fakeBackupDriver(?string $restore_failure = null): ArrayObject
                 if ($this->restore_failure) {
                     throw new Exception($this->restore_failure);
                 }
+
+                return ['job_id' => '', 'status' => 'completed'];
             }
         };
     });
 
     return $log;
+}
+
+/**
+ * Stands in for a driver that hands the work to another service (kmanager):
+ * the call returns at once with the backup still running, and the service
+ * completes or fails it later, which the tests do by updating the OrgBackup the
+ * way the backup callback does.
+ */
+function fakeRemoteBackupDriver(): ArrayObject
+{
+    $log = new ArrayObject;
+
+    Backup::shouldReceive('supportsServerTargets')->andReturnUsing(fn (Server $server) => (new BackupService)->supportsServerTargets($server));
+    Backup::shouldReceive('connect')->andReturnUsing(function (OrgBackup $backup) use ($log) {
+        return new class($backup, $log)
+        {
+            public function __construct(private OrgBackup $backup, private ArrayObject $log) {}
+
+            public function run()
+            {
+                $this->log[] = 'backup';
+
+                return ['job_id' => 'job-'.$this->backup->id, 'status' => 'running'];
+            }
+
+            public function restore()
+            {
+                $this->log[] = 'restore';
+
+                return ['job_id' => 'job-'.$this->backup->id];
+            }
+        };
+    });
+
+    return $log;
+}
+
+/** What the callback from the remote service does to the backup record */
+function remoteReports(string $action, string $status, ?string $backup_name = null): void
+{
+    $backup = OrgBackup::where('action', $action)->sole();
+    $backup->status = $status;
+    $backup->completed_at = $status === 'completed' ? now() : null;
+    $backup->backup_name = $backup_name ?? $backup->backup_name;
+    $backup->save();
 }
 
 function startMigration(AppInstance $instance, Server $target): Task
@@ -128,7 +177,7 @@ it('backs up, restores to the new server, switches the app and runs a standard u
 
     // The dump is taken from the app's own server and loaded into the new one
     $backup = OrgBackup::where('action', 'backup')->sole();
-    expect($backup->settings)->toBe(['source_org_server_id' => $old->id]);
+    expect($backup->settings)->toBe(['source_org_server_id' => $old->id, 'full_copy' => true]);
     expect($backup->status)->toBe('completed');
     expect($backup->delete_at)->not->toBeNull();
 
@@ -224,6 +273,128 @@ it('keeps waiting while the update is still running', function () {
     expect($instance->fresh()->database_server_id)->toBe($task->getValue('target_org_server_id'));
 });
 
+it('waits for a remote backup and restore to finish before each next step', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $target = databaseServer('new-db');
+    $calls = fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, $target);
+
+    // Only the backup has been asked for, and it is still running
+    expect($calls->getArrayCopy())->toBe(['backup']);
+    expect($task->status)->toBe('in_progress');
+    expect(OrgBackup::where('action', 'backup')->sole()->status)->toBe('running');
+    expect(OrgBackup::where('action', 'backup')->sole()->job_id)->not->toBeEmpty();
+
+    Action::complete($task);
+    expect($calls->getArrayCopy())->toBe(['backup']);
+
+    // The service reports the backup done: now the restore is started, from its snapshot
+    remoteReports('backup', 'completed', 'snapshot-1');
+    Action::complete($task);
+
+    expect($calls->getArrayCopy())->toBe(['backup', 'restore']);
+    $restore = OrgBackup::where('action', 'restore')->sole();
+    expect($restore->backup_name)->toBe('snapshot-1');
+    expect($restore->status)->toBe('running');
+
+    // The app is not switched until the data is on the new server
+    Action::complete($task);
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect(Task::where('action_slug', 'application_update')->count())->toBe(0);
+
+    remoteReports('restore', 'completed');
+    Action::complete($task);
+
+    $new = OrgServer::where('organization_id', $instance->organization_id)->where('server_id', $target->id)->first();
+    expect($instance->fresh()->database_server_id)->toBe($new->id);
+    $update = Task::find($task->fresh()->getValue('update_task_id'));
+    expect($update->action_slug)->toBe('application_update');
+
+    Action::complete($update);
+    expect($task->fresh()->status)->toBe('complete');
+    expect($instance->fresh()->status)->toBe('active');
+});
+
+it('does not start the restore twice when checked again before the backup finishes', function () {
+    [$instance] = appOnDatabaseServer();
+    $calls = fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, databaseServer('new-db'));
+    remoteReports('backup', 'completed', 'snapshot-1');
+
+    Action::complete($task);
+    Action::complete($task);
+    Action::complete($task);
+
+    expect($calls->getArrayCopy())->toBe(['backup', 'restore']);
+    expect(OrgBackup::where('action', 'restore')->count())->toBe(1);
+});
+
+it('stays on the old server when the remote backup fails', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $calls = fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, databaseServer('new-db'));
+    remoteReports('backup', 'failed');
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->error_message)->toContain('old-db');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect($instance->fresh()->status)->toBe('active');
+    expect($calls->getArrayCopy())->toBe(['backup']);
+});
+
+it('stays on the old server when the remote restore fails', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, databaseServer('new-db'));
+    remoteReports('backup', 'completed', 'snapshot-1');
+    Action::complete($task);
+    remoteReports('restore', 'failed');
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('failed');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect($instance->fresh()->status)->toBe('active');
+    expect(Task::where('action_slug', 'application_update')->count())->toBe(0);
+});
+
+it('gives up when the remote service never reports back', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, databaseServer('new-db'));
+    $task->custom_values = array_merge($task->customValues(), [
+        'stage_started_at' => now()->subMinutes(ApplicationDatabaseMigrate::COPY_TIMEOUT_MINUTES + 1)->toIso8601String(),
+    ]);
+    $task->save();
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('failed');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect($instance->fresh()->status)->toBe('active');
+});
+
+it('fails when the finished backup has no file to restore', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $calls = fakeRemoteBackupDriver();
+
+    $task = startMigration($instance, databaseServer('new-db'));
+    remoteReports('backup', 'completed');
+
+    Action::complete($task);
+
+    expect($task->fresh()->status)->toBe('failed');
+    expect($instance->fresh()->database_server_id)->toBe($old->id);
+    expect($calls->getArrayCopy())->toBe(['backup']);
+});
+
 it('only offers other database servers that can be backed up and restored', function () {
     [$instance, $old] = appOnDatabaseServer();
     $target = databaseServer('new-db');
@@ -282,6 +453,16 @@ it('only allows drivers that declare they can work against a named server', func
     expect(ApplicationDatabaseMigrate::blocker($instance, $remote_db))->toBe(__('messages.database_migration.invalid_server'));
     expect(ApplicationDatabaseMigrate::blocker($instance, $capable_db))->toBeNull();
     expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->sort()->values()->all())->toBe([$target->id, $capable_db->id]);
+});
+
+it('refuses a second server record for the host the app is already on', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $alias = databaseServer('alias-db');
+    $alias->host = $old->server->host;
+    $alias->save();
+
+    expect(ApplicationDatabaseMigrate::blocker($instance, $alias))->toBe(__('messages.database_migration.same_server'));
+    expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->all())->toBe([]);
 });
 
 it('refuses to migrate an app that is not active or has no database', function () {
