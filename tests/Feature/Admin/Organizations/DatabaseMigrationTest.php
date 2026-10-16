@@ -7,6 +7,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Integrations\ServerManagers\AppDatabase\BackupInterface;
+use App\Integrations\ServerManagers\AppDatabase\DatabaseInterface;
 use App\Organization;
 use App\OrgBackup;
 use App\OrgServer;
@@ -15,6 +16,8 @@ use App\Support\Facades\Action;
 use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 use ReflectionProperty;
 use Tests\Support\TestSupports;
@@ -232,5 +235,41 @@ class DatabaseMigrationTest extends TestCase
         // A target only applies to restores, a source only to dumps
         $restore->settings = ['source_org_server_id' => $new->id];
         $this->assertSame('old-db.db.internal', $host($restore));
+    }
+
+    public function test_backups_connect_with_the_apps_own_database_password()
+    {
+        $this->appInstance->updateSetting('db_password', Crypt::encryptString('app-specific-password'));
+        $this->appInstance->save();
+
+        $password = (new ReflectionProperty(BackupInterface::class, 'password'))
+            ->getValue(new BackupInterface($this->completedBackup()));
+
+        $this->assertSame('app-specific-password', $password);
+        $this->assertNotSame($this->organization->secretpw, $password);
+    }
+
+    public function test_the_database_user_added_on_a_server_has_the_apps_own_database_password()
+    {
+        $this->appInstance->updateSetting('db_password', Crypt::encryptString('app-specific-password'));
+        $this->appInstance->save();
+
+        $statements = [];
+        $pdo = Mockery::mock();
+        $pdo->shouldReceive('quote')->andReturnUsing(fn ($value) => "'{$value}'");
+        $connection = Mockery::mock();
+        $connection->shouldReceive('getPdo')->andReturn($pdo);
+        $connection->shouldReceive('statement')->andReturnUsing(function ($sql) use (&$statements) {
+            $statements[] = $sql;
+
+            return true;
+        });
+        DB::shouldReceive('purge');
+        DB::shouldReceive('connection')->with('app_db')->andReturn($connection);
+
+        (new DatabaseInterface($this->old, $this->appInstance))->add();
+
+        $this->assertContains("CREATE USER IF NOT EXISTS `org_demo`@'%' IDENTIFIED BY 'app-specific-password'", $statements);
+        $this->assertContains("ALTER USER `org_demo`@'%' IDENTIFIED BY 'app-specific-password'", $statements);
     }
 }
