@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\AppInstance;
 use App\Application;
 use App\FailedJob;
 use App\Http\Controllers\Controller;
@@ -126,23 +125,19 @@ class Dashboard extends Controller
 
     private function appUsage()
     {
-        $rows = AppInstance::selectRaw('application_id, status, count(*) as total')
-            ->groupBy('application_id', 'status')
+        return Application::withCount([
+            'instances as total_instances',
+            'instances as active_instances' => fn ($query) => $query->where('status', 'active'),
+        ])
+            ->having('total_instances', '>', 0)
+            ->orderByDesc('total_instances')
             ->get()
-            ->groupBy('application_id');
-
-        $applications = Application::whereIn('id', $rows->keys())->get()->keyBy('id');
-
-        return $rows->map(function ($status_rows, $application_id) use ($applications) {
-            $counts = $status_rows->pluck('total', 'status');
-
-            return [
-                'id' => (int) $application_id,
-                'name' => $applications[$application_id]->name ?? __('labels.unknown'),
-                'active' => (int) ($counts['active'] ?? 0),
-                'total' => (int) $status_rows->sum('total'),
-            ];
-        })->sortByDesc('total')->values();
+            ->map(fn (Application $application) => [
+                'id' => $application->id,
+                'name' => $application->name,
+                'active' => (int) $application->active_instances,
+                'total' => (int) $application->total_instances,
+            ]);
     }
 
     private function buildWarnings(
