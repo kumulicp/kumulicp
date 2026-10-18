@@ -12,6 +12,7 @@ use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Backup;
 use App\Task;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -22,6 +23,11 @@ use Throwable;
  *  2. restore into the new server (which adds the database + user there)
  *  3. point the app at the new server
  *  4. standard app update, so the chart picks up the new database host
+ *
+ * The backup and restore may run on another service (kmanager) that reports
+ * back when it is done, so each step is only started once the one before it is
+ * confirmed complete: run() starts the first, and complete(), which the task
+ * runner calls every minute, moves on from there.
  *
  * Nothing on the old server is ever modified, so any failure before the app
  * comes back up on the new server is rolled back by pointing the app at the
@@ -38,6 +44,14 @@ class ApplicationDatabaseMigrate extends Action
     // How long the app has, after being pointed at the new database, to come
     // back up on it before the migration is rolled back.
     public const UPDATE_TIMEOUT_MINUTES = 20;
+
+    // How long the backup, and then the restore, each have to finish before
+    // the migration is given up on (the app is still on the old database then).
+    public const COPY_TIMEOUT_MINUTES = 180;
+
+    // Longest a single pass over the migration may hold its lock for: a driver
+    // that backs up or restores before it returns can take a while.
+    private const LOCK_SECONDS = 14400;
 
     // How long the fresh backup is kept as a safety copy of the old data.
     public const BACKUP_RETENTION_DAYS = 14;
@@ -88,7 +102,9 @@ class ApplicationDatabaseMigrate extends Action
             return __('messages.database_migration.invalid_server');
         }
 
-        if ($current->server_id === $target_server->id) {
+        // Restoring replaces the database it loads into, so a different server
+        // record for the same host is just as much the app's live database.
+        if ($current->server_id === $target_server->id || $current->server->host === $target_server->host) {
             return __('messages.database_migration.same_server');
         }
 
@@ -126,33 +142,7 @@ class ApplicationDatabaseMigrate extends Action
                 'target_org_server_id' => $target->id,
             ]);
 
-            // 1. Fresh backup, taken from the app's own database server
-            $backup = self::record($task, 'backup', $previous, ['source_org_server_id' => $previous->id]);
-            $backup->delete_at = now()->addDays(self::BACKUP_RETENTION_DAYS);
-            Backup::connect($backup)->run();
-            self::finish($backup);
-
-            // 2. Restore into the new server, which adds the database and user there
-            $restore = self::record($task, 'restore', $previous, ['target_org_server_id' => $target->id], $backup->backup_name);
-            Backup::connect($restore)->restore();
-            self::finish($restore);
-
-            // 3. Cut over
-            self::remember($task, ['cutover_at' => now()->toIso8601String()]);
-            $app_instance->database_server()->associate($target);
-            $app_instance->save();
-
-            // 4. Standard update so the chart gets the new database host. A
-            //    stale update from before the cutover would be configured
-            //    for the old server.
-            ActionFacade::clear('application_update', $app_instance);
-            $update = ActionFacade::execute(new ApplicationUpdate($app_instance), $task, true);
-
-            if (! $update) {
-                throw new \Exception(__('messages.database_migration.update_not_scheduled'));
-            }
-
-            self::remember($task, ['update_task_id' => $update->id]);
+            self::advance($task);
         } catch (Throwable $e) {
             report($e);
 
@@ -170,9 +160,125 @@ class ApplicationDatabaseMigrate extends Action
 
     public static function complete(Task &$task)
     {
-        // Still copying; the app hasn't been pointed at the new server yet.
+        try {
+            self::advance($task);
+        } catch (Throwable $e) {
+            report($e);
+
+            self::rollback($task, $e->getMessage());
+        }
+    }
+
+    /**
+     * Moves the migration on as far as it can go right now. run() and the
+     * every-minute completion check can overlap, and a step started twice
+     * would be a second restore or a second cut over, so only one at a time.
+     */
+    private static function advance(Task $task): void
+    {
+        Cache::lock("database-migration:{$task->id}", self::LOCK_SECONDS)->get(function () use ($task) {
+            $task->refresh();
+
+            while (self::step($task)) {
+                //
+            }
+        });
+    }
+
+    /**
+     * Does what the stage the migration is at calls for. True if it moved on
+     * to the next stage (which may already be finished, for a driver that
+     * completes before returning), false if it has to wait.
+     */
+    private static function step(Task $task): bool
+    {
+        if ($task->status !== 'in_progress') {
+            return false;
+        }
+
+        return match ($task->getValue('stage')) {
+            null => self::startBackup($task),
+            'backup' => self::startRestore($task),
+            'restore' => self::cutOver($task),
+            'update' => self::finishUpdate($task),
+            default => false,
+        };
+    }
+
+    // 1. Fresh backup, taken from the app's own database server. A complete
+    //    copy: whatever routine backups leave out would be missing from the
+    //    new database.
+    private static function startBackup(Task $task): bool
+    {
+        $previous = OrgServer::findOrFail($task->getValue('previous_org_server_id'));
+
+        $backup = self::record($task, 'backup', $previous, ['source_org_server_id' => $previous->id, 'full_copy' => true]);
+        $backup->delete_at = now()->addDays(self::BACKUP_RETENTION_DAYS);
+        $backup->save();
+
+        self::remember($task, ['stage' => 'backup', 'backup_id' => $backup->id, 'stage_started_at' => now()->toIso8601String()]);
+        self::launch($backup, 'run');
+
+        return true;
+    }
+
+    // 2. Restore into the new server, which adds the database and user there
+    private static function startRestore(Task $task): bool
+    {
+        $backup = OrgBackup::findOrFail($task->getValue('backup_id'));
+
+        if (! self::finished($task, $backup)) {
+            return false;
+        }
+
+        if (! $backup->backup_name) {
+            throw new \Exception(__('messages.exception.no_backup_file'));
+        }
+
+        $previous = OrgServer::findOrFail($task->getValue('previous_org_server_id'));
+        $restore = self::record($task, 'restore', $previous, ['target_org_server_id' => $task->getValue('target_org_server_id')], $backup->backup_name);
+
+        self::remember($task, ['stage' => 'restore', 'restore_id' => $restore->id, 'stage_started_at' => now()->toIso8601String()]);
+        self::launch($restore, 'restore');
+
+        return true;
+    }
+
+    // 3. Cut over: the data is on the new server, so point the app at it.
+    //
+    // 4. Standard update so the chart gets the new database host. A stale
+    //    update from before the cutover would be configured for the old server.
+    private static function cutOver(Task $task): bool
+    {
+        $restore = OrgBackup::findOrFail($task->getValue('restore_id'));
+
+        if (! self::finished($task, $restore)) {
+            return false;
+        }
+
+        $app_instance = $task->app_instance;
+
+        self::remember($task, ['stage' => 'update', 'cutover_at' => now()->toIso8601String()]);
+        $app_instance->database_server()->associate(OrgServer::findOrFail($task->getValue('target_org_server_id')));
+        $app_instance->save();
+
+        ActionFacade::clear('application_update', $app_instance);
+        $update = ActionFacade::execute(new ApplicationUpdate($app_instance), $task, true);
+
+        if (! $update) {
+            throw new \Exception(__('messages.database_migration.update_not_scheduled'));
+        }
+
+        self::remember($task, ['update_task_id' => $update->id]);
+
+        return false;
+    }
+
+    private static function finishUpdate(Task $task): bool
+    {
+        // Cut over, but the update that applies it hasn't been scheduled yet
         if (! $update_id = $task->getValue('update_task_id')) {
-            return;
+            return false;
         }
 
         $update = Task::find($update_id);
@@ -190,14 +296,64 @@ class ApplicationDatabaseMigrate extends Action
             $task->complete();
             $task->groupNotified();
 
-            return;
+            return false;
         }
 
         $timed_out = Carbon::parse($task->getValue('cutover_at'))->addMinutes(self::UPDATE_TIMEOUT_MINUTES)->isPast();
 
         if (! $update || $update->status === 'failed' || $timed_out) {
-            self::rollback($task, $update?->error_message ?: __('messages.database_migration.update_failed'));
+            throw new \Exception($update?->error_message ?: __('messages.database_migration.update_failed'));
         }
+
+        return false;
+    }
+
+    /**
+     * Starts a backup or restore. A driver that does the work before it
+     * returns says so ('completed'); one that hands it to another service
+     * leaves the record running, to be completed (or failed) by that
+     * service's callback.
+     */
+    private static function launch(OrgBackup $backup, string $method): void
+    {
+        $response = Backup::connect($backup)->$method();
+
+        if (! empty($response['job_id'])) {
+            $backup->job_id = $response['job_id'];
+        }
+
+        // Only a result that is already known is written: for the others the
+        // callback may have got there first.
+        $status = $response['status'] ?? 'running';
+        if ($status !== 'running') {
+            $backup->status = $status;
+            $backup->completed_at = $status === 'completed' ? now() : null;
+        }
+
+        $backup->save();
+    }
+
+    /**
+     * Whether a backup or restore has finished, so the next stage can start.
+     * Throws if it failed, or has been running longer than it should.
+     */
+    private static function finished(Task $task, OrgBackup $backup): bool
+    {
+        $backup->refresh();
+
+        if ($backup->status === 'completed') {
+            return true;
+        }
+
+        if ($backup->status !== 'running') {
+            throw new \Exception(__('messages.database_migration.copy_failed', ['step' => __('labels.'.$backup->action)]));
+        }
+
+        if (Carbon::parse($task->getValue('stage_started_at'))->addMinutes(self::COPY_TIMEOUT_MINUTES)->isPast()) {
+            throw new \Exception(__('messages.database_migration.copy_timed_out', ['step' => __('labels.'.$backup->action)]));
+        }
+
+        return false;
     }
 
     /**
@@ -277,13 +433,6 @@ class ApplicationDatabaseMigrate extends Action
         $backup->save();
 
         return $backup;
-    }
-
-    private static function finish(OrgBackup $backup): void
-    {
-        $backup->status = 'completed';
-        $backup->completed_at = now();
-        $backup->save();
     }
 
     // run() and ActionService::run() both persist custom values when the
