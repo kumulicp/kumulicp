@@ -34,7 +34,7 @@ class Dashboard extends Controller
         $plans = Plan::withCount('subscribers')
             ->orderByDesc('subscribers_count')
             ->get()
-            ->map(fn ($plan) => [
+            ->map(fn (Plan $plan) => [
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'status' => $plan->status,
@@ -92,7 +92,7 @@ class Dashboard extends Controller
         $applications_total = Application::count();
         $applications_enabled = Application::where('enabled', true)->count();
 
-        return inertia()->render('Admin/Dashboard/Overview', [
+        return inertia()->render('Admin/Dashboard/DashboardOverview', [
             'organizations' => $organizations,
             'applications' => [
                 'total' => $applications_total,
