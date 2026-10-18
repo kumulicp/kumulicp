@@ -101,6 +101,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
                 Route::resource('backups', 'Admin\Organizations\BackupRestore');
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore');
+                Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore');
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
@@ -110,6 +111,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
                         Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
+                        Route::post('migrate-database', 'Admin\Organizations\Applications@migrate_database')->name('organizations.app.migrate_database');
                         Route::delete('', 'Admin\Organizations\Applications@delete')->name('organizations.app.delete');
                         Route::get('activate/{version}', 'Admin\Organizations\Applications@activate')->name('organizations.app.activate');
                         Route::get('upgrade/{version}', 'Admin\Organizations\Applications@upgrade')->name('organizations.app.upgrade');

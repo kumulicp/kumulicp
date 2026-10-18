@@ -6,6 +6,7 @@ use App\BackupSchedule;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\OrgBackup;
+use App\Server;
 use App\Services\OrgServerService;
 use App\Support\Facades\Backup;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class BackupRestore extends Controller
 {
     public function index(Organization $organization)
     {
-        $backups = $organization->backups()->with('app_instance.application')->orderBy('scheduled_at', 'desc')->paginate(30);
+        $backups = $organization->backups()->with(['app_instance.application', 'app_instance.database_server'])->orderBy('scheduled_at', 'desc')->paginate(30);
 
         return inertia()->render('Admin/Organizations/Backups/BackupsList', [
             'organization' => [
@@ -28,6 +29,12 @@ class BackupRestore extends Controller
                     'text' => $app->label." ({$app->application->name})",
                 ];
             }),
+            'database_servers' => Server::where('type', 'database')
+                ->orderBy('name')
+                ->get()
+                ->filter(fn (Server $server) => Backup::supportsServerTargets($server))
+                ->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])
+                ->values(),
             'backups' => $backups->map(function ($backup) {
                 return [
                     'id' => $backup->id,
@@ -39,6 +46,7 @@ class BackupRestore extends Controller
                     'action' => $backup->action,
                     'source' => $backup->source,
                     'type' => $backup->type,
+                    'database_server_id' => $backup->app_instance?->database_server?->server_id,
                     'status' => $backup->status,
                     'completed_at' => $backup->completed_at,
                     'scheduled_at' => $backup->scheduled_at,
@@ -108,8 +116,35 @@ class BackupRestore extends Controller
         return redirect('/admin/organizations/'.$organization->id.'/backups')->with('success', __('admin.backups.scheduled'));
     }
 
-    public function restore(Organization $organization, OrgBackup $backup)
+    /**
+     * Restores a backup, by default to the server it was taken from. For a
+     * database backup, `database_server_id` restores it into another database
+     * server instead (adding the app's database and user there); the app
+     * itself keeps using its current server -- moving the app is what
+     * ApplicationDatabaseMigrate is for.
+     */
+    public function restore(Request $request, Organization $organization, OrgBackup $backup)
     {
+        abort_unless($backup->organization_id === $organization->id, 404);
+
+        $validated = $request->validate([
+            'database_server_id' => 'nullable|integer|exists:servers,id',
+        ]);
+
+        $redirect = "/admin/organizations/{$organization->id}/backups";
+        $settings = null;
+        $server = null;
+
+        if ($validated['database_server_id'] ?? null) {
+            $server = Server::findOrFail($validated['database_server_id']);
+
+            if ($backup->type !== 'database' || ! $backup->app_instance || $server->type !== 'database' || ! $server->host || ! Backup::supportsServerTargets($server)) {
+                return redirect($redirect)->with('error', __('admin.backups.denied.restore_server'));
+            }
+
+            $settings = ['target_org_server_id' => OrgServerService::forServer($organization, $server)->get()->id];
+        }
+
         $restore = new OrgBackup;
         $restore->organization_id = $organization->id;
         $restore->app_instance_id = $backup->app_instance_id;
@@ -120,9 +155,10 @@ class BackupRestore extends Controller
         $restore->scheduled_at = now();
         $restore->backup_name = $backup->backup_name;
         $restore->org_server_id = $backup->org_server_id;
+        $restore->settings = $settings;
         $restore->save();
 
-        return redirect("/admin/organizations/{$organization->id}/backups")->with('success', __('admin.backups.restoring'));
+        return redirect($redirect)->with('success', $server ? __('admin.backups.restoring_to', ['server' => $server->name]) : __('admin.backups.restoring'));
     }
 
     public function destroy(Request $request, Organization $organization, OrgBackup $backup)

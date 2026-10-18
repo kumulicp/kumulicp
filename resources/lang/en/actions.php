@@ -8,6 +8,7 @@ return [
     'deactivating_app' => 'Deactivating :app',
     'deleting_app' => 'Deleting :app',
     'updating_app' => 'Updating :app',
+    'migrating_app_database' => 'Migrating :app database to :server',
     'upgrading_app' => 'Upgrading :app',
     'upgrading_all_apps' => 'Upgrading all :app to :version',
     'updating_app_customizations' => 'Updating :app Customizations',

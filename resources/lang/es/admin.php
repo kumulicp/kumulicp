@@ -145,8 +145,10 @@ return [
             'upgrading' => ':app mejorándose',
             'deleting' => ':app eliminándose',
             'run_job' => ':app :job ejecutándose',
+            'migrating_database' => 'La base de datos de :app se está migrando a :server',
             'denied' => [
                 'version_exists' => 'La versión que seleccionaste no existe',
+                'migration_running' => 'Ya hay una migración de base de datos a ese servidor en curso o que requiere atención -- revisa la página de Tareas',
             ],
         ],
     ],
@@ -155,6 +157,7 @@ return [
         'added' => 'Copia de seguridad de :time agregada',
         'scheduled' => 'La copia de seguridad ha sido programada',
         'restoring' => 'La copia de seguridad será restaurada',
+        'restoring_to' => 'La copia de seguridad será restaurada en :server',
         'cancelled' => 'Copia de seguridad programada para :time fue cancelada',
         'recurring' => [
             'added' => 'Copia de seguridad recurrente agregada',
@@ -165,6 +168,7 @@ return [
         'denied' => [
             'exists' => 'El tipo de copia de seguridad no existe',
             'delete' => 'La copia de seguridad programada para :time no se puede eliminar',
+            'restore_server' => 'Esta copia de seguridad no se puede restaurar en el servidor de base de datos seleccionado',
         ],
     ],
     'settings' => [
