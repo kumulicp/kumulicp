@@ -9,7 +9,7 @@ import { Link } from '@inertiajs/vue3'
   </Head>
 
   <div class="admin-dashboard">
-    <va-card class="mb-4">
+    <va-card class="mb-2">
       <va-card-title>{{ $t('admin.dashboard.warnings') }}</va-card-title>
       <va-card-content>
         <va-alert v-if="warnings.length === 0" color="success" icon="check_circle">
@@ -30,7 +30,7 @@ import { Link } from '@inertiajs/vue3'
 
     <div class="row row-equal mb-1">
       <div class="flex xs12 sm6 md3">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0">{{ organizations.total }}</h2>
             <p>{{ $t('admin.dashboard.organizations') }}</p>
@@ -39,7 +39,7 @@ import { Link } from '@inertiajs/vue3'
         </va-card>
       </div>
       <div class="flex xs12 sm6 md3">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0">{{ applications.total }}</h2>
             <p>{{ $t('admin.dashboard.apps_catalog') }}</p>
@@ -48,7 +48,7 @@ import { Link } from '@inertiajs/vue3'
         </va-card>
       </div>
       <div class="flex xs12 sm6 md3">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0" :class="{ 'text-danger': stats.failed_jobs > 0 }">{{ stats.failed_jobs }}</h2>
             <p>{{ $t('admin.dashboard.failed_jobs') }}</p>
@@ -56,7 +56,7 @@ import { Link } from '@inertiajs/vue3'
         </va-card>
       </div>
       <div class="flex xs12 sm6 md3">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0" :class="{ 'text-warning': stats.error_logs_last_day > 0 }">{{ stats.error_logs_last_day }}</h2>
             <p>{{ $t('admin.dashboard.error_logs_24h') }}</p>
@@ -67,7 +67,7 @@ import { Link } from '@inertiajs/vue3'
 
     <div class="row">
       <div class="flex xs12 lg6">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.plan_usage') }}</va-card-title>
           <va-card-content>
             <VaScrollContainer color="primary" horizontal>
@@ -96,7 +96,7 @@ import { Link } from '@inertiajs/vue3'
         </va-card>
       </div>
       <div class="flex xs12 lg6">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.app_usage') }}</va-card-title>
           <va-card-content>
             <VaScrollContainer color="primary" horizontal>
@@ -124,7 +124,7 @@ import { Link } from '@inertiajs/vue3'
 
     <div class="row">
       <div class="flex xs12 lg6">
-        <va-card class="mb-4">
+        <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.task_status') }}</va-card-title>
           <va-card-content>
             <table class="va-table va-table--hoverable mt-3">
@@ -137,8 +137,9 @@ import { Link } from '@inertiajs/vue3'
             </table>
           </va-card-content>
         </va-card>
-
-        <va-card class="mb-4">
+      </div>
+      <div class="flex xs12 lg6">
+        <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.security_findings') }}</va-card-title>
           <va-card-content>
             <table class="va-table va-table--hoverable mt-3">
@@ -152,9 +153,10 @@ import { Link } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
       </div>
-
-      <div class="flex xs12 lg6">
-        <va-card class="mb-4">
+    </div>
+    <div class="row">
+      <div class="flex xs12">
+        <va-card class="mb-2">
           <va-card-title>
             <span>{{ $t('admin.dashboard.recent_failed_tasks') }}</span>
             <Link href="/admin/server/tasks">{{ $t('admin.dashboard.view_all') }}</Link>
@@ -183,8 +185,11 @@ import { Link } from '@inertiajs/vue3'
             </VaScrollContainer>
           </va-card-content>
         </va-card>
-
-        <va-card class="mb-4">
+      </div>
+    </div>
+    <div class="row">
+      <div class="flex xs12 lg6">
+        <va-card class="mb-2">
           <va-card-title>
             <span>{{ $t('admin.dashboard.recent_failed_scans') }}</span>
             <Link href="/admin/server/security/scans">{{ $t('admin.dashboard.view_all') }}</Link>
