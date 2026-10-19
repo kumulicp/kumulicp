@@ -21,6 +21,7 @@ use Illuminate\Support\Arr;
  * @property bool $email_enabled
  * @property bool $archive
  * @property-read Collection<int, Organization> $subscribers
+ * @property-read int|null $subscribers_count
  * @property-read Server|null $email_server
  */
 class Plan extends Model

@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $can_update_domain
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
+ * @property-read int|null $total_instances
+ * @property-read int|null $active_instances
  * @property-read Collection<int, Application> $children
  * @property-read Application|null $parent_app
  * @property-read Collection<int, AppVersion> $versions

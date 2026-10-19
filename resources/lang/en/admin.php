@@ -1,6 +1,17 @@
 <?php
 
 return [
+    'dashboard' => [
+        'dashboard' => 'Dashboard',
+        'warning_messages' => [
+            'failed_jobs' => ':count queued job(s) have failed and need attention.',
+            'failed_tasks' => ':count task(s) have failed recently.',
+            'critical_findings' => ':count critical security finding(s) are unresolved.',
+            'high_findings' => ':count high-severity security finding(s) are unresolved.',
+            'servers_pending' => ':count server(s) are pending validation.',
+            'error_logs' => ':count error-level log entries in the last 24 hours.',
+        ],
+    ],
     'servers' => [
         'authentik' => [
             'host' => 'Set the domain name here: authentik.example.com. This will override the default hostname for the app instance. (Requires manual app upgrade)',
