@@ -31,6 +31,10 @@ class Chart
         return $this->namespace ?? $this->organization->slug;
     }
 
+    // The kind of workload this chart creates (the kumulicp.io/type label), so
+    // NetworkPolicies can select it. Job charts override this.
+    public string $type = 'app';
+
     // Labels stamped on everything this chart creates so the cluster resources
     // can be traced back to the app and the specific app instance they came from.
     public function labels(): array
@@ -38,6 +42,7 @@ class Chart
         return [
             'kumulicp.io/app' => $this->labelValue($this->app_instance->application->slug),
             'kumulicp.io/instance' => $this->labelValue($this->app_instance->name),
+            'kumulicp.io/type' => $this->type,
         ];
     }
 

@@ -10,6 +10,8 @@ class JobChart extends Chart
 {
     public $chart = [];
 
+    public string $type = 'job';
+
     public function persistentVolumeClaim()
     {
         if ($pvc_name = $this->app_instance->getOverride('pvc.name')) {

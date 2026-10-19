@@ -3,6 +3,9 @@
 use App\AppPlan;
 use App\AppVersion;
 use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Rancher\Charts\Job\MySQLJobChart;
+use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
+use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
 use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
 use App\Organization;
@@ -29,6 +32,7 @@ it('labels charts with the app and instance they came from', function () {
     $expected = [
         'kumulicp.io/app' => $app_instance->application->slug,
         'kumulicp.io/instance' => $app_instance->name,
+        'kumulicp.io/type' => 'app',
     ];
 
     $chart = new DemoHelmChart($organization, $app_instance);
@@ -45,6 +49,18 @@ it('labels charts with the app and instance they came from', function () {
 
     expect((new IngressRedirectChart($organization, $app_instance))->values()['metadata']['labels'])->toBe($expected);
     expect((new MiddlewareRedirectChart($organization, $app_instance))->values()['metadata']['labels'])->toBe($expected);
+});
+
+it('labels job charts as jobs rather than apps', function () {
+    $organization = Organization::factory()->create();
+    $app_instance = chartLabelsAppInstance($organization);
+
+    foreach ([WordpressJobChart::class, NextcloudJobChart::class, MySQLJobChart::class] as $job_chart) {
+        $labels = (new $job_chart($organization, $app_instance))->labels();
+
+        expect($labels['kumulicp.io/type'])->toBe('job');
+        expect($labels['kumulicp.io/instance'])->toBe($app_instance->name);
+    }
 });
 
 it('sanitizes label values to be valid kubernetes labels', function () {
