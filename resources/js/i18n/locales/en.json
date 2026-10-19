@@ -466,7 +466,7 @@
       "editVersion": "Edit Version",
       "versionRoles": "Version Roles",
       "pullSecret": "Image Pull Secret",
-      "addPullSecret": "Add Pull Secret",
+      "addPullSecret": "Add Image Registry",
       "helmChartRepoAuth": "Helm Chart Repo Authentication",
       "helmRepoSecretNone": "None (public repo)",
       "addHelmRepoSecret": "Add Repo Secret"
