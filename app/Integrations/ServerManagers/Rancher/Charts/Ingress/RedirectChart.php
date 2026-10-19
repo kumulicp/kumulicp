@@ -30,6 +30,7 @@ class RedirectChart extends IngressChart
                     'cert-manager.io/cluster-issuer' => Application::instance($this->app_instance)->configuration('ingress-annotation-cluster_issuer') ?? 'letsencrypt-production',
                     'traefik.ingress.kubernetes.io/router.middlewares' => "$namespace-{$this->name}@kubernetescrd",
                 ],
+                'labels' => $this->labels(),
                 'namespace' => $namespace,
                 'name' => $this->name,
             ],
