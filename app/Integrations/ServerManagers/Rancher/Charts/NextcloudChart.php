@@ -160,6 +160,23 @@ class NextcloudChart extends HelmChart
         ];
     }
 
+    // The nextcloud chart has no `commonLabels`, so each resource kind it
+    // creates takes labels under its own key.
+    public function labelValues(): array
+    {
+        $labels = $this->labels();
+
+        return [
+            'deploymentLabels' => $labels,
+            'podLabels' => $labels,
+            'ingress' => ['labels' => $labels],
+            'persistence' => ['labels' => $labels],
+            'cronjob' => ['cronjob' => ['labels' => $labels, 'podLabels' => $labels]],
+            'imaginary' => ['podLabels' => $labels],
+            'metrics' => ['podLabels' => $labels],
+        ];
+    }
+
     // Raw config.php contents mounted at config/previews.config.php -- see
     // https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/config_sample_php_parameters.html#previews
     // Kept separate from the chart's own imaginary.config.php (activated via
