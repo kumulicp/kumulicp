@@ -466,7 +466,6 @@
       "editVersion": "Editar Versión",
       "versionRoles": "Roles de la Versión",
       "pullSecret": "Secreto de Extracción de Imagen",
-      "pullSecretNone": "Ninguno (registro público)",
       "addPullSecret": "Agregar Secreto de Extracción",
       "helmChartRepoAuth": "Autenticación del Repositorio de Helm Chart",
       "helmRepoSecretNone": "Ninguno (repositorio público)",

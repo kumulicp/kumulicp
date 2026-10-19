@@ -155,8 +155,7 @@ import { useForm } from '@inertiajs/vue3'
                   id="pullSecretId"
                   class="my-2"
                   immediateValidation
-                  clearable
-                  :placeholder="$t('admin.versions.pullSecretNone')"
+                  required-mark
                   :options="pull_secrets"
                   text-by="name"
                   value-by="id"

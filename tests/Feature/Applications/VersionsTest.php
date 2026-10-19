@@ -61,10 +61,13 @@ it('creates a version with recommendations — copies settings from app profile'
 it('creates a version with previous_version — copies settings, roles and admin_path', function () {
     $roles = $this->demoApp->roles()->pluck('id')->toArray();
 
+    $pull_secret = RepoSecret::factory()->create(['registry' => 'registry3.example.com']);
+
     $source = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,
         'name' => '1.0',
         'admin_path' => '/source-admin',
+        'pull_secret_id' => $pull_secret->id,
         'settings' => ['chart_version' => '1.2.3', 'helm_repo_name' => 'source-chart'],
         'roles' => ['order' => $roles, 'default_admin_groups' => [$roles[0]]],
     ]);
@@ -84,6 +87,7 @@ it('creates a version with previous_version — copies settings, roles and admin
     expect($version->setting('chart_version'))->toBe('1.2.3');
     expect($version->setting('helm_repo_name'))->toBe('source-chart');
     expect($version->admin_path)->toBe('/source-admin');
+    expect($version->pull_secret_id)->toBe($pull_secret->id);
     expect($version->roles['order'])->toBe($roles);
     expect($version->roles['default_admin_groups'])->toBe([$roles[0]]);
 });
@@ -155,6 +159,20 @@ it('updates version settings and default roles', function () {
     expect($version->pullSecret->registry)->toBe('registry2.example.com');
     expect($version->roles['default_admin_groups'])->toBe([$roles[0]]);
     expect($version->roles['default_user_groups'])->toBe([$roles[1]]);
+});
+
+it('requires an image registry when updating a version', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '1.0',
+    ]);
+
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}", [
+        'version' => '1.0',
+        'announcement_location' => 'none',
+    ]);
+
+    $response->assertSessionHasErrors('pull_secret_id');
 });
 
 // ─── Roles (order) ───────────────────────────────────────────────────────────

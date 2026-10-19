@@ -60,11 +60,13 @@ class Versions extends Controller
             'copy_from' => 'required|in:recommendations,previous_version,none',
             'copy_version' => 'exclude_unless:copy_from,previous_version|required|exists:app_versions,id',
         ]);
+        $pull_secret_id = null;
         if ($validatedData['copy_from'] === 'previous_version' && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
             $admin_path = $copy_version->admin_path;
             $roles = $copy_version->roles;
+            $pull_secret_id = $copy_version->pull_secret_id;
         } elseif ($validatedData['copy_from'] === 'recommendations') {
             $recommendations = ApplicationFacade::profile($app)->recommendations();
             $settings = [
@@ -89,6 +91,7 @@ class Versions extends Controller
         $app_version->roles = $roles;
         $app_version->status = 'deactivated';
         $app_version->admin_path = $admin_path;
+        $app_version->pull_secret_id = $pull_secret_id;
         $app_version->save();
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
@@ -194,7 +197,7 @@ class Versions extends Controller
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
-            'pull_secret_id' => 'nullable|integer|exists:repo_secrets,id',
+            'pull_secret_id' => 'required|integer|exists:repo_secrets,id',
             'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
@@ -209,7 +212,7 @@ class Versions extends Controller
         $version->name = $request->input('version');
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
-        $version->pull_secret_id = $request->input('pull_secret_id') ?: null;
+        $version->pull_secret_id = $validatedData['pull_secret_id'];
         $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
