@@ -94,18 +94,18 @@ import { useForm } from '@inertiajs/vue3'
                   class="my-2"
                   immediateValidation
                   clearable
-                  :placeholder="$t('admin.versions.helmRepoSecretNone')"
+                  :placeholder="$t('admin.versions.helmRepoNone')"
                   :options="helm_repo_secrets"
                   text-by="name"
                   value-by="id"
                   :error="$page.props.errors.helm_repo_secret_id"
                   :error-messages="$page.props.errors.helm_repo_secret_id"
                   />
-                <va-button id="addHelmRepoSecret" preset="secondary" size="small" class="my-2" @click="showAddHelmRepoSecret = !showAddHelmRepoSecret">{{ $t('admin.versions.addHelmRepoSecret') }}</va-button>
-                <va-modal v-model="showAddHelmRepoSecret" no-outside-dismiss no-padding size="small" class="p-0">
+                <va-button id="addHelmRepo" preset="secondary" size="small" class="my-2" @click="showAddHelmRepo = !showAddHelmRepo">{{ $t('admin.versions.addHelmRepo') }}</va-button>
+                <va-modal v-model="showAddHelmRepo" no-outside-dismiss no-padding size="small" class="p-0">
                   <template #content="{ ok }">
-                    <form @submit.prevent="helmRepoSecretForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddHelmRepoSecret = false; helmRepoSecretForm.reset() } })">
-                      <va-card-title class="m-0"> {{ $t('admin.versions.addHelmRepoSecret') }} </va-card-title>
+                    <form @submit.prevent="helmRepoSecretForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddHelmRepo = false; helmRepoSecretForm.reset() } })">
+                      <va-card-title class="m-0"> {{ $t('admin.versions.addHelmRepo') }} </va-card-title>
                       <va-card-content class="m-0">
                         <va-input v-model="helmRepoSecretForm.name"
                           immediateValidation
@@ -129,6 +129,7 @@ import { useForm } from '@inertiajs/vue3'
                           immediateValidation
                           id="helmRepoSecretUsername"
                           :label="$t('admin.repoSecrets.username')"
+                          :messages="$t('admin.repoSecrets.usernameMessage')"
                           class="mb-3"
                           :error="$page.props.errors.username"
                           :error-messages="$page.props.errors.username" />
@@ -150,53 +151,54 @@ import { useForm } from '@inertiajs/vue3'
                   </template>
                 </va-modal>
                 <va-select
-                  v-model="form.pull_secret_id"
+                  v-model="form.image_registry_id"
                   :label="$t('admin.versions.containerImageRegistry')"
-                  id="pullSecretId"
+                  id="imageRegistryId"
                   class="my-2"
                   immediateValidation
                   required-mark
-                  :options="pull_secrets"
+                  :options="image_registries"
                   text-by="name"
                   value-by="id"
-                  :error="$page.props.errors.pull_secret_id"
-                  :error-messages="$page.props.errors.pull_secret_id"
+                  :error="$page.props.errors.image_registry_id"
+                  :error-messages="$page.props.errors.image_registry_id"
                   />
-                <va-button id="addPullSecret" preset="secondary" size="small" class="my-2" @click="showAddPullSecret = !showAddPullSecret">{{ $t('admin.versions.addPullSecret') }}</va-button>
-                <va-modal v-model="showAddPullSecret" no-outside-dismiss no-padding size="small" class="p-0">
+                <va-button id="addImageRegistry" preset="secondary" size="small" class="my-2" @click="showAddImageRegistry = !showAddImageRegistry">{{ $t('admin.versions.addImageRegistry') }}</va-button>
+                <va-modal v-model="showAddImageRegistry" no-outside-dismiss no-padding size="small" class="p-0">
                   <template #content="{ ok }">
-                    <form @submit.prevent="pullSecretForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddPullSecret = false; pullSecretForm.reset() } })">
-                      <va-card-title class="m-0"> {{ $t('admin.versions.addPullSecret') }} </va-card-title>
+                    <form @submit.prevent="imageRegistryForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddImageRegistry = false; imageRegistryForm.reset() } })">
+                      <va-card-title class="m-0"> {{ $t('admin.versions.addImageRegistry') }} </va-card-title>
                       <va-card-content class="m-0">
-                        <va-input v-model="pullSecretForm.name"
+                        <va-input v-model="imageRegistryForm.name"
                           immediateValidation
-                          id="pullSecretName"
+                          id="imageRegistryName"
                           required-mark
                           :label="$t('admin.repoSecrets.name')"
                           class="mb-3"
                           :messages="$t('admin.repoSecrets.nameMessage')"
                           :error="$page.props.errors.name"
                           :error-messages="$page.props.errors.name" />
-                        <va-input v-model="pullSecretForm.registry"
+                        <va-input v-model="imageRegistryForm.registry"
                           immediateValidation
-                          id="pullSecretRegistry"
+                          id="imageRegistryRegistry"
                           required-mark
                           :label="$t('admin.repoSecrets.registry')"
                           class="mb-3"
                           :messages="$t('admin.repoSecrets.registryMessage')"
                           :error="$page.props.errors.registry"
                           :error-messages="$page.props.errors.registry" />
-                        <va-input v-model="pullSecretForm.username"
+                        <va-input v-model="imageRegistryForm.username"
                           immediateValidation
-                          id="pullSecretUsername"
+                          id="imageRegistryUsername"
                           :label="$t('admin.repoSecrets.username')"
+                          :messages="$t('admin.repoSecrets.usernameMessage')"
                           class="mb-3"
                           :error="$page.props.errors.username"
                           :error-messages="$page.props.errors.username" />
-                        <va-input v-model="pullSecretForm.password"
+                        <va-input v-model="imageRegistryForm.password"
                           type="password"
                           immediateValidation
-                          id="pullSecretPassword"
+                          id="imageRegistryPassword"
                           :label="$t('admin.repoSecrets.password')"
                           class="mb-3"
                           :messages="$t('admin.repoSecrets.passwordMessage')"
@@ -204,8 +206,8 @@ import { useForm } from '@inertiajs/vue3'
                           :error-messages="$page.props.errors.password" />
                       </va-card-content>
                       <va-card-actions align="right" class="">
-                        <va-button color="textInverted" :disabled="pullSecretForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-                        <va-button type="submit" :disabled="pullSecretForm.processing" id="submitPullSecret" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+                        <va-button color="textInverted" :disabled="imageRegistryForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                        <va-button type="submit" :disabled="imageRegistryForm.processing" id="submitImageRegistry" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
                       </va-card-actions>
                     </form>
                   </template>
@@ -335,7 +337,7 @@ export default {
     app: Object,
     can: Object,
     recommendations: Object,
-    pull_secrets: Array,
+    image_registries: Array,
     helm_repo_secrets: Array
   },
   data () {
@@ -347,9 +349,9 @@ export default {
       ],
       showEnableDisable: false,
       showRecommendations: false,
-      showAddPullSecret: false,
-      showAddHelmRepoSecret: false,
-      pullSecretForm: useForm({
+      showAddImageRegistry: false,
+      showAddHelmRepo: false,
+      imageRegistryForm: useForm({
         type: 'image',
         name: '',
         registry: '',
@@ -373,7 +375,7 @@ export default {
         helm_repo_secret_id: this.version.helm_repo_secret_id,
         image_repo_name: this.version.image_repo_name,
         port: this.version.port,
-        pull_secret_id: this.version.pull_secret_id,
+        image_registry_id: this.version.image_registry_id,
         announcement_location: this.version.announcement_location,
         announcement_id: this.version.announcement_id ? this.version.announcement_id : '',
         default_admin_roles: this.version.default_admin_roles,

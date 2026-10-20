@@ -51,6 +51,7 @@ import { useForm } from '@inertiajs/vue3'
               immediateValidation
               id="username"
               :label="$t('admin.repoSecrets.username')"
+              :messages="$t('admin.repoSecrets.usernameMessage')"
               class="mb-3"
               :error="$page.props.errors.username"
               :error-messages="$page.props.errors.username" />

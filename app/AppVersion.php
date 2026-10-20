@@ -15,7 +15,7 @@ use Illuminate\Support\Arr;
  * @property array $roles
  * @property array $settings
  * @property-read Application $application
- * @property-read RepoSecret|null $pullSecret
+ * @property-read RepoSecret|null $imageRegistry
  * @property-read RepoSecret|null $helmRepoSecret
  */
 class AppVersion extends Model
@@ -34,14 +34,14 @@ class AppVersion extends Model
         return $this->belongsTo('App\Application', 'application_id');
     }
 
-    public function pullSecret()
+    public function imageRegistry()
     {
-        return $this->belongsTo('App\RepoSecret', 'pull_secret_id');
+        return $this->belongsTo('App\RepoSecret', 'image_registry_id');
     }
 
-    public function requiresPullSecret(): bool
+    public function requiresImageRegistryAuth(): bool
     {
-        return $this->pull_secret_id !== null && $this->pullSecret && $this->pullSecret->requiresAuth();
+        return $this->image_registry_id !== null && $this->imageRegistry && $this->imageRegistry->requiresAuth();
     }
 
     public function helmRepoSecret()

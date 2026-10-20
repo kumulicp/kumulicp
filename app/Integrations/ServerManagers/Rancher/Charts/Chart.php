@@ -95,8 +95,8 @@ class Chart
     {
         $version = $this->app_instance->version;
 
-        if ($version && $version->requiresPullSecret()) {
-            return [$version->pullSecret->k8sSecretName()];
+        if ($version && $version->requiresImageRegistryAuth()) {
+            return [$version->imageRegistry->k8sSecretName()];
         }
 
         return [];
@@ -110,7 +110,7 @@ class Chart
         // Never return null/empty: a null 'image.registry' value makes Helm drop the
         // chart's default, and the unquoted image line then renders as "%!s(<nil>)/..."
         // which fails YAML parsing ("found character that cannot start any token").
-        return $version->pullSecret?->registry ?: $version->setting('image_registry') ?: 'docker.io';
+        return $version->imageRegistry?->registry ?: $version->setting('image_registry') ?: 'docker.io';
     }
 
     // The fully-qualified image reference (registry/repository:tag) for the application's container image

@@ -76,27 +76,27 @@ class Upgrade extends Command
     }
 
     // Migrate the legacy "image_registry" version setting to the new
-    // PullSecret structure, so registries can be managed centrally and
+    // RepoSecret structure, so registries can be managed centrally and
     // reused between apps.
     private function alpha_159()
     {
-        $pull_secrets_by_registry = [];
+        $registries_by_name = [];
 
         foreach (AppVersion::all() as $version) {
             $registry = $version->setting('image_registry');
 
-            if (! $registry || $version->pull_secret_id) {
+            if (! $registry || $version->image_registry_id) {
                 continue;
             }
 
-            if (! array_key_exists($registry, $pull_secrets_by_registry)) {
-                $pull_secrets_by_registry[$registry] = RepoSecret::firstOrCreate(
+            if (! array_key_exists($registry, $registries_by_name)) {
+                $registries_by_name[$registry] = RepoSecret::firstOrCreate(
                     ['registry' => $registry],
                     ['name' => $registry]
                 );
             }
 
-            $version->pull_secret_id = $pull_secrets_by_registry[$registry]->id;
+            $version->image_registry_id = $registries_by_name[$registry]->id;
 
             $settings = $version->settings ?? [];
             unset($settings['image_registry']);

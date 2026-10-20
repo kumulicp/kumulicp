@@ -50,7 +50,7 @@ it('scopes versions() by type', function () {
     $helm_secret = RepoSecret::factory()->helm()->create();
     $application = Application::factory()->create();
 
-    AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $image_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'image_registry_id' => $image_secret->id]);
     AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $helm_secret->id]);
 
     expect($image_secret->versions()->count())->toBe(1);
@@ -61,7 +61,7 @@ it('matches versions() via either column for the both type', function () {
     $both_secret = RepoSecret::factory()->both()->create();
     $application = Application::factory()->create();
 
-    AppVersion::factory()->create(['application_id' => $application->id, 'pull_secret_id' => $both_secret->id]);
+    AppVersion::factory()->create(['application_id' => $application->id, 'image_registry_id' => $both_secret->id]);
     AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $both_secret->id]);
 
     expect($both_secret->versions()->count())->toBe(2);

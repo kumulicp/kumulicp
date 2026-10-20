@@ -43,7 +43,7 @@ class RepoSecret extends Model
     {
         return AppVersion::where(function ($query) {
             if ($this->type !== self::TYPE_HELM) {
-                $query->orWhere('pull_secret_id', $this->id);
+                $query->orWhere('image_registry_id', $this->id);
             }
             if ($this->type !== self::TYPE_IMAGE) {
                 $query->orWhere('helm_repo_secret_id', $this->id);
@@ -77,7 +77,7 @@ class RepoSecret extends Model
     public function inUse(): bool
     {
         return AppInstance::whereHas('version', function ($query) {
-            $query->where('pull_secret_id', $this->id)->orWhere('helm_repo_secret_id', $this->id);
+            $query->where('image_registry_id', $this->id)->orWhere('helm_repo_secret_id', $this->id);
         })->exists();
     }
 }

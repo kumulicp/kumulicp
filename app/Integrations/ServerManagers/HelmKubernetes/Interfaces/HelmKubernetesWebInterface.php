@@ -42,17 +42,17 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
         $this->secret = new Secret($this->organization, $server);
     }
 
-    // Make sure the image pull secret required by the app instance's version
+    // Make sure the image registry credentials required by the app instance's version
     // exists in the organization's namespace before the app is deployed
-    public function ensurePullSecret()
+    public function ensureImageRegistryAuth()
     {
         $version = $this->app_instance->version;
 
-        if (! $version || ! $version->requiresPullSecret()) {
+        if (! $version || ! $version->requiresImageRegistryAuth()) {
             return true;
         }
 
-        $this->secret->ensure($this->organization->slug, $version->pullSecret);
+        $this->secret->ensure($this->organization->slug, $version->imageRegistry);
 
         return true;
     }
@@ -162,7 +162,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
     public function add()
     {
         if ($this->existsOrganization()) {
-            $this->ensurePullSecret();
+            $this->ensureImageRegistryAuth();
 
             $charts = ApplicationFacade::instance($this->app_instance)->charts();
 
@@ -184,7 +184,7 @@ class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function update()
     {
-        $this->ensurePullSecret();
+        $this->ensureImageRegistryAuth();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
 
