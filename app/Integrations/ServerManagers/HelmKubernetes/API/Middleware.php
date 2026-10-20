@@ -7,7 +7,7 @@ use App\Integrations\ServerManagers\Rancher\Charts\Middleware\MiddlewareChart;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Manages Traefik's Middleware CRD (domain redirects) via kubectl. Only
+ * Manages Traefik's Middleware CRD (domain redirects) via the Kubernetes API. Only
  * runs when the server's k8s_ingress_class is explicitly set to 'traefik' —
  * this CRD isn't generic Kubernetes, it only exists once Traefik is
  * installed as the ingress controller. If the field is blank or set to
@@ -28,13 +28,13 @@ class Middleware extends Kubernetes
         }
 
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->apply($chart->values(), $namespace);
+        $result = $this->api()->apply($chart->values(), $namespace);
 
         Log::info(__('messages.api.rancher.log.middleware_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
-            'response' => $result['success'] ? json_decode($result['output'], true) : $result['error'],
+            'response' => $result['success'] ? $result['data'] : $result['error'],
         ];
     }
 
@@ -50,11 +50,11 @@ class Middleware extends Kubernetes
         }
 
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->delete('middleware.traefik.io', $chart->name, $namespace);
+        $result = $this->api()->delete('traefik.io/v1alpha1', 'Middleware', $chart->name, $namespace);
 
         Log::info(__('messages.api.rancher.log.middleware_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
-        return ['status' => 'success', 'response' => $result['output']];
+        return ['status' => 'success', 'response' => $result['data']];
     }
 
     public function isActive(MiddlewareChart $chart): int
@@ -64,7 +64,7 @@ class Middleware extends Kubernetes
         }
 
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->get('middleware.traefik.io', $chart->name, $namespace);
+        $result = $this->api()->get('traefik.io/v1alpha1', 'Middleware', $chart->name, $namespace);
 
         return $result['success'] ? 1 : 0;
     }
