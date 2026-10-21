@@ -468,9 +468,7 @@
       "addImageRegistry": "Agregar Registro de Imágenes",
       "helmChartRepoAuth": "Autenticación del Repositorio de Helm Chart",
       "helmRepoNone": "Ninguno (repositorio público)",
-      "addHelmRepo": "Agregar Repositorio de Helm Chart"
-      "helmRepoSecretNone": "Ninguno (repositorio público)",
-      "addHelmRepoSecret": "Agregar Secreto de Repositorio",
+      "addHelmRepo": "Agregar Repositorio de Helm Chart",
       "checkNow": "Buscar actualizaciones",
       "updates": "Actualizaciones",
       "newerImage": "Hay una imagen más reciente para {version}: {latest}.",
