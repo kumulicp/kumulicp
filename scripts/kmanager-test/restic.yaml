@@ -1,0 +1,50 @@
+# The restic repository both kmanagers back up to and restore from: a local
+# directory on one shared volume (one node, so ReadWriteOnce is shared fine).
+# Creating the repository, and making it writable for kmanager's non-root user,
+# is a one-off Job that runs before the kmanagers start.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kmanager-test
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: restic-repo
+  namespace: kmanager-test
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restic-init
+  namespace: kmanager-test
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init
+          image: kmanager:dev
+          imagePullPolicy: Never
+          securityContext:
+            runAsUser: 0
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "$RESTIC_PASSWORD" > /tmp/restic-password
+              [ -f /restic-repo/config ] || restic init -r /restic-repo --password-file /tmp/restic-password
+              chown -R 1000:1000 /restic-repo
+          envFrom:
+            - secretRef: {name: kmanager-1}
+          volumeMounts:
+            - {name: restic-repo, mountPath: /restic-repo}
+      volumes:
+        - name: restic-repo
+          persistentVolumeClaim:
+            claimName: restic-repo

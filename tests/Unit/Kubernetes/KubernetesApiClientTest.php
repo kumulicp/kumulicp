@@ -202,15 +202,23 @@ it('returns the concatenated logs of every matching pod, reading each pod\'s def
     expect($result['success'])->toBeTrue();
     expect($result['data'])->toBe("first\nsecond");
 
-    Http::assertSent(function (Request $request) {
+    $query = function (Request $request): array {
         parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
-        return match (parse_url($request->url(), PHP_URL_PATH)) {
-            '/api/v1/namespaces/demo/pods' => $query['labelSelector'] === 'job-name=scan',
-            '/api/v1/namespaces/demo/pods/scan-a/log' => $query['container'] === 'trivy' && $request->hasHeader('Accept', 'text/plain'),
-            '/api/v1/namespaces/demo/pods/scan-b/log' => $query['container'] === 'main',
-        };
-    });
+        return $query;
+    };
+    $path = fn (Request $request) => parse_url($request->url(), PHP_URL_PATH);
+
+    Http::assertSent(fn (Request $request) => $path($request) === '/api/v1/namespaces/demo/pods'
+        && $query($request)['labelSelector'] === 'job-name=scan');
+
+    // the log endpoint 406s an explicit text/plain Accept
+    Http::assertSent(fn (Request $request) => $path($request) === '/api/v1/namespaces/demo/pods/scan-a/log'
+        && $query($request)['container'] === 'trivy'
+        && $request->header('Accept') === ['*/*']);
+    Http::assertSent(fn (Request $request) => $path($request) === '/api/v1/namespaces/demo/pods/scan-b/log'
+        && $query($request)['container'] === 'main'
+        && $request->header('Accept') === ['*/*']);
 });
 
 it('returns empty logs when no pod matches', function () {
