@@ -228,8 +228,8 @@ class KubernetesApiClient
                     ?? $pod['spec']['containers'][0]['name']
                     ?? null;
 
-                // log endpoint serves text/plain, not JSON
-                $response = (clone $http)->accept('text/plain')->get(
+                // log endpoint serves text/plain, but 406s an explicit text/plain Accept
+                $response = (clone $http)->replaceHeaders(['Accept' => '*/*'])->get(
                     "{$pods_path}/".rawurlencode($name).'/log',
                     array_filter(['container' => $container]),
                 );
