@@ -113,5 +113,5 @@ it('removes only the labels it owns when the plan goes back to no tier', functio
 
     Http::assertSent(fn (Request $request) => $request->method() === 'PUT'
         && $request['metadata']['labels'] === ['field.cattle.io/projectId' => 'p-123']
-        && ! isset($request['metadata']['annotations'][NamespaceSecurityReconciler::ANNOTATION]));
+        && ! isset(((array) $request['metadata']['annotations'])[NamespaceSecurityReconciler::ANNOTATION]));
 });
