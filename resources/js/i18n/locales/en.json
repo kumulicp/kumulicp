@@ -468,9 +468,7 @@
       "addImageRegistry": "Add Image Registry",
       "helmChartRepoAuth": "Helm Chart Repo Authentication",
       "helmRepoNone": "None (public repo)",
-      "addHelmRepo": "Add Helm Chart Repo"
-      "helmRepoSecretNone": "None (public repo)",
-      "addHelmRepoSecret": "Add Repo Secret",
+      "addHelmRepo": "Add Helm Chart Repo",
       "checkNow": "Check for updates",
       "updates": "Updates",
       "newerImage": "A newer image is available for {version}: {latest}.",
