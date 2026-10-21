@@ -276,8 +276,8 @@ return [
                 'persistent_volume_claim_created' => 'Persistent Volume Claim created for :organization',
                 'persistent_volume_claim_updated' => 'Persistent Volume Claim updated for :organization',
                 'persistent_volume_claim_deleted' => 'Persistent Volume Claim deleted for :organization',
-                'secret_created' => 'Pull secret :name created in namespace :namespace',
-                'secret_deleted' => 'Pull secret :name deleted from namespace :namespace',
+                'secret_created' => 'Image registry secret :name created in namespace :namespace',
+                'secret_deleted' => 'Image registry secret :name deleted from namespace :namespace',
             ],
             'error' => [
                 'job' => 'Rancher Job - :job - :message',

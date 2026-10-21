@@ -92,7 +92,7 @@ it('prevents deleting a repo secret in use by an app instance', function () {
     $repo_secret = RepoSecret::factory()->create();
 
     $app_instance = $this->support->demo_app->instances()->first();
-    $app_instance->version->pull_secret_id = $repo_secret->id;
+    $app_instance->version->image_registry_id = $repo_secret->id;
     $app_instance->version->save();
 
     $response = $this->delete('/admin/settings/repo-secrets/'.$repo_secret->id);
@@ -109,7 +109,7 @@ it('mass migrates app versions from one repo secret to another', function () {
 
     $version = AppVersion::factory()->create([
         'application_id' => $this->support->demo_app->id,
-        'pull_secret_id' => $from->id,
+        'image_registry_id' => $from->id,
     ]);
 
     $response = $this->post('/admin/settings/repo-secrets/mass-migrate', [
@@ -120,7 +120,7 @@ it('mass migrates app versions from one repo secret to another', function () {
     $response->assertSessionDoesntHaveErrors();
 
     $version->refresh();
-    expect($version->pull_secret_id)->toBe($to->id);
+    expect($version->image_registry_id)->toBe($to->id);
 });
 
 it('mass migrates versions on both columns for the both type', function () {
@@ -129,9 +129,9 @@ it('mass migrates versions on both columns for the both type', function () {
     $from = RepoSecret::factory()->both()->create();
     $to = RepoSecret::factory()->both()->create();
 
-    $pull_version = AppVersion::factory()->create([
+    $image_version = AppVersion::factory()->create([
         'application_id' => $this->support->demo_app->id,
-        'pull_secret_id' => $from->id,
+        'image_registry_id' => $from->id,
     ]);
     $helm_version = AppVersion::factory()->create([
         'application_id' => $this->support->demo_app->id,
@@ -145,7 +145,7 @@ it('mass migrates versions on both columns for the both type', function () {
 
     $response->assertSessionDoesntHaveErrors();
 
-    expect($pull_version->refresh()->pull_secret_id)->toBe($to->id);
+    expect($image_version->refresh()->image_registry_id)->toBe($to->id);
     expect($helm_version->refresh()->helm_repo_secret_id)->toBe($to->id);
 });
 

@@ -8,18 +8,18 @@ use Illuminate\Support\Facades\Log;
 
 class Secret extends Kubernetes
 {
-    public function isActive(string $namespace, RepoSecret $pull_secret): int
+    public function isActive(string $namespace, RepoSecret $repo_secret): int
     {
-        $result = $this->kubectl()->get('secret', $pull_secret->k8sSecretName(), $namespace);
+        $result = $this->kubectl()->get('secret', $repo_secret->k8sSecretName(), $namespace);
 
         return $result['success'] ? 1 : 0;
     }
 
-    public function create(string $namespace, RepoSecret $pull_secret)
+    public function create(string $namespace, RepoSecret $repo_secret)
     {
-        $result = $this->kubectl()->apply($this->manifest($namespace, $pull_secret), $namespace);
+        $result = $this->kubectl()->apply($this->manifest($namespace, $repo_secret), $namespace);
 
-        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
@@ -27,36 +27,36 @@ class Secret extends Kubernetes
         ];
     }
 
-    public function remove(string $namespace, RepoSecret $pull_secret)
+    public function remove(string $namespace, RepoSecret $repo_secret)
     {
-        $result = $this->kubectl()->delete('secret', $pull_secret->k8sSecretName(), $namespace);
+        $result = $this->kubectl()->delete('secret', $repo_secret->k8sSecretName(), $namespace);
 
-        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
         return ['status' => 'success', 'response' => $result['output']];
     }
 
-    public function ensure(string $namespace, RepoSecret $pull_secret)
+    public function ensure(string $namespace, RepoSecret $repo_secret)
     {
-        if ($this->isActive($namespace, $pull_secret) === 1) {
+        if ($this->isActive($namespace, $repo_secret) === 1) {
             return ['status' => 'success', 'response' => null];
         }
 
-        return $this->create($namespace, $pull_secret);
+        return $this->create($namespace, $repo_secret);
     }
 
-    private function manifest(string $namespace, RepoSecret $pull_secret): array
+    private function manifest(string $namespace, RepoSecret $repo_secret): array
     {
         return [
             'apiVersion' => 'v1',
             'kind' => 'Secret',
             'type' => 'kubernetes.io/dockerconfigjson',
             'metadata' => [
-                'name' => $pull_secret->k8sSecretName(),
+                'name' => $repo_secret->k8sSecretName(),
                 'namespace' => $namespace,
             ],
             'data' => [
-                '.dockerconfigjson' => base64_encode($pull_secret->dockerConfigJson()),
+                '.dockerconfigjson' => base64_encode($repo_secret->dockerConfigJson()),
             ],
         ];
     }

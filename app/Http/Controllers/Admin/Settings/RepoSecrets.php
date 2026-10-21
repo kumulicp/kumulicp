@@ -58,7 +58,7 @@ class RepoSecrets extends Controller
             return redirect()->back()->with('error', __('admin.repoSecrets.inUse'));
         }
 
-        AppVersion::where('pull_secret_id', $repoSecret->id)->update(['pull_secret_id' => null]);
+        AppVersion::where('image_registry_id', $repoSecret->id)->update(['image_registry_id' => null]);
         AppVersion::where('helm_repo_secret_id', $repoSecret->id)->update(['helm_repo_secret_id' => null]);
 
         $repoSecret->delete();
@@ -81,7 +81,7 @@ class RepoSecrets extends Controller
         }
 
         if ($from->type !== RepoSecret::TYPE_HELM) {
-            AppVersion::where('pull_secret_id', $from->id)->update(['pull_secret_id' => $to->id]);
+            AppVersion::where('image_registry_id', $from->id)->update(['image_registry_id' => $to->id]);
         }
 
         if ($from->type !== RepoSecret::TYPE_IMAGE) {

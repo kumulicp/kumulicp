@@ -232,12 +232,12 @@ return [
         'system_checks_settings' => 'System Checks',
     ],
     'repoSecrets' => [
-        'repoSecrets' => 'Repo Secrets',
-        'added' => 'Repo secret added',
-        'deleted' => 'Repo secret deleted',
-        'inUse' => 'This repo secret cannot be deleted because it is required by one or more app instances',
-        'migrateTypeMismatch' => 'Both repo secrets must be the same type',
-        'migrated' => 'App versions migrated to the new repo secret',
+        'repoSecrets' => 'Registries',
+        'added' => 'Registry added',
+        'deleted' => 'Registry deleted',
+        'inUse' => 'This registry cannot be deleted because it is required by one or more app instances',
+        'migrateTypeMismatch' => 'Both registries must be the same type',
+        'migrated' => 'App versions migrated to the new registry',
     ],
     'tasks' => [
         'tasks' => 'Tasks',

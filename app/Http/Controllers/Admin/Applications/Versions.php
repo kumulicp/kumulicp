@@ -60,11 +60,13 @@ class Versions extends Controller
             'copy_from' => 'required|in:recommendations,previous_version,none',
             'copy_version' => 'exclude_unless:copy_from,previous_version|required|exists:app_versions,id',
         ]);
+        $image_registry_id = null;
         if ($validatedData['copy_from'] === 'previous_version' && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
             $admin_path = $copy_version->admin_path;
             $roles = $copy_version->roles;
+            $image_registry_id = $copy_version->image_registry_id;
         } elseif ($validatedData['copy_from'] === 'recommendations') {
             $recommendations = ApplicationFacade::profile($app)->recommendations();
             $settings = [
@@ -89,6 +91,7 @@ class Versions extends Controller
         $app_version->roles = $roles;
         $app_version->status = 'deactivated';
         $app_version->admin_path = $admin_path;
+        $app_version->image_registry_id = $image_registry_id;
         $app_version->save();
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
@@ -106,7 +109,7 @@ class Versions extends Controller
                 'helm_repo_name' => $version->setting('helm_repo_name'),
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
-                'pull_secret_id' => $version->pull_secret_id,
+                'image_registry_id' => $version->image_registry_id,
                 'helm_repo_secret_id' => $version->helm_repo_secret_id,
                 'chart_version' => $version->setting('chart_version'),
                 'chart_name' => $version->setting('chart_name'),
@@ -127,11 +130,11 @@ class Versions extends Controller
                 'name' => $app->name,
                 'id' => $app->id,
             ],
-            'pull_secrets' => RepoSecret::whereIn('type', [RepoSecret::TYPE_IMAGE, RepoSecret::TYPE_BOTH])->orderBy('name')->get()->map(function ($pull_secret) {
+            'image_registries' => RepoSecret::whereIn('type', [RepoSecret::TYPE_IMAGE, RepoSecret::TYPE_BOTH])->orderBy('name')->get()->map(function ($image_registry) {
                 return [
-                    'id' => $pull_secret->id,
-                    'name' => $pull_secret->name,
-                    'registry' => $pull_secret->registry,
+                    'id' => $image_registry->id,
+                    'name' => $image_registry->name,
+                    'registry' => $image_registry->registry,
                 ];
             }),
             'helm_repo_secrets' => RepoSecret::whereIn('type', [RepoSecret::TYPE_HELM, RepoSecret::TYPE_BOTH])->orderBy('name')->get()->map(function ($helm_repo_secret) {
@@ -194,7 +197,7 @@ class Versions extends Controller
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
-            'pull_secret_id' => 'nullable|integer|exists:repo_secrets,id',
+            'image_registry_id' => 'required|integer|exists:repo_secrets,id',
             'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
@@ -209,7 +212,7 @@ class Versions extends Controller
         $version->name = $request->input('version');
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
-        $version->pull_secret_id = $request->input('pull_secret_id') ?: null;
+        $version->image_registry_id = $validatedData['image_registry_id'];
         $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),

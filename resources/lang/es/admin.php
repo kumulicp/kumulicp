@@ -185,12 +185,12 @@ return [
         'invoice_settings' => 'Configuración de facturación',
     ],
     'repoSecrets' => [
-        'repoSecrets' => 'Secretos de repositorio',
-        'added' => 'Secreto de repositorio agregado',
-        'deleted' => 'Secreto de repositorio eliminado',
-        'inUse' => 'Este secreto de repositorio no se puede eliminar porque es requerido por una o más instancias de aplicación',
-        'migrateTypeMismatch' => 'Ambos secretos de repositorio deben ser del mismo tipo',
-        'migrated' => 'Versiones de la aplicación migradas al nuevo secreto de repositorio',
+        'repoSecrets' => 'Registros',
+        'added' => 'Registro agregado',
+        'deleted' => 'Registro eliminado',
+        'inUse' => 'Este registro no se puede eliminar porque es requerido por una o más instancias de aplicación',
+        'migrateTypeMismatch' => 'Ambos registros deben ser del mismo tipo',
+        'migrated' => 'Versiones de la aplicación migradas al nuevo registro',
     ],
     'tasks' => [
         'tasks' => 'Tareas',

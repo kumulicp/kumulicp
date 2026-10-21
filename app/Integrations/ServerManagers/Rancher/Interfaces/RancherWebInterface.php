@@ -42,17 +42,17 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
         $this->secret = new Secret($this->organization, $this->server);
     }
 
-    // Make sure the image pull secret required by the app instance's version
+    // Make sure the image registry credentials required by the app instance's version
     // exists in the organization's namespace before the app is deployed
-    public function ensurePullSecret()
+    public function ensureImageRegistryAuth()
     {
         $version = $this->app_instance->version;
 
-        if (! $version || ! $version->requiresPullSecret()) {
+        if (! $version || ! $version->requiresImageRegistryAuth()) {
             return true;
         }
 
-        $this->secret->ensure($this->organization->slug, $version->pullSecret);
+        $this->secret->ensure($this->organization->slug, $version->imageRegistry);
 
         return true;
     }
@@ -147,7 +147,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
 
         // verify the organization exists is active
         if ($this->existsOrganization()) {
-            $this->ensurePullSecret();
+            $this->ensureImageRegistryAuth();
 
             $charts = ApplicationFacade::instance($this->app_instance)->charts();
 
@@ -177,7 +177,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
             return ApplicationFacade::instance($parent)->connect('web')->update();
         }
 
-        $this->ensurePullSecret();
+        $this->ensureImageRegistryAuth();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
 

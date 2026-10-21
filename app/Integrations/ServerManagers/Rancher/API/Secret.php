@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Log;
 
 class Secret extends Rancher
 {
-    // Check if the pull secret exists(1) or does not exist(0) in the given namespace
-    public function isActive(string $namespace, RepoSecret $pull_secret): int
+    // Check if the registry secret exists(1) or does not exist(0) in the given namespace
+    public function isActive(string $namespace, RepoSecret $repo_secret): int
     {
         $address = $this->org_server->server->address;
-        $name = $pull_secret->k8sSecretName();
+        $name = $repo_secret->k8sSecretName();
 
         $url = $address.'/v1/secrets/'.$namespace.'/'.$name;
         $this->ignoreErrorCode(404)->get($url);
@@ -25,17 +25,17 @@ class Secret extends Rancher
         return 1;
     }
 
-    public function create(string $namespace, RepoSecret $pull_secret)
+    public function create(string $namespace, RepoSecret $repo_secret)
     {
         $address = $this->org_server->server->address;
 
         $url = $address.'/v1/secrets';
 
-        $data = $this->values($namespace, $pull_secret);
+        $data = $this->values($namespace, $repo_secret);
 
         $this->json()->post($url, $data);
 
-        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
         if ($this->hasError()) {
             return [
@@ -50,10 +50,10 @@ class Secret extends Rancher
         ];
     }
 
-    public function remove(string $namespace, RepoSecret $pull_secret)
+    public function remove(string $namespace, RepoSecret $repo_secret)
     {
         $address = $this->org_server->server->address;
-        $name = $pull_secret->k8sSecretName();
+        $name = $repo_secret->k8sSecretName();
 
         $url = $address.'/v1/secrets/'.$namespace.'/'.$name;
 
@@ -74,30 +74,30 @@ class Secret extends Rancher
         ];
     }
 
-    // Make sure the pull secret exists in the namespace, creating it if necessary
-    public function ensure(string $namespace, RepoSecret $pull_secret)
+    // Make sure the registry secret exists in the namespace, creating it if necessary
+    public function ensure(string $namespace, RepoSecret $repo_secret)
     {
-        if ($this->isActive($namespace, $pull_secret) === 1) {
+        if ($this->isActive($namespace, $repo_secret) === 1) {
             return [
                 'status' => 'success',
                 'response' => null,
             ];
         }
 
-        return $this->create($namespace, $pull_secret);
+        return $this->create($namespace, $repo_secret);
     }
 
-    private function values(string $namespace, RepoSecret $pull_secret): array
+    private function values(string $namespace, RepoSecret $repo_secret): array
     {
         return [
             'kind' => 'Secret',
             'type' => 'kubernetes.io/dockerconfigjson',
             'metadata' => [
-                'name' => $pull_secret->k8sSecretName(),
+                'name' => $repo_secret->k8sSecretName(),
                 'namespace' => $namespace,
             ],
             'data' => [
-                '.dockerconfigjson' => base64_encode($pull_secret->dockerConfigJson()),
+                '.dockerconfigjson' => base64_encode($repo_secret->dockerConfigJson()),
             ],
         ];
     }
