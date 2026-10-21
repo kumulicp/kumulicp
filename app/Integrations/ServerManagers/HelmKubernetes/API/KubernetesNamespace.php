@@ -35,26 +35,32 @@ class KubernetesNamespace extends Kubernetes
 
     protected function currentNamespaceMetadata(): array
     {
-        $namespace = $this->organization->slug;
-        $result = $this->kubectl()->get('namespace', $namespace, $namespace);
+        $result = $this->api()->get('v1', 'Namespace', $this->organization->slug);
 
         if (! $result['success']) {
             return ['error' => $result['error']];
         }
 
-        $metadata = json_decode($result['output'], true)['metadata'] ?? [];
-
         return [
-            'labels' => $metadata['labels'] ?? [],
-            'annotations' => $metadata['annotations'] ?? [],
+            'labels' => $result['data']['metadata']['labels'] ?? [],
+            'annotations' => $result['data']['metadata']['annotations'] ?? [],
         ];
     }
 
+    // apply() is a JSON merge patch for an object that already exists, so a
+    // null value removes that label/annotation. That only needs get + patch
+    // on namespaces, the same verbs apply() always did.
     protected function applyNamespaceMetadata(array $changes): array
     {
-        $namespace = $this->organization->slug;
-        $patch = array_filter(['labels' => $changes['labels'], 'annotations' => $changes['annotations']]);
-        $result = $this->kubectl()->mergePatch('namespace', $namespace, ['metadata' => $patch], $namespace);
+        $result = $this->api()->apply([
+            'apiVersion' => 'v1',
+            'kind' => 'Namespace',
+            'metadata' => array_filter([
+                'name' => $this->organization->slug,
+                'labels' => $changes['labels'],
+                'annotations' => $changes['annotations'],
+            ]),
+        ]);
 
         return ['success' => $result['success'], 'error' => $result['error']];
     }

@@ -87,7 +87,7 @@ class KubernetesApiClient
                 return $this->failure("Unknown resource kind {$kind} ({$api_version})");
             }
 
-            if ($resource[1] && ! $namespace) {
+            if ($resource[2] && ! $namespace) {
                 return $this->failure("{$kind} {$name} requires a namespace");
             }
 
@@ -163,7 +163,8 @@ class KubernetesApiClient
             }
 
             if ($metadata_only) {
-                $http->accept('application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1, application/json');
+                // replace, not add: accept() would append to the client's default Accept header
+                $http->replaceHeaders(['Accept' => 'application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1, application/json']);
             }
 
             return $this->result($http->get(

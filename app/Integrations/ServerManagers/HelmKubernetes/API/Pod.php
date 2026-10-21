@@ -24,16 +24,17 @@ class Pod extends Kubernetes
     // already reaped by ttlSecondsAfterFinished.
     public function latestInstallLogs(string $release_slug): ?string
     {
-        $result = $this->kubectl()->run(
-            ['get', 'jobs', '-l', "kumulicp.io/release={$release_slug}", '--sort-by=.metadata.creationTimestamp', '-o', 'json'],
-            $this->namespace(),
-        );
+        $result = $this->api()->list('batch/v1', 'Job', $this->namespace(), "kumulicp.io/release={$release_slug}");
 
         if (! $result['success']) {
             return null;
         }
 
-        $jobs = json_decode($result['output'], true)['items'] ?? [];
+        $jobs = $result['data']['items'] ?? [];
+
+        // creationTimestamp is ISO 8601, so it sorts chronologically as text
+        usort($jobs, fn ($a, $b) => strcmp($a['metadata']['creationTimestamp'] ?? '', $b['metadata']['creationTimestamp'] ?? ''));
+
         $name = $jobs === [] ? null : ($jobs[array_key_last($jobs)]['metadata']['name'] ?? null);
 
         return $name ? $this->logsForJob($name) : null;
