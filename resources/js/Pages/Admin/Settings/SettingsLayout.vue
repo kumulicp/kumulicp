@@ -58,6 +58,10 @@ export default {
         url: basePath + '/security-tools'
       },
       {
+        title: this.$t('settings.namespaceSecurity'),
+        url: basePath + '/namespace-security'
+      },
+      {
         title: this.$t('settings.systemChecks'),
         url: basePath + '/system-checks'
       }

@@ -51,9 +51,13 @@ kind: ClusterRole
 metadata:
   name: kumulicp-deployer
 rules:
+  # `patch` is only used when a server's security_mode setting is `managed`:
+  # it lets KumuliCP add/update/remove the Pod Security Admission labels on
+  # existing namespaces (KubernetesNamespace::update()). Leave it out if you
+  # never enable that. Existing clusters must re-apply this ClusterRole.
   - apiGroups: [""]
     resources: ["namespaces"]
-    verbs: ["get", "list", "create", "delete"]
+    verbs: ["get", "list", "create", "delete", "patch"]
   - apiGroups: [""]
     resources: ["configmaps", "secrets", "serviceaccounts", "pods", "pods/log"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
@@ -74,7 +78,7 @@ rules:
   # above.
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["rolebindings"]
-    verbs: ["get", "list", "create", "delete"]
+    verbs: ["get", "list", "create", "patch", "delete"]
   # Kubernetes' RBAC privilege-escalation check refuses to let any identity
   # create a RoleBinding granting a ClusterRole it doesn't itself hold --
   # without this, the RoleBinding above is rejected with "attempting to

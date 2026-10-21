@@ -18,9 +18,11 @@ use Symfony\Component\Yaml\Yaml;
  * Actual completion is tracked separately via isActive(), on the normal
  * task-completion polling schedule (ApplicationUpgrade::complete() etc).
  * Read-only/Helm's-own-bookkeeping operations (retrieve, isActive,
- * deleteStuckReleaseSecrets) stay as direct `helm`/`kubectl` CLI calls
- * under kumulicp-deployer. Reuses the same Chart value-array builders
- * Rancher uses (NextcloudChart, WordpressChart, CiviCRMStandaloneChart, ...).
+ * deleteStuckReleaseSecrets) read Helm's release Secrets straight from the
+ * Kubernetes API under kumulicp-deployer (see HelmReleases), so neither a
+ * `helm` nor a `kubectl` binary is needed where this app runs. Reuses the
+ * same Chart value-array builders Rancher uses (NextcloudChart,
+ * WordpressChart, CiviCRMStandaloneChart, ...).
  */
 class Application extends Kubernetes
 {
@@ -68,13 +70,13 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $result = $this->helm()->run(['get', 'values', $release_name, '-o', 'json'], $namespace);
+        $result = $this->helmReleases()->values($release_name, $namespace);
 
         Log::info(__('messages.api.rancher.log.app_retrieved', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
-            'response' => $result['success'] ? json_decode($result['output'], true) : $result['error'],
+            'response' => $result['success'] ? $result['values'] : $result['error'],
         ];
     }
 
@@ -99,14 +101,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $result = $this->helm()->run(['status', $release_name, '-o', 'json'], $namespace);
-
-        if (! $result['success']) {
-            return 0;
-        }
-
-        $data = json_decode($result['output'], true);
-        $status = $data['info']['status'] ?? null;
+        $status = $this->helmReleases()->status($release_name, $namespace);
 
         return match ($status) {
             'deployed' => 1,
@@ -132,21 +127,8 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $result = $this->kubectl()->run(['get', 'secret', '-l', "owner=helm,name={$release_name}", '-o', 'json'], $namespace);
-
-        if (! $result['success']) {
-            return;
-        }
-
-        $secrets = json_decode($result['output'], true)['items'] ?? [];
-
-        foreach ($secrets as $secret) {
-            $status = $secret['metadata']['labels']['status'] ?? '';
-            $name = $secret['metadata']['name'] ?? null;
-
-            if ($name && str_starts_with($status, 'pending-')) {
-                $this->kubectl()->delete('secret', $name, $namespace);
-            }
+        foreach ($this->helmReleases()->pendingSecretNames($release_name, $namespace) as $name) {
+            $this->api()->delete('v1', 'Secret', $name, $namespace);
         }
     }
 

@@ -65,34 +65,63 @@ class WordpressJobChart extends JobChart
                             'imagePullPolicy' => 'Always',
                             'name' => 'wordpress-job',
                             'ports' => [[
-                                'containerPort' => 80,
+                                'containerPort' => 8080,
                                 'name' => 'http',
                                 'protocol' => 'TCP',
                             ]],
+                            // Same hardening as the wordpress chart's container: restricted
+                            // Pod Security level, read-only root filesystem.
+                            'securityContext' => [
+                                'allowPrivilegeEscalation' => false,
+                                'capabilities' => ['drop' => ['ALL']],
+                                'privileged' => false,
+                                'readOnlyRootFilesystem' => true,
+                                'runAsGroup' => 33,
+                                'runAsNonRoot' => true,
+                                'runAsUser' => 33,
+                                'seccompProfile' => ['type' => 'RuntimeDefault'],
+                            ],
                             'terminationMessagePath' => '/dev/termination-log',
                             'terminationMessagePolicy' => 'File',
-                            'volumeMounts' => [[
-                                'mountPath' => '/wordpress',
-                                'name' => 'wordpress-storage',
-                                'subPath' => 'wordpress',
-                            ]],
+                            'volumeMounts' => [
+                                [
+                                    'mountPath' => '/wordpress',
+                                    'name' => 'wordpress-storage',
+                                    'subPath' => 'wordpress',
+                                ],
+                                // entrypoint.sh and wp-cli write here
+                                [
+                                    'mountPath' => '/tmp',
+                                    'name' => 'tmp',
+                                ],
+                            ],
                         ]],
                         'dnsPolicy' => 'ClusterFirst',
                         'imagePullSecrets' => array_map(fn ($name) => ['name' => $name], $this->imagePullSecrets()),
                         'restartPolicy' => 'Never',
                         'schedulerName' => 'default-scheduler',
                         'securityContext' => [
-                            'fsGroup' => 0,
+                            'fsGroup' => 33,
+                            'runAsGroup' => 33,
+                            'runAsNonRoot' => true,
+                            'runAsUser' => 33,
+                            'seccompProfile' => ['type' => 'RuntimeDefault'],
                         ],
                         'serviceAccount' => 'default',
                         'serviceAccountName' => 'default',
                         'terminationGracePeriodSeconds' => 30,
-                        'volumes' => [[
-                            'name' => 'wordpress-storage',
-                            'persistentVolumeClaim' => [
-                                'claimName' => $this->persistentVolumeClaim(),
+                        'volumes' => [
+                            [
+                                'name' => 'wordpress-storage',
+                                'persistentVolumeClaim' => [
+                                    'claimName' => $this->persistentVolumeClaim(),
+                                ],
                             ],
-                        ]],
+                            [
+                                'name' => 'tmp',
+                                'emptyDir' => (object) [],
+                            ],
+                        ],
                     ],
                 ],
             ],

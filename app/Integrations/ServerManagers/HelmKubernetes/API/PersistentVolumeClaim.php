@@ -12,13 +12,13 @@ class PersistentVolumeClaim extends Kubernetes
         $namespace = $this->organization->slug;
         $claim_string = $namespace.'-pvc';
 
-        $result = $this->kubectl()->apply($this->manifest($namespace, $claim_string, $claim_size), $namespace);
+        $result = $this->api()->apply($this->manifest($namespace, $claim_string, $claim_size), $namespace);
 
         Log::info(__('messages.api.rancher.log.persistent_volume_claim_created', ['organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
-            'response' => $result['success'] ? json_decode($result['output'], true) : $result['error'],
+            'response' => $result['success'] ? $result['data'] : $result['error'],
         ];
     }
 
@@ -27,13 +27,13 @@ class PersistentVolumeClaim extends Kubernetes
     public function isActive(): int
     {
         $namespace = $this->organization->slug;
-        $result = $this->kubectl()->get('persistentvolumeclaim', $namespace.'-pvc', $namespace);
+        $result = $this->api()->get('v1', 'PersistentVolumeClaim', $namespace.'-pvc', $namespace);
 
         if (! $result['success']) {
             return 0;
         }
 
-        $data = json_decode($result['output'], true);
+        $data = $result['data'];
         $phase = $data['status']['phase'] ?? null;
 
         return match ($phase) {
