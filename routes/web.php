@@ -19,6 +19,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
 
     Route::get('welcome', 'HomeController@welcome')->name('organization.welcome');
 
+    Route::prefix('locations')->group(function () {
+        Route::get('countries', 'Account\Locations@countries')->name('locations.countries');
+        Route::get('countries/{country}/states', 'Account\Locations@states')->where('country', '[A-Za-z]{2}')->name('locations.states');
+    });
+
     Route::prefix('announcements')->group(function () {
         Route::get('{id}', 'Account\Announcements@show')->name('organization.announcements.show');
     });
