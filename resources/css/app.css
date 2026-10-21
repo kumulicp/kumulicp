@@ -1,4 +1,19 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+    --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root:root {
+    --va-font-family: var(--font-sans);
+    --va-letter-spacing: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+}
 
 a {
     color: var(--va-primary);
