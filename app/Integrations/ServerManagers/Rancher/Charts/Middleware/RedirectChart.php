@@ -12,7 +12,7 @@ class RedirectChart extends MiddlewareChart
     public function __construct(Organization $organization, AppInstance $app_instance)
     {
         parent::__construct($organization, $app_instance);
-        $this->name .= '-redirect';
+        $this->name = $this->redirectName();
     }
 
     public function values(): array

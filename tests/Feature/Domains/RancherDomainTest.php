@@ -44,7 +44,11 @@ it('applies ingress and middleware charts on domain change', function () {
     $ingress_chart = (new IngressRedirectChart($demo_app->organization, $demo_app))->values();
     expect(Arr::get($ingress_chart, 'spec.rules.0.host'))->toContain($app_base_domain);
 
+    $redirect_name = $demo_app->name.'-redirect';
+    expect(Arr::get($ingress_chart, 'metadata.name'))->toBe($redirect_name);
+
     $middleware_chart = (new MiddlewareRedirectChart($demo_app->organization, $demo_app))->values();
+    expect(Arr::get($middleware_chart, 'metadata.name'))->toBe($redirect_name);
     expect(Arr::get($middleware_chart, 'spec.redirectRegex.regex'))->toContain($app_base_domain);
     expect(Arr::get($middleware_chart, 'spec.redirectRegex.replacement'))->toContain($demo_app->domain());
 

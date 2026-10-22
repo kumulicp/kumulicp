@@ -19,6 +19,12 @@ class Chart
         $this->name = $this->app_instance->name;
     }
 
+    // Name shared by the redirect ingress and middleware: <app-name>-<instance-id>-redirect
+    protected function redirectName(): string
+    {
+        return $this->app_instance->name.'-redirect';
+    }
+
     public function namespace()
     {
         return $this->namespace ?? $this->organization->slug;
