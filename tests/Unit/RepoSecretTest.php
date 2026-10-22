@@ -2,6 +2,7 @@
 
 use App\Application;
 use App\AppVersion;
+use App\Integrations\ServerManagers\Rancher\API\Secret;
 use App\RepoSecret;
 
 it('builds a k8s secret name from its id', function () {
@@ -66,3 +67,26 @@ it('matches versions() via either column for the both type', function () {
 
     expect($both_secret->versions()->count())->toBe(2);
 });
+
+it('labels its cluster secret as a pull secret for the registry, not an app or instance', function () {
+    $repo_secret = RepoSecret::factory()->create();
+
+    expect($repo_secret->k8sLabels())->toBe([
+        'kumulicp.io/type' => 'pull-secret',
+        'kumulicp.io/registry' => (string) $repo_secret->id,
+    ]);
+});
+
+it('applies the labels to the secret in both server managers', function (string $secret_class, string $method) {
+    $repo_secret = RepoSecret::factory()->create();
+
+    $secret = (new ReflectionClass($secret_class))->newInstanceWithoutConstructor();
+    $builder = new ReflectionMethod($secret_class, $method);
+
+    $secret_data = $builder->invoke($secret, 'some-namespace', $repo_secret);
+
+    expect($secret_data['metadata']['labels'])->toBe($repo_secret->k8sLabels());
+})->with([
+    'rancher' => [Secret::class, 'values'],
+    'helm kubernetes' => [App\Integrations\ServerManagers\HelmKubernetes\API\Secret::class, 'manifest'],
+]);

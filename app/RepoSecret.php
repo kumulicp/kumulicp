@@ -61,6 +61,17 @@ class RepoSecret extends Model
         return 'pull-secret-'.$this->id;
     }
 
+    // Labels for the pull secret created in the cluster. The secret is shared by every
+    // app instance in the namespace that uses this registry, so it can't be labeled
+    // with an app or instance -- only with what it is and the registry it came from.
+    public function k8sLabels(): array
+    {
+        return [
+            'kumulicp.io/type' => 'pull-secret',
+            'kumulicp.io/registry' => (string) $this->id,
+        ];
+    }
+
     public function dockerConfigJson(): string
     {
         return json_encode([

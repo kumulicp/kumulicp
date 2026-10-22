@@ -95,6 +95,7 @@ class Secret extends Rancher
             'metadata' => [
                 'name' => $repo_secret->k8sSecretName(),
                 'namespace' => $namespace,
+                'labels' => $repo_secret->k8sLabels(),
             ],
             'data' => [
                 '.dockerconfigjson' => base64_encode($repo_secret->dockerConfigJson()),
