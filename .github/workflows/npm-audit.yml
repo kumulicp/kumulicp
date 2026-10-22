@@ -1,10 +1,14 @@
 name: NPM Security Audit
 
+# Not run on PRs: advisories land independently of any change, and fixing them
+# often needs dependency work unrelated to the PR. Run daily against main instead.
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   npm-audit:
