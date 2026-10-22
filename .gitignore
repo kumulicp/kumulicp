@@ -65,3 +65,5 @@ test-results/
 
 # Claude
 .claude/security
+scripts/kmanager-test/.generated.env
+scripts/kmanager-test/.generated.env
