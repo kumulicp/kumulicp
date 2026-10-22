@@ -811,7 +811,8 @@
     "dropzone": "Upload Image",
     "uploadFile": "Select Image",
     "noOptions": "No Options Available",
-    "search": "Search"
+    "search": "Search",
+    "cancel": "Cancel"
   },
   "messages": {
     "status": {

@@ -808,7 +808,8 @@
     "dropzone": "Subir Imagen",
     "uploadFile": "Seleccionar Imagen",
     "noOptions": "No Hay Opciones Disponibles",
-    "search": "Buscar"
+    "search": "Buscar",
+    "cancel": "Cancelar"
   },
   "messages": {
     "status": {
