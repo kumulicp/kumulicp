@@ -1,4 +1,18 @@
 @import "tailwindcss";
+@import "@fontsource-variable/source-sans-3";
+
+@theme {
+    --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root:root {
+    --va-font-family: var(--font-sans);
+    --va-letter-spacing: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+}
 
 a {
     color: var(--va-primary);
