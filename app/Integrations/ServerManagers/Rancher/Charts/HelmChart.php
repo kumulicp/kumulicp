@@ -25,12 +25,21 @@ abstract class HelmChart extends Chart
         }
     }
 
-    // The Helm values array for this chart, merged with the plan's additional
-    // configs. Shared by any server-manager driver — not Rancher-specific.
+    // The Helm values that apply the kumulicp labels. Charts differ in which
+    // keys they accept, so override this for charts without `commonLabels`
+    // (which labels every resource the chart deploys).
+    public function labelValues(): array
+    {
+        return ['commonLabels' => $this->labels()];
+    }
+
+    // The Helm values array for this chart, merged with the kumulicp labels and
+    // the plan's additional configs. Shared by any server-manager driver — not
+    // Rancher-specific.
     public function valuesWithAdditionalConfigs(): array
     {
         $app_instance = Application::instance($this->app_instance);
-        $values = $this->values();
+        $values = array_replace_recursive($this->values(), $this->labelValues());
         $additionalConfigs = $this->app_instance->plan->additionalConfigs();
 
         foreach ($additionalConfigs as $config) {

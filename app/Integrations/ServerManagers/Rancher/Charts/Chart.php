@@ -5,6 +5,7 @@ namespace App\Integrations\ServerManagers\Rancher\Charts;
 use App\AppInstance;
 use App\Organization;
 use App\Support\Facades\Application;
+use Illuminate\Support\Str;
 
 class Chart
 {
@@ -28,6 +29,29 @@ class Chart
     public function namespace()
     {
         return $this->namespace ?? $this->organization->slug;
+    }
+
+    // The kind of workload this chart creates (the kumulicp.io/type label), so
+    // NetworkPolicies can select it. Job charts override this.
+    public string $type = 'app';
+
+    // Labels stamped on everything this chart creates so the cluster resources
+    // can be traced back to the app and the specific app instance they came from.
+    public function labels(): array
+    {
+        return [
+            'kumulicp.io/app' => $this->labelValue($this->app_instance->application->slug),
+            'kumulicp.io/instance' => $this->labelValue($this->app_instance->name),
+            'kumulicp.io/type' => $this->type,
+        ];
+    }
+
+    // Kubernetes label values: max 63 chars of [A-Za-z0-9_.-], starting and ending alphanumeric
+    private function labelValue(string $value): string
+    {
+        $value = Str::limit(preg_replace('/[^A-Za-z0-9_.-]+/', '-', $value), 63, '');
+
+        return trim($value, '-_.');
     }
 
     public function extraEnv()

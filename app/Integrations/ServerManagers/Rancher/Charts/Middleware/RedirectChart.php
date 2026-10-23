@@ -26,6 +26,7 @@ class RedirectChart extends MiddlewareChart
             'apiVersion' => 'traefik.io/v1alpha1',
             'kind' => 'Middleware',
             'metadata' => [
+                'labels' => $this->labels(),
                 'namespace' => $namespace,
                 'name' => $this->name,
             ],

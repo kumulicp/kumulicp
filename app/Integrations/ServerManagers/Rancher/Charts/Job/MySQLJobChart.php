@@ -23,9 +23,7 @@ class MySQLJobChart extends JobChart
                 'annotations' => [
                     'test' => 'annonation',
                 ],
-                'labels' => [
-                    'test' => 'label',
-                ],
+                'labels' => $this->labels(),
                 'name' => $job_name,
                 'namespace' => $app_instance->organization->slug,
             ],
@@ -37,6 +35,9 @@ class MySQLJobChart extends JobChart
                 'ttlSecondsAfterFinished' => 600,
                 'suspend' => false,
                 'template' => [
+                    'metadata' => [
+                        'labels' => $this->labels(),
+                    ],
                     'spec' => [
                         'containers' => [[
                             'env' => $env,
