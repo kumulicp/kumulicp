@@ -10,14 +10,14 @@ class Secret extends Kubernetes
 {
     public function isActive(string $namespace, RepoSecret $repo_secret): int
     {
-        $result = $this->api()->get('v1', 'Secret', $pull_secret->k8sSecretName(), $namespace);
+        $result = $this->api()->get('v1', 'Secret', $repo_secret->k8sSecretName(), $namespace);
 
         return $result['success'] ? 1 : 0;
     }
 
     public function create(string $namespace, RepoSecret $repo_secret)
     {
-        $result = $this->api()->apply($this->manifest($namespace, $pull_secret), $namespace);
+        $result = $this->api()->apply($this->manifest($namespace, $repo_secret), $namespace);
 
         Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
@@ -29,7 +29,7 @@ class Secret extends Kubernetes
 
     public function remove(string $namespace, RepoSecret $repo_secret)
     {
-        $result = $this->api()->delete('v1', 'Secret', $pull_secret->k8sSecretName(), $namespace);
+        $result = $this->api()->delete('v1', 'Secret', $repo_secret->k8sSecretName(), $namespace);
 
         Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
