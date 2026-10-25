@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Rancher\Charts;
 
 use App\Support\Facades\Application;
+use Illuminate\Support\Arr;
 
 // Values builder for the third-party "generic" chart published at
 // https://repo.helmforge.dev (source: https://github.com/helmforgedev/charts/tree/main/charts/generic),
@@ -25,7 +26,7 @@ class GenericChart extends HelmChart
         $port = (int) ($version->setting('port') ?: 8080);
         $fullname = $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $this->organization->slug.'-'.$this->chartName());
 
-        return [
+        $values = [
             'fullnameOverride' => $fullname,
             'replicaCount' => $this->replicaCount(),
             'image' => [
@@ -76,6 +77,17 @@ class GenericChart extends HelmChart
                 ] : [],
             ],
         ];
+
+        // Symfony's Yaml::dump() renders an empty PHP array as `{}`, which
+        // the chart's schema rejects for these list-typed values. Omit them
+        // when empty so the chart's own `[]` defaults apply.
+        foreach (['imagePullSecrets', 'env', 'ingress.tls'] as $list) {
+            if (! Arr::get($values, $list)) {
+                Arr::forget($values, $list);
+            }
+        }
+
+        return $values;
     }
 
     // A single PVC-backed volume ('data'), mounted into every container.

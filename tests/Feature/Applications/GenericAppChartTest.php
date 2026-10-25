@@ -95,4 +95,9 @@ it('defaults the port to 8080 and skips persistence/ingress when disabled', func
     expect($values['containers'][0]['ports'][0]['containerPort'])->toBe(8080);
     expect($values['persistence'])->toBe([]);
     expect($values['ingress']['enabled'])->toBeFalse();
+
+    // Empty list-typed values must be omitted: Yaml::dump() would render
+    // them as `{}`, which the chart's schema rejects.
+    expect($values)->not->toHaveKeys(['imagePullSecrets', 'env']);
+    expect($values['ingress'])->not->toHaveKey('tls');
 });
