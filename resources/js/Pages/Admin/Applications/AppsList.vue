@@ -68,12 +68,33 @@ import { Link, useForm, router } from '@inertiajs/vue3'
           <tr>
             <th>{{ $t('common.name') }}</th>
             <th>{{ $t('admin.apps.status') }}</th>
+            <th>{{ $t('admin.apps.version') }}</th>
+            <th>{{ $t('admin.apps.chartVersion') }}</th>
+            <th>{{ $t('admin.apps.updatesAvailable') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(app, index) in apps" :key="index">
             <td><Link :href="'/admin/apps/'+app.slug">{{ app.name }}</Link></td>
             <td>{{ app.status }}</td>
+            <td>
+              <div v-for="version in app.versions" :key="'version-' + version.id">{{ version.version }}</div>
+            </td>
+            <td>
+              <div v-for="version in app.versions" :key="'chart-' + version.id">{{ version.chart_version }}</div>
+            </td>
+            <td>
+              <div v-for="version in app.versions" :key="'updates-' + version.id">
+                <template v-if="version.updates">
+                  <va-badge v-if="version.updates.image" color="success" class="mr-1" :text="$t('admin.versions.imageBadge', { latest: version.updates.image })" />
+                  <va-badge v-if="version.updates.chart" color="success" class="mr-1" :text="$t('admin.versions.chartBadge', { latest: version.updates.chart })" />
+                  <va-badge v-if="version.updates.chart_incompatible" color="warning" class="mr-1" :text="$t('admin.versions.chartBlockedBadge', { latest: version.updates.chart_incompatible.version })" />
+                  <va-badge v-if="version.updates.image_error || version.updates.chart_error" color="danger" class="mr-1" :text="$t('admin.versions.checkFailedBadge')" />
+                  <div v-if="!version.updates.image && !version.updates.chart && !version.updates.chart_incompatible && !version.updates.image_error && !version.updates.chart_error" class="va-text-secondary">{{ $t('admin.versions.upToDate') }}</div>
+                </template>
+                <span v-else class="va-text-secondary">{{ $t('admin.versions.notChecked') }}</span>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
