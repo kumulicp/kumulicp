@@ -188,7 +188,7 @@ services:
         - sail
 
     # Single-node k3s cluster for testing kumulicp against a real Kubernetes
-    # API + Traefik ingress (e.g. `helm install` smoke tests). Separate from
+    # API + Traefik ingress (e.g. app install smoke tests). Separate from
     # the `rancher` service above, which brings its own management UI/agents
     # rather than a bare cluster to develop against directly.
     k3s:
@@ -217,8 +217,8 @@ services:
         - K3S_TOKEN=changeme
         # Written inside the container; copy it out with:
         #   docker compose cp k3s:/output/kubeconfig.yaml ./kubeconfig.yaml
-        # then swap its `server:` field to https://localhost:6443 to use
-        # kubectl/helm from the host.
+        # then swap its `server:` field to https://localhost:6443 to reach
+        # the cluster from the host.
         - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
         - K3S_KUBECONFIG_MODE=666
         # 80/443 (not 8090/8443) so app URLs built by kumulicp

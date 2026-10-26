@@ -12,7 +12,7 @@ class TrivyTool extends SecurityToolProfile
     protected $image = 'aquasec/trivy:0.72.0';
 
     // No positional [CONTEXT] arg: passing one (even a placeholder like
-    // "cluster") makes trivy look for that literal kubectl context and fail
+    // "cluster") makes trivy look for a kubeconfig context by that name and fail
     // with "context does not exist". Omitting it makes trivy scan the whole
     // cluster using the pod's own in-cluster ServiceAccount, same as the
     // other tools.

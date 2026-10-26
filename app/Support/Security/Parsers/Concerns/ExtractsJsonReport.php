@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 trait ExtractsJsonReport
 {
     /**
-     * `kubectl logs` merges stdout/stderr, so raw_output has the tool's own
+     * Pod logs merge stdout/stderr, so raw_output has the tool's own
      * log lines (and sometimes a pretty-printer summary) before the actual
      * report, which isn't itself valid JSON. Find the last complete top-level
      * JSON object in the text and decode that.

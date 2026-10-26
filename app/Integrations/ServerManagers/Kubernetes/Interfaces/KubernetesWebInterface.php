@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\Interfaces;
+namespace App\Integrations\ServerManagers\Kubernetes\Interfaces;
 
 use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
-use App\Integrations\ServerManagers\HelmKubernetes\API\Application;
-use App\Integrations\ServerManagers\HelmKubernetes\API\Job;
-use App\Integrations\ServerManagers\HelmKubernetes\API\KubernetesNamespace;
-use App\Integrations\ServerManagers\HelmKubernetes\API\Secret;
-use App\Integrations\ServerManagers\HelmKubernetes\Services\DomainMiddlewareService;
+use App\Integrations\ServerManagers\Kubernetes\API\Application;
+use App\Integrations\ServerManagers\Kubernetes\API\Job;
+use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\Secret;
+use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 // Driver-agnostic: existsOrganization()/addOrganization()/deleteOrganization()
 // only depend on $this->namespace having isActive()/create()/remove(), which
@@ -19,7 +19,7 @@ use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
 
-class HelmKubernetesWebInterface implements AppInterface, OrganizationInterface
+class KubernetesWebInterface implements AppInterface, OrganizationInterface
 {
     use OrganizationServices;
 

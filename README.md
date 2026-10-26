@@ -9,7 +9,7 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 
 ### Admin
 
-- Built on Kubernetes: Integrated with Rancher to ease Kubernetes management
+- Built on Kubernetes: Direct API calls to K8s or through the Rancher API
 - App management: Version management so you can upgrade all your clients apps automatically
 - Plans: Create plans to provide flexible pricing, feature options and app configurations
 - Billing: Integrate with Stripe for recurring monthly billing
