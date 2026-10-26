@@ -6,6 +6,7 @@ use App\Actions\Apps\MassApplicationUpgrade;
 use App\Announcement;
 use App\Application;
 use App\AppVersion;
+use App\Console\Calls\CheckVersionUpdates;
 use App\Http\Controllers\Controller;
 use App\RepoSecret;
 use App\Support\Facades\Action;
@@ -34,6 +35,7 @@ class Versions extends Controller
                     'status' => $version->status,
                     'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d h:m:s'),
                     'created_at' => (new Carbon($version->created_at))->format('Y-m-d h:m:s'),
+                    'updates' => $version->updateSummary(),
                 ];
             }),
             'breadcrumbs' => [
@@ -52,18 +54,30 @@ class Versions extends Controller
         ]);
     }
 
+    public function checkUpdates(Application $app)
+    {
+        (new CheckVersionUpdates($app->id))();
+
+        return redirect('/admin/apps/'.$app->slug.'/versions')->with('success', __('admin.applications.versions.updates_checked'));
+    }
+
     public function store(Request $request, Application $app)
     {
         /* Validate */
         $validatedData = $request->validate([
             'version' => 'required|not_regex:/\//',
-            'copy_from' => 'required|in:recommendations,previous_version,none',
-            'copy_version' => 'exclude_unless:copy_from,previous_version|required|exists:app_versions,id',
+            'copy_from' => 'required|in:recommendations,previous_version,update,none',
+            'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
         ]);
         $image_registry_id = null;
-        if ($validatedData['copy_from'] === 'previous_version' && is_numeric($validatedData['copy_version'])) {
+        if (in_array($validatedData['copy_from'], ['previous_version', 'update']) && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
+
+            // Adopting an update: also move to the newest chart that passed the compatibility check
+            if ($validatedData['copy_from'] === 'update' && $newer_chart = $copy_version->newerChartVersion()) {
+                $settings['chart_version'] = $newer_chart;
+            }
             $admin_path = $copy_version->admin_path;
             $roles = $copy_version->roles;
             $image_registry_id = $copy_version->image_registry_id;

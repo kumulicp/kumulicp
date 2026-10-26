@@ -218,6 +218,20 @@ class KubernetesApiClient
         });
     }
 
+    // The API server's version info (GET /version); the git version is in ['data']['gitVersion'].
+    public function serverVersion(): array
+    {
+        return $this->request(fn (PendingRequest $http) => $this->result($http->get('/version')));
+    }
+
+    /**
+     * The API server's build info (GET /version): gitVersion, major, minor…
+     */
+    public function version(): array
+    {
+        return $this->request(fn (PendingRequest $http) => $this->result($http->get('/version')));
+    }
+
     /**
      * Runs $callback(PendingRequest) once with credentials in place, turning
      * a connection-level failure into the same failure shape as an API error.

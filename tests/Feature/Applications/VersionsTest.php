@@ -1,9 +1,12 @@
 <?php
 
 use App\AppVersion;
+use App\Console\Calls\CheckVersionUpdates;
 use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
+use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 
@@ -234,4 +237,180 @@ it('saves role order — clears all roles when order is empty', function () {
 
     $version->refresh();
     expect($version->roles['order'])->toBe([]);
+});
+
+// ─── Update check ─────────────────────────────────────────────────────────────
+
+it('shows newer images and compatible charts on the versions page', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.1',
+        'settings' => ['chart_version' => '9.0.0'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'chart' => [
+                'current' => '9.0.0',
+                'latest' => '9.1.0',
+                'latest_compatible' => '9.0.1',
+                'compatibility' => ['version' => '9.1.0', 'status' => 'incompatible', 'issues' => ['The chart no longer has the value image.tag, which Kumulicp sets.'], 'warnings' => [], 'targets' => []],
+                'error' => null,
+            ],
+        ],
+    ]);
+
+    $this->withoutVite()
+        ->get("/admin/apps/{$this->demoApp->slug}/versions")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Admin/Applications/Versions/VersionsList')
+            ->where('versions', fn ($versions) => collect($versions)->contains(fn ($row) => $row['id'] === $version->id
+                && $row['updates']['image'] === '33.0.2'
+                && $row['updates']['chart'] === '9.0.1'
+                && $row['updates']['chart_incompatible']['version'] === '9.1.0'))
+        );
+});
+
+it('hides stored updates once the version has caught up', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.2',
+        'settings' => ['chart_version' => '9.0.1'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'chart' => ['current' => '9.0.0', 'latest' => '9.0.1', 'latest_compatible' => '9.0.1', 'compatibility' => null, 'error' => null],
+        ],
+    ]);
+
+    expect($version->newerImageTag())->toBeNull()
+        ->and($version->newerChartVersion())->toBeNull()
+        ->and($version->incompatibleChart())->toBeNull();
+});
+
+it('checks for updates on demand from the versions page', function () {
+    AppVersion::where('application_id', $this->demoApp->id)->update(['status' => 'deactivated']);
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '1.0.0',
+        'status' => 'active',
+        'settings' => ['image_registry' => 'registry.example.com', 'image_repo_name' => 'demo/app'],
+    ]);
+
+    Http::fake(['registry.example.com/v2/demo/app/tags/list*' => Http::response(['tags' => ['1.0.0', '1.0.1', 'latest']])]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions/check-updates")
+        ->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions");
+
+    expect($version->refresh()->newerImageTag())->toBe('1.0.1')
+        ->and($version->update_check['chart'])->toBeNull();
+});
+
+// ─── Update check: only enabled versions ──────────────────────────────────────
+
+function checkedVersion(array $attributes = []): AppVersion
+{
+    return AppVersion::factory()->create(array_merge([
+        'application_id' => test()->demoApp->id,
+        'name' => '33.0.1',
+        'status' => 'active',
+        'settings' => ['chart_version' => '9.0.0'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'chart' => ['current' => '9.0.0', 'latest' => '9.0.1', 'latest_compatible' => '9.0.1', 'compatibility' => null, 'error' => null],
+        ],
+    ], $attributes));
+}
+
+it('drops the update check when a version stops being enabled', function () {
+    $version = checkedVersion();
+    expect($version->refresh()->update_check)->not->toBeNull();
+
+    $version->status = 'deactivated';
+    $version->save();
+
+    expect($version->refresh()->update_check)->toBeNull()
+        ->and($version->updateSummary())->toBeNull();
+});
+
+it('only reports updates for the enabled version', function () {
+    $old = checkedVersion();
+    $old->status = 'deactivated';
+    $old->save();
+    $new = checkedVersion(['name' => '33.0.2']);
+
+    $this->withoutVite()
+        ->get("/admin/apps/{$this->demoApp->slug}/versions")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('versions', fn ($versions) => collect($versions)->where('updates', '!=', null)->pluck('id')->all() === [$new->id])
+        );
+});
+
+it('clears results left on versions that are not enabled when checking for updates', function () {
+    AppVersion::where('application_id', $this->demoApp->id)->update(['status' => 'deactivated']);
+    $stale = checkedVersion(['status' => 'deactivated']);
+    AppVersion::whereKey($stale->id)->update(['update_check' => json_encode(['checked_at' => '2026-10-14T03:00:00+00:00'])]);
+    expect($stale->refresh()->update_check)->not->toBeNull();
+
+    (new CheckVersionUpdates)();
+
+    expect($stale->refresh()->update_check)->toBeNull();
+});
+
+it('adds a new version from an update, copying the checked version and its newest compatible chart', function () {
+    $source = checkedVersion(['admin_path' => '/source-admin', 'settings' => ['chart_version' => '9.0.0', 'helm_repo_name' => 'source-chart']]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '33.0.2',
+        'copy_from' => 'update',
+        'copy_version' => $source->id,
+    ])->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/33.0.2");
+
+    $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '33.0.2')->firstOrFail();
+
+    expect($version->setting('chart_version'))->toBe('9.0.1')
+        ->and($version->setting('helm_repo_name'))->toBe('source-chart')
+        ->and($version->admin_path)->toBe('/source-admin')
+        ->and($version->status)->toBe('deactivated')
+        ->and($version->update_check)->toBeNull();
+});
+
+it('requires the version to copy when adding from an update', function () {
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '33.0.2',
+        'copy_from' => 'update',
+    ])->assertSessionHasErrors('copy_version');
+});
+
+it('lists the enabled version, its chart and its updates on the admin application list', function () {
+    $version = checkedVersion();
+
+    $this->withoutVite()
+        ->get('/admin/apps')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Admin/Applications/AppsList')
+            ->where('apps', fn ($apps) => collect($apps)->contains(fn ($app) => $app['id'] === $this->demoApp->id
+                && collect($app['versions'])->contains(fn ($row) => $row['id'] === $version->id
+                    && $row['version'] === '33.0.1'
+                    && $row['chart_version'] === '9.0.0'
+                    && $row['updates']['image'] === '33.0.2'
+                    && $row['updates']['chart'] === '9.0.1')))
+        );
+});
+
+it('shows apps with updates available on the admin dashboard', function () {
+    $version = checkedVersion();
+    checkedVersion(['name' => '1.0.0', 'status' => 'deactivated']);
+
+    $this->withoutVite()
+        ->get('/admin')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Admin/Dashboard/DashboardOverview')
+            ->where('app_updates', fn ($updates) => collect($updates)->pluck('id')->all() === [$version->id]
+                && collect($updates)->first()['image'] === '33.0.2'
+                && collect($updates)->first()['chart'] === '9.0.1')
+        );
 });

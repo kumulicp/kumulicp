@@ -22,7 +22,7 @@ class Applications extends Controller
     {
         $apps = ApplicationFacade::all();
 
-        $apps = Application::paginate(20);
+        $apps = Application::with(['versions' => fn ($query) => $query->where('status', 'active')])->paginate(20);
 
         return inertia()->render('Admin/Applications/AppsList', [
             'apps' => $apps->map(function ($app) {
@@ -31,6 +31,12 @@ class Applications extends Controller
                     'slug' => $app->slug,
                     'name' => $app->name,
                     'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
+                    'versions' => $app->versions->map(fn (AppVersion $version) => [
+                        'id' => $version->id,
+                        'version' => $version->name,
+                        'chart_version' => $version->setting('chart_version'),
+                        'updates' => $version->updateSummary(),
+                    ])->all(),
                 ];
             }),
             'meta' => [

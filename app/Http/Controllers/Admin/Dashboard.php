@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Application;
+use App\AppVersion;
 use App\FailedJob;
 use App\Http\Controllers\Controller;
 use App\Log;
@@ -99,6 +100,7 @@ class Dashboard extends Controller
             ],
             'plans' => $plans,
             'app_usage' => $app_usage,
+            'app_updates' => $this->appUpdates(),
             'task_statuses' => $task_statuses,
             'recent_failed_tasks' => $recent_failed_tasks,
             'security_findings' => $security_findings,
@@ -123,13 +125,35 @@ class Dashboard extends Controller
         ]);
     }
 
+    // Enabled app versions with a newer image tag or a compatible newer chart
+    private function appUpdates()
+    {
+        return AppVersion::where('status', 'active')
+            ->whereNotNull('update_check')
+            ->with('application')
+            ->get()
+            ->map(fn (AppVersion $version) => ['version' => $version, 'updates' => $version->updateSummary()])
+            ->filter(fn (array $row) => $row['updates'] && ($row['updates']['image'] || $row['updates']['chart']))
+            ->sortBy(fn (array $row) => $row['version']->application->name)
+            ->map(fn (array $row) => [
+                'id' => $row['version']->id,
+                'slug' => $row['version']->application->slug,
+                'name' => $row['version']->application->name,
+                'version' => $row['version']->name,
+                'image' => $row['updates']['image'],
+                'chart_current' => $row['updates']['chart_current'],
+                'chart' => $row['updates']['chart'],
+            ])
+            ->values();
+    }
+
     private function appUsage()
     {
         return Application::withCount([
             'instances as total_instances',
             'instances as active_instances' => fn ($query) => $query->where('status', 'active'),
         ])
-            ->having('total_instances', '>', 0)
+            ->has('instances')
             ->orderByDesc('total_instances')
             ->get()
             ->map(fn (Application $application) => [

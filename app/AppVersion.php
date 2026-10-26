@@ -2,10 +2,14 @@
 
 namespace App;
 
+use App\Support\VersionUpdates\ChartCompatibilityChecker;
+use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -14,6 +18,7 @@ use Illuminate\Support\Arr;
  * @property string|null $admin_path
  * @property array $roles
  * @property array $settings
+ * @property array|null $update_check
  * @property-read Application $application
  * @property-read RepoSecret|null $imageRegistry
  * @property-read RepoSecret|null $helmRepoSecret
@@ -27,9 +32,24 @@ class AppVersion extends Model
     protected $casts = [
         'roles' => 'array',
         'settings' => 'array',
+        'update_check' => 'array',
     ];
 
-    public function application()
+    protected static function booted(): void
+    {
+        // Update checks only describe enabled versions: once a version is no
+        // longer enabled, its last result must not keep being shown
+        static::saving(function (AppVersion $version) {
+            if ($version->status !== 'active') {
+                $version->update_check = null;
+            }
+        });
+    }
+
+    /**
+     * @return BelongsTo<Application, $this>
+     */
+    public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
@@ -263,5 +283,64 @@ class AppVersion extends Model
 
         $this->settings = $settings;
         $this->save();
+    }
+
+    // The newest image tag found by the update check, if still newer than this version's tag
+    public function newerImageTag(): ?string
+    {
+        $latest = Arr::get($this->update_check ?? [], 'image.latest');
+
+        return (new VersionComparator)->isNewer($latest, $this->name) ? $latest : null;
+    }
+
+    // The newest chart version that passed the compatibility check, if still newer than the one in use
+    public function newerChartVersion(): ?string
+    {
+        $latest = Arr::get($this->update_check ?? [], 'chart.latest_compatible');
+
+        return (new VersionComparator)->isNewer($latest, $this->setting('chart_version')) ? $latest : null;
+    }
+
+    // The newest chart release when it failed the compatibility check, with its issues
+    public function incompatibleChart(): ?array
+    {
+        $compatibility = Arr::get($this->update_check ?? [], 'chart.compatibility');
+
+        if (! $compatibility || $compatibility['status'] === ChartCompatibilityChecker::COMPATIBLE) {
+            return null;
+        }
+
+        if (! (new VersionComparator)->isNewer($compatibility['version'] ?? null, $this->setting('chart_version'))) {
+            return null;
+        }
+
+        return $compatibility;
+    }
+
+    // What the last update check found, for display. Only enabled versions are checked.
+    public function updateSummary(): ?array
+    {
+        $check = $this->update_check;
+
+        if ($this->status !== 'active' || ! $check) {
+            return null;
+        }
+
+        $incompatible = $this->incompatibleChart();
+
+        return [
+            'checked_at' => (new Carbon($check['checked_at']))->format('Y-m-d H:i'),
+            'image' => $this->newerImageTag(),
+            'image_error' => Arr::get($check, 'image.error'),
+            'chart_current' => $this->setting('chart_version'),
+            'chart' => $this->newerChartVersion(),
+            'chart_error' => Arr::get($check, 'chart.error'),
+            'chart_incompatible' => $incompatible ? [
+                'version' => $incompatible['version'],
+                'status' => $incompatible['status'],
+                'issues' => $incompatible['issues'],
+            ] : null,
+            'chart_warnings' => Arr::get($check, 'chart.compatibility.warnings', []),
+        ];
     }
 }
