@@ -35,7 +35,7 @@ class Versions extends Controller
                     'status' => $version->status,
                     'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d h:m:s'),
                     'created_at' => (new Carbon($version->created_at))->format('Y-m-d h:m:s'),
-                    'updates' => $this->updates($version),
+                    'updates' => $version->updateSummary(),
                 ];
             }),
             'breadcrumbs' => [
@@ -61,45 +61,23 @@ class Versions extends Controller
         return redirect('/admin/apps/'.$app->slug.'/versions')->with('success', __('admin.applications.versions.updates_checked'));
     }
 
-    // What the last update check found for a version, for the Versions page
-    private function updates(AppVersion $version): ?array
-    {
-        $check = $version->update_check;
-
-        if (! $check) {
-            return null;
-        }
-
-        $incompatible = $version->incompatibleChart();
-
-        return [
-            'checked_at' => (new Carbon($check['checked_at']))->format('Y-m-d H:i'),
-            'image' => $version->newerImageTag(),
-            'image_error' => Arr::get($check, 'image.error'),
-            'chart_current' => $version->setting('chart_version'),
-            'chart' => $version->newerChartVersion(),
-            'chart_error' => Arr::get($check, 'chart.error'),
-            'chart_incompatible' => $incompatible ? [
-                'version' => $incompatible['version'],
-                'status' => $incompatible['status'],
-                'issues' => $incompatible['issues'],
-            ] : null,
-            'chart_warnings' => Arr::get($check, 'chart.compatibility.warnings', []),
-        ];
-    }
-
     public function store(Request $request, Application $app)
     {
         /* Validate */
         $validatedData = $request->validate([
             'version' => 'required|not_regex:/\//',
-            'copy_from' => 'required|in:recommendations,previous_version,none',
-            'copy_version' => 'exclude_unless:copy_from,previous_version|required|exists:app_versions,id',
+            'copy_from' => 'required|in:recommendations,previous_version,update,none',
+            'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
         ]);
         $image_registry_id = null;
-        if ($validatedData['copy_from'] === 'previous_version' && is_numeric($validatedData['copy_version'])) {
+        if (in_array($validatedData['copy_from'], ['previous_version', 'update']) && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
+
+            // Adopting an update: also move to the newest chart that passed the compatibility check
+            if ($validatedData['copy_from'] === 'update' && $newer_chart = $copy_version->newerChartVersion()) {
+                $settings['chart_version'] = $newer_chart;
+            }
             $admin_path = $copy_version->admin_path;
             $roles = $copy_version->roles;
             $image_registry_id = $copy_version->image_registry_id;

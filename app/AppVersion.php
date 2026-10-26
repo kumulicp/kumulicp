@@ -7,7 +7,9 @@ use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -33,7 +35,21 @@ class AppVersion extends Model
         'update_check' => 'array',
     ];
 
-    public function application()
+    protected static function booted(): void
+    {
+        // Update checks only describe enabled versions: once a version is no
+        // longer enabled, its last result must not keep being shown
+        static::saving(function (AppVersion $version) {
+            if ($version->status !== 'active') {
+                $version->update_check = null;
+            }
+        });
+    }
+
+    /**
+     * @return BelongsTo<Application, $this>
+     */
+    public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
     }
@@ -299,5 +315,32 @@ class AppVersion extends Model
         }
 
         return $compatibility;
+    }
+
+    // What the last update check found, for display. Only enabled versions are checked.
+    public function updateSummary(): ?array
+    {
+        $check = $this->update_check;
+
+        if ($this->status !== 'active' || ! $check) {
+            return null;
+        }
+
+        $incompatible = $this->incompatibleChart();
+
+        return [
+            'checked_at' => (new Carbon($check['checked_at']))->format('Y-m-d H:i'),
+            'image' => $this->newerImageTag(),
+            'image_error' => Arr::get($check, 'image.error'),
+            'chart_current' => $this->setting('chart_version'),
+            'chart' => $this->newerChartVersion(),
+            'chart_error' => Arr::get($check, 'chart.error'),
+            'chart_incompatible' => $incompatible ? [
+                'version' => $incompatible['version'],
+                'status' => $incompatible['status'],
+                'issues' => $incompatible['issues'],
+            ] : null,
+            'chart_warnings' => Arr::get($check, 'chart.compatibility.warnings', []),
+        ];
     }
 }

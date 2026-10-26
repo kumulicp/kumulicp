@@ -53,7 +53,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     <va-button id="checkUpdates" class="ml-2" preset="secondary" :loading="checkForm.processing" :disabled="checkForm.processing" @click="checkForm.post('/admin/apps/' + app.slug + '/versions/check-updates')">{{ $t('admin.versions.checkNow') }}</va-button>
     <va-modal v-model="showAddVersion" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
-        <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions')">
+        <form @submit.prevent="submit">
           <va-card-title class="m-0">{{ $t('admin.versions.addVersion') }}</va-card-title>
           <va-card-content class="m-0">
             <va-input v-model="form.version"
@@ -70,9 +70,11 @@ import { Link, useForm } from '@inertiajs/vue3'
               {{ $t('admin.versions.copyValuesFrom') }}
             </div>
             <va-radio v-model="form.copy_from"
-              :options="copyFrom"
+              :options="copyOptions"
               value-by="value"
+              @update:modelValue="copyChanged"
               />
+            <div v-if="selectedUpdate" id="updateDetails" class="va-text-secondary mt-2" style="font-size: 0.85rem">{{ selectedUpdate.details }}</div>
             <va-select v-model="form.copy_version"
               v-if="form.copy_from === 'previous_version'"
               id="copyVersion"
@@ -107,7 +109,6 @@ import { Link, useForm } from '@inertiajs/vue3'
               <tr>
                 <th style="width: 50px">{{ $t('status.enabled') }}</th>
                 <th width="70%">{{ $t('admin.versions.name') }}</th>
-                <th>{{ $t('admin.versions.updates') }}</th>
                 <th>{{ $t('status.updatedAt') }}</th>
                 <th>{{ $t('status.createdAt') }}</th>
               </tr>
@@ -116,15 +117,6 @@ import { Link, useForm } from '@inertiajs/vue3'
               <tr v-for="version in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="version.name">
                 <td style="text-align: center"><va-icon name="fa-circle" :color="version.status == 'active' ? 'success' : 'backgroundElement'" /></td>
                 <td><Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version">{{ version.version }}</Link></td>
-                <td>
-                  <template v-if="version.updates">
-                    <va-badge v-if="version.updates.image" color="success" class="mr-1" :text="$t('admin.versions.imageBadge', { latest: version.updates.image })" />
-                    <va-badge v-if="version.updates.chart" color="success" class="mr-1" :text="$t('admin.versions.chartBadge', { latest: version.updates.chart })" />
-                    <va-badge v-if="version.updates.chart_incompatible" color="warning" class="mr-1" :text="$t('admin.versions.chartBlockedBadge', { latest: version.updates.chart_incompatible.version })" />
-                    <div class="va-text-secondary" style="font-size: 0.8rem">{{ $t('admin.versions.lastChecked', { date: version.updates.checked_at }) }}</div>
-                  </template>
-                  <span v-else-if="version.status == 'active'" class="va-text-secondary">{{ $t('admin.versions.notChecked') }}</span>
-                </td>
                 <td>{{ version.updated_at }}</td>
                 <td>{{ version.created_at }}</td>
               </tr>
@@ -151,6 +143,42 @@ export default {
   computed: {
     versionsWithUpdates () {
       return this.versions.filter((version) => version.updates)
+    },
+    // A new version can be added for each enabled version with a newer image tag that isn't already a version
+    updateOptions () {
+      return this.versions
+        .filter((version) => version.updates && version.updates.image && !this.versions.some((other) => other.version === version.updates.image))
+        .map((version) => ({
+          text: this.$t('admin.versions.updateOption', { latest: version.updates.image }),
+          details: version.updates.chart
+            ? this.$t('admin.versions.updateDetailsChart', { current: version.version, chart: version.updates.chart })
+            : this.$t('admin.versions.updateDetails', { current: version.version }),
+          value: 'update:' + version.id,
+          latest: version.updates.image
+        }))
+    },
+    selectedUpdate () {
+      return this.updateOptions.find((option) => option.value === this.form.copy_from)
+    },
+    copyOptions () {
+      return [...this.updateOptions, ...this.copyFrom]
+    }
+  },
+  methods: {
+    // Choosing an update fills in the new version's name
+    copyChanged (value) {
+      const update = this.updateOptions.find((option) => option.value === value)
+      if (update) {
+        this.form.version = update.latest
+      }
+    },
+    submit () {
+      this.form.transform((data) => {
+        if (!data.copy_from.startsWith('update:')) {
+          return data
+        }
+        return { ...data, copy_from: 'update', copy_version: Number(data.copy_from.split(':')[1]) }
+      }).post('/admin/apps/' + this.app.slug + '/versions')
     }
   },
   data () {
