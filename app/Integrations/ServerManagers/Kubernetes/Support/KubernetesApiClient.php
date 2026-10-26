@@ -218,6 +218,12 @@ class KubernetesApiClient
         });
     }
 
+    // The API server's version info (GET /version); the git version is in ['data']['gitVersion'].
+    public function serverVersion(): array
+    {
+        return $this->request(fn (PendingRequest $http) => $this->result($http->get('/version')));
+    }
+
     /**
      * The API server's build info (GET /version): gitVersion, major, minor…
      */

@@ -8,12 +8,12 @@ use Throwable;
 
 /**
  * Decides whether a chart version can replace the one an app version uses,
- * for plain Helm (helm_k8s) and Rancher deployments, without the helm CLI:
+ * for plain Kubernetes (Helm) and Rancher deployments, without the helm CLI:
  *
  *  - the package downloads and has a Helm 3 chart apiVersion (v1 or v2);
  *  - every value Kumulicp sets still exists in the chart's defaults;
  *  - Kumulicp's values pass the chart's values.schema.json;
- *  - each helm_k8s cluster's Kubernetes version satisfies kubeVersion;
+ *  - each kubernetes cluster's Kubernetes version satisfies kubeVersion;
  *  - each Rancher server still lists the version once Rancher applies its
  *    own rancher-version / kube-version filtering.
  */
@@ -130,7 +130,7 @@ class ChartCompatibilityChecker
             ])];
         }
 
-        if ($server->interface === 'helm_k8s') {
+        if ($server->interface === 'kubernetes') {
             $constraint = $package->kubeVersion();
 
             if (! $constraint) {

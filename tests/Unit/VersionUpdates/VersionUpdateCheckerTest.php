@@ -4,6 +4,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppVersion;
 use App\OrgServer;
+use App\RepoSecret;
 use App\Server;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
 use App\Support\VersionUpdates\ValuesContract;
@@ -99,6 +100,26 @@ it('offers the newest image tag and the newest chart that passes the checks', fu
         ->and($version->incompatibleChart()['version'])->toBe('9.1.0');
 });
 
+it('lists image tags from the version\'s image registry and its credentials', function () {
+    $registry = RepoSecret::factory()->create(['registry' => 'registry.example.com', 'username' => 'puller', 'password' => 'secret']);
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->application->id,
+        'name' => '1.0.0',
+        'image_registry_id' => $registry->id,
+        'settings' => ['image_repo_name' => 'org/app'],
+    ]);
+
+    Http::fake(['registry.example.com/v2/org/app/tags/list*' => Http::sequence()
+        ->push('', 401, ['WWW-Authenticate' => 'Basic realm="registry"'])
+        ->push(['tags' => ['1.0.0', '1.0.1']]),
+    ]);
+
+    $result = checkerWith(null)->check($version);
+
+    expect($result['image'])->toMatchArray(['latest' => '1.0.1', 'error' => null]);
+    Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'Basic '.base64_encode('puller:secret')));
+});
+
 it('blocks a chart whose schema rejects the values Kumulicp sends', function () {
     $version = AppVersion::factory()->create([
         'application_id' => $this->application->id,
@@ -121,12 +142,12 @@ it('blocks a chart whose schema rejects the values Kumulicp sends', function () 
         ->and($result['chart']['compatibility']['status'])->toBe('incompatible');
 });
 
-it('checks a helm_k8s cluster version against the chart kubeVersion', function () {
+it('checks a kubernetes cluster version against the chart kubeVersion', function () {
     $version = AppVersion::factory()->create([
         'application_id' => $this->application->id,
         'settings' => ['helm_repo_name' => 'https://charts.example.com', 'chart_name' => 'demo', 'chart_version' => '1.0.0'],
     ]);
-    runOn($this->application, $version, 'helm_k8s', ['address' => 'https://cluster.example.com:6443', 'api_secret' => 'token', 'settings' => ['k8s_auth_type' => 'bearer_token']]);
+    runOn($this->application, $version, 'kubernetes', ['address' => 'https://cluster.example.com:6443', 'api_secret' => 'token', 'settings' => ['k8s_auth_type' => 'bearer_token']]);
 
     Http::fake([
         'cluster.example.com:6443/version' => Http::response(['gitVersion' => 'v1.28.5+k3s1']),
@@ -140,7 +161,7 @@ it('checks a helm_k8s cluster version against the chart kubeVersion', function (
 
     expect($result['chart']['latest'])->toBe('1.2.0')
         ->and($result['chart']['latest_compatible'])->toBe('1.1.0')
-        ->and($result['chart']['compatibility']['targets'][0])->toMatchArray(['interface' => 'helm_k8s', 'status' => 'incompatible'])
+        ->and($result['chart']['compatibility']['targets'][0])->toMatchArray(['interface' => 'kubernetes', 'status' => 'incompatible'])
         ->and($result['chart']['compatibility']['targets'][0]['reason'])->toContain('1.28.5');
 
     Http::assertSent(fn ($request) => $request->url() === 'https://cluster.example.com:6443/version');

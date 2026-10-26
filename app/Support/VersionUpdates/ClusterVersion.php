@@ -8,7 +8,7 @@ use Composer\Semver\Semver;
 use Throwable;
 
 /**
- * The Kubernetes version of a helm_k8s cluster, and whether a chart's
+ * The Kubernetes version of a kubernetes cluster, and whether a chart's
  * kubeVersion constraint accepts it.
  */
 class ClusterVersion
