@@ -9,7 +9,6 @@ use App\Support\VersionUpdates\ChartCompatibilityChecker;
 use App\Support\VersionUpdates\ValuesContract;
 use App\Support\VersionUpdates\VersionUpdateChecker;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Process;
 use Tests\Support\TestSupports;
 use Tests\Support\VersionUpdates\ChartArchive;
 
@@ -129,10 +128,8 @@ it('checks a helm_k8s cluster version against the chart kubeVersion', function (
     ]);
     runOn($this->application, $version, 'helm_k8s', ['address' => 'https://cluster.example.com:6443', 'api_secret' => 'token', 'settings' => ['k8s_auth_type' => 'bearer_token']]);
 
-    Process::fake([
-        '*' => Process::result(json_encode(['serverVersion' => ['gitVersion' => 'v1.28.5+k3s1']])),
-    ]);
     Http::fake([
+        'cluster.example.com:6443/version' => Http::response(['gitVersion' => 'v1.28.5+k3s1']),
         'charts.example.com/index.yaml' => Http::response(ChartArchive::index('demo', ['1.0.0', '1.1.0', '1.2.0'])),
         'charts.example.com/demo-1.0.0.tgz' => Http::response(ChartArchive::make('demo', '1.0.0')),
         'charts.example.com/demo-1.1.0.tgz' => Http::response(ChartArchive::make('demo', '1.1.0', [], ['kubeVersion' => '>=1.25.0-0'])),
@@ -146,7 +143,7 @@ it('checks a helm_k8s cluster version against the chart kubeVersion', function (
         ->and($result['chart']['compatibility']['targets'][0])->toMatchArray(['interface' => 'helm_k8s', 'status' => 'incompatible'])
         ->and($result['chart']['compatibility']['targets'][0]['reason'])->toContain('1.28.5');
 
-    Process::assertRan(fn ($process) => in_array('version', $process->command));
+    Http::assertSent(fn ($request) => $request->url() === 'https://cluster.example.com:6443/version');
 });
 
 it('uses Rancher\'s filtered ClusterRepo index as its compatibility verdict', function () {

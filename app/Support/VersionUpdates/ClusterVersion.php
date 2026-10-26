@@ -2,7 +2,7 @@
 
 namespace App\Support\VersionUpdates;
 
-use App\Integrations\ServerManagers\HelmKubernetes\Support\KubectlCli;
+use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
 use App\Server;
 use Composer\Semver\Semver;
 use Throwable;
@@ -51,7 +51,7 @@ class ClusterVersion
     private function lookup(Server $server): ?string
     {
         try {
-            $result = (new KubectlCli($server))->run(['version', '-o', 'json'], 'default', null, 30);
+            $result = (new KubernetesApiClient($server))->version();
         } catch (Throwable $exception) {
             report($exception);
 
@@ -62,7 +62,7 @@ class ClusterVersion
             return null;
         }
 
-        $git_version = json_decode($result['output'], true)['serverVersion']['gitVersion'] ?? '';
+        $git_version = $result['data']['gitVersion'] ?? '';
 
         return self::normalize($git_version);
     }

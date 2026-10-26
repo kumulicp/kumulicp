@@ -21,7 +21,7 @@ class ImageTagResolver
             return null;
         }
 
-        $registry = $version->pullSecret ? $version->pullSecret->registry : $version->setting('image_registry');
+        $registry = $version->imageRegistry?->registry ?: $version->setting('image_registry');
 
         // Allow a fully qualified repo ("ghcr.io/org/app") when no registry is set
         $first_segment = explode('/', $repository)[0];
@@ -31,7 +31,7 @@ class ImageTagResolver
         }
 
         $host = RegistryClient::apiHost($registry);
-        $client = new RegistryClient($version->requiresPullSecret() ? $version->pullSecret : null);
+        $client = new RegistryClient($version->requiresImageRegistryAuth() ? $version->imageRegistry : null);
 
         return $client->tags($host, RegistryClient::repository($host, $repository));
     }
