@@ -64,7 +64,6 @@ import AppsLayout from './AppsLayout.vue'
         </va-list-item-label>
       </va-list-item-section>
     </va-list-item>
-    <va-list-separator class="my-1" fit />
 
     <template v-if="pod_security">
       <va-list-separator class="my-1" fit />
@@ -75,7 +74,7 @@ import AppsLayout from './AppsLayout.vue'
           </va-list-item-label>
         </va-list-item-section>
         <va-list-item-section>
-          <va-list-item-label>
+          <div>
             <va-alert v-if="!pod_security.warnings || pod_security.warnings.length === 0" color="success" outline>
               {{ $t('admin.apps.podSecurityNone', { date: collectedAt }) }}
             </va-alert>
@@ -94,7 +93,7 @@ import AppsLayout from './AppsLayout.vue'
                 </ul>
               </va-alert>
             </template>
-          </va-list-item-label>
+          </div>
         </va-list-item-section>
       </va-list-item>
     </template>
