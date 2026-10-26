@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Integrations\ServerManagers\AppDatabase\AppDatabaseProfile;
 use App\Integrations\ServerManagers\DockerMailServer\MailserverProfile;
-use App\Integrations\ServerManagers\HelmKubernetes\HelmKubernetesProfile;
+use App\Integrations\ServerManagers\Kubernetes\KubernetesProfile;
 use App\Integrations\ServerManagers\Rancher\RancherProfile;
 use App\Integrations\SSO\Authentik\AuthentikProfile;
 use App\OrgServer;
@@ -16,7 +16,7 @@ class ServerInterfaceService
     private $interfaces = [
         'web' => [
             'rancher' => RancherProfile::class,
-            'helm_k8s' => HelmKubernetesProfile::class,
+            'kubernetes' => KubernetesProfile::class,
         ],
         'database' => [
             'app_database' => AppDatabaseProfile::class,

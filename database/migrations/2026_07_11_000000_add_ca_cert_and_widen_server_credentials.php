@@ -20,9 +20,9 @@ return new class extends Migration
         Schema::table('servers', function (Blueprint $table) {
             // Widen from varchar(255): the `encrypted` cast on these columns
             // produces ciphertext well over 255 chars even for short
-            // secrets, and the helm_k8s driver also stores a ServiceAccount
+            // secrets, and the kubernetes driver also stores a ServiceAccount
             // token or a PEM client cert/key here (see Server field mapping
-            // for the helm_k8s interface).
+            // for the kubernetes interface).
             $table->text('api_key')->change();
             $table->text('api_secret')->change();
         });

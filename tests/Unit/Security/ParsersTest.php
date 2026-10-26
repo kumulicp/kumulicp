@@ -194,7 +194,7 @@ test('kubescape parser extracts the report from noisy pod logs', function () {
         ],
     ]);
 
-    // kubectl logs merges stdout/stderr, so the real raw_output has log lines
+    // Pod logs merge stdout/stderr, so the real raw_output has log lines
     // and the pretty-printer summary before the report, which `--format json`
     // (without -o) prints as a single compact line at the very end.
     $raw = implode("\n", [

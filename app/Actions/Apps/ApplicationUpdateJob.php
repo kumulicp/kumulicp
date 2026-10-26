@@ -58,7 +58,7 @@ class ApplicationUpdateJob extends Action
             return;
         }
 
-        // Job/JobChart::create() (both the Rancher and HelmKubernetes
+        // Job/JobChart::create() (both the Rancher and Kubernetes
         // drivers) return this shape without throwing even when the
         // create/apply itself failed -- has to be checked explicitly, or a
         // failed creation silently proceeds with a null job_id.
