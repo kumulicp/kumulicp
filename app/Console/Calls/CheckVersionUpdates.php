@@ -18,6 +18,12 @@ class CheckVersionUpdates
     {
         $checker = new VersionUpdateChecker;
 
+        // Only enabled versions are checked; drop results left on any other version
+        AppVersion::where('status', '!=', 'active')
+            ->whereNotNull('update_check')
+            ->when($this->application_id, fn ($query) => $query->where('application_id', $this->application_id))
+            ->update(['update_check' => null]);
+
         $versions = AppVersion::where('status', 'active')
             ->when($this->application_id, fn ($query) => $query->where('application_id', $this->application_id))
             ->get();
