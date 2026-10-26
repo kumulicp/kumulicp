@@ -1,6 +1,6 @@
 <?php
 
-use App\Integrations\ServerManagers\HelmKubernetes\API\HelmInstaller;
+use App\Integrations\ServerManagers\Kubernetes\API\HelmInstaller;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 function makeHelmInstaller(): HelmInstaller
 {
     $server = Server::factory()->create([
-        'interface' => 'helm_k8s',
+        'interface' => 'kubernetes',
         'address' => 'https://cluster.example.com:6443',
         'ca_cert' => 'fake-ca',
         'api_secret' => 'token',

@@ -1,6 +1,6 @@
 <?php
 
-use App\Integrations\ServerManagers\HelmKubernetes\Support\K8sCredentialContext;
+use App\Integrations\ServerManagers\Kubernetes\Support\K8sCredentialContext;
 use App\Server;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 function makeK8sServer(array $attributes = []): Server
 {
     return Server::factory()->create(array_merge([
-        'interface' => 'helm_k8s',
+        'interface' => 'kubernetes',
         'address' => 'https://cluster.example.com:6443',
         'ca_cert' => 'fake-ca',
         'api_secret' => 'token',
@@ -100,7 +100,7 @@ it('falls back to the system trust store when no CA cert is set', function () {
 
 it('defaults k8s_tls_verify to true when unset', function () {
     $server = Server::factory()->create([
-        'interface' => 'helm_k8s',
+        'interface' => 'kubernetes',
         'settings' => ['k8s_auth_type' => 'bearer_token'],
     ]);
 

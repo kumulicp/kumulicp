@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\API;
+namespace App\Integrations\ServerManagers\Kubernetes\API;
 
 use App\AppInstance;
-use App\Integrations\ServerManagers\HelmKubernetes\Kubernetes;
+use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
 use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Yaml\Yaml;
@@ -19,8 +19,8 @@ use Symfony\Component\Yaml\Yaml;
  * task-completion polling schedule (ApplicationUpgrade::complete() etc).
  * Read-only/Helm's-own-bookkeeping operations (retrieve, isActive,
  * deleteStuckReleaseSecrets) read Helm's release Secrets straight from the
- * Kubernetes API under kumulicp-deployer (see HelmReleases), so neither a
- * `helm` nor a `kubectl` binary is needed where this app runs. Reuses the
+ * Kubernetes API under kumulicp-deployer (see HelmReleases), so no cluster
+ * tooling is needed where this app runs. Reuses the
  * same Chart value-array builders Rancher uses (NextcloudChart,
  * WordpressChart, CiviCRMStandaloneChart, ...).
  */
@@ -141,7 +141,7 @@ class Application extends Kubernetes
     // name => value map materialized as a Kubernetes Secret and injected
     // into the install Job as env vars (see HelmInstallJob) -- credentials
     // never go into $repo_args/Job args, since those are visible via
-    // `kubectl describe pod`. The helm-runner image's entrypoint reads
+    // the Pod's spec. The helm-runner image's entrypoint reads
     // OCI_REGISTRY_HOST/OCI_USERNAME/OCI_PASSWORD to `helm registry login`
     // before the main command, or HELM_REPO_USERNAME/HELM_REPO_PASSWORD to
     // append --username/--password for classic repos.

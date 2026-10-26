@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\API;
+namespace App\Integrations\ServerManagers\Kubernetes\API;
 
-use App\Integrations\ServerManagers\HelmKubernetes\Kubernetes;
+use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
 use App\Integrations\ServerManagers\Rancher\Charts\Ingress\IngressChart;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;

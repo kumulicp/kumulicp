@@ -1,30 +1,30 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes;
+namespace App\Integrations\ServerManagers\Kubernetes;
 
-use App\Integrations\ServerManagers\HelmKubernetes\Interfaces\HelmKubernetesWebInterface;
+use App\Integrations\ServerManagers\Kubernetes\Interfaces\KubernetesWebInterface;
 use Illuminate\Support\Arr;
 
-class HelmKubernetesProfile
+class KubernetesProfile
 {
     private $interfaces = [
-        'web' => HelmKubernetesWebInterface::class,
+        'web' => KubernetesWebInterface::class,
     ];
 
     public function description()
     {
         return [
             'general' => [
-                __('admin.servers.helm_k8s.general_1'),
+                __('admin.servers.kubernetes.general_1'),
             ],
-            'host' => __('admin.servers.helm_k8s.host'),
-            'address' => __('admin.servers.helm_k8s.address'),
-            'ca_cert' => __('admin.servers.helm_k8s.ca_cert'),
-            'ip' => __('admin.servers.helm_k8s.ip'),
-            'internal_address' => __('admin.servers.helm_k8s.internal_address'),
-            'api_key' => __('admin.servers.helm_k8s.api_key'),
-            'api_secret' => __('admin.servers.helm_k8s.api_secret'),
-            'settings' => __('admin.servers.helm_k8s.settings'),
+            'host' => __('admin.servers.kubernetes.host'),
+            'address' => __('admin.servers.kubernetes.address'),
+            'ca_cert' => __('admin.servers.kubernetes.ca_cert'),
+            'ip' => __('admin.servers.kubernetes.ip'),
+            'internal_address' => __('admin.servers.kubernetes.internal_address'),
+            'api_key' => __('admin.servers.kubernetes.api_key'),
+            'api_secret' => __('admin.servers.kubernetes.api_secret'),
+            'settings' => __('admin.servers.kubernetes.settings'),
         ];
     }
 

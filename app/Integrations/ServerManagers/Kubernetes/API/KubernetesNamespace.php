@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\API;
+namespace App\Integrations\ServerManagers\Kubernetes\API;
 
-use App\Integrations\ServerManagers\HelmKubernetes\Kubernetes;
+use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
 use Illuminate\Support\Facades\Log;
 
 class KubernetesNamespace extends Kubernetes

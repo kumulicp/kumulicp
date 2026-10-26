@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
+namespace App\Integrations\ServerManagers\Kubernetes\Support;
 
 use App\Server;
 use Illuminate\Support\Facades\Http;
@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
  * Builds the HTTP client used to talk to a Server's Kubernetes API, from its
  * stored connection details, without ever mounting a persistent kubeconfig.
  *
- * The helm_k8s driver reuses the Server model's existing generic fields
+ * The kubernetes driver reuses the Server model's existing generic fields
  * rather than dedicated columns:
  *   - address        => Kubernetes API server URL
  *   - ca_cert         => cluster CA certificate (PEM, not secret)
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Http;
  *                        'k8s_impersonate_user', 'k8s_impersonate_group'
  *   - api_key/api_secret (already encrypted+hidden) => bearer token
  *     (api_secret only) or client key/cert (api_key/api_secret) depending
- *     on k8s_auth_type — see HelmKubernetesProfile::description().
+ *     on k8s_auth_type — see KubernetesProfile::description().
  *
  * Bearer-token auth is just an Authorization header. The CA certificate and
  * the client certificate/key (client_cert auth) are the only things that

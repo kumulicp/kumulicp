@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
+namespace App\Integrations\ServerManagers\Kubernetes\Support;
 
 /**
  * Read-only view of Helm's own release bookkeeping, replacing `helm status`

@@ -1,6 +1,6 @@
 <?php
 
-use App\Integrations\ServerManagers\HelmKubernetes\Support\KubernetesApiClient;
+use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
 use App\Server;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 function makeK8sApiClient(): KubernetesApiClient
 {
     return new KubernetesApiClient(Server::factory()->create([
-        'interface' => 'helm_k8s',
+        'interface' => 'kubernetes',
         'address' => 'https://cluster.example.com:6443',
         'ca_cert' => 'fake-ca',
         'api_secret' => 'token',

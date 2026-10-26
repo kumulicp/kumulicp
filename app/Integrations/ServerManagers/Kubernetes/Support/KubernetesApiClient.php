@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
+namespace App\Integrations\ServerManagers\Kubernetes\Support;
 
 use App\Server;
 use Illuminate\Http\Client\ConnectionException;
@@ -9,16 +9,16 @@ use Illuminate\Http\Client\Response;
 
 /**
  * Minimal Kubernetes REST client — talks to the API server directly over
- * HTTPS, so neither `kubectl` nor `helm` has to be installed where this app
- * runs. Authenticates per-call from the Server's stored credentials (see
+ * HTTPS, so no cluster tooling has to be installed where this app runs.
+ * Authenticates per-call from the Server's stored credentials (see
  * K8sCredentialContext).
  *
  * Every method returns ['success' => bool, 'status' => int, 'data' => ?array,
  * 'error' => string] rather than throwing on an API error, so callers can
  * map failures onto their own result shapes.
  *
- * apply() mirrors the permissions `kubectl apply` needed (get + create, or
- * get + patch for an object that already differs), rather than using
+ * apply() needs only get + create, or get + patch for an object that
+ * already differs, rather than using
  * server-side apply, which would additionally require `patch` just to
  * create an object — see docs/k8s-rbac-sample.yaml.
  */
@@ -64,8 +64,7 @@ class KubernetesApiClient
 
     /**
      * Create the manifest's object, or update it if it already exists.
-     * Unchanged objects are left alone (no write issued), like
-     * `kubectl apply`'s "unchanged".
+     * Unchanged objects are left alone (no write is issued).
      */
     public function apply(array $manifest, ?string $namespace = null): array
     {
@@ -150,8 +149,7 @@ class KubernetesApiClient
     }
 
     /**
-     * Deletes an object. Already-gone is treated as success (like
-     * `kubectl delete --ignore-not-found`).
+     * Deletes an object. Already-gone is treated as success.
      */
     public function delete(string $api_version, string $kind, string $name, ?string $namespace = null): array
     {
@@ -162,8 +160,8 @@ class KubernetesApiClient
                 return $this->failure("Unknown resource kind {$kind} ({$api_version})");
             }
 
-            // Background propagation is `kubectl delete`'s default; the API's
-            // own default for some kinds (e.g. batch/v1 Job) orphans children.
+            // Background propagation cleans up children; the API's own
+            // default for some kinds (e.g. batch/v1 Job) orphans them.
             $response = $http->delete($this->path($resource, $namespace, $name), ['propagationPolicy' => 'Background']);
 
             if ($response->status() === 404) {
@@ -175,7 +173,7 @@ class KubernetesApiClient
     }
 
     /**
-     * Logs of every pod matching the label selector (like `kubectl logs -l`),
+     * Logs of every pod matching the label selector,
      * concatenated. Each pod's default container is read: the one named by
      * its `kubectl.kubernetes.io/default-container` annotation, else the
      * first. On success the logs are in ['data'] as a string.

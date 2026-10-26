@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes\Services;
+namespace App\Integrations\ServerManagers\Kubernetes\Services;
 
 use App\AppInstance;
-use App\Integrations\ServerManagers\HelmKubernetes\API\Ingress;
-use App\Integrations\ServerManagers\HelmKubernetes\API\Middleware;
+use App\Integrations\ServerManagers\Kubernetes\API\Ingress;
+use App\Integrations\ServerManagers\Kubernetes\API\Middleware;
 use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
 use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 use App\Organization;

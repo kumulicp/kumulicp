@@ -1,6 +1,6 @@
 <?php
 
-use App\Integrations\ServerManagers\HelmKubernetes\Support\HelmInstallJob;
+use App\Integrations\ServerManagers\Kubernetes\Support\HelmInstallJob;
 
 beforeEach(function () {
     config(['services.helm_runner.image' => 'test-registry/kumulicp-helm-runner:1.0.0']);

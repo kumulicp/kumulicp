@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Integrations\ServerManagers\HelmKubernetes;
+namespace App\Integrations\ServerManagers\Kubernetes;
 
-use App\Integrations\ServerManagers\HelmKubernetes\API\HelmInstaller;
-use App\Integrations\ServerManagers\HelmKubernetes\Support\HelmReleases;
-use App\Integrations\ServerManagers\HelmKubernetes\Support\KubernetesApiClient;
+use App\Integrations\ServerManagers\Kubernetes\API\HelmInstaller;
+use App\Integrations\ServerManagers\Kubernetes\Support\HelmReleases;
+use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
 
 /**
- * Base class for the direct Kubernetes/Helm driver, sibling to
+ * Base class for the direct Kubernetes driver, sibling to
  * App\Integrations\ServerManagers\Rancher\Rancher. Holds the org/server
  * context and namespace convention (one namespace per organization, same as
  * Rancher) and exposes api()/helmReleases() helpers that talk to the
  * Kubernetes API directly, authenticating per-call from the Server's stored
- * k8s_* credential fields. No kubectl or helm binary is involved.
+ * k8s_* credential fields. No command-line tooling is involved.
  */
 class Kubernetes
 {

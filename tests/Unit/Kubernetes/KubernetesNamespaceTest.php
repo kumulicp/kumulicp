@@ -1,16 +1,16 @@
 <?php
 
-use App\Integrations\ServerManagers\HelmKubernetes\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-function makeHelmK8sOrgServer(): OrgServer
+function makeKubernetesOrgServer(): OrgServer
 {
     $server = Server::factory()->create([
-        'interface' => 'helm_k8s',
+        'interface' => 'kubernetes',
         'address' => 'https://cluster.example.com:6443',
         'ca_cert' => 'fake-ca',
         'api_secret' => 'token',
@@ -26,7 +26,7 @@ function makeHelmK8sOrgServer(): OrgServer
 }
 
 it('maps an Active namespace phase to isActive() == 1', function () {
-    $org_server = makeHelmK8sOrgServer();
+    $org_server = makeKubernetesOrgServer();
 
     Http::fake([
         '*' => Http::response(['status' => ['phase' => 'Active']]),
@@ -41,7 +41,7 @@ it('maps an Active namespace phase to isActive() == 1', function () {
 });
 
 it('maps a Terminating namespace phase to isActive() == 2', function () {
-    $org_server = makeHelmK8sOrgServer();
+    $org_server = makeKubernetesOrgServer();
 
     Http::fake([
         '*' => Http::response(['status' => ['phase' => 'Terminating']]),
@@ -53,7 +53,7 @@ it('maps a Terminating namespace phase to isActive() == 2', function () {
 });
 
 it('maps a failed API call to isActive() == 0', function () {
-    $org_server = makeHelmK8sOrgServer();
+    $org_server = makeKubernetesOrgServer();
 
     Http::fake([
         '*' => Http::response(['kind' => 'Status', 'message' => 'namespaces "x" not found'], 404),
@@ -65,7 +65,7 @@ it('maps a failed API call to isActive() == 0', function () {
 });
 
 it('creates the namespace as a cluster-scoped object', function () {
-    $org_server = makeHelmK8sOrgServer();
+    $org_server = makeKubernetesOrgServer();
 
     Http::fake(function (Request $request) {
         return $request->method() === 'GET'
@@ -86,7 +86,7 @@ it('creates the namespace as a cluster-scoped object', function () {
 });
 
 it('reports a failed namespace create with the API error message', function () {
-    $org_server = makeHelmK8sOrgServer();
+    $org_server = makeKubernetesOrgServer();
 
     Http::fake(function (Request $request) {
         return $request->method() === 'GET'
