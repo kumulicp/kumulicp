@@ -66,6 +66,38 @@ import { Link } from '@inertiajs/vue3'
     </div>
 
     <div class="row">
+      <div class="flex xs12">
+        <va-card class="mb-2" id="appUpdates">
+          <va-card-title>{{ $t('admin.dashboard.app_updates') }}</va-card-title>
+          <va-card-content>
+            <p v-if="app_updates.length === 0" class="secondary">{{ $t('admin.dashboard.no_app_updates') }}</p>
+            <VaScrollContainer v-else color="primary" horizontal>
+              <table class="va-table va-table--hoverable mt-3">
+                <thead>
+                  <tr>
+                    <th>{{ $t('admin.dashboard.application') }}</th>
+                    <th>{{ $t('admin.apps.version') }}</th>
+                    <th>{{ $t('admin.apps.updatesAvailable') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="update in app_updates" :key="update.id">
+                    <td><Link :href="'/admin/apps/'+update.slug+'/versions'">{{ update.name }}</Link></td>
+                    <td>{{ update.version }}</td>
+                    <td>
+                      <va-badge v-if="update.image" color="success" class="mr-1" :text="$t('admin.versions.imageBadge', { latest: update.image })" />
+                      <va-badge v-if="update.chart" color="success" class="mr-1" :text="$t('admin.versions.chartBadge', { latest: update.chart })" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </VaScrollContainer>
+          </va-card-content>
+        </va-card>
+      </div>
+    </div>
+
+    <div class="row">
       <div class="flex xs12 lg6">
         <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.plan_usage') }}</va-card-title>
@@ -234,6 +266,7 @@ export default {
     applications: Object,
     plans: Object,
     app_usage: Object,
+    app_updates: Array,
     task_statuses: Object,
     recent_failed_tasks: Object,
     security_findings: Object,
