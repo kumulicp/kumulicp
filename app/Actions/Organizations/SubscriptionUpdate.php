@@ -29,7 +29,11 @@ class SubscriptionUpdate extends Action
         $this->organization = $organization;
         $this->subscription = $subscription;
         $this->prerequisites = null;
-        $this->setCustomValues(['subscription' => serialize($subscription)]);
+        // run() rebuilds the subscription from the database, so nothing about it
+        // is stored (an unserialize() of database contents breaks across deploys
+        // and is an object-injection risk). The timestamp keeps successive
+        // updates from being collapsed into one by Action::task_exists().
+        $this->setCustomValues(['requested_at' => now()->toIso8601String()]);
         $this->description = __('actions.updating_subscription');
     }
 
@@ -37,8 +41,7 @@ class SubscriptionUpdate extends Action
     {
         $organization = $task->organization;
 
-        $subscription = unserialize($task->getValue('subscription'));
-        $subscription->refresh();
+        $subscription = (new SubscriptionService($organization))->refresh();
 
         FastCache::clear(organization: $task->organization);
 
@@ -78,7 +81,7 @@ class SubscriptionUpdate extends Action
 
     public static function retry(Task $task)
     {
-        return new self($task->organization, unserialize($task->getValue('subscription')));
+        return new self($task->organization, new SubscriptionService($task->organization));
     }
 
     public static function complete(Task $task) {}

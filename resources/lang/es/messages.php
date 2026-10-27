@@ -20,6 +20,7 @@ return [
     'action' => [
         'tech_difficulties' => 'Estamos experimentando dificultades técnicas. Resolución de problemas en curso.',
         'waiting_for' => 'Esperando a que finalicen otras tareas',
+        'dependency_failed' => 'Falló una tarea de la que depende esta',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
         'parent_app' => ':app necesita instalarse primero',

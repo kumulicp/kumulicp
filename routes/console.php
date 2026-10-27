@@ -27,9 +27,13 @@ use Spatie\UptimeMonitor\Commands\CheckUptime;
 |
 */
 
-Schedule::call(new TaskCleanup)->everyMinute();
-Schedule::call(new PrerequisiteChecks)->everyMinute();
-Schedule::call(new SystemTasks)->everyMinute();
+// The task runners are single-flight: a slow pass must not overlap the next
+// minute's (two passes would claim and run the same tasks), and only one server
+// runs each. The mutex expiry keeps a crashed run from blocking tasks for the
+// default 24 hours.
+Schedule::call(new TaskCleanup)->name('task-cleanup')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new PrerequisiteChecks)->name('prerequisite-checks')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new SystemTasks)->name('system-tasks')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();

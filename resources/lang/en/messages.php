@@ -20,6 +20,7 @@ return [
     'action' => [
         'tech_difficulties' => 'Experiencing technical difficulties. Resolving issues in progress.',
         'waiting_for' => 'Waiting for other tasks to complete',
+        'dependency_failed' => 'A task this one depends on has failed',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
         'parent_app' => ':app needs to be installed first',

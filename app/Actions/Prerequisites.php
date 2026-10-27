@@ -118,8 +118,16 @@ class Prerequisites
 
         if ($task && $task->status !== 'complete') {
             $this->passed = false;
-            $this->message .= __('messages.action.waiting_for');
+            $this->message .= $this->waitingMessage($task);
         }
+    }
+
+    // A failed task won't finish by itself, so don't report it as still running
+    private function waitingMessage(Task $task): string
+    {
+        return $task->status === 'failed'
+            ? __('messages.action.dependency_failed')
+            : __('messages.action.waiting_for');
     }
 
     private function parent_task_check($prereq)
@@ -129,10 +137,10 @@ class Prerequisites
             ->first();
         if ($prereq['required'] == 'yes' && (($parent_task && $parent_task['status'] != 'complete') || ! $parent_task)) {
             $this->passed = false;
-            $this->message .= __('messages.action.waiting_for');
+            $this->message .= $parent_task ? $this->waitingMessage($parent_task) : __('messages.action.waiting_for');
         } elseif ($prereq['required'] == 'no' && ($parent_task && $parent_task['status'] != 'complete')) {
             $this->passed = false;
-            $this->message .= __('messages.action.waiting_for');
+            $this->message .= $this->waitingMessage($parent_task);
         }
 
         return $this;

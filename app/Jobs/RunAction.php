@@ -18,6 +18,16 @@ class RunAction implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    // A task is never run twice by the queue itself: a retry (after a connection
+    // failure, or by an admin) is a new dispatch from the task's own state. A job
+    // the queue redelivers after retry_after expires fails (and reverts) instead
+    // of running again alongside the original.
+    public $tries = 1;
+
+    // Seconds the queue allows a margin before retry_after, so a job is killed
+    // before the queue would hand it to a second worker.
+    private const RETRY_AFTER_MARGIN = 30;
+
     /**
      * Create the event listener.
      *
@@ -30,6 +40,12 @@ class RunAction implements ShouldQueue
 
         if ($action && $action::$long_running && $connection = config('queue.long_running_connection')) {
             $this->onConnection($connection)->onQueue('long');
+        }
+
+        $retry_after = config('queue.connections.'.($this->connection ?? config('queue.default')).'.retry_after');
+
+        if ($retry_after) {
+            $this->timeout = max($retry_after - self::RETRY_AFTER_MARGIN, 1);
         }
     }
 

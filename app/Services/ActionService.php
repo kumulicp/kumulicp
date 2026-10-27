@@ -190,8 +190,8 @@ class ActionService
     {
         $action = Arr::get($this->actions, $task->action());
         $action_complete = null;
-        if ($this->waiting_for($task->getValue('waiting_for'))) {
-            $error_message = __('messages.action.waiting_for');
+        if ($blocked_by = $this->waiting_for($task->getValue('waiting_for'))) {
+            $error_message = __("messages.action.{$blocked_by}");
             if ($task->error_message != $error_message) {
                 $task->error_message = $error_message;
                 $task->save();
@@ -208,8 +208,11 @@ class ActionService
             $other_tasks = Task::whereNot('id', $task->id)->where('task_group', $task->task_group)->get();
 
             foreach ($other_tasks as $other_task) {
+                // Pending siblings still have to satisfy their own prerequisites
                 if ($other_task->status === 'pending') {
-                    RunAction::dispatch($other_task);
+                    if ($this->checkPrerequisites($other_task)->passed) {
+                        RunAction::dispatch($other_task);
+                    }
                 } elseif ($other_task->status === 'in_progress') {
                     $this->complete($other_task);
                 }
@@ -219,19 +222,20 @@ class ActionService
         return $action_complete;
     }
 
-    public function register($name, $action)
+    /**
+     * Registers an action class under "group.slug" (e.g. "nextcloud.manage_addon").
+     */
+    public function register(string $name, string $action): void
     {
-        if (class_exists($action) && is_subclass_of($action, Action::class)) {
-            if (Arr::has($this->actions, $name)) {
-                array_push($this->actions[$name], $action);
-            } else {
-                Arr::set($this->actions, $name, $action);
-            }
-
-            return $this->actions['nextcloud'];
+        if (! str_contains($name, '.')) {
+            throw new \InvalidArgumentException("Action must be registered as \"group.slug\", got \"{$name}\"");
         }
 
-        throw new \Exception(__('messages.exception.action_not_subclass', ['action' => $action]));
+        if (! class_exists($action) || ! is_subclass_of($action, Action::class)) {
+            throw new \Exception(__('messages.exception.action_not_subclass', ['action' => $action]));
+        }
+
+        Arr::set($this->actions, $name, $action);
     }
 
     public function execute(Action $action, ?Task $parent_task = null, ?bool $background = null, bool $delay = false)
@@ -272,7 +276,9 @@ class ActionService
             }
         }
 
-        if (! $delay && $this->checkPrerequisites($task)->passed) {
+        // A task postGenerate() just failed must stay failed: running it anyway
+        // (and checkPrerequisites() wiping its error message) hides the failure.
+        if ($task->status !== 'failed' && ! $delay && $this->checkPrerequisites($task)->passed) {
             RunAction::dispatch($task);
         }
 
@@ -326,19 +332,29 @@ class ActionService
         $tasks->delete();
     }
 
-    private function waiting_for(?array $tasks = null)
+    /**
+     * Why $tasks (ids of tasks this one waits on) are holding it back: the
+     * messages.action key to show, or null if none of them are.
+     */
+    private function waiting_for(?array $tasks = null): ?string
     {
-        if (! is_null($tasks)) {
-            foreach ($tasks as $task) {
-                $waiting_for = Task::find($task);
+        $blocked_by = null;
 
-                if ($waiting_for && $waiting_for->status != 'complete') {
-                    return true;
-                }
+        foreach ($tasks ?? [] as $task) {
+            $waiting_for = Task::find($task);
+
+            if ($waiting_for && $waiting_for->status === 'failed') {
+                // A failed dependency won't finish by itself: say so rather
+                // than showing "waiting" forever.
+                return 'dependency_failed';
+            }
+
+            if ($waiting_for && $waiting_for->status != 'complete') {
+                $blocked_by = 'waiting_for';
             }
         }
 
-        return false;
+        return $blocked_by;
     }
 
     public function checkPrerequisites(Task $task)
