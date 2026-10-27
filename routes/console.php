@@ -35,6 +35,7 @@ Schedule::call(fn () => app(VersionTestRunner::class)->syncProvisioning())->name
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();
+Schedule::command('catalog:sync')->daily()->withoutOverlapping();
 Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
