@@ -3,6 +3,7 @@
 namespace App\Actions\Organizations;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Jobs\Applications\UpdateLDAPGroups;
 use App\Notifications\SubscriptionUpdatedNotification;
 use App\Organization;
@@ -55,7 +56,7 @@ class SubscriptionUpdate extends Action
             },
         ])->catch(function (Throwable $e) use ($task) {
             $task->error_message = $e->getMessage();
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
         })->dispatch();
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\Support\Facades\Action;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
@@ -45,7 +46,7 @@ it('does not recover a release that only just started pending', function () {
     Action::complete($task);
     $task->refresh();
 
-    expect($task->status)->not->toBe('complete');
+    expect($task->status)->not->toBe(TaskStatus::COMPLETE);
     expect($task->getValue('helm_pending_since'))->not->toBeNull();
     expect(FakeServerManager::$recover_stuck_release_calls)->toBe(0);
 });
@@ -73,7 +74,7 @@ it('recovers a release stuck pending past the long queue timeout', function () {
     $task->refresh();
 
     expect(FakeServerManager::$recover_stuck_release_calls)->toBe(1);
-    expect($task->status)->toBe('pending');
+    expect($task->status)->toBe(TaskStatus::PENDING);
     expect($task->getValue('helm_pending_since'))->toBeNull();
 });
 
@@ -93,5 +94,5 @@ it('clears the pending timer once the release becomes active', function () {
     Action::complete($task);
     $task->refresh();
 
-    expect($task->status)->toBe('complete');
+    expect($task->status)->toBe(TaskStatus::COMPLETE);
 });

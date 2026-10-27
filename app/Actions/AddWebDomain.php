@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Domain;
@@ -62,7 +63,7 @@ class AddWebDomain extends Action
         } catch (Throwable $e) {
             report($e);
             $task->error_message = $e->getMessage();
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
         }
     }

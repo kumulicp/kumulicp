@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Channels\PanelChannel;
+use App\Enums\TaskStatus;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -47,7 +48,7 @@ class DummyNotification extends Notification implements ShouldQueue
      */
     public function toMail($notifiable)
     {
-        if ($this->task->status == 'complete') {
+        if ($this->task->status === TaskStatus::COMPLETE) {
             return (new MailMessage)
                 ->subject($this->task->description.' '.__('labels.success'))
                 ->line(__('messages.notification.dummy.completed'));
@@ -73,7 +74,7 @@ class DummyNotification extends Notification implements ShouldQueue
     {
         return [
             'title' => __('labels.dummy_notification'),
-            'message' => $this->task->status === 'complete' ? __('messages.notification.dummy.completed') : __('messages.notification.dummy.failed'),
+            'message' => $this->task->status === TaskStatus::COMPLETE ? __('messages.notification.dummy.completed') : __('messages.notification.dummy.failed'),
         ];
     }
 }

@@ -4,6 +4,7 @@ use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\AppInstance;
 use App\Contracts\BackupContract;
 use App\Contracts\BackupServerTargetContract;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgBackup;
 use App\OrgServer;
@@ -190,12 +191,12 @@ it('backs up, restores to the new server, switches the app and runs a standard u
     $update = Task::find($task->getValue('update_task_id'));
     expect($update->action_slug)->toBe('application_update');
     expect($update->task_group)->toBe($task->task_group);
-    expect($task->status)->toBe('in_progress');
+    expect($task->status)->toBe(TaskStatus::IN_PROGRESS);
 
     // Completes once the update does
     Action::complete($update);
 
-    expect($task->fresh()->status)->toBe('complete');
+    expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
     expect($instance->fresh()->status)->toBe('active');
     expect($instance->fresh()->database_server_id)->toBe($new->id);
 });
@@ -209,7 +210,7 @@ it('leaves the app on its current server when the restore fails', function () {
 
     expect($instance->fresh()->database_server_id)->toBe($old->id);
     expect($instance->fresh()->status)->toBe('active');
-    expect($task->status)->toBe('failed');
+    expect($task->status)->toBe(TaskStatus::FAILED);
     expect($task->error_message)->toContain('mysql: connection refused')->toContain('old-db');
 
     // Never got as far as the update
@@ -223,14 +224,14 @@ it('rolls back to the old server when the app update fails', function () {
 
     $task = startMigration($instance, $target);
     $update = Task::find($task->getValue('update_task_id'));
-    $update->status = 'failed';
+    $update->status = TaskStatus::FAILED;
     $update->error_message = 'helm upgrade failed';
     $update->save();
 
     Action::complete($task);
 
     $task->refresh();
-    expect($task->status)->toBe('failed');
+    expect($task->status)->toBe(TaskStatus::FAILED);
     expect($task->error_message)->toContain('helm upgrade failed')->toContain('old-db');
     expect($instance->fresh()->database_server_id)->toBe($old->id);
 
@@ -256,7 +257,7 @@ it('rolls back when the app does not come back up in time', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
     expect($instance->fresh()->database_server_id)->toBe($old->id);
 });
 
@@ -269,7 +270,7 @@ it('keeps waiting while the update is still running', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('in_progress');
+    expect($task->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);
     expect($instance->fresh()->database_server_id)->toBe($task->getValue('target_org_server_id'));
 });
 
@@ -282,7 +283,7 @@ it('waits for a remote backup and restore to finish before each next step', func
 
     // Only the backup has been asked for, and it is still running
     expect($calls->getArrayCopy())->toBe(['backup']);
-    expect($task->status)->toBe('in_progress');
+    expect($task->status)->toBe(TaskStatus::IN_PROGRESS);
     expect(OrgBackup::where('action', 'backup')->sole()->status)->toBe('running');
     expect(OrgBackup::where('action', 'backup')->sole()->job_id)->not->toBeEmpty();
 
@@ -312,7 +313,7 @@ it('waits for a remote backup and restore to finish before each next step', func
     expect($update->action_slug)->toBe('application_update');
 
     Action::complete($update);
-    expect($task->fresh()->status)->toBe('complete');
+    expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
     expect($instance->fresh()->status)->toBe('active');
 });
 
@@ -340,7 +341,7 @@ it('stays on the old server when the remote backup fails', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
     expect($task->fresh()->error_message)->toContain('old-db');
     expect($instance->fresh()->database_server_id)->toBe($old->id);
     expect($instance->fresh()->status)->toBe('active');
@@ -358,7 +359,7 @@ it('stays on the old server when the remote restore fails', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
     expect($instance->fresh()->database_server_id)->toBe($old->id);
     expect($instance->fresh()->status)->toBe('active');
     expect(Task::where('action_slug', 'application_update')->count())->toBe(0);
@@ -376,7 +377,7 @@ it('gives up when the remote service never reports back', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
     expect($instance->fresh()->database_server_id)->toBe($old->id);
     expect($instance->fresh()->status)->toBe('active');
 });
@@ -390,7 +391,7 @@ it('fails when the finished backup has no file to restore', function () {
 
     Action::complete($task);
 
-    expect($task->fresh()->status)->toBe('failed');
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
     expect($instance->fresh()->database_server_id)->toBe($old->id);
     expect($calls->getArrayCopy())->toBe(['backup']);
 });

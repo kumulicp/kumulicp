@@ -3,6 +3,7 @@
 use App\Actions\Apps\ApplicationDeactivate;
 use App\AdditionalStorage;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Notifications\ApplicationDeactivated;
 use App\Organization;
 use App\Support\Facades\Action;
@@ -62,7 +63,7 @@ it('deactivates an active app instance and notifies admins', function () {
     Action::complete($task);
     $task->refresh();
 
-    expect($task->status)->toBe('complete');
+    expect($task->status)->toBe(TaskStatus::COMPLETE);
 
     $instance->refresh();
     expect($instance->status)->toBe('deactivated');

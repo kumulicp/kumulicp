@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
@@ -12,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RunAction implements ShouldQueue
@@ -59,8 +61,16 @@ class RunAction implements ShouldQueue
      */
     public function handle()
     {
+        // Another run of this task may already hold it (a second dispatch, or a
+        // retry racing a scheduler pass), or it may be finished already:
+        // running it twice is worse than not running it.
+        if (! $this->task->claim()) {
+            Log::info('Task is already running or finished, not running it again', ['task_id' => $this->task->id]);
+
+            return;
+        }
+
         $this->task->attempts = $this->task->attempts + 1;
-        $this->task->status = 'in_progress';
         $this->task->save();
 
         try {
@@ -76,12 +86,14 @@ class RunAction implements ShouldQueue
             }
         } catch (ConnectionFailedException $e) {
             $this->task->job_id = 0;
-            $this->task->status = 'pending';
+            $this->task->status = TaskStatus::PENDING;
             $this->task->error_code = 'connection_failed';
             $this->task->error_message = $e->getMessage();
             $this->task->save();
 
             report($e);
+        } finally {
+            $this->task->release();
         }
     }
 
@@ -89,9 +101,10 @@ class RunAction implements ShouldQueue
     {
         Action::revert($this->task);
         $this->task->job_id = 0;
-        $this->task->status = 'failed';
+        $this->task->status = TaskStatus::FAILED;
         $this->task->error_code = 'throwable';
         $this->task->error_message = $e->getMessage();
         $this->task->save();
+        $this->task->release();
     }
 }

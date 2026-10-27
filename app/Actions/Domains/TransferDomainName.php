@@ -3,6 +3,7 @@
 namespace App\Actions\Domains;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Domain;
@@ -12,7 +13,7 @@ class TransferDomainName extends Action
 {
     public $slug = 'transfer_domain_name';
 
-    public $status = 'pending';
+    public TaskStatus $status = TaskStatus::PENDING;
 
     public function __construct(Organization $organization, public OrgDomain $domain, string $epp_code, float $price)
     {

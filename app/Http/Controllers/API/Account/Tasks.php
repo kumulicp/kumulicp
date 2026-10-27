@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\Account;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Organization;
 use App\Support\TaskHelpers;
@@ -30,7 +31,7 @@ class Tasks extends Controller
 
         $remove_group = Task::where('task_group', $task->task_group)
             ->where('organization_id', $organization->id)
-            ->where('status', 'complete')
+            ->where('status', TaskStatus::COMPLETE->value)
             ->delete();
     }
 }

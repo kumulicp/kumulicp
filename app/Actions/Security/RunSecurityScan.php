@@ -3,6 +3,7 @@
 namespace App\Actions\Security;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\Pod;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\SecurityScanJobChart;
@@ -92,7 +93,7 @@ class RunSecurityScan extends Action
             $error_message = 'Failed to retrieve scan job logs: '.$exception->getMessage();
             $security_scan->fail($error_message);
             $task->error_message = $error_message;
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
 
             return;
@@ -107,7 +108,7 @@ class RunSecurityScan extends Action
             $error_message = "Security scan job {$job_status}";
             $security_scan->fail($error_message);
             $task->error_message = $error_message;
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
 
             return;
@@ -117,7 +118,7 @@ class RunSecurityScan extends Action
             $error_message = 'Security scan job succeeded but no log output was retrieved';
             $security_scan->fail($error_message);
             $task->error_message = $error_message;
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
 
             return;
@@ -171,7 +172,7 @@ class RunSecurityScan extends Action
         $targets = $task->getValue('targets') ?? [];
         $options = $task->getValue('options') ?? [];
         $retry = new self($org_server, $task->getValue('tool'), $security_scan, $targets, $options);
-        $retry->status = 'ready';
+        $retry->status = TaskStatus::READY;
 
         return $retry;
     }

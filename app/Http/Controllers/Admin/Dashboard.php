@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Application;
 use App\AppVersion;
+use App\Enums\TaskStatus;
 use App\FailedJob;
 use App\Http\Controllers\Controller;
 use App\Log;
@@ -45,11 +46,13 @@ class Dashboard extends Controller
 
         $app_usage = $this->appUsage();
 
+        // toBase(): the model's status cast would turn the plucked keys into enums
         $task_statuses = Task::selectRaw('status, count(*) as total')
             ->groupBy('status')
+            ->toBase()
             ->pluck('total', 'status');
 
-        $recent_failed_tasks = Task::where('status', 'failed')
+        $recent_failed_tasks = Task::where('status', TaskStatus::FAILED->value)
             ->with(['organization', 'application'])
             ->orderByDesc('updated_at')
             ->limit(8)

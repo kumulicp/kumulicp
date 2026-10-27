@@ -3,6 +3,7 @@
 use App\Actions\Action;
 use App\Actions\DummyAction;
 use App\Actions\Organizations\SubscriptionUpdate;
+use App\Enums\TaskStatus;
 use App\Jobs\RunAction;
 use App\Organization;
 use App\Services\ActionService;
@@ -70,7 +71,7 @@ it('does not run a task whose postGenerate failed', function () {
 
     $task = ActionFacade::execute($failing);
 
-    expect($task->status)->toBe('failed');
+    expect($task->status)->toBe(TaskStatus::FAILED);
     // checkPrerequisites() used to blank this out on the way to dispatching
     expect($task->fresh()->error_message)->toBe('could not prepare');
     Queue::assertNotPushed(RunAction::class);
@@ -146,7 +147,7 @@ it('reports a failed task in waiting_for rather than waiting forever', function 
     ActionFacade::complete($waiting);
 
     expect($waiting->fresh()->error_message)->toBe(__('messages.action.dependency_failed'));
-    expect($waiting->fresh()->status)->toBe('in_progress');
+    expect($waiting->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);
 });
 
 it('registers an action under group.slug and rejects bad registrations', function () {

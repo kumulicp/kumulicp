@@ -2,6 +2,7 @@
 
 namespace App\Console\Calls;
 
+use App\Enums\TaskStatus;
 use App\Support\Facades\Action;
 use App\Task;
 
@@ -9,18 +10,17 @@ class PrerequisiteChecks
 {
     public function __invoke()
     {
-        $tasks = Task::where('status', 'pending')->get();
+        $tasks = Task::where('status', TaskStatus::PENDING->value)->get();
 
         foreach ($tasks as $task) {
             try {
                 $prerequisites = Action::checkPrerequisites($task);
+                // Moved only if still pending: a task that something else has
+                // started in the meantime must not be pulled back to ready.
                 if ($prerequisites->passed) {
-                    $task->notified = 0;
-                    $task->status = 'ready';
-                    $task->save();
+                    $task->transition(TaskStatus::READY, TaskStatus::PENDING, ['notified' => 0]);
                 } elseif ($prerequisites->permanent_fail == true) {
-                    $task->status = 'failed';
-                    $task->save();
+                    $task->transition(TaskStatus::FAILED, TaskStatus::PENDING);
                 } else {
                     $task->error_code = null;
                     $task->error_message = $prerequisites->message;
@@ -28,10 +28,10 @@ class PrerequisiteChecks
                 }
             } catch (\Throwable $e) {
                 report($e);
-                $task->error_code = 'exception';
-                $task->error_message = $e->getMessage();
-                $task->status = 'failed';
-                $task->save();
+                $task->transition(TaskStatus::FAILED, TaskStatus::PENDING, [
+                    'error_code' => 'exception',
+                    'error_message' => $e->getMessage(),
+                ]);
             }
         }
     }

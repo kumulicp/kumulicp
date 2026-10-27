@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Rancher\Actions;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\OrgServer;
@@ -57,7 +58,7 @@ class RunJob extends Action
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $retry = new self($org_server, unserialize($task->getValue('job')), $task->getValue('job_name'), $task->getValue('namespace'));
-        $retry->status = 'ready';
+        $retry->status = TaskStatus::READY;
 
         return $retry;
     }

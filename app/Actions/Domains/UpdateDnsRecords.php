@@ -3,6 +3,7 @@
 namespace App\Actions\Domains;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Domain;
@@ -14,7 +15,7 @@ class UpdateDnsRecords extends Action
 
     public $background = true;
 
-    public $status = 'in_progress';
+    public TaskStatus $status = TaskStatus::IN_PROGRESS;
 
     public function __construct(Organization $organization, public OrgDomain $domain)
     {

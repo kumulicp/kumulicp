@@ -4,6 +4,7 @@ namespace App\Actions\Apps;
 
 use App\Actions\Action;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\OrgSubdomain;
 use App\Support\Facades\Action as ActionFacade;
@@ -24,7 +25,7 @@ class ApplicationDomainChecks extends Action
         $this->organization = $app_instance->organization;
         $this->app_instance = $app_instance;
         $this->setCustomValues(['domain' => $domain->id]);
-        $this->status = 'in_progress';
+        $this->status = TaskStatus::IN_PROGRESS;
 
         $app_server = Application::instance($app_instance)->server('web');
         $this->description = __('actions.waiting_for_domain_ip', ['domain' => $domain->name, 'ip' => $app_server->server->ip]);

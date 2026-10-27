@@ -3,6 +3,7 @@
 namespace App\Integrations\Applications\Nextcloud\Jobs;
 
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\Services\GroupFolderService;
 use App\Services\AdditionalStorageService;
 use App\Task;
@@ -78,7 +79,7 @@ class UpdateGroupFolder
             report($e);
             if ($this->task) {
                 $this->task->error_message = $e->getMessage();
-                $this->task->status = 'failed';
+                $this->task->status = TaskStatus::FAILED;
                 $this->task->save();
             }
         }

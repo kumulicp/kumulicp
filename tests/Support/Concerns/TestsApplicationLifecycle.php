@@ -9,6 +9,7 @@ use App\Actions\Apps\ApplicationUpgrade;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\Support\Facades\Action;
 use App\Task;
@@ -96,7 +97,7 @@ trait TestsApplicationLifecycle
             if ($fresh !== null) {
                 $task = $fresh;
             }
-            if (in_array($task->status, ['complete', 'failed'])) {
+            if (in_array($task->status, [TaskStatus::COMPLETE, TaskStatus::FAILED], true)) {
                 return;
             }
             if ($this->lifecycleSleepSeconds > 0) {
@@ -105,19 +106,19 @@ trait TestsApplicationLifecycle
             $iterations++;
         }
 
-        $this->fail("Task {$task->id} did not complete after {$this->lifecycleMaxIterations} polls (status: {$task->status}).");
+        $this->fail("Task {$task->id} did not complete after {$this->lifecycleMaxIterations} polls (status: {$task->status->value}).");
     }
 
     protected function runActivate(AppPlan $plan, Organization $org, Application $app): AppInstance
     {
         $task = Action::execute(new ApplicationActivate(organization: $org, app: $app, plan: $plan));
-        $task->status = 'in_progress';
+        $task->status = TaskStatus::IN_PROGRESS;
         $task->save();
         Action::run($task);
 
         $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
 
-        $this->assertEquals('complete', $task->status, 'ApplicationActivate did not complete');
+        $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationActivate did not complete');
 
         $instance = AppInstance::where('application_id', $app->id)->first();
         $this->assertNotNull($instance, 'No AppInstance found after activation');
@@ -134,7 +135,7 @@ trait TestsApplicationLifecycle
         $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
 
         $instance->refresh();
-        $this->assertEquals('complete', $task->status, 'ApplicationUpdate did not complete');
+        $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationUpdate did not complete');
         $this->assertEquals('active', $instance->status, 'AppInstance status is not active after update');
     }
 
@@ -146,7 +147,7 @@ trait TestsApplicationLifecycle
         $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
 
         $instance->refresh();
-        $this->assertEquals('complete', $task->status, 'ApplicationUpgrade did not complete');
+        $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationUpgrade did not complete');
         $this->assertEquals('active', $instance->status, 'AppInstance status is not active after upgrade');
     }
 
@@ -155,14 +156,14 @@ trait TestsApplicationLifecycle
         $instanceId = $instance->id;
         $task = Action::execute(new ApplicationDelete($instance));
         Action::run($task);
-        $task->status = 'in_progress';
+        $task->status = TaskStatus::IN_PROGRESS;
         $task->save();
 
         $this->pollUntilDone($task, function (Task &$t) {
             Action::complete($t);
             // ApplicationDelete marks itself done by deleting the Task record
             if (is_null(Task::find($t->id))) {
-                $t->status = 'complete';
+                $t->status = TaskStatus::COMPLETE;
             }
         });
 

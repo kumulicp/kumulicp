@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Wordpress\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\Wordpress\API\User;
 use App\Task;
@@ -16,7 +17,7 @@ class ProcessPermissions extends Action
 
     public $action_group = 'wordpress';
 
-    public $status = 'in_progress';
+    public TaskStatus $status = TaskStatus::IN_PROGRESS;
 
     public $background = true;
 
@@ -69,7 +70,7 @@ class ProcessPermissions extends Action
 
             if ($user->hasError()) {
                 $task->error_message = $user->error();
-                $task->status = 'pending';
+                $task->status = TaskStatus::PENDING;
                 $task->error_code = 'update_user_role_failed';
                 $task->save();
             }

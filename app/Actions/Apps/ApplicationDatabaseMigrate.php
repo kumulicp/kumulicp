@@ -4,6 +4,7 @@ namespace App\Actions\Apps;
 
 use App\Actions\Action;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\OrgBackup;
 use App\OrgServer;
 use App\Server;
@@ -192,7 +193,7 @@ class ApplicationDatabaseMigrate extends Action
      */
     private static function step(Task $task): bool
     {
-        if ($task->status !== 'in_progress') {
+        if ($task->status !== TaskStatus::IN_PROGRESS) {
             return false;
         }
 
@@ -283,7 +284,7 @@ class ApplicationDatabaseMigrate extends Action
 
         $update = Task::find($update_id);
 
-        if ($update?->status === 'complete') {
+        if ($update?->status === TaskStatus::COMPLETE) {
             $app_instance = $task->app_instance;
             $app_instance->status = 'active';
             $app_instance->save();
@@ -301,7 +302,7 @@ class ApplicationDatabaseMigrate extends Action
 
         $timed_out = Carbon::parse($task->getValue('cutover_at'))->addMinutes(self::UPDATE_TIMEOUT_MINUTES)->isPast();
 
-        if (! $update || $update->status === 'failed' || $timed_out) {
+        if (! $update || $update->status === TaskStatus::FAILED || $timed_out) {
             throw new \Exception($update?->error_message ?: __('messages.database_migration.update_failed'));
         }
 
@@ -362,7 +363,7 @@ class ApplicationDatabaseMigrate extends Action
      */
     public static function revert(Task $task)
     {
-        if ($task->status !== 'complete') {
+        if ($task->status !== TaskStatus::COMPLETE) {
             self::rollback($task, $task->error_message ?: __('messages.database_migration.update_failed'));
         }
     }
@@ -412,7 +413,7 @@ class ApplicationDatabaseMigrate extends Action
 
         Log::critical($message, ['organization_id' => $task->organization_id]);
 
-        $task->status = 'failed';
+        $task->status = TaskStatus::FAILED;
         $task->error_message = $message;
         $task->save();
     }

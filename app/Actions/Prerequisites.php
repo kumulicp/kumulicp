@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\AppInstance;
 use App\Application;
+use App\Enums\TaskStatus;
 use App\OrgDomain;
 use App\Task;
 
@@ -116,7 +117,7 @@ class Prerequisites
     {
         $task = Task::find($prereq['task_id']);
 
-        if ($task && $task->status !== 'complete') {
+        if ($task && $task->status !== TaskStatus::COMPLETE) {
             $this->passed = false;
             $this->message .= $this->waitingMessage($task);
         }
@@ -125,7 +126,7 @@ class Prerequisites
     // A failed task won't finish by itself, so don't report it as still running
     private function waitingMessage(Task $task): string
     {
-        return $task->status === 'failed'
+        return $task->status === TaskStatus::FAILED
             ? __('messages.action.dependency_failed')
             : __('messages.action.waiting_for');
     }
@@ -135,10 +136,10 @@ class Prerequisites
         $parent_task = Task::where($prereq['check'], $prereq[$prereq['check']])
             ->where('organization_id', $this->task->organization_id)
             ->first();
-        if ($prereq['required'] == 'yes' && (($parent_task && $parent_task['status'] != 'complete') || ! $parent_task)) {
+        if ($prereq['required'] == 'yes' && (($parent_task && $parent_task->status !== TaskStatus::COMPLETE) || ! $parent_task)) {
             $this->passed = false;
             $this->message .= $parent_task ? $this->waitingMessage($parent_task) : __('messages.action.waiting_for');
-        } elseif ($prereq['required'] == 'no' && ($parent_task && $parent_task['status'] != 'complete')) {
+        } elseif ($prereq['required'] == 'no' && ($parent_task && $parent_task->status !== TaskStatus::COMPLETE)) {
             $this->passed = false;
             $this->message .= $this->waitingMessage($parent_task);
         }

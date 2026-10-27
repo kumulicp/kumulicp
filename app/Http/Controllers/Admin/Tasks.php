@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\DummyAction;
 use App\Application;
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\RunSchedule;
 use App\Support\Facades\Action;
@@ -44,8 +45,8 @@ class Tasks extends Controller
         if ($request->app) {
             $tasks->where('application_id', $request->app);
         }
-        if ($request->status) {
-            $tasks->where('status', $request->status);
+        if ($status = TaskStatus::tryFrom((string) $request->status)) {
+            $tasks->where('status', $status->value);
         }
         if ($request->app_instance) {
             $tasks->where('app_instance_id', $request->app_instance);
@@ -56,7 +57,7 @@ class Tasks extends Controller
         return [
             'tasks' => $tasks->map(function ($task) {
                 $time = new Time;
-                if ($task->status != 'complete') {
+                if ($task->status !== TaskStatus::COMPLETE) {
                     $duration = Time::duration($task->created_at, time());
 
                 } else {
@@ -68,7 +69,7 @@ class Tasks extends Controller
                     'organization' => $task->organization ? $task->organization->name : '',
                     'application' => $task->application ? $task->application->name.($task->version ? ' ('.$task->version->name.')' : '') : '',
                     'version' => $task->version ? $task->version->name : '',
-                    'status' => $task->status,
+                    'status' => $task->status->value,
                     'time' => $duration,
                     'description' => $task->description,
                     'error_message' => $task->error_message,

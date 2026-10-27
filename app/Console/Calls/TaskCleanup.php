@@ -2,6 +2,7 @@
 
 namespace App\Console\Calls;
 
+use App\Enums\TaskStatus;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
 use App\Task;
@@ -10,7 +11,9 @@ class TaskCleanup
 {
     public function __invoke()
     {
-        $tasks = Task::where('status', 'in_progress')
+        // Not the ones a RunAction is still running: complete() would race run()
+        $tasks = Task::where('status', TaskStatus::IN_PROGRESS->value)
+            ->notClaimed()
             ->get();
 
         foreach ($tasks as $task) {

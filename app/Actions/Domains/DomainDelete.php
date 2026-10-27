@@ -3,6 +3,7 @@
 namespace App\Actions\Domains;
 
 use App\Actions\Action;
+use App\Enums\TaskStatus;
 use App\Events\Domains\DomainDeleted;
 use App\Organization;
 use App\OrgDomain;
@@ -65,7 +66,7 @@ class DomainDelete extends Action
                 }
             }
         } catch (Throwable $e) {
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->error_message = $e->getMessage();
             $task->save();
         }
