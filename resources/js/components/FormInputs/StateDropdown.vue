@@ -26,58 +26,52 @@ export default {
   data () {
     return {
       loadingStates: true,
-      selected_state: ''
+      selected_state: '',
+      states: [],
+      initialLoad: true
     }
   },
   watch: {
     selected_state () {
       this.$emit('update:state', this.selected_state)
-    }
-  },
-  computed: {
-    states: {
-      get () {
-        if (this.country && this.country.length > 1) {
-          return this.loadStates(this.country)
-        } else if (this.country.value) {
-          return this.loadStates(this.country.value)
-        }
-
-        return []
+    },
+    country: {
+      immediate: true,
+      handler () {
+        this.loadStates()
       }
     }
-  },
-  mounted () {
-    // this.loadStates(this.country)
   },
   methods: {
-    loadStates (country) {
-      const vueState = this
-      this.selected_state = ''
-      this.loadingStates = true
-      const config = {
-        headers: {
-          'X-CSCAPI-KEY': 'TGNFdUdiSDVWck1PVnJVU3h5UG9aQVFZUXFJUmNlU0xEZ0VDdXliaQ=='
-        }
+    loadStates () {
+      const country = this.country?.value ?? this.country
+      this.states = []
+      if (!this.initialLoad) {
+        this.selected_state = ''
       }
 
-      const states = []
-      axios.get('https://api.countrystatecity.in/v1/countries/' + country + '/states', config)
-        .then(function (response) {
-          response.data.forEach(function (state) {
-            states.push({
-              value: state.iso2,
-              text: state.name
-            })
-            if (vueState.state === state.iso2) {
-              vueState.selected_state = state.iso2
-            }
+      if (!country || country.length !== 2) {
+        this.loadingStates = false
+        return
+      }
 
-            vueState.loadingStates = false
-          })
+      this.loadingStates = true
+      axios.get('/locations/countries/' + country + '/states')
+        .then((response) => {
+          if (country !== (this.country?.value ?? this.country)) {
+            return
+          }
+          this.states = response.data
+          if (this.initialLoad && this.states.some((state) => state.value === this.state)) {
+            this.selected_state = this.state
+          }
         })
-
-      return states
+        .finally(() => {
+          if (country === (this.country?.value ?? this.country)) {
+            this.loadingStates = false
+            this.initialLoad = false
+          }
+        })
     }
   }
 }

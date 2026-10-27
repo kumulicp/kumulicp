@@ -55,7 +55,6 @@ class Organization extends Controller
         /* Validate */
         $validatedData = $request->validate([
             'name' => 'required|string|max:100',
-            'description' => 'required|string|max:255',
             'org_email' => 'required|email:rfc,filter|lowercase|max:100',
             'org_phone_number' => 'required|max:100',
             'user_first_name' => 'required|max:100',
@@ -72,7 +71,6 @@ class Organization extends Controller
         $organization = auth()->user()->organization;
 
         $org_name = $request->name;
-        $org_description = $request->description;
         $org_email = $request->org_email;
         $org_phone_number = $request->org_phone_number;
         $user_first_name = $request->user_first_name;
@@ -86,7 +84,6 @@ class Organization extends Controller
         $country = $request->country;
 
         $organization->name = $org_name;
-        $organization->description = $org_description;
         $organization->email = $org_email;
         $organization->phone_number = $org_phone_number;
         $organization->contact_first_name = $user_first_name;

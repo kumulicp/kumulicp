@@ -46,26 +46,13 @@ export default {
   },
   methods: {
     loadCountries () {
-      const vueState = this
-      const config = {
-        headers: {
-          'X-CSCAPI-KEY': 'TGNFdUdiSDVWck1PVnJVU3h5UG9aQVFZUXFJUmNlU0xEZ0VDdXliaQ=='
-        }
-      }
-
-      axios.get('https://api.countrystatecity.in/v1/countries', config)
-        .then(function (response) {
-          response.data.forEach(function (country) {
-            if (!vueState.top_countries.includes(country.iso2)) {
-              vueState.countries.push({
-                value: country.iso2,
-                text: country.name
-              })
-            }
-            if (country.iso2 === vueState.country) {
-              vueState.selected_country = country.iso2
-            }
-          })
+      axios.get('/locations/countries')
+        .then((response) => {
+          const rest = response.data.filter((country) => !this.top_countries.includes(country.value))
+          this.countries = [...this.countries, ...rest]
+          if (this.country && this.countries.some((country) => country.value === this.country)) {
+            this.selected_country = this.country
+          }
         })
     }
   }
