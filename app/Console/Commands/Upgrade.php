@@ -7,7 +7,11 @@ use App\Organization;
 use App\Plan;
 use App\RepoSecret;
 use App\Support\Facades\Settings;
+use Composer\InstalledVersions;
+use Database\Seeders\WorldSeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
+use Nnjeim\World\Models\Country;
 
 class Upgrade extends Command
 {
@@ -54,7 +58,31 @@ class Upgrade extends Command
 
         Settings::update('installed_version', array_key_last($this->versions));
 
+        $this->syncWorldData();
+
         return 0;
+    }
+
+    // The country/state data ships inside the nnjeim/world package, so it only
+    // needs reloading on first install or when the package version changes.
+    private function syncWorldData()
+    {
+        $package_version = InstalledVersions::getPrettyVersion('nnjeim/world');
+
+        if (Country::exists() && Settings::get('world_data_version') === $package_version) {
+            return;
+        }
+
+        $this->info('Loading country and state data ('.$package_version.')');
+
+        $this->call('db:seed', ['--class' => WorldSeeder::class, '--force' => true]);
+
+        Cache::forget('locations.countries');
+        foreach (Country::pluck('iso2') as $iso2) {
+            Cache::forget('locations.states.'.$iso2);
+        }
+
+        Settings::update('world_data_version', $package_version);
     }
 
     private function alpha_215()

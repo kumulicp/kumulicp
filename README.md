@@ -72,7 +72,8 @@ sail artisan key:generate
 # Setup the database tables
 sail artisan migrate
 
-# Load the country/state data used by the address dropdowns (required, one-off)
+# Load the country/state data used by the address dropdowns
+# (`sail artisan upgrade` also does this, and reloads it when nnjeim/world is updated)
 sail artisan db:seed --class=WorldSeeder
 
 # Build the frontend
