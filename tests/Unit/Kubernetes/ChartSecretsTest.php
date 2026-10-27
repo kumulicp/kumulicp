@@ -98,6 +98,19 @@ it('adds an ownerReference to a job only when given one', function () {
         ]);
 });
 
+it('adds the chart labels without letting them override managed-by', function () {
+    $manifest = (new ChartSecrets('demo', 'demo-secrets', 'demo-release', [
+        'kumulicp.io/app' => 'wordpress',
+        'app.kubernetes.io/managed-by' => 'someone-else',
+    ]))->set('k', 'v')->manifest();
+
+    expect($manifest['metadata']['labels'])->toBe([
+        'kumulicp.io/app' => 'wordpress',
+        'app.kubernetes.io/managed-by' => 'someone-else',
+        'kumulicp.io/release' => 'demo-release',
+    ]);
+});
+
 it('applies a store as a Secret manifest in the request body', function () {
     Http::fake([
         '*' => Http::sequence()

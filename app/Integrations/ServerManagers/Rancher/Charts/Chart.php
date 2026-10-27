@@ -61,7 +61,7 @@ class Chart
     // applies the Secret to the cluster see the same store.
     public function secrets(): ChartSecrets
     {
-        return $this->secrets ??= new ChartSecrets($this->namespace(), $this->secretsName(), $this->secretsRelease());
+        return $this->secrets ??= new ChartSecrets($this->namespace(), $this->secretsName(), $this->secretsRelease(), $this->labels());
     }
 
     // Whether the web server's driver creates this chart's Secret before the

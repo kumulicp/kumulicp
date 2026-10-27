@@ -34,6 +34,7 @@ class ChartSecrets
         private string $namespace,
         private string $name,
         private ?string $release = null,
+        private array $labels = [],
     ) {}
 
     public function name(): string
@@ -116,7 +117,8 @@ class ChartSecrets
         $data = $this->data;
         ksort($data);
 
-        $labels = ['app.kubernetes.io/managed-by' => 'kumulicp'];
+        // The chart's kumulicp.io/* labels trace the Secret back to its app instance
+        $labels = $this->labels + ['app.kubernetes.io/managed-by' => 'kumulicp'];
         if ($this->release) {
             $labels['kumulicp.io/release'] = $this->release;
         }

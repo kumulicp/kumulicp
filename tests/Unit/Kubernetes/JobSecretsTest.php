@@ -1,6 +1,7 @@
 <?php
 
 use App\AppInstance;
+use App\Application;
 use App\Integrations\ServerManagers\Kubernetes\API\Job;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Organization;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 function jobChartFor(string $interface, string $job_namespace = 'demo'): JobChart
 {
     $instance = (new AppInstance)->forceFill(['name' => 'demo-app']);
+    $instance->setRelation('application', (new Application)->forceFill(['slug' => 'demo']));
     $org_server = new OrgServer;
     $org_server->setRelation('server', (new Server)->forceFill(['interface' => $interface]));
     $instance->setRelation('web_server', $org_server);
@@ -164,4 +166,20 @@ it('does not apply anything extra for a job with no secrets', function () {
     jobApi()->create(jobChartFor('kubernetes'));
 
     expect(appliedManifests())->toBe(['Job:demo-job-abc']);
+});
+
+it('labels the Secret like the Job it belongs to', function () {
+    fakeJobCluster();
+
+    $chart = jobChartFor('kubernetes');
+    $chart->secretEnv('ACCOUNT_TOKEN', 'tok');
+
+    jobApi()->create($chart);
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'POST'
+        && ($m = json_decode($request->body(), true))['kind'] === 'Secret'
+        && $m['metadata']['labels']['kumulicp.io/app'] === 'demo'
+        && $m['metadata']['labels']['kumulicp.io/instance'] === 'demo-app'
+        && $m['metadata']['labels']['kumulicp.io/type'] === 'job'
+        && $m['metadata']['labels']['app.kubernetes.io/managed-by'] === 'kumulicp');
 });
