@@ -44,11 +44,13 @@ class Configurations extends Controller
             'textarea' => 'nullable|string',
             'password' => 'nullable|string',
             'int' => 'nullable|integer',
+            'enum' => 'nullable|string',
         ];
 
         $validateAdditionalConfigurations = [];
         $additionalConfigs = [];
-        $mergedAdditionalConfigs = array_merge($request->additionalConfigs, $plan->additionalConfigs());
+        // The request wins so array items renumbered after a removal take their new definition
+        $mergedAdditionalConfigs = array_merge($plan->additionalConfigs(), $request->input('additionalConfigs', []));
 
         foreach ($mergedAdditionalConfigs as $config) {
             if (array_key_exists($config['type'], $validationTypes) && Arr::has($request->configurations, $config['name'])) {

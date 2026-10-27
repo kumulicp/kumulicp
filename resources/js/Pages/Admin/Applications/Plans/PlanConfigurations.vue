@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import { useForm } from '@inertiajs/vue3'
+import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/services/arrayConfigs'
 
 </script>
 <template>
@@ -18,82 +19,103 @@ import { useForm } from '@inertiajs/vue3'
           </va-list-item-label>
         </va-list-item-section>
       </va-list-item>
-      <template v-for="(config, index) in configList" :key="index">
-        <va-list-item class="py-3" :id="'config-' + config.name">
+      <template v-for="(row, rowIndex) in rows" :key="row.key">
+        <va-list-item v-if="row.kind === 'groupStart'" class="pt-3">
           <va-list-item-section label>
             <va-list-item-label>
-              <h5>{{ config.name }}</h5>
+              <h4 class="va-h4">{{ row.title }}</h4>
+            </va-list-item-label>
+          </va-list-item-section>
+        </va-list-item>
+        <va-list-item v-else-if="row.kind === 'itemStart'" class="array-item array-item-start">
+          <va-list-item-section v-if="row.removable" icon>
+            <va-button
+              color="backgroundSecondary"
+              @click="removeArrayItem(row.prefix, row.index)"
+              :title="$t('admin.plans.removeArrayItem', { name: row.title })"
+              >
+              <va-icon name="fa-x" color="danger" />
+            </va-button>
+          </va-list-item-section>
+        </va-list-item>
+        <va-list-item v-else-if="row.kind === 'groupEnd'" class="py-3">
+          <va-button color="secondary" @click="addArrayItem(row.prefix)">{{ $t('admin.plans.addArrayItem', { name: row.title }) }}</va-button>
+        </va-list-item>
+        <va-list-item v-else class="py-3" :class="{ 'array-item': row.grouped }" :id="'config-' + row.config.name">
+          <va-list-item-section label>
+            <va-list-item-label>
+              <h5>{{ row.label }}</h5>
             </va-list-item-label>
             <va-list-item-label caption :lines="2">
-              <b>{{ $t('admin.plans.persistentSetting') }}:</b> {{ config.persistent }}
+              <b>{{ $t('admin.plans.persistentSetting') }}:</b> {{ row.config.persistent }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>
             <va-list-item-label>
               <va-input
-                v-if="config.type == 'string'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'string'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="pb-1"
                 />
               <va-input
-                v-if="config.type == 'int'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'int'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 type="number"
                 min="0"
                 class="pb-1"
                 />
               <va-checkbox
-                v-if="config.type == 'bool'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'bool'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="pb-1"
                 />
               <YamlEditor
-                v-if="config.type == 'yaml'"
-                :ref="el => setYamlEditorRef(config.name, el)"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'yaml'"
+                :ref="el => setYamlEditorRef(row.config.name, el)"
+                v-model="form['configurations'][row.config.name]"
                 class="pb-1"
-                :error-messages="errors && errors['configurations.' + config.name]"
+                :error-messages="errors && errors['configurations.' + row.config.name]"
                 />
               <va-input
-                v-if="config.type == 'json'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'json'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="pb-1"
                 />
               <va-input
-                v-if="config.type == 'password'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'password'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 type="password"
                 class="pb-1"
                 :placeholder="$t('admin.plans.leavePasswordBlank')"
                 />
               <va-select
-                v-if="config.type == 'enum'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'enum'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
-                :options="config.options"
+                :options="row.config.options"
                 value-by="value"
                 text-by="text"
                 searchable
                 />
               <va-textarea
-                v-if="config.type == 'textarea'"
-                v-model="form['configurations'][config.name]"
+                v-if="row.config.type == 'textarea'"
+                v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="full-width"
                 max-rows="15"
                 />
             </va-list-item-label>
           </va-list-item-section>
-          <va-list-item-section v-if="config.additional" icon>
-                <va-button color="backgroundSecondary" @click="removeConfig(index)" :title="$t('admin.plans.removeConfig')"><va-icon name="fa-x" color="danger" /></va-button>
+          <va-list-item-section v-if="row.removable" icon>
+                <va-button color="backgroundSecondary" @click="removeConfig(row.config.name)" :title="$t('admin.plans.removeConfig')"><va-icon name="fa-x" color="danger" /></va-button>
           </va-list-item-section>
         </va-list-item>
-      <va-list-separator class="my-1" fit v-if="(index+1) != configs.length" />
+        <va-list-separator class="my-1" fit v-if="hasSeparatorAfter(rowIndex)" />
       </template>
     </va-list>
     <div class="row mb-3 ml-1">{{ $t('admin.plans.persistentSettingsNotice') }}</div>
@@ -162,7 +184,9 @@ export default {
     }
 
     return {
-      configList: this.configs,
+      configList: { ...this.configs },
+      // The configs defined by the app's profile, as opposed to the ones added to this plan
+      profileConfigs: Object.fromEntries(Object.entries(this.configs).filter(([, config]) => config && ! config.additional)),
       feature_options: [
         { text: this.$t('status.disabled'), value: 'disabled' },
         { text: this.$t('status.enabled'), value: 'enabled' },
@@ -193,10 +217,22 @@ export default {
       ]
     }
   },
+  computed: {
+    rows () {
+      return buildRows(this.configList, this.profileConfigs)
+    }
+  },
   mounted () {
     this.scrollToFirstError()
   },
   methods: {
+    hasSeparatorAfter (rowIndex) {
+      const row = this.rows[rowIndex]
+
+      if (rowIndex === this.rows.length - 1) return false
+
+      return row.kind === 'groupEnd' || (row.kind === 'config' && ! row.grouped)
+    },
     setYamlEditorRef (name, el) {
       if (el) {
         this.yamlEditorRefs[name] = el
@@ -249,10 +285,77 @@ export default {
 
       this.newConfig.name = ''
     },
-    removeConfig (index) {
-      delete this.configList[index]
-      delete this.form.configurations[index]
+    removeConfig (name) {
+      delete this.configList[name]
+      delete this.form.configurations[name]
+      delete this.form.additionalConfigs[name]
+    },
+    addArrayItem (prefix) {
+      for (const { config, value } of newArrayItem(this.configList, this.profileConfigs, prefix)) {
+        this.configList[config.name] = config
+        this.form.configurations[config.name] = value
+        this.form.additionalConfigs[config.name] = {
+          name: config.name,
+          type: config.type,
+          persistent: config.persistent,
+          ...(config.options !== undefined ? { options: config.options } : {})
+        }
+      }
+    },
+    removeArrayItem (prefix, index) {
+      const map = removalMap(Object.keys(this.configList), prefix, index)
+      const configList = {}
+      const values = {}
+      const additionalConfigs = {}
+
+      for (const [name, config] of Object.entries(this.configList)) {
+        const newName = name in map ? map[name] : name
+        if (newName === null) continue
+
+        if (newName === name) {
+          configList[name] = config
+          if (name in this.form.additionalConfigs) additionalConfigs[name] = this.form.additionalConfigs[name]
+        } else if (this.profileConfigs[newName]) {
+          // Shifted onto a name the profile defines, so it takes the profile's definition back
+          configList[newName] = { ...this.profileConfigs[newName] }
+        } else {
+          configList[newName] = { ...config, name: newName, additional: true }
+          additionalConfigs[newName] = {
+            name: newName,
+            type: config.type,
+            persistent: config.persistent,
+            ...(config.options !== undefined ? { options: config.options } : {})
+          }
+        }
+
+        values[newName] = this.form.configurations[name]
+      }
+
+      // The profile's configs always exist for the plan, so restore any that the shift left behind
+      for (const [name, config] of Object.entries(this.profileConfigs)) {
+        const parsed = parseArrayConfigName(name)
+        if (! parsed || parsed.prefix !== prefix || name in configList) continue
+
+        configList[name] = { ...config }
+        values[name] = config.default ?? (config.type === 'bool' ? false : null)
+      }
+
+      this.configList = configList
+      this.form.configurations = values
+      this.form.additionalConfigs = additionalConfigs
     }
   }
 }
 </script>
+
+<style scoped>
+.array-item {
+  border-left: 3px solid var(--va-primary);
+  padding-left: 1rem;
+}
+
+.array-item-start {
+  margin-top: 1rem;
+  justify-content: flex-end;
+}
+</style>
