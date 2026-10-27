@@ -66,6 +66,9 @@ return [
         'rollback_failed' => 'The database migration failed (:reason) and returning the app to its previous database also failed: :error. Check the app\'s database server and run an app update.',
         'migrated' => ':app is now using the :server database server',
     ],
+    'plan_secrets' => [
+        'revealed' => 'Plan secret :name (:app, plan :plan) was revealed by :user',
+    ],
     'sso' => [
         'denied' => [
             'groups_missing' => 'Some groups don\'t exist',
@@ -279,6 +282,8 @@ return [
                 'persistent_volume_claim_deleted' => 'Persistent Volume Claim deleted for :organization',
                 'secret_created' => 'Image registry secret :name created in namespace :namespace',
                 'secret_deleted' => 'Image registry secret :name deleted from namespace :namespace',
+                'chart_secret_applied' => 'Chart secret :name applied in namespace :namespace',
+                'chart_secret_deleted' => 'Chart secret :name deleted from namespace :namespace',
             ],
             'error' => [
                 'job' => 'Rancher Job - :job - :message',

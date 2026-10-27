@@ -67,7 +67,7 @@ class BulkEdit extends Controller
 
     private function formatPlan(AppPlan $plan): array
     {
-        $settings = $plan->settings;
+        $settings = $plan->publicSettings();
         $plan_features = ApplicationFacade::plan($plan)->features()->all();
         $settings['features'] = $plan_features;
 
@@ -262,7 +262,7 @@ class BulkEdit extends Controller
         $plan_ids = $plans->pluck('id')->toArray();
 
         $formatted_plans = $plans->map(function ($plan) {
-            $settings = $plan->settings;
+            $settings = $plan->publicSettings();
             $plan_features = ApplicationFacade::plan($plan)->features()->all();
             $settings['features'] = $plan_features;
 

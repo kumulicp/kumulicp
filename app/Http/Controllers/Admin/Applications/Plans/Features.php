@@ -14,7 +14,7 @@ class Features extends Controller
     public function edit(Application $app, AppPlan $plan)
     {
         $features = ApplicationFacade::profile($app->slug)->features();
-        $settings = $plan->settings;
+        $settings = $plan->publicSettings();
 
         $plan_features = ApplicationFacade::plan($plan)->features()->all();
         $settings['features'] = $plan_features;

@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Services\Application\PlanSecretsService;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -257,6 +258,13 @@ class AppPlan extends Model
     public function selfRegistrationEnabled(): bool
     {
         return (bool) $this->setting('self_registration_enabled');
+    }
+
+    // The settings that are safe to send to the browser: everything except the
+    // plan's custom secrets (see PlanSecretsService), which only the server uses.
+    public function publicSettings(): array
+    {
+        return Arr::except($this->settings ?? [], [PlanSecretsService::SETTING]);
     }
 
     public function updateSetting($setting, $value)

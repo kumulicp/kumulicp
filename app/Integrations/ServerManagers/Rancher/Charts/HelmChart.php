@@ -25,6 +25,16 @@ abstract class HelmChart extends Chart
         }
     }
 
+    protected function secretsName(): string
+    {
+        return Str::slug($this->chartName().'-secrets');
+    }
+
+    protected function secretsRelease(): ?string
+    {
+        return Str::slug($this->chartName());
+    }
+
     // The Helm values that apply the kumulicp labels. Charts differ in which
     // keys they accept, so override this for charts without `commonLabels`
     // (which labels every resource the chart deploys).

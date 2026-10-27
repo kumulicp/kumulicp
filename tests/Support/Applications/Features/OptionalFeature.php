@@ -9,6 +9,8 @@ class OptionalFeature extends AppFeature
 {
     public $name = 'optional-feature';
 
+    public $var_name = 'OPTIONAL_FEATURE';
+
     public $category = 'apps';
 
     public $type = 'checkbox';

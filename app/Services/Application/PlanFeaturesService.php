@@ -3,6 +3,7 @@
 namespace App\Services\Application;
 
 use App\AppPlan;
+use App\Integrations\Applications\AppFeature;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 
@@ -38,6 +39,24 @@ class PlanFeaturesService
                     }
                 }
             }
+
+            $this->maskSecretSettings($name, $feature);
+        }
+    }
+
+    // Secret settings never leave the server. Each value is blanked, and
+    // 'secrets_set' records only whether one is saved, so the admin UI can show
+    // "set" and treat a blank submission as "keep what is stored".
+    private function maskSecretSettings(string $name, $feature): void
+    {
+        $this->features[$name]['secrets_set'] = [];
+
+        $secret_settings = $feature instanceof AppFeature ? $feature->secretSettings() : [];
+
+        foreach ($secret_settings as $setting_name) {
+            // Read the value before it is blanked
+            $this->features[$name]['secrets_set'][$setting_name] = ! empty($this->features[$name]['settings'][$setting_name]);
+            $this->features[$name]['settings'][$setting_name] = '';
         }
     }
 

@@ -68,6 +68,8 @@ return [
             'first_plan_description' => 'Primer plan a modificar',
             'configurations_updated' => 'Configuraciones del plan :plan actualizadas',
             'features_updated' => 'Funciones del plan :plan actualizadas',
+            'secrets_updated' => 'Secretos del plan :plan actualizados',
+            'secret_value_required' => 'Un secreto nuevo necesita un valor',
             'denied' => [
                 'delete' => 'El plan no se puede eliminar porque hay organizaciones actualmente suscritas a él. Por favor, considera archivarlo por ahora.',
             ],

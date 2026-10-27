@@ -53,6 +53,10 @@ export default {
         title: this.$t('admin.plans.serverConfigurations'),
         url: basePath + '/configurations'
       })
+      tabs.push({
+        title: this.$t('admin.plans.secrets'),
+        url: basePath + '/secrets'
+      })
     }
 
     let value = this.$t('common.view')
