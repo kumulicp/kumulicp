@@ -24,6 +24,9 @@ class RunAction implements ShouldQueue
     // of running again alongside the original.
     public $tries = 1;
 
+    // Set in the constructor from the connection's retry_after (see below)
+    public $timeout = null;
+
     // Seconds the queue allows a margin before retry_after, so a job is killed
     // before the queue would hand it to a second worker.
     private const RETRY_AFTER_MARGIN = 30;
