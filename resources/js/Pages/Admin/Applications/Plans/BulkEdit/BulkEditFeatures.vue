@@ -62,6 +62,9 @@ import { useForm } from '@inertiajs/vue3'
                     <va-input
                       v-model="form.plans[plan.id].features[feature.value].settings[setting.name]"
                       immediateValidation
+                      :type="setting.secret ? 'password' : 'text'"
+                      :autocomplete="setting.secret ? 'new-password' : undefined"
+                      :placeholder="setting.secret && plan.settings?.features?.[feature.value]?.secrets_set?.[setting.name] ? $t('admin.plans.secretValueSet') : ''"
                     />
                   </td>
                 </tr>

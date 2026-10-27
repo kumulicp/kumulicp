@@ -61,6 +61,9 @@ return [
         'action_failed' => '',
         'no_billing_driver' => 'El controlador de facturación no existe',
     ],
+    'plan_secrets' => [
+        'revealed' => 'El secreto :name del plan (:app, plan :plan) fue revelado por :user',
+    ],
     'sso' => [
         'denied' => [
             'groups_missing' => 'Algunos grupos no existen',

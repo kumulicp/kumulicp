@@ -81,7 +81,7 @@ class Plans extends Controller
         $parent_servers = Server::where('app_instance_id', '>', 0)->with('app_instance')->get();
         $application_id = $app->slug;
         $configs = ApplicationFacade::configurations($app, $plan, true);
-        $settings = $plan->settings;
+        $settings = $plan->publicSettings();
 
         $plan_features = ApplicationFacade::plan($plan)->features()->all();
         $settings['features'] = $plan_features;
@@ -173,7 +173,7 @@ class Plans extends Controller
         $sso_servers = Server::where('type', 'sso')->get();
         $parent_servers = Server::where('app_instance_id', '>', 0)->with('app_instance')->get();
         $application_id = $app->slug;
-        $settings = $plan->settings;
+        $settings = $plan->publicSettings();
 
         $plan_features = ApplicationFacade::plan($plan)->features()->all();
         $profile = ApplicationFacade::profile($app);

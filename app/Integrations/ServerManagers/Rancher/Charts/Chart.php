@@ -3,8 +3,10 @@
 namespace App\Integrations\ServerManagers\Rancher\Charts;
 
 use App\AppInstance;
+use App\Integrations\Applications\AppFeature;
 use App\Organization;
 use App\Support\Facades\Application;
+use App\Support\SecretValue;
 use Illuminate\Support\Str;
 
 class Chart
@@ -116,7 +118,7 @@ class Chart
             }
         }
 
-        return array_merge($env_vars, $this->convertFeaturesToEnvVars());
+        return array_merge($env_vars, $this->convertFeaturesToEnvVars(), $this->planSecretEnv());
     }
 
     public function convertFeaturesToEnvVars()
@@ -137,14 +139,32 @@ class Chart
 
                 // If feature enabled, check for settings and include them in chart
                 if ($feature['status'] == 'enabled') {
-                    foreach ($feature['settings'] as $name => $setting) {
-                        $env_vars[] = [
-                            'name' => strtoupper($name),
-                            'value' => $setting,
-                        ];
+                    $secret_settings = $app_features[$name] instanceof AppFeature ? $app_features[$name]->secretSettings() : [];
+
+                    foreach ($feature['settings'] as $setting_name => $setting) {
+                        $env_vars[] = in_array($setting_name, $secret_settings, true)
+                            ? $this->secretEnv(strtoupper($setting_name), SecretValue::decrypt($setting))
+                            : ['name' => strtoupper($setting_name), 'value' => $setting];
                     }
                 }
             }
+        }
+
+        return $env_vars;
+    }
+
+    // The plan's custom secrets (set on the plan's Secrets page), one env var each
+    public function planSecretEnv(): array
+    {
+        $plan = $this->app_instance->plan;
+
+        if (! $plan) {
+            return [];
+        }
+
+        $env_vars = [];
+        foreach (Application::plan($plan)->secrets()->values() as $name => $value) {
+            $env_vars[] = $this->secretEnv($name, $value);
         }
 
         return $env_vars;

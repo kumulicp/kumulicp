@@ -9,6 +9,8 @@ class EnabledFeature extends AppFeature
 {
     public $name = 'enabled-feature';
 
+    public $var_name = 'ENABLED_FEATURE';
+
     public $category = 'apps';
 
     public $type = 'checkbox';

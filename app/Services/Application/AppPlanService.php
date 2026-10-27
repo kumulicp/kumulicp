@@ -4,12 +4,17 @@ namespace App\Services\Application;
 
 use App\Actions\Organizations\UpdateSubscriptionSettings;
 use App\AppPlan;
+use App\Integrations\Applications\AppFeature;
 use App\Support\Facades\Action;
+use App\Support\Facades\Application;
+use App\Support\SecretValue;
 use Illuminate\Support\Arr;
 
 class AppPlanService
 {
     private $features;
+
+    private $secrets;
 
     public function __construct(public AppPlan $plan) {}
 
@@ -20,6 +25,11 @@ class AppPlanService
         }
 
         return $this->features;
+    }
+
+    public function secrets(): PlanSecretsService
+    {
+        return $this->secrets ??= new PlanSecretsService($this->plan);
     }
 
     public function setDefault()
@@ -62,6 +72,7 @@ class AppPlanService
         $plan_changed = false;
 
         $plan_settings = [];
+        $app_features = Application::profile($this->plan->application->slug)->features();
 
         foreach ($features as $name => $feature) {
             if (is_string($feature)) {
@@ -76,7 +87,7 @@ class AppPlanService
                 'price' => Arr::get($feature, 'price'),
                 'price_id' => Arr::get($feature, 'price_id'),
                 'payment_type' => Arr::get($feature, 'payment_type'),
-                'settings' => Arr::get($feature, 'settings', []),
+                'settings' => $this->featureSettingsToStore($name, Arr::get($feature, 'settings', []), $app_features[$name] ?? null),
             ];
 
             if ($plan_settings[$name] != $this->featureSettings($name)) {
@@ -91,6 +102,21 @@ class AppPlanService
         }
 
         return $plan_settings;
+    }
+
+    // Secret settings are stored encrypted. The admin UI never receives them, so
+    // a blank one means "unchanged" and keeps what is stored.
+    private function featureSettingsToStore(string $name, array $settings, ?AppFeature $feature): array
+    {
+        foreach ($feature?->secretSettings() ?? [] as $setting_name) {
+            $value = Arr::get($settings, $setting_name);
+
+            $settings[$setting_name] = ($value === null || $value === '')
+                ? Arr::get($this->featureSettings($name), "settings.$setting_name", '')
+                : SecretValue::encrypt($value);
+        }
+
+        return $settings;
     }
 
     public function basePrice()

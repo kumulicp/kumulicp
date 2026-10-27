@@ -114,6 +114,8 @@ return [
             'first_plan_description' => 'First plan to be changed',
             'configurations_updated' => ':plan plan configurations updated',
             'features_updated' => ':plan plan features updated',
+            'secrets_updated' => ':plan plan secrets updated',
+            'secret_value_required' => 'A value is required for a new secret',
             'denied' => [
                 'delete' => "Plan can't be deleted as organizations are currently subscribed to it. Please consider archiving for now.",
             ],

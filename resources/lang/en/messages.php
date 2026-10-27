@@ -65,6 +65,9 @@ return [
         'rollback_failed' => 'The database migration failed (:reason) and returning the app to its previous database also failed: :error. Check the app\'s database server and run an app update.',
         'migrated' => ':app is now using the :server database server',
     ],
+    'plan_secrets' => [
+        'revealed' => 'Plan secret :name (:app, plan :plan) was revealed by :user',
+    ],
     'sso' => [
         'denied' => [
             'groups_missing' => 'Some groups don\'t exist',
