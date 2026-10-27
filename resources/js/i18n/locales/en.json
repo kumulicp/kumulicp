@@ -431,6 +431,8 @@
       "parentServer": "Parent Server",
       "plans": "Plans",
       "removeConfig": "Remove Config",
+      "addArrayItem": "Add {name}",
+      "removeArrayItem": "Remove this {name}",
       "serverConfigurations": "Server Configurations",
       "settings": "Settings"
     },
