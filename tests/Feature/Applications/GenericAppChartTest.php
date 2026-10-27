@@ -153,6 +153,11 @@ it('builds one volume per persistence array item', function () {
     expect($values['persistence']['volumes'][1]['persistentVolumeClaim']['claimName'])->toBe("$fullname-uploads");
     expect(array_column($values['persistence']['mounts'], 'mountPath'))->toBe(['/data', '/uploads']);
 
+    // The chart consumes the array items itself, so they must not also be set as raw Helm value paths
+    expect((new GenericChart($organization, $app_instance))->valuesWithAdditionalConfigs()['persistence'])
+        ->toHaveKeys(['persistentVolumeClaims', 'volumes', 'mounts'])
+        ->not->toHaveKey(1);
+
     // An existing claim is mounted but not created
     $app_instance->plan->updateSettings(['configurations' => array_merge(
         $app_instance->plan->setting('configurations'),
@@ -173,4 +178,81 @@ it('builds one volume per persistence array item', function () {
 
     expect(fn () => (new GenericChart($organization, $app_instance->fresh()))->values())
         ->toThrow(Exception::class, 'repeats the name or mountPath');
+});
+
+it('wires probes, pod security, secret env, ingress annotations and Recreate', function () {
+    $organization = Organization::factory()->create();
+
+    $app = Application::initialize('generic');
+    Application::roles($app);
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $app->id,
+        'settings' => ['image_repo_name' => 'library/my-app', 'port' => 9000],
+    ]);
+
+    $app_plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'base' => ['price' => 0, 'storage' => 1, 'price_id' => null],
+            'basic' => ['max' => 1, 'name' => 'Basic', 'price' => 0, 'amount' => 1, 'storage' => 1, 'price_id' => null],
+            'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
+            'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
+            'configurations' => [
+                'probe-path' => '/health',
+                'security-runAsUser' => 1000,
+                'security-fsGroup' => 2000,
+                'secretEnv' => ['DB_PASSWORD' => 's3cret', 'PORT_NUM' => 5432],
+                'persistence-enabled' => true,
+                'ingress-tls' => true,
+                'ingress-annotations' => ['traefik.ingress.kubernetes.io/router.middlewares' => 'default-limit@kubernetescrd'],
+            ],
+        ],
+    ]);
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan)->get();
+    $values = (new GenericChart($organization, $app_instance))->values();
+
+    expect($values['readinessProbe']['httpGet'])->toBe(['path' => '/health', 'port' => 9000]);
+    expect($values['startupProbe']['httpGet'])->toBe(['path' => '/health', 'port' => 9000]);
+    expect($values['podSecurityContext'])->toBe(['runAsUser' => 1000, 'fsGroup' => 2000]);
+    expect($values['updateStrategy'])->toBe(['type' => 'Recreate', 'rollingUpdate' => null]);
+
+    expect($values['secrets'])->toBe([['name' => 'env', 'stringData' => ['DB_PASSWORD' => 's3cret', 'PORT_NUM' => '5432']]]);
+    expect($values['envFrom'])->toBe([['secretRef' => ['name' => $values['fullnameOverride'].'-env']]]);
+    expect($values['env'] ?? [])->not->toContain(['name' => 'DB_PASSWORD', 'value' => 's3cret']);
+
+    expect($values['ingress']['annotations'])->toHaveKeys([
+        'traefik.ingress.kubernetes.io/router.middlewares',
+        'cert-manager.io/cluster-issuer',
+    ]);
+});
+
+it('leaves probes, pod security, secrets and update strategy to the chart by default', function () {
+    $organization = Organization::factory()->create();
+
+    $app = Application::initialize('generic');
+    Application::roles($app);
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $app->id,
+        'settings' => ['image_repo_name' => 'library/my-app'],
+    ]);
+
+    $app_plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'base' => ['price' => 0, 'storage' => 1, 'price_id' => null],
+            'basic' => ['max' => 1, 'name' => 'Basic', 'price' => 0, 'amount' => 1, 'storage' => 1, 'price_id' => null],
+            'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
+            'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
+        ],
+    ]);
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan)->get();
+    $values = (new GenericChart($organization, $app_instance))->values();
+
+    expect($values)->not->toHaveKeys([
+        'readinessProbe', 'startupProbe', 'podSecurityContext', 'updateStrategy', 'secrets', 'envFrom',
+    ]);
 });

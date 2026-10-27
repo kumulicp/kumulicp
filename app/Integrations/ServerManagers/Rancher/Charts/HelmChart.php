@@ -14,6 +14,11 @@ abstract class HelmChart extends Chart
 
     public $chart_name = '';
 
+    // Array configuration prefixes (`<prefix>-<index>-<field>`) that values()
+    // consumes itself. valuesWithAdditionalConfigs() skips them instead of also
+    // setting them as raw Helm value paths.
+    public $handled_array_prefixes = [];
+
     abstract public function values(): array;
 
     public function chartName()
@@ -53,11 +58,26 @@ abstract class HelmChart extends Chart
         $additionalConfigs = $this->app_instance->plan->additionalConfigs();
 
         foreach ($additionalConfigs as $config) {
+            if ($this->handlesArrayConfig($config['name'])) {
+                continue;
+            }
+
             $key = str_replace('-', '.', $config['name']);
             Arr::set($values, $key, $app_instance->configuration($config['name']));
         }
 
         return $values;
+    }
+
+    private function handlesArrayConfig(string $name): bool
+    {
+        foreach ($this->handled_array_prefixes as $prefix) {
+            if (preg_match('/^'.preg_quote($prefix, '/').'-\d+-/', $name)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function buildChart()

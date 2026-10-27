@@ -10,11 +10,14 @@ use Illuminate\Support\Arr;
 // backing App\Integrations\Applications\GenericAppProfile. That chart
 // supports far more than this profile exposes (StatefulSet/DaemonSet/Jobs,
 // KEDA, NetworkPolicy, multi-container pods, ...) -- only a
-// single-container Deployment with one optional PVC-backed volume and one
-// optional Ingress host is wired up here.
+// single-container Deployment with optional PVC-backed volumes, one optional
+// Ingress host, an HTTP probe path, env/secret env vars and a pod user/group
+// is wired up here.
 class GenericChart extends HelmChart
 {
     public $chart_name = 'generic';
+
+    public $handled_array_prefixes = ['persistence'];
 
     public function values(): array
     {
@@ -61,9 +64,10 @@ class GenericChart extends HelmChart
             'ingress' => [
                 'enabled' => $this->appEnabled() && $app_instance->configuration('ingress-enabled'), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
                 'ingressClassName' => $app_instance->configuration('ingress-className'),
-                'annotations' => $app_instance->configuration('ingress-tls') ? [
+                // Platform-managed annotations win over admin-supplied ones
+                'annotations' => array_merge((array) $app_instance->configuration('ingress-annotations'), $app_instance->configuration('ingress-tls') ? [
                     'cert-manager.io/cluster-issuer' => $this->clusterIssuer(),
-                ] : [],
+                ] : []),
                 'hosts' => [
                     ['host' => $this->app_instance->domain()],
                 ],
@@ -76,6 +80,33 @@ class GenericChart extends HelmChart
             ],
         ];
 
+        $values += $this->probes($app_instance->configuration('probe-path'), $port);
+
+        // Empty/0 means "leave it to the image", so filter drops both
+        $pod_security = array_filter([
+            'runAsUser' => (int) $app_instance->configuration('security-runAsUser'),
+            'fsGroup' => (int) $app_instance->configuration('security-fsGroup'),
+        ]);
+        if ($pod_security) {
+            $values['podSecurityContext'] = $pod_security;
+        }
+
+        // A rolling update starts the new pod before stopping the old one, so
+        // two pods would share the same volume (a ReadWriteOnce claim can get
+        // stuck attaching; an embedded database could be corrupted). `null`
+        // removes the chart's default rollingUpdate block, which can't be
+        // combined with Recreate.
+        if ($values['persistence']) {
+            $values['updateStrategy'] = ['type' => 'Recreate', 'rollingUpdate' => null];
+        }
+
+        // Delivered as a chart-managed Secret (named <fullname>-env by the
+        // chart) via envFrom instead of inline in the pod spec.
+        if ($secret_env = (array) $app_instance->configuration('secretEnv')) {
+            $values['secrets'] = [['name' => 'env', 'stringData' => array_map('strval', $secret_env)]];
+            $values['envFrom'] = [['secretRef' => ['name' => rtrim(substr($fullname.'-env', 0, 63), '-')]]];
+        }
+
         // Symfony's Yaml::dump() renders an empty PHP array as `{}`, which
         // the chart's schema rejects for these list-typed values. Omit them
         // when empty so the chart's own `[]` defaults apply.
@@ -86,6 +117,23 @@ class GenericChart extends HelmChart
         }
 
         return $values;
+    }
+
+    // Without a path there are no probes (the chart's default), so a pod
+    // receives traffic as soon as its container starts. The startup probe
+    // allows 5 minutes for slow images before readiness takes over.
+    private function probes(?string $path, int $port): array
+    {
+        if (! $path) {
+            return [];
+        }
+
+        $http_get = ['path' => $path, 'port' => $port];
+
+        return [
+            'readinessProbe' => ['httpGet' => $http_get, 'periodSeconds' => 10],
+            'startupProbe' => ['httpGet' => $http_get, 'periodSeconds' => 5, 'failureThreshold' => 60],
+        ];
     }
 
     // One PVC-backed volume per `persistence-<index>-*` configuration item,

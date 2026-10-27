@@ -45,6 +45,15 @@ class GenericAppProfile extends AppProfile
             'default' => [],
             'validations' => 'nullable|array',
         ],
+        // Same shape as `env`, but delivered through a Secret (envFrom) so the
+        // values stay out of the pod spec.
+        'secretEnv' => [
+            'name' => 'secretEnv',
+            'type' => 'yaml',
+            'persistent' => true,
+            'default' => [],
+            'validations' => 'nullable|array',
+        ],
         'resources-requests-cpu' => [
             'name' => 'resources-requests-cpu',
             'type' => 'string',
@@ -128,6 +137,31 @@ class GenericAppProfile extends AppProfile
             'default' => '',
             'validations' => 'nullable|string',
         ],
+        // HTTP path (e.g. /health) for the readiness and startup probes on the
+        // app port. Empty disables probing.
+        'probe-path' => [
+            'name' => 'probe-path',
+            'type' => 'string',
+            'persistent' => false,
+            'default' => '',
+            'validations' => 'nullable|string|starts_with:/',
+        ],
+        // Empty (or 0) leaves the user/group to the image. fsGroup makes
+        // mounted volumes writable by non-root images.
+        'security-runAsUser' => [
+            'name' => 'security-runAsUser',
+            'type' => 'int',
+            'persistent' => false,
+            'default' => null,
+            'validations' => 'nullable|integer|min:0',
+        ],
+        'security-fsGroup' => [
+            'name' => 'security-fsGroup',
+            'type' => 'int',
+            'persistent' => false,
+            'default' => null,
+            'validations' => 'nullable|integer|min:0',
+        ],
         'ingress-enabled' => [
             'name' => 'ingress-enabled',
             'type' => 'bool',
@@ -148,6 +182,13 @@ class GenericAppProfile extends AppProfile
             'persistent' => false,
             'default' => 'traefik',
             'validations' => 'nullable|string',
+        ],
+        'ingress-annotations' => [
+            'name' => 'ingress-annotations',
+            'type' => 'yaml',
+            'persistent' => false,
+            'default' => [],
+            'validations' => 'nullable|array',
         ],
     ];
 }
