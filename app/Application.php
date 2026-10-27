@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property AccessType $access_type
  * @property bool $primary_domain_allowed
  * @property bool $can_update_domain
+ * @property int|null $chart_source_id
+ * @property array|null $catalog
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
  * @property-read int|null $total_instances
@@ -54,6 +56,7 @@ class Application extends Model
         'primary_domain_allowed' => 'boolean',
         'can_update_domain' => 'boolean',
         'domain_option' => 'array',
+        'catalog' => 'array',
     ];
 
     /**
@@ -72,6 +75,17 @@ class Application extends Model
         }
 
         return false;
+    }
+
+    // Imported from a chart source rather than backed by a hand-written profile
+    public function isCatalog(): bool
+    {
+        return ! empty($this->catalog);
+    }
+
+    public function chartSource()
+    {
+        return $this->belongsTo(ChartSource::class, 'chart_source_id');
     }
 
     public function organizations()

@@ -33,6 +33,7 @@ Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->witho
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();
+Schedule::command('catalog:sync')->daily()->withoutOverlapping();
 Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
