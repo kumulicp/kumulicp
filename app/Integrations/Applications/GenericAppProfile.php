@@ -80,32 +80,52 @@ class GenericAppProfile extends AppProfile
             'default' => false,
             'validations' => 'boolean',
         ],
-        'persistence-storageClass' => [
-            'name' => 'persistence-storageClass',
+        // One PVC per `persistence-<index>-*` group; see
+        // resources/js/services/arrayConfigs.ts for how these are grouped and
+        // cloned on the plan configurations page. `name` and `mountPath` must
+        // be unique across items, so edit them on any item you add.
+        'persistence-0-name' => [
+            'name' => 'persistence-0-name',
             'type' => 'string',
             'persistent' => true,
-            'default' => '',
+            'default' => 'data',
             'validations' => 'nullable|string',
         ],
-        'persistence-existingClaim' => [
-            'name' => 'persistence-existingClaim',
+        'persistence-0-mountPath' => [
+            'name' => 'persistence-0-mountPath',
             'type' => 'string',
             'persistent' => true,
-            'default' => '',
+            'default' => '/data',
             'validations' => 'nullable|string',
         ],
-        'persistence-accessMode' => [
-            'name' => 'persistence-accessMode',
-            'type' => 'string',
+        // Size in Gi. Empty uses the instance's app storage.
+        'persistence-0-size' => [
+            'name' => 'persistence-0-size',
+            'type' => 'int',
+            'persistent' => true,
+            'default' => null,
+            'validations' => 'nullable|integer|min:1',
+        ],
+        'persistence-0-accessMode' => [
+            'name' => 'persistence-0-accessMode',
+            'type' => 'enum',
+            'options' => ['ReadWriteOnce', 'ReadWriteMany'],
             'persistent' => true,
             'default' => 'ReadWriteOnce',
             'validations' => 'nullable|in:ReadWriteOnce,ReadWriteMany',
         ],
-        'persistence-mountPath' => [
-            'name' => 'persistence-mountPath',
+        'persistence-0-storageClass' => [
+            'name' => 'persistence-0-storageClass',
             'type' => 'string',
             'persistent' => true,
-            'default' => '/data',
+            'default' => '',
+            'validations' => 'nullable|string',
+        ],
+        'persistence-0-existingClaim' => [
+            'name' => 'persistence-0-existingClaim',
+            'type' => 'string',
+            'persistent' => true,
+            'default' => '',
             'validations' => 'nullable|string',
         ],
         'ingress-enabled' => [

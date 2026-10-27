@@ -16,8 +16,6 @@ class GenericChart extends HelmChart
 {
     public $chart_name = 'generic';
 
-    private const VOLUME_NAME = 'data';
-
     public function values(): array
     {
         $app_instance = Application::instance($this->app_instance);
@@ -90,35 +88,51 @@ class GenericChart extends HelmChart
         return $values;
     }
 
-    // A single PVC-backed volume ('data'), mounted into every container.
-    // The chart keeps PVC creation, pod-volume attachment, and container
-    // mounts as three deliberately decoupled lists (see its docs/storage.md),
-    // so all three have to agree on the same claim name here.
+    // One PVC-backed volume per `persistence-<index>-*` configuration item,
+    // each mounted into every container. The chart keeps PVC creation,
+    // pod-volume attachment, and container mounts as three deliberately
+    // decoupled lists (see its docs/storage.md), so all three have to agree
+    // on the same claim name here.
     private function persistence($app_instance, string $fullname): array
     {
         if (! $app_instance->configuration('persistence-enabled')) {
             return [];
         }
 
-        $existing_claim = $app_instance->configuration('persistence-existingClaim');
-        $claim_name = $existing_claim ?: "{$fullname}-".self::VOLUME_NAME;
+        $claims = $volumes = $mounts = [];
 
-        return [
-            'persistentVolumeClaims' => $existing_claim ? [] : [array_filter([
-                'name' => self::VOLUME_NAME,
-                'storage' => $this->appStorage().'Gi',
-                'accessModes' => [$app_instance->configuration('persistence-accessMode')],
-                'storageClassName' => $app_instance->configuration('persistence-storageClass'),
-            ])],
-            'volumes' => [[
-                'name' => self::VOLUME_NAME,
-                'persistentVolumeClaim' => ['claimName' => $claim_name],
-            ]],
-            'mounts' => [[
-                'name' => self::VOLUME_NAME,
-                'mountPath' => $app_instance->configuration('persistence-mountPath'),
-            ]],
-        ];
+        foreach ($app_instance->arrayConfiguration('persistence') as $index => $item) {
+            $name = $item['name'] ?? null;
+            $mount_path = $item['mountPath'] ?? null;
+
+            if (! $name || ! $mount_path) {
+                throw new \Exception("Generic app persistence item $index needs a name and mountPath");
+            }
+
+            if (in_array($name, array_column($mounts, 'name')) || in_array($mount_path, array_column($mounts, 'mountPath'))) {
+                throw new \Exception("Generic app persistence item $index repeats the name or mountPath of an earlier item");
+            }
+
+            $existing_claim = $item['existingClaim'] ?? null;
+
+            if (! $existing_claim) {
+                $claims[] = array_filter([
+                    'name' => $name,
+                    'storage' => (($item['size'] ?? null) ?: $this->appStorage()).'Gi',
+                    'accessModes' => [$item['accessMode'] ?? 'ReadWriteOnce'],
+                    'storageClassName' => $item['storageClass'] ?? null,
+                ]);
+            }
+
+            $volumes[] = [
+                'name' => $name,
+                'persistentVolumeClaim' => ['claimName' => $existing_claim ?: "{$fullname}-{$name}"],
+            ];
+            $mounts[] = ['name' => $name, 'mountPath' => $mount_path];
+        }
+
+        // An empty list would be dumped as `{}`, see values()
+        return array_filter(['persistentVolumeClaims' => $claims, 'volumes' => $volumes, 'mounts' => $mounts]);
     }
 
     // Admin-supplied env vars (configuration('env') is a plain name => value

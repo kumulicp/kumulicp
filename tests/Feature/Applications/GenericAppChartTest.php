@@ -101,3 +101,76 @@ it('defaults the port to 8080 and skips persistence/ingress when disabled', func
     expect($values)->not->toHaveKeys(['imagePullSecrets', 'env']);
     expect($values['ingress'])->not->toHaveKey('tls');
 });
+
+it('builds one volume per persistence array item', function () {
+    $organization = Organization::factory()->create();
+
+    $app = Application::initialize('generic');
+    Application::roles($app);
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $app->id,
+        'settings' => ['image_repo_name' => 'library/my-app'],
+    ]);
+
+    $extra = fn (string $field, string $type = 'string') => [
+        'name' => "persistence-1-$field",
+        'type' => $type,
+        'persistent' => true,
+        'additional' => true,
+    ];
+
+    $app_plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'base' => ['price' => 0, 'storage' => 2, 'price_id' => null],
+            'basic' => ['max' => 1, 'name' => 'Basic', 'price' => 0, 'amount' => 1, 'storage' => 1, 'price_id' => null],
+            'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
+            'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
+            'additionalConfigs' => [
+                'persistence-1-name' => $extra('name'),
+                'persistence-1-mountPath' => $extra('mountPath'),
+                'persistence-1-size' => $extra('size', 'int'),
+                'persistence-1-existingClaim' => $extra('existingClaim'),
+            ],
+            'configurations' => [
+                'persistence-enabled' => true,
+                'persistence-1-name' => 'uploads',
+                'persistence-1-mountPath' => '/uploads',
+                'persistence-1-size' => 5,
+                'persistence-1-existingClaim' => '',
+            ],
+        ],
+    ]);
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan)->get();
+    $fullname = (new GenericChart($organization, $app_instance))->values()['fullnameOverride'];
+    $values = (new GenericChart($organization, $app_instance))->values();
+
+    expect($values['persistence']['persistentVolumeClaims'])->toHaveCount(2);
+    expect($values['persistence']['persistentVolumeClaims'][0]['name'])->toBe('data');
+    expect($values['persistence']['persistentVolumeClaims'][1])->toMatchArray(['name' => 'uploads', 'storage' => '5Gi']);
+    expect($values['persistence']['volumes'][1]['persistentVolumeClaim']['claimName'])->toBe("$fullname-uploads");
+    expect(array_column($values['persistence']['mounts'], 'mountPath'))->toBe(['/data', '/uploads']);
+
+    // An existing claim is mounted but not created
+    $app_instance->plan->updateSettings(['configurations' => array_merge(
+        $app_instance->plan->setting('configurations'),
+        ['persistence-1-existingClaim' => 'shared-uploads'],
+    )]);
+    $app_instance->plan->save();
+    $values = (new GenericChart($organization, $app_instance->fresh()))->values();
+
+    expect($values['persistence']['persistentVolumeClaims'])->toHaveCount(1);
+    expect($values['persistence']['volumes'][1]['persistentVolumeClaim']['claimName'])->toBe('shared-uploads');
+
+    // Items must not share a name or mount path
+    $app_instance->plan->updateSettings(['configurations' => array_merge(
+        $app_instance->plan->setting('configurations'),
+        ['persistence-1-name' => 'data'],
+    )]);
+    $app_instance->plan->save();
+
+    expect(fn () => (new GenericChart($organization, $app_instance->fresh()))->values())
+        ->toThrow(Exception::class, 'repeats the name or mountPath');
+});
