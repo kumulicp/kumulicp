@@ -18,7 +18,7 @@ class WordpressChart extends HelmChart
             $database_server = $database_server->server;
         }
 
-        return [
+        $values = [
             'affinity' => [
                 'podAffinity' => [
                     'requiredDuringSchedulingIgnoredDuringExecution' => [
@@ -96,5 +96,14 @@ class WordpressChart extends HelmChart
             'wordpressUsername' => $app_instance->configuration('wordpress-username'),
             'wordpressScheme' => $app_instance->configuration('ingress-tls') ? 'https' : 'http',
         ];
+
+        // Symfony's Yaml::dump() renders an empty PHP array as `{}`, which the
+        // chart's schema rejects for the list-typed sidecars. Omit it when empty
+        // so the chart's own `[]` default applies.
+        if (! $values['sidecars']) {
+            unset($values['sidecars']);
+        }
+
+        return $values;
     }
 }
