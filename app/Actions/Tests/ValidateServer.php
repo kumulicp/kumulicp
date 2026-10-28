@@ -8,6 +8,7 @@ use App\Actions\Apps\ApplicationDelete;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Server;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
@@ -42,7 +43,7 @@ class ValidateServer extends Action
 
         foreach (['activate', 'update', 'upgrade', 'delete'] as $key) {
             $sub_task = Task::find($values[$key]);
-            if (! $sub_task || $sub_task->status != 'complete') {
+            if (! $sub_task || $sub_task->status !== TaskStatus::COMPLETE) {
                 return;
             }
         }

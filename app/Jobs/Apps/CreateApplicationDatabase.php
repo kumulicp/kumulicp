@@ -3,6 +3,7 @@
 namespace App\Jobs\Apps;
 
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Bus\Queueable;
@@ -59,7 +60,7 @@ class CreateApplicationDatabase
             }
         } catch (Throwable $e) {
             if ($this->task) {
-                $this->task->status = 'failed';
+                $this->task->status = TaskStatus::FAILED;
                 $this->task->error_message = $e->getMessage();
                 $this->task->save();
             }

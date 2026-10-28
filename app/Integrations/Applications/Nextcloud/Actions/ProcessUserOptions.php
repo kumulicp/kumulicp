@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Nextcloud\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\API\Users;
 use App\Support\AccountManager\UserManager;
 use App\Support\ByteConversion;
@@ -78,7 +79,7 @@ class ProcessUserOptions extends Action
                 throw new \Exception(__('actions.nextcloud.quota_not_changed'));
             }
         } catch (\Throwable $e) {
-            $task->status = 'pending';
+            $task->status = TaskStatus::PENDING;
             $task->error_message = $e->getMessage();
             $task->error_code = 'user_not_found';
             $task->save();

@@ -4,6 +4,7 @@ namespace App\Actions\Organizations;
 
 use App\Actions\Action;
 use App\Actions\Apps\ApplicationDelete;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
@@ -16,7 +17,7 @@ class DeleteOrganization extends Action
 
     public $background = true;
 
-    public $status = 'pending';
+    public TaskStatus $status = TaskStatus::PENDING;
 
     public function __construct(Organization $organization)
     {
@@ -52,7 +53,7 @@ class DeleteOrganization extends Action
 
     public static function complete(Task $task)
     {
-        $app_tasks = Task::whereNot('status', 'complete')
+        $app_tasks = Task::whereNot('status', TaskStatus::COMPLETE->value)
             ->whereNot('id', $task->id)
             ->where(function (Builder $query) use ($task) {
                 foreach ($task->getValue('app_tasks') as $app) {

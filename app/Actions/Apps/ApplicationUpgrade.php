@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\AppVersion;
+use App\Enums\TaskStatus;
 use App\Events\AppInstanceSubscriptionChanged;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Notifications\ApplicationUpgraded;
@@ -85,7 +86,7 @@ class ApplicationUpgrade extends Action
         $app_instance->status = 'updating';
         $app_instance->save();
 
-        $task->status = 'ready';
+        $task->status = TaskStatus::READY;
         $task->save();
 
         return new self($app_instance, $task->version);

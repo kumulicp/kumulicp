@@ -10,6 +10,7 @@ use App\AppInstance;
 use App\Application as App;
 use App\AppPlan;
 use App\AppVersion;
+use App\Enums\TaskStatus;
 use App\Events\ApplicationActivated as EventApplicationActivated;
 use App\Events\Apps\ApplicationActivating;
 use App\Events\Apps\ApplicationPreActivation;
@@ -96,7 +97,7 @@ class ApplicationActivate extends Action
         ApplicationPreActivation::dispatch($this->app_instance);
 
         if ($is_shared_app) {
-            $this->status = 'in_progress';
+            $this->status = TaskStatus::IN_PROGRESS;
             $this->addCustomValue(['shared_app' => true]);
         }
     }
@@ -159,7 +160,7 @@ class ApplicationActivate extends Action
     public static function retry(Task $task)
     {
         if ($task->action_slug == 'activate') {
-            $task->status = 'ready';
+            $task->status = TaskStatus::READY;
             $task->save();
         } else {
             $plan_id = $task->getValue('app_plan');
@@ -182,7 +183,7 @@ class ApplicationActivate extends Action
                     'app' => $app_instance->application->name,
                     'guidance' => $server->notFoundMessage(),
                 ]);
-                $task->status = 'failed';
+                $task->status = TaskStatus::FAILED;
                 $task->save();
 
                 return;

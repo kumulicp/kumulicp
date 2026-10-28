@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\TaskStatus;
 use App\Task;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,7 @@ class TaskHelpers
         $uuidExpr = DB::getDriverName() === 'sqlite' ? 'lower(hex(randomblob(16)))' : 'UUID()';
         $tasks = Task::selectRaw("tasks.*, IFNULL(action_slug,{$uuidExpr}) as unq_group")
             ->where($filters)
-            ->whereNot('status', 'complete')
+            ->whereNot('status', TaskStatus::COMPLETE->value)
             ->orderBy('updated_at', 'desc')
             ->groupBy('task_group')
             ->get();
@@ -33,7 +34,7 @@ class TaskHelpers
         foreach ($tasks as $task) {
             $status = 'In Progress';
             $message = 'In Progress';
-            if ($task->status == 'failed' || $task->attempts > 1) {
+            if ($task->status === TaskStatus::FAILED || $task->attempts > 1) {
                 $status = 'Failed';
                 $message = __('messages.action.tech_difficulties');
             }
@@ -63,7 +64,7 @@ class TaskHelpers
     public static function pendingDomainChanges($organization)
     {
         $pending_domain_tasks = DB::table('tasks')
-            ->where('status', '!=', 'complete')
+            ->where('status', '!=', TaskStatus::COMPLETE->value)
             ->where('organization_id', $organization->id)
             ->where(function ($query) {
                 $query->where('action_slug', 'domain_add')

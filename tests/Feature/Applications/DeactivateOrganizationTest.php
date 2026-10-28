@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Organizations\DeactivateOrganization;
+use App\Enums\TaskStatus;
 use App\Notifications\ApplicationDeactivated;
 use App\Notifications\OrganizationDeactivated;
 use App\Organization;
@@ -52,7 +53,7 @@ it('deactivates the organization and all of its app instances', function () {
     // Not complete yet -- still waiting on the fanned-out app task.
     Action::complete($task);
     $task->refresh();
-    expect($task->status)->not->toBe('complete');
+    expect($task->status)->not->toBe(TaskStatus::COMPLETE);
 
     FakeServerManager::markInactive($instance->id);
     Action::complete($appTask);
@@ -62,7 +63,7 @@ it('deactivates the organization and all of its app instances', function () {
     Action::complete($task);
     $task->refresh();
 
-    expect($task->status)->toBe('complete');
+    expect($task->status)->toBe(TaskStatus::COMPLETE);
 
     $admin = $org->admins()->first()->get();
     Notification::assertSentTo($admin, ApplicationDeactivated::class);

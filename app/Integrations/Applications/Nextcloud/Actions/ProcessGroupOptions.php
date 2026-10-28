@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\Jobs\RemoveGroupFolder;
 use App\Integrations\Applications\Nextcloud\Jobs\UpdateGroupFolder;
 use App\Integrations\Applications\Nextcloud\Services\GroupFolderService;
@@ -22,7 +23,7 @@ class ProcessGroupOptions extends Action
 
     public $action_group = 'nextcloud';
 
-    public $status = 'in_progress';
+    public TaskStatus $status = TaskStatus::IN_PROGRESS;
 
     public $background = 1;
 

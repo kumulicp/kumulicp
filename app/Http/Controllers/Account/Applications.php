@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Actions\Domains\UpdateDnsRecords;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\Applications\UpdateLDAPGroups;
 use App\OrgDomain;
@@ -32,7 +33,7 @@ class Applications extends Controller
         if (! $apps->isEmpty()) {
             return inertia('Organization/Apps/AppsList', [
                 'apps' => $apps->map(function ($app) {
-                    $tasks = $app->tasks()->where('background', 0)->where('status', '!=', 'complete')->get();
+                    $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
 
                     return [
                         'id' => $app->id,
@@ -110,7 +111,7 @@ class Applications extends Controller
             $domains = $domains->all();
         }
 
-        $tasks = $app->tasks()->where('background', 0)->where('status', '!=', 'complete')->get();
+        $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
 
         $features = collect(Application::instance($app)->features()->optional($app))->map(function ($customization) {
             return [

@@ -4,6 +4,7 @@ namespace App\Actions\Apps;
 
 use App\Actions\Action;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Exceptions\SSONotReadyException;
 use App\Jobs\RunAction;
 use App\Support\Facades\Application;
@@ -34,7 +35,7 @@ class ApplicationSSOSetup extends Action
                     $response = $sso->add();
                 }
             } catch (SSONotReadyException $e) {
-                $task->status = 'pending';
+                $task->status = TaskStatus::PENDING;
                 $task->error_message = $e->getMessage();
                 $task->save();
 

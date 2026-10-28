@@ -4,6 +4,7 @@ namespace App\Actions\Email;
 
 use App\Actions\Action;
 use App\Actions\Prerequisites;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Domain;
@@ -13,7 +14,7 @@ class RetrieveDkimKey extends Action
 {
     public $slug = 'retrieve_dkim_key';
 
-    public $status = 'pending';
+    public TaskStatus $status = TaskStatus::PENDING;
 
     public function __construct(Organization $organization, OrgDomain $domain)
     {

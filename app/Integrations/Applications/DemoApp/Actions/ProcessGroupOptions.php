@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\DemoApp\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\AccountManager;
@@ -16,7 +17,7 @@ class ProcessGroupOptions extends Action
 
     public $action_group = 'demo_app';
 
-    public $status = 'in_progress';
+    public TaskStatus $status = TaskStatus::IN_PROGRESS;
 
     public $background = false;
 
@@ -55,7 +56,7 @@ class ProcessGroupOptions extends Action
 
     public static function run($task): void
     {
-        $task->status = 'complete';
+        $task->status = TaskStatus::COMPLETE;
         $task->save();
     }
 
@@ -68,7 +69,7 @@ class ProcessGroupOptions extends Action
 
     public static function complete($task): void
     {
-        if ($task->status === 'complete') {
+        if ($task->status === TaskStatus::COMPLETE) {
             $task->delete();
         }
     }

@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Apps\ApplicationActivate;
 use App\Application;
 use App\AppPlan;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\Server;
 use App\Support\Facades\Action as ActionFacade;
@@ -64,7 +65,7 @@ class ServerActivate extends Action
     public static function complete(Task &$task)
     {
         if (! $task->app_instance) {
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->error_message = __('messages.rule.app_exists');
             $task->save();
         } elseif ($task->app_instance->status === 'active') {

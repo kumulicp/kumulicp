@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\CiviCRMStandalone\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\API\User;
 use App\Task;
@@ -68,7 +69,7 @@ class ProcessPermissions extends Action
 
             if ($user->hasError()) {
                 $task->error_message = $user->error();
-                $task->status = 'pending';
+                $task->status = TaskStatus::PENDING;
                 $task->error_code = 'create_user_failed';
                 $task->save();
 
@@ -88,7 +89,7 @@ class ProcessPermissions extends Action
 
         if ($user->hasError()) {
             $task->error_message = $user->error();
-            $task->status = 'pending';
+            $task->status = TaskStatus::PENDING;
             $task->error_code = 'update_user_roles_failed';
             $task->save();
 

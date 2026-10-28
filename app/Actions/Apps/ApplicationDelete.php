@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Jobs\Applications\RemoveLDAPGroups;
 use App\Services\SubscriptionService;
 use App\Support\Facades\AccountManager;
@@ -108,7 +109,7 @@ class ApplicationDelete extends Action
 
     public static function retry(Task $task)
     {
-        $task->status = 'ready';
+        $task->status = TaskStatus::READY;
         $task->save();
 
         return new self($task->app_instance);

@@ -5,6 +5,7 @@ namespace App\Actions\Apps;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
@@ -38,7 +39,7 @@ class ApplicationUpdateJob extends Action
         $existing_task = Task::where('action_slug', $this->slug)
             ->whereIn('app_instance_id', $sibling_instance_ids)
             ->where('app_instance_id', '!=', $app_instance->id)
-            ->where('status', '!=', 'complete')
+            ->where('status', '!=', TaskStatus::COMPLETE->value)
             ->latest('id')
             ->first();
 
@@ -67,7 +68,7 @@ class ApplicationUpdateJob extends Action
                 'job' => $task->getValue('job_name'),
                 'message' => is_string($job['response'] ?? null) ? $job['response'] : json_encode($job['response'] ?? null),
             ]);
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->save();
 
             return;
@@ -81,7 +82,7 @@ class ApplicationUpdateJob extends Action
 
     public static function retry(Task $task)
     {
-        $task->status = 'ready';
+        $task->status = TaskStatus::READY;
         $task->save();
 
         return new self($task->app_instance, $task->getValue('job_name'));
@@ -107,7 +108,7 @@ class ApplicationUpdateJob extends Action
                 $task->groupNotified();
             } elseif ($status == 'failed') {
                 $task->error_message = __('messages.api.rancher.error.job', ['job' => $task->getValue('job_id'), 'message' => '']);
-                $task->status = 'failed';
+                $task->status = TaskStatus::FAILED;
                 $task->save();
             }
         }

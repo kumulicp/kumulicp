@@ -4,6 +4,7 @@ namespace App\Actions\Domains;
 
 use App\Actions\Action;
 use App\Actions\Organizations\InvoiceOrganization;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
 use App\Support\Facades\Action as ActionFacade;
@@ -14,7 +15,7 @@ class RegisterDomainName extends Action
 {
     public $slug = 'register_domain_name';
 
-    public $status = 'pending';
+    public TaskStatus $status = TaskStatus::PENDING;
 
     public function __construct(Organization $organization, public OrgDomain $domain, float $price, int $years, $extended_attributes = null)
     {
@@ -36,7 +37,7 @@ class RegisterDomainName extends Action
         $org_domain = $organization->domains()->where('name', $domain_name)->where('status', 'registering')->first();
 
         if (! $org_domain) {
-            $task->status = 'failed';
+            $task->status = TaskStatus::FAILED;
             $task->error_code = 'no_org_domain';
             $task->error_message = __('organization.domain.denied.exists');
             $task->save();

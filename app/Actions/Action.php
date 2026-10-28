@@ -2,12 +2,13 @@
 
 namespace App\Actions;
 
+use App\Enums\TaskStatus;
 use App\Task;
 use Illuminate\Support\Arr;
 
 class Action
 {
-    public $status = 'pending';
+    public TaskStatus $status = TaskStatus::PENDING;
 
     public $background = false;
 
@@ -32,6 +33,10 @@ class Action
     public $organization;
 
     public $slug = '';
+
+    // Minutes after the task is created by which it must be complete. Past that
+    // the TaskReaper rolls it back and fails it. Null: no deadline.
+    public ?int $deadline_minutes = null;
 
     // Routes RunAction onto the 'database-long' queue connection (longer retry_after).
     public static bool $long_running = false;
@@ -122,7 +127,7 @@ class Action
         $task = Task::where('organization_id', $this->organization->id)
             ->where('action_slug', $this->slug)
             ->where('action_group', $this->action_group)
-            ->where('status', '!=', 'complete');
+            ->whereIn('status', TaskStatus::openValues());
 
         // If action doesn't replace previous action, also confirm the custom values are the same to avoid redundancy
         if (! $this->replace) {

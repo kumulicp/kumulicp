@@ -33,6 +33,7 @@ use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearTestAccounts;
 use App\Actions\Tests\CreateTests;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
 use App\Integrations\Applications\DemoApp\Actions\ProcessGroupOptions as DemoAppProcessGroupOptions;
@@ -118,7 +119,7 @@ class ActionService
         $tasks = $organization->tasks()
             ->where('action_group', $category)
             ->where('action_slug', $action)
-            ->where('status', '!=', 'complete')
+            ->whereIn('status', TaskStatus::openValues())
             ->count();
 
         return $tasks > 0;
@@ -129,7 +130,10 @@ class ActionService
         $application = $task->application;
         $task->job_id = 0;
         $task->notified = 0;
-        $task->status = 'pending';
+        $task->status = TaskStatus::PENDING;
+        // Whatever was running or queued under the old state is abandoned
+        $task->claimed_at = null;
+        $task->queued_at = null;
         $task->save();
 
         $action = Arr::get($this->actions, $task->action());
@@ -149,13 +153,13 @@ class ActionService
                 }
             } catch (ConnectionFailedException $e) {
                 $task->job_id = 0;
-                $task->status = 'pending';
+                $task->status = TaskStatus::PENDING;
                 $task->error_message = $e->getMessage();
                 $task->error_code = 'connection_failed';
                 $task->save();
             } catch (Throwable $e) {
                 $task->error_message = $e->getMessage();
-                $task->status = 'failed';
+                $task->status = TaskStatus::FAILED;
                 $task->save();
 
                 report($e);
@@ -204,16 +208,16 @@ class ActionService
             $action_complete = $action::complete($task);
         }
 
-        if ($task->status === 'complete') {
+        if ($task->status === TaskStatus::COMPLETE) {
             $other_tasks = Task::whereNot('id', $task->id)->where('task_group', $task->task_group)->get();
 
             foreach ($other_tasks as $other_task) {
                 // Pending siblings still have to satisfy their own prerequisites
-                if ($other_task->status === 'pending') {
+                if ($other_task->status === TaskStatus::PENDING) {
                     if ($this->checkPrerequisites($other_task)->passed) {
                         RunAction::dispatch($other_task);
                     }
-                } elseif ($other_task->status === 'in_progress') {
+                } elseif ($other_task->status === TaskStatus::IN_PROGRESS) {
                     $this->complete($other_task);
                 }
             }
@@ -258,6 +262,7 @@ class ActionService
         $task->description = $action->description;
         $task->prerequisites = $action->prerequisites;
         $task->status = $action->status;
+        $task->deadline_at = $action->deadline_minutes ? now()->addMinutes($action->deadline_minutes) : null;
         $task->custom_values = $action->customValues();
         $task->background = $background ?? $action->background;
         $task->save();
@@ -271,14 +276,14 @@ class ActionService
             } catch (Throwable $e) {
                 report($e);
                 $task->error_message = $e->getMessage();
-                $task->status = 'failed';
+                $task->status = TaskStatus::FAILED;
                 $task->save();
             }
         }
 
         // A task postGenerate() just failed must stay failed: running it anyway
         // (and checkPrerequisites() wiping its error message) hides the failure.
-        if ($task->status !== 'failed' && ! $delay && $this->checkPrerequisites($task)->passed) {
+        if ($task->status !== TaskStatus::FAILED && ! $delay && $this->checkPrerequisites($task)->passed) {
             RunAction::dispatch($task);
         }
 
@@ -323,7 +328,7 @@ class ActionService
 
     public function clear(string $action_name, ?AppInstance $app_instance = null)
     {
-        $tasks = Task::where('action_slug', $action_name)->where('status', '!=', 'complete');
+        $tasks = Task::where('action_slug', $action_name)->whereIn('status', TaskStatus::openValues());
 
         if ($app_instance) {
             $tasks->where('app_instance_id', $app_instance->id);
@@ -343,13 +348,13 @@ class ActionService
         foreach ($tasks ?? [] as $task) {
             $waiting_for = Task::find($task);
 
-            if ($waiting_for && $waiting_for->status === 'failed') {
+            if ($waiting_for && $waiting_for->status === TaskStatus::FAILED) {
                 // A failed dependency won't finish by itself: say so rather
                 // than showing "waiting" forever.
                 return 'dependency_failed';
             }
 
-            if ($waiting_for && $waiting_for->status != 'complete') {
+            if ($waiting_for && $waiting_for->status !== TaskStatus::COMPLETE) {
                 $blocked_by = 'waiting_for';
             }
         }

@@ -5,6 +5,7 @@ namespace App\Actions\Apps;
 use App\Actions\Action;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Jobs\Applications\RemoveLDAPGroups;
 use App\Notifications\ApplicationDeactivated;
 use App\Services\SubscriptionService;
@@ -59,7 +60,7 @@ class ApplicationDeactivate extends Action
 
     public static function retry(Task $task)
     {
-        $task->status = 'ready';
+        $task->status = TaskStatus::READY;
         $task->save();
 
         return new self($task->app_instance);
