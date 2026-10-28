@@ -185,18 +185,16 @@ it('stores no serialized subscription on the subscription update task', function
     expect(SubscriptionUpdate::retry($task))->toBeInstanceOf(SubscriptionUpdate::class);
 });
 
-it('keeps each task runner single-flight on one server', function () {
+it('keeps the task dispatcher single-flight on one server', function () {
     Artisan::call('schedule:list');
 
     $events = collect(Schedule::events())->keyBy(fn ($event) => $event->description);
 
-    foreach (['task-cleanup', 'prerequisite-checks', 'system-tasks'] as $name) {
-        expect($events->has($name))->toBeTrue("{$name} is not scheduled");
-        expect($events[$name]->withoutOverlapping)->toBeTrue("{$name} can overlap itself");
-        expect($events[$name]->onOneServer)->toBeTrue("{$name} runs on every server");
-        // Not the 24 hour default, or one crashed run would stall every task
-        expect($events[$name]->expiresAt)->toBeLessThanOrEqual(60);
-    }
+    expect($events->has('task-dispatcher'))->toBeTrue('task-dispatcher is not scheduled');
+    expect($events['task-dispatcher']->withoutOverlapping)->toBeTrue('task-dispatcher can overlap itself');
+    expect($events['task-dispatcher']->onOneServer)->toBeTrue('task-dispatcher runs on every server');
+    // Not the 24 hour default, or one crashed run would stall every task
+    expect($events['task-dispatcher']->expiresAt)->toBeLessThanOrEqual(60);
 });
 
 it('never lets the queue run a task twice and kills it before it is redelivered', function () {

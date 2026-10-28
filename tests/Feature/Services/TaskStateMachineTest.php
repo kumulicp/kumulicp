@@ -1,13 +1,10 @@
 <?php
 
 use App\Actions\Action;
-use App\Console\Calls\PrerequisiteChecks;
-use App\Console\Calls\SystemTasks;
-use App\Console\Calls\TaskCleanup;
-use App\Console\Calls\TaskReaper;
 use App\Enums\TaskStatus;
 use App\Jobs\RunAction;
 use App\Organization;
+use App\Services\Tasks\TaskDispatcher;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
 use App\User;
@@ -182,12 +179,12 @@ it('takes over a claim that has outlived the lease', function () {
     expect($task->claim())->toBeTrue();
 });
 
-it('queues each ready task once however often SystemTasks runs', function () {
+it('queues each ready task once however often queueReady runs', function () {
     Queue::fake();
     $task = stateTask(['status' => 'ready', 'error_message' => 'previous attempt']);
 
-    (new SystemTasks)();
-    (new SystemTasks)();
+    app(TaskDispatcher::class)->queueReady();
+    app(TaskDispatcher::class)->queueReady();
 
     Queue::assertPushed(RunAction::class, 1);
     $fresh = $task->fresh();
@@ -204,7 +201,7 @@ it('readies pending tasks whose prerequisites pass and leaves waiting ones', fun
         'prerequisites' => json_encode(['prereqs' => [['type' => 'waiting_for', 'task_id' => $blocker->id]]]),
     ]);
 
-    (new PrerequisiteChecks)();
+    app(TaskDispatcher::class)->promote();
 
     expect($free->fresh()->status)->toBe(TaskStatus::READY);
     expect($free->fresh()->notified)->toBe(0);
@@ -250,7 +247,7 @@ it('does not poll a task while it is still being run', function () {
     $idle = stateTask(['status' => 'in_progress']);
     $stale = stateTask(['status' => 'in_progress', 'claimed_at' => now()->subSeconds(Task::CLAIM_LEASE_SECONDS + 60)]);
 
-    (new TaskCleanup)();
+    app(TaskDispatcher::class)->poll();
 
     expect(StateMachineRecorder::$completed)->toEqualCanonicalizing([$idle->id, $stale->id]);
     expect(StateMachineRecorder::$completed)->not->toContain($running->id);
@@ -263,7 +260,7 @@ it('queues a task again when its job was lost', function () {
     $legacy = stateTask(['status' => 'queued']);
     DB::table('tasks')->where('id', $legacy->id)->update(['updated_at' => now()->subMinutes(Task::QUEUED_TIMEOUT_MINUTES + 5)]);
 
-    (new TaskReaper)();
+    app(TaskDispatcher::class)->reap();
 
     expect($lost->fresh()->status)->toBe(TaskStatus::READY);
     expect($lost->fresh()->queued_at)->toBeNull();
@@ -278,7 +275,7 @@ it('rolls back and fails a task that missed its deadline', function () {
     $running = stateTask(['status' => 'in_progress', 'deadline_at' => now()->subMinute(), 'claimed_at' => now()]);
     $finished = stateTask(['status' => 'complete', 'deadline_at' => now()->subMinute()]);
 
-    (new TaskReaper)();
+    app(TaskDispatcher::class)->reap();
 
     $failed = $late->fresh();
     expect($failed->status)->toBe(TaskStatus::FAILED);
@@ -326,16 +323,17 @@ it('sets a deadline on a task only when its action asks for one', function () {
     expect($untimed->deadline_at)->toBeNull();
 });
 
-it('resets a retried task so it can be claimed again', function () {
+it('resets a retried task and queues it to be claimed again', function () {
     Queue::fake();
-    $task = stateTask(['status' => 'failed', 'claimed_at' => now(), 'queued_at' => now()]);
+    $task = stateTask(['status' => 'failed', 'claimed_at' => now(), 'queued_at' => now()->subHour()]);
 
     ActionFacade::retry($task);
 
     $fresh = $task->fresh();
-    expect($fresh->status)->toBe(TaskStatus::PENDING);
+    expect($fresh->status)->toBe(TaskStatus::QUEUED);
     expect($fresh->claimed_at)->toBeNull();
-    expect($fresh->queued_at)->toBeNull();
+    expect($fresh->queued_at->isAfter(now()->subMinute()))->toBeTrue();
+    Queue::assertPushed(RunAction::class, 1);
 });
 
 it('renders the admin dashboard with the task counts', function () {

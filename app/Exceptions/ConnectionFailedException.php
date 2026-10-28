@@ -2,9 +2,9 @@
 
 namespace App\Exceptions;
 
-use Exception;
+use App\Exceptions\Tasks\RetryableException;
 
-class ConnectionFailedException extends Exception
+class ConnectionFailedException extends RetryableException
 {
     /**
      * Get the exception's context information.

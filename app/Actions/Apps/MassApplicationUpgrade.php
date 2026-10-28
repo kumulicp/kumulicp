@@ -3,6 +3,8 @@
 namespace App\Actions\Apps;
 
 use App\Actions\Action;
+use App\Actions\ActionResult;
+use App\Actions\NativeAction;
 use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\AppVersion;
@@ -11,7 +13,7 @@ use App\Organization;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
 
-class MassApplicationUpgrade extends Action
+class MassApplicationUpgrade extends NativeAction
 {
     public $slug = 'mass_application_upgrade';
 
@@ -31,7 +33,7 @@ class MassApplicationUpgrade extends Action
         $this->prerequisites = $prereqs->get();
     }
 
-    public static function run($task)
+    public static function handle(Task $task): ActionResult
     {
         $organizations_with_version = AppInstance::where('application_id', $task->application_id)->get();
 
@@ -42,10 +44,10 @@ class MassApplicationUpgrade extends Action
             }
         }
 
-        $task->complete();
+        return ActionResult::done();
     }
 
-    public static function retry(Task $task)
+    public static function retry(Task $task): ?Action
     {
         return new self($task->version);
     }

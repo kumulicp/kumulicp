@@ -3,6 +3,8 @@
 namespace App\Integrations\ServerManagers\Rancher\Actions;
 
 use App\Actions\Action;
+use App\Actions\ActionResult;
+use App\Actions\NativeAction;
 use App\Enums\TaskStatus;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
@@ -11,7 +13,7 @@ use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-class RunJob extends Action
+class RunJob extends NativeAction
 {
     public $slug = 'run_rancher_job';
 
@@ -28,7 +30,7 @@ class RunJob extends Action
         $this->background = 1;
     }
 
-    public static function run(Task $task)
+    public static function handle(Task $task): ActionResult
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $job_name = $task->getValue('job_name');
@@ -42,19 +44,18 @@ class RunJob extends Action
 
         $response = $job->create($chart);
 
-        if ($response) {
-            $run_job = new self($org_server, $job_chart, $job_name);
-            $run_job->addCustomValue([
-                'response' => $response,
-                'job_id' => Arr::get($response, 'response.metadata.name'),
-                'namespace' => $namespace,
-            ]);
-
-            return $run_job;
+        if (! $response) {
+            return ActionResult::fail(__('messages.api.rancher.error.job', ['job' => $job_name, 'message' => '']), 'job_create_failed');
         }
+
+        return ActionResult::wait([
+            'response' => $response,
+            'job_id' => Arr::get($response, 'response.metadata.name'),
+            'namespace' => $namespace,
+        ]);
     }
 
-    public static function retry(Task $task)
+    public static function retry(Task $task): ?Action
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $retry = new self($org_server, unserialize($task->getValue('job')), $task->getValue('job_name'), $task->getValue('namespace'));
@@ -63,7 +64,7 @@ class RunJob extends Action
         return $retry;
     }
 
-    public static function complete(Task $task)
+    public static function poll(Task $task): ActionResult
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $job_id = $task->getValue('job_id');
@@ -71,11 +72,7 @@ class RunJob extends Action
         if ($namespace = $task->getValue('namespace')) {
             $job->setNamespace($namespace);
         }
-        $job_status = $job->status($job_id);
 
-        if ($job_status == 'success') {
-            $task->complete();
-            $task->groupNotified();
-        }
+        return $job->status($job_id) == 'success' ? ActionResult::done() : ActionResult::wait();
     }
 }
