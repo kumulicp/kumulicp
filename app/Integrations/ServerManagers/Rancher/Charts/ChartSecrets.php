@@ -149,6 +149,18 @@ class ChartSecrets
         ];
     }
 
+    // Changes whenever a key or value does. A workload carries it as a pod
+    // annotation so its pods restart when its secrets change (they only read
+    // them at start). Keyed with the app key: the annotation is readable in the
+    // cluster, so a plain hash would let a weak secret be guessed offline.
+    public function checksum(): string
+    {
+        $data = $this->data;
+        ksort($data);
+
+        return hash_hmac('sha256', json_encode($data), (string) config('app.key'));
+    }
+
     // The manifest as YAML, i.e. what `kubectl get secret -o yaml` would show.
     public function toYaml(): string
     {

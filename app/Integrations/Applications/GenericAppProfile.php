@@ -38,17 +38,9 @@ class GenericAppProfile extends AppProfile
             'default' => 1,
             'validations' => 'integer|required',
         ],
+        // Plain (non-secret) env vars. Secrets go on the plan's Secrets tab.
         'env' => [
             'name' => 'env',
-            'type' => 'yaml',
-            'persistent' => true,
-            'default' => [],
-            'validations' => 'nullable|array',
-        ],
-        // Same shape as `env`, but delivered through a Secret (envFrom) so the
-        // values stay out of the pod spec.
-        'secretEnv' => [
-            'name' => 'secretEnv',
             'type' => 'yaml',
             'persistent' => true,
             'default' => [],

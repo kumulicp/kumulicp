@@ -11,8 +11,8 @@ use Illuminate\Support\Arr;
 // supports far more than this profile exposes (StatefulSet/DaemonSet/Jobs,
 // KEDA, NetworkPolicy, multi-container pods, ...) -- only a
 // single-container Deployment with optional PVC-backed volumes, one optional
-// Ingress host, an HTTP probe path, env/secret env vars and a pod user/group
-// is wired up here.
+// Ingress host, an HTTP probe path, env vars (secrets come from the plan's
+// Secrets tab) and a pod user/group is wired up here.
 class GenericChart extends HelmChart
 {
     public $chart_name = 'generic';
@@ -100,11 +100,12 @@ class GenericChart extends HelmChart
             $values['updateStrategy'] = ['type' => 'Recreate', 'rollingUpdate' => null];
         }
 
-        // Delivered as a chart-managed Secret (named <fullname>-env by the
-        // chart) via envFrom instead of inline in the pod spec.
-        if ($secret_env = (array) $app_instance->configuration('secretEnv')) {
-            $values['secrets'] = [['name' => 'env', 'stringData' => array_map('strval', $secret_env)]];
-            $values['envFrom'] = [['secretRef' => ['name' => rtrim(substr($fullname.'-env', 0, 63), '-')]]];
+        // The plan's secrets (and secret feature settings) are already in `env`
+        // as secretKeyRefs, built by extraEnv(). That Secret is managed by
+        // kumulicp, outside the chart, so the chart can't see it change: carry
+        // its checksum so the pods restart when it does.
+        if (! $this->secrets()->isEmpty()) {
+            $values['podAnnotations'] = ['kumulicp.io/secrets-checksum' => $this->secrets()->checksum()];
         }
 
         // Symfony's Yaml::dump() renders an empty PHP array as `{}`, which

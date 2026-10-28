@@ -111,6 +111,18 @@ it('adds the chart labels without letting them override managed-by', function ()
     ]);
 });
 
+it('has a checksum that changes with any key or value, but not with their order', function () {
+    $make = fn (array $data) => collect($data)->reduce(fn ($store, $value, $key) => $store->set($key, $value), new ChartSecrets('demo', 'demo-secrets'));
+
+    $base = $make(['a' => '1', 'b' => '2'])->checksum();
+
+    expect($make(['b' => '2', 'a' => '1'])->checksum())->toBe($base)
+        ->and($make(['a' => '1', 'b' => '3'])->checksum())->not->toBe($base)
+        ->and($make(['a' => '1', 'c' => '2'])->checksum())->not->toBe($base)
+        // Keyed with the app key, so it cannot be used to guess a weak secret offline
+        ->and($base)->not->toBe(hash('sha256', json_encode(['a' => '1', 'b' => '2'])));
+});
+
 it('applies a store as a Secret manifest in the request body', function () {
     Http::fake([
         '*' => Http::sequence()

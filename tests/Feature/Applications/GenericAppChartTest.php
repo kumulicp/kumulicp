@@ -4,6 +4,8 @@ use App\AppPlan;
 use App\AppVersion;
 use App\Integrations\ServerManagers\Rancher\Charts\GenericChart;
 use App\Organization;
+use App\OrgServer;
+use App\Server;
 use App\Support\Facades\Application;
 
 it('builds generic chart values from an image-only app instance', function () {
@@ -180,7 +182,7 @@ it('builds one volume per persistence array item', function () {
         ->toThrow(Exception::class, 'repeats the name or mountPath');
 });
 
-it('wires probes, pod security, secret env, ingress annotations and Recreate', function () {
+it('wires probes, pod security, ingress annotations and Recreate', function () {
     $organization = Organization::factory()->create();
 
     $app = Application::initialize('generic');
@@ -202,7 +204,6 @@ it('wires probes, pod security, secret env, ingress annotations and Recreate', f
                 'probe-path' => '/health',
                 'security-runAsUser' => 1000,
                 'security-fsGroup' => 2000,
-                'secretEnv' => ['DB_PASSWORD' => 's3cret', 'PORT_NUM' => 5432],
                 'persistence-enabled' => true,
                 'ingress-tls' => true,
                 'ingress-annotations' => ['traefik.ingress.kubernetes.io/router.middlewares' => 'default-limit@kubernetescrd'],
@@ -217,10 +218,6 @@ it('wires probes, pod security, secret env, ingress annotations and Recreate', f
     expect($values['startupProbe']['httpGet'])->toBe(['path' => '/health', 'port' => 9000]);
     expect($values['podSecurityContext'])->toBe(['runAsUser' => 1000, 'fsGroup' => 2000]);
     expect($values['updateStrategy'])->toBe(['type' => 'Recreate', 'rollingUpdate' => null]);
-
-    expect($values['secrets'])->toBe([['name' => 'env', 'stringData' => ['DB_PASSWORD' => 's3cret', 'PORT_NUM' => '5432']]]);
-    expect($values['envFrom'])->toBe([['secretRef' => ['name' => $values['fullnameOverride'].'-env']]]);
-    expect($values['env'] ?? [])->not->toContain(['name' => 'DB_PASSWORD', 'value' => 's3cret']);
 
     expect($values['ingress']['annotations'])->toHaveKeys([
         'traefik.ingress.kubernetes.io/router.middlewares',
@@ -253,6 +250,62 @@ it('leaves probes, pod security, secrets and update strategy to the chart by def
     $values = (new GenericChart($organization, $app_instance))->values();
 
     expect($values)->not->toHaveKeys([
-        'readinessProbe', 'startupProbe', 'podSecurityContext', 'updateStrategy', 'secrets', 'envFrom',
+        'readinessProbe', 'startupProbe', 'podSecurityContext', 'updateStrategy', 'secrets', 'envFrom', 'podAnnotations',
     ]);
+});
+
+it('delivers the plan secrets through the Secret and restarts the pods when they change', function () {
+    $organization = Organization::factory()->create();
+
+    $app = Application::initialize('generic');
+    Application::roles($app);
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $app->id,
+        'settings' => ['image_repo_name' => 'library/my-app'],
+    ]);
+
+    $app_plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'base' => ['price' => 0, 'storage' => 1, 'price_id' => null],
+            'basic' => ['max' => 1, 'name' => 'Basic', 'price' => 0, 'amount' => 1, 'storage' => 1, 'price_id' => null],
+            'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
+            'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
+            'configurations' => ['env' => ['PLAIN_SETTING' => 'visible']],
+        ],
+    ]);
+    Application::plan($app_plan)->secrets()->update([['name' => 'DB_PASSWORD', 'value' => 's3cret']]);
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan)->get();
+    $on = function (string $interface) use ($app_instance, $organization) {
+        $app_instance->unsetRelation('plan'); // a deploy loads the plan fresh
+        $org_server = new OrgServer;
+        $org_server->setRelation('server', (new Server)->forceFill(['interface' => $interface]));
+        $app_instance->setRelation('web_server', $org_server);
+
+        return new GenericChart($organization, $app_instance);
+    };
+
+    $chart = $on('kubernetes');
+    $values = $chart->values();
+
+    // The value stays out of the Helm values, and is only referenced from the pod
+    expect(json_encode($values))->not->toContain('s3cret');
+    expect($values['env'])->toContain(['name' => 'PLAIN_SETTING', 'value' => 'visible']);
+    expect(collect($values['env'])->firstWhere('name', 'DB_PASSWORD')['valueFrom']['secretKeyRef']['key'])->toBe('db-password');
+    expect(base64_decode($chart->secrets()->manifest()['data']['db-password']))->toBe('s3cret');
+    expect($values)->not->toHaveKeys(['secrets', 'envFrom']);
+
+    // The pods restart when a secret changes, and not otherwise
+    $checksum = $values['podAnnotations']['kumulicp.io/secrets-checksum'];
+    expect($on('kubernetes')->values()['podAnnotations']['kumulicp.io/secrets-checksum'])->toBe($checksum);
+
+    Application::plan($app_plan)->secrets()->update([['name' => 'DB_PASSWORD', 'value' => 'changed']]);
+    expect($on('kubernetes')->values()['podAnnotations']['kumulicp.io/secrets-checksum'])->not->toBe($checksum);
+
+    // Drivers that do not create the Secret keep the plain value, and have no Secret to watch
+    $plain = $on('rancher')->values();
+    expect(collect($plain['env'])->firstWhere('name', 'DB_PASSWORD'))->toBe(['name' => 'DB_PASSWORD', 'value' => 'changed']);
+    expect($plain)->not->toHaveKey('podAnnotations');
 });
