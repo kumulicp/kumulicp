@@ -211,6 +211,31 @@ class AppInstanceService
         return null;
     }
 
+    // Resolves the `<prefix>-<index>-<field>` array configurations (see
+    // resources/js/services/arrayConfigs.ts) to [index => [field => value]],
+    // ordered by index. Items come from the profile, plus any the plan or
+    // instance added.
+    public function arrayConfiguration(string $prefix): array
+    {
+        $names = array_merge(
+            array_keys(Application::profile($this->app_instance->application)->configurations()),
+            array_keys($this->app_instance->plan?->additionalConfigs() ?? []),
+            array_keys((array) Arr::get($this->app_instance->settings, 'configurations', [])),
+        );
+
+        $items = [];
+
+        foreach (array_unique($names) as $name) {
+            if (preg_match('/^'.preg_quote($prefix, '/').'-(\d+)-(.+)$/', $name, $match)) {
+                $items[(int) $match[1]][$match[2]] = $this->configuration($name);
+            }
+        }
+
+        ksort($items);
+
+        return $items;
+    }
+
     public function updateRedirectDomains(string $type = 'all')
     {
         $this->connect('web')->updateRedirectDomains();
