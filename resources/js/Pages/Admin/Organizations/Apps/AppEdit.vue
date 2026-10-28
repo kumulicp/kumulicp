@@ -16,27 +16,7 @@ import AppsLayout from './AppsLayout.vue'
         <va-button color="danger" @click="showDeleteAppModal = true">{{ $t('admin.apps.delete') }}</va-button>
         </VaButtonGroup>
     </div>
-    <va-scroll-container
-        color="primary"
-        horizontal
-    >
-        <table class="va-table va-table--hoverable mt-3">
-        <thead>
-            <tr>
-            <th>{{ $t('admin.versions.version') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="(version, index) in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
-            <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+version.id">{{ version.version }}</Link></td>
-            </tr>
-        </tbody>
-        </table>
-    </va-scroll-container>
-
-    <va-pagination v-if="versions.length > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :total="versions.length" :direction-links="false" :page-size="pageSize" />
-
-    <va-list-separator class="my-1" fit />
+    <va-list-separator class="my-4" fit />
 
     <va-list>
         <va-list-item class="py-3">
@@ -111,10 +91,22 @@ import AppsLayout from './AppsLayout.vue'
         <va-card-title class="m-0">{{ $t('admin.apps.upgrade') }}</va-card-title>
         <va-card-content class="m-0 p-0">
             {{ $t('admin.apps.upgradeModal') }}
+
+            <va-radio v-model="upgradeType" class="mt-3" :options="upgradeTypes" value-by="value" />
+            <va-select
+              v-if="upgradeType === 'version'"
+              v-model="upgradeVersionId"
+              class="mt-3"
+              :label="$t('admin.apps.upgradeVersion')"
+              :options="versionOptions"
+              text-by="text"
+              value-by="value"
+              required-mark
+            />
         </va-card-content>
         <va-card-actions align="right" class="">
-            <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-            <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/upgrade/'+app.version.id"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('common.yes') }}</va-button></Link>
+            <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <Link :href="upgradeUrl"><va-button type="submit" id="submit" class="mr-2" :disabled="upgradeType === 'version' && !upgradeVersionId">{{ $t('common.yes') }}</va-button></Link>
         </va-card-actions>
       </template>
     </va-modal>
@@ -202,12 +194,32 @@ export default {
     versions: Object,
     database_servers: Array
   },
+  computed: {
+    versionOptions () {
+      return this.versions.map(version => ({ text: version.version, value: version.id }))
+    },
+    upgradeUrl () {
+      const versionId = this.upgradeType === 'version' ? this.upgradeVersionId : this.app.version.id
+
+      return '/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/upgrade/' + versionId
+    }
+  },
   data () {
     const settings = this.app.settings ? JSON.stringify(this.app.settings, '', 2) : '{}'
 
     return {
-      curPageValue: 1,
-      pageSize: 10,
+      upgradeType: 'current',
+      upgradeVersionId: null,
+      upgradeTypes: [
+        {
+          text: this.$t('admin.apps.upgradeCurrent'),
+          value: 'current'
+        },
+        {
+          text: this.$t('admin.apps.upgradeNewVersion'),
+          value: 'version'
+        }
+      ],
       form: useForm({
         settings
       }),
