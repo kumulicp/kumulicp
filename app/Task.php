@@ -63,7 +63,7 @@ class Task extends Model
             $from = $task->getOriginal('status');
             $to = $task->status;
 
-            if ($from instanceof TaskStatus && $to instanceof TaskStatus && ! $from->canTransitionTo($to)) {
+            if ($from instanceof TaskStatus && ! $from->canTransitionTo($to)) {
                 Log::warning("Unexpected task status change {$from->value} -> {$to->value}", [
                     'task_id' => $task->id,
                     'action' => $task->action(),
