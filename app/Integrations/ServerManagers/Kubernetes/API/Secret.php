@@ -77,7 +77,7 @@ class Secret extends Kubernetes
         return $this->create($namespace, $repo_secret);
     }
 
-    private function manifest(string $namespace, RepoSecret $repo_secret): array
+    protected function manifest(string $namespace, RepoSecret $repo_secret): array
     {
         return [
             'apiVersion' => 'v1',

@@ -22,7 +22,7 @@ class Job extends Kubernetes
             return ['status' => 'failed', 'response' => $secret_result['response']];
         }
 
-        $result = $this->api()->apply($job->chart, $namespace);
+        $result = $this->api()->apply($this->manifest($job), $namespace);
 
         if (! $job->secrets()->isEmpty()) {
             $this->settleJobSecret($job, $result);
@@ -60,21 +60,37 @@ class Job extends Kubernetes
             return 'failed';
         }
 
-        $data = $result['data'];
+        return $this->state($result['data'] ?? []);
+    }
 
-        if (Arr::get($data, 'status.active') == 1) {
+    // Reads running, success or failed off the job object.
+    protected function state(array $job): string
+    {
+        if (Arr::get($job, 'status.active') == 1) {
             return 'running';
         }
 
-        if (Arr::get($data, 'status.succeeded') == 1) {
+        if (Arr::get($job, 'status.succeeded') == 1) {
             return 'success';
         }
 
-        if (Arr::get($data, 'status.failed') >= 1) {
+        if (Arr::get($job, 'status.failed') >= 1) {
             return 'failed';
         }
 
         return 'running';
+    }
+
+    // The Job to apply: the chart's own manifest, plus the pull secrets its image needs.
+    protected function manifest(JobChart $job): array
+    {
+        $data = $job->chart;
+
+        if ($pull_secrets = $job->imagePullSecrets()) {
+            Arr::set($data, 'spec.template.spec.imagePullSecrets', array_map(fn ($name) => ['name' => $name], $pull_secrets));
+        }
+
+        return $data;
     }
 
     // A job's Secret is owned by the Job: gone with it on success, and removed

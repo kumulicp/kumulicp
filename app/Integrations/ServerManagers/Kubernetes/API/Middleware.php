@@ -66,6 +66,12 @@ class Middleware extends Kubernetes
         $namespace = $this->organization->slug;
         $result = $this->api()->get('traefik.io/v1alpha1', 'Middleware', $chart->name, $namespace);
 
-        return $result['success'] ? 1 : 0;
+        return $result['success'] ? $this->state($result['data'] ?? []) : 0;
+    }
+
+    // A middleware that exists is active(1); override to report transitioning (2).
+    protected function state(array $middleware): int
+    {
+        return 1;
     }
 }

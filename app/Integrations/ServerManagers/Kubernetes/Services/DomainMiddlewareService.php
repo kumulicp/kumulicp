@@ -12,17 +12,27 @@ use App\OrgServer;
 
 class DomainMiddlewareService
 {
-    private Ingress $ingress;
+    protected Ingress $ingress;
 
-    private Middleware $middleware;
+    protected Middleware $middleware;
 
     public function __construct(
-        private Organization $organization,
-        private OrgServer $server,
-        private AppInstance $app_instance,
+        protected Organization $organization,
+        protected OrgServer $server,
+        protected AppInstance $app_instance,
     ) {
-        $this->middleware = new Middleware($organization, $server);
-        $this->ingress = new Ingress($organization, $server);
+        $this->middleware = $this->makeMiddleware();
+        $this->ingress = $this->makeIngress();
+    }
+
+    protected function makeMiddleware(): Middleware
+    {
+        return new Middleware($this->organization, $this->server);
+    }
+
+    protected function makeIngress(): Ingress
+    {
+        return new Ingress($this->organization, $this->server);
     }
 
     public function addAppMiddleware()

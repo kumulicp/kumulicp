@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Support;
 
 use App\Server;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -27,10 +28,13 @@ use Illuminate\Support\Facades\Http;
  * Any ephemeral file is written with 0600 permissions under the system temp
  * directory, scoped to a single invocation, and always deleted afterward —
  * even if the callback throws.
+ *
+ * Subclasses (e.g. a Rancher-proxied cluster) change how a request is
+ * addressed and authenticated by overriding baseUrl() and authenticate().
  */
 class K8sCredentialContext
 {
-    public function __construct(private Server $server) {}
+    public function __construct(protected Server $server) {}
 
     public function authType(): string
     {
@@ -57,18 +61,35 @@ class K8sCredentialContext
     public function withRequest(callable $callback, int $timeout = 30)
     {
         return $this->withCredentialFiles(function (array $options, array $headers) use ($callback, $timeout) {
-            $http = Http::baseUrl(rtrim((string) $this->server->address, '/'))
+            $http = Http::baseUrl($this->baseUrl())
                 ->acceptJson()
                 ->timeout($timeout)
                 ->withHeaders($headers)
                 ->withOptions($options);
 
-            if (! $this->usesClientCert()) {
-                $http->withToken((string) $this->server->api_secret);
-            }
+            $this->authenticate($http);
 
             return $callback($http);
         });
+    }
+
+    /**
+     * The URL every API path is resolved against.
+     */
+    protected function baseUrl(): string
+    {
+        return rtrim((string) $this->server->address, '/');
+    }
+
+    /**
+     * Adds the server's credentials to the request. Client-certificate auth
+     * is already in the Guzzle options by now, so only a bearer token is set.
+     */
+    protected function authenticate(PendingRequest $http): void
+    {
+        if (! $this->usesClientCert()) {
+            $http->withToken((string) $this->server->api_secret);
+        }
     }
 
     /**
@@ -106,7 +127,7 @@ class K8sCredentialContext
         }
     }
 
-    private function impersonationHeaders(): array
+    protected function impersonationHeaders(): array
     {
         return array_filter([
             'Impersonate-User' => $this->server->setting('k8s_impersonate_user'),
@@ -114,7 +135,7 @@ class K8sCredentialContext
         ]);
     }
 
-    private function writeEphemeralFile(string $contents): string
+    protected function writeEphemeralFile(string $contents): string
     {
         $path = sys_get_temp_dir().'/kumulicp-k8s-'.bin2hex(random_bytes(16));
 

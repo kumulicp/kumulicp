@@ -21,6 +21,14 @@ use Illuminate\Http\Client\Response;
  * already differs, rather than using
  * server-side apply, which would additionally require `patch` just to
  * create an object — see docs/k8s-rbac-sample.yaml.
+ *
+ * Built to be extended for clusters reached through something other than
+ * the plain Kubernetes API (e.g. Rancher). A subclass changes:
+ *   - authentication / base URL: pass a K8sCredentialContext subclass
+ *   - URL layout: path(), createPath(), and RESOURCES for known kinds
+ *   - how objects are written: createObject(), updateObject()
+ * The public methods and their return shape stay the same, so every
+ * caller keeps working against either client.
  */
 class KubernetesApiClient
 {
@@ -29,7 +37,7 @@ class KubernetesApiClient
      * round-trip: apiVersion => kind => [plural resource name, namespaced].
      * Anything else (e.g. a CRD) is looked up via API discovery.
      */
-    private const RESOURCES = [
+    protected const RESOURCES = [
         'v1' => [
             'Namespace' => ['namespaces', false],
             'Secret' => ['secrets', true],
@@ -52,14 +60,14 @@ class KubernetesApiClient
         ],
     ];
 
-    private K8sCredentialContext $context;
+    protected K8sCredentialContext $context;
 
     /** @var array<string, array<string, array{0: string, 1: bool}>> */
-    private array $discovered = [];
+    protected array $discovered = [];
 
-    public function __construct(Server $server)
+    public function __construct(Server $server, ?K8sCredentialContext $context = null)
     {
-        $this->context = new K8sCredentialContext($server);
+        $this->context = $context ?? new K8sCredentialContext($server);
     }
 
     /**
@@ -91,7 +99,7 @@ class KubernetesApiClient
             $existing = $http->get($this->path($resource, $namespace, $name));
 
             if ($existing->status() === 404) {
-                return $this->result($http->post($this->path($resource, $namespace), $manifest));
+                return $this->result($this->createObject($http, $resource, $namespace, $manifest));
             }
 
             if (! $existing->successful()) {
@@ -102,11 +110,27 @@ class KubernetesApiClient
                 return $this->result($existing);
             }
 
-            return $this->result(
-                $http->withBody(json_encode($manifest), 'application/merge-patch+json')
-                    ->patch($this->path($resource, $namespace, $name))
-            );
+            return $this->result($this->updateObject($http, $resource, $namespace, $name, $manifest, $existing->json() ?? []));
         });
+    }
+
+    /**
+     * Sends the request that creates $manifest's object. $resource is as
+     * returned by resolve().
+     */
+    protected function createObject(PendingRequest $http, array $resource, ?string $namespace, array $manifest): Response
+    {
+        return $http->post($this->createPath($resource, $namespace), $manifest);
+    }
+
+    /**
+     * Sends the request that brings an existing object (as the API returned
+     * it, in $current) in line with $manifest.
+     */
+    protected function updateObject(PendingRequest $http, array $resource, ?string $namespace, string $name, array $manifest, array $current): Response
+    {
+        return $http->withBody(json_encode($manifest), 'application/merge-patch+json')
+            ->patch($this->path($resource, $namespace, $name));
     }
 
     public function get(string $api_version, string $kind, string $name, ?string $namespace = null): array
@@ -236,7 +260,7 @@ class KubernetesApiClient
      * Runs $callback(PendingRequest) once with credentials in place, turning
      * a connection-level failure into the same failure shape as an API error.
      */
-    private function request(callable $callback): array
+    protected function request(callable $callback): array
     {
         try {
             return $this->context->withRequest($callback);
@@ -248,11 +272,11 @@ class KubernetesApiClient
     /**
      * @return array{0: string, 1: string, 2: bool}|null [api path prefix, plural resource name, namespaced]
      */
-    private function resolve(PendingRequest $http, string $api_version, string $kind): ?array
+    protected function resolve(PendingRequest $http, string $api_version, string $kind): ?array
     {
         $prefix = str_contains($api_version, '/') ? "/apis/{$api_version}" : "/api/{$api_version}";
 
-        $known = self::RESOURCES[$api_version][$kind] ?? $this->discover($http, $api_version, $prefix)[$kind] ?? null;
+        $known = static::RESOURCES[$api_version][$kind] ?? $this->discover($http, $api_version, $prefix)[$kind] ?? null;
 
         return $known ? [$prefix, ...$known] : null;
     }
@@ -264,7 +288,7 @@ class KubernetesApiClient
      *
      * @return array<string, array{0: string, 1: bool}>
      */
-    private function discover(PendingRequest $http, string $api_version, string $prefix): array
+    protected function discover(PendingRequest $http, string $api_version, string $prefix): array
     {
         if (isset($this->discovered[$api_version])) {
             return $this->discovered[$api_version];
@@ -288,7 +312,7 @@ class KubernetesApiClient
         return $this->discovered[$api_version] = $kinds;
     }
 
-    private function path(array $resource, ?string $namespace, ?string $name = null): string
+    protected function path(array $resource, ?string $namespace, ?string $name = null): string
     {
         [$prefix, $plural, $namespaced] = $resource;
 
@@ -308,12 +332,21 @@ class KubernetesApiClient
     }
 
     /**
+     * Where a new object of this kind is POSTed. The Kubernetes API creates
+     * in the same collection it lists from.
+     */
+    protected function createPath(array $resource, ?string $namespace): string
+    {
+        return $this->path($resource, $namespace);
+    }
+
+    /**
      * Whether $current (what the API returned) already holds everything in
      * $desired. Extra fields on $current (defaulted/server-set) are fine.
      * Lists must match element for element, as a JSON merge patch replaces
      * them wholesale.
      */
-    private function contains(mixed $current, mixed $desired): bool
+    protected function contains(mixed $current, mixed $desired): bool
     {
         if (! is_array($desired)) {
             return $current == $desired;
@@ -355,7 +388,7 @@ class KubernetesApiClient
         return true;
     }
 
-    private function result(Response $response): array
+    protected function result(Response $response): array
     {
         $data = $response->json();
 
@@ -368,7 +401,7 @@ class KubernetesApiClient
     }
 
     // Kubernetes error responses are a Status object with a `message`.
-    private function errorMessage(Response $response): string
+    protected function errorMessage(Response $response): string
     {
         $message = $response->json('message');
 
@@ -379,7 +412,7 @@ class KubernetesApiClient
         return trim($response->body()) ?: 'HTTP '.$response->status();
     }
 
-    private function failure(string $error): array
+    protected function failure(string $error): array
     {
         return ['success' => false, 'status' => 0, 'data' => null, 'error' => $error];
     }
