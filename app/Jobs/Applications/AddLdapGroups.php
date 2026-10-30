@@ -50,7 +50,10 @@ class AddLdapGroups implements ShouldQueue
         Organization::setOrganization($organization);
 
         $is_shared_child = (bool) $app_instance->sharedPlanParent();
-        $add_group_app = $app_instance->parent_id == 0 ? $app_instance : $app_instance->parent;
+        // A multisite child (e.g. ERPNext) keeps its own app container and role
+        // groups -- same rule as LdapSupport::getAppInstanceID()/AppRole::app_slug(),
+        // so the groups created here are the ones getAppRoleGroup() later finds.
+        $add_group_app = $app_instance->parent_id == 0 || $app_instance->usesMultisitePermissions() ? $app_instance : $app_instance->parent;
 
         // For a shared-app child, this org never otherwise gets an
         // app-level container of its own -- the hub's own activation only

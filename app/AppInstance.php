@@ -4,6 +4,7 @@ namespace App;
 
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -282,7 +283,7 @@ class AppInstance extends Model
 
     public function usesMultisitePermissions(): bool
     {
-        return \App\Support\Facades\Application::profile($this->application)->isCompatible('multisite');
+        return ApplicationFacade::profile($this->application)->isCompatible('multisite');
     }
 
     // False for a shared-plan child without multisite (e.g. Nextcloud) --

@@ -23,6 +23,12 @@ class NextcloudEnvVars extends EnvVar
         $is_shared_hub = $app_instance->children()->notDeactivated()->exists();
         $global_base = config('ldap.connections.default.base_dn');
 
+        if ($is_shared_hub && (! config('ldap.connections.directory_reader.username') || ! config('ldap.connections.directory_reader.password'))) {
+            // Without the reader account the widened hub would bind with empty
+            // credentials and silently break login for every org on it.
+            throw new \RuntimeException('Shared Nextcloud requires LDAP_DIRECTORY_READER_USERNAME and LDAP_DIRECTORY_READER_PASSWORD (run `php artisan ldap:provision-directory-reader`).');
+        }
+
         $base_dn = $is_shared_hub ? $global_base : Dn::create($app_instance->organization);
         // Each org's own admin DN is ACL-restricted to just that org's
         // subtree -- widening LDAP_BASE above is useless for a shared hub
@@ -58,9 +64,13 @@ class NextcloudEnvVars extends EnvVar
             'SHARED_INSTANCE' => $is_shared_hub ? 'true' : 'false',
         ];
 
-        // For a shared hub, login is gated on the central access group
-        // instead of this instance's own standard/basic role groups -- those
-        // only ever covered the hub's own org, never a registered child's.
+        // For a shared hub, login is gated on the central access group, which
+        // child orgs are synced into as they're granted roles (see
+        // Permissions::syncCentralAccessGroup()). The hub's own org is never
+        // synced into it, so its standard/basic role groups stay accepted too
+        // -- otherwise registering the first child would lock the hub's own
+        // users out.
+        $own_role_filter = "(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)";
         $login_group_dn = $is_shared_hub ? LdapSupport::centralAccessGroup($app_instance->get())->getDn() : null;
 
         $ldap_settings = config('account_manager.driver') === 'ldap' ? [
@@ -72,11 +82,11 @@ class NextcloudEnvVars extends EnvVar
             'LDAP_BASE' => $base_dn,
             'LDAP_GROUP_BASE' => $group_base,
             'LOGIN_FILTER' => $is_shared_hub
-                ? "(&(objectclass=inetOrgPerson)(memberof=$login_group_dn)(|(cn=%uid)(mail=%uid)))"
-                : "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn))(|(cn=%uid)(mail=%uid)))",
+                ? "(&(objectclass=inetOrgPerson)(|(memberof=$login_group_dn)$own_role_filter)(|(cn=%uid)(mail=%uid)))"
+                : "(&(objectclass=inetOrgPerson)(|$own_role_filter)(|(cn=%uid)(mail=%uid)))",
             'USER_FILTER' => $is_shared_hub
-                ? "(&(objectclass=inetOrgPerson)(memberof=$login_group_dn))"
-                : "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)))",
+                ? "(&(objectclass=inetOrgPerson)(|(memberof=$login_group_dn)$own_role_filter))"
+                : "(&(objectclass=inetOrgPerson)(|$own_role_filter))",
         ] : [];
 
         $sso_settings = $app_instance->configuration('enable-sso') ? [

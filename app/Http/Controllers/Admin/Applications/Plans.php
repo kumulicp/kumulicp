@@ -297,7 +297,7 @@ class Plans extends Controller
         $database_server = $request->database_server;
         $sso_server = $request->sso_server;
 
-        if ($request->server_type === 'shared' && $shared_app = AppInstance::find($request->shared_app)) {
+        if ($request->server_type === 'shared' && ($shared_app = AppInstance::find($request->shared_app)) && $shared_app->plan) {
             $web_server = $shared_app->plan->web_server_id;
             $database_server = $shared_app->plan->database_server_id;
             $sso_server = $shared_app->plan->sso_server_id;

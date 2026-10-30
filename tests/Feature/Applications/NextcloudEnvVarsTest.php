@@ -1,12 +1,12 @@
 <?php
 
 use App\AppInstance;
+use App\Application;
 use App\AppPlan;
 use App\AppVersion;
-use App\Application;
 use App\Integrations\Applications\Nextcloud\NextcloudEnvVars;
-use App\OrgServer;
 use App\Organization;
+use App\OrgServer;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;
 
@@ -65,3 +65,39 @@ it('binds a standalone Nextcloud instance with its own org admin', function () {
     expect($env['LDAP_ADMIN'])->not->toBe(config('ldap.connections.directory_reader.username'));
     expect($env['LDAP_ADMIN'])->not->toBe(config('ldap.connections.default.username'));
 });
+
+it('still lets the hub org\'s own role groups log in to a shared hub', function () {
+    config()->set('ldap.connections.directory_reader.username', 'cn=directory-reader,o=server,dc=test,dc=local');
+    config()->set('ldap.connections.directory_reader.password', 'reader-secret');
+
+    $app = ApplicationFacade::initialize('nextcloud');
+    $version = AppVersion::factory()->create(['application_id' => $app->id]);
+    $plan = AppPlan::factory()->create(['application_id' => $app->id]);
+
+    $hub = makeNextcloudAppInstance(Organization::factory()->create(), $app, $version, $plan);
+    makeNextcloudAppInstance(Organization::factory()->create(), $app, $version, $plan, $hub);
+
+    $env = (new NextcloudEnvVars)->get($hub);
+
+    expect($env['LOGIN_FILTER'])
+        ->toContain('memberof=cn=access,')
+        ->toContain("memberof=cn={$hub->name}-standard,")
+        ->toContain("memberof=cn={$hub->name}-basic,");
+    expect($env['USER_FILTER'])
+        ->toContain('memberof=cn=access,')
+        ->toContain("memberof=cn={$hub->name}-standard,");
+});
+
+it('refuses to build a shared hub without the directory reader configured', function () {
+    config()->set('ldap.connections.directory_reader.username', null);
+    config()->set('ldap.connections.directory_reader.password', null);
+
+    $app = ApplicationFacade::initialize('nextcloud');
+    $version = AppVersion::factory()->create(['application_id' => $app->id]);
+    $plan = AppPlan::factory()->create(['application_id' => $app->id]);
+
+    $hub = makeNextcloudAppInstance(Organization::factory()->create(), $app, $version, $plan);
+    makeNextcloudAppInstance(Organization::factory()->create(), $app, $version, $plan, $hub);
+
+    (new NextcloudEnvVars)->get($hub);
+})->throws(RuntimeException::class, 'LDAP_DIRECTORY_READER');

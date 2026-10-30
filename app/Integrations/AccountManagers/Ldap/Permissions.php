@@ -124,7 +124,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         }
 
         $this->syncCentralAccessGroup($app_instance, granting: true);
-        $this->syncOrgGroupFolder($app_instance, granting: true);
+        $this->trySyncOrgGroupFolder($app_instance, granting: true);
     }
 
     public function removeAppRole(AppInstance $app_instance, AppRole $role)
@@ -139,7 +139,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
         }
 
         $this->syncCentralAccessGroup($app_instance, granting: false);
-        $this->syncOrgGroupFolder($app_instance, granting: false);
+        $this->trySyncOrgGroupFolder($app_instance, granting: false);
     }
 
     // Shared Nextcloud only: keeps membership in the hub's central access
@@ -170,6 +170,19 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
         if ($remaining === 0 && $this->ldapUser->groups()->exists($central_group)) {
             $this->ldapUser->groups()->detach($central_group);
+        }
+    }
+
+    // The LDAP change above is already made by the time this runs, and the
+    // hub (or the user's Nextcloud account) may not be reachable yet -- so a
+    // Nextcloud failure is reported rather than aborting the role grant. The
+    // group/folder are created lazily, so the next grant retries.
+    private function trySyncOrgGroupFolder(AppInstance $app_instance, bool $granting): void
+    {
+        try {
+            $this->syncOrgGroupFolder($app_instance, $granting);
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 

@@ -57,8 +57,9 @@ class Nextcloud extends Application
                     // an HTTP status code -- so callers that opted out via
                     // ignoreErrorCode() (e.g. Users::find()) need that
                     // respected here too, or every "not found" throws
-                    // regardless of what they asked to ignore.
-                    $fatal = in_array((int) $body->meta->statuscode, $this->error_codes);
+                    // regardless of what they asked to ignore. Anything not
+                    // explicitly ignored stays fatal, whatever its code.
+                    $fatal = ! in_array((int) $body->meta->statuscode, $this->ignored_error_codes);
                     $this->setError($body->meta->message, $body->meta->statuscode, $fatal);
                 }
             } else {
