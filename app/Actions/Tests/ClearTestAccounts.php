@@ -23,17 +23,13 @@ class ClearTestAccounts extends Action
     public static function run(Task $task)
     {
         $test = AccountTest::find($task->getValue('test_id'));
-        $waiting_for = [];
+        $deletions = [];
 
         foreach ($test->organizations as $organization) {
-            $action = ActionFacade::execute(new DeleteOrganization($organization), $task);
-            $waiting_for[] = $action->id;
+            $deletions[] = ActionFacade::execute(new DeleteOrganization($organization), $task);
         }
 
-        $self = new self($test);
-        $self->addCustomValue(['waiting_for' => $waiting_for]);
-
-        return $self;
+        return (new self($test))->waitFor(...array_filter($deletions));
     }
 
     public static function complete(Task $task)

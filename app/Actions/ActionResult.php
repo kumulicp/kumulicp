@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Task;
+
 /**
  * What a TaskAction tells the runner about the task it just worked on. The
  * runner, not the action, moves the task to its next status.
@@ -31,6 +33,7 @@ final class ActionResult
         public readonly ?string $code = null,
         public readonly ?Action $action = null,
         public readonly array $after = [],
+        public readonly ?array $waiting_for = null,
     ) {}
 
     /**
@@ -80,6 +83,14 @@ final class ActionResult
      */
     public function then(callable $after): self
     {
-        return new self($this->outcome, $this->values, $this->reason, $this->seconds, $this->code, $this->action, [...$this->after, $after]);
+        return new self($this->outcome, $this->values, $this->reason, $this->seconds, $this->code, $this->action, [...$this->after, $after], $this->waiting_for);
+    }
+
+    /**
+     * The task can't complete until these tasks have (see Action::waitFor()).
+     */
+    public function waitingFor(Task ...$tasks): self
+    {
+        return new self($this->outcome, $this->values, $this->reason, $this->seconds, $this->code, $this->action, $this->after, array_values(array_unique([...($this->waiting_for ?? []), ...array_map(fn (Task $task) => $task->id, $tasks)])));
     }
 }

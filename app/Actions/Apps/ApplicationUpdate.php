@@ -32,7 +32,7 @@ class ApplicationUpdate extends Action
         $server = $app_instance->connect('web');
 
         if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'update_settings'), $task, true)) {
-            $app_update->addCustomValue(['waiting_for' => [$job->id]]);
+            $app_update->waitFor($job);
         }
 
         $server->update();

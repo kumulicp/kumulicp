@@ -256,7 +256,7 @@ import { Link } from '@inertiajs/vue3'
 </template>
 
 <script lang="ts">
-const TASK_STATUS_ORDER = ['pending', 'ready', 'queued', 'in_progress', 'complete', 'failed']
+const TASK_STATUS_ORDER = ['pending', 'ready', 'queued', 'in_progress', 'blocked', 'complete', 'failed']
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info']
 
 export default {

@@ -196,10 +196,8 @@ it('queues each ready task once however often queueReady runs', function () {
 it('readies pending tasks whose prerequisites pass and leaves waiting ones', function () {
     $free = stateTask(['status' => 'pending', 'notified' => 1]);
     $blocker = stateTask(['status' => 'in_progress']);
-    $waiting = stateTask([
-        'status' => 'pending',
-        'prerequisites' => json_encode(['prereqs' => [['type' => 'waiting_for', 'task_id' => $blocker->id]]]),
-    ]);
+    $waiting = stateTask(['status' => 'pending']);
+    $waiting->dependOn($blocker);
 
     app(TaskDispatcher::class)->promote();
 

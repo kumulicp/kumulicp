@@ -4,8 +4,8 @@ namespace App\Actions;
 
 use App\AppInstance;
 use App\Application;
-use App\Enums\TaskStatus;
 use App\OrgDomain;
+use App\Services\Tasks\TaskDependencies;
 use App\Task;
 
 class Prerequisites
@@ -15,6 +15,9 @@ class Prerequisites
     public $passed = true;
 
     public $permanent_fail = false;
+
+    // A task this one waits for has failed, so waiting longer won't help
+    public $blocked = false;
 
     public $message = '';
 
@@ -36,6 +39,30 @@ class Prerequisites
         if (method_exists($this, $prereq_check)) {
             $this->$prereq_check($prerequisite_vars);
         }
+    }
+
+    /**
+     * The tasks the task waits for to start: has one failed, or are any still
+     * on their way?
+     */
+    public function checkDependencies(): static
+    {
+        if (! $this->task) {
+            return $this;
+        }
+
+        $state = app(TaskDependencies::class)->state($this->task, Task::GATE_START);
+
+        if ($state['failed']->isNotEmpty()) {
+            $this->passed = false;
+            $this->blocked = true;
+            $this->message .= __('messages.action.dependency_failed');
+        } elseif ($state['waiting']->isNotEmpty()) {
+            $this->passed = false;
+            $this->message .= __('messages.action.waiting_for');
+        }
+
+        return $this;
     }
 
     public static function parser($instructions, $vars = [])
@@ -84,65 +111,11 @@ class Prerequisites
         return $this;
     }
 
-    public function add_parent_task($check, $equals, $required)
-    {
-        $this->prereqs[] = [
-            $check => $equals,
-            'required' => $required,
-        ];
-
-        return $this;
-    }
-
     public function add_subscription_active()
     {
         $this->prereqs[] = [
             'type' => 'subscription_active',
         ];
-
-        return $this;
-    }
-
-    public function add_waiting_for(Task $task)
-    {
-        $this->prereqs[] = [
-            'type' => 'waiting_for',
-            'task_id' => $task->id,
-        ];
-
-        return $this;
-    }
-
-    private function waiting_for_check($prereq)
-    {
-        $task = Task::find($prereq['task_id']);
-
-        if ($task && $task->status !== TaskStatus::COMPLETE) {
-            $this->passed = false;
-            $this->message .= $this->waitingMessage($task);
-        }
-    }
-
-    // A failed task won't finish by itself, so don't report it as still running
-    private function waitingMessage(Task $task): string
-    {
-        return $task->status === TaskStatus::FAILED
-            ? __('messages.action.dependency_failed')
-            : __('messages.action.waiting_for');
-    }
-
-    private function parent_task_check($prereq)
-    {
-        $parent_task = Task::where($prereq['check'], $prereq[$prereq['check']])
-            ->where('organization_id', $this->task->organization_id)
-            ->first();
-        if ($prereq['required'] == 'yes' && (($parent_task && $parent_task->status !== TaskStatus::COMPLETE) || ! $parent_task)) {
-            $this->passed = false;
-            $this->message .= $parent_task ? $this->waitingMessage($parent_task) : __('messages.action.waiting_for');
-        } elseif ($prereq['required'] == 'no' && ($parent_task && $parent_task->status !== TaskStatus::COMPLETE)) {
-            $this->passed = false;
-            $this->message .= $this->waitingMessage($parent_task);
-        }
 
         return $this;
     }

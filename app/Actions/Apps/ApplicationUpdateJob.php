@@ -3,10 +3,8 @@
 namespace App\Actions\Apps;
 
 use App\Actions\Action;
-use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Enums\TaskStatus;
-use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Arr;
@@ -44,7 +42,7 @@ class ApplicationUpdateJob extends Action
             ->first();
 
         if ($existing_task) {
-            $this->prerequisites = (new Prerequisites)->add_waiting_for($existing_task)->get();
+            $this->dependsOn($existing_task);
         }
     }
 
@@ -100,10 +98,6 @@ class ApplicationUpdateJob extends Action
 
             if ($status == 'success') {
 
-                // Copmletes parent task faster
-                if ($parent_task_id = $task->getValue('parent_task_id')) {
-                    app(TaskRunner::class)->poll(Task::find($parent_task_id));
-                }
                 $task->complete();
                 $task->groupNotified();
             } elseif ($status == 'failed') {

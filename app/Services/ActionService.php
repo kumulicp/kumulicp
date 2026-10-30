@@ -148,11 +148,14 @@ class ActionService
         $task->job_id = 0;
         $task->notified = 0;
         $task->status = TaskStatus::PENDING;
-        // Whatever was running or queued under the old state is abandoned
+        // Whatever was running or queued under the old state is abandoned, and the
+        // run will start whatever it waits on again
         $task->claimed_at = null;
         $task->queued_at = null;
         $task->next_attempt_at = null;
+        $task->blocked_from = null;
         $task->save();
+        $task->syncFinishDependencies([]);
 
         if ($handler = $this->handlerFor($task)) {
             try {
@@ -228,6 +231,17 @@ class ActionService
         $task->background = $background ?? $action->background;
         $task->save();
 
+        // A delayed task with a parent starts once the parent is complete
+        if ($parent_task && $delay) {
+            $action->dependsOn($parent_task);
+        }
+
+        $task->dependOn($action->start_dependencies, Task::GATE_START);
+
+        if ($action->finish_dependencies !== null) {
+            $task->syncFinishDependencies($action->finish_dependencies);
+        }
+
         if (method_exists($action, 'postGenerate')) {
             $task->attempts = 1;
             $task->save();
@@ -300,6 +314,6 @@ class ActionService
             }
         }
 
-        return $prerequisites;
+        return $prerequisites->checkDependencies();
     }
 }

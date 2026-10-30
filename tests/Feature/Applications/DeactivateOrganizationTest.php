@@ -16,7 +16,7 @@ use Tests\Support\TestSupports;
 
 /**
  * DeactivateOrganization fans out one ApplicationDeactivate task per app
- * instance the org has, then waits on all of them (via 'waiting_for')
+ * instance the org has, then waits on all of them (via finish dependencies)
  * before completing itself. This is the only place ApplicationDeactivate
  * is actually invoked in the app today.
  */
@@ -45,10 +45,10 @@ it('deactivates the organization and all of its app instances', function () {
     $org->refresh();
     expect($org->status)->toBe('deactivated');
 
-    $waitingFor = $task->getValue('waiting_for');
+    $waitingFor = $task->dependencies()->wherePivot('gate', Task::GATE_FINISH)->get();
     expect($waitingFor)->toHaveCount(1);
 
-    $appTask = Task::find($waitingFor[0]);
+    $appTask = $waitingFor[0];
     expect($appTask->action_slug)->toBe('application_deactivate');
 
     // Not complete yet -- still waiting on the fanned-out app task.
@@ -90,7 +90,7 @@ it('fans out a deactivate task for every app instance the organization has', fun
     $task = Action::execute(new DeactivateOrganization($org));
     $task->refresh();
 
-    expect($task->getValue('waiting_for'))->toHaveCount(2);
+    expect($task->dependencies()->wherePivot('gate', Task::GATE_FINISH)->count())->toBe(2);
 
     $instance1->refresh();
     $instance2->refresh();
