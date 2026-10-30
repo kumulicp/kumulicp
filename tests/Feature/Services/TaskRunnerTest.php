@@ -177,9 +177,12 @@ it('rolls back and fails a task whose action returns fail', function () {
 
 it('runs what the action wants done once the new state is saved', function () {
     $seen = [];
-    RunnerNative::$handle = fn () => ActionResult::done()->then(function (Task $task) use (&$seen) {
-        $seen[] = Task::find($task->id)->status;
-    });
+    // Not an arrow function: that would capture $seen by value
+    RunnerNative::$handle = function () use (&$seen) {
+        return ActionResult::done()->then(function (Task $task) use (&$seen) {
+            $seen[] = Task::find($task->id)->status;
+        });
+    };
 
     runnerRun(runnerTask());
 
@@ -266,8 +269,9 @@ it('fails the task even if rolling it back throws', function () {
     expect($task->fresh()->error_message)->toBe('bad');
 });
 
-it('rejects a native action that does not return an ActionResult', function () {
-    RunnerNative::$handle = fn () => null;
+// PHP itself rejects a handle() that returns something other than an ActionResult
+it('rejects a native action that returns a legacy result', function () {
+    RunnerNative::$handle = fn () => ActionResult::legacy();
     $task = runnerTask();
 
     expect(fn () => ActionFacade::run($task))->toThrow(LogicException::class);
