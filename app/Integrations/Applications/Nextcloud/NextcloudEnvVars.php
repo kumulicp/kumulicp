@@ -71,7 +71,7 @@ class NextcloudEnvVars extends EnvVar
         // -- otherwise registering the first child would lock the hub's own
         // users out.
         $own_role_filter = "(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)";
-        $login_group_dn = $is_shared_hub ? LdapSupport::centralAccessGroup($app_instance->get())->getDn() : null;
+        $login_group_dn = $is_shared_hub ? LdapSupport::centralAccessGroupDn($app_instance->get()) : null;
 
         $ldap_settings = config('account_manager.driver') === 'ldap' ? [
             'USE_LDAP' => 'true',

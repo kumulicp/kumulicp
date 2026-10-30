@@ -85,7 +85,7 @@ class LdapSupport
         return $group;
     }
 
-    public static function ensureAppContainer(Organization $organization, string $app_instance_id, ?string $description = null): Group
+    public static function ensureAppContainer(Organization $organization, string $app_instance_id, ?string $description = null): void
     {
         $dn = Dn::create($organization, 'applications', $app_instance_id);
         $container = Group::find($dn);
@@ -98,8 +98,14 @@ class LdapSupport
             $container->setAttribute('member', Dn::create($organization));
             $container->save();
         }
+    }
 
-        return $container;
+    // Pure DN lookup (no directory I/O), for building the hub's LDAP filters.
+    // The group itself is created lazily by centralAccessGroup() on the first
+    // grant; until then the filter simply matches nobody through it.
+    public static function centralAccessGroupDn(AppInstance $hub): string
+    {
+        return Dn::create($hub->organization, 'applications', ['access', $hub->name]);
     }
 
     // One per shared-app hub -- every group folder a shared Nextcloud
@@ -111,7 +117,7 @@ class LdapSupport
     // child's own per-org role group (see AddLdapGroups, Permissions).
     public static function centralAccessGroup(AppInstance $hub)
     {
-        $dn = Dn::create($hub->organization, 'applications', ['access', $hub->name]);
+        $dn = self::centralAccessGroupDn($hub);
         $group = Group::find($dn);
 
         if (! $group) {
