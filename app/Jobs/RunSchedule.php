@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Artisan;
 
-// schedule:run invokes TaskCleanup/PrerequisiteChecks/SystemTasks/etc.
+// schedule:run invokes DispatchTasks/etc.
 // synchronously, including blocking calls like checkConnection()'s
 // retry-with-sleep loop per stuck task. Running that inline in a web
 // request ties up an Octane worker for the whole duration; queueing it

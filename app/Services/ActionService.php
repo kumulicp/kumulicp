@@ -33,6 +33,7 @@ use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearTestAccounts;
 use App\Actions\Tests\CreateTests;
 use App\AppInstance;
+use App\Contracts\Actions\TaskAction;
 use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
@@ -42,8 +43,11 @@ use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
 use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
-use App\Jobs\RunAction;
 use App\Organization;
+use App\Services\Tasks\Handlers\LegacyHandler;
+use App\Services\Tasks\Handlers\NativeHandler;
+use App\Services\Tasks\Handlers\TaskHandler;
+use App\Services\Tasks\TaskDispatcher;
 use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -114,6 +118,20 @@ class ActionService
         return Arr::get($this->actions, $task->action());
     }
 
+    /**
+     * How to drive the task's action, or null if it isn't a registered one.
+     */
+    public function handlerFor(Task $task): ?TaskHandler
+    {
+        $class = $this->classFor($task);
+
+        if (! $class) {
+            return null;
+        }
+
+        return is_subclass_of($class, TaskAction::class) ? new NativeHandler($class) : new LegacyHandler($class);
+    }
+
     public function exists(Organization $organization, string $category, string $action)
     {
         $tasks = $organization->tasks()
@@ -127,29 +145,27 @@ class ActionService
 
     public function retry(Task $task)
     {
-        $application = $task->application;
         $task->job_id = 0;
         $task->notified = 0;
         $task->status = TaskStatus::PENDING;
         // Whatever was running or queued under the old state is abandoned
         $task->claimed_at = null;
         $task->queued_at = null;
+        $task->next_attempt_at = null;
         $task->save();
 
-        $action = Arr::get($this->actions, $task->action());
-
-        if ($action && method_exists($action, 'retry')) {
+        if ($handler = $this->handlerFor($task)) {
             try {
-                $retry = $action::retry($task);
+                if ($retry = $handler->retry($task)) {
+                    $task->attempts++;
+                    $task->error_message = '';
+                    $task->custom_values = $retry->custom_values;
+                    $task->save();
 
-                $task->attempts++;
-                $task->error_message = '';
-                $task->custom_values = $retry->custom_values;
-                $task->save();
-
-                if (is_object($retry) && method_exists($retry, 'postGenerate')) {
-                    $task->status = $retry->status;
-                    $retry->postGenerate($task);
+                    if (method_exists($retry, 'postGenerate')) {
+                        $task->status = $retry->status;
+                        $retry->postGenerate($task);
+                    }
                 }
             } catch (ConnectionFailedException $e) {
                 $task->job_id = 0;
@@ -168,62 +184,7 @@ class ActionService
 
         $task->save();
 
-        RunAction::dispatch($task);
-    }
-
-    public function run(Task $task)
-    {
-        $action = Arr::get($this->actions, $task->action());
-
-        if ($action) {
-            if (method_exists($action, 'run')) {
-                $run = $action::run($task);
-
-                // Update custom values if they've been changed
-                if ($run && $run->customValues() != $task->custom_values) {
-                    $task->custom_values = $run->customValues();
-                    $task->save();
-                }
-            }
-        } else {
-            throw new \Exception('This action hasn\'t been registered: '.$task->action());
-        }
-    }
-
-    public function complete(Task $task)
-    {
-        $action = Arr::get($this->actions, $task->action());
-        $action_complete = null;
-        if ($blocked_by = $this->waiting_for($task->getValue('waiting_for'))) {
-            $error_message = __("messages.action.{$blocked_by}");
-            if ($task->error_message != $error_message) {
-                $task->error_message = $error_message;
-                $task->save();
-            }
-
-            return;
-        }
-
-        if ($action && method_exists($action, 'complete')) {
-            $action_complete = $action::complete($task);
-        }
-
-        if ($task->status === TaskStatus::COMPLETE) {
-            $other_tasks = Task::whereNot('id', $task->id)->where('task_group', $task->task_group)->get();
-
-            foreach ($other_tasks as $other_task) {
-                // Pending siblings still have to satisfy their own prerequisites
-                if ($other_task->status === TaskStatus::PENDING) {
-                    if ($this->checkPrerequisites($other_task)->passed) {
-                        RunAction::dispatch($other_task);
-                    }
-                } elseif ($other_task->status === TaskStatus::IN_PROGRESS) {
-                    $this->complete($other_task);
-                }
-            }
-        }
-
-        return $action_complete;
+        app(TaskDispatcher::class)->queue($task);
     }
 
     /**
@@ -284,7 +245,7 @@ class ActionService
         // A task postGenerate() just failed must stay failed: running it anyway
         // (and checkPrerequisites() wiping its error message) hides the failure.
         if ($task->status !== TaskStatus::FAILED && ! $delay && $this->checkPrerequisites($task)->passed) {
-            RunAction::dispatch($task);
+            app(TaskDispatcher::class)->queue($task);
         }
 
         Log::info(__('labels.task').': '.$task->description, ['organization_id' => $task->organization->id]);
@@ -311,21 +272,6 @@ class ActionService
         return $this->execute($action, $parent_task);
     }
 
-    public function revert(Task $task)
-    {
-        $action = Arr::get($this->actions, $task->action());
-
-        if ($action && method_exists($action, 'revert')) {
-            $revert = $action::revert($task);
-
-            // Update custom values if they've been changed
-            if ($revert && $revert->customValues() != $task->custom_values) {
-                $task->custom_values = $revert->customValues();
-                $task->save();
-            }
-        }
-    }
-
     public function clear(string $action_name, ?AppInstance $app_instance = null)
     {
         $tasks = Task::where('action_slug', $action_name)->whereIn('status', TaskStatus::openValues());
@@ -335,31 +281,6 @@ class ActionService
         }
 
         $tasks->delete();
-    }
-
-    /**
-     * Why $tasks (ids of tasks this one waits on) are holding it back: the
-     * messages.action key to show, or null if none of them are.
-     */
-    private function waiting_for(?array $tasks = null): ?string
-    {
-        $blocked_by = null;
-
-        foreach ($tasks ?? [] as $task) {
-            $waiting_for = Task::find($task);
-
-            if ($waiting_for && $waiting_for->status === TaskStatus::FAILED) {
-                // A failed dependency won't finish by itself: say so rather
-                // than showing "waiting" forever.
-                return 'dependency_failed';
-            }
-
-            if ($waiting_for && $waiting_for->status !== TaskStatus::COMPLETE) {
-                $blocked_by = 'waiting_for';
-            }
-        }
-
-        return $blocked_by;
     }
 
     public function checkPrerequisites(Task $task)

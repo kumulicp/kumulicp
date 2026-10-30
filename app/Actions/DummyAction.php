@@ -8,7 +8,7 @@ use App\Task;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class DummyAction extends Action
+class DummyAction extends NativeAction
 {
     public $slug = 'dummy_action';
 
@@ -24,23 +24,25 @@ class DummyAction extends Action
         $this->description = 'Dummy Task';
     }
 
-    public static function run($task)
+    public static function handle(Task $task): ActionResult
     {
         Log::info(__('actions.dummy.run'), ['organization_id' => $task->organization->id]);
+
+        return ActionResult::wait();
     }
 
-    public static function retry($task)
+    public static function retry(Task $task): ?Action
     {
         Log::info(__('actions.dummy.retry'), ['organization_id' => $task->organization->id]);
 
         return new self;
     }
 
-    public static function complete(Task $task)
+    public static function poll(Task $task): ActionResult
     {
         Log::critical(__('actions.dummy.completed', ['organization_id' => $task->organization->id]));
         $task->organization->notifyAdmins(new DummyNotification($task));
-        $task->complete();
-        $task->groupNotified();
+
+        return ActionResult::done();
     }
 }

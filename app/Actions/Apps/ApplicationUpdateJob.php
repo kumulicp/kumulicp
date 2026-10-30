@@ -6,7 +6,7 @@ use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Enums\TaskStatus;
-use App\Support\Facades\Action as ActionFacade;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Arr;
@@ -102,7 +102,7 @@ class ApplicationUpdateJob extends Action
 
                 // Copmletes parent task faster
                 if ($parent_task_id = $task->getValue('parent_task_id')) {
-                    $parent_task = ActionFacade::complete(Task::find($parent_task_id));
+                    app(TaskRunner::class)->poll(Task::find($parent_task_id));
                 }
                 $task->complete();
                 $task->groupNotified();

@@ -35,8 +35,16 @@ class Action
     public $slug = '';
 
     // Minutes after the task is created by which it must be complete. Past that
-    // the TaskReaper rolls it back and fails it. Null: no deadline.
+    // the TaskDispatcher rolls it back and fails it. Null: no deadline.
     public ?int $deadline_minutes = null;
+
+    // How many times the runner tries the task when it throws an error it doesn't
+    // know. 1: fail at once, as an action that isn't safe to run twice must.
+    public static int $max_attempts = 1;
+
+    // Seconds to wait before running the task again after a transient failure;
+    // the last one repeats.
+    public static array $backoff = [60, 120, 300, 600];
 
     // Routes RunAction onto the 'database-long' queue connection (longer retry_after).
     public static bool $long_running = false;

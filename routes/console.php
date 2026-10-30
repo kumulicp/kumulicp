@@ -4,14 +4,11 @@ use App\Console\Calls\ActivateBackup;
 use App\Console\Calls\CheckVersionUpdates;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Console\Calls\DeleteBackups;
+use App\Console\Calls\DispatchTasks;
 use App\Console\Calls\ExpiredSubscriptionsCheck;
 use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
-use App\Console\Calls\PrerequisiteChecks;
 use App\Console\Calls\RecurringBackups;
-use App\Console\Calls\SystemTasks;
-use App\Console\Calls\TaskCleanup;
-use App\Console\Calls\TaskReaper;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use Illuminate\Support\Facades\Schedule;
 use Spatie\UptimeMonitor\Commands\CheckCertificates;
@@ -28,14 +25,11 @@ use Spatie\UptimeMonitor\Commands\CheckUptime;
 |
 */
 
-// The task runners are single-flight: a slow pass must not overlap the next
-// minute's (two passes would claim and run the same tasks), and only one server
-// runs each. The mutex expiry keeps a crashed run from blocking tasks for the
-// default 24 hours.
-Schedule::call(new TaskCleanup)->name('task-cleanup')->everyMinute()->withoutOverlapping(15)->onOneServer();
-Schedule::call(new PrerequisiteChecks)->name('prerequisite-checks')->everyMinute()->withoutOverlapping(15)->onOneServer();
-Schedule::call(new SystemTasks)->name('system-tasks')->everyMinute()->withoutOverlapping(15)->onOneServer();
-Schedule::call(new TaskReaper)->name('task-reaper')->everyMinute()->withoutOverlapping(15)->onOneServer();
+// One ordered pass moves every task along (poll, ready, queue, reap). It is
+// single-flight: a slow pass must not overlap the next minute's (two passes
+// would claim the same tasks), and only one server runs it. The mutex expiry
+// keeps a crashed run from blocking tasks for the default 24 hours.
+Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();

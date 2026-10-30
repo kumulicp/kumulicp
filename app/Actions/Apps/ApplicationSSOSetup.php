@@ -3,14 +3,14 @@
 namespace App\Actions\Apps;
 
 use App\Actions\Action;
+use App\Actions\ActionResult;
+use App\Actions\NativeAction;
 use App\AppInstance;
-use App\Enums\TaskStatus;
-use App\Exceptions\SSONotReadyException;
-use App\Jobs\RunAction;
+use App\Services\Tasks\TaskDispatcher;
 use App\Support\Facades\Application;
 use App\Task;
 
-class ApplicationSSOSetup extends Action
+class ApplicationSSOSetup extends NativeAction
 {
     public $slug = 'application_sso_setup';
 
@@ -22,46 +22,38 @@ class ApplicationSSOSetup extends Action
         $this->description = __('actions.sso_setup', ['app' => $app_instance->name]);
     }
 
-    public static function run(Task $task)
+    /**
+     * A SSONotReadyException from the SSO server is a WaitingException: the
+     * runner puts the task back to pending and tries again shortly.
+     */
+    public static function handle(Task $task): ActionResult
     {
         $app_instance = Application::instance($task->app_instance);
         $sso = $app_instance->connect('sso');
 
-        if ($sso) {
-            try {
-                if ($app_instance->setting('sso') && $sso->exists()) {
-                    $response = $sso->update();
-                } else {
-                    $response = $sso->add();
-                }
-            } catch (SSONotReadyException $e) {
-                $task->status = TaskStatus::PENDING;
-                $task->error_message = $e->getMessage();
-                $task->save();
-
-                return new self($task->app_instance);
-            }
-        } else {
+        if (! $sso) {
             throw new \Exception(__('messages.exception.sso_failed'));
         }
 
-        $task->complete();
-        $task->groupNotified();
-
-        if ($parent_task_id = $task->getValue('parent_task_id')) {
-            $parent_task = RunAction::dispatch(Task::find($parent_task_id));
+        if ($app_instance->setting('sso') && $sso->exists()) {
+            $sso->update();
+        } else {
+            $sso->add();
         }
 
-        return new self($task->app_instance);
+        // The task that was waiting on this one can go now that it is complete
+        return ActionResult::done()->then(function (Task $task) {
+            if (($parent_task_id = $task->getValue('parent_task_id')) && $parent_task = Task::find($parent_task_id)) {
+                app(TaskDispatcher::class)->queue($parent_task);
+            }
+        });
     }
 
-    public static function retry(Task $task)
+    public static function retry(Task $task): ?Action
     {
         $action = new self($task->app_instance);
         $action->setCustomValues($task->custom_values);
 
         return $action;
     }
-
-    public static function complete(Task $task) {}
 }

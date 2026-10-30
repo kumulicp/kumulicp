@@ -2,9 +2,9 @@
 
 namespace App\Exceptions;
 
-use Exception;
+use App\Exceptions\Tasks\WaitingException;
 
-class SSONotReadyException extends Exception
+class SSONotReadyException extends WaitingException
 {
     /**
      * Get the exception's context information.

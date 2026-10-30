@@ -3,13 +3,13 @@
 use App\AppInstance;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Organization;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Task;
 use App\User;
 use Illuminate\Support\Facades\Exceptions;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
-use Tests\Support\ServerManagers\FakeServerManager;
 use Tests\Support\TestSupports;
 
 /**
@@ -130,9 +130,9 @@ it('deletes app instances once their deactivate_at grace period has passed', fun
     // ApplicationDelete is long_running -- with QUEUE_LONG_CONNECTION unset
     // in tests the auto-dispatch inside Action::execute() already ran it
     // synchronously, so this mirrors the shared trait's runDelete() pattern.
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
     $task->refresh();
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
 
     expect(AppInstance::find($instanceId))->toBeNull();
 });
@@ -178,7 +178,7 @@ it('does not let one blocked shared-app hub stop the rest of the sweep', functio
 
     (new DeactivatedAppInstanceCheck)();
 
-    Exceptions::assertReported(fn (\Exception $e) => str_contains($e->getMessage(), $hub->label));
+    Exceptions::assertReported(fn (Exception $e) => str_contains($e->getMessage(), $hub->label));
 
     $hub->refresh();
     expect($hub->status)->toBe('deactivating');

@@ -6,6 +6,7 @@ use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Log;
  * @property Carbon|null $queued_at
  * @property Carbon|null $claimed_at
  * @property Carbon|null $deadline_at
+ * @property Carbon|null $next_attempt_at
  * @property-read Application|null $application
  * @property-read AppVersion|null $version
  * @property-read Organization|null $organization
@@ -49,6 +51,7 @@ class Task extends Model
         'queued_at' => 'datetime',
         'claimed_at' => 'datetime',
         'deadline_at' => 'datetime',
+        'next_attempt_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -135,13 +138,14 @@ class Task extends Model
                 'status' => TaskStatus::IN_PROGRESS->value,
                 'claimed_at' => $claimed_at,
                 'queued_at' => null,
+                'next_attempt_at' => null,
             ]);
 
         if (! $updated) {
             return false;
         }
 
-        $attributes = ['status' => TaskStatus::IN_PROGRESS, 'claimed_at' => $claimed_at, 'queued_at' => null];
+        $attributes = ['status' => TaskStatus::IN_PROGRESS, 'claimed_at' => $claimed_at, 'queued_at' => null, 'next_attempt_at' => null];
         $this->forceFill($attributes);
         $this->syncOriginalAttributes(array_keys($attributes));
 
@@ -158,6 +162,14 @@ class Task extends Model
 
         $this->forceFill(['claimed_at' => null]);
         $this->syncOriginalAttributes(['claimed_at']);
+    }
+
+    /**
+     * @return HasMany<TaskEvent, $this>
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(TaskEvent::class)->orderBy('id');
     }
 
     /**

@@ -3,6 +3,7 @@
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Enums\TaskStatus;
 use App\Organization;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -39,11 +40,11 @@ it('does not recover a release that only just started pending', function () {
     $instance = upgradeStuckReleaseInstance();
 
     $task = Action::execute(new ApplicationUpgrade($instance, $instance->version));
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
 
     FakeServerManager::markPending($instance->id);
 
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     expect($task->status)->not->toBe(TaskStatus::COMPLETE);
@@ -55,12 +56,12 @@ it('recovers a release stuck pending past the long queue timeout', function () {
     $instance = upgradeStuckReleaseInstance();
 
     $task = Action::execute(new ApplicationUpgrade($instance, $instance->version));
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
 
     FakeServerManager::markPending($instance->id);
 
     // First poll: just records when the pending streak started.
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     // Backdate it past the long queue's retry_after threshold.
@@ -70,7 +71,7 @@ it('recovers a release stuck pending past the long queue timeout', function () {
     $task->custom_values = $custom_values;
     $task->save();
 
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     expect(FakeServerManager::$recover_stuck_release_calls)->toBe(1);
@@ -82,16 +83,16 @@ it('clears the pending timer once the release becomes active', function () {
     $instance = upgradeStuckReleaseInstance();
 
     $task = Action::execute(new ApplicationUpgrade($instance, $instance->version));
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
 
     FakeServerManager::markPending($instance->id);
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     expect($task->getValue('helm_pending_since'))->not->toBeNull();
 
     FakeServerManager::clearPending($instance->id);
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     expect($task->status)->toBe(TaskStatus::COMPLETE);
