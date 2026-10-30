@@ -2,7 +2,6 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Support;
 
-use App\Integrations\ServerManagers\Kubernetes\Support\K8sCredentialContext;
 use Illuminate\Http\Client\PendingRequest;
 
 /**
@@ -12,8 +11,10 @@ use Illuminate\Http\Client\PendingRequest;
  *
  * The cluster is 'local' unless the server's `rancher_cluster_id` setting
  * names another, or the address already points at a cluster's proxy path.
+ * Certificate verification follows RancherCredentialContext, so both ways
+ * into Rancher agree on it.
  */
-class RancherClusterCredentials extends K8sCredentialContext
+class RancherClusterCredentials extends RancherCredentialContext
 {
     protected function baseUrl(): string
     {

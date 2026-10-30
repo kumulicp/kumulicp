@@ -27,6 +27,10 @@ use App\Server;
  *   - app install and activation: the Application class's methods
  * Objects created from this one (secret(), helmInstaller()) share its API
  * client, so overriding makeApiClient() once switches them all.
+ *
+ * Some work has to go to the cluster's own Kubernetes API even when a driver
+ * manages its resources through something else (chart Secrets, looking a
+ * Job's uid up): that is clusterApi(), which is api() unless overridden.
  */
 class Kubernetes
 {
@@ -66,6 +70,16 @@ class Kubernetes
     public function api(): KubernetesApiClient
     {
         return $this->api ??= $this->makeApiClient();
+    }
+
+    /**
+     * The cluster's own Kubernetes API. The same as api() for a driver that
+     * manages resources through it; a driver that manages them through
+     * something else overrides this to reach the cluster directly.
+     */
+    public function clusterApi(): KubernetesApiClient
+    {
+        return $this->api();
     }
 
     protected function makeApiClient(): KubernetesApiClient

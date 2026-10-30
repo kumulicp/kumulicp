@@ -184,9 +184,7 @@ class KubernetesApiClient
                 return $this->failure("Unknown resource kind {$kind} ({$api_version})");
             }
 
-            // Background propagation cleans up children; the API's own
-            // default for some kinds (e.g. batch/v1 Job) orphans them.
-            $response = $http->delete($this->path($resource, $namespace, $name), ['propagationPolicy' => 'Background']);
+            $response = $http->delete($this->path($resource, $namespace, $name), $this->deleteOptions());
 
             if ($response->status() === 404) {
                 return ['success' => true, 'status' => 404, 'data' => null, 'error' => ''];
@@ -197,6 +195,15 @@ class KubernetesApiClient
     }
 
     /**
+     * Background propagation cleans up children; the API's own default for
+     * some kinds (e.g. batch/v1 Job) orphans them.
+     */
+    protected function deleteOptions(): array
+    {
+        return ['propagationPolicy' => 'Background'];
+    }
+
+    /**
      * Logs of every pod matching the label selector,
      * concatenated. Each pod's default container is read: the one named by
      * its `kubectl.kubernetes.io/default-container` annotation, else the
@@ -204,6 +211,7 @@ class KubernetesApiClient
      */
     public function podLogs(string $label_selector, string $namespace): array
     {
+        // A scan's logs can run to tens of megabytes, well past the usual timeout.
         return $this->request(function (PendingRequest $http) use ($label_selector, $namespace) {
             $pods_path = $this->path($this->resolve($http, 'v1', 'Pod'), $namespace);
             $pods = $this->result($http->get($pods_path, ['labelSelector' => $label_selector]));
@@ -239,7 +247,7 @@ class KubernetesApiClient
             }
 
             return ['success' => true, 'status' => 200, 'data' => implode("\n", $logs), 'error' => ''];
-        });
+        }, timeout: 120);
     }
 
     // The API server's version info (GET /version); the git version is in ['data']['gitVersion'].
@@ -260,13 +268,22 @@ class KubernetesApiClient
      * Runs $callback(PendingRequest) once with credentials in place, turning
      * a connection-level failure into the same failure shape as an API error.
      */
-    protected function request(callable $callback): array
+    protected function request(callable $callback, int $timeout = 30): array
     {
         try {
-            return $this->context->withRequest($callback);
+            return $this->context->withRequest($callback, $timeout);
         } catch (ConnectionException $exception) {
-            return $this->failure($exception->getMessage());
+            return $this->connectionFailure($exception);
         }
+    }
+
+    /**
+     * What a request that never got an answer returns. A subclass that
+     * wants unreachable servers to fail loudly can throw here instead.
+     */
+    protected function connectionFailure(ConnectionException $exception): array
+    {
+        return $this->failure($exception->getMessage());
     }
 
     /**
