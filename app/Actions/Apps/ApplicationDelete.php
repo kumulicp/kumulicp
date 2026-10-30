@@ -66,7 +66,7 @@ class ApplicationDelete extends Action
         } elseif ($app_profile->activationType($app_instance->get()) === 'job') {  // Delete via job
             if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
                 // Need to wait until this new job task is complete
-                $app_delete->addCustomValue(['waiting_for' => [$job->id]]);
+                $app_delete->waitFor($job);
             }
         }
 

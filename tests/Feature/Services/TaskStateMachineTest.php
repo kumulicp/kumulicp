@@ -81,11 +81,11 @@ function stateTask(array $attributes = []): Task
 
 it('keeps the enum values identical to the statuses already stored', function () {
     expect(array_map(fn (TaskStatus $status) => $status->value, TaskStatus::cases()))
-        ->toBe(['pending', 'ready', 'queued', 'in_progress', 'complete', 'failed']);
+        ->toBe(['pending', 'ready', 'queued', 'in_progress', 'complete', 'failed', 'blocked']);
 });
 
 it('treats every status but complete as open', function () {
-    expect(TaskStatus::openValues())->toBe(['pending', 'ready', 'queued', 'in_progress', 'failed']);
+    expect(TaskStatus::openValues())->toBe(['pending', 'ready', 'queued', 'in_progress', 'failed', 'blocked']);
     expect(TaskStatus::FAILED->isOpen())->toBeTrue();
     expect(TaskStatus::COMPLETE->isOpen())->toBeFalse();
 });
@@ -196,10 +196,8 @@ it('queues each ready task once however often queueReady runs', function () {
 it('readies pending tasks whose prerequisites pass and leaves waiting ones', function () {
     $free = stateTask(['status' => 'pending', 'notified' => 1]);
     $blocker = stateTask(['status' => 'in_progress']);
-    $waiting = stateTask([
-        'status' => 'pending',
-        'prerequisites' => json_encode(['prereqs' => [['type' => 'waiting_for', 'task_id' => $blocker->id]]]),
-    ]);
+    $waiting = stateTask(['status' => 'pending']);
+    $waiting->dependOn($blocker);
 
     app(TaskDispatcher::class)->promote();
 

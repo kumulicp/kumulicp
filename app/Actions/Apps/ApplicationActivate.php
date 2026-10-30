@@ -85,7 +85,7 @@ class ApplicationActivate extends Action
         $prereqs->add_subscription_active();
         if (! Arr::has($custom_values, 'sso_task_id') && $this->plan->sso_server) {
             if ($this->sso_task = ActionFacade::execute(new ApplicationSSOSetup($application->get()), background: true)) {
-                $prereqs->add_waiting_for($this->sso_task);
+                $this->dependsOn($this->sso_task);
                 $this->addCustomValue(['sso_task_id' => $this->sso_task->id]);
             }
         }
@@ -107,13 +107,6 @@ class ApplicationActivate extends Action
         if (! $task->getValue('shared_app')) {
             // Add ldap groups
             AddLdapGroups::dispatch($task->app_instance);
-
-            if ($this->sso_task) {
-                $task_values = $this->sso_task->custom_values;
-                $new_values = Arr::set($task_values, 'parent_task_id', $task->id);
-                $this->sso_task->custom_values = $new_values;
-                $this->sso_task->save();
-            }
         }
     }
 
@@ -142,12 +135,9 @@ class ApplicationActivate extends Action
                 $task->restart();
             }
         } elseif ($app_profile->activationType($app_instance->get()) === 'job') {
-            $waiting_for = [];
             $new_task = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'activate'), $task, background: true);
             $parent_app_task = ActionFacade::execute(new ApplicationUpgrade($app_instance->parent, $app_instance->parent->version), $task, background: true);
-            $waiting_for[] = $new_task->id;
-            $waiting_for[] = $parent_app_task->id;
-            $app_activate->addCustomValue(['waiting_for' => $waiting_for]);
+            $app_activate->waitFor(...array_filter([$new_task, $parent_app_task]));
         }
 
         // Create task to process customizations

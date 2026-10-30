@@ -18,7 +18,6 @@ class DeactivateOrganization extends Action
     public function __construct(Organization $organization)
     {
         $this->organization = $organization;
-        $app_tasks = [];
 
         $this->description = __('actions.deactivating_organization', ['organization' => $organization->name]);
     }
@@ -30,14 +29,10 @@ class DeactivateOrganization extends Action
 
         $app_tasks = [];
         foreach ($task->organization->app_instances as $app) {
-            $app_task = ActionFacade::execute(new ApplicationDeactivate($app), $task);
-            $app_tasks[] = $app_task->id;
+            $app_tasks[] = ActionFacade::execute(new ApplicationDeactivate($app), $task);
         }
 
-        $self = new self($task->organization);
-        $self->addCustomValue(['waiting_for' => $app_tasks]);
-
-        return $self;
+        return (new self($task->organization))->waitFor(...array_filter($app_tasks));
     }
 
     public static function retry(Task $task)

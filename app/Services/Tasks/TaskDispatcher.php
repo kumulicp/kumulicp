@@ -21,12 +21,14 @@ class TaskDispatcher
 {
     /**
      * One scheduled pass, in the order a task moves: poll the ones running,
-     * ready the ones whose prerequisites pass, queue the ones that are ready,
-     * then clean up after the ones that stalled.
+     * release the ones that were blocked, ready the ones whose prerequisites
+     * pass, queue the ones that are ready, then clean up after the ones that
+     * stalled.
      */
     public function tick(): void
     {
         $this->poll();
+        $this->unblock();
         $this->promote();
         $this->queueReady();
         $this->reap();
@@ -82,6 +84,13 @@ class TaskDispatcher
             ->get();
 
         foreach ($tasks as $task) {
+            // Polling an earlier task may have finished this one, or started it
+            $task = Task::where('status', TaskStatus::IN_PROGRESS->value)->notClaimed()->find($task->id);
+
+            if (! $task) {
+                continue;
+            }
+
             Organization::setOrganization($task->organization);
 
             app(TaskRunner::class)->tryPoll($task);
@@ -106,7 +115,9 @@ class TaskDispatcher
 
                 // Moved only if still pending: a task that something else has
                 // started in the meantime must not be pulled back to ready.
-                if ($prerequisites->passed) {
+                if ($prerequisites->blocked) {
+                    $this->block($task, $prerequisites->message);
+                } elseif ($prerequisites->passed) {
                     $task->transition(TaskStatus::READY, TaskStatus::PENDING, ['notified' => 0]);
                 } elseif ($prerequisites->permanent_fail == true) {
                     $task->transition(TaskStatus::FAILED, TaskStatus::PENDING);
@@ -121,6 +132,51 @@ class TaskDispatcher
                     'error_code' => 'exception',
                     'error_message' => $e->getMessage(),
                 ]);
+            }
+        }
+    }
+
+    /**
+     * A pending task whose dependency has failed waits, visibly, for that to be
+     * put right.
+     */
+    private function block(Task $task, string $message): void
+    {
+        $blocked = $task->transition(TaskStatus::BLOCKED, TaskStatus::PENDING, [
+            'blocked_from' => TaskStatus::PENDING->value,
+            'error_code' => 'dependency_failed',
+            'error_message' => $message,
+        ]);
+
+        if ($blocked) {
+            TaskEvent::record($task, 'blocked', $message, [], TaskStatus::PENDING);
+        }
+    }
+
+    /**
+     * Blocked tasks go back to where they were once the task that failed has
+     * been retried (it is no longer failed) or removed.
+     */
+    public function unblock(): void
+    {
+        $dependencies = app(TaskDependencies::class);
+
+        foreach (Task::where('status', TaskStatus::BLOCKED->value)->get() as $task) {
+            $running = $task->blocked_from === TaskStatus::IN_PROGRESS->value;
+            $gate = $running ? Task::GATE_FINISH : Task::GATE_START;
+
+            if ($dependencies->state($task, $gate)['failed']->isNotEmpty()) {
+                continue;
+            }
+
+            $released = $task->transition($running ? TaskStatus::IN_PROGRESS : TaskStatus::PENDING, TaskStatus::BLOCKED, [
+                'blocked_from' => null,
+                'error_code' => null,
+                'error_message' => null,
+            ]);
+
+            if ($released) {
+                TaskEvent::record($task, 'unblocked', null, [], TaskStatus::BLOCKED);
             }
         }
     }
@@ -184,7 +240,7 @@ class TaskDispatcher
      */
     private function failExpired(): void
     {
-        $open = [TaskStatus::PENDING, TaskStatus::READY, TaskStatus::QUEUED, TaskStatus::IN_PROGRESS];
+        $open = [TaskStatus::PENDING, TaskStatus::READY, TaskStatus::QUEUED, TaskStatus::IN_PROGRESS, TaskStatus::BLOCKED];
 
         $tasks = Task::whereNotNull('deadline_at')
             ->where('deadline_at', '<', now())

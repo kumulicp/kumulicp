@@ -6,7 +6,6 @@ use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\AppInstance;
-use App\Services\Tasks\TaskDispatcher;
 use App\Support\Facades\Application;
 use App\Task;
 
@@ -41,12 +40,8 @@ class ApplicationSSOSetup extends NativeAction
             $sso->add();
         }
 
-        // The task that was waiting on this one can go now that it is complete
-        return ActionResult::done()->then(function (Task $task) {
-            if (($parent_task_id = $task->getValue('parent_task_id')) && $parent_task = Task::find($parent_task_id)) {
-                app(TaskDispatcher::class)->queue($parent_task);
-            }
-        });
+        // The tasks waiting on this one are started as soon as it is complete
+        return ActionResult::done();
     }
 
     public static function retry(Task $task): ?Action

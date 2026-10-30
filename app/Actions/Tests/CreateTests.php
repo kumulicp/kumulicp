@@ -6,7 +6,6 @@ use App\AccountTest;
 use App\Actions\Action;
 use App\Actions\Apps\ApplicationActivate;
 use App\Actions\Organizations\SubscriptionUpdate;
-use App\Actions\Prerequisites;
 use App\Application;
 use App\AppPlan;
 use App\AppVersion;
@@ -31,9 +30,6 @@ class CreateTests extends Action
     {
         $this->description = __('actions.create_tests', ['number' => $test->test_number]);
         $this->organization = Organization::where('type', 'superaccount')->first();
-
-        $prereqs = new Prerequisites;
-        $prereqs->add_parent_task('action_slug', 'clear_tests', 'yes');
 
         $this->setCustomValues(['test_id' => $test->id]);
 
@@ -103,8 +99,7 @@ class CreateTests extends Action
 
             $subscription = (new SubscriptionService($organization))->all();
             if ($base_plan) {
-                $task = ActionFacade::execute(new SubscriptionUpdate($organization, $subscription));
-                $waiting_for[] = $task->id;
+                $waiting_for[] = ActionFacade::execute(new SubscriptionUpdate($organization, $subscription));
             }
 
             foreach ($test_account->settings['apps'] as $name => $app) {
@@ -119,15 +114,12 @@ class CreateTests extends Action
                         plan: $plan,
                     ));
 
-                    $waiting_for[] = $app->id;
+                    $waiting_for[] = $app;
                 }
             }
         }
 
-        $self = new self($test_account);
-        $self->addCustomValue(['waiting_for' => $waiting_for]);
-
-        return $self;
+        return (new self($test_account))->waitFor(...array_filter($waiting_for));
     }
 
     public static function retry(Task $task)

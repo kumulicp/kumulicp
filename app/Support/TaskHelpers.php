@@ -34,7 +34,7 @@ class TaskHelpers
         foreach ($tasks as $task) {
             $status = 'In Progress';
             $message = 'In Progress';
-            if ($task->status === TaskStatus::FAILED || $task->attempts > 1) {
+            if (in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true) || $task->attempts > 1) {
                 $status = 'Failed';
                 $message = __('messages.action.tech_difficulties');
             }

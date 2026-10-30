@@ -9,7 +9,6 @@ use App\Organization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
-use Illuminate\Database\Eloquent\Builder;
 
 class DeleteOrganization extends Action
 {
@@ -22,7 +21,6 @@ class DeleteOrganization extends Action
     public function __construct(Organization $organization)
     {
         $this->organization = $organization;
-        $app_tasks = [];
 
         $this->description = __('actions.deleting_organization');
     }
@@ -31,17 +29,13 @@ class DeleteOrganization extends Action
     {
         $app_tasks = [];
         foreach ($task->organization->app_instances as $app) {
-            $app_task = ActionFacade::execute(new ApplicationDelete($app, start_time: '00:00', end_time: '23:59'), $task);
-
-            if ($app_task) {
-                $app_tasks[] = $app_task->id;
+            if ($app_task = ActionFacade::execute(new ApplicationDelete($app, start_time: '00:00', end_time: '23:59'), $task)) {
+                $app_tasks[] = $app_task;
             }
         }
 
-        $self = new self($task->organization);
-        $self->addCustomValue(['app_tasks' => $app_tasks]);
-
-        return $self;
+        // The organization is only deleted once every app has been
+        return (new self($task->organization))->waitFor(...$app_tasks);
     }
 
     public static function retry(Task $task)
@@ -53,29 +47,18 @@ class DeleteOrganization extends Action
 
     public static function complete(Task $task)
     {
-        $app_tasks = Task::whereNot('status', TaskStatus::COMPLETE->value)
-            ->whereNot('id', $task->id)
-            ->where(function (Builder $query) use ($task) {
-                foreach ($task->getValue('app_tasks') as $app) {
-                    $query->orWhere('id', $app);
-                }
-            })
-            ->where('organization_id', $task->organization_id);
+        // Polled only once the apps' delete tasks are complete or gone
+        AccountManager::account($task->organization)->destroy();
 
-        if ($app_tasks->count() === 0) {
-            $organization = AccountManager::account($task->organization)->destroy();
-
-            $task->organization->domains()->delete();
-            $task->organization->app_instances()->delete();
-            $task->organization->backups()->delete();
-            $task->organization->domains()->delete();
-            $task->organization->servers()->delete();
-            $task->organization->tasks()->delete();
-            $task->organization->users()->forceDelete();
-            $task->organization->logs()->delete();
-            $task->organization->delete();
-            $app_tasks->delete();
-            $task->delete();
-        }
+        $task->organization->domains()->delete();
+        $task->organization->app_instances()->delete();
+        $task->organization->backups()->delete();
+        $task->organization->domains()->delete();
+        $task->organization->servers()->delete();
+        $task->organization->tasks()->delete();
+        $task->organization->users()->forceDelete();
+        $task->organization->logs()->delete();
+        $task->organization->delete();
+        $task->delete();
     }
 }

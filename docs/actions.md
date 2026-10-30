@@ -98,6 +98,36 @@ is safe to run twice.
 * `$long_running` - run on the `long` queue.
 * `$background` - hidden from the customer-facing task list.
 
+## Dependencies
+
+A task can wait for other tasks, at one of two points:
+
+* **Before it starts** - `$action->dependsOn($task)` (in the constructor, or before
+  `Action::execute()`). The task stays pending until every one is complete.
+* **Before it completes** - `$action->waitFor($task, ...)` on the action `run()`
+  returns (or `ActionResult::wait()->waitingFor($task, ...)` from a native one), for
+  work the action started and is waiting on. The task stays in progress and isn't
+  polled until every one is complete. It replaces whatever the task waited on before;
+  an action that doesn't call `waitFor()` leaves it as it is.
+
+`Action::execute($action, $parent, delay: true)` makes the new task wait for `$parent`.
+
+```php
+$job = ActionFacade::execute(new ApplicationUpdateJob($app, 'update_settings'), $task, true);
+
+return (new self($app))->waitFor($job);
+```
+
+A dependency that has **failed** doesn't leave its dependents waiting for ever: they
+become `blocked` (with `blocked_from` saying whether they were waiting to start or
+already running). Retry the failed task and they carry on by themselves; delete it and
+they are released. Deleting a task, finished or not, also releases whatever waited on
+it - `ApplicationDelete` relies on that to say it is done. A task that completes starts
+the tasks waiting for it straight away rather than on the next scheduled pass.
+
+`task_group` still groups related tasks for the UI and notifications, but no longer
+makes them start each other.
+
 ## Older actions
 
 Actions written before `TaskAction` have static `run()`, `complete()`, `retry()`

@@ -45,11 +45,6 @@ function hardeningTask(Organization $organization, array $attributes = []): Task
     return $task;
 }
 
-function hardeningWaitingFor(Task $task): string
-{
-    return json_encode(['prereqs' => [['type' => 'waiting_for', 'task_id' => $task->id]]]);
-}
-
 it('does not run a task whose postGenerate failed', function () {
     Queue::fake();
     $organization = hardeningOrganization();
@@ -98,57 +93,61 @@ it('runs a task that was created successfully', function () {
     Queue::assertPushed(RunAction::class, 1);
 });
 
-it('only runs pending siblings whose prerequisites are met when a task completes', function () {
+it('starts the tasks waiting for a task when it completes, once their prerequisites are met', function () {
     Queue::fake();
     $organization = hardeningOrganization();
 
-    $completed = hardeningTask($organization, ['status' => 'complete', 'task_group' => 77]);
-    $other_work = hardeningTask($organization, ['status' => 'in_progress', 'task_group' => 78]);
-    $blocked = hardeningTask($organization, [
-        'status' => 'pending',
-        'task_group' => 77,
-        'prerequisites' => hardeningWaitingFor($other_work),
-    ]);
-    $free = hardeningTask($organization, ['status' => 'pending', 'task_group' => 77]);
+    $completed = hardeningTask($organization, ['status' => 'complete']);
+    $other_work = hardeningTask($organization, ['status' => 'in_progress']);
+    $waiting = hardeningTask($organization);
+    $waiting->dependOn($completed);
+    $still_blocked = hardeningTask($organization);
+    $still_blocked->dependOn([$completed, $other_work]);
+    // Same group, but nothing to do with it
+    $unrelated = hardeningTask($organization, ['task_group' => $completed->task_group]);
 
-    app(TaskRunner::class)->poll($completed);
+    app(TaskRunner::class)->wakeDependents($completed);
 
     Queue::assertPushed(RunAction::class, 1);
-    Queue::assertPushed(RunAction::class, fn (RunAction $job) => $job->task->is($free));
-    Queue::assertNotPushed(RunAction::class, fn (RunAction $job) => $job->task->is($blocked));
+    Queue::assertPushed(RunAction::class, fn (RunAction $job) => $job->task->is($waiting));
+    Queue::assertNotPushed(RunAction::class, fn (RunAction $job) => $job->task->is($still_blocked) || $job->task->is($unrelated));
 });
 
-it('says so when a prerequisite task has failed instead of waiting on it', function () {
+it('says so when a task it waits for has failed instead of waiting on it', function () {
     $organization = hardeningOrganization();
 
     $failed = hardeningTask($organization, ['status' => 'failed']);
     $running = hardeningTask($organization, ['status' => 'in_progress']);
 
-    $after_failed = hardeningTask($organization, ['prerequisites' => hardeningWaitingFor($failed)]);
-    $after_running = hardeningTask($organization, ['prerequisites' => hardeningWaitingFor($running)]);
+    $after_failed = hardeningTask($organization);
+    $after_failed->dependOn($failed);
+    $after_running = hardeningTask($organization);
+    $after_running->dependOn($running);
 
     $failed_check = ActionFacade::checkPrerequisites($after_failed);
     $running_check = ActionFacade::checkPrerequisites($after_running);
 
     expect($failed_check->passed)->toBeFalse();
+    expect($failed_check->blocked)->toBeTrue();
     expect($failed_check->message)->toBe(__('messages.action.dependency_failed'));
     expect($running_check->passed)->toBeFalse();
+    expect($running_check->blocked)->toBeFalse();
     expect($running_check->message)->toBe(__('messages.action.waiting_for'));
 });
 
-it('reports a failed task in waiting_for rather than waiting forever', function () {
+it('blocks a running task whose child failed rather than waiting for it forever', function () {
     $organization = hardeningOrganization();
 
     $failed = hardeningTask($organization, ['status' => 'failed']);
-    $waiting = hardeningTask($organization, [
-        'status' => 'in_progress',
-        'custom_values' => ['waiting_for' => [$failed->id]],
-    ]);
+    $waiting = hardeningTask($organization, ['status' => 'in_progress']);
+    $waiting->dependOn($failed, Task::GATE_FINISH);
 
     app(TaskRunner::class)->poll($waiting);
 
-    expect($waiting->fresh()->error_message)->toBe(__('messages.action.dependency_failed'));
-    expect($waiting->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);
+    $fresh = $waiting->fresh();
+    expect($fresh->error_message)->toBe(__('messages.action.dependency_failed'));
+    expect($fresh->status)->toBe(TaskStatus::BLOCKED);
+    expect($fresh->blocked_from)->toBe('in_progress');
 });
 
 it('registers an action under group.slug and rejects bad registrations', function () {

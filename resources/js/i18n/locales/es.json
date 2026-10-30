@@ -666,6 +666,7 @@
       "failed": "Fallida",
       "pending": "Pendiente",
       "queued": "En Cola",
+      "blocked": "Bloqueada",
       "ready": "Lista",
       "inProgress": "En Progreso",
       "completed": "Completada",

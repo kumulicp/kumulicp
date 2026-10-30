@@ -194,6 +194,7 @@ export default {
       statuses: [
         { text: this.$t('admin.tasks.all'), value: '' },
         { text: this.$t('admin.tasks.failed'), value: 'failed' },
+        { text: this.$t('admin.tasks.blocked'), value: 'blocked' },
         { text: this.$t('admin.tasks.pending'), value: 'pending' },
         { text: this.$t('admin.tasks.inProgress'), value: 'in_progress' },
         { text: this.$t('admin.tasks.completed'), value: 'complete' }

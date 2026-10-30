@@ -16,9 +16,12 @@ enum TaskStatus: string
 
     case FAILED = 'failed';
 
+    // Waiting on a task it depends on that has failed
+    case BLOCKED = 'blocked';
+
     /**
-     * Not finished. A failed task counts as open: it still blocks identical
-     * tasks and anything waiting on it until it is retried or removed.
+     * Not finished. A failed or blocked task counts as open: it still blocks
+     * identical tasks and anything waiting on it until it is retried or removed.
      */
     public function isOpen(): bool
     {
@@ -47,11 +50,12 @@ enum TaskStatus: string
     public function transitions(): array
     {
         return match ($this) {
-            self::PENDING => [self::READY, self::IN_PROGRESS, self::COMPLETE, self::FAILED],
+            self::PENDING => [self::READY, self::IN_PROGRESS, self::COMPLETE, self::FAILED, self::BLOCKED],
             self::READY => [self::QUEUED, self::IN_PROGRESS, self::PENDING, self::FAILED],
             self::QUEUED => [self::IN_PROGRESS, self::READY, self::PENDING, self::FAILED],
-            self::IN_PROGRESS => [self::COMPLETE, self::FAILED, self::PENDING, self::READY],
+            self::IN_PROGRESS => [self::COMPLETE, self::FAILED, self::PENDING, self::READY, self::BLOCKED],
             self::FAILED => [self::PENDING, self::READY],
+            self::BLOCKED => [self::PENDING, self::IN_PROGRESS, self::FAILED],
             self::COMPLETE => [],
         };
     }

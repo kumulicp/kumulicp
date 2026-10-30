@@ -49,11 +49,55 @@ class Action
     // Routes RunAction onto the 'database-long' queue connection (longer retry_after).
     public static bool $long_running = false;
 
+    /**
+     * Ids of the tasks that must be complete before this one runs.
+     *
+     * @var array<int, int>
+     */
+    public array $start_dependencies = [];
+
+    /**
+     * Ids of the tasks this one can't complete without, or null if the action
+     * doesn't say (a running task's existing ones are then left as they are).
+     *
+     * @var array<int, int>|null
+     */
+    public ?array $finish_dependencies = null;
+
     protected $application;
 
     protected $version;
 
     protected $app_instance;
+
+    /**
+     * The task isn't run until these are complete. A failed one blocks it.
+     */
+    public function dependsOn(Task ...$tasks): static
+    {
+        // Ids as keys deduplicate for free
+        $merged = array_fill_keys($this->start_dependencies, true);
+
+        foreach ($tasks as $task) {
+            $merged[$task->id] = true;
+        }
+
+        $this->start_dependencies = array_keys($merged);
+
+        return $this;
+    }
+
+    /**
+     * The task stays in progress, and isn't polled for completion, until these
+     * are complete. For work the action started and is waiting on. Replaces what
+     * a running task waited on before.
+     */
+    public function waitFor(Task ...$tasks): static
+    {
+        $this->finish_dependencies = array_values(array_unique([...($this->finish_dependencies ?? []), ...array_map(fn (Task $task) => $task->id, $tasks)]));
+
+        return $this;
+    }
 
     public function application($property)
     {

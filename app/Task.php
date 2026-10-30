@@ -6,9 +6,11 @@ use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -29,6 +31,7 @@ use Illuminate\Support\Facades\Log;
  * @property Carbon|null $claimed_at
  * @property Carbon|null $deadline_at
  * @property Carbon|null $next_attempt_at
+ * @property string|null $blocked_from
  * @property-read Application|null $application
  * @property-read AppVersion|null $version
  * @property-read Organization|null $organization
@@ -41,6 +44,12 @@ class Task extends Model
     // Longest a RunAction may hold a task for. Past this a claim no longer
     // counts, so a worker that died mid-run can't keep the task to itself.
     public const CLAIM_LEASE_SECONDS = 1200;
+
+    // A dependency that must be complete before the task runs
+    public const GATE_START = 'start';
+
+    // A dependency the running task can't complete without
+    public const GATE_FINISH = 'finish';
 
     // How long a task may sit queued before the reaper assumes its job was lost
     public const QUEUED_TIMEOUT_MINUTES = 10;
@@ -162,6 +171,114 @@ class Task extends Model
 
         $this->forceFill(['claimed_at' => null]);
         $this->syncOriginalAttributes(['claimed_at']);
+    }
+
+    /**
+     * The tasks this one waits for, whichever gate (see the pivot's gate).
+     *
+     * @return BelongsToMany<Task, $this>
+     */
+    public function dependencies(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'task_dependencies', 'task_id', 'depends_on_task_id')->withPivot('gate');
+    }
+
+    /**
+     * The tasks waiting for this one.
+     *
+     * @return BelongsToMany<Task, $this>
+     */
+    public function dependents(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'task_dependencies', 'depends_on_task_id', 'task_id')->withPivot('gate');
+    }
+
+    /**
+     * Makes the task wait for $tasks (tasks or ids). Tasks that are already
+     * waited for at that gate are left alone. Throws if it would make the task
+     * wait, however indirectly, for itself.
+     *
+     * @param  Task|int|iterable<int, Task|int>  $tasks
+     */
+    public function dependOn(Task|int|iterable $tasks, string $gate = self::GATE_START): void
+    {
+        $ids = self::idsOf($tasks);
+
+        foreach ($ids as $id) {
+            if ($id === (int) $this->id || $this->isDependedOnBy($id)) {
+                throw new \LogicException("Task {$this->id} can't wait for task {$id}: that would make it wait for itself");
+            }
+        }
+
+        foreach ($ids as $id) {
+            DB::table('task_dependencies')->insertOrIgnore([
+                'task_id' => $this->id,
+                'depends_on_task_id' => $id,
+                'gate' => $gate,
+                'created_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Makes $tasks the ones the running task waits on to finish, dropping any
+     * it waited on before.
+     *
+     * @param  Task|int|iterable<int, Task|int>  $tasks
+     */
+    public function syncFinishDependencies(Task|int|iterable $tasks): void
+    {
+        $ids = self::idsOf($tasks);
+
+        DB::table('task_dependencies')
+            ->where('task_id', $this->id)
+            ->where('gate', self::GATE_FINISH)
+            ->whereNotIn('depends_on_task_id', $ids)
+            ->delete();
+
+        $this->dependOn($ids, self::GATE_FINISH);
+    }
+
+    /**
+     * Whether task $id waits, however indirectly, for this one.
+     */
+    private function isDependedOnBy(int $id): bool
+    {
+        $seen = [];
+        $frontier = [$id];
+
+        while ($frontier !== []) {
+            $next = DB::table('task_dependencies')
+                ->whereIn('task_id', $frontier)
+                ->pluck('depends_on_task_id')
+                ->map(fn ($task_id) => (int) $task_id)
+                ->all();
+
+            if (in_array((int) $this->id, $next, true)) {
+                return true;
+            }
+
+            $seen = array_merge($seen, $frontier);
+            $frontier = array_values(array_diff(array_unique($next), $seen));
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  Task|int|iterable<int, Task|int>  $tasks
+     * @return array<int, int>
+     */
+    private static function idsOf(Task|int|iterable $tasks): array
+    {
+        $tasks = $tasks instanceof Task || is_int($tasks) ? [$tasks] : $tasks;
+        $ids = [];
+
+        foreach ($tasks as $task) {
+            $ids[] = (int) ($task instanceof Task ? $task->id : $task);
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**

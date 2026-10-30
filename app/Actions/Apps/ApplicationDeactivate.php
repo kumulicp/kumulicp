@@ -46,7 +46,7 @@ class ApplicationDeactivate extends Action
         RemoveLDAPGroups::dispatch($task->app_instance);
 
         if (Application::profile($app_instance->application->slug)->activationType() == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'upgrade'), null, true)) {
-            $application_deactivate->addCustomValue(['waiting_for' => [$job->id]]);
+            $application_deactivate->waitFor($job);
 
             $parent_app = Application::instance($app_instance->parent);
             $parent_app->connect('web')->update();

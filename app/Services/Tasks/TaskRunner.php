@@ -96,8 +96,16 @@ class TaskRunner
      */
     public function poll(Task $task): void
     {
-        if ($blocked_by = $this->waitingFor($task->getValue('waiting_for'))) {
-            $error_message = __("messages.action.{$blocked_by}");
+        $state = app(TaskDependencies::class)->state($task, Task::GATE_FINISH);
+
+        if ($state['failed']->isNotEmpty()) {
+            $this->block($task, TaskStatus::IN_PROGRESS);
+
+            return;
+        }
+
+        if ($state['waiting']->isNotEmpty()) {
+            $error_message = __('messages.action.waiting_for');
             if ($task->error_message != $error_message) {
                 $task->error_message = $error_message;
                 $task->save();
@@ -109,18 +117,47 @@ class TaskRunner
         if ($handler = $this->handlerFor($task)) {
             $this->apply($task, $handler->poll($task));
         }
+    }
 
-        if ($task->status === TaskStatus::COMPLETE) {
-            $dispatcher = app(TaskDispatcher::class);
+    /**
+     * A task needs another that has failed: park it, visibly, until that one is
+     * retried or removed (TaskDispatcher::unblock() then lets it carry on).
+     */
+    public function block(Task $task, TaskStatus $from): void
+    {
+        $message = __('messages.action.dependency_failed');
 
-            foreach (Task::whereNot('id', $task->id)->where('task_group', $task->task_group)->get() as $other_task) {
-                // Pending siblings still have to satisfy their own prerequisites
-                if ($other_task->status === TaskStatus::PENDING) {
-                    if (app('actions')->checkPrerequisites($other_task)->passed) {
-                        $dispatcher->queue($other_task);
-                    }
-                } elseif ($other_task->status === TaskStatus::IN_PROGRESS) {
-                    $this->poll($other_task);
+        $blocked = $task->transition(TaskStatus::BLOCKED, $from, [
+            'blocked_from' => $from->value,
+            'error_code' => 'dependency_failed',
+            'error_message' => $message,
+        ]);
+
+        if ($blocked) {
+            TaskEvent::record($task, 'blocked', $message, [], $from);
+        }
+    }
+
+    /**
+     * A task has finished: the ones waiting for it needn't wait for the next
+     * scheduled pass to carry on.
+     */
+    public function wakeDependents(Task $task): void
+    {
+        $dispatcher = app(TaskDispatcher::class);
+
+        foreach ($task->dependents()->get() as $dependent) {
+            /** @var object{gate: string} $pivot */
+            $pivot = $dependent->getRelation('pivot');
+
+            if ($pivot->gate === Task::GATE_START && in_array($dependent->status, [TaskStatus::PENDING, TaskStatus::READY], true)) {
+                if (app('actions')->checkPrerequisites($dependent)->passed) {
+                    $dispatcher->queue($dependent);
+                }
+            } elseif ($pivot->gate === Task::GATE_FINISH && $dependent->status === TaskStatus::IN_PROGRESS) {
+                // Not one that is still being run: complete() would race run()
+                if (Task::whereKey($dependent->id)->notClaimed()->exists()) {
+                    $this->tryPoll($dependent);
                 }
             }
         }
@@ -189,10 +226,25 @@ class TaskRunner
                 $task->save();
             }
 
+            // Only when the action says what it waits for: one rebuilt without
+            // saying keeps what it had
+            if ($result->action && $result->action->finish_dependencies !== null) {
+                $task->syncFinishDependencies($result->action->finish_dependencies);
+            }
+
+            // A legacy action may have completed the task itself
+            if ($task->status === TaskStatus::COMPLETE) {
+                $this->wakeDependents($task);
+            }
+
             return;
         }
 
         $this->mergeValues($task, $result->values);
+
+        if ($result->waiting_for !== null) {
+            $task->syncFinishDependencies($result->waiting_for);
+        }
 
         switch ($result->outcome) {
             case ActionResult::DONE:
@@ -200,6 +252,7 @@ class TaskRunner
                 $task->complete();
                 $task->groupNotified();
                 TaskEvent::record($task, 'completed', null, [], $from);
+                $this->wakeDependents($task);
                 break;
 
             case ActionResult::RETRY_LATER:
@@ -298,30 +351,5 @@ class TaskRunner
         $class = $this->handlerFor($task)?->actionClass();
 
         return $class ? $class::$max_attempts : 1;
-    }
-
-    /**
-     * Why the tasks this one waits on (ids) are holding it back: the
-     * messages.action key to show, or null if none of them are.
-     */
-    private function waitingFor(?array $tasks = null): ?string
-    {
-        $blocked_by = null;
-
-        foreach ($tasks ?? [] as $task) {
-            $waiting_for = Task::find($task);
-
-            if ($waiting_for && $waiting_for->status === TaskStatus::FAILED) {
-                // A failed dependency won't finish by itself: say so rather
-                // than showing "waiting" forever.
-                return 'dependency_failed';
-            }
-
-            if ($waiting_for && $waiting_for->status !== TaskStatus::COMPLETE) {
-                $blocked_by = 'waiting_for';
-            }
-        }
-
-        return $blocked_by;
     }
 }
