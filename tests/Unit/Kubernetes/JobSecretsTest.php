@@ -108,7 +108,7 @@ it('reads an env secret from the Secret on kubernetes, never inlining the value'
 });
 
 it('keeps a plain env value on drivers that do not create the Secret', function () {
-    $chart = jobChartFor('rancher');
+    $chart = jobChartFor('other');
 
     expect($chart->secretEnv('NO_REPLY_PASSWORD', 'pw'))->toBe(['name' => 'NO_REPLY_PASSWORD', 'value' => 'pw'])
         ->and($chart->secrets()->isEmpty())->toBeTrue();

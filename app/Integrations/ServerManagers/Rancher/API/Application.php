@@ -23,6 +23,15 @@ class Application extends Rancher
         // instantiate nextcloud
         $data = $chart->buildChart();
 
+        // values() fills $chart->secrets() as a side effect, so the Secret is
+        // applied only after the chart is built, and before the install that
+        // references it.
+        $secret_result = $this->secret()->applyStore($chart->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
+        }
+
         $response = $this->json()->post($url, $data);
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
@@ -45,6 +54,16 @@ class Application extends Rancher
         $url = $address."/v1/catalog.cattle.io.clusterrepos/$repo_name?action=upgrade";
 
         $data = $chart->buildChart();
+
+        // values() fills $chart->secrets() as a side effect, so the Secret is
+        // applied only after the chart is built, and before the install that
+        // references it.
+        $secret_result = $this->secret()->applyStore($chart->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
+        }
+
         $response = $this->json()->post($url, $data);
 
         Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
@@ -87,6 +106,8 @@ class Application extends Rancher
         $url = "$address/v1/catalog.cattle.io.apps/$namespace/$app_name?action=uninstall";
 
         $response = $this->json()->ignoreErrorCode(404)->post($url, $data);
+
+        $this->secret()->removeStore($chart->secrets());
 
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 

@@ -22,15 +22,64 @@ class Job extends Rancher
             Arr::set($data, 'spec.template.spec.imagePullSecrets', array_map(fn ($name) => ['name' => $name], $pull_secrets));
         }
 
-        $this->json()->post($url, $data);
+        // The Job's own manifest decides where it runs; its Secret must be there too.
+        $job->secrets()->setNamespace(Arr::get($job->chart, 'metadata.namespace', $namespace));
+
+        $secret_result = $this->secret()->applyStore($job->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
+        }
+
+        try {
+            $this->json()->post($url, $data);
+        } catch (\Throwable $e) {
+            $this->secret()->removeStore($job->secrets());
+
+            throw $e;
+        }
+
         $response = $this->response();
 
         Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
 
+        $content = $this->response_content();
+
+        if (! $job->secrets()->isEmpty()) {
+            $this->settleJobSecret($job, $content);
+        }
+
         return [
             'status' => 'success',
-            'response' => $this->response_content(),
+            'response' => $content,
         ];
+    }
+
+    // A job's Secret is owned by the Job: gone with it on success, and removed
+    // once the Job is confirmed not to exist. The Job's uid comes from the
+    // create response, else from the cluster; if that lookup fails for any
+    // other reason the Secret is left alone, since removing it would break a
+    // Job that did start.
+    private function settleJobSecret(JobChart $job, mixed $created): void
+    {
+        $name = Arr::get($job->chart, 'metadata.name');
+        $uid = Arr::get(is_array($created) ? $created : [], 'metadata.uid');
+
+        if (! $uid) {
+            $found = $this->api()->get('batch/v1', 'Job', $name, $job->secrets()->namespace());
+            $uid = Arr::get($found['data'] ?? [], 'metadata.uid');
+
+            if (! $uid) {
+                if ($found['status'] === 404) {
+                    $this->secret()->removeStore($job->secrets());
+                }
+
+                return;
+            }
+        }
+
+        // Re-apply with an ownerReference now the Job's uid is known.
+        $this->secret()->applyStore($job->secrets(), ['name' => $name, 'uid' => $uid]);
     }
 
     // primarily for adding regex redirects

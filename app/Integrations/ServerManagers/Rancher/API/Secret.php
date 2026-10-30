@@ -2,12 +2,15 @@
 
 namespace App\Integrations\ServerManagers\Rancher\API;
 
+use App\Integrations\ServerManagers\Concerns\AppliesChartSecrets;
 use App\Integrations\ServerManagers\Rancher\Rancher;
 use App\RepoSecret;
 use Illuminate\Support\Facades\Log;
 
 class Secret extends Rancher
 {
+    use AppliesChartSecrets;
+
     // Check if the registry secret exists(1) or does not exist(0) in the given namespace
     public function isActive(string $namespace, RepoSecret $repo_secret): int
     {
