@@ -3,6 +3,9 @@
 namespace App\Integrations\ServerManagers\Rancher;
 
 use App\Integrations\Integration;
+use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
+use App\Integrations\ServerManagers\Rancher\API\Secret;
+use App\Integrations\ServerManagers\Rancher\Support\RancherClusterCredentials;
 use App\Organization;
 use App\OrgServer;
 use App\Services\OrgServerService;
@@ -16,6 +19,8 @@ class Rancher extends Integration
     private $namespace;
 
     private $raw_response = false;
+
+    private ?KubernetesApiClient $api = null;
 
     public function __construct(Organization $organization, public OrgServer $org_server)
     {
@@ -58,6 +63,22 @@ class Rancher extends Integration
             $server_info->api_key,
             $server_info->api_secret,
         ];
+    }
+
+    /**
+     * The Kubernetes API of the cluster Rancher manages, reached through
+     * Rancher's cluster proxy (see RancherClusterCredentials).
+     */
+    public function api(): KubernetesApiClient
+    {
+        $server = $this->org_server->server;
+
+        return $this->api ??= new KubernetesApiClient($server, new RancherClusterCredentials($server));
+    }
+
+    public function secret(): Secret
+    {
+        return new Secret($this->organization, $this->org_server);
     }
 
     // Skips JSON decoding for the next request so plain-text responses

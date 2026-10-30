@@ -5,6 +5,7 @@ namespace App\Integrations\ServerManagers\Rancher\Charts;
 use App\AppInstance;
 use App\Integrations\Applications\AppFeature;
 use App\Organization;
+use App\OrgServer;
 use App\Support\Facades\Application;
 use App\Support\SecretValue;
 use Illuminate\Support\Str;
@@ -67,12 +68,19 @@ class Chart
     }
 
     // Whether the web server's driver creates this chart's Secret before the
-    // workload starts. Only the kubernetes driver does; anything else has to keep using
-    // plaintext values, or the secretKeyRef would point at a Secret that
-    // never exists.
+    // workload starts. The kubernetes driver does, and so does rancher, through
+    // Rancher's Kubernetes proxy; anything else has to keep using plaintext
+    // values, or the secretKeyRef would point at a Secret that never exists.
     protected function secretsDelivered(): bool
     {
-        return $this->app_instance->web_server?->server?->interface === 'kubernetes';
+        return $this->webServerDeliversSecrets($this->app_instance->web_server);
+    }
+
+    // For charts that run on a different instance's web server than their own
+    // (e.g. a shared-app child on its hub's).
+    protected function webServerDeliversSecrets(?OrgServer $web_server): bool
+    {
+        return in_array($web_server?->server?->interface, ['kubernetes', 'rancher'], true);
     }
 
     // A container env entry for a secret value: read from the chart's Secret

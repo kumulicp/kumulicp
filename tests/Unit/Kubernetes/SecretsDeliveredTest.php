@@ -34,6 +34,7 @@ it('only uses the secret store where the driver creates the Secret', function (?
     expect(helmChartOn($interface)->delivered())->toBe($expected);
 })->with([
     'kubernetes applies the Secret' => ['kubernetes', true],
-    'rancher never applies the Secret' => ['rancher', false],
+    'rancher applies the Secret through its cluster proxy' => ['rancher', true],
+    'an unknown driver does not' => ['other', false],
     'no web server assigned' => [null, false],
 ]);

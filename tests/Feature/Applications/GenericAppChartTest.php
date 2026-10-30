@@ -304,8 +304,13 @@ it('delivers the plan secrets through the Secret and restarts the pods when they
     Application::plan($app_plan)->secrets()->update([['name' => 'DB_PASSWORD', 'value' => 'changed']]);
     expect($on('kubernetes')->values()['podAnnotations']['kumulicp.io/secrets-checksum'])->not->toBe($checksum);
 
+    // Rancher applies the Secret through its cluster proxy, so it delivers it too
+    $rancher = $on('rancher')->values();
+    expect(collect($rancher['env'])->firstWhere('name', 'DB_PASSWORD')['valueFrom']['secretKeyRef']['key'])->toBe('db-password');
+    expect(json_encode($rancher))->not->toContain('changed');
+
     // Drivers that do not create the Secret keep the plain value, and have no Secret to watch
-    $plain = $on('rancher')->values();
+    $plain = $on('other')->values();
     expect(collect($plain['env'])->firstWhere('name', 'DB_PASSWORD'))->toBe(['name' => 'DB_PASSWORD', 'value' => 'changed']);
     expect($plain)->not->toHaveKey('podAnnotations');
 });

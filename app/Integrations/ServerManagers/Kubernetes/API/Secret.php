@@ -2,13 +2,15 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\API;
 
+use App\Integrations\ServerManagers\Concerns\AppliesChartSecrets;
 use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
-use App\Integrations\ServerManagers\Rancher\Charts\ChartSecrets;
 use App\RepoSecret;
 use Illuminate\Support\Facades\Log;
 
 class Secret extends Kubernetes
 {
+    use AppliesChartSecrets;
+
     public function isActive(string $namespace, RepoSecret $repo_secret): int
     {
         $result = $this->api()->get('v1', 'Secret', $repo_secret->k8sSecretName(), $namespace);
@@ -35,37 +37,6 @@ class Secret extends Kubernetes
         Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $repo_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
 
         return ['status' => 'success', 'response' => $result['data']];
-    }
-
-    // Applies a chart's collected secrets as a standard Secret. Must run before
-    // the workload that references it is created. No-op for an empty store.
-    // $ownerJob (name, uid) is for job stores, so the Secret is garbage-collected
-    // with its Job.
-    public function applyStore(ChartSecrets $store, ?array $ownerJob = null): array
-    {
-        if ($store->isEmpty()) {
-            return ['status' => 'success', 'response' => null];
-        }
-
-        $manifest = $store->manifest($ownerJob['uid'] ?? null, $ownerJob['name'] ?? null);
-        $result = $this->api()->apply($manifest, $store->namespace());
-
-        // Only the name is logged: the manifest and its values must never reach logs.
-        Log::info(__('messages.api.rancher.log.chart_secret_applied', ['namespace' => $store->namespace(), 'name' => $store->name()]), ['organization_id' => $this->organization->id]);
-
-        return [
-            'status' => $result['success'] ? 'success' : 'failed',
-            'response' => $result['success'] ? null : $result['error'],
-        ];
-    }
-
-    public function removeStore(ChartSecrets $store): array
-    {
-        $result = $this->api()->delete('v1', 'Secret', $store->name(), $store->namespace());
-
-        Log::info(__('messages.api.rancher.log.chart_secret_deleted', ['namespace' => $store->namespace(), 'name' => $store->name()]), ['organization_id' => $this->organization->id]);
-
-        return ['status' => $result['success'] ? 'success' : 'failed', 'response' => $result['success'] ? null : $result['error']];
     }
 
     public function ensure(string $namespace, RepoSecret $repo_secret)

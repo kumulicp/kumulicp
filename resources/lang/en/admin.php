@@ -52,7 +52,8 @@ return [
             'api_secret' => 'Use the Secret key that comes with the API key created above. Stored encrypted; not shown again after saving — leave blank to keep the current value.',
             'ip' => 'IP address of the domain used in the address',
             'internal_address' => 'This is used for apps that need to add a proxy server as a trusted IP',
-            'settings' => 'Requires creating a new project for organizations to be stored. Add the settings: project_id',
+            'settings' => 'Requires creating a new project for organizations to be stored. Add the settings: project_id.
+        Optional: "rancher_cluster_id" (default "local") names the cluster whose Kubernetes API is reached through Rancher\'s proxy (/k8s/clusters/<id>) to create Secrets for charts and jobs. Not needed if the Address already points at a cluster (…/k8s/clusters/<id>). The Rancher API key must be allowed to create Secrets in the organization namespaces.',
         ],
         'app_database' => [
             'host' => 'IP or domain used by the Control Panel to connect to this database',
