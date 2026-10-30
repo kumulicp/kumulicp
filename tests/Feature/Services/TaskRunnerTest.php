@@ -274,7 +274,7 @@ it('rejects a native action that returns a legacy result', function () {
     RunnerNative::$handle = fn () => ActionResult::legacy();
     $task = runnerTask();
 
-    expect(fn () => ActionFacade::run($task))->toThrow(LogicException::class);
+    expect(fn () => app(TaskRunner::class)->execute($task))->toThrow(LogicException::class);
 });
 
 it('polls a native action until it is done', function () {
@@ -354,7 +354,7 @@ it('leaves a status a legacy action set itself alone', function () {
 it('has nothing to run for an action that is not registered', function () {
     $task = runnerTask('unknown');
 
-    expect(fn () => ActionFacade::run($task))->toThrow(Exception::class, 'hasn\'t been registered');
+    expect(fn () => app(TaskRunner::class)->execute($task))->toThrow(Exception::class, 'hasn\'t been registered');
 });
 
 it('retries a task whose action has no fresh action to give', function () {

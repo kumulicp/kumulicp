@@ -33,8 +33,8 @@ use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearTestAccounts;
 use App\Actions\Tests\CreateTests;
 use App\AppInstance;
-use App\Enums\TaskStatus;
 use App\Contracts\Actions\TaskAction;
+use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
 use App\Integrations\Applications\DemoApp\Actions\ProcessGroupOptions as DemoAppProcessGroupOptions;
@@ -48,7 +48,6 @@ use App\Services\Tasks\Handlers\LegacyHandler;
 use App\Services\Tasks\Handlers\NativeHandler;
 use App\Services\Tasks\Handlers\TaskHandler;
 use App\Services\Tasks\TaskDispatcher;
-use App\Services\Tasks\TaskRunner;
 use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -189,23 +188,6 @@ class ActionService
     }
 
     /**
-     * Runs the task's action once, as it stands. The queue's RunAction job
-     * goes through TaskRunner::run(), which also takes the task first.
-     */
-    public function run(Task $task)
-    {
-        app(TaskRunner::class)->execute($task);
-    }
-
-    /**
-     * Polls the task's action to see whether it has finished.
-     */
-    public function complete(Task $task)
-    {
-        app(TaskRunner::class)->poll($task);
-    }
-
-    /**
      * Registers an action class under "group.slug" (e.g. "nextcloud.manage_addon").
      */
     public function register(string $name, string $action): void
@@ -288,11 +270,6 @@ class ActionService
         }
 
         return $this->execute($action, $parent_task);
-    }
-
-    public function revert(Task $task)
-    {
-        app(TaskRunner::class)->compensate($task);
     }
 
     public function clear(string $action_name, ?AppInstance $app_instance = null)

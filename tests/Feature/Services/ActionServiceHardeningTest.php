@@ -8,6 +8,7 @@ use App\Jobs\RunAction;
 use App\Organization;
 use App\Services\ActionService;
 use App\Services\SubscriptionService;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
 use Illuminate\Support\Facades\Artisan;
@@ -110,7 +111,7 @@ it('only runs pending siblings whose prerequisites are met when a task completes
     ]);
     $free = hardeningTask($organization, ['status' => 'pending', 'task_group' => 77]);
 
-    ActionFacade::complete($completed);
+    app(TaskRunner::class)->poll($completed);
 
     Queue::assertPushed(RunAction::class, 1);
     Queue::assertPushed(RunAction::class, fn (RunAction $job) => $job->task->is($free));
@@ -144,7 +145,7 @@ it('reports a failed task in waiting_for rather than waiting forever', function 
         'custom_values' => ['waiting_for' => [$failed->id]],
     ]);
 
-    ActionFacade::complete($waiting);
+    app(TaskRunner::class)->poll($waiting);
 
     expect($waiting->fresh()->error_message)->toBe(__('messages.action.dependency_failed'));
     expect($waiting->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);

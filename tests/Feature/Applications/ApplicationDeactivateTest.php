@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Enums\TaskStatus;
 use App\Notifications\ApplicationDeactivated;
 use App\Organization;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use Illuminate\Support\Facades\Notification;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
@@ -53,14 +54,14 @@ it('deactivates an active app instance and notifies admins', function () {
     $instance->refresh();
     expect($instance->status)->toBe('deactivating');
 
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
     $task->refresh();
 
     // ApplicationDeactivate::complete() only finalizes once the web server
     // reports inactive -- FakeServerManager defaults to "active" for any
     // instance it hasn't been told otherwise about.
     FakeServerManager::markInactive($instance->id);
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
     $task->refresh();
 
     expect($task->status)->toBe(TaskStatus::COMPLETE);
@@ -82,11 +83,11 @@ it('cascades deactivation to child app instances', function () {
     $child->refresh();
     expect($child->status)->toBe('deactivating');
 
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
     $task->refresh();
 
     FakeServerManager::markInactive($instance->id);
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
 
     $instance->refresh();
     $child->refresh();
@@ -107,11 +108,11 @@ it('removes additional storage records once deactivation completes', function ()
     $storage->save();
 
     $task = Action::execute(new ApplicationDeactivate($instance));
-    Action::run($task);
+    app(TaskRunner::class)->execute($task);
     $task->refresh();
 
     FakeServerManager::markInactive($instance->id);
-    Action::complete($task);
+    app(TaskRunner::class)->poll($task);
 
     expect(AdditionalStorage::find($storage->id))->toBeNull();
 });

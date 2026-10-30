@@ -11,6 +11,7 @@ use App\Application;
 use App\AppPlan;
 use App\Enums\TaskStatus;
 use App\Organization;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Task;
 use Illuminate\Support\Facades\Mail;
@@ -114,9 +115,9 @@ trait TestsApplicationLifecycle
         $task = Action::execute(new ApplicationActivate(organization: $org, app: $app, plan: $plan));
         $task->status = TaskStatus::IN_PROGRESS;
         $task->save();
-        Action::run($task);
+        app(TaskRunner::class)->execute($task);
 
-        $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
+        $this->pollUntilDone($task, fn (Task &$t) => app(TaskRunner::class)->poll($t));
 
         $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationActivate did not complete');
 
@@ -130,9 +131,9 @@ trait TestsApplicationLifecycle
     protected function runUpdate(AppInstance $instance): void
     {
         $task = Action::execute(new ApplicationUpdate($instance));
-        Action::run($task);
+        app(TaskRunner::class)->execute($task);
 
-        $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
+        $this->pollUntilDone($task, fn (Task &$t) => app(TaskRunner::class)->poll($t));
 
         $instance->refresh();
         $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationUpdate did not complete');
@@ -142,9 +143,9 @@ trait TestsApplicationLifecycle
     protected function runUpgrade(AppInstance $instance): void
     {
         $task = Action::execute(new ApplicationUpgrade($instance, $instance->version));
-        Action::run($task);
+        app(TaskRunner::class)->execute($task);
 
-        $this->pollUntilDone($task, fn (Task &$t) => Action::complete($t));
+        $this->pollUntilDone($task, fn (Task &$t) => app(TaskRunner::class)->poll($t));
 
         $instance->refresh();
         $this->assertSame(TaskStatus::COMPLETE, $task->status, 'ApplicationUpgrade did not complete');
@@ -155,12 +156,12 @@ trait TestsApplicationLifecycle
     {
         $instanceId = $instance->id;
         $task = Action::execute(new ApplicationDelete($instance));
-        Action::run($task);
+        app(TaskRunner::class)->execute($task);
         $task->status = TaskStatus::IN_PROGRESS;
         $task->save();
 
         $this->pollUntilDone($task, function (Task &$t) {
-            Action::complete($t);
+            app(TaskRunner::class)->poll($t);
             // ApplicationDelete marks itself done by deleting the Task record
             if (is_null(Task::find($t->id))) {
                 $t->status = TaskStatus::COMPLETE;
