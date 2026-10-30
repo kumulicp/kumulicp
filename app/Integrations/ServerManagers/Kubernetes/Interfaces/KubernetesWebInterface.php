@@ -19,27 +19,57 @@ use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
 
+/**
+ * Built to be extended: a driver layered on Kubernetes (e.g. Rancher)
+ * overrides the make*() factories to swap in its own API classes, and any
+ * of the public methods where its behaviour differs.
+ */
 class KubernetesWebInterface implements AppInterface, OrganizationInterface
 {
     use OrganizationServices;
 
-    private $organization;
+    protected $organization;
 
-    private $namespace;
+    protected $namespace;
 
-    private $application;
+    protected $application;
 
-    private $secret;
+    protected $secret;
 
     public function __construct(
-        private OrgServer $server,
-        private ?AppInstance $app_instance = null,
+        protected OrgServer $server,
+        protected ?AppInstance $app_instance = null,
     ) {
         $this->organization = $server->organization;
 
-        $this->namespace = new KubernetesNamespace($this->organization, $server);
-        $this->application = new Application($this->organization, $server);
-        $this->secret = new Secret($this->organization, $server);
+        $this->namespace = $this->makeNamespace();
+        $this->application = $this->makeApplication();
+        $this->secret = $this->makeSecret();
+    }
+
+    protected function makeNamespace(): KubernetesNamespace
+    {
+        return new KubernetesNamespace($this->organization, $this->server);
+    }
+
+    protected function makeApplication(): Application
+    {
+        return new Application($this->organization, $this->server);
+    }
+
+    protected function makeSecret(): Secret
+    {
+        return new Secret($this->organization, $this->server);
+    }
+
+    protected function makeJob(): Job
+    {
+        return new Job($this->organization, $this->server);
+    }
+
+    protected function makeDomainMiddleware(): DomainMiddlewareService
+    {
+        return new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
     }
 
     // Make sure the image registry credentials required by the app instance's version
@@ -59,16 +89,8 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function exists()
     {
-        $app = new Application($this->organization, $this->server);
-
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($this->app_instance)->charts();
-        }
-
-        foreach ($charts as $chart) {
-            $is_active = $app->isActive($this->app_instance, $chart);
+        foreach ($this->chartsForStatus() as $chart) {
+            $is_active = $this->application->isActive($this->app_instance, $chart);
 
             if ($is_active === 1 || $is_active === 2) {
                 return true;
@@ -85,15 +107,9 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function get()
     {
-        $app_instance = $this->app_instance;
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            $app_instance = $this->app_instance->parent;
-            $charts = ApplicationFacade::instance($app_instance)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($app_instance)->charts();
-        }
+        $app_instance = $this->statusInstance();
 
-        return $this->application->retrieve($app_instance, $charts[0]);
+        return $this->application->retrieve($app_instance, ApplicationFacade::instance($app_instance)->charts()[0]);
     }
 
     public function isActive()
@@ -140,16 +156,22 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         }
     }
 
-    private function chartsForStatus(): array
+    // The instance whose releases report this one's status: a job runs inside its parent's release.
+    protected function statusInstance(): AppInstance
     {
         if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            return ApplicationFacade::instance($this->app_instance->parent)->charts();
+            return $this->app_instance->parent;
         }
 
-        return ApplicationFacade::instance($this->app_instance)->charts();
+        return $this->app_instance;
     }
 
-    private function statusLabel(int $status): string
+    protected function chartsForStatus(): array
+    {
+        return ApplicationFacade::instance($this->statusInstance())->charts();
+    }
+
+    protected function statusLabel(int $status): string
     {
         return match ($status) {
             1 => 'deployed',
@@ -209,7 +231,7 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
     // isActive()), so callers that need the queue/task error-reporting
     // machinery to see a helm failure (RunAction::failed() -> task's
     // error_message + Laravel log) must check the result explicitly.
-    private function assertSuccessful(array $result, $chart): void
+    protected function assertSuccessful(array $result, $chart): void
     {
         if ($result['status'] === 'failed') {
             throw new \Exception(__('messages.exception.helm_operation_failed', [
@@ -240,21 +262,16 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function updateRedirectDomains()
     {
-        $domain_middleware = new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
-        $domain_middleware->update();
+        $this->makeDomainMiddleware()->update();
     }
 
     public function runJob(JobChart $job_chart)
     {
-        $job = new Job($this->organization, $this->server);
-
-        return $job->create($job_chart);
+        return $this->makeJob()->create($job_chart);
     }
 
     public function jobStatus(string $job_id)
     {
-        $job = new Job($this->organization, $this->server);
-
-        return $job->status($job_id);
+        return $this->makeJob()->status($job_id);
     }
 }

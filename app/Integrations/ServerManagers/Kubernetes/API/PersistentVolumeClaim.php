@@ -33,20 +33,27 @@ class PersistentVolumeClaim extends Kubernetes
             return 0;
         }
 
-        $data = $result['data'];
-        $phase = $data['status']['phase'] ?? null;
+        return $this->state($result['data'] ?? []);
+    }
 
-        return match ($phase) {
+    // Reads bound(1), non existant (0), or transitioning (2) off the claim object.
+    protected function state(array $claim): int
+    {
+        return match ($claim['status']['phase'] ?? null) {
             'Bound' => 1,
             'Pending' => 2,
             default => 0,
         };
     }
 
-    // No storage class is hardcoded (unlike Rancher's Longhorn default) so this
-    // works on any cluster; set the server setting 'storage_class' to override
-    // the cluster's default StorageClass.
-    private function manifest(string $namespace, string $claim_string, string $claim_size): array
+    // No storage class is hardcoded so this works on any cluster; set the
+    // server setting 'storage_class' to override the cluster's default StorageClass.
+    protected function storageClass(): ?string
+    {
+        return $this->server()->setting('storage_class');
+    }
+
+    protected function manifest(string $namespace, string $claim_string, string $claim_size): array
     {
         $spec = [
             'accessModes' => ['ReadWriteOnce'],
@@ -57,7 +64,7 @@ class PersistentVolumeClaim extends Kubernetes
             ],
         ];
 
-        if ($storage_class = $this->server()->setting('storage_class')) {
+        if ($storage_class = $this->storageClass()) {
             $spec['storageClassName'] = $storage_class;
         }
 

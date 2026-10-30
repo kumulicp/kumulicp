@@ -49,6 +49,12 @@ class Ingress extends Kubernetes
         $namespace = $this->organization->slug;
         $result = $this->api()->get('networking.k8s.io/v1', 'Ingress', $chart->name, $namespace);
 
-        return $result['success'] ? 1 : 0;
+        return $result['success'] ? $this->state($result['data'] ?? []) : 0;
+    }
+
+    // An ingress that exists is active(1); override to report transitioning (2).
+    protected function state(array $ingress): int
+    {
+        return 1;
     }
 }

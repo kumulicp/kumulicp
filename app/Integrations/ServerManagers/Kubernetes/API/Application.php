@@ -36,7 +36,7 @@ class Application extends Kubernetes
         return $this->installOrUpgrade($app_instance, $chart);
     }
 
-    private function installOrUpgrade(AppInstance $app_instance, HelmChart $chart): array
+    protected function installOrUpgrade(AppInstance $app_instance, HelmChart $chart): array
     {
         $app = $app_instance->application;
         $namespace = $chart->namespace();
@@ -112,9 +112,19 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        $status = $this->helmReleases()->status($release_name, $namespace);
+        return $this->state($this->releaseStatus($release_name, $namespace));
+    }
 
-        return match ($status) {
+    // The release's Helm status ('deployed', 'pending-install', ...), or null if it doesn't exist.
+    protected function releaseStatus(string $release_name, string $namespace): ?string
+    {
+        return $this->helmReleases()->status($release_name, $namespace);
+    }
+
+    // Maps a release status onto non existant (0), active (1), transitioning (2) or failed (3).
+    protected function state(?string $release_status): int
+    {
+        return match ($release_status) {
             'deployed' => 1,
             'pending-install', 'pending-upgrade', 'pending-rollback', 'uninstalling' => 2,
             'failed' => 3,
@@ -156,7 +166,7 @@ class Application extends Kubernetes
     // OCI_REGISTRY_HOST/OCI_USERNAME/OCI_PASSWORD to `helm registry login`
     // before the main command, or HELM_REPO_USERNAME/HELM_REPO_PASSWORD to
     // append --username/--password for classic repos.
-    private function chartReference(AppInstance $app_instance): array
+    protected function chartReference(AppInstance $app_instance): array
     {
         $chart_name = $app_instance->version->setting('chart_name');
         $repo = $app_instance->version->setting('helm_repo_name');

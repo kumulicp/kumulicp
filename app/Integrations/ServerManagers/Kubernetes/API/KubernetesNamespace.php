@@ -47,21 +47,20 @@ class KubernetesNamespace extends Kubernetes
             return 0;
         }
 
-        $data = $result['data'];
-        $phase = $data['status']['phase'] ?? null;
-
-        if ($phase === 'Active') {
-            return 1;
-        }
-
-        if ($phase === 'Terminating') {
-            return 2;
-        }
-
-        return 0;
+        return $this->state($result['data'] ?? []);
     }
 
-    private function manifest(string $namespace): array
+    // Reads active(1), non existant (0), or transitioning (2) off the namespace object.
+    protected function state(array $namespace): int
+    {
+        return match ($namespace['status']['phase'] ?? null) {
+            'Active' => 1,
+            'Terminating' => 2,
+            default => 0,
+        };
+    }
+
+    protected function manifest(string $namespace): array
     {
         return [
             'apiVersion' => 'v1',
