@@ -147,11 +147,14 @@ class TaskRunner
         $dispatcher = app(TaskDispatcher::class);
 
         foreach ($task->dependents()->get() as $dependent) {
-            if ($dependent->pivot->gate === Task::GATE_START && in_array($dependent->status, [TaskStatus::PENDING, TaskStatus::READY], true)) {
+            /** @var object{gate: string} $pivot */
+            $pivot = $dependent->getRelation('pivot');
+
+            if ($pivot->gate === Task::GATE_START && in_array($dependent->status, [TaskStatus::PENDING, TaskStatus::READY], true)) {
                 if (app('actions')->checkPrerequisites($dependent)->passed) {
                     $dispatcher->queue($dependent);
                 }
-            } elseif ($dependent->pivot->gate === Task::GATE_FINISH && $dependent->status === TaskStatus::IN_PROGRESS) {
+            } elseif ($pivot->gate === Task::GATE_FINISH && $dependent->status === TaskStatus::IN_PROGRESS) {
                 // Not one that is still being run: complete() would race run()
                 if (Task::whereKey($dependent->id)->notClaimed()->exists()) {
                     $this->tryPoll($dependent);

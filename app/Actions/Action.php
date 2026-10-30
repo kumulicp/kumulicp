@@ -75,7 +75,14 @@ class Action
      */
     public function dependsOn(Task ...$tasks): static
     {
-        $this->start_dependencies = array_values(array_unique([...$this->start_dependencies, ...array_map(fn (Task $task) => $task->id, $tasks)]));
+        // Ids as keys deduplicate for free
+        $merged = array_fill_keys($this->start_dependencies, true);
+
+        foreach ($tasks as $task) {
+            $merged[$task->id] = true;
+        }
+
+        $this->start_dependencies = array_keys($merged);
 
         return $this;
     }

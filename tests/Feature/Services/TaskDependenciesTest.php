@@ -322,15 +322,15 @@ it('replaces what a legacy action waits on only when it says what that is', func
 
     // Rebuilds itself without saying: keeps what it had
     DepsLegacy::$run = fn () => depAction($organization);
-    ActionFacade::run($task);
+    app(TaskRunner::class)->run($task);
     expect(depIds($task, 'finish'))->toBe([$old->id]);
 
     DepsLegacy::$run = fn () => depAction($organization)->waitFor($new);
-    ActionFacade::run($task);
+    app(TaskRunner::class)->run($task);
     expect(depIds($task, 'finish'))->toBe([$new->id]);
 
     DepsLegacy::$run = fn () => depAction($organization)->waitFor();
-    ActionFacade::run($task);
+    app(TaskRunner::class)->run($task);
     expect(depIds($task, 'finish'))->toBe([]);
 });
 

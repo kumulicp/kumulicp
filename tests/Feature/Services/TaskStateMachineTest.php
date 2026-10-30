@@ -81,11 +81,11 @@ function stateTask(array $attributes = []): Task
 
 it('keeps the enum values identical to the statuses already stored', function () {
     expect(array_map(fn (TaskStatus $status) => $status->value, TaskStatus::cases()))
-        ->toBe(['pending', 'ready', 'queued', 'in_progress', 'complete', 'failed']);
+        ->toBe(['pending', 'ready', 'queued', 'in_progress', 'complete', 'failed', 'blocked']);
 });
 
 it('treats every status but complete as open', function () {
-    expect(TaskStatus::openValues())->toBe(['pending', 'ready', 'queued', 'in_progress', 'failed']);
+    expect(TaskStatus::openValues())->toBe(['pending', 'ready', 'queued', 'in_progress', 'failed', 'blocked']);
     expect(TaskStatus::FAILED->isOpen())->toBeTrue();
     expect(TaskStatus::COMPLETE->isOpen())->toBeFalse();
 });
