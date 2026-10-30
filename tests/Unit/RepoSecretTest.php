@@ -87,6 +87,6 @@ it('applies the labels to the secret in both server managers', function (string 
 
     expect($secret_data['metadata']['labels'])->toBe($repo_secret->k8sLabels());
 })->with([
-    'rancher' => [Secret::class, 'values'],
+    'rancher' => [Secret::class, 'manifest'],
     'kubernetes' => [App\Integrations\ServerManagers\Kubernetes\API\Secret::class, 'manifest'],
 ]);

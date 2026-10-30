@@ -3,151 +3,107 @@
 namespace App\Integrations\ServerManagers\Rancher\API;
 
 use App\AppInstance;
+use App\Integrations\ServerManagers\Kubernetes\API\Application as BaseApplication;
 use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
-use App\Integrations\ServerManagers\Rancher\Rancher;
+use App\Integrations\ServerManagers\Rancher\Support\UsesRancher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
-class Application extends Rancher
+/**
+ * Installs apps through Rancher's catalog rather than a Helm Job of our own:
+ * Rancher runs the install, and reports the release's state on the catalog
+ * app. The chart's Secret, which its values reference, is a plain Kubernetes
+ * object applied through the cluster proxy before the install (see
+ * Chart::secretsDelivered()).
+ */
+class Application extends BaseApplication
 {
+    use UsesRancher;
+
     public function create(AppInstance $app_instance, HelmChart $chart)
     {
-        $app = $app_instance->application;
-        $app_name = $app->slug;
-        $namespace = $chart->namespace();
-        $address = $this->org_server->server->address;
-        $repo_name = $chart->repo_name ?? $app_instance->version->setting('helm_repo_name');
-
-        $url = $address."/v1/catalog.cattle.io.clusterrepos/$repo_name?action=install";
-
-        // instantiate nextcloud
-        $data = $chart->buildChart();
-
-        // values() fills $chart->secrets() as a side effect, so the Secret is
-        // applied only after the chart is built, and before the install that
-        // references it.
-        $secret_result = $this->secret()->applyStore($chart->secrets());
-
-        if ($secret_result['status'] !== 'success') {
-            return ['status' => 'failed', 'response' => $secret_result['response']];
-        }
-
-        $response = $this->json()->post($url, $data);
-
-        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
-
-        return [
-            'status' => 'success',
-            'response' => $this->response_content(),
-        ];
+        return $this->catalogAction($app_instance, $chart, 'install');
     }
 
     public function update(AppInstance $app_instance, HelmChart $chart)
     {
-        $app = $app_instance->application;
-        $app_name = $app->slug;
-        $namespace = $chart->namespace();
-        $application = $app_instance->application;
-        $address = $this->org_server->server->address;
-        $repo_name = $chart->repo_name ?? $app_instance->version->setting('helm_repo_name');
-
-        $url = $address."/v1/catalog.cattle.io.clusterrepos/$repo_name?action=upgrade";
-
-        $data = $chart->buildChart();
-
-        // values() fills $chart->secrets() as a side effect, so the Secret is
-        // applied only after the chart is built, and before the install that
-        // references it.
-        $secret_result = $this->secret()->applyStore($chart->secrets());
-
-        if ($secret_result['status'] !== 'success') {
-            return ['status' => 'failed', 'response' => $secret_result['response']];
-        }
-
-        $response = $this->json()->post($url, $data);
-
-        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
-
-        return [
-            'status' => 'success',
-            'response' => $this->response_content(),
-        ];
+        return $this->catalogAction($app_instance, $chart, 'upgrade');
     }
 
     public function retrieve(AppInstance $app_instance, HelmChart $chart)
     {
-        $namespace = $chart->namespace();
-        $application = $app_instance->application;
-        $address = $this->org_server->server->address;
-        $app_name = $chart->chartName();
-
-        $url = $address.'/v1/catalog.cattle.io.apps/'.$namespace.'/'.$app_name;
-
-        $response = $this->get($url);
+        $result = $this->rancher()->get('catalog.cattle.io/v1', 'App', $chart->chartName(), $chart->namespace());
 
         Log::info(__('messages.api.rancher.log.app_retrieved', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
         return [
-            'status' => 'success',
-            'response' => $this->response_content(),
+            'status' => $result['success'] ? 'success' : 'failed',
+            'response' => $result['success'] ? $result['data'] : $result['error'],
         ];
     }
 
     public function remove(AppInstance $app_instance, HelmChart $chart)
     {
-        $app_name = $chart->chartName();
+        $path = '/v1/catalog.cattle.io.apps/'.$chart->namespace().'/'.$chart->chartName().'?action=uninstall';
 
-        $namespace = $chart->namespace();
-        $application = $app_instance->application;
-        $address = $this->org_server->server->address;
-
-        $data = $chart->buildChart();
-
-        $url = "$address/v1/catalog.cattle.io.apps/$namespace/$app_name?action=uninstall";
-
-        $response = $this->json()->ignoreErrorCode(404)->post($url, $data);
+        $result = $this->rancher()->action($path, $chart->buildChart());
 
         $this->secret()->removeStore($chart->secrets());
 
         Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
 
+        // Already uninstalled is as good as done.
         return [
-            'status' => 'success',
-            'response' => $this->response_content(),
+            'status' => $result['success'] || $result['status'] === 404 ? 'success' : 'failed',
+            'response' => $result['data'],
         ];
     }
 
-    public function isActive(AppInstance $app_instance, HelmChart $chart): int
+    // Rancher reports the catalog app's state itself, so it is read from
+    // there rather than from Helm's release Secrets and translated into the
+    // status names the shared state() understands.
+    protected function releaseStatus(string $release_name, string $namespace): ?string
     {
-        $app_name = $chart->chartName();
-        $namespace = $chart->namespace();
-        $address = $this->org_server->server->address;
+        $result = $this->rancher()->get('catalog.cattle.io/v1', 'App', $release_name, $namespace);
 
-        $url = $address.'/v1/catalog.cattle.io.apps/'.$namespace.'/'.$app_name;
-        $this->ignoreErrorCode(404)->get($url);
-        $response = $this->response();
-
-        // if the resource doesn't exist return false
-        if ($response['status_code'] === 404) {
-            return 0;
+        if (! $result['success']) {
+            return null;
         }
 
-        // Check if persistent volume claim is transitioning;
-        if (Arr::get($response, 'content.metadata.state.transitioning') === true) {
-            return 2;
+        if (Arr::get($result['data'], 'metadata.state.transitioning') === true) {
+            return 'pending-upgrade';
         }
 
-        // Check if the persistent volume claim is active
-        if (Arr::get($response, 'content.metadata.state.name') === 'deployed') {
-            return 1;
+        $state = Arr::get($result['data'], 'metadata.state.name');
+
+        return in_array($state, ['deployed', 'failed'], true) ? $state : null;
+    }
+
+    // Rancher manages its own releases; there is no Helm Secret of ours to clear.
+    public function deleteStuckReleaseSecrets(HelmChart $chart): void {}
+
+    private function catalogAction(AppInstance $app_instance, HelmChart $chart, string $action): array
+    {
+        $repo_name = $chart->repo_name ?? $app_instance->version->setting('helm_repo_name');
+
+        // buildChart() fills $chart->secrets() as a side effect, so the Secret
+        // is only applied after the chart is built, and before the install
+        // that references it.
+        $data = $chart->buildChart();
+
+        $secret_result = $this->secret()->applyStore($chart->secrets());
+
+        if ($secret_result['status'] !== 'success') {
+            return ['status' => 'failed', 'response' => $secret_result['response']];
         }
 
-        // Check if the persistent volume claim is active
-        if (Arr::get($response, 'content.metadata.state.name') === 'failed') {
-            return 3;
-        }
+        $result = $this->rancher()->action("/v1/catalog.cattle.io.clusterrepos/{$repo_name}?action={$action}", $data);
 
-        // If no match, return non-existant
-        return 0;
+        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app_instance->application->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+
+        return [
+            'status' => $result['success'] ? 'success' : 'failed',
+            'response' => $result['success'] ? $result['data'] : $result['error'],
+        ];
     }
 }
