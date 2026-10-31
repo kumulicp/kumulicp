@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\ChartSource;
 use App\Support\Catalog\ChartCatalogSync;
 use Illuminate\Console\Command;
+use OffloadProject\Toggle\Facades\Toggle;
 
 class CatalogSync extends Command
 {
@@ -16,6 +17,12 @@ class CatalogSync extends Command
 
     public function handle(ChartCatalogSync $sync): int
     {
+        if (Toggle::inactive('app-catalog')) {
+            $this->components->warn('The app catalog is disabled. Set TOGGLE_APP_CATALOG=true to enable it.');
+
+            return self::FAILURE;
+        }
+
         $sources = ChartSource::where('enabled', true)
             ->when($this->argument('source'), fn ($query, $slug) => $query->where('slug', $slug))
             ->get();
