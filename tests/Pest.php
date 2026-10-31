@@ -361,9 +361,10 @@ function bulkEditSettingsPayload(array $overrides = []): array
         'sso_server' => null,
         'shared_app' => null,
         'displayed_features' => [],
-        'base' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
-        'standard' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
-        'basic' => ['name' => '', 'price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
-        'storage' => ['price' => 0, 'price_id' => '', 'amount' => 0, 'max' => 0],
+        // Prices are sent per currency under `prices.{component}.{currency}`.
+        'base' => ['storage' => 0, 'max' => 0],
+        'standard' => ['storage' => 0, 'max' => 0],
+        'basic' => ['name' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
+        'storage' => ['amount' => 0, 'max' => 0],
     ], $overrides);
 }

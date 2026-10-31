@@ -52,7 +52,9 @@ class AppInstancePlanService
 
     public function price($entity)
     {
-        return $this->plan->setting("$entity.price");
+        $currency = $this->organization->billingCurrency();
+
+        return $this->plan->priceFor($entity, $currency)['amount'];
     }
 
     public function itemName(): string
@@ -185,10 +187,10 @@ class AppInstancePlanService
                 break;
             case 'storage':
                 $count['label'] = __('labels.additional_storage');
-                $count['calculation'] = '$'.$this->plan->setting('storage.price').' for every '.$this->plan->setting('storage.amount').'GB';
+                $count['calculation'] = '$'.$this->price('storage').' for every '.$this->plan->setting('storage.amount').'GB';
                 $count['storage'] = $this->additionalStorageTotal();
                 $count['quantity'] = $this->countEntity('storage');
-                $count['price'] = $this->plan->setting('storage.price');
+                $count['price'] = $this->price('storage');
                 $count['amount'] = $this->plan->setting('storage.amount');
                 $count['total_price'] = number_format($this->additionalStoragePriceTotal(), 2, '.', ', ');
                 $count['unit'] = $this->plan->setting('storage.amount').'GB';
@@ -416,7 +418,7 @@ class AppInstancePlanService
 
     public function totalPrice(): float
     {
-        return $this->plan->setting('base.price')
+        return $this->price('base')
             + $this->standardPriceTotal()
             + $this->basicPriceTotal()
             + $this->additionalStoragePriceTotal()
@@ -442,7 +444,7 @@ class AppInstancePlanService
 
     public function standardPriceTotal(): float
     {
-        return $this->plan->setting('standard.price') ? $this->countEntity('standard') * $this->plan->setting('standard.price') : 0;
+        return $this->price('standard') ? $this->countEntity('standard') * $this->price('standard') : 0;
     }
 
     public function standardStorageTotal(): float
@@ -452,7 +454,18 @@ class AppInstancePlanService
 
     public function basicPriceTotal(): float
     {
-        return ($this->countEntity('basic') && $this->plan->setting('basic.price')) ? ceil($this->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->plan->setting('basic.price') : 0;
+        return ($this->countEntity('basic') && $this->price('basic')) ? $this->basicBlocks() * $this->price('basic') : 0;
+    }
+
+    /**
+     * Number of billable blocks of basic users. Users are billed in blocks of
+     * `basic.amount`; a missing or zero block size means one user per block.
+     */
+    public function basicBlocks(): int
+    {
+        $block_size = max(1, (int) $this->plan->setting('basic.amount'));
+
+        return (int) ceil($this->countEntity('basic') / $block_size);
     }
 
     public function basicAmountTotal(): float
@@ -462,7 +475,7 @@ class AppInstancePlanService
 
     public function additionalStoragePriceTotal()
     {
-        return $this->plan->setting('storage.price') ? $this->countEntity('storage') * $this->plan->setting('storage.price') : 0;
+        return $this->price('storage') ? $this->countEntity('storage') * $this->price('storage') : 0;
     }
 
     public function additionalStorageTotal()

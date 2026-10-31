@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import BulkEditLayout from './BulkEditLayout.vue'
 import { useForm } from '@inertiajs/vue3'
+import { currencyByCode, buildCurrencyPrices } from '@/constants/currencies'
 
 </script>
 <template>
@@ -195,27 +196,31 @@ import { useForm } from '@inertiajs/vue3'
           <tr class="section-header">
             <td :colspan="plans.length + 1"><strong>{{ $t('admin.plans.baseOptions') }}</strong></td>
           </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input
-                :id="'plan-'+plan.id+'-base-price'"
-                v-model="form.plans[plan.id].base.price"
-                type="number"
-                min="0"
-                step=".01"
-                immediateValidation
-              >
-                <template #prependInner>{{ $t('admin.plans.currencySymbol') }}</template>
-              </va-input>
-            </td>
-          </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input :id="'plan-'+plan.id+'-base-price-id'" v-model="form.plans[plan.id].base.price_id" immediateValidation />
-            </td>
-          </tr>
+          <template v-for="currency in enabled_currencies" :key="'base-price-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.price') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input
+                  :id="'plan-' + plan.id + '-base-price-' + currency"
+                  v-model="form.plans[plan.id].prices.base[currency].amount"
+                  type="number"
+                  min="0"
+                  step=".01"
+                  immediateValidation
+                >
+                  <template #prependInner>{{ currencySymbol(currency) }}</template>
+                </va-input>
+              </td>
+            </tr>
+          </template>
+          <template v-for="currency in enabled_currencies" :key="'base-price-id-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.productID') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input :id="'plan-' + plan.id + '-base-price-id-' + currency" v-model="form.plans[plan.id].prices.base[currency].price_id" immediateValidation />
+              </td>
+            </tr>
+          </template>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.baseStorage') }}</td>
             <td v-for="plan in plans" :key="plan.id">
@@ -235,20 +240,23 @@ import { useForm } from '@inertiajs/vue3'
           <tr class="section-header">
             <td :colspan="plans.length + 1"><strong>{{ $t('admin.plans.standardUsers') }}</strong></td>
           </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input
-                v-model="form.plans[plan.id].standard.price"
-                type="number"
-                min="0"
-                step=".01"
-                immediateValidation
-              >
-                <template #prependInner>{{ $t('admin.plans.currencySymbol') }}</template>
-              </va-input>
-            </td>
-          </tr>
+          <template v-for="currency in enabled_currencies" :key="'standard-price-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.price') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input
+                  :id="'plan-' + plan.id + '-standard-price-' + currency"
+                  v-model="form.plans[plan.id].prices.standard[currency].amount"
+                  type="number"
+                  min="0"
+                  step=".01"
+                  immediateValidation
+                >
+                  <template #prependInner>{{ currencySymbol(currency) }}</template>
+                </va-input>
+              </td>
+            </tr>
+          </template>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.maxUsers') }}</td>
             <td v-for="plan in plans" :key="plan.id">
@@ -261,12 +269,14 @@ import { useForm } from '@inertiajs/vue3'
               </va-input>
             </td>
           </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input v-model="form.plans[plan.id].standard.price_id" immediateValidation />
-            </td>
-          </tr>
+          <template v-for="currency in enabled_currencies" :key="'standard-price-id-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.productID') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input :id="'plan-' + plan.id + '-standard-price-id-' + currency" v-model="form.plans[plan.id].prices.standard[currency].price_id" immediateValidation />
+              </td>
+            </tr>
+          </template>
           <tr v-if="app.can.additional_user_storage">
             <td class="setting-label">{{ $t('admin.plans.standardUserStorage') }}</td>
             <td v-for="plan in plans" :key="plan.id">
@@ -291,20 +301,23 @@ import { useForm } from '@inertiajs/vue3'
               <va-input v-model="form.plans[plan.id].basic.name" immediateValidation />
             </td>
           </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input
-                v-model="form.plans[plan.id].basic.price"
-                type="number"
-                min="0"
-                step=".01"
-                immediateValidation
-              >
-                <template #prependInner>{{ $t('admin.plans.currencySymbol') }}</template>
-              </va-input>
-            </td>
-          </tr>
+          <template v-for="currency in enabled_currencies" :key="'basic-price-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.price') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input
+                  :id="'plan-' + plan.id + '-basic-price-' + currency"
+                  v-model="form.plans[plan.id].prices.basic[currency].amount"
+                  type="number"
+                  min="0"
+                  step=".01"
+                  immediateValidation
+                >
+                  <template #prependInner>{{ currencySymbol(currency) }}</template>
+                </va-input>
+              </td>
+            </tr>
+          </template>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.maxUsers') }}</td>
             <td v-for="plan in plans" :key="plan.id">
@@ -317,12 +330,14 @@ import { useForm } from '@inertiajs/vue3'
               </va-input>
             </td>
           </tr>
-          <tr>
-            <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-            <td v-for="plan in plans" :key="plan.id">
-              <va-input v-model="form.plans[plan.id].basic.price_id" immediateValidation />
-            </td>
-          </tr>
+          <template v-for="currency in enabled_currencies" :key="'basic-price-id-' + currency">
+            <tr>
+              <td class="setting-label">{{ $t('admin.plans.productID') }} ({{ currency }})</td>
+              <td v-for="plan in plans" :key="plan.id">
+                <va-input :id="'plan-' + plan.id + '-basic-price-id-' + currency" v-model="form.plans[plan.id].prices.basic[currency].price_id" immediateValidation />
+              </td>
+            </tr>
+          </template>
           <tr v-if="app.can.additional_user_storage">
             <td class="setting-label">{{ $t('admin.plans.baseStorage') }}</td>
             <td v-for="plan in plans" :key="plan.id">
@@ -353,20 +368,23 @@ import { useForm } from '@inertiajs/vue3'
             <tr class="section-header">
               <td :colspan="plans.length + 1"><strong>{{ $t('admin.plans.additionalStorage') }}</strong></td>
             </tr>
+            <template v-for="currency in enabled_currencies" :key="'storage-price-' + currency">
             <tr>
-              <td class="setting-label">{{ $t('admin.plans.price') }}</td>
+              <td class="setting-label">{{ $t('admin.plans.price') }} ({{ currency }})</td>
               <td v-for="plan in plans" :key="plan.id">
                 <va-input
-                  v-model="form.plans[plan.id].storage.price"
+                  :id="'plan-' + plan.id + '-storage-price-' + currency"
+                  v-model="form.plans[plan.id].prices.storage[currency].amount"
                   type="number"
                   min="0"
                   step=".01"
                   immediateValidation
                 >
-                  <template #prependInner>{{ $t('admin.plans.currencySymbol') }}</template>
+                  <template #prependInner>{{ currencySymbol(currency) }}</template>
                 </va-input>
               </td>
             </tr>
+          </template>
             <tr>
               <td class="setting-label">{{ $t('admin.plans.maxAdditionalStorage') }}</td>
               <td v-for="plan in plans" :key="plan.id">
@@ -380,12 +398,14 @@ import { useForm } from '@inertiajs/vue3'
                 </va-input>
               </td>
             </tr>
+            <template v-for="currency in enabled_currencies" :key="'storage-price-id-' + currency">
             <tr>
-              <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
+              <td class="setting-label">{{ $t('admin.plans.productID') }} ({{ currency }})</td>
               <td v-for="plan in plans" :key="plan.id">
-                <va-input v-model="form.plans[plan.id].storage.price_id" immediateValidation />
+                <va-input :id="'plan-' + plan.id + '-storage-price-id-' + currency" v-model="form.plans[plan.id].prices.storage[currency].price_id" immediateValidation />
               </td>
             </tr>
+          </template>
             <tr>
               <td class="setting-label">{{ $t('admin.plans.quantity') }}</td>
               <td v-for="plan in plans" :key="plan.id">
@@ -458,6 +478,7 @@ export default {
     database_servers: Object,
     sso_servers: Object,
     shared_apps: Object,
+    enabled_currencies: Array,
     errors: Object
   },
   data () {
@@ -479,29 +500,27 @@ export default {
         sso_server: plan.sso_server,
         shared_app: plan.shared_app,
         displayed_features: plan.features ? JSON.parse(JSON.stringify(plan.features)) : [],
+        prices: {
+          base: buildCurrencyPrices(plan.settings, 'base', this.enabled_currencies),
+          standard: buildCurrencyPrices(plan.settings, 'standard', this.enabled_currencies),
+          basic: buildCurrencyPrices(plan.settings, 'basic', this.enabled_currencies),
+          storage: buildCurrencyPrices(plan.settings, 'storage', this.enabled_currencies)
+        },
         base: {
-          price: plan.settings?.base?.price ?? 0,
-          price_id: plan.settings?.base?.price_id ?? '',
           storage: plan.settings?.base?.storage ?? 0,
           max: plan.settings?.base?.max ?? 0
         },
         standard: {
-          price: plan.settings?.standard?.price ?? 0,
-          price_id: plan.settings?.standard?.price_id ?? '',
           storage: plan.settings?.standard?.storage ?? 0,
           max: plan.settings?.standard?.max ?? 0
         },
         basic: {
           name: plan.settings?.basic?.name ?? '',
-          price: plan.settings?.basic?.price ?? 0,
-          price_id: plan.settings?.basic?.price_id ?? '',
           storage: plan.settings?.basic?.storage ?? 0,
           max: plan.settings?.basic?.max ?? 0,
           amount: plan.settings?.basic?.amount ?? 0
         },
         storage: {
-          price: plan.settings?.storage?.price ?? 0,
-          price_id: plan.settings?.storage?.price_id ?? '',
           amount: plan.settings?.storage?.amount ?? 0,
           max: plan.settings?.storage?.max ?? 0
         }
@@ -520,6 +539,9 @@ export default {
     }
   },
   methods: {
+    currencySymbol (code: string) {
+      return currencyByCode(code)?.symbol ?? code
+    },
     submit () {
       this.form.post('/admin/apps/' + this.app.slug + '/plans/bulk-edit/edit')
     },

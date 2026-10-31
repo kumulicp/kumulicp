@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import BulkEditLayout from './BulkEditLayout.vue'
+import { formatComponentPrices, formatComponentPriceIds } from '@/constants/currencies'
 
 </script>
 <template>
@@ -100,11 +101,11 @@ import BulkEditLayout from './BulkEditLayout.vue'
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.base?.price }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPrices(plan.settings, 'base', enabled_currencies) }}</td>
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ plan.settings.base?.price_id }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPriceIds(plan.settings, 'base', enabled_currencies) }}</td>
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.baseStorage') }}</td>
@@ -117,7 +118,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.standard?.price }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPrices(plan.settings, 'standard', enabled_currencies) }}</td>
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.maxUsers') }}</td>
@@ -125,7 +126,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ plan.settings.standard?.price_id }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPriceIds(plan.settings, 'standard', enabled_currencies) }}</td>
         </tr>
         <tr v-if="app.can.additional_user_storage">
           <td class="setting-label">{{ $t('admin.plans.standardUserStorage') }}</td>
@@ -142,7 +143,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.basic?.price }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPrices(plan.settings, 'basic', enabled_currencies) }}</td>
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.maxUsers') }}</td>
@@ -150,7 +151,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
         </tr>
         <tr>
           <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-          <td v-for="plan in plans" :key="plan.id">{{ plan.settings.basic?.price_id }}</td>
+          <td v-for="plan in plans" :key="plan.id">{{ formatComponentPriceIds(plan.settings, 'basic', enabled_currencies) }}</td>
         </tr>
         <tr v-if="app.can.additional_user_storage">
           <td class="setting-label">{{ $t('admin.plans.baseStorage') }}</td>
@@ -168,7 +169,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
         <template v-if="app.can.additional_user_storage">
           <tr>
             <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-            <td v-for="plan in plans" :key="plan.id">{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.storage?.price }}</td>
+            <td v-for="plan in plans" :key="plan.id">{{ formatComponentPrices(plan.settings, 'storage', enabled_currencies) }}</td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.maxAdditionalStorage') }}</td>
@@ -176,7 +177,7 @@ import BulkEditLayout from './BulkEditLayout.vue'
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-            <td v-for="plan in plans" :key="plan.id">{{ plan.settings.storage?.price_id }}</td>
+            <td v-for="plan in plans" :key="plan.id">{{ formatComponentPriceIds(plan.settings, 'storage', enabled_currencies) }}</td>
           </tr>
           <tr>
             <td class="setting-label">{{ $t('admin.plans.quantity') }}</td>
@@ -259,7 +260,12 @@ export default {
     web_servers: Object,
     database_servers: Object,
     sso_servers: Object,
-    shared_apps: Object
+    shared_apps: Object,
+    enabled_currencies: Array
+  },
+  methods: {
+    formatComponentPrices,
+    formatComponentPriceIds
   }
 }
 </script>

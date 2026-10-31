@@ -227,7 +227,7 @@ class BasePlanService
     {
         return [
             'label' => __('labels.additional_storage'),
-            'calculation' => '$'.$this->plan->setting('storage.price').' for every '.$this->plan->setting('storage.amount').'GB',
+            'calculation' => '$'.$this->price('storage').' for every '.$this->plan->setting('storage.amount').'GB',
             'storage' => $this->additionalStorageTotal(),
             'quantity' => $this->org_service->countEntity('storage'),
             'price' => $this->price('storage'),
@@ -263,7 +263,9 @@ class BasePlanService
 
     public function price($entity)
     {
-        return $this->plan->setting("$entity.price");
+        $currency = $this->organization->billingCurrency();
+
+        return $this->plan->priceFor($entity, $currency)['amount'];
     }
 
     public function refresh()
@@ -379,7 +381,7 @@ class BasePlanService
         $base = $this;
 
         return FastCache::retrieve('base_plan_total_price', function () use ($base) {
-            return $base->plan->setting('base.price')
+            return $base->price('base')
             + $base->standardPriceTotal()
             + $base->basicPriceTotal()
             + $base->additionalStoragePriceTotal()
@@ -416,19 +418,28 @@ class BasePlanService
 
     public function standardPriceTotal()
     {
-        return $this->plan->setting('standard.price') ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.price') : 0;
+        return $this->price('standard') ? $this->org_service->countEntity('standard') * $this->price('standard') : 0;
     }
 
     public function standardStorageTotal()
     {
-        return ($this->plan->setting('standard.price')) ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
+        return ($this->price('standard')) ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
     }
 
     public function basicPriceTotal()
     {
-        return $this->plan->setting('basic.price')
-                ? ceil($this->org_service->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->plan->setting('basic.price')
-                : 0;
+        return $this->price('basic') ? $this->basicBlocks() * $this->price('basic') : 0;
+    }
+
+    /**
+     * Number of billable blocks of basic users. Users are billed in blocks of
+     * `basic.amount`; a missing or zero block size means one user per block.
+     */
+    public function basicBlocks(): int
+    {
+        $block_size = max(1, (int) $this->plan->setting('basic.amount'));
+
+        return (int) ceil($this->org_service->countEntity('basic') / $block_size);
     }
 
     public function basicAmountTotal()
@@ -438,7 +449,7 @@ class BasePlanService
 
     public function additionalStoragePriceTotal()
     {
-        return $this->plan->setting('storage.price') ? $this->org_service->countEntity('storage') * $this->plan->setting('storage.price') : 0;
+        return $this->price('storage') ? $this->org_service->countEntity('storage') * $this->price('storage') : 0;
     }
 
     public function additionalStorageTotal()
@@ -448,12 +459,12 @@ class BasePlanService
 
     public function applicationPriceTotal()
     {
-        return $this->plan->setting('application.price') ? $this->org_service->countEntity('application') * $this->plan->setting('application.price') : 0;
+        return $this->price('application') ? $this->org_service->countEntity('application') * $this->price('application') : 0;
     }
 
     public function emailPriceTotal()
     {
-        return $this->plan->setting('email.price') ? $this->org_service->countEntity('email') * $this->plan->setting('email.price') : 0;
+        return $this->price('email') ? $this->org_service->countEntity('email') * $this->price('email') : 0;
     }
 
     public function accessTypeName(?AccessType $access_type = null): ?string

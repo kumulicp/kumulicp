@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin\Applications;
 
 use App\Application;
 use App\AppRole;
+use App\Enums\AccessType;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as AppFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class Roles extends Controller
 {
@@ -112,7 +114,7 @@ class Roles extends Controller
             'slug' => 'required|string|max:100',
             'description' => 'required|string|max:500',
             'category' => 'required|string|max:100',
-            'access_type' => 'required|string|max:100',
+            'access_type' => ['required', 'string', 'max:100', Rule::enum(AccessType::class)],
         ]);
         $role = new AppRole;
         $role->application_id = $app->id;
@@ -138,7 +140,7 @@ class Roles extends Controller
             'slug' => 'string|max:100|required',
             'description' => 'string|max:255|required',
             'category' => 'string|max:100|required',
-            'access_type' => 'string|max:100|required|in:disabled,minimal,basic,standard',
+            'access_type' => ['required', 'string', 'max:100', Rule::enum(AccessType::class)],
             'required_features' => 'nullable|array',
             'ignore_role' => 'boolean',
             'implied_roles' => 'nullable|array',

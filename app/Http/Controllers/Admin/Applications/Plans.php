@@ -88,6 +88,7 @@ class Plans extends Controller
         $settings['features'] = $plan_features;
 
         return inertia()->render('Admin/Applications/Plans/PlanView', [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,

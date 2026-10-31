@@ -50,6 +50,7 @@ class BulkEdit extends Controller
         $sso_servers = Server::where('type', 'sso')->get();
 
         return [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'web_servers' => $web_servers->map(function ($s) {
                 return ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')'];
             }),

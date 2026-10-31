@@ -32,7 +32,7 @@ class AppInstanceService
 
     private $application;
 
-    private $role_groups;
+    private array $role_groups = [];
 
     private $storage;
 
@@ -462,20 +462,25 @@ class AppInstanceService
 
     public function standardRoles()
     {
-        if (! $this->role_groups) {
-            $this->role_groups = $this->app_instance->version->roles('standard');
-        }
-
-        return $this->role_groups;
+        return $this->rolesOfAccessType('standard');
     }
 
     public function basicRoles()
     {
-        if (! $this->role_groups) {
-            $this->role_groups = $this->app_instance->version->roles('basic');
+        return $this->rolesOfAccessType('basic');
+    }
+
+    /**
+     * Roles of one access type, cached per type so that asking for one type
+     * never returns the roles of another.
+     */
+    private function rolesOfAccessType(string $access_type)
+    {
+        if (! isset($this->role_groups[$access_type])) {
+            $this->role_groups[$access_type] = $this->app_instance->version->roles($access_type);
         }
 
-        return $this->role_groups;
+        return $this->role_groups[$access_type];
     }
 
     public function application()

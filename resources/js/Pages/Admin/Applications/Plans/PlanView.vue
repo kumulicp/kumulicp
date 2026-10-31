@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
+import { formatComponentPrices, formatComponentPriceIds } from '@/constants/currencies'
 
 </script>
 <template>
@@ -78,11 +79,11 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.price') }}:</b></td>
-        <td>{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.base.price }}</td>
+        <td>{{ formatComponentPrices(plan.settings, 'base', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.productID') }}:</b></td>
-        <td>{{ plan.settings.base.price_id }}</td>
+        <td>{{ formatComponentPriceIds(plan.settings, 'base', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.baseStorage') }}:</b></td>
@@ -94,7 +95,7 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.price') }}:</b></td>
-        <td>{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.standard.price }}</td>
+        <td>{{ formatComponentPrices(plan.settings, 'standard', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.maxUsers') }}:</b></td>
@@ -102,7 +103,7 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.productID') }}:</b></td>
-        <td>{{ plan.settings.standard.price_id }}</td>
+        <td>{{ formatComponentPriceIds(plan.settings, 'standard', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.standardUserStorage') }}:</b></td>
@@ -118,7 +119,7 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.price') }}:</b></td>
-        <td>{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.basic.price }}</td>
+        <td>{{ formatComponentPrices(plan.settings, 'basic', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.maxUsers') }}:</b></td>
@@ -126,14 +127,14 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.productID') }}:</b></td>
-        <td>{{ plan.settings.basic.price_id }}</td>
+        <td>{{ formatComponentPriceIds(plan.settings, 'basic', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.baseStorage') }}:</b></td>
         <td>{{ plan.settings.basic.storage }}{{ $t('admin.plans.gb') }}</td>
       </tr>
       <tr>
-        <td><b>{{ $t('admin.plans.usersPerPrice') }}{{ plan.settings.basic.price }}:</b></td>
+        <td><b>{{ $t('admin.plans.usersPerPrice') }} {{ formatComponentPrices(plan.settings, 'basic', enabled_currencies) }}:</b></td>
         <td>{{ plan.settings.basic.amount }}</td>
       </tr>
       <tr>
@@ -142,7 +143,7 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.price') }}:</b></td>
-        <td>{{ $t('admin.plans.currencySymbol') }}{{ plan.settings.storage.price }}</td>
+        <td>{{ formatComponentPrices(plan.settings, 'storage', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.maxAdditionalStorage') }}:</b></td>
@@ -150,7 +151,7 @@ import PlanLayout from './PlanLayout.vue'
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.productID') }}:</b></td>
-        <td>{{ plan.settings.storage.price_id }}</td>
+        <td>{{ formatComponentPriceIds(plan.settings, 'storage', enabled_currencies) }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.quantity') }}:</b></td>
@@ -243,7 +244,12 @@ export default {
     web_servers: Object,
     database_servers: Object,
     sso_servers: Object,
-    parent_servers: Object
+    parent_servers: Object,
+    enabled_currencies: Array
+  },
+  methods: {
+    formatComponentPrices,
+    formatComponentPriceIds
   },
   data () {
     const configs = {}
