@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\Applications\Catalog;
+namespace App\Integrations\Applications\HelmForge;
 
 use App\AppInstance;
 use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
@@ -14,7 +14,7 @@ use Illuminate\Support\Arr;
  * detected for the chart at sync time (ChartConventionDetector) and only
  * writes the keys that chart actually has.
  */
-class CatalogChart extends HelmChart
+class HelmForgeChart extends HelmChart
 {
     public function __construct(Organization $organization, AppInstance $app_instance)
     {
@@ -130,10 +130,14 @@ class CatalogChart extends HelmChart
             'host' => $domain,
             'paths' => [['path' => '/', 'pathType' => 'Prefix']],
         ]]);
-        Arr::set($values, "$base.tls", $tls ? [[
-            'secretName' => $this->chartName().'-ingress-tls',
-            'hosts' => [$domain],
-        ]] : []);
+        // Left out without TLS: Yaml::dump() renders an empty PHP array as
+        // `{}`, which would override the chart's `[]` and fail its schema.
+        if ($tls) {
+            Arr::set($values, "$base.tls", [[
+                'secretName' => $this->chartName().'-ingress-tls',
+                'hosts' => [$domain],
+            ]]);
+        }
     }
 
     private function setPullSecrets(array &$values, array $pull_secrets): void

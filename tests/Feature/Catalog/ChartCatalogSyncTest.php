@@ -3,9 +3,11 @@
 use App\Application;
 use App\AppVersion;
 use App\ChartSource;
-use App\Integrations\Applications\Catalog\CatalogProfile;
+use App\Enums\ApplicationSource;
+use App\Integrations\Applications\HelmForge\HelmForgeProfile;
 use App\Support\Catalog\ChartCatalogSync;
 use App\Support\Facades\Application as ApplicationFacade;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\Yaml\Yaml;
 use Tests\Support\VersionUpdates\ChartArchive;
@@ -36,6 +38,9 @@ function fakeCatalog(array $charts, array $values = []): void
         }
     }
 
+    // A fresh client each time: stubs registered earlier would otherwise win,
+    // and the recorded requests would carry over
+    Http::swap(new HttpFactory);
     Http::fake($fakes);
 }
 
@@ -52,8 +57,9 @@ it('imports every chart as a disabled app with its newest versions', function ()
     expect($report['created'])->toBe(['gitea', 'redis']);
 
     $gitea = Application::where('slug', 'gitea')->first();
-    expect($gitea->enabled)->toBeFalse();
+    expect($gitea->enabled)->toBeFalsy();
     expect($gitea->chart_source_id)->toBe($this->source->id);
+    expect($gitea->source)->toBe(ApplicationSource::HelmForge);
     expect($gitea->description)->toBe('The gitea app');
     expect($gitea->catalog['chart_version'])->toBe('2.0.0');
 
@@ -73,14 +79,17 @@ it('is idempotent and keeps admin edits', function () {
     app(ChartCatalogSync::class)->sync($this->source);
 
     $gitea = Application::where('slug', 'gitea')->first();
-    $gitea->update(['name' => 'Our Git', 'enabled' => true]);
+    $gitea->name = 'Our Git';
+    $gitea->enabled = true;
+    $gitea->save();
 
+    Http::swap(new HttpFactory);
     Http::fake(['repo.test/index.yaml' => Http::response(catalogIndex(['gitea' => ['2.0.0']]))]);
     $report = app(ChartCatalogSync::class)->sync($this->source);
 
     expect($report['updated'])->toBe(['gitea']);
     expect($gitea->fresh()->name)->toBe('Our Git');
-    expect($gitea->fresh()->enabled)->toBeTrue();
+    expect($gitea->fresh()->enabled)->toBeTruthy();
     expect(AppVersion::where('application_id', $gitea->id)->count())->toBe(1);
     // Unchanged chart version: the package wasn't downloaded again
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '.tgz'));
@@ -144,16 +153,48 @@ it('flags charts missing core concerns as limited', function () {
     expect($report['limited']['gitea'])->toBe(['ingress', 'persistence', 'replicas', 'resources']);
 });
 
-it('resolves a synced app to a catalog profile with its detected options', function () {
+it('resolves a synced app to a HelmForge profile with its detected options', function () {
     fakeCatalog(['gitea' => ['1.0.0']], ['gitea' => ['replicaCount' => 2, 'resources' => []]]);
     app(ChartCatalogSync::class)->sync($this->source);
 
     $profile = ApplicationFacade::profile('gitea');
 
-    expect($profile)->toBeInstanceOf(CatalogProfile::class);
+    expect($profile)->toBeInstanceOf(HelmForgeProfile::class);
     expect($profile->name())->toBe('gitea');
     expect($profile->isCompatible('helm_chart'))->toBeTrue();
     expect($profile->isCompatible('rancher'))->toBeFalse();
     expect($profile->configuration('replicaCount')['default'])->toBe(2);
     expect(ApplicationFacade::profile('unknown-app')->name())->toBe('generic');
+});
+
+it('routes an app to the channel of its source', function () {
+    Application::factory()->create(['slug' => 'added-in-ui', 'source' => ApplicationSource::Generic]);
+    // Same catalog data as a synced app, but it was not imported from HelmForge
+    Application::factory()->create(['slug' => 'not-helmforge', 'source' => ApplicationSource::Generic, 'catalog' => ['configurations' => []]]);
+
+    expect(ApplicationFacade::profile('added-in-ui')->name())->toBe('generic');
+    expect(ApplicationFacade::profile('not-helmforge')->name())->toBe('generic');
+});
+
+it('lets a registered profile win over the source', function () {
+    $nextcloud = Application::factory()->create(['slug' => 'nextcloud', 'source' => ApplicationSource::HelmForge, 'catalog' => ['configurations' => []]]);
+
+    expect(ApplicationFacade::profile($nextcloud)->name())->toBe('nextcloud');
+});
+
+it('marks apps created for a registered profile as profile apps', function () {
+    $application = ApplicationFacade::initialize('wordpress');
+
+    expect($application->fresh()->source)->toBe(ApplicationSource::Profile);
+});
+
+it('does not sync a chart source without a supported chart schema', function () {
+    $other = ChartSource::create(['name' => 'Cloud Pirates', 'slug' => 'cloudpirates', 'url' => 'https://repo.test']);
+    fakeCatalog(['gitea' => ['1.0.0']]);
+
+    $report = app(ChartCatalogSync::class)->sync($other);
+
+    expect($report['error'])->toContain('cloudpirates');
+    expect($report['created'])->toBe([]);
+    expect(Application::where('slug', 'gitea')->exists())->toBeFalse();
 });
