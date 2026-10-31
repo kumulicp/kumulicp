@@ -312,6 +312,8 @@
       "domains": "Dominios",
       "appSettings": "Configuración de la Aplicación",
       "appPlanCaption": "Elige cualquier plan de aplicación o selecciona un plan específico",
+      "appPlans": "Planes de la Aplicación",
+      "appPlansMultipleCaption": "Elige uno o más planes de aplicación entre los que los usuarios podrán elegir",
       "maxActivationsCaption": "Elige el número máximo de veces que se puede activar esta aplicación",
       "disabled": "Deshabilitado",
       "enabledApps": "Aplicaciones",

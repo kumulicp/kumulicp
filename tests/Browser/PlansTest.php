@@ -76,12 +76,15 @@ describe('Admin Plans', function () {
             ->assertSee('Additional Storage Options');
     });
 
-    it('app plan select allows only a single selection', function () {
-        $plan = Plan::factory()->create(['type' => 'app', 'name' => 'Single Select Plan', 'org_type' => 'none']);
+    it('app plan select allows multiple selection for pay per app plans only', function () {
+        $app = Plan::factory()->create(['type' => 'app', 'name' => 'Multi Select Plan', 'org_type' => 'none']);
+        $package = Plan::factory()->create(['type' => 'package', 'name' => 'Single Select Plan', 'org_type' => 'none']);
 
-        $page = visit('/admin/service/plans/'.$plan->id);
-        $page->assertSee('App Settings');
-        $hasMultiple = $page->script("Array.from(document.querySelectorAll('.va-select')).some(el => el.hasAttribute('multiple'))");
-        expect($hasMultiple)->toBeFalsy();
+        $modalIsMultiple = fn ($plan) => visit('/admin/service/plans/'.$plan->id)
+            ->click('#addApp')
+            ->script("document.querySelector('#appModalPlan')?.closest('.va-select')?.classList.contains('va-select--multiple') ?? null");
+
+        expect($modalIsMultiple($app))->toBeTruthy();
+        expect($modalIsMultiple($package))->toBeFalsy();
     });
 });

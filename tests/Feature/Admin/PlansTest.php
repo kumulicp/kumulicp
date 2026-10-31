@@ -504,6 +504,67 @@ class PlansTest extends TestCase
         $this->assertEquals([$appPlan->id], $saved);
     }
 
+    public function test_pay_per_app_plan_can_store_multiple_app_plans_per_app()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'app']);
+
+        $app = Application::factory()->create(['slug' => 'test_app_multi', 'name' => 'Test App Multi', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [
+                    $app->slug => ['max' => 1, 'plans' => $ids],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertEquals($ids, $plan->refresh()->app_plans[$app->slug]['plans']);
+    }
+
+    public function test_package_plan_keeps_only_a_single_app_plan_per_app()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'package']);
+
+        $app = Application::factory()->create(['slug' => 'test_app_single', 'name' => 'Test App Single', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'package',
+                'app_plans' => [
+                    $app->slug => ['max' => 1, 'plans' => $ids],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertEquals([$ids[0]], $plan->refresh()->app_plans[$app->slug]['plans']);
+    }
+
+    public function test_edit_returns_every_selected_app_plan()
+    {
+        $user = $this->adminUser();
+
+        $app = Application::factory()->create(['slug' => 'test_app_edit', 'name' => 'Test App Edit', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+        $plan = Plan::factory()->create([
+            'type' => 'app',
+            'app_plans' => [$app->slug => ['max' => 2, 'plans' => $ids]],
+        ]);
+
+        $this->actingAs($user)
+            ->get("/admin/service/plans/{$plan->id}")
+            ->assertInertia(fn ($page) => $page
+                ->where("plan.app_plans.{$app->slug}.plans", $ids)
+                ->where("plan.app_plans.{$app->slug}.max", 2));
+    }
+
     // ---------------------------------------------------------------------------
     // Remove tests
     // ---------------------------------------------------------------------------

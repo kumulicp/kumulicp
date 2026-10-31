@@ -312,6 +312,8 @@
       "domains": "Domains",
       "appSettings": "App Settings",
       "appPlanCaption": "Choose from any app plan or select a specific plan",
+      "appPlans": "App Plans",
+      "appPlansMultipleCaption": "Choose one or more app plans for users to select from",
       "maxActivationsCaption": "Choose the maximum number of times this app can be activated",
       "disabled": "Disabled",
       "enabledApps": "Apps",

@@ -485,7 +485,7 @@ import { currencyByCode } from '@/constants/currencies'
               <va-list-item-section>
                 <va-list-item-label>{{ app.name }}</va-list-item-label>
                 <va-list-item-label caption>
-                  {{ $t('admin.plans.appPlan') }}: {{ appPlanName(app.slug) }} &middot;
+                  {{ isPayPerApp ? $t('admin.plans.appPlans') : $t('admin.plans.appPlan') }}: {{ appPlanNames(app.slug) }} &middot;
                   {{ $t('admin.plans.maxActivations') }}: {{ form.app_plans[app.slug].max ?? 0 }}
                 </va-list-item-label>
               </va-list-item-section>
@@ -523,19 +523,20 @@ import { currencyByCode } from '@/constants/currencies'
           class="my-2"
           :disabled="editingSlug !== null"
           required-mark
-          @update:model-value="draft.plans = null"
+          @update:model-value="draft.plans = isPayPerApp ? [] : null"
         />
         <va-select
           id="appModalPlan"
           v-model="draft.plans"
-          :label="$t('admin.plans.appPlan')"
+          :label="isPayPerApp ? $t('admin.plans.appPlans') : $t('admin.plans.appPlan')"
           :options="draft.slug ? app_plans[draft.slug] : []"
           value-by="value"
           text-by="text"
           class="my-2"
+          :multiple="isPayPerApp"
           :disabled="!draft.slug"
           required-mark
-          :messages="$t('admin.plans.appPlanCaption')"
+          :messages="isPayPerApp ? $t('admin.plans.appPlansMultipleCaption') : $t('admin.plans.appPlanCaption')"
         />
         <va-input
           id="appModalMax"
@@ -550,7 +551,7 @@ import { currencyByCode } from '@/constants/currencies'
       </va-card-content>
       <va-card-actions align="right">
         <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
-        <va-button id="saveApp" class="mr-2" :disabled="!draft.slug || !draft.plans" @click="saveApp(ok)">{{ $t('common.save') }}</va-button>
+        <va-button id="saveApp" class="mr-2" :disabled="!draft.slug || !hasDraftPlans" @click="saveApp(ok)">{{ $t('common.save') }}</va-button>
       </va-card-actions>
     </template>
   </va-modal>
@@ -668,42 +669,59 @@ export default {
     typeChanged () {
       return this.originalType !== null && this.form.type !== this.originalType
     },
-    // Apps with an app plan selected are the ones offered to users
+    // Pay per app plans can offer several app plans per app, packaged plans only one
+    isPayPerApp () {
+      return this.form.type === 'app'
+    },
+    hasDraftPlans () {
+      return Array.isArray(this.draft.plans) ? this.draft.plans.length > 0 : !!this.draft.plans
+    },
+    // Apps with at least one app plan selected are the ones offered to users
     addedApps () {
-      return Object.values(this.apps).filter((app) => this.form.app_plans[app.slug]?.plans)
+      return Object.values(this.apps).filter((app) => this.selectedPlanIds(app.slug).length > 0)
     },
     availableApps () {
-      return Object.values(this.apps).filter((app) => !this.form.app_plans[app.slug]?.plans)
+      return Object.values(this.apps).filter((app) => this.selectedPlanIds(app.slug).length === 0)
     }
   },
   methods: {
-    appPlanName (slug) {
+    selectedPlanIds (slug) {
       const selected = this.form.app_plans[slug]?.plans
-      return this.app_plans[slug]?.find((plan) => plan.value === selected)?.text ?? selected
+      if (Array.isArray(selected)) return selected
+      return selected ? [selected] : []
+    },
+    appPlanNames (slug) {
+      return this.selectedPlanIds(slug)
+        .map((id) => this.app_plans[slug]?.find((plan) => plan.value === id)?.text ?? id)
+        .join(', ')
+    },
+    emptyDraftPlans () {
+      return this.isPayPerApp ? [] : null
     },
     openAddApp () {
       this.editingSlug = null
-      this.draft = { slug: null, plans: null, max: 1 }
+      this.draft = { slug: null, plans: this.emptyDraftPlans(), max: 1 }
       this.showAppModal = true
     },
     openEditApp (app) {
       this.editingSlug = app.slug
+      const ids = this.selectedPlanIds(app.slug)
       this.draft = {
         slug: app.slug,
-        plans: this.form.app_plans[app.slug].plans,
+        plans: this.isPayPerApp ? [...ids] : (ids[0] ?? null),
         max: this.form.app_plans[app.slug].max ?? 0
       }
       this.showAppModal = true
     },
     saveApp (close) {
       this.form.app_plans[this.draft.slug] = {
-        plans: this.draft.plans,
+        plans: Array.isArray(this.draft.plans) ? this.draft.plans : [this.draft.plans],
         max: this.draft.max
       }
       close()
     },
     removeApp (slug) {
-      this.form.app_plans[slug] = { plans: null, max: 0 }
+      this.form.app_plans[slug] = { plans: [], max: 0 }
     },
     addNewFeature () {
       this.form.displayed_features.push({
