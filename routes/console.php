@@ -11,6 +11,7 @@ use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use Illuminate\Support\Facades\Schedule;
+use OffloadProject\Toggle\Facades\Toggle;
 use Spatie\UptimeMonitor\Commands\CheckCertificates;
 use Spatie\UptimeMonitor\Commands\CheckUptime;
 
@@ -33,7 +34,7 @@ Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->witho
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();
-Schedule::command('catalog:sync')->daily()->withoutOverlapping();
+Schedule::command('catalog:sync')->daily()->withoutOverlapping()->when(fn () => Toggle::active('app-catalog'));
 Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
