@@ -389,4 +389,22 @@ class Organization extends Model
     {
         return $query->where('status', '!=', 'deactivated');
     }
+
+    /**
+     * Leave out the throwaway organizations created for tests.
+     */
+    public function scopeNotTest(Builder $query)
+    {
+        return $query->where(function (Builder $query) {
+            $query->whereNull('organizations.account_test_id')->orWhere('organizations.account_test_id', 0);
+        });
+    }
+
+    /**
+     * Whether this is a throwaway organization created for a test.
+     */
+    public function isTest(): bool
+    {
+        return ! empty($this->account_test_id);
+    }
 }

@@ -82,6 +82,20 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::post('', 'Admin\Applications\Versions@update');
                         Route::get('enable', 'Admin\Applications\Versions@enable');
                         Route::get('disable', 'Admin\Applications\Versions@disable');
+                        Route::post('mass-upgrade', 'Admin\Applications\Versions@massUpgrade');
+                        Route::prefix('tests')->group(function () {
+                            Route::get('', 'Admin\Applications\Versions\Tests@index')->name('app.versions.tests');
+                            Route::post('', 'Admin\Applications\Versions\Tests@store')->name('app.versions.tests.store');
+                            Route::post('bypass', 'Admin\Applications\Versions\Tests@bypass')->name('app.versions.tests.bypass');
+                            Route::prefix('{run}')->group(function () {
+                                Route::get('', 'Admin\Applications\Versions\Tests@show')->name('app.versions.tests.show');
+                                Route::post('next', 'Admin\Applications\Versions\Tests@next')->name('app.versions.tests.next');
+                                Route::post('cancel', 'Admin\Applications\Versions\Tests@cancel')->name('app.versions.tests.cancel');
+                                Route::post('steps/{step}/confirm', 'Admin\Applications\Versions\Tests@confirm')->name('app.versions.tests.confirm');
+                                Route::post('steps/{step}/fail', 'Admin\Applications\Versions\Tests@fail')->name('app.versions.tests.fail');
+                                Route::post('steps/{step}/retry', 'Admin\Applications\Versions\Tests@retry')->name('app.versions.tests.retry');
+                            });
+                        });
                         Route::get('roles', 'Admin\Applications\Versions@roles')->name('discover.apps.versions.roles');
                         Route::post('roles', 'Admin\Applications\Versions@updateRoles')->name('discover.apps.versions.roles.update');
                     });
@@ -101,8 +115,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             });
         });
 
-        Route::resource('organizations', 'Admin\Organizations');
-        Route::prefix('organizations')->group(function () {
+        Route::resource('organizations', 'Admin\Organizations')->middleware('block-test-orgs');
+        Route::prefix('organizations')->middleware('block-test-orgs')->group(function () {
             Route::prefix('{organization}')->group(function () {
                 Route::get('logs', 'Admin\Organizations@logs')->name('organizations.logs');
                 Route::get('tasks', 'Admin\Organizations@tasks')->name('organizations.tasks');

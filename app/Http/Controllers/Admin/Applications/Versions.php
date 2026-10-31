@@ -36,8 +36,10 @@ class Versions extends Controller
                     'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d h:m:s'),
                     'created_at' => (new Carbon($version->created_at))->format('Y-m-d h:m:s'),
                     'updates' => $version->updateSummary(),
+                    'test' => $this->testSummary($version),
                 ];
             }),
+            'mass_upgrade' => $this->massUpgradeSummary($app),
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
@@ -138,7 +140,10 @@ class Versions extends Controller
                     'state' => $version->status == 'active' ? 'disable' : 'enable',
                     'label' => $version->status == 'active' ? 'Disable' : 'Enable',
                 ],
+                'test' => $this->testSummary($version),
+                'is_active' => $version->status == 'active',
             ],
+            'mass_upgrade' => $this->massUpgradeSummary($app),
             'app' => [
                 'slug' => $app->slug,
                 'name' => $app->name,
@@ -245,6 +250,10 @@ class Versions extends Controller
 
     public function enable(Application $app, AppVersion $version)
     {
+        if (! $version->canBeEnabled()) {
+            return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
+        }
+
         $versions = AppVersion::where('application_id', $app->id)->get();
 
         foreach ($versions as $deactivated_version) {
@@ -252,12 +261,30 @@ class Versions extends Controller
             $deactivated_version->save();
         }
 
-        $task = Action::execute(new MassApplicationUpgrade($version));
-
         $version->status = 'active';
         $version->save();
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
+    }
+
+    /**
+     * Upgrade every install that is behind the enabled version.
+     */
+    public function massUpgrade(Application $app, AppVersion $version)
+    {
+        $redirect = redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name);
+
+        if ($version->status !== 'active') {
+            return $redirect->with('error', __('admin.applications.versions.mass_upgrade_not_enabled'));
+        }
+
+        if ($app->instancesBehind($version)->isEmpty()) {
+            return $redirect->with('error', __('admin.applications.versions.mass_upgrade_none'));
+        }
+
+        Action::execute(new MassApplicationUpgrade($version));
+
+        return $redirect->with('success', __('admin.applications.versions.mass_upgrade_started', ['version' => $version->name]));
     }
 
     public function disable(Application $app, AppVersion $version)
@@ -352,5 +379,38 @@ class Versions extends Controller
         $version->save();
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name.'/roles')->with('success', __('admin.applications.versions.order_updated'));
+    }
+
+    /**
+     * Where a version stands with its tests, for the version pages.
+     *
+     * @return array<string, mixed>
+     */
+    private function testSummary(AppVersion $version): array
+    {
+        $run = $version->testRuns()->first();
+
+        return [
+            'gate' => $version->testGate(),
+            'run_id' => $run?->id,
+            'can_enable' => $version->canBeEnabled(),
+            'bypassed_by' => $run?->bypassed_by?->name,
+            'bypass_reason' => $run?->bypass_reason,
+        ];
+    }
+
+    /**
+     * The mass upgrade button's state: only an enabled version with installs behind it has one.
+     *
+     * @return array<string, mixed>
+     */
+    private function massUpgradeSummary(Application $app): array
+    {
+        $active = $app->active_version();
+
+        return [
+            'version' => $active?->name,
+            'count' => $active ? $app->instancesBehind($active)->count() : 0,
+        ];
     }
 }

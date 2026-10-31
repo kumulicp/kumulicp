@@ -289,6 +289,11 @@ class Applications extends Controller
             $version = $app->versions()->where('status', 'active')->first();
         }
 
+        // Turning the app back on with the version it already runs needs no testing; a different one does
+        if ($version && $version->status !== 'active' && ! $version->canBeEnabled()) {
+            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
+        }
+
         if ($version) {
             $version->status = 'active';
             $version->save();

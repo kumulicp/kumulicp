@@ -23,13 +23,13 @@ class Dashboard extends Controller
         $now = Carbon::now();
 
         $organizations = [
-            'total' => Organization::count(),
-            'active' => Organization::where('status', 'active')->count(),
-            'new' => Organization::where('status', 'new')->count(),
-            'deactivated' => Organization::where('status', 'deactivated')->count(),
-            'trialing' => Organization::whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now)->count(),
-            'new_last_30_days' => Organization::where('created_at', '>=', $now->copy()->subDays(30))->count(),
-            'suborganizations' => Organization::whereNotNull('parent_organization_id')->count(),
+            'total' => Organization::notTest()->count(),
+            'active' => Organization::notTest()->where('status', 'active')->count(),
+            'new' => Organization::notTest()->where('status', 'new')->count(),
+            'deactivated' => Organization::notTest()->where('status', 'deactivated')->count(),
+            'trialing' => Organization::notTest()->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now)->count(),
+            'new_last_30_days' => Organization::notTest()->where('created_at', '>=', $now->copy()->subDays(30))->count(),
+            'suborganizations' => Organization::notTest()->whereNotNull('parent_organization_id')->count(),
         ];
 
         $plans = Plan::withCount('subscribers')

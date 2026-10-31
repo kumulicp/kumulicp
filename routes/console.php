@@ -10,6 +10,7 @@ use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
+use App\Services\VersionTesting\VersionTestRunner;
 use Illuminate\Support\Facades\Schedule;
 use Spatie\UptimeMonitor\Commands\CheckCertificates;
 use Spatie\UptimeMonitor\Commands\CheckUptime;
@@ -30,6 +31,7 @@ use Spatie\UptimeMonitor\Commands\CheckUptime;
 // would claim the same tasks), and only one server runs it. The mutex expiry
 // keeps a crashed run from blocking tasks for the default 24 hours.
 Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(fn () => app(VersionTestRunner::class)->syncProvisioning())->name('version-test-sync')->everyMinute()->withoutOverlapping(5);
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();

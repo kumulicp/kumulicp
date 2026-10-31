@@ -24,7 +24,7 @@ class BackupScheduler extends Controller
     public function index()
     {
         $backups = BackupSchedule::orderBy('scheduled_at', 'desc')->paginate(30);
-        $organizations = Organization::all();
+        $organizations = Organization::notTest()->get();
         $applications = Application::all();
         $servers = Server::all();
 

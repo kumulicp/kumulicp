@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BlockTestOrganizations;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -44,7 +45,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => SetupAwareAuthenticate::class,
             'guest' => RedirectIfAuthenticated::class,
             'toggle' => EnsureFeatureEnabled::class,
+            'block-test-orgs' => BlockTestOrganizations::class,
         ]);
+        // The block reads the organization route binding has resolved
+        $middleware->appendToPriorityList(SubstituteBindings::class, BlockTestOrganizations::class);
         $middleware->trustProxies(at: [
             '10.0.0.0/8',
         ],

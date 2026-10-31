@@ -34,12 +34,17 @@ export default {
         {
           title: this.$t('admin.roles.roles'),
           url: this.basePath + '/roles'
+        },
+        {
+          title: this.$t('admin.versionTests.tests'),
+          url: this.basePath + '/tests'
         }
       ]
     },
     value () {
       const pathname = (new URL(window.location.href)).pathname
-      const active = this.tabs.find((tab) => tab.url === pathname)
+      // A test run is a page under the tests tab
+      const active = this.tabs.find((tab) => tab.url === pathname) || this.tabs.find((tab) => pathname.startsWith(tab.url + '/') && tab.url !== this.basePath)
       return active ? active.title : this.$t('common.edit')
     }
   }
