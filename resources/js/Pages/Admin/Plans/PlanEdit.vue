@@ -475,29 +475,29 @@ import { currencyByCode } from '@/constants/currencies'
       </AdminSettings>
       <va-list-separator class="my-1" fit />
       <h1 class="va-h1">{{ $t('admin.plans.appSettings') }}</h1>
-      <AdminSettings v-for="(app, index) in apps" :key="index">
-        <template #name>{{ app.name }}</template>
+      <AdminSettings>
+        <template #name>{{ $t('admin.plans.enabledApps') }}</template>
+        <template #description>{{ $t('admin.plans.enabledAppsDescription') }}</template>
         <template #settings>
-          <va-select v-model="form['app_plans'][app.slug]['plans']"
-            :label="$t('admin.plans.appPlan')"
-            :options="app_plans[app.slug]"
-            value-by="value"
-            text-by="text"
-            class="my-2"
-            immediateValidation
-            clearable
-            :placeholder="$t('admin.plans.disabled')"
-            :messages="$t('admin.plans.appPlanCaption')"
-            />
-          <va-input
-            v-model="form['app_plans'][app.slug]['max']"
-            :label="$t('admin.plans.maxActivations')"
-            immediateValidation
-            type="number"
-            min="0"
-            class="my-2"
-            :messages="$t('admin.plans.maxActivationsCaption')"
-            />
+          <p v-if="addedApps.length === 0" id="noApps" class="my-2">{{ $t('admin.plans.noAppsAdded') }}</p>
+          <va-list v-else class="mb-2">
+            <va-list-item v-for="app in addedApps" :key="app.slug" :id="'app-row-' + app.slug">
+              <va-list-item-section>
+                <va-list-item-label>{{ app.name }}</va-list-item-label>
+                <va-list-item-label caption>
+                  {{ $t('admin.plans.appPlan') }}: {{ appPlanName(app.slug) }} &middot;
+                  {{ $t('admin.plans.maxActivations') }}: {{ form.app_plans[app.slug].max ?? 0 }}
+                </va-list-item-label>
+              </va-list-item-section>
+              <va-list-item-section icon>
+                <div class="flex">
+                  <va-button :id="'edit-app-' + app.slug" preset="secondary" size="small" class="mr-2" @click="openEditApp(app)">{{ $t('common.edit') }}</va-button>
+                  <va-button :id="'remove-app-' + app.slug" preset="secondary" color="danger" size="small" @click="removeApp(app.slug)">{{ $t('common.remove') }}</va-button>
+                </div>
+              </va-list-item-section>
+            </va-list-item>
+          </va-list>
+          <va-button id="addApp" :disabled="availableApps.length === 0" @click="openAddApp()">{{ $t('admin.plans.addApp') }}</va-button>
         </template>
       </AdminSettings>
 
@@ -505,6 +505,55 @@ import { currencyByCode } from '@/constants/currencies'
       </form>
     </va-card-content>
   </va-card>
+  <va-modal v-model="showAppModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+  >
+    <template #content="{ ok }">
+      <va-card-title class="m-0">{{ editingSlug ? $t('admin.plans.editApp') : $t('admin.plans.addApp') }}</va-card-title>
+      <va-card-content class="m-0">
+        <va-select
+          id="appModalApp"
+          v-model="draft.slug"
+          :label="$t('admin.plans.app')"
+          :options="editingSlug ? addedApps : availableApps"
+          value-by="slug"
+          text-by="name"
+          class="my-2"
+          :disabled="editingSlug !== null"
+          required-mark
+          @update:model-value="draft.plans = null"
+        />
+        <va-select
+          id="appModalPlan"
+          v-model="draft.plans"
+          :label="$t('admin.plans.appPlan')"
+          :options="draft.slug ? app_plans[draft.slug] : []"
+          value-by="value"
+          text-by="text"
+          class="my-2"
+          :disabled="!draft.slug"
+          required-mark
+          :messages="$t('admin.plans.appPlanCaption')"
+        />
+        <va-input
+          id="appModalMax"
+          v-model="draft.max"
+          :label="$t('admin.plans.maxActivations')"
+          type="number"
+          min="0"
+          class="my-2"
+          :disabled="!draft.slug"
+          :messages="$t('admin.plans.maxActivationsCaption')"
+        />
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+        <va-button id="saveApp" class="mr-2" :disabled="!draft.slug || !draft.plans" @click="saveApp(ok)">{{ $t('common.save') }}</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
 </template>
 
 <script lang="ts">
@@ -547,6 +596,9 @@ export default {
     return {
       originalType: this.plan.type,
       features: this.plan.features,
+      showAppModal: false,
+      editingSlug: null,
+      draft: { slug: null, plans: null, max: 1 },
       app_plans: appPlans,
       planTypes: [
         {
@@ -615,9 +667,44 @@ export default {
   computed: {
     typeChanged () {
       return this.originalType !== null && this.form.type !== this.originalType
+    },
+    // Apps with an app plan selected are the ones offered to users
+    addedApps () {
+      return Object.values(this.apps).filter((app) => this.form.app_plans[app.slug]?.plans)
+    },
+    availableApps () {
+      return Object.values(this.apps).filter((app) => !this.form.app_plans[app.slug]?.plans)
     }
   },
   methods: {
+    appPlanName (slug) {
+      const selected = this.form.app_plans[slug]?.plans
+      return this.app_plans[slug]?.find((plan) => plan.value === selected)?.text ?? selected
+    },
+    openAddApp () {
+      this.editingSlug = null
+      this.draft = { slug: null, plans: null, max: 1 }
+      this.showAppModal = true
+    },
+    openEditApp (app) {
+      this.editingSlug = app.slug
+      this.draft = {
+        slug: app.slug,
+        plans: this.form.app_plans[app.slug].plans,
+        max: this.form.app_plans[app.slug].max ?? 0
+      }
+      this.showAppModal = true
+    },
+    saveApp (close) {
+      this.form.app_plans[this.draft.slug] = {
+        plans: this.draft.plans,
+        max: this.draft.max
+      }
+      close()
+    },
+    removeApp (slug) {
+      this.form.app_plans[slug] = { plans: null, max: 0 }
+    },
     addNewFeature () {
       this.form.displayed_features.push({
         name: '',
