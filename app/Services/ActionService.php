@@ -31,7 +31,9 @@ use App\Actions\Prerequisites;
 use App\Actions\Security\RunSecurityScan;
 use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearTestAccounts;
+use App\Actions\Tests\ClearVersionTestStep;
 use App\Actions\Tests\CreateTests;
+use App\Actions\Tests\ProvisionVersionTestStep;
 use App\AppInstance;
 use App\Contracts\Actions\TaskAction;
 use App\Enums\TaskStatus;
@@ -71,6 +73,8 @@ class ActionService
             'mass_application_upgrade' => MassApplicationUpgrade::class,
             'create_tests' => CreateTests::class,
             'clear_tests' => ClearTestAccounts::class,
+            'provision_version_test_step' => ProvisionVersionTestStep::class,
+            'clear_version_test_step' => ClearVersionTestStep::class,
             'process_customizations' => ProcessCustomizations::class,
             'retrieve_dkim_key' => RetrieveDkimKey::class,
             'register_domain_name' => RegisterDomainName::class,

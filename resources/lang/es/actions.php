@@ -10,6 +10,8 @@ return [
     'migrating_app_database' => 'Migrando la base de datos de :app a :server',
     'updating_app' => 'Actualizando :app',
     'upgrading_app' => 'Mejorando :app',
+    'provision_version_test_step' => 'Preparando una prueba de :app :version, :plan',
+    'clear_version_test_step' => 'Limpiando la organización de prueba de :plan',
     'upgrading_all_apps' => 'Actualizando todas las :app a :version',
     'updating_app_customizations' => 'Actualizando personalizaciones de :app',
     'waiting_for_domain_ip' => 'Esperando a que :domain apunte a :ip',
