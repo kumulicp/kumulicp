@@ -138,6 +138,10 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('logs')->group(function () {
                 Route::get('', 'Admin\Logs@index')->name('admin.logs.index');
             });
+            Route::prefix('audit')->group(function () {
+                Route::get('', 'Admin\AuditLogs@index')->name('admin.audit.index');
+                Route::get('export', 'Admin\AuditLogs@export')->name('admin.audit.export');
+            });
             Route::prefix('security/scans')->group(function () {
                 Route::get('', 'Admin\SecurityScans@index')->name('security.scans.index');
                 Route::post('', 'Admin\SecurityScans@store')->name('security.scans.store');

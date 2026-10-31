@@ -104,6 +104,24 @@ return [
             ],
         ],
 
+        // Audit entries as JSON on stderr. Selected through AUDIT_LOG_CHANNEL (config/audit.php).
+        'audit' => [
+            'driver' => 'monolog',
+            'level' => 'info',
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => JsonFormatter::class,
+            'formatter_with' => [
+                'appendNewline' => true,
+                'includeStacktraces' => false,
+            ],
+            'processors' => [
+                StructuredLogProcessor::class,
+            ],
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

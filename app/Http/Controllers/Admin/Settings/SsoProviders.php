@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Settings;
 
 use App\Http\Controllers\Controller;
 use App\SsoProvider;
+use App\Support\Facades\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -56,6 +57,11 @@ class SsoProviders extends Controller
 
     public function show(SsoProvider $provider)
     {
+        // The edit form is sent the client secret, so opening it counts as viewing the secret.
+        if ($provider->client_secret) {
+            Audit::record('sso_provider.secret_viewed', $provider);
+        }
+
         return inertia('Admin/Settings/SsoProviders/SsoProviderEdit', [
             'provider' => [
                 'id' => $provider->id,

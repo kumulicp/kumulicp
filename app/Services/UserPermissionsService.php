@@ -10,6 +10,7 @@ use App\Notifications\PermissionsUpdatedNotification;
 use App\Notifications\UserCreated;
 use App\Organization;
 use App\Support\Facades\Action;
+use App\Support\Facades\Audit;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
@@ -120,6 +121,13 @@ class UserPermissionsService
         }
 
         $changes = $permissions->changes();
+
+        Audit::record(
+            'user.permissions_changed',
+            ['type' => 'user', 'id' => $user_id, 'label' => $user_id],
+            properties: ['changes' => $changes],
+            target_organization_id: $organization->id,
+        );
 
         Action::execute(new SubscriptionUpdate($organization, Subscription::all()), background: true);
         UserPermissionsUpdated::dispatch($user);

@@ -7,6 +7,7 @@ use App\Rules\ConfirmOldPassword;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
 use App\Support\Facades\AccountManager;
+use App\Support\Facades\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 
@@ -74,6 +75,8 @@ class Profile extends Controller
         $user = AccountManager::users()->find($user->username);
         $user->setPassword($validatedData['password']);
         $user->save();
+
+        Audit::record('auth.password_changed');
 
         return redirect('/profile')->with('success', __('profile.password.updated'));
 

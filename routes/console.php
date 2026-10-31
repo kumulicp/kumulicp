@@ -63,6 +63,6 @@ Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command('queue:prune-failed', ['--hours' => 720])->daily();
-Schedule::command('model:prune', ['--model' => [App\Log::class]])->daily();
+Schedule::command('model:prune', ['--model' => [App\Log::class, App\AuditLog::class]])->daily();
 Schedule::command(CheckUptime::class)->everyMinute();
 Schedule::command(CheckCertificates::class)->daily();

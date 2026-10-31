@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\AccountManagerService;
 use App\Services\ActionService;
 use App\Services\ApplicationService;
+use App\Services\AuditService;
 use App\Services\BackupService;
 use App\Services\FastCacheService;
 use App\Services\OrganizationService;
@@ -73,6 +74,10 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
             return new SettingsService;
         });
 
+        $this->app->singleton('audit', function ($app) {
+            return new AuditService;
+        });
+
         $this->app->singleton('fastcache', function ($app) {
             return new FastCacheService;
         });
@@ -92,6 +97,6 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
      */
     public function provides()
     {
-        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
+        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings', 'audit'];
     }
 }

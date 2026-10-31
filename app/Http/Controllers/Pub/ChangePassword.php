@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\NewUserCode;
 use App\Rules\ConfirmOldPassword;
 use App\Support\Facades\AccountManager;
+use App\Support\Facades\Audit;
 use App\Support\Facades\Organization;
 use App\User;
 use Illuminate\Http\Request;
@@ -74,6 +75,8 @@ class ChangePassword extends Controller
         $new_user->activated = true;
         $new_user->save();
 
+        Audit::record('auth.password_set', ['type' => 'user', 'id' => $new_user->username, 'label' => $new_user->username], target_organization_id: $new_user->organization_id);
+
         return redirect('/public/users/done/'.$code);
     }
 
@@ -88,6 +91,8 @@ class ChangePassword extends Controller
         $user = AccountManager::users()->findEmail($email);
         $user->setPassword($request->input('newPassword'));
         $user->save();
+
+        Audit::record('auth.password_changed', ['type' => 'user', 'id' => $email, 'label' => $email]);
 
         return redirect('public/users/done')->with('success', __('auth.password.updated'));
     }

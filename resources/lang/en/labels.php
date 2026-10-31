@@ -53,6 +53,7 @@ return [
     'disabled' => 'Disabled',
     'features' => 'Features',
     'logs' => 'Logs',
+    'audit_log' => 'Audit Log',
     'minimal' => 'Minimal',
     'unknown' => 'Unknown',
     'deactivates' => 'Deactivates :date',

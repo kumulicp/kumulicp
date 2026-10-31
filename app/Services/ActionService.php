@@ -42,6 +42,7 @@ use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
 use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
 use App\Jobs\RunAction;
 use App\Organization;
+use App\Support\Facades\Audit;
 use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -203,6 +204,8 @@ class ActionService
         }
 
         if ($task->status === 'complete') {
+            Audit::recordTaskEvent('task.completed', $task);
+
             Log::info('task.completed', [
                 'organization_id' => $task->organization_id,
                 'task_id' => $task->id,
@@ -261,7 +264,15 @@ class ActionService
         $task->status = $action->status;
         $task->custom_values = $action->customValues();
         $task->background = $background ?? $action->background;
+
+        if (Audit::enabled() && $initiator = Audit::initiator()) {
+            $task->initiated_by_type = $initiator['type'];
+            $task->initiated_by_id = $initiator['id'];
+        }
+
         $task->save();
+
+        Audit::recordTaskEvent('task.created', $task);
 
         if (method_exists($action, 'postGenerate')) {
             $task->attempts = 1;

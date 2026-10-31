@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AddRequestContext;
+use App\Http\Middleware\AuditRequest;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -40,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->appendToGroup('web', [
             AddRequestContext::class,
+            AuditRequest::class,
             HandleInertiaRequests::class,
             SecurityHeaders::class,
         ]);

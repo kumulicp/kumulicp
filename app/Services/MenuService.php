@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Facades\Audit;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use Illuminate\Support\Arr;
@@ -124,6 +125,14 @@ class MenuService
                         'perm' => $admin,
                         'external' => false,
                         'order' => 600,
+                    ],
+                    [
+                        'name' => __('labels.audit_log'),
+                        'url' => '/admin/server/audit',
+                        'icon' => 'fa-download',
+                        'perm' => $admin && Audit::enabled(),
+                        'external' => false,
+                        'order' => 650,
                     ],
                     [
                         'name' => __('labels.package_manager'),

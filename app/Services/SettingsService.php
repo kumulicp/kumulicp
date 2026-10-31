@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\ServerSetting;
+use App\Support\Facades\Audit;
 use Illuminate\Support\Arr;
 
 class SettingsService
@@ -24,6 +25,8 @@ class SettingsService
     public function update($key, $value = null)
     {
         if ($value) {
+            $old_value = $this->settings[$key] ?? null;
+
             if (array_key_exists($key, $this->settings)) {
                 $setting = ServerSetting::where('key', $key)->first();
                 $setting->value = $value;
@@ -36,6 +39,8 @@ class SettingsService
             }
 
             Arr::set($this->settings, $key, $value);
+
+            Audit::recordSettingChange($key, $old_value, (string) $value);
         } elseif (array_key_exists($key, $this->settings)) {
             $this->remove($key);
         }
@@ -53,8 +58,12 @@ class SettingsService
     public function remove($key)
     {
         if (array_key_exists($key, $this->settings)) {
-            $setting = ServerSetting::where('key', $key)->first();
-            $setting->delete();
+            $old_value = $this->settings[$key];
+
+            ServerSetting::where('key', $key)->delete();
+            unset($this->settings[$key]);
+
+            Audit::recordSettingChange($key, $old_value, null);
         }
     }
 }

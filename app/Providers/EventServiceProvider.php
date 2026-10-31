@@ -18,6 +18,7 @@ use App\Integrations\ServerManagers\Rancher\Listeners\UpdateIngressMiddleware;
 use App\Integrations\SSO\Authentik\Listeners\SyncLDAP;
 use App\Integrations\SSO\Authentik\Listeners\UpdateAppInfo;
 use App\Jobs\Users\UpdateUserStorage;
+use App\Listeners\AuditSubscriber;
 use App\Listeners\NotifyCpAdminOfNewOrganization;
 use App\Listeners\SendEmailVerificationNotification;
 use App\Listeners\UpdateAppLdapGroups;
@@ -50,5 +51,8 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(OrganizationCreated::class, NotifyCpAdminOfNewOrganization::class);
 
         Event::listen(OrganizationRegistered::class, SendEmailVerificationNotification::class);
+
+        // Audit trail (a no-op until "audit_logging_enabled" is switched on in the admin settings)
+        Event::subscribe(AuditSubscriber::class);
     }
 }

@@ -53,6 +53,7 @@ return [
     'disabled' => 'Deshabilitado',
     'features' => 'Funciones',
     'logs' => 'Registros',
+    'audit_log' => 'Registro de Auditoría',
     'minimal' => 'Mínimo',
     'unknown' => 'Desconocido',
     'deactivates' => 'Se desactiva el :date',

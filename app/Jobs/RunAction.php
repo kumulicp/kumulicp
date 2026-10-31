@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Exceptions\ConnectionFailedException;
 use App\Support\Facades\Action;
+use App\Support\Facades\Audit;
 use App\Support\Facades\Organization;
 use App\Task;
 use Illuminate\Bus\Batchable;
@@ -102,6 +103,8 @@ class RunAction implements ShouldQueue
 
         Context::add($this->taskContext());
         Log::error('task.failed', ['exception' => $e]);
+
+        Audit::recordTaskEvent('task.failed', $this->task, ['error' => $e->getMessage()], 'failure');
     }
 
     /**

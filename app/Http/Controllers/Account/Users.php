@@ -20,6 +20,7 @@ use App\Services\AdditionalStorageService;
 use App\SuborgUser;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
+use App\Support\Facades\Audit;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
@@ -506,6 +507,8 @@ class Users extends Controller
         $new_user_code->expires_at = now()->addHours(72);
         $new_user_code->save();
         $user->notify(new ResetPassword($user, $new_user_code->code));
+
+        Audit::record('auth.password_reset_requested', ['type' => 'user', 'id' => $username, 'label' => $user->attribute('name')], target_organization_id: $new_user_code->organization_id);
 
         return redirect('/users')->with('success', 'Password Reset Link Sent');
     }

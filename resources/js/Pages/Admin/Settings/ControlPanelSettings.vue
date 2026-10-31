@@ -101,6 +101,18 @@ import { CURRENCIES } from '@/constants/currencies'
     </AdminSettings>
     <va-list-separator class="my-1" fit />
     <AdminSettings>
+      <template #name>{{ $t('settings.audit') }}</template>
+      <template #description>{{ $t('settings.auditDescription') }}</template>
+      <template #settings>
+        <va-switch v-model="form.audit_logging_enabled"
+          :label="$t('settings.auditEnabled')"
+          id="auditLoggingEnabled"
+          class="mb-3"
+        />
+      </template>
+    </AdminSettings>
+    <va-list-separator class="my-1" fit />
+    <AdminSettings>
       <template #name>{{ $t('settings.currency') }}</template>
       <template #description>{{ $t('settings.currencyDescription') }}</template>
       <template #settings>
@@ -176,7 +188,8 @@ export default {
         error_email: this.settings.error_email,
         default_currency: this.settings.default_currency ?? 'USD',
         enabled_currencies: this.settings.enabled_currencies ?? ['USD'],
-        default_locale: this.settings.default_locale
+        default_locale: this.settings.default_locale,
+        audit_logging_enabled: !!this.settings.audit_logging_enabled
       })
     }
   },

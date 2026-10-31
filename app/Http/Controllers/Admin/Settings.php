@@ -24,6 +24,7 @@ class Settings extends Controller
                 'default_currency' => SettingsFacade::get('default_currency', 'USD'),
                 'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
                 'default_locale' => SettingsFacade::get('default_locale'),
+                'audit_logging_enabled' => (bool) SettingsFacade::get('audit_logging_enabled'),
             ],
             'locales' => config('locales.available'),
             'breadcrumbs' => [
@@ -50,6 +51,7 @@ class Settings extends Controller
             'enabled_currencies' => 'required|array|min:1',
             'enabled_currencies.*' => 'string|size:3',
             'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
+            'audit_logging_enabled' => 'sometimes|boolean',
         ]);
 
         $enabledCurrencies = $validated['enabled_currencies'];
@@ -68,6 +70,11 @@ class Settings extends Controller
         SettingsFacade::update('default_currency', $validated['default_currency']);
         SettingsFacade::update('enabled_currencies', json_encode($enabledCurrencies));
         SettingsFacade::update('default_locale', Arr::get($validated, 'default_locale'));
+
+        // Only touched when the form sends it, so an older client can never switch auditing off by omission.
+        if (array_key_exists('audit_logging_enabled', $validated)) {
+            SettingsFacade::update('audit_logging_enabled', $validated['audit_logging_enabled'] ? '1' : null);
+        }
 
         return redirect('admin/settings')->with('success', __('admin.settings.updated'));
     }
