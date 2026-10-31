@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -14,7 +15,7 @@ use LogicException;
  *
  * @property int $id
  * @property string $event_id
- * @property \Illuminate\Support\Carbon $occurred_at
+ * @property Carbon $occurred_at
  * @property string $event
  * @property string $outcome
  * @property string|null $actor_type

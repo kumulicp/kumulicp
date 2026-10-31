@@ -1,5 +1,6 @@
 <?php
 
+use App\AuditLog;
 use App\Console\Calls\ActivateBackup;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Console\Calls\DeleteBackups;
@@ -63,6 +64,6 @@ Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command('queue:prune-failed', ['--hours' => 720])->daily();
-Schedule::command('model:prune', ['--model' => [App\Log::class, App\AuditLog::class]])->daily();
+Schedule::command('model:prune', ['--model' => [App\Log::class, AuditLog::class]])->daily();
 Schedule::command(CheckUptime::class)->everyMinute();
 Schedule::command(CheckCertificates::class)->daily();

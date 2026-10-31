@@ -1,12 +1,15 @@
 <?php
 
 use App\Http\Middleware\AddRequestContext;
-use App\Logging\Processors\StructuredLogProcessor;
 use App\Log;
+use App\Logging\Processors\StructuredLogProcessor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Monolog\Formatter\JsonFormatter;
+use Monolog\Handler\StreamHandler;
 use Monolog\Level;
+use Monolog\Logger;
 use Monolog\LogRecord;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -62,9 +65,9 @@ it('masks secret looking keys and truncates long strings', function () {
 
 it('writes one json object per line through the stderr_json channel', function () {
     $stream = fopen('php://memory', 'w+');
-    $handler = new Monolog\Handler\StreamHandler($stream);
-    $handler->setFormatter(new Monolog\Formatter\JsonFormatter(Monolog\Formatter\JsonFormatter::BATCH_MODE_JSON, true, false, true));
-    $logger = new Monolog\Logger('testing', [$handler], [new StructuredLogProcessor]);
+    $handler = new StreamHandler($stream);
+    $handler->setFormatter(new JsonFormatter(JsonFormatter::BATCH_MODE_JSON, true, false, true));
+    $logger = new Logger('testing', [$handler], [new StructuredLogProcessor]);
 
     $logger->info('task.started', ['task_id' => 3]);
     $logger->error('boom', ['exception' => new RuntimeException('bad')]);
@@ -79,8 +82,8 @@ it('writes one json object per line through the stderr_json channel', function (
 });
 
 it('defines the stderr_json channel and a configurable default stack', function () {
-    expect(config('logging.channels.stderr_json.handler'))->toBe(Monolog\Handler\StreamHandler::class)
-        ->and(config('logging.channels.stderr_json.formatter'))->toBe(Monolog\Formatter\JsonFormatter::class)
+    expect(config('logging.channels.stderr_json.handler'))->toBe(StreamHandler::class)
+        ->and(config('logging.channels.stderr_json.formatter'))->toBe(JsonFormatter::class)
         ->and(config('logging.channels.custom.channels'))->toContain('mysql');
 });
 

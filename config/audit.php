@@ -1,5 +1,31 @@
 <?php
 
+use App\AdditionalStorage;
+use App\Announcement;
+use App\AppInstance;
+use App\Application;
+use App\AppPlan;
+use App\AppRole;
+use App\AppVersion;
+use App\BackupSchedule;
+use App\EmailForwarder;
+use App\Group;
+use App\GroupMember;
+use App\Organization;
+use App\OrgBackup;
+use App\OrgDomain;
+use App\OrgServer;
+use App\OrgSubdomain;
+use App\Plan;
+use App\RecurringBackup;
+use App\RepoSecret;
+use App\Server;
+use App\SsoProvider;
+use App\SuborgUser;
+use App\Tld;
+use App\User;
+use App\UserSsoAccount;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -22,31 +48,31 @@ return [
 
     // Models whose create / update / delete are recorded automatically.
     'models' => [
-        App\User::class,
-        App\Organization::class,
-        App\SuborgUser::class,
-        App\Group::class,
-        App\GroupMember::class,
-        App\UserSsoAccount::class,
-        App\SsoProvider::class,
-        App\Plan::class,
-        App\AppPlan::class,
-        App\Application::class,
-        App\AppVersion::class,
-        App\AppRole::class,
-        App\AppInstance::class,
-        App\OrgDomain::class,
-        App\OrgSubdomain::class,
-        App\OrgServer::class,
-        App\OrgBackup::class,
-        App\Server::class,
-        App\RepoSecret::class,
-        App\RecurringBackup::class,
-        App\BackupSchedule::class,
-        App\Tld::class,
-        App\Announcement::class,
-        App\AdditionalStorage::class,
-        App\EmailForwarder::class,
+        User::class,
+        Organization::class,
+        SuborgUser::class,
+        Group::class,
+        GroupMember::class,
+        UserSsoAccount::class,
+        SsoProvider::class,
+        Plan::class,
+        AppPlan::class,
+        Application::class,
+        AppVersion::class,
+        AppRole::class,
+        AppInstance::class,
+        OrgDomain::class,
+        OrgSubdomain::class,
+        OrgServer::class,
+        OrgBackup::class,
+        Server::class,
+        RepoSecret::class,
+        RecurringBackup::class,
+        BackupSchedule::class,
+        Tld::class,
+        Announcement::class,
+        AdditionalStorage::class,
+        EmailForwarder::class,
     ],
 
     // Request paths (not the HTTP verb) that change state even though they are GET routes.

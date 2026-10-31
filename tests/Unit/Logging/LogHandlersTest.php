@@ -6,6 +6,7 @@ use App\Logging\MatrixLoggingHandler;
 use App\Logging\MySQLLoggingHandler;
 use App\Mail\CriticalError;
 use App\Support\Facades\Settings;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -140,7 +141,7 @@ it('never throws when matrix is unreachable', function () {
         'services.matrix.access_token' => 'token',
         'services.matrix.room_id' => '!room:matrix.test',
     ]);
-    Http::fake(fn () => throw new Illuminate\Http\Client\ConnectionException('timeout'));
+    Http::fake(fn () => throw new ConnectionException('timeout'));
 
     (new MatrixLoggingHandler)->handle(make_log_record());
 
