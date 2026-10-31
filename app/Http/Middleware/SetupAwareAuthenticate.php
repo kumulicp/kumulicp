@@ -16,7 +16,7 @@ class SetupAwareAuthenticate extends Middleware
      */
     protected function redirectTo($request)
     {
-        if (! $request->expectsJson()) {
+        if (! $request->expectsJson() && ! $request->is('api/*')) {
             $organizations = ServerSetting::where('key', 'installed')
                 ->where('value', 1)
                 ->first();
