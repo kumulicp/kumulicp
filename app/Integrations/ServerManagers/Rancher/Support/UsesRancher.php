@@ -45,7 +45,11 @@ trait UsesRancher
 
     protected function rancher(): RancherApiClient
     {
-        return $this->api();
+        $api = $this->api();
+
+        assert($api instanceof RancherApiClient);
+
+        return $api;
     }
 
     /**
