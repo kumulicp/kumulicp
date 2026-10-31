@@ -491,9 +491,18 @@ class BasePlanService
 
     public function basicPriceTotal()
     {
-        return $this->price('basic')
-                ? ceil($this->org_service->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->price('basic')
-                : 0;
+        return $this->price('basic') ? $this->basicBlocks() * $this->price('basic') : 0;
+    }
+
+    /**
+     * Number of billable blocks of basic users. Users are billed in blocks of
+     * `basic.amount`; a missing or zero block size means one user per block.
+     */
+    public function basicBlocks(): int
+    {
+        $block_size = max(1, (int) $this->plan->setting('basic.amount'));
+
+        return (int) ceil($this->org_service->countEntity('basic') / $block_size);
     }
 
     public function basicAmountTotal()

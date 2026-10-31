@@ -161,11 +161,13 @@ it('updates basic user settings per plan', function () {
             'plans' => [
                 $this->plan1->id => bulkEditSettingsPayload([
                     'name' => 'Original Name One', 'description' => 'Original Desc One',
-                    'basic' => ['name' => 'Volunteer', 'price' => 3, 'price_id' => 'bas_1', 'storage' => 1, 'max' => 10, 'amount' => 5],
+                    'basic' => ['name' => 'Volunteer', 'storage' => 1, 'max' => 10, 'amount' => 5],
+                    'prices' => ['basic' => ['USD' => ['amount' => 3, 'price_id' => 'bas_1']]],
                 ]),
                 $this->plan2->id => bulkEditSettingsPayload([
                     'name' => 'Original Name Two', 'description' => 'Original Desc Two',
-                    'basic' => ['name' => 'Member', 'price' => 6, 'price_id' => 'bas_2', 'storage' => 2, 'max' => 25, 'amount' => 10],
+                    'basic' => ['name' => 'Member', 'storage' => 2, 'max' => 25, 'amount' => 10],
+                    'prices' => ['basic' => ['USD' => ['amount' => 6, 'price_id' => 'bas_2']]],
                 ]),
             ],
         ]
@@ -178,6 +180,22 @@ it('updates basic user settings per plan', function () {
     expect($this->plan2->settings['basic']['name'])->toBe('Member');
     expect($this->plan1->settings['basic']['max'])->toBe(10);
     expect($this->plan2->settings['basic']['max'])->toBe(25);
+    expect($this->plan1->settings['basic']['prices']['USD']['amount'])->toBe(3);
+    expect($this->plan2->settings['basic']['prices']['USD']['amount'])->toBe(6);
+    expect($this->plan1->settings['basic']['prices']['USD']['price_id'])->toBe('bas_1');
+    expect($this->plan2->settings['basic']['prices']['USD']['price_id'])->toBe('bas_2');
+});
+
+it('passes the enabled currencies to the bulk edit pages', function () {
+    $query = "plans[]={$this->plan1->id}&plans[]={$this->plan2->id}";
+
+    $this->actingAs($this->user)
+        ->get("/admin/apps/{$this->demoApp->slug}/plans/bulk-edit/edit?{$query}")
+        ->assertInertia(fn ($page) => $page->has('enabled_currencies'));
+
+    $this->actingAs($this->user)
+        ->get("/admin/apps/{$this->demoApp->slug}/plans/bulk-edit?{$query}")
+        ->assertInertia(fn ($page) => $page->has('enabled_currencies'));
 });
 
 it('updates payment_enabled flag per plan', function () {
