@@ -4,11 +4,12 @@ use App\Application;
 use App\AppPlan;
 use App\AppVersion;
 use App\ChartSource;
-use App\Integrations\Applications\Catalog\CatalogChart;
+use App\Integrations\Applications\HelmForge\HelmForgeChart;
 use App\Organization;
 use App\Support\Catalog\ChartCatalogSync;
 use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Support\Facades\Http;
+use Symfony\Component\Yaml\Yaml;
 use Tests\Support\VersionUpdates\ChartArchive;
 
 // Syncs one chart with the given default values and activates it for an organization
@@ -34,7 +35,7 @@ function catalogInstance(array $values, array $plan_configurations = []): array
 
     $app_instance = ApplicationFacade::activate($organization, $application, $version, $plan)->get();
 
-    return [new CatalogChart($organization, $app_instance), $app_instance];
+    return [new HelmForgeChart($organization, $app_instance), $app_instance];
 }
 
 function giteaDefaults(): array
@@ -99,4 +100,14 @@ it('names the release after the chart and the instance', function () {
     expect($chart->chart_name)->toBe('gitea');
     expect($chart->chartName())->toBe($app_instance->name);
     expect($app_instance->version->setting('chart_name'))->toBe('gitea');
+});
+
+it('leaves ingress.tls to the chart default when TLS is off', function () {
+    [$chart] = catalogInstance(giteaDefaults());
+
+    $values = $chart->valuesWithAdditionalConfigs();
+
+    // An empty array would be dumped as `{}` and fail charts whose schema wants a list
+    expect($values['ingress'])->not->toHaveKey('tls');
+    expect(Yaml::dump($values, 10))->not->toContain('tls: {}');
 });

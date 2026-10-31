@@ -80,10 +80,10 @@ class Application extends Model
         return false;
     }
 
-    // Imported from a chart source rather than backed by a hand-written profile
-    public function isCatalog(): bool
+    // Imported from the HelmForge chart repository rather than backed by a hand-written profile
+    public function isHelmForge(): bool
     {
-        return ! empty($this->catalog);
+        return $this->source === ApplicationSource::HelmForge;
     }
 
     public function chartSource()
