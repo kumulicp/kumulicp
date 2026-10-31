@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * A Helm chart repository whose charts are imported as catalog applications
@@ -17,12 +18,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $type
  * @property int|null $helm_repo_secret_id
  * @property bool $enabled
- * @property \Illuminate\Support\Carbon|null $last_synced_at
+ * @property Carbon|null $last_synced_at
  * @property string|null $last_sync_error
  */
 class ChartSource extends Model
 {
     protected $table = 'chart_sources';
+
+    protected $fillable = ['name', 'slug', 'url', 'type', 'helm_repo_secret_id', 'enabled', 'last_synced_at', 'last_sync_error'];
 
     protected $casts = [
         'enabled' => 'boolean',

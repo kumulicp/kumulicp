@@ -1,7 +1,7 @@
 # Chart catalog
 
-Imports every chart of a Helm repository (HelmForge by default) as a disabled
-application, deployed by one generic profile and chart class instead of a
+Imports every chart of the HelmForge Helm repository as a disabled application,
+deployed by one `HelmForgeProfile` and `HelmForgeChart` instead of a
 hand-written `FooProfile` + `FooChart` per app.
 
 ```sh
@@ -22,12 +22,28 @@ php artisan catalog:sync helmforge --report   # one source, listing skipped/fail
   persistence, resources, image pull secrets and the admin password. The
   result and the plan options derived from it are stored in
   `applications.catalog`.
-- **Deploying**: `ApplicationService::profile()` returns a `CatalogProfile`
-  for a slug with no registered profile and catalog data; its chart class,
-  `CatalogChart`, writes Kumulicp's settings only to the keys the chart has.
+- **Deploying**: `ApplicationService::profile()` returns a `HelmForgeProfile`
+  for an app with no registered profile whose `source` is `helmforge`; its
+  chart class, `HelmForgeChart`, writes Kumulicp's settings only to the keys
+  the chart has.
 - **Overrides** for charts that don't follow the common layout go in
   `config/catalog.php` (`overrides.<chart>`); a hand-written profile for the
   same slug always wins over the catalog one.
+
+## Application sources
+
+`applications.source` decides how an app is deployed:
+
+| source      | deployed by                                    | set when                          |
+|-------------|------------------------------------------------|-----------------------------------|
+| `profile`   | its registered profile (built-in or a plugin)  | the profile's app row is created  |
+| `generic`   | `GenericAppProfile` / `GenericChart`           | an admin adds an app in the UI    |
+| `helmforge` | `HelmForgeProfile` / `HelmForgeChart`          | `catalog:sync` imports the chart  |
+
+A registered profile for the slug always wins, whatever the source says.
+Other chart repositories follow their own values schema, so `catalog:sync`
+refuses any chart source other than `helmforge` (`ApplicationSource::forChartSource()`)
+until it gets its own profile, chart class and source value.
 
 ## Not covered
 

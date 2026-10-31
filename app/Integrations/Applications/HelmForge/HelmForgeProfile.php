@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\Applications\Catalog;
+namespace App\Integrations\Applications\HelmForge;
 
 use App\Application;
 use App\Integrations\Applications\AppProfile;
@@ -10,14 +10,14 @@ use App\Integrations\Applications\AppProfile;
  * profiles it has no code of its own: everything comes from the `catalog`
  * data stored on the application when the chart was synced.
  */
-class CatalogProfile extends AppProfile
+class HelmForgeProfile extends AppProfile
 {
     protected $activation_type = 'chart';
 
     // Not `rancher`: Rancher can only install from repos registered in it
     protected $compatibility = ['helm_chart'];
 
-    protected $helm_chart = CatalogChart::class;
+    protected $helm_chart = HelmForgeChart::class;
 
     public function __construct(Application $application)
     {

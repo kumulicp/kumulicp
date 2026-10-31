@@ -5,6 +5,7 @@ namespace App\Support\Catalog;
 use App\Application;
 use App\AppVersion;
 use App\ChartSource;
+use App\Enums\ApplicationSource;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\VersionUpdates\ChartPackage;
 use App\Support\VersionUpdates\HttpChartRepository;
@@ -12,9 +13,10 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Imports every chart of a chart source as a (disabled) application with its
- * newest versions, plus the convention data CatalogProfile/CatalogChart use
- * to deploy it. Safe to re-run: existing apps and versions keep any admin
+ * Imports every chart of the HelmForge chart source as a (disabled) application
+ * with its newest versions, plus the convention data HelmForgeProfile/HelmForgeChart
+ * use to deploy it. Other chart repositories have their own values schema, so
+ * they need their own profile and chart class before they can be synced. Safe to re-run: existing apps and versions keep any admin
  * edits, and a chart is only downloaded again when it has a new version.
  */
 class ChartCatalogSync
@@ -31,6 +33,13 @@ class ChartCatalogSync
     {
         $report = ['created' => [], 'updated' => [], 'skipped' => [], 'failed' => [], 'limited' => [], 'error' => null];
         $secret = $source->helmRepoSecret?->requiresAuth() ? $source->helmRepoSecret : null;
+
+        if (ApplicationSource::forChartSource($source) !== ApplicationSource::HelmForge) {
+            $report['error'] = "Chart source {$source->slug} has no supported chart schema, only HelmForge charts can be imported";
+            $source->update(['last_sync_error' => $report['error']]);
+
+            return $report;
+        }
 
         try {
             $index = (new HttpChartRepository($source->url, '', $secret))->index();
@@ -117,6 +126,7 @@ class ChartCatalogSync
             $application->enabled = false;
         }
 
+        $application->source = ApplicationSource::HelmForge;
         $application->chart_source_id = $source->id;
         $application->catalog = $catalog;
         $application->save();
