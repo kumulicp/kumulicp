@@ -25,6 +25,7 @@ jobs:
           -e LDAP_DOMAIN="example.com" \
           -e LDAP_ADMIN_PASSWORD="admin" \
           -v "${GITHUB_WORKSPACE}/.github/ldap/memberof.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/memberof.ldif" \
+          -v "${GITHUB_WORKSPACE}/.github/ldap/acl.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/acl.ldif" \
           osixia/openldap:1.5.0 --copy-service
         until docker exec ldap ldapsearch -x -H ldap://localhost -b dc=example,dc=com -D 'cn=admin,dc=example,dc=com' -w admin > /dev/null 2>&1; do
           sleep 2
@@ -63,5 +64,7 @@ jobs:
         LDAP_USERNAME: "cn=admin,dc=example,dc=com"
         LDAP_PASSWORD: admin
         LDAP_BASE_DN: "dc=example,dc=com"
+        LDAP_DIRECTORY_READER_USERNAME: "cn=directory-reader,o=server,dc=example,dc=com"
+        LDAP_DIRECTORY_READER_PASSWORD: readeradmin
         LDAP_TLS: false
       run: php artisan test --testsuite=AccountManagerLdap

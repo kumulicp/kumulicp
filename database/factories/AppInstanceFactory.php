@@ -18,6 +18,7 @@ class AppInstanceFactory extends Factory
     public function definition()
     {
         return [
+            'name' => fake()->unique()->slug(2),
             'api_password' => '',
             'status' => 'active',
         ];
