@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Api\ApiExceptionRenderer;
+use App\Http\Middleware\Api\AddRequestId;
+use App\Http\Middleware\Api\ForceJsonResponse;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -55,6 +58,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
+        $middleware->group('api.v1', [
+            AddRequestId::class,
+            ForceJsonResponse::class,
+            'throttle:api',
+            SubstituteBindings::class,
+        ]);
+
         $middleware->group('web', [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
@@ -67,7 +77,18 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request, Throwable $exception) => ApiExceptionRenderer::appliesTo($request) || $request->expectsJson()
+        );
+        $exceptions->render(new ApiExceptionRenderer);
+
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            // API errors are already rendered as JSON by ApiExceptionRenderer;
+            // the Inertia error pages and web CSP below must not touch them.
+            if (ApiExceptionRenderer::appliesTo($request)) {
+                return $response;
+            }
+
             // SecurityHeaders (the 'web'-group middleware) never gets to run its
             // post-$next() code for exception-driven responses - Laravel's
             // pipeline unwinds straight past it. Reuse the nonce it already
