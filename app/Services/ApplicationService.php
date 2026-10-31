@@ -133,14 +133,18 @@ class ApplicationService
         if (count($options) > 0) {
             foreach ($options as $name => $option) {
                 if ($plan) {
+                    // The default only applies until the plan has saved a value. A saved blank is
+                    // intentional, so it must not be replaced by the default again.
+                    $hasSavedValue = Arr::has($plan->settings ?? [], "configurations.$name");
+
                     if ($raw && $option['type'] == 'json') {
                         $options[$name]['value'] = json_encode($plan->setting("configurations.$name") ?? $option['default'] ?? []);
                     } elseif ($raw && $option['type'] == 'password') {
                         $options[$name]['value'] = '';
-                    } elseif ($raw && $option['type'] === 'enum') {
-                        $options[$name]['value'] = $plan->setting("configurations.$name") ?? $option['default'] ?? null;
+                    } elseif ($hasSavedValue) {
+                        $options[$name]['value'] = $plan->setting("configurations.$name");
                     } else {
-                        $options[$name]['value'] = $plan->setting("configurations.$name") ?? $option['default'] ?? null;
+                        $options[$name]['value'] = $option['default'] ?? null;
                     }
                 }
             }
