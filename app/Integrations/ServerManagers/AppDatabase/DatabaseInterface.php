@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class DatabaseInterface implements DatabaseContract
 {
+    // The database name doubles as the user name, and MySQL caps user names at 32 characters.
+    public const MAX_NAME_LENGTH = 32;
+
+    private const HASH_LENGTH = 8;
+
     private $database = '';
 
     private $organization;
@@ -17,7 +22,7 @@ class DatabaseInterface implements DatabaseContract
     public function __construct(OrgServer $server, private ?AppInstance $app_instance = null)
     {
         $this->organization = $server->organization;
-        $this->database = $this->app_instance->databasename ?: $this->organization->slug.'_'.$app_instance->name;
+        $this->database = $this->app_instance->databasename ?: self::generateName($this->organization->slug, $app_instance->name);
         // The connection is cached by name; a second server in the same
         // process (e.g. a migration's source, then its target) needs a fresh one.
         DB::purge('app_db');
@@ -37,6 +42,30 @@ class DatabaseInterface implements DatabaseContract
         ]);
     }
 
+    /**
+     * The name for a new app database (and its user). Names over the limit keep
+     * a readable prefix and end in a hash of the full name, so two long names
+     * that share a prefix still come out different. Names already stored on an
+     * app instance are never regenerated.
+     */
+    public static function generateName(string $organization_slug, string $app_name): string
+    {
+        $name = $organization_slug.'_'.$app_name;
+
+        if (mb_strlen($name) <= self::MAX_NAME_LENGTH) {
+            return $name;
+        }
+
+        $prefix_length = self::MAX_NAME_LENGTH - self::HASH_LENGTH - 1;
+
+        return mb_substr($name, 0, $prefix_length).'_'.substr(hash('sha256', $name), 0, self::HASH_LENGTH);
+    }
+
+    public static function quoteIdentifier(string $identifier): string
+    {
+        return '`'.str_replace('`', '``', $identifier).'`';
+    }
+
     public function existsOrganization()
     {
         return true;
@@ -44,7 +73,7 @@ class DatabaseInterface implements DatabaseContract
 
     public function exists()
     {
-        return count(DB::connection('app_db')->select("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{$this->database}'")) === 1;
+        return count(DB::connection('app_db')->select('SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?', [$this->database])) === 1;
     }
 
     public function get() {}
@@ -59,11 +88,12 @@ class DatabaseInterface implements DatabaseContract
     {
         $connection = DB::connection('app_db');
         $password = $connection->getPdo()->quote($this->app_instance->dbPassword());
+        $database = self::quoteIdentifier($this->database);
 
-        $connection->statement("CREATE DATABASE IF NOT EXISTS `{$this->database}`");
-        $connection->statement("CREATE USER IF NOT EXISTS `{$this->database}`@'%' IDENTIFIED BY $password");
-        $connection->statement("ALTER USER `{$this->database}`@'%' IDENTIFIED BY $password");
-        $connection->statement("GRANT ALL PRIVILEGES ON `{$this->database}`.* TO `{$this->database}`@'%'");
+        $connection->statement("CREATE DATABASE IF NOT EXISTS $database");
+        $connection->statement("CREATE USER IF NOT EXISTS $database@'%' IDENTIFIED BY $password");
+        $connection->statement("ALTER USER $database@'%' IDENTIFIED BY $password");
+        $connection->statement("GRANT ALL PRIVILEGES ON $database.* TO $database@'%'");
 
         return [
             'id' => null,
@@ -78,8 +108,10 @@ class DatabaseInterface implements DatabaseContract
     public function delete()
     {
         if ($this->exists()) {
-            DB::connection('app_db')->select("DROP DATABASE `{$this->database}`");
-            DB::connection('app_db')->select("DROP USER `{$this->database}`@'%'");
+            $database = self::quoteIdentifier($this->database);
+
+            DB::connection('app_db')->statement("DROP DATABASE $database");
+            DB::connection('app_db')->statement("DROP USER $database@'%'");
         }
     }
 }
