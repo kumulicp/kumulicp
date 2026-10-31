@@ -20,7 +20,7 @@ class Pod extends Rancher
             ->first(fn ($pod) => ($pod['metadata']['labels']['job-name'] ?? null) === $job_name)['metadata']['name'] ?? null;
 
         if (! $pod_name) {
-            Log::warning(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+            Log::warning('Pod not found for job', ['organization_id' => $this->organization->id, 'event' => 'rancher.pod_not_found', 'namespace' => $namespace, 'job_name' => $job_name]);
 
             return null;
         }
@@ -35,7 +35,7 @@ class Pod extends Rancher
         $response = $this->response();
 
         if ($response['status_code'] === 404) {
-            Log::warning(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+            Log::warning('Pod logs not found', ['organization_id' => $this->organization->id, 'event' => 'rancher.pod_logs_not_found', 'namespace' => $namespace, 'pod_name' => $pod_name]);
 
             return null;
         }

@@ -11,7 +11,7 @@ class PolicyBindings extends Authentik
 {
     public function list(AppInstance $app_instance)
     {
-        Log::info(__('messages.api.authentik.log.policy_binding.listed', ['app' => $app_instance->name]), ['organization_id' => $this->organization->id]);
+        Log::debug(__('messages.api.authentik.log.policy_binding.listed', ['app' => $app_instance->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.authentik.log.policy_binding.listed']);
 
         $this->resetClient();
         $pk = $app_instance->setting('sso.pk');
@@ -25,7 +25,7 @@ class PolicyBindings extends Authentik
 
     public function create(string $target, ?string $group = null, ?string $policy = null, ?string $user = null)
     {
-        Log::info(__('messages.api.authentik.log.policy_binding.created', ['policy_binding' => $group, 'app' => $target]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.authentik.log.policy_binding.created', ['policy_binding' => $group, 'app' => $target]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.authentik.log.policy_binding.created']);
 
         $this->resetClient();
         $policy_binding = $this->json()->post($this->basePath().'/api/v3/policies/bindings/', [
@@ -45,7 +45,7 @@ class PolicyBindings extends Authentik
 
     public function remove(string $target, string $id)
     {
-        Log::info(__('messages.api.authentik.log.policy_binding.removed', ['policy_binding' => $id, 'app' => $target]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.authentik.log.policy_binding.removed', ['policy_binding' => $id, 'app' => $target]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.authentik.log.policy_binding.removed']);
 
         $this->resetClient();
 

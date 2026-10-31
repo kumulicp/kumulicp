@@ -48,6 +48,8 @@ class CreateApplicationSSO
                 throw new \Exception(__('messages.exception.sso_failed'));
             }
         } catch (Throwable $e) {
+            report($e);
+
             if ($this->task) {
                 $this->task->status = 'failed';
                 $this->task->error_message = $e->getMessage();

@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\HelmKubernetes\Support;
 
 use App\Server;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -30,6 +31,17 @@ class KubectlCli
             $command = array_merge([$binary], $subcommand, $kubectl_args);
 
             $result = Process::timeout($timeout)->input($input)->run($command);
+
+            if (! $result->successful()) {
+                // Log the verb and namespace only: the full command can contain secrets or manifests.
+                Log::warning('Kubectl command failed', [
+                    'event' => 'kubectl.command_failed',
+                    'command' => $subcommand[0] ?? null,
+                    'namespace' => $namespace,
+                    'exit_code' => $result->exitCode(),
+                    'error' => mb_substr(trim($result->errorOutput()), 0, 500),
+                ]);
+            }
 
             return [
                 'success' => $result->successful(),

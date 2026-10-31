@@ -203,6 +203,13 @@ class ActionService
         }
 
         if ($task->status === 'complete') {
+            Log::info('task.completed', [
+                'organization_id' => $task->organization_id,
+                'task_id' => $task->id,
+                'action_slug' => $task->action_slug,
+                'attempts' => $task->attempts,
+            ]);
+
             $other_tasks = Task::whereNot('id', $task->id)->where('task_group', $task->task_group)->get();
 
             foreach ($other_tasks as $other_task) {
@@ -274,7 +281,12 @@ class ActionService
             RunAction::dispatch($task);
         }
 
-        Log::info(__('labels.task').': '.$task->description, ['organization_id' => $task->organization->id]);
+        Log::info('task.created', [
+            'organization_id' => $task->organization->id,
+            'task_id' => $task->id,
+            'action_slug' => $task->action_slug,
+            'description' => $task->description,
+        ]);
 
         return $task;
     }

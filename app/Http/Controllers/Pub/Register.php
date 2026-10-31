@@ -17,6 +17,7 @@ use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -191,6 +192,10 @@ class Register extends Controller
             'secret' => SettingsFacade::get('captcha_secret_key'),
             'response' => $token,
         ]);
+
+        if (! $response->successful()) {
+            Log::warning('Captcha verification request failed', ['event' => 'captcha.verify_failed', 'provider' => $provider, 'status' => $response->status()]);
+        }
 
         return $response->json('success') === true;
     }

@@ -16,15 +16,15 @@ class Backups extends Controller
 
         $backup = OrgBackup::where('id', $request->input('job_id'))->first();
 
-        $results_to_string = json_encode([
+        $results = [
             'job_id' => $request->input('job_id'),
             'status' => $request->input('result.status'),
             'action' => $request->input('result.action'),
             'backup_name' => $request->input('result.backup_name'),
-        ]);
+        ];
 
         if ($backup) {
-            Log::info($results_to_string, ['organization_id' => $backup->organization_id]);
+            Log::info('Backup job result received', ['organization_id' => $backup->organization_id, 'event' => 'backup.result_received'] + $results);
             if ($request->input('result.status') == 'completed') {
 
                 if ($request->input('result.action') === 'backup') {
@@ -41,7 +41,7 @@ class Backups extends Controller
 
                 $backup->save();
             } elseif ($request->input('result.status') === 'failed') {
-                Log::critical(__('messages.failed')."! : {$results_to_string}", ['organization_id' => $backup->organization_id]);
+                Log::critical('Backup job failed', ['organization_id' => $backup->organization_id, 'event' => 'backup.job_failed'] + $results);
                 $backup->status = 'failed';
                 $backup->save();
             }
@@ -49,7 +49,7 @@ class Backups extends Controller
             return response()->json(json_encode(['status' => 'success']), 200);
         }
 
-        Log::critical(__('messages.failed')."! : {$results_to_string}", ['organization_id' => 1]);
+        Log::critical('Backup job result for unknown backup', ['organization_id' => 1, 'event' => 'backup.job_unknown'] + $results);
 
         return response()->json(json_encode(['status' => 'failed']), 200);
     }

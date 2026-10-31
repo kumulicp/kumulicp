@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +17,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Log extends Model
 {
+    use MassPrunable;
+
+    /**
+     * Rows older than LOG_DB_DAYS are removed daily by `model:prune`.
+     *
+     * @return Builder<static>
+     */
+    public function prunable(): Builder
+    {
+        return static::where('created_at', '<=', now()->subDays(max(1, (int) config('logging.db_days', 90))));
+    }
+
     /**
      * Get the attributes that should be cast.
      *

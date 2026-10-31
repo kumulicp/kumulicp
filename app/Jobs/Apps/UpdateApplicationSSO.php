@@ -42,6 +42,8 @@ class UpdateApplicationSSO
                 $app_instance->save();
             }
         } catch (Throwable $e) {
+            report($e);
+
             if ($this->task) {
                 $this->task->status = 'failed';
                 $this->task->error_message = $e->getMessage();

@@ -14,7 +14,7 @@ class Job extends Kubernetes
         $namespace = $this->namespace();
         $result = $this->kubectl()->apply($job->chart, $namespace);
 
-        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_created']);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
@@ -32,7 +32,7 @@ class Job extends Kubernetes
         $namespace = $this->namespace();
         $result = $this->kubectl()->delete('job', $job->name, $namespace);
 
-        Log::info(__('messages.api.rancher.log.job_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_deleted']);
 
         return ['status' => 'success', 'response' => $result['output']];
     }

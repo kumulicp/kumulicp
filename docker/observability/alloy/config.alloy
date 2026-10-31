@@ -1,0 +1,70 @@
+// Alloy config for trying the Loki pipeline locally (docker compose --profile observability).
+// For Kubernetes see docs/observability.md.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.kumulicp.receiver]
+}
+
+loki.process "kumulicp" {
+  // KumuliCP logs one JSON object per line (the stderr_json channel). Lines from other
+  // containers are not JSON; the json stage just skips them.
+  stage.json {
+    expressions = {
+      level           = "level_name",
+      channel         = "channel",
+      process         = "extra.process",
+      event           = "extra.event",
+      request_id      = "extra.request_id",
+      organization_id = "extra.organization_id",
+      task_id         = "extra.task_id",
+    }
+  }
+
+  // Low-cardinality values become labels.
+  stage.labels {
+    values = {
+      level   = "",
+      channel = "",
+      process = "",
+    }
+  }
+
+  // High-cardinality values stay queryable without exploding the index.
+  stage.structured_metadata {
+    values = {
+      event           = "",
+      request_id      = "",
+      organization_id = "",
+      task_id         = "",
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

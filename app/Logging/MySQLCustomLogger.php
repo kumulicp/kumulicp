@@ -16,6 +16,6 @@ class MySQLCustomLogger
     {
         $logger = new Logger('MySQLLoggingHandler');
 
-        return $logger->pushHandler(new MySQLLoggingHandler);
+        return $logger->pushHandler(new MySQLLoggingHandler(Logger::toMonologLevel($config['level'] ?? 'info')));
     }
 }

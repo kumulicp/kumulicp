@@ -39,12 +39,15 @@ class ActivateBackup
                     $backup->save();
                 }
             } catch (\Throwable $e) {
-                report($e);
-
                 $backup->status = 'failed';
                 $backup->save();
 
-                Log::critical(__('labels.backup').' '.__('labels.failed').": {$backup->backup_name}", ['organization_id' => $backup->organization_id]);
+                Log::critical(__('labels.backup').' '.__('labels.failed').": {$backup->backup_name}", [
+                    'organization_id' => $backup->organization_id,
+                    'event' => 'backup.activation_failed',
+                    'backup_name' => $backup->backup_name,
+                    'exception' => $e,
+                ]);
             }
         }
     }

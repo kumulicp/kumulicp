@@ -25,7 +25,7 @@ class Application extends Rancher
 
         $response = $this->json()->post($url, $data);
 
-        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.app_created']);
 
         return [
             'status' => 'success',
@@ -47,7 +47,7 @@ class Application extends Rancher
         $data = $chart->buildChart();
         $response = $this->json()->post($url, $data);
 
-        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.app_created', ['app' => $app->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.app_created']);
 
         return [
             'status' => 'success',
@@ -66,7 +66,7 @@ class Application extends Rancher
 
         $response = $this->get($url);
 
-        Log::info(__('messages.api.rancher.log.app_retrieved', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::debug(__('messages.api.rancher.log.app_retrieved', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.app_retrieved']);
 
         return [
             'status' => 'success',
@@ -88,7 +88,7 @@ class Application extends Rancher
 
         $response = $this->json()->ignoreErrorCode(404)->post($url, $data);
 
-        Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.app_deleted', ['app' => $app_instance->name, 'organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.app_deleted']);
 
         return [
             'status' => 'success',

@@ -30,7 +30,7 @@ class Middleware extends Kubernetes
         $namespace = $this->organization->slug;
         $result = $this->kubectl()->apply($chart->values(), $namespace);
 
-        Log::info(__('messages.api.rancher.log.middleware_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.middleware_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.middleware_created']);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
@@ -52,7 +52,7 @@ class Middleware extends Kubernetes
         $namespace = $this->organization->slug;
         $result = $this->kubectl()->delete('middleware.traefik.io', $chart->name, $namespace);
 
-        Log::info(__('messages.api.rancher.log.middleware_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.middleware_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.middleware_deleted']);
 
         return ['status' => 'success', 'response' => $result['output']];
     }

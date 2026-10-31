@@ -10,6 +10,6 @@ class MatrixLogger
     {
         $logger = new Logger('MatrixLoggingHandler');
 
-        return $logger->pushHandler(new MatrixLoggingHandler);
+        return $logger->pushHandler(new MatrixLoggingHandler(Logger::toMonologLevel($config['level'] ?? 'error')));
     }
 }

@@ -12,6 +12,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RunAction implements ShouldQueue
@@ -42,9 +44,14 @@ class RunAction implements ShouldQueue
      */
     public function handle()
     {
+        $started_at = microtime(true);
         $this->task->attempts = $this->task->attempts + 1;
         $this->task->status = 'in_progress';
         $this->task->save();
+
+        // Everything logged while this task runs carries these fields (and jobs it queues inherit them).
+        Context::add($this->taskContext());
+        Log::info('task.started', ['description' => $this->task->description]);
 
         try {
             Organization::setOrganization($this->task->organization);
@@ -57,7 +64,14 @@ class RunAction implements ShouldQueue
                     $this->task->save();
                 }
             }
+
+            Log::info('task.run_finished', ['duration_ms' => $this->durationSince($started_at)]);
         } catch (ConnectionFailedException $e) {
+            Log::warning('task.connection_failed', [
+                'duration_ms' => $this->durationSince($started_at),
+                'exception' => $e,
+            ]);
+
             $this->task->job_id = 0;
             $this->task->status = 'pending';
             $this->task->error_code = 'connection_failed';
@@ -85,5 +99,27 @@ class RunAction implements ShouldQueue
         $this->task->error_code = 'throwable';
         $this->task->error_message = $e->getMessage();
         $this->task->save();
+
+        Context::add($this->taskContext());
+        Log::error('task.failed', ['exception' => $e]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function taskContext(): array
+    {
+        return array_filter([
+            'task_id' => $this->task->id,
+            'action_slug' => $this->task->action_slug,
+            'app_instance_id' => $this->task->app_instance_id,
+            'organization_id' => $this->task->organization_id,
+            'attempt' => $this->task->attempts,
+        ], fn ($value) => $value !== null);
+    }
+
+    private function durationSince(float $started_at): int
+    {
+        return (int) round((microtime(true) - $started_at) * 1000);
     }
 }

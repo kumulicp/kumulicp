@@ -58,6 +58,8 @@ class CreateApplicationDatabase
                 throw new \Exception(__('messages.exception.database_failed'));
             }
         } catch (Throwable $e) {
+            report($e);
+
             if ($this->task) {
                 $this->task->status = 'failed';
                 $this->task->error_message = $e->getMessage();

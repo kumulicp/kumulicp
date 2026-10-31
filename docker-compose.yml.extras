@@ -276,7 +276,68 @@ services:
         networks:
         - sail
 
+    # Optional log pipeline for trying KumuliCP's JSON logs locally:
+    #   docker compose --profile observability up -d loki alloy grafana
+    # then set LOG_STACK=stderr_json,mysql,email in .env. See docs/observability.md.
+    loki:
+        image: grafana/loki:3.4.2
+        profiles: [observability]
+        command: -config.file=/etc/loki/local-config.yaml
+        ports:
+        - '3100:3100'
+        volumes:
+        - loki-data:/loki
+        networks:
+        - sail
+        logging:
+            driver: json-file
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+    alloy:
+        image: grafana/alloy:v1.7.5
+        profiles: [observability]
+        command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+        ports:
+        - '12345:12345'
+        volumes:
+        - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        depends_on:
+        - loki
+        networks:
+        - sail
+        logging:
+            driver: json-file
+            options:
+                max-size: '10m'
+                max-file: '3'
+
+    grafana:
+        image: grafana/grafana:11.5.2
+        profiles: [observability]
+        ports:
+        - '3000:3000'
+        environment:
+            GF_AUTH_ANONYMOUS_ENABLED: 'true'
+            GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+        volumes:
+        - ./docker/observability/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+        - grafana-data:/var/lib/grafana
+        depends_on:
+        - loki
+        networks:
+        - sail
+        logging:
+            driver: json-file
+            options:
+                max-size: '10m'
+                max-file: '3'
+
 volumes:
+    loki-data:
+    grafana-data:
     rancher-vol:
     nextcloud:
     nextcloud-db:

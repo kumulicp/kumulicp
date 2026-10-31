@@ -7,6 +7,7 @@ use App\Integrations\SSO\Authentik\Authentik;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class Providers extends Authentik
@@ -92,6 +93,7 @@ class Providers extends Authentik
         try {
             $response = $this->delete($this->basePath()."/api/v3/providers/oauth2/$provider_id/");
         } catch (\Throwable $e) {
+            Log::warning('Authentik provider removal failed', ['organization_id' => $this->organization->id, 'event' => 'authentik.provider_remove_failed', 'app_instance_id' => $app_instance->id, 'exception' => $e]);
             $response = 'failed';
         }
 

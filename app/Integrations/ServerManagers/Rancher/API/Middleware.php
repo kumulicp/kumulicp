@@ -20,7 +20,7 @@ class Middleware extends Rancher
         $this->json()->post($url, $data);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.middleware_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.middleware_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.middleware_created']);
 
         return [
             'status' => 'success',
@@ -50,7 +50,7 @@ class Middleware extends Rancher
         $this->json()->put($url, $data);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.middleware_updated', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.middleware_updated', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.middleware_updated']);
 
         return [
             'status' => 'success',
@@ -68,7 +68,7 @@ class Middleware extends Rancher
         $this->json()->ignoreErrorCode(404)->delete($url);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.middleware_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.middleware_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.middleware_deleted']);
 
         return [
             'status' => 'success',

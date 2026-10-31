@@ -88,7 +88,7 @@ class HelmInstaller extends Kubernetes
 
         $this->attachOwnerReferences($job, $namespace, $job_result);
 
-        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_created']);
 
         return [
             'success' => true,

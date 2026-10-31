@@ -9,6 +9,7 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Response;
 
@@ -44,8 +45,11 @@ class HomeController extends Controller
                         'unit' => 'GB',
                     ];
                 }
-            } catch (\Throwable) {
-                //
+            } catch (\Throwable $e) {
+                Log::warning('Could not load Nextcloud group folders for the dashboard', [
+                    'event' => 'nextcloud.group_folders_failed',
+                    'exception' => $e,
+                ]);
             }
         }
 

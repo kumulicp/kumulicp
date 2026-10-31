@@ -25,7 +25,7 @@ class Job extends Rancher
         $this->json()->post($url, $data);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_created']);
 
         return [
             'status' => 'success',
@@ -55,7 +55,7 @@ class Job extends Rancher
         $this->json()->put($url, $data);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.job_updated', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_updated', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_updated']);
 
         return [
             'status' => 'success',
@@ -73,7 +73,7 @@ class Job extends Rancher
         $this->json()->delete($url);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.job_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.job_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.job_deleted']);
 
         return [
             'status' => 'success',

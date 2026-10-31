@@ -20,7 +20,7 @@ class KubernetesNamespace extends Rancher
         $this->json()->post($url, $data);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.namespace_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.namespace_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.namespace_created']);
 
         if ($this->hasError()) {
             return [
@@ -49,7 +49,7 @@ class KubernetesNamespace extends Rancher
         $this->json()->delete($url);
         $response = $this->response();
 
-        Log::info(__('messages.api.rancher.log.namespace_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.namespace_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.namespace_deleted']);
 
         if ($this->hasError()) {
             return [

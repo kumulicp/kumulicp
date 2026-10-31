@@ -3,6 +3,7 @@
 namespace App\Integrations\Registrars\Namecheap\API;
 
 use App\Integrations\Registrars\Namecheap\Namecheap;
+use Illuminate\Support\Facades\Log;
 
 class Users extends Namecheap
 {
@@ -20,7 +21,11 @@ class Users extends Namecheap
         try {
             $this->form()->post($this->basePath(), $this->postParameters());
         } catch (\Throwable $e) {
-
+            Log::warning('Namecheap pricing request failed', [
+                'organization_id' => $this->organization->id,
+                'event' => 'namecheap.pricing_failed',
+                'exception' => $e,
+            ]);
         }
 
         if (! $this->hasError()) {

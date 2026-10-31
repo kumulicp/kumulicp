@@ -5,6 +5,7 @@ namespace App\Integrations\SSO\Authentik\API;
 use App\AppInstance;
 use App\Integrations\SSO\Authentik\Authentik;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 
 class Applications extends Authentik
 {
@@ -63,6 +64,7 @@ class Applications extends Authentik
         try {
             $response = $this->delete($this->basePath()."/api/v3/core/applications/$app_slug/");
         } catch (\Throwable $e) {
+            Log::warning('Authentik application removal failed', ['organization_id' => $this->organization->id, 'event' => 'authentik.application_remove_failed', 'app_instance_id' => $app_instance->id, 'exception' => $e]);
             $response = 'failed';
         }
 

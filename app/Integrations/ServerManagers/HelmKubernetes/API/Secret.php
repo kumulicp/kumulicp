@@ -19,7 +19,7 @@ class Secret extends Kubernetes
     {
         $result = $this->kubectl()->apply($this->manifest($namespace, $pull_secret), $namespace);
 
-        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.secret_created']);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
@@ -31,7 +31,7 @@ class Secret extends Kubernetes
     {
         $result = $this->kubectl()->delete('secret', $pull_secret->k8sSecretName(), $namespace);
 
-        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.secret_deleted']);
 
         return ['status' => 'success', 'response' => $result['output']];
     }

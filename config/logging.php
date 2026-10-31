@@ -6,6 +6,8 @@ use App\Logging\MatrixLogger;
 use App\Logging\MatrixLoggingHandler;
 use App\Logging\MySQLCustomLogger;
 use App\Logging\MySQLLoggingHandler;
+use App\Logging\Processors\StructuredLogProcessor;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -23,6 +25,28 @@ return [
     */
 
     'default' => env('LOG_CHANNEL', 'custom'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Log record metadata
+    |--------------------------------------------------------------------------
+    |
+    | Stamped on every record written through the "stderr_json" channel so a log
+    | collector can tell the web, queue worker and scheduler workloads apart.
+    | Set LOG_PROCESS to "web", "queue" or "scheduler" on each deployment;
+    | when empty it falls back to "web" for HTTP requests and "cli" otherwise.
+    |
+    */
+
+    'process' => env('LOG_PROCESS'),
+
+    'release' => env('APP_RELEASE'),
+
+    // Log a heartbeat line every minute from the scheduler (see routes/console.php).
+    'heartbeat' => (bool) env('LOG_HEARTBEAT', false),
+
+    // Days to keep rows in the "logs" table (pruned daily by the scheduler).
+    'db_days' => (int) env('LOG_DB_DAYS', 90),
 
     /*
     |--------------------------------------------------------------------------
@@ -53,10 +77,31 @@ return [
             'ignore_exceptions' => true,
         ],
 
+        // The default channel. LOG_STACK picks its members, e.g. in a container:
+        // LOG_STACK=stderr_json,mysql,email
         'custom' => [
             'driver' => 'stack',
-            'channels' => ['mysql', 'email', 'daily'],
+            'channels' => array_values(array_filter(array_map('trim', explode(',', (string) env('LOG_STACK', 'mysql,email,daily'))))),
             'ignore_exceptions' => true,
+        ],
+
+        // One JSON object per line on stderr, for Docker / Kubernetes log collectors (Alloy, Promtail, ...).
+        // Uses stderr rather than stdout: output on stdout can corrupt FrankenPHP's worker handshake.
+        'stderr_json' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => JsonFormatter::class,
+            'formatter_with' => [
+                'appendNewline' => true,
+                'includeStacktraces' => true,
+            ],
+            'processors' => [
+                StructuredLogProcessor::class,
+            ],
         ],
 
         'single' => [
@@ -68,8 +113,8 @@ return [
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
-            'level' => 'debug',
-            'days' => 14,
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => (int) env('LOG_DAILY_DAYS', 14),
         ],
 
         'slack' => [
@@ -125,7 +170,7 @@ return [
             'driver' => 'custom',
             'handler' => MySQLLoggingHandler::class,
             'via' => MySQLCustomLogger::class,
-            'level' => 'info',
+            'level' => env('LOG_DB_LEVEL', 'info'),
         ],
 
         // Email critical alerts

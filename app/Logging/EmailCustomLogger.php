@@ -16,6 +16,6 @@ class EmailCustomLogger
     {
         $logger = new Logger('EmailLoggingHandler');
 
-        return $logger->pushHandler(new EmailLoggingHandler);
+        return $logger->pushHandler(new EmailLoggingHandler(Logger::toMonologLevel($config['level'] ?? 'error')));
     }
 }

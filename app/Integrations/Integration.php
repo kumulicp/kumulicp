@@ -5,6 +5,7 @@ namespace App\Integrations;
 use App\Exceptions\ConnectionFailedException;
 use App\Organization;
 use App\Support\Redactor;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -302,7 +303,16 @@ class Integration
             $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
         }
 
-        $response = $client->$request_type($url, $data);
+        $started_at = microtime(true);
+
+        try {
+            $response = $client->$request_type($url, $data);
+        } catch (ConnectionException $e) {
+            Log::warning('Integration request could not connect', $this->requestLogContext($request_type, $url, $started_at) + ['exception' => $e]);
+
+            throw $e;
+        }
+
         $this->storeCookies($response->cookies());
 
         $this->status_code = $response->getStatusCode();
@@ -311,15 +321,36 @@ class Integration
         $body = $response->getBody();
         $contents = $body->getContents();
 
+        $request_context = $this->requestLogContext($request_type, $url, $started_at) + ['status' => $this->status_code];
+
         if (in_array($this->status_code, $this->statusErrorCodes())) {
+            Log::warning('Integration request returned an error status', $request_context);
             $this->httpError(__('messages.exception.http_error'), $contents, $url);
         }
+        Log::debug('Integration request completed', $request_context);
         $this->parseResponse($contents);
         $this->error_codes = [0, 400, 401, 404, 405, 422, 500, 503, 504];
 
         if (! $this->save_session) {
             $this->resetClient();
         }
+    }
+
+    /**
+     * Fields describing an outgoing request. The query string is dropped because it can carry tokens.
+     *
+     * @return array<string, mixed>
+     */
+    private function requestLogContext(string $request_type, string $url, float $started_at): array
+    {
+        return [
+            'organization_id' => $this->organization?->id,
+            'event' => 'integration.request',
+            'integration' => $this->name,
+            'method' => strtoupper($request_type),
+            'url' => strtok($url, '?'),
+            'duration_ms' => (int) round((microtime(true) - $started_at) * 1000),
+        ];
     }
 
     // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite below.

@@ -14,7 +14,7 @@ class PersistentVolumeClaim extends Kubernetes
 
         $result = $this->kubectl()->apply($this->manifest($namespace, $claim_string, $claim_size), $namespace);
 
-        Log::info(__('messages.api.rancher.log.persistent_volume_claim_created', ['organization' => $this->organization->name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.persistent_volume_claim_created', ['organization' => $this->organization->name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.persistent_volume_claim_created']);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',

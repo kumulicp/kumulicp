@@ -10,6 +10,7 @@ use App\Ldap\Models\User;
 use App\Organization;
 use App\Support\Facades\Settings;
 use App\User as DatabaseUser;
+use Illuminate\Support\Facades\Log;
 use LdapRecord\Container;
 use LdapRecord\Laravel\Import\Importer;
 use LdapRecord\Query\Collection;
@@ -106,6 +107,7 @@ class LdapSupport
 
             $connected = true;
         } catch (\Throwable $e) {
+            Log::warning('LDAP connection test failed', ['event' => 'ldap.connection_failed', 'exception' => $e]);
         }
 
         return $connected;

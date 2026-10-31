@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -297,6 +298,7 @@ class AppInstance extends Model
         try {
             $api_password = Crypt::decrypt($this->api_password);
         } catch (\Throwable $e) {
+            Log::error('Could not decrypt app instance API password', ['event' => 'app_instance.decrypt_failed', 'app_instance_id' => $this->id, 'setting' => 'api_password', 'exception' => $e]);
             $api_password = '**Corrupted Password**';
         }
 
@@ -311,6 +313,7 @@ class AppInstance extends Model
             }
         } catch (\Throwable $e) {
             // fall through to org secretpw for existing instances
+            Log::warning('Could not decrypt app instance database password', ['event' => 'app_instance.decrypt_failed', 'app_instance_id' => $this->id, 'setting' => 'db_password', 'exception' => $e]);
         }
 
         return $this->organization->secretpw;
@@ -323,7 +326,7 @@ class AppInstance extends Model
                 return Crypt::decryptString($encrypted);
             }
         } catch (\Throwable $e) {
-            //
+            Log::warning('Could not decrypt app instance site API key', ['event' => 'app_instance.decrypt_failed', 'app_instance_id' => $this->id, 'setting' => 'site_api_key', 'exception' => $e]);
         }
 
         $key = Str::random(32);

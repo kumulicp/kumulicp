@@ -41,7 +41,12 @@ class SyncLDAP implements ShouldQueue
                 try {
                     $sources = (new Sources($event->organization, $app_instance->sso_server))->LDAPSync($app_instance);
                 } catch (ConnectionFailedException $exception) {
-                    Log::warning('Skipping LDAP sync for app instance '.$app_instance->id.': '.$exception->getMessage(), ['organization_id' => $event->organization->id]);
+                    Log::warning('Skipping LDAP sync for app instance', [
+                        'organization_id' => $event->organization->id,
+                        'event' => 'sso.ldap_sync_skipped',
+                        'app_instance_id' => $app_instance->id,
+                        'exception' => $exception,
+                    ]);
                 }
             }
             $sso_servers[] = $app_instance->sso_server_id;

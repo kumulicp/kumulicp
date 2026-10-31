@@ -20,7 +20,7 @@ class Ingress extends Kubernetes
 
         $result = $this->kubectl()->apply($data, $namespace);
 
-        Log::info(__('messages.api.rancher.log.ingress_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.ingress_created', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.ingress_created']);
 
         return [
             'status' => $result['success'] ? 'success' : 'failed',
@@ -39,7 +39,7 @@ class Ingress extends Kubernetes
         $namespace = $this->organization->slug;
         $result = $this->kubectl()->delete('ingress', $chart->name, $namespace);
 
-        Log::info(__('messages.api.rancher.log.ingress_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.ingress_deleted', ['organization' => $namespace]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.ingress_deleted']);
 
         return ['status' => 'success', 'response' => $result['output']];
     }

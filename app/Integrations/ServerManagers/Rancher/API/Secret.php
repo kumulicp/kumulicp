@@ -35,7 +35,7 @@ class Secret extends Rancher
 
         $this->json()->post($url, $data);
 
-        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_created', ['namespace' => $namespace, 'name' => $pull_secret->k8sSecretName()]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.secret_created']);
 
         if ($this->hasError()) {
             return [
@@ -59,7 +59,7 @@ class Secret extends Rancher
 
         $this->json()->ignoreErrorCode(404)->delete($url);
 
-        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $name]), ['organization_id' => $this->organization->id]);
+        Log::info(__('messages.api.rancher.log.secret_deleted', ['namespace' => $namespace, 'name' => $name]), ['organization_id' => $this->organization->id, 'event' => 'messages.api.rancher.log.secret_deleted']);
 
         if ($this->hasError()) {
             return [
