@@ -151,7 +151,9 @@ class ApplicationUpgrade extends Action
         }
 
         if ($status['pending'] ?? false) {
-            if (method_exists($server, 'recoverStuckRelease') && static::recoverStuckPendingRelease($task, $server)) {
+            if (method_exists($server, 'recoverStuckRelease')
+                && (! method_exists($server, 'canRecoverStuckRelease') || $server->canRecoverStuckRelease())
+                && static::recoverStuckPendingRelease($task, $server)) {
                 return;
             }
         } else {

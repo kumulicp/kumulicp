@@ -2,141 +2,55 @@
 
 namespace App\Integrations\ServerManagers\Rancher\Interfaces;
 
-use App\AppInstance;
-use App\Contracts\OrganizationInterface;
-use App\Contracts\ServerManager\AppInterface;
+use App\Integrations\ServerManagers\Kubernetes\API\Application as BaseApplication;
+use App\Integrations\ServerManagers\Kubernetes\API\Job as BaseJob;
+use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace as BaseKubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\Secret as BaseSecret;
+use App\Integrations\ServerManagers\Kubernetes\Interfaces\KubernetesWebInterface;
+use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService as BaseDomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\API\Application;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
-use App\Integrations\ServerManagers\Rancher\Services\OrganizationServices;
-use App\Organization;
-use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
 
-class RancherWebInterface implements AppInterface, OrganizationInterface
+/**
+ * The Kubernetes web interface, run against a cluster managed by Rancher.
+ * Differs only in which API classes it uses, and in apps that share another
+ * app's release.
+ */
+class RancherWebInterface extends KubernetesWebInterface
 {
-    use OrganizationServices;
-
-    private $organization;
-
-    private $namespace;
-
-    private $application;
-
-    private $job;
-
-    private $secret;
-
-    public function __construct(
-        private OrgServer $server,
-        private ?AppInstance $app_instance = null,
-    ) {
-        $this->organization = $server->organization;
-
-        $this->namespace = new KubernetesNamespace($this->organization, $server);
-        $this->application = new Application($this->organization, $server);
-        $this->job = new Job($this->organization, $this->server);
-        $this->secret = new Secret($this->organization, $this->server);
+    protected function makeNamespace(): BaseKubernetesNamespace
+    {
+        return new KubernetesNamespace($this->organization, $this->server);
     }
 
-    // Make sure the image registry credentials required by the app instance's version
-    // exists in the organization's namespace before the app is deployed
-    public function ensureImageRegistryAuth()
+    protected function makeApplication(): BaseApplication
     {
-        $version = $this->app_instance->version;
-
-        if (! $version || ! $version->requiresImageRegistryAuth()) {
-            return true;
-        }
-
-        $this->secret->ensure($this->organization->slug, $version->imageRegistry);
-
-        return true;
+        return new Application($this->organization, $this->server);
     }
 
-    public function exists()
+    protected function makeSecret(): BaseSecret
     {
-        $app = new Application($this->organization, $this->server);
+        return new Secret($this->organization, $this->server);
+    }
 
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($this->app_instance)->charts();
-        }
+    protected function makeJob(): BaseJob
+    {
+        return new Job($this->organization, $this->server);
+    }
 
-        foreach ($charts as $chart) {
-            $is_active = $app->isActive($this->app_instance, $chart);
+    protected function makeDomainMiddleware(): BaseDomainMiddlewareService
+    {
+        return new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
+    }
 
-            if ($is_active === 1 || $is_active === 2) {
-                return true;
-            }
-        }
-
+    // Rancher manages its own releases, so there is nothing of ours to recover.
+    public function canRecoverStuckRelease(): bool
+    {
         return false;
-    }
-
-    public function notFoundMessage(): string
-    {
-        return __('messages.exception.app_not_found_rancher');
-    }
-
-    public function get()
-    {
-        $app_instance = $this->app_instance;
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            $app_instance = $this->app_instance->parent;
-            $charts = ApplicationFacade::instance($app_instance)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($app_instance)->charts();
-        }
-
-        return $this->application->retrieve($app_instance, $charts[0]);
-    }
-
-    public function isActive()
-    {
-        return $this->checkStatus()['active'];
-    }
-
-    public function checkStatus(): array
-    {
-        if (ApplicationFacade::profile($this->app_instance->application->slug)->activationType($this->app_instance) === 'job') {
-            $charts = ApplicationFacade::instance($this->app_instance->parent)->charts();
-        } else {
-            $charts = ApplicationFacade::instance($this->app_instance)->charts();
-        }
-
-        $active = true;
-        $pending = false;
-        $labels = [];
-
-        foreach ($charts as $chart) {
-            $status = $this->application->isActive($this->app_instance, $chart);
-            $labels[] = $chart->chartName().': '.$this->statusLabel($status);
-
-            if ($status !== 1) {
-                $active = false;
-            }
-
-            if ($status === 2) {
-                $pending = true;
-            }
-        }
-
-        return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
-    }
-
-    private function statusLabel(int $status): string
-    {
-        return match ($status) {
-            1 => 'deployed',
-            2 => 'pending',
-            3 => 'failed',
-            default => 'not found',
-        };
     }
 
     public function add()
@@ -145,30 +59,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
             return ApplicationFacade::instance($parent)->connect('web')->update();
         }
 
-        // verify the organization exists is active
-        if ($this->existsOrganization()) {
-            $this->ensureImageRegistryAuth();
-
-            $charts = ApplicationFacade::instance($this->app_instance)->charts();
-
-            foreach ($charts as $chart) {
-                // verify app is active
-                if ($this->application->isActive($this->app_instance, $chart) === 1) {
-                    $this->update();
-                } else {
-                    $this->application->create($this->app_instance, $chart);
-
-                    $this->app_instance->refresh();
-                    // Update domain middleware
-                    // $this->updateRedirectDomains();
-
-                }
-            }
-
-            return true;
-        } else {
-            $this->addOrganization();
-        }
+        return parent::add();
     }
 
     public function update()
@@ -177,25 +68,7 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
             return ApplicationFacade::instance($parent)->connect('web')->update();
         }
 
-        $this->ensureImageRegistryAuth();
-
-        $charts = ApplicationFacade::instance($this->app_instance)->charts();
-
-        foreach ($charts as $chart) {
-            $is_active = $this->application->isActive($this->app_instance, $chart);
-
-            // 0 = not found -- e.g. release record deleted/lost -- falls back
-            // to a fresh install rather than silently no-op'ing forever.
-            if (in_array($is_active, [0, 1, 3], true)) {
-                $this->application->update($this->app_instance, $chart);
-
-                $this->app_instance->refresh();
-                // Update domain middleware
-                $this->updateRedirectDomains();
-            }
-        }
-
-        return true;
+        return parent::update();
     }
 
     public function delete()
@@ -211,36 +84,6 @@ class RancherWebInterface implements AppInterface, OrganizationInterface
             return ApplicationFacade::instance($parent)->connect('web')->update();
         }
 
-        $this->updateRedirectDomains();
-
-        $this->app_instance->refresh();
-
-        $charts = ApplicationFacade::instance($this->app_instance)->charts();
-
-        foreach ($charts as $chart) {
-            if ($chart->delete_method === 'remove') {
-                $this->application->remove($this->app_instance, $chart);
-            } elseif ($chart->delete_method === 'update') {
-                $this->update();
-            }
-        }
-
-        return true;
-    }
-
-    public function updateRedirectDomains()
-    {
-        $domain_middleware = new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
-        $domain_middleware->update();
-    }
-
-    public function runJob(JobChart $job_chart)
-    {
-        return $this->job->create($job_chart);
-    }
-
-    public function jobStatus(string $job_id)
-    {
-        return $this->job->status($job_id);
+        return parent::delete();
     }
 }

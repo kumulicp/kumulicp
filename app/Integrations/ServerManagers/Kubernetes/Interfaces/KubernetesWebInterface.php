@@ -140,6 +140,17 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
     }
 
     /**
+     * Whether this driver can clear a release left pending by a killed
+     * process. Checked by ApplicationUpgrade before it calls
+     * recoverStuckRelease(); a driver whose releases are managed elsewhere
+     * returns false.
+     */
+    public function canRecoverStuckRelease(): bool
+    {
+        return true;
+    }
+
+    /**
      * Deletes the release secret for any chart currently stuck pending --
      * see Application::deleteStuckReleaseSecrets(). Called when a task's
      * completion check finds the release has sat pending longer than the

@@ -183,3 +183,70 @@ it('labels the Secret like the Job it belongs to', function () {
         && $m['metadata']['labels']['kumulicp.io/type'] === 'job'
         && $m['metadata']['labels']['app.kubernetes.io/managed-by'] === 'kumulicp');
 });
+
+// A cluster whose create-Job response leaves the uid out; GETs of the Job
+// answer $lookup (200 with a uid, or an error status) once it has been created.
+function fakeJobClusterWithoutUid(int $lookup = 200): void
+{
+    $job_created = false;
+
+    Http::fake(function (Request $request) use (&$job_created, $lookup) {
+        $path = parse_url($request->url(), PHP_URL_PATH);
+        $body = json_decode($request->body(), true) ?? [];
+
+        if (str_ends_with($path, '/jobs/demo-job-abc')) {
+            return $job_created && $lookup === 200
+                ? Http::response(['metadata' => ['name' => 'demo-job-abc', 'uid' => 'job-uid-2']])
+                : Http::response(['kind' => 'Status', 'message' => 'not found'], $job_created ? $lookup : 404);
+        }
+
+        if ($request->method() === 'POST' && ($body['kind'] ?? null) === 'Job') {
+            $job_created = true;
+        }
+
+        return $request->method() === 'GET'
+            ? Http::response(['kind' => 'Status', 'message' => 'not found'], 404)
+            : Http::response($body, 201);
+    });
+}
+
+it('looks the Job up for its uid when the create response leaves it out', function () {
+    fakeJobClusterWithoutUid();
+
+    $chart = jobChartFor('kubernetes');
+    $chart->secretEnv('ACCOUNT_TOKEN', 'tok');
+
+    jobApi()->create($chart);
+
+    Http::assertSent(fn (Request $request) => in_array($request->method(), ['POST', 'PATCH'])
+        && (json_decode($request->body(), true)['metadata']['ownerReferences'][0]['uid'] ?? null) === 'job-uid-2');
+});
+
+it('removes the Secret when the Job is confirmed not to exist', function () {
+    fakeJobClusterWithoutUid(lookup: 404);
+
+    $chart = jobChartFor('kubernetes');
+    $chart->secretEnv('ACCOUNT_TOKEN', 'tok');
+
+    jobApi()->create($chart);
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'DELETE'
+        && str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/secrets/'.$chart->secrets()->name()));
+});
+
+it('leaves the Secret alone when the Job lookup fails for any other reason', function () {
+    fakeJobClusterWithoutUid(lookup: 500);
+
+    $chart = jobChartFor('kubernetes');
+    $chart->secretEnv('ACCOUNT_TOKEN', 'tok');
+
+    jobApi()->create($chart);
+
+    Http::assertNotSent(fn (Request $request) => $request->method() === 'DELETE');
+});
+
+it('reaches the cluster API through the same client as everything else', function () {
+    $api = jobApi();
+
+    expect($api->clusterApi())->toBe($api->api());
+});
