@@ -17,10 +17,19 @@ class HttpChartRepository implements ChartRepository
 
     public function __construct(
         private string $url,
-        private string $chart_name,
+        private string $chart_name = '',
         private ?RepoSecret $secret = null,
     ) {
         $this->url = rtrim($url, '/');
+    }
+
+    // Reuses index entries that were already fetched, so downloading many
+    // charts from one repository doesn't re-fetch the whole index each time.
+    public function withEntries(array $entries): static
+    {
+        $this->entries = $entries;
+
+        return $this;
     }
 
     public function versions(): array
@@ -55,14 +64,24 @@ class HttpChartRepository implements ChartRepository
         return $response->body();
     }
 
+    /**
+     * Every chart in the repository, keyed by chart name, each as the list of
+     * its index entries (newest first, as Helm writes them).
+     *
+     * @return array<string, array<int, array>>
+     */
+    public function index(): array
+    {
+        $response = $this->request()->get($this->url.'/index.yaml');
+        $response->throw();
+
+        return (array) (Yaml::parse($response->body())['entries'] ?? []);
+    }
+
     private function entries(): array
     {
         if ($this->entries === null) {
-            $response = $this->request()->get($this->url.'/index.yaml');
-            $response->throw();
-
-            $index = Yaml::parse($response->body());
-            $this->entries = (array) ($index['entries'][$this->chart_name] ?? []);
+            $this->entries = (array) ($this->index()[$this->chart_name] ?? []);
         }
 
         return $this->entries;

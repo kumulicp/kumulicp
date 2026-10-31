@@ -35,6 +35,7 @@ uses(TestCase::class, RefreshDatabase::class)->in('Browser');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/AccountManager');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Billing');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Applications');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Catalog');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Auth');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');

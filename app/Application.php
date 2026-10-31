@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Enums\AccessType;
+use App\Enums\ApplicationSource;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property AccessType $access_type
  * @property bool $primary_domain_allowed
  * @property bool $can_update_domain
+ * @property ApplicationSource $source
+ * @property int|null $chart_source_id
+ * @property array|null $catalog
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
  * @property-read int|null $total_instances
@@ -42,6 +46,7 @@ class Application extends Model
      */
     protected $attributes = [
         'domain_option' => '[]',
+        'source' => 'generic',
     ];
 
     /**
@@ -54,6 +59,8 @@ class Application extends Model
         'primary_domain_allowed' => 'boolean',
         'can_update_domain' => 'boolean',
         'domain_option' => 'array',
+        'catalog' => 'array',
+        'source' => ApplicationSource::class,
     ];
 
     /**
@@ -72,6 +79,17 @@ class Application extends Model
         }
 
         return false;
+    }
+
+    // Imported from the HelmForge chart repository rather than backed by a hand-written profile
+    public function isHelmForge(): bool
+    {
+        return $this->source === ApplicationSource::HelmForge;
+    }
+
+    public function chartSource()
+    {
+        return $this->belongsTo(ChartSource::class, 'chart_source_id');
     }
 
     public function organizations()

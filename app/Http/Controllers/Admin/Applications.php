@@ -7,6 +7,7 @@ use App\AppPlan;
 use App\AppScreenshot;
 use App\AppVersion;
 use App\Enums\AccessType;
+use App\Enums\ApplicationSource;
 use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -69,6 +70,7 @@ class Applications extends Controller
         $app = new Application;
         $app->name = $name;
         $app->slug = $slug;
+        $app->source = ApplicationSource::Generic;
         $app->category = $request->category;
         $app->short_description = strip_tags($request->description);
         $app->description = clean($request->description, 'rich_text');

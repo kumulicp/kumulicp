@@ -7,9 +7,11 @@ use App\Application;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\Enums\ApplicationSource;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneProfile;
 use App\Integrations\Applications\GenericAppProfile;
+use App\Integrations\Applications\HelmForge\HelmForgeProfile;
 use App\Integrations\Applications\Nextcloud\NextcloudProfile;
 use App\Integrations\Applications\Wordpress\WordpressProfile;
 use App\Organization;
@@ -34,6 +36,9 @@ class ApplicationService
     private $activated_apps;
 
     private $instances = [];
+
+    // Profiles of HelmForge apps by slug (false = looked up, not a HelmForge app)
+    private $helmforge_profiles = [];
 
     public function __construct()
     {
@@ -74,13 +79,31 @@ class ApplicationService
         }
     }
 
+    // Apps with a registered profile (built-in or from a plugin module) always
+    // use it. Everything else is deployed through the channel of its source.
     public function profile(Application|string $app)
     {
-        if (is_a($app, Application::class)) {
-            $app = $app->slug;
+        $model = is_a($app, Application::class) ? $app : null;
+        $slug = $model ? $model->slug : $app;
+
+        if ($profile = Arr::get($this->applications, $slug)) {
+            return $profile;
         }
 
-        return Arr::get($this->applications, $app, Arr::get($this->applications, 'generic'));
+        return $this->helmForgeProfile($slug, $model) ?? Arr::get($this->applications, 'generic');
+    }
+
+    // Apps imported from HelmForge have no registered profile; theirs is built
+    // from the data stored on the application when it was synced.
+    private function helmForgeProfile(string $slug, ?Application $model): ?HelmForgeProfile
+    {
+        if (! array_key_exists($slug, $this->helmforge_profiles)) {
+            $model ??= Application::where('slug', $slug)->first();
+
+            $this->helmforge_profiles[$slug] = $model?->isHelmForge() ? new HelmForgeProfile($model) : false;
+        }
+
+        return $this->helmforge_profiles[$slug] ?: null;
     }
 
     public function roles(Application|string $app)
@@ -309,6 +332,7 @@ class ApplicationService
         if (Arr::has($this->applications, $app_name)) {
             $application = new Application;
             $application->slug = $app_name;
+            $application->source = ApplicationSource::Profile;
             $application->name = Str::headline($app_name);
             $application->short_description = '';
             $application->description = '';
