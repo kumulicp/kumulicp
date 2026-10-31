@@ -32,8 +32,8 @@ class Versions extends Controller
                     'id' => $version->id,
                     'version' => $version->name,
                     'status' => $version->status,
-                    'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d h:m:s'),
-                    'created_at' => (new Carbon($version->created_at))->format('Y-m-d h:m:s'),
+                    'updated_at' => (new Carbon($version->updated_at))->format('Y-m-d H:i:s'),
+                    'created_at' => (new Carbon($version->created_at))->format('Y-m-d H:i:s'),
                 ];
             }),
             'breadcrumbs' => [

@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetupAwareAuthenticate;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -131,6 +132,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return SecurityHeaders::apply($response, $request, $nonce);
         });
         $exceptions->dontReportDuplicates();
+        // Cap how often one failing code location is reported, so a broken upstream
+        // that fails every minute doesn't flood the logs and alert channels.
+        $exceptions->throttle(fn (Throwable $e) => Limit::perMinute(5)->by($e::class.'|'.$e->getFile().':'.$e->getLine()));
         $exceptions->dontReport([
             TransportException::class,
         ]);

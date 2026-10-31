@@ -6,7 +6,6 @@ use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Integration;
 use App\Organization;
 use App\OrgServer;
-use Illuminate\Support\Facades\Log;
 
 class Authentik extends Integration
 {
@@ -39,7 +38,6 @@ class Authentik extends Integration
         if ($this->status_code == 400) {
             $response = json_decode($response, true);
             $error_message = __('messages.exception.api_error', ['description' => 'Authentik', 'code' => $response['code'], 'message' => $response['message']]);
-            Log::critical($error_message, ['organization_id' => $this->organization->id]);
 
             $this->setError($error_message, $response['code']);
         } else {

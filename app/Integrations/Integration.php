@@ -4,6 +4,7 @@ namespace App\Integrations;
 
 use App\Exceptions\ConnectionFailedException;
 use App\Organization;
+use App\Support\Redactor;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -182,21 +183,19 @@ class Integration
 
     public function setError($message, $code, $fatal = false, $quiet = false)
     {
-        $url = '';
-        if (url()->current() !== '') {
-            $url = url()->current();
-        }
-
         $this->error_message = $message;
         $this->error_code = $code;
         $this->error_fatal = $fatal;
 
         if ($this->error_message) {
-            $error_message = "URL: $url \n
-            Message: $message";
+            $error_message = "Message: $message";
 
             if (! $quiet) {
-                Log::critical($error_message, ['organization_id' => $this->organization->id]);
+                Log::critical($message, [
+                    'organization_id' => $this->organization?->id,
+                    'integration' => $this->name,
+                    'error_code' => $code,
+                ]);
             }
 
             if ($fatal) {
@@ -238,8 +237,28 @@ class Integration
 
     private function httpError($name, $data = null, $url = null)
     {
-        $error_message = "$url $name - {$this->name}: [{$this->status_code}] {$data}";
+        $error_message = "$url $name - {$this->name}: [{$this->status_code}] ".$this->scrubResponseBody($data);
         throw new ConnectionFailedException($error_message);
+    }
+
+    /**
+     * Upstream error bodies end up in task rows, emails and chat alerts, so mask
+     * anything secret-looking and cap the length.
+     */
+    protected function scrubResponseBody(mixed $data): string
+    {
+        if (is_array($data) || is_object($data)) {
+            $data = json_encode($data);
+        }
+
+        $data = (string) $data;
+        $decoded = json_decode($data, true);
+
+        if (is_array($decoded)) {
+            $data = (string) json_encode(Redactor::redact($decoded));
+        }
+
+        return mb_strlen($data) > 1000 ? mb_substr($data, 0, 1000).'… [truncated]' : $data;
     }
 
     public function resetClient()

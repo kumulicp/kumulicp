@@ -161,7 +161,7 @@ class StripeGateway implements BillingContract
         $description = $description;
         $stripeCharge = $this->organization->invoiceFor($description, $stripe_price_format);
 
-        Log::info(__('actions.invoice', ['description' => $description, 'price' => $stripe_price_format]), ['organization_id' => $this->organization]);
+        Log::info(__('actions.invoice', ['description' => $description, 'price' => $stripe_price_format]), ['organization_id' => $this->organization->id]);
 
         $recent_invoices = $this->organization->invoices(false, ['limit' => 1, 'created' => ['gt' => now()->subMinutes(10)->timestamp, 'lt' => now()->timestamp]]);
 

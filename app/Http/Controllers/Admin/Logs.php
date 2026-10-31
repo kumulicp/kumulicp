@@ -15,10 +15,11 @@ class Logs extends Controller
         return inertia()->render('Admin/LogsList', [
             'logs' => $logs->map(function ($log) {
                 return [
+                    'id' => $log->id,
                     'organization' => $log->organization?->name,
                     'level' => $log->level_name,
                     'message' => $log->message,
-                    'time' => (new Carbon($log->created_at))->format('Y-m-d h:m'),
+                    'time' => (new Carbon($log->created_at))->format('Y-m-d H:i'),
                 ];
             }),
             'meta' => [

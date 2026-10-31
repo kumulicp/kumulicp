@@ -18,6 +18,8 @@ class RunAction implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private const REPORT_EVERY_N_ATTEMPTS = 30;
+
     /**
      * Create the event listener.
      *
@@ -62,13 +64,22 @@ class RunAction implements ShouldQueue
             $this->task->error_message = $e->getMessage();
             $this->task->save();
 
-            report($e);
+            // The task is retried every minute until the upstream recovers. Report the
+            // first failure and then only periodically, so an outage doesn't flood alerts.
+            if ($this->task->attempts <= 1 || $this->task->attempts % self::REPORT_EVERY_N_ATTEMPTS === 0) {
+                report($e);
+            }
         }
     }
 
     public function failed(Throwable $e)
     {
-        Action::revert($this->task);
+        try {
+            Action::revert($this->task);
+        } catch (Throwable $revert_exception) {
+            report($revert_exception);
+        }
+
         $this->task->job_id = 0;
         $this->task->status = 'failed';
         $this->task->error_code = 'throwable';

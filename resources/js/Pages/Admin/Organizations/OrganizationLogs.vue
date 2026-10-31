@@ -21,7 +21,7 @@ import { router } from '@inertiajs/vue3'
         </tr>
       </thead>
       <tbody>
-        <tr v-for="log in logs" :key="log.name">
+        <tr v-for="log in logs" :key="log.id">
           <td>{{ log.level }}</td>
           <td>{{ log.message }}</td>
           <td>{{ log.time }}</td>

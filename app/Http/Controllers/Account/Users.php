@@ -28,7 +28,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -462,7 +461,6 @@ class Users extends Controller
             $add_email_response = $email_server->createUserEmail($user, $domain);
         } catch (Throwable $e) {
             report($e);
-            Log::critical($e->getMessage(), ['organization_id' => $domain->organization_id]);
 
             return redirect('/users/'.$username)->with('error', __('organization.user.denied.email_failed'));
         }

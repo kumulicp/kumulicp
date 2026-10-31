@@ -24,11 +24,10 @@ class CriticalError extends Mailable implements ShouldQueue
     public function __construct($log_data)
     {
         $this->log = $log_data;
-        if (array_key_exists('organization_id', $log_data)) {
+        // Records without an organization (cron, console) fall through to the view's "cron job" label.
+        if (! empty($log_data['organization_id'])) {
             $this->organization = Organization::find($log_data['organization_id']);
         }
-
-        $this->organization = Organization::where('type', 'superaccount')->first();
     }
 
     /**

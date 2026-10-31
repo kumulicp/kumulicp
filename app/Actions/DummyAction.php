@@ -38,7 +38,7 @@ class DummyAction extends Action
 
     public static function complete(Task $task)
     {
-        Log::critical(__('actions.dummy.completed', ['organization_id' => $task->organization->id]));
+        Log::info(__('actions.dummy.completed', ['organization_id' => $task->organization->id]), ['organization_id' => $task->organization->id]);
         $task->organization->notifyAdmins(new DummyNotification($task));
         $task->complete();
         $task->groupNotified();

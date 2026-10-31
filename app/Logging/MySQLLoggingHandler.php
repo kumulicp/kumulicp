@@ -2,7 +2,7 @@
 
 namespace App\Logging;
 
-use Illuminate\Support\Arr;
+use App\Logging\Concerns\InspectsLogRecords;
 use Illuminate\Support\Facades\DB;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
@@ -10,12 +10,10 @@ use Monolog\LogRecord;
 
 class MySQLLoggingHandler extends AbstractProcessingHandler
 {
+    use InspectsLogRecords;
+
     private $table = 'logs';
 
-    /**
-     * Reference:
-     * https://github.com/markhilton/monolog-mysql/blob/master/src/Logger/Monolog/Handler/MysqlHandler.php
-     */
     public function __construct($level = Level::Info, $bubble = true)
     {
         parent::__construct($level, $bubble);
@@ -23,28 +21,23 @@ class MySQLLoggingHandler extends AbstractProcessingHandler
 
     protected function write(LogRecord $record): void
     {
-        if (in_array('REMOTE_ADDR', $_SERVER, true) && in_array('HTTP_USER_AGENT', $_SERVER, true)) {
-            $remote_addr = $_SERVER['REMOTE_ADDR'];
-            $http_user_agent = $_SERVER['HTTP_USER_AGENT'];
-        } else {
-            $remote_addr = '';
-            $http_user_agent = '';
-        }
+        $origin = $this->requestOrigin();
 
         $data = [
-            'message' => $record['message'],
-            'organization_id' => Arr::get($record, 'context.organization_id'),
-            'context' => json_encode($record['context']),
-            'level' => $record['level'],
-            'level_name' => $record['level_name'],
-            'channel' => $record['channel'],
-            'record_datetime' => $record['datetime']->format('Y-m-d H:i:s'),
-            'extra' => json_encode($record['extra']),
-            'formatted' => $record['formatted'],
-            'remote_addr' => $remote_addr,
-            'user_agent' => $http_user_agent,
+            'message' => $record->message,
+            'organization_id' => $this->recordOrganizationId($record),
+            'context' => $this->encodeJson($this->recordContext($record)),
+            'level' => $record->level->value,
+            'level_name' => $record->level->getName(),
+            'channel' => $record->channel,
+            'record_datetime' => $record->datetime->format('Y-m-d H:i:s'),
+            'extra' => $this->encodeJson($record->extra),
+            'formatted' => (string) $record->formatted,
+            'remote_addr' => $origin['remote_addr'],
+            'user_agent' => $origin['user_agent'],
             'created_at' => date('Y-m-d H:i:s'),
         ];
+
         DB::connection()->table($this->table)->insert($data);
     }
 }

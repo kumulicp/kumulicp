@@ -60,7 +60,7 @@ class ForgotPasswordController extends Controller
         );
 
         Log::info('Password reset link requested.', [
-            'email' => $request->input('email'),
+            'email_hash' => substr(hash('sha256', strtolower((string) $request->input('email'))), 0, 16),
             'broker_status' => $response,
         ]);
 

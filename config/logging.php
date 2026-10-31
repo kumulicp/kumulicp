@@ -104,9 +104,9 @@ return [
             'level' => 'debug',
         ],
 
+        // The errorlog driver writes through PHP's error_log(), so it takes no path.
         'errorlog' => [
             'driver' => 'errorlog',
-            'path' => storage_path('logs/error.log'),
             'level' => 'error',
         ],
 
@@ -117,7 +117,6 @@ return [
 
         'emergency' => [
             'driver' => 'errorlog',
-            'path' => storage_path('logs/emergency.log'),
             'level' => 'emergency',
         ],
 
