@@ -8,7 +8,6 @@ use App\AppInstance;
 use App\AppPlan;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
-use App\Organization;
 use App\OrgSubdomain;
 use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\AppInstance\AppStorageService;
@@ -25,16 +24,6 @@ use Illuminate\Support\Str;
 class AppInstanceService
 {
     private $features;
-
-    private $standard_users;
-
-    private $basic_users;
-
-    private $application;
-
-    private $role_groups;
-
-    private $storage;
 
     private $cache = [];
 
@@ -243,11 +232,6 @@ class AppInstanceService
         return $this;
     }
 
-    public function hasParent()
-    {
-        return $this->app_instance->parent ? true : false;
-    }
-
     public function hasCustomizations()
     {
         return count($this->customizations()) > 0;
@@ -294,46 +278,6 @@ class AppInstanceService
         }
 
         return $domains;
-    }
-
-    public function orgSubdomains(Organization $organization)
-    {
-        $application = $this->app_instance->application;
-        $allowsPrimary = $application->hasDomainOption('primary');
-        $allowsSubdomains = $application->hasDomainOption('subdomains');
-
-        if (! $allowsPrimary && ! $allowsSubdomains) {
-            return collect();
-        }
-
-        $domains = $organization->subdomains();
-
-        if ($allowsPrimary && ! $allowsSubdomains) {
-            $domains->where('host', '@');
-        } elseif ($allowsSubdomains && ! $allowsPrimary) {
-            $domains->whereNot('host', '@');
-        }
-
-        $domains->where(function ($query) {
-            return $query->where('app_instance_id', $this->app_instance->id)
-                ->orWhere('app_instance_id', 0)
-                ->orWhere('app_instance_id', null);
-        })
-            ->where('type', 'app');
-
-        return $domains->get();
-    }
-
-    public function isSubdomainAvailable(OrgSubdomain $domain)
-    {
-        $application = $this->app_instance->application;
-        $allowsPrimary = $application->hasDomainOption('primary');
-        $allowsSubdomains = $application->hasDomainOption('subdomains');
-
-        return in_array($domain->app_instance_id, [$this->app_instance->id, 0, null])
-            && $domain->type === 'app'
-            && (($allowsPrimary && $domain->host === '@')
-                || ($allowsSubdomains && $domain->host !== '@'));
     }
 
     public function personalized_settings()
@@ -392,23 +336,12 @@ class AppInstanceService
 
     public function countStorage()
     {
-        $additional_storage = 0;
-
-        foreach ($this->app_instance->additional_storage()->get() as $storage) {
-            $additional_storage += $storage->quantity ?? 0;
-        }
-
-        return $additional_storage;
+        return $this->app_instance->countStorage();
     }
 
     public function storage()
     {
         return new AppStorageService($this->app_instance);
-    }
-
-    public function roles(bool $all = true)
-    {
-        return $this->app_instance->version->roles(all: $all);
     }
 
     public function enabledGroups()
@@ -458,33 +391,6 @@ class AppInstanceService
         }
 
         return $roles;
-    }
-
-    public function standardRoles()
-    {
-        if (! $this->role_groups) {
-            $this->role_groups = $this->app_instance->version->roles('standard');
-        }
-
-        return $this->role_groups;
-    }
-
-    public function basicRoles()
-    {
-        if (! $this->role_groups) {
-            $this->role_groups = $this->app_instance->version->roles('basic');
-        }
-
-        return $this->role_groups;
-    }
-
-    public function application()
-    {
-        if (! $this->application) {
-            $this->application = $this->app_instance->application;
-        }
-
-        return $this->application;
     }
 
     public function __get($property)

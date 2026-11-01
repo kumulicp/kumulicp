@@ -392,6 +392,64 @@ class AppInstance extends Model
         return isset($this->server);
     }
 
+    public function countStorage()
+    {
+        return $this->additional_storage()->sum('quantity');
+    }
+
+    public function orgSubdomains(Organization $organization)
+    {
+        $allowsPrimary = $this->application->hasDomainOption('primary');
+        $allowsSubdomains = $this->application->hasDomainOption('subdomains');
+
+        if (! $allowsPrimary && ! $allowsSubdomains) {
+            return collect();
+        }
+
+        $domains = $organization->subdomains();
+
+        if ($allowsPrimary && ! $allowsSubdomains) {
+            $domains->where('host', '@');
+        } elseif ($allowsSubdomains && ! $allowsPrimary) {
+            $domains->whereNot('host', '@');
+        }
+
+        $domains->where(function ($query) {
+            return $query->where('app_instance_id', $this->id)
+                ->orWhere('app_instance_id', 0)
+                ->orWhere('app_instance_id', null);
+        })
+            ->where('type', 'app');
+
+        return $domains->get();
+    }
+
+    public function isSubdomainAvailable(OrgSubdomain $domain)
+    {
+        $allowsPrimary = $this->application->hasDomainOption('primary');
+        $allowsSubdomains = $this->application->hasDomainOption('subdomains');
+
+        return in_array($domain->app_instance_id, [$this->id, 0, null])
+            && $domain->type === 'app'
+            && (($allowsPrimary && $domain->host === '@')
+                || ($allowsSubdomains && $domain->host !== '@'));
+    }
+
+    public function roles(bool $all = true)
+    {
+        return $this->version->roles(all: $all);
+    }
+
+    public function standardRoles()
+    {
+        return $this->version->roles('standard');
+    }
+
+    public function basicRoles()
+    {
+        return $this->version->roles('basic');
+    }
+
     public function scopeActive(Builder $query)
     {
         return $query->where('status', 'active');
