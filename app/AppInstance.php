@@ -32,6 +32,7 @@ use Illuminate\Support\Str;
  * @property string $label
  * @property string|null $status
  * @property string|null $api_password
+ * @property string|null $db_password
  * @property array|null $settings
  * @property Carbon|null $deactivate_at
  * @property Carbon|null $trial_ends_at
@@ -62,7 +63,12 @@ class AppInstance extends Model
         'demo_app' => DemoAppExtensions::class,
     ];
 
+    protected $hidden = [
+        'db_password',
+    ];
+
     protected $casts = [
+        'db_password' => 'encrypted',
         'settings' => 'array',
         'deactivate_at' => 'date',
         'trial_ends_at' => 'date',
@@ -329,15 +335,8 @@ class AppInstance extends Model
 
     public function dbPassword(): string
     {
-        try {
-            if ($encrypted = $this->setting('db_password')) {
-                return Crypt::decryptString($encrypted);
-            }
-        } catch (\Throwable $e) {
-            // fall through to org secretpw for existing instances
-        }
-
-        return $this->organization->secretpw;
+        return $this->db_password
+            ?? throw new \RuntimeException("App instance {$this->id} has no database password");
     }
 
     public function siteApiKey(): string

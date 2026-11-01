@@ -7,7 +7,6 @@ use App\Organization;
 use App\OrgServer;
 use App\Server;
 use App\Support\Facades\Application;
-use Illuminate\Support\Facades\Crypt;
 
 it('gives the app its own database password rather than the organization secret', function () {
     $organization = Organization::factory()->create(['secretpw' => 'organization-secret']);
@@ -52,7 +51,7 @@ it('gives the app its own database password rather than the organization secret'
     $org_server->backup_server_id = $org_server->id;
     $org_server->save();
 
-    $app_instance->updateSetting('db_password', Crypt::encryptString('instance-database-secret'));
+    $app_instance->db_password = 'instance-database-secret';
     $app_instance->database_server_id = $org_server->id;
     $app_instance->databasename = 'demo_nextcloud';
     $app_instance->save();
