@@ -398,6 +398,7 @@ class DemoSeeder extends Seeder
                 'plan_id' => 1,
                 'web_server_id' => 1,
                 'api_password' => Crypt::encrypt(env('NEXTCLOUD_ADMIN_PASSWORD')),
+                'db_password' => Crypt::encryptString(Str::password(32, true, true, false)),
                 'status' => 'active',
             ],
             [
@@ -411,6 +412,7 @@ class DemoSeeder extends Seeder
                 'plan_id' => 3,
                 'web_server_id' => 1,
                 'api_password' => Crypt::encrypt(env('WORDPRESS_ADMIN_PASSWORD')),
+                'db_password' => Crypt::encryptString(Str::password(32, true, true, false)),
                 'status' => 'active',
             ],
         ]);

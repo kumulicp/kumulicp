@@ -16,7 +16,6 @@ use App\Support\Facades\Action;
 use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Mockery;
 use ReflectionProperty;
@@ -72,6 +71,7 @@ class DatabaseMigrationTest extends TestCase
         $this->appInstance->status = 'active';
         $this->appInstance->databasename = 'org_demo';
         $this->appInstance->database_server_id = $this->old->id;
+        $this->appInstance->db_password = 'app-specific-password';
         $this->appInstance->save();
     }
 
@@ -239,9 +239,6 @@ class DatabaseMigrationTest extends TestCase
 
     public function test_backups_connect_with_the_apps_own_database_password()
     {
-        $this->appInstance->updateSetting('db_password', Crypt::encryptString('app-specific-password'));
-        $this->appInstance->save();
-
         $password = (new ReflectionProperty(BackupInterface::class, 'password'))
             ->getValue(new BackupInterface($this->completedBackup()));
 
@@ -251,9 +248,6 @@ class DatabaseMigrationTest extends TestCase
 
     public function test_the_database_user_added_on_a_server_has_the_apps_own_database_password()
     {
-        $this->appInstance->updateSetting('db_password', Crypt::encryptString('app-specific-password'));
-        $this->appInstance->save();
-
         $statements = [];
         $pdo = Mockery::mock();
         $pdo->shouldReceive('quote')->andReturnUsing(fn ($value) => "'{$value}'");
