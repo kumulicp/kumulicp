@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $description
  * @property array $domain_option
  * @property AccessType $access_type
- * @property bool $primary_domain_allowed
  * @property bool $can_update_domain
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
@@ -51,7 +50,6 @@ class Application extends Model
      */
     protected $casts = [
         'access_type' => AccessType::class,
-        'primary_domain_allowed' => 'boolean',
         'can_update_domain' => 'boolean',
         'domain_option' => 'array',
     ];

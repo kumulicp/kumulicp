@@ -24,7 +24,6 @@ class Organization extends Controller
         return inertia('Organization/Settings/Organization/OrganizationSettings', [
             'org' => [
                 'name' => $organization->name,
-                'description' => $organization->description,
                 'email' => $organization->email,
                 'phone_number' => $organization->phone_number,
                 'street' => $organization->street,

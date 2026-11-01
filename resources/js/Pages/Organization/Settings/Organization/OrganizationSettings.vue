@@ -180,7 +180,6 @@ export default {
       form: useForm({
         _token: this.$page.props.csrf_token,
         name: this.org.name,
-        description: this.org.description,
         org_email: this.org.email,
         org_phone_number: this.org.phone_number,
         street: this.org.street,

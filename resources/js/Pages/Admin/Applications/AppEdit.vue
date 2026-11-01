@@ -101,14 +101,6 @@ import { useForm } from '@inertiajs/vue3'
     <AdminSettings>
       <template #name>{{ $t('admin.apps.settings') }}</template>
       <template #settings>
-        <va-checkbox v-model="form.primary_domain_allowed"
-          :label="$t('admin.apps.primaryDomainAllowed')"
-          :messages="$t('admin.apps.primaryDomainAllowedMessage')"
-          class="my-2"
-          immediateValidation
-          :error="$page.props.errors.primary_domain_allowed"
-          :error-messages="$page.props.errors.primary_domain_allowed"
-          />
         <va-checkbox v-model="form.can_update_domain"
           :label="$t('admin.apps.canUpdateDomain')"
           :messages="$t('admin.apps.canUpdateDomainMessage')"
@@ -208,7 +200,6 @@ export default {
         image: this.app.image,
         parent_app: this.app.parent_app.id,
         access_type: this.app.access_type,
-        primary_domain_allowed: this.app.primary_domain_allowed,
         short_description: this.app.short_description,
         description: this.app.description,
         domain_option: this.app.domain_option ?? [],
