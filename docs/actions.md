@@ -128,6 +128,95 @@ the tasks waiting for it straight away rather than on the next scheduled pass.
 `task_group` still groups related tasks for the UI and notifications, but no longer
 makes them start each other.
 
+## Constructors
+
+A constructor stores what the action was asked to do (ids, flags) and may check
+it is sensible - throwing from it is how a controller finds out the request is
+invalid. It must not save anything, dispatch a job, execute another action or fire
+an event: the constructor also runs when something builds the action without
+meaning to do the work, and the work would then be done twice.
+
+Work that has to happen once the task exists goes in `onCreate(Task $task)`. It runs
+when the task is created - not for a duplicate that `Action::execute()` turns away -
+and again when the task is retried, so it must be safe to repeat.
+
+```php
+public function __construct(AppInstance $app_instance)
+{
+    $this->app_instance = $app_instance;          // just remember it
+}
+
+public function onCreate(Task $task)
+{
+    $this->app_instance->status = 'deleting';     // now the task exists
+    $this->app_instance->save();
+}
+```
+
+`handle()` and `poll()` get everything from the `Task` (its custom values and
+relations); don't rebuild the action with `new self(...)` in them.
+
+(Older actions use `postGenerate()` for this. It does the same, but also counts
+the creation as a first attempt on the task, which is why new code uses `onCreate`.)
+
+## Steps
+
+An action that is a fixed sequence of stages, each of which may take a while, is a
+`StepAction`: list the steps and write each as a `Step`.
+
+```php
+class MoveDisk extends StepAction
+{
+    public static function steps(): array
+    {
+        return [Snapshot::class, Copy::class, Switch::class];
+    }
+}
+
+class Copy extends Step
+{
+    public function run(Task $task): ActionResult        // start it
+    {
+        $copy = Disks::copy($task->getValue('snapshot_id'));
+
+        return ActionResult::wait(['copy_id' => $copy->id]);
+    }
+
+    public function check(Task $task): ActionResult      // each poll while it runs
+    {
+        return Disks::copied($task->getValue('copy_id')) ? ActionResult::done() : ActionResult::wait();
+    }
+
+    public function rollback(Task $task): ?string        // undo it; returns a note for the error message
+    {
+        Disks::remove($task->getValue('copy_id'));
+
+        return null;
+    }
+
+    public function timeoutMinutes(): ?int
+    {
+        return 120;
+    }
+}
+```
+
+* A step that returns `done()` goes straight on to the next in the same pass; one
+  that returns `wait()` is `check()`ed on each poll until it is done.
+* If a step fails, times out, or throws something unexpected, the steps that were
+  started are rolled back, last first, and the task fails. A step that is merely
+  waiting on something (`WaitingException`, `RetryableException`) starts again
+  later instead.
+* Only one pass runs over a task's steps at a time, and progress is kept in
+  `task_steps` (`$task->steps`), so the task resumes where it was after a restart.
+  Anything a step needs to remember goes in the task's custom values (return it
+  in the result).
+* Override `failureMessage()` on the action to say what the failure reads like once
+  the rollback is done.
+
+Most actions don't need steps: one that starts something and polls for it is just
+`handle()` and `poll()`.
+
 ## Older actions
 
 Actions written before `TaskAction` have static `run()`, `complete()`, `retry()`
