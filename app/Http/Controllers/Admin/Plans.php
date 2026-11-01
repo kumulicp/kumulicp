@@ -106,7 +106,8 @@ class Plans extends Controller
             $plans = Arr::get($plan->app_plans, "{$app->slug}.plans");
             $app_plans[$app->slug] = [
                 'max' => Arr::get($plan->app_plans, "{$app->slug}.max") ?? 0,
-                'plans' => is_array($plans) ? ($plans[0] ?? null) : null,
+                // Always a list of app plan ids; only pay-per-app plans may hold more than one
+                'plans' => is_array($plans) ? array_values($plans) : [],
             ];
         }
 
@@ -242,6 +243,10 @@ class Plans extends Controller
         foreach ($rawAppPlans as $slug => &$config) {
             if (array_key_exists('plans', $config) && ! is_array($config['plans'])) {
                 $config['plans'] = $config['plans'] !== null ? [$config['plans']] : [];
+            }
+            // Pay per app plans can offer several app plans per app; packaged plans only a single one
+            if (isset($config['plans']) && $request->type !== 'app') {
+                $config['plans'] = array_slice(array_values($config['plans']), 0, 1);
             }
         }
         unset($config);
