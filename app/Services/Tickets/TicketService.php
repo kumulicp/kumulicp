@@ -34,16 +34,18 @@ class TicketService
         private TicketNotifier $notifier,
         private TicketHtml $html,
         private TicketStaff $staff,
+        private AttachmentService $attachments,
     ) {}
 
     /**
-     * @param  array{subject: string, body: string, type?: string, impact?: string, category_id?: int|null, app_instance_id?: int|null, customer_assignee_id?: int|null}  $data
+     * @param  array{subject: string, body: string, type?: string, impact?: string, category_id?: int|null, app_instance_id?: int|null, customer_assignee_id?: int|null, attachment_ids?: list<int>}  $data
      */
     public function create(User $requester, array $data, string $source = 'web'): Ticket
     {
-        $body = $this->html->prepare($data['body']);
+        $drafts = $this->attachments->drafts(Arr::get($data, 'attachment_ids', []), $requester);
+        $body = $this->html->prepare($data['body'], 'body', $drafts->pluck('id')->all(), $drafts->isNotEmpty());
 
-        $ticket = DB::transaction(function () use ($requester, $data, $body, $source) {
+        $ticket = DB::transaction(function () use ($requester, $data, $body, $source, $drafts) {
             $ticket = new Ticket([
                 'subject' => $data['subject'],
                 'type' => $data['type'] ?? TicketType::QUESTION->value,
@@ -66,7 +68,8 @@ class TicketService
 
             $this->saveWithNumber($ticket);
 
-            $this->addMessage($ticket, $requester, TicketMessage::KIND_REQUESTER, TicketMessage::PUBLIC, $body, $source);
+            $message = $this->addMessage($ticket, $requester, TicketMessage::KIND_REQUESTER, TicketMessage::PUBLIC, $body, $source);
+            $this->attachments->bind($drafts, $ticket, $message, $body['images']);
             $this->record($ticket, 'created', $requester);
 
             if ($ticket->support_assignee_id) {
@@ -84,7 +87,10 @@ class TicketService
         return $ticket;
     }
 
-    public function reply(Ticket $ticket, User $author, string $body, bool $asStaff, bool $internal = false): TicketMessage
+    /**
+     * @param  list<int>  $attachmentIds  Ids of the author's uploaded drafts to send with the message
+     */
+    public function reply(Ticket $ticket, User $author, string $body, bool $asStaff, bool $internal = false, array $attachmentIds = []): TicketMessage
     {
         if ($internal && ! $asStaff) {
             throw new AuthorizationException(__('tickets.errors.internal_staff_only'));
@@ -94,9 +100,10 @@ class TicketService
             throw ValidationException::withMessages(['body' => __('tickets.errors.closed')]);
         }
 
-        $prepared = $this->html->prepare($body);
+        $drafts = $this->attachments->drafts($attachmentIds, $author);
+        $prepared = $this->html->prepare($body, 'body', $drafts->pluck('id')->all(), $drafts->isNotEmpty());
 
-        $message = DB::transaction(function () use ($ticket, $author, $asStaff, $internal, $prepared) {
+        $message = DB::transaction(function () use ($ticket, $author, $asStaff, $internal, $prepared, $drafts) {
             $message = $this->addMessage(
                 $ticket,
                 $author,
@@ -104,6 +111,7 @@ class TicketService
                 $internal ? TicketMessage::INTERNAL : TicketMessage::PUBLIC,
                 $prepared,
             );
+            $this->attachments->bind($drafts, $ticket, $message, $prepared['images']);
 
             if (! $internal) {
                 $ticket->last_activity_at = now();
@@ -174,7 +182,9 @@ class TicketService
             throw new AuthorizationException(__('tickets.errors.cannot_edit'));
         }
 
-        $prepared = $this->html->prepare($body);
+        // An edit can keep showing the message's own images but cannot add files
+        $own = $message->attachments()->pluck('id')->all();
+        $prepared = $this->html->prepare($body, 'body', $own, $own !== []);
 
         if ($prepared['html'] === $message->body_html) {
             return $message;
@@ -458,7 +468,7 @@ class TicketService
     }
 
     /**
-     * @param  array{html: string, text: string}  $body
+     * @param  array{html: string, text: string, images?: list<int>}  $body
      */
     private function addMessage(Ticket $ticket, User $author, string $kind, string $visibility, array $body, string $source = 'web'): TicketMessage
     {

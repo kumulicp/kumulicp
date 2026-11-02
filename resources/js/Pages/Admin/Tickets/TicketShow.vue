@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
 import TicketEditor from '@/components/tickets/TicketEditor.vue'
+import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
 import TicketThread from '@/components/tickets/TicketThread.vue'
 import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
 </script>
@@ -37,7 +38,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         <va-card-content>
           <va-alert v-if="internal" color="warning" class="mb-3">{{ $t('tickets.admin.internalWarning') }}</va-alert>
           <form @submit.prevent="sendReply">
-            <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:admin:${ticket.number}`" :error="replyForm.errors.body" />
+            <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:admin:${ticket.number}`" :error="replyForm.errors.body" @uploaded="imageUploaded" />
+            <AttachmentPicker v-model="attachments" class="mt-3" :max-files="attachment_limits.files" :max-file-mb="attachment_limits.file_mb" />
+            <div v-if="replyForm.errors.attachment_ids" class="va-message-list__message text-danger mt-1">{{ replyForm.errors.attachment_ids }}</div>
             <va-button type="submit" id="sendReply" class="mt-3" :disabled="replyForm.processing">
               {{ internal ? $t('tickets.admin.addNote') : $t('tickets.sendReply') }}
             </va-button>
@@ -157,10 +160,12 @@ export default {
     priorities: Array,
     categories: Array,
     me: Number,
+    attachment_limits: Object,
   },
   data () {
     return {
       internal: false,
+      attachments: [],
       replyForm: useForm({ body: '', internal: false }),
       form: this.makeForm(),
     }
@@ -187,13 +192,17 @@ export default {
     },
     sendReply () {
       this.replyForm.internal = this.internal
-      this.replyForm.post(`${this.ticket.url}/messages`, {
+      this.replyForm.transform(data => ({ ...data, attachment_ids: this.attachments.map(attachment => attachment.id) })).post(`${this.ticket.url}/messages`, {
         preserveScroll: true,
         onSuccess: () => {
           this.$refs.editor?.clearDraft()
           this.replyForm.reset('body')
+          this.attachments = []
         },
       })
+    },
+    imageUploaded (attachment) {
+      this.attachments.push({ ...attachment, inline: true })
     },
     save () {
       this.form.post(this.ticket.url, { preserveScroll: true })

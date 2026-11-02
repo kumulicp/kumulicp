@@ -46,6 +46,20 @@ return [
         'body_too_long' => 'The message is too long (maximum :max characters).',
     ],
 
+    'attachments' => [
+        'upload_failed' => 'The file could not be uploaded: :reason',
+        'not_received' => 'No file was received. It may be larger than the server allows.',
+        'not_saved' => 'it could not be saved',
+        'empty' => 'That file is empty.',
+        'too_large' => 'That file is too large (maximum :max MB).',
+        'too_many_waiting' => 'You have too many files waiting to be sent. Send or remove some first.',
+        'type_not_allowed' => 'That type of file is not allowed. Allowed: :types.',
+        'rejected' => 'That file was rejected by the security scan.',
+        'too_many' => 'You can attach at most :max files to one message.',
+        'unavailable' => 'One of the attached files is no longer available. Please upload it again.',
+        'message_too_large' => 'The attached files are too large together (maximum :max MB per message).',
+    ],
+
     'errors' => [
         'internal_staff_only' => 'Only support staff can add internal notes.',
         'closed' => 'This ticket is closed. Reopen it to reply.',

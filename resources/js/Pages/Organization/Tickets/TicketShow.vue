@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
 import TicketEditor from '@/components/tickets/TicketEditor.vue'
+import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
 import TicketThread from '@/components/tickets/TicketThread.vue'
 import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
 </script>
@@ -27,7 +28,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         <va-card-title>{{ $t('tickets.reply') }}</va-card-title>
         <va-card-content>
           <form @submit.prevent="sendReply">
-            <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:${ticket.number}`" :error="replyForm.errors.body" />
+            <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:${ticket.number}`" :error="replyForm.errors.body" @uploaded="imageUploaded" />
+            <AttachmentPicker v-model="attachments" class="mt-3" :max-files="attachment_limits.files" :max-file-mb="attachment_limits.file_mb" />
+            <div v-if="replyForm.errors.attachment_ids" class="va-message-list__message text-danger mt-1">{{ replyForm.errors.attachment_ids }}</div>
             <va-button type="submit" id="sendReply" class="mt-3" :disabled="replyForm.processing">{{ $t('tickets.sendReply') }}</va-button>
           </form>
         </va-card-content>
@@ -116,10 +119,12 @@ export default {
     members: Array,
     me: Number,
     edit_window_minutes: Number,
+    attachment_limits: Object,
   },
   data () {
     return {
       replyForm: useForm({ body: '' }),
+      attachments: [],
       detailsForm: useForm({ subject: this.ticket.subject, impact: this.ticket.impact.value }),
       customerAssignee: this.ticket.customer_assignee?.id ?? null,
       showEdit: false,
@@ -138,13 +143,17 @@ export default {
   },
   methods: {
     sendReply () {
-      this.replyForm.post(`${this.ticket.url}/messages`, {
+      this.replyForm.transform(data => ({ ...data, attachment_ids: this.attachments.map(attachment => attachment.id) })).post(`${this.ticket.url}/messages`, {
         preserveScroll: true,
         onSuccess: () => {
           this.$refs.editor?.clearDraft()
           this.replyForm.reset()
+          this.attachments = []
         },
       })
+    },
+    imageUploaded (attachment) {
+      this.attachments.push({ ...attachment, inline: true })
     },
     changeCustomerAssignee (value) {
       router.put(this.ticket.url, { customer_assignee_id: value ?? null }, { preserveScroll: true })

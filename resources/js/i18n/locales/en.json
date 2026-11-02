@@ -1607,6 +1607,15 @@
       "apps": "Apps",
       "relatedToTicket": "this ticket",
       "recentTasks": "Recent tasks"
+    },
+    "attachments": {
+      "title": "Attachments",
+      "add": "Attach files",
+      "hint": "Up to {files} files, {size} MB each. You can also drop files here or paste a screenshot into your message.",
+      "inText": "in message",
+      "tooMany": "You can attach at most {max} files.",
+      "tooLarge": "That file is too large (maximum {max} MB).",
+      "uploadFailed": "The upload failed. Please try again."
     }
   }
 }

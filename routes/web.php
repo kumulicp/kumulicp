@@ -410,6 +410,10 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::get('', 'Account\Tickets@index')->name('organization.tickets.index');
         Route::get('create', 'Account\Tickets@create')->name('organization.tickets.create');
         Route::post('', 'Account\Tickets@store')->middleware('throttle:'.config('tickets.throttle.create'))->name('organization.tickets.store');
+        // Shared by customers and staff; access is decided per file
+        Route::post('uploads', 'Account\TicketAttachments@store')->middleware('throttle:'.config('tickets.throttle.upload'))->name('tickets.uploads.store');
+        Route::delete('uploads/{attachment}', 'Account\TicketAttachments@destroy')->name('tickets.uploads.destroy');
+        Route::get('attachments/{attachment}', 'Account\TicketAttachments@show')->name('tickets.attachments.show');
         Route::prefix('{number}')->where(['number' => '[0-9]+'])->group(function () {
             Route::get('', 'Account\Tickets@show')->name('organization.tickets.show');
             Route::put('', 'Account\Tickets@update')->name('organization.tickets.update');

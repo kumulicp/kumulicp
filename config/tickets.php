@@ -40,5 +40,29 @@ return [
     'throttle' => [
         'create' => '10,60',
         'reply' => '30,60',
+        'upload' => '60,60',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attachments
+    |--------------------------------------------------------------------------
+    | Files live on a private disk and are only ever served through an
+    | authorized route. Sizes are bounded by PHP's upload_max_filesize /
+    | post_max_size and by the proxy in front of the app as well, so raise
+    | those too when raising these.
+    */
+    'attachments' => [
+        'disk' => env('TICKETS_ATTACHMENT_DISK', 'tickets'),
+        'max_file_kb' => (int) env('TICKETS_ATTACHMENT_MAX_FILE_KB', 10240),
+        'max_files' => (int) env('TICKETS_ATTACHMENT_MAX_FILES', 10),
+        'max_message_kb' => (int) env('TICKETS_ATTACHMENT_MAX_MESSAGE_KB', 25600),
+        // Uploads that were never sent with a message are deleted after this long
+        'orphan_hours' => 24,
+        // Most uploads one person may have waiting to be sent
+        'max_drafts_per_user' => 50,
+        // Class implementing App\Contracts\Tickets\AttachmentScanner (e.g. a ClamAV
+        // client). Null means files are not scanned.
+        'scanner' => env('TICKETS_ATTACHMENT_SCANNER'),
     ],
 ];

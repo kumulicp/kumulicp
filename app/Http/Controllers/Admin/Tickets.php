@@ -112,7 +112,7 @@ class Tickets extends Controller
 
         return inertia('Admin/Tickets/TicketShow', [
             'ticket' => AdminTicketResource::make($ticket)->resolve($request),
-            'messages' => AdminMessageResource::collection($ticket->messages()->with('author')->get())->resolve($request),
+            'messages' => AdminMessageResource::collection($ticket->messages()->with(['author', 'attachments'])->get())->resolve($request),
             'timeline' => (new TicketTimeline)->for($ticket, true),
             'context' => $this->context($ticket),
             'staff' => $this->staffOptions(),
@@ -122,6 +122,10 @@ class Tickets extends Controller
             'priorities' => collect(TicketPriority::cases())->map(fn ($p) => ['value' => $p->value, 'text' => $p->label()])->all(),
             'categories' => $this->categoryOptions(),
             'me' => $request->user()->id,
+            'attachment_limits' => [
+                'files' => config('tickets.attachments.max_files'),
+                'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
+            ],
             'breadcrumbs' => [
                 ['label' => __('tickets.admin.title'), 'url' => '/admin/support/tickets'],
                 ['label' => $ticket->reference],
@@ -136,7 +140,7 @@ class Tickets extends Controller
         $ticket = Ticket::where('number', $number)->firstOrFail();
         $internal = (bool) $request->validated('internal', false);
 
-        $this->tickets->reply($ticket, $request->user(), $request->validated('body'), asStaff: true, internal: $internal);
+        $this->tickets->reply($ticket, $request->user(), $request->validated('body'), asStaff: true, internal: $internal, attachmentIds: $request->validated('attachment_ids', []));
 
         return redirect('/admin/support/tickets/'.$ticket->number)
             ->with('success', $internal ? __('tickets.note_added') : __('tickets.reply_sent'));

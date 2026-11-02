@@ -46,6 +46,20 @@ return [
         'body_too_long' => 'El mensaje es demasiado largo (máximo :max caracteres).',
     ],
 
+    'attachments' => [
+        'upload_failed' => 'No se pudo subir el archivo: :reason',
+        'not_received' => 'No se recibió ningún archivo. Puede ser mayor de lo que permite el servidor.',
+        'not_saved' => 'no se pudo guardar',
+        'empty' => 'Ese archivo está vacío.',
+        'too_large' => 'Ese archivo es demasiado grande (máximo :max MB).',
+        'too_many_waiting' => 'Tiene demasiados archivos pendientes de enviar. Envíe o elimine algunos primero.',
+        'type_not_allowed' => 'Ese tipo de archivo no está permitido. Permitidos: :types.',
+        'rejected' => 'Ese archivo fue rechazado por el análisis de seguridad.',
+        'too_many' => 'Puede adjuntar como máximo :max archivos a un mensaje.',
+        'unavailable' => 'Uno de los archivos adjuntos ya no está disponible. Vuelva a subirlo.',
+        'message_too_large' => 'Los archivos adjuntos son demasiado grandes en conjunto (máximo :max MB por mensaje).',
+    ],
+
     'errors' => [
         'internal_staff_only' => 'Solo el personal de soporte puede añadir notas internas.',
         'closed' => 'Este ticket está cerrado. Reábralo para responder.',

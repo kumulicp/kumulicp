@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import TicketEditor from '@/components/tickets/TicketEditor.vue'
+import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
 </script>
 <template>
   <Head>
@@ -56,8 +57,12 @@ import TicketEditor from '@/components/tickets/TicketEditor.vue'
         </div>
 
         <div class="va-input-label mb-1">{{ $t('navbar.helpDeskBody') }}</div>
-        <TicketEditor ref="editor" v-model="form.body" draft-key="ticket-draft:new" :error="form.errors.body" />
+        <TicketEditor ref="editor" v-model="form.body" draft-key="ticket-draft:new" :error="form.errors.body" @uploaded="imageUploaded" />
         <div class="va-message-list__message">{{ $t('navbar.helpDeskBodyMessage') }}</div>
+
+        <div class="va-input-label mt-3 mb-1">{{ $t('tickets.attachments.title') }}</div>
+        <AttachmentPicker v-model="attachments" :max-files="attachment_limits.files" :max-file-mb="attachment_limits.file_mb" />
+        <div v-if="form.errors.attachment_ids" class="va-message-list__message text-danger mt-1">{{ form.errors.attachment_ids }}</div>
 
         <div class="mt-4">
           <va-button type="submit" id="submit" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
@@ -79,9 +84,11 @@ export default {
     apps: Array,
     members: Array,
     me: Number,
+    attachment_limits: Object,
   },
   data () {
     return {
+      attachments: [],
       form: useForm({
         subject: '',
         body: '',
@@ -95,9 +102,13 @@ export default {
   },
   methods: {
     submit () {
-      this.form.post('/support/tickets', {
+      this.form.transform(data => ({ ...data, attachment_ids: this.attachments.map(attachment => attachment.id) })).post('/support/tickets', {
         onSuccess: () => this.$refs.editor?.clearDraft(),
       })
+    },
+    // A pasted screenshot was uploaded; it goes out with the message
+    imageUploaded (attachment) {
+      this.attachments.push({ ...attachment, inline: true })
     },
   },
 }

@@ -22,6 +22,8 @@ class BodyRequest extends FormRequest
         return [
             'body' => ['required', 'string'],
             'internal' => ['sometimes', 'boolean'],
+            'attachment_ids' => ['sometimes', 'array', 'max:'.config('tickets.attachments.max_files')],
+            'attachment_ids.*' => ['integer'],
         ];
     }
 }

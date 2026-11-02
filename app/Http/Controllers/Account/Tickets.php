@@ -105,6 +105,10 @@ class Tickets extends Controller
                 ->map(fn ($app) => ['value' => $app->id, 'text' => $app->label])->all(),
             'members' => $this->members($user),
             'me' => $user->id,
+            'attachment_limits' => [
+                'files' => config('tickets.attachments.max_files'),
+                'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
+            ],
             'breadcrumbs' => [
                 ['label' => __('tickets.title'), 'url' => '/support/tickets'],
                 ['label' => __('tickets.new_ticket')],
@@ -137,7 +141,7 @@ class Tickets extends Controller
 
         return inertia('Organization/Tickets/TicketShow', [
             'ticket' => OrgTicketResource::make($ticket)->resolve($request),
-            'messages' => OrgMessageResource::collection($ticket->publicMessages()->with('author')->get())->resolve($request),
+            'messages' => OrgMessageResource::collection($ticket->publicMessages()->with(['author', 'attachments'])->get())->resolve($request),
             'timeline' => (new TicketTimeline)->for($ticket, false),
             'can' => [
                 'reply' => Gate::allows('reply', $ticket),
@@ -148,6 +152,10 @@ class Tickets extends Controller
             'members' => $this->members($user),
             'me' => $user->id,
             'edit_window_minutes' => config('tickets.edit_window_minutes'),
+            'attachment_limits' => [
+                'files' => config('tickets.attachments.max_files'),
+                'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
+            ],
             'breadcrumbs' => [
                 ['label' => __('tickets.title'), 'url' => '/support/tickets'],
                 ['label' => $ticket->reference],
@@ -160,7 +168,7 @@ class Tickets extends Controller
         $ticket = $this->find($request, $number);
         Gate::authorize('reply', $ticket);
 
-        $this->tickets->reply($ticket, $request->user(), $request->validated('body'), asStaff: false);
+        $this->tickets->reply($ticket, $request->user(), $request->validated('body'), asStaff: false, attachmentIds: $request->validated('attachment_ids', []));
 
         return redirect('/support/tickets/'.$ticket->number)->with('success', __('tickets.reply_sent'));
     }
