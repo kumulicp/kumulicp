@@ -102,6 +102,15 @@ return [
         'custom_elements' => [
             ['u', 'Inline', 'Inline', 'Common'],
         ],
+        // Ticket messages. No images/styles/iframes; attachments are added separately.
+        'ticket' => [
+            'HTML.Doctype' => 'HTML 4.01 Transitional',
+            'HTML.Allowed' => 'p,br,b,strong,i,em,u,s,strike,ul,ol,li,h3,h4,blockquote,pre,code,a[href|title]',
+            'AutoFormat.RemoveEmpty' => true,
+            'URI.AllowedSchemes' => ['http' => true, 'https' => true, 'mailto' => true],
+            'HTML.TargetBlank' => true,
+            'HTML.Nofollow' => true,
+        ],
         'help_desk' => [
             'HTML.Doctype' => 'HTML 4.01 Transitional',
             'HTML.Allowed' => 'p,br,b,strong,i,em,u,s,ul,ol,li,h1,h2,h3,h4,h5,h6,blockquote,pre,code,a[href|title|target]',

@@ -72,6 +72,14 @@ return [
             'root' => storage_path('backups'),
         ],
 
+        // Private storage for ticket attachments (Phase 2). Never served directly.
+        'tickets' => [
+            'driver' => 'local',
+            'root' => storage_path('app/tickets'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         'backup_s3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

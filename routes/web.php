@@ -102,6 +102,18 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             });
         });
 
+        Route::prefix('support')->middleware('toggle:tickets')->group(function () {
+            Route::post('categories', 'Admin\Tickets@storeCategory')->name('admin.tickets.categories.store');
+            Route::delete('categories/{category}', 'Admin\Tickets@destroyCategory')->name('admin.tickets.categories.destroy');
+            Route::prefix('tickets')->group(function () {
+                Route::get('', 'Admin\Tickets@index')->name('admin.tickets.index');
+                Route::get('{number}', 'Admin\Tickets@show')->whereNumber('number')->name('admin.tickets.show');
+                Route::post('{number}', 'Admin\Tickets@update')->whereNumber('number')->name('admin.tickets.update');
+                Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply'))->name('admin.tickets.reply');
+                Route::put('{number}/messages/{message}', 'Admin\Tickets@updateMessage')->whereNumber('number')->name('admin.tickets.messages.update');
+            });
+        });
+
         Route::resource('organizations', 'Admin\Organizations');
         Route::prefix('organizations')->group(function () {
             Route::prefix('{organization}')->group(function () {
@@ -392,6 +404,20 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::get('', 'Profile@index')->name('profile');
         Route::post('update/passwd', 'Profile@updatePassword')->name('profile.update.password');
         Route::post('', 'Profile@update')->name('profile.update');
+    });
+
+    Route::prefix('support/tickets')->middleware('toggle:tickets')->group(function () {
+        Route::get('', 'Account\Tickets@index')->name('organization.tickets.index');
+        Route::get('create', 'Account\Tickets@create')->name('organization.tickets.create');
+        Route::post('', 'Account\Tickets@store')->middleware('throttle:'.config('tickets.throttle.create'))->name('organization.tickets.store');
+        Route::prefix('{number}')->where(['number' => '[0-9]+'])->group(function () {
+            Route::get('', 'Account\Tickets@show')->name('organization.tickets.show');
+            Route::put('', 'Account\Tickets@update')->name('organization.tickets.update');
+            Route::post('messages', 'Account\Tickets@reply')->middleware('throttle:'.config('tickets.throttle.reply'))->name('organization.tickets.reply');
+            Route::put('messages/{message}', 'Account\Tickets@updateMessage')->name('organization.tickets.messages.update');
+            Route::post('close', 'Account\Tickets@close')->name('organization.tickets.close');
+            Route::post('reopen', 'Account\Tickets@reopen')->name('organization.tickets.reopen');
+        });
     });
 
     Route::post('/support/ticket/submit', 'Account\Support@submit')->name('organization.support.submit');

@@ -27,6 +27,7 @@ class Notifications extends Controller
                     'id' => $notification->id,
                     'title' => Arr::get($notification->data, 'title'),
                     'description' => Arr::get($notification->data, 'message'),
+                    'url' => Arr::get($notification->data, 'url'),
                     'unread' => is_null($notification->read_at),
                     'status' => 'Complete',
                     'type' => 'notification',

@@ -73,6 +73,8 @@ const HelpDeskTinymceEditor = defineAsyncComponent(() =>
   </div>
 </template>
 <script>
+import { router } from '@inertiajs/vue3'
+
 export default {
   data () {
     return {
@@ -110,13 +112,19 @@ export default {
     submitTicket () {
       const vueState = this
       this.processing = true
-      axios.post('/support/ticket/submit', this.form, {
+      // With tickets enabled this creates a real ticket; otherwise it emails support as before
+      const useTickets = !!this.$page.props.flags?.tickets
+      const url = useTickets ? '/support/tickets' : '/support/ticket/submit'
+      const payload = useTickets
+        ? { subject: this.form.subject, body: this.form.body, type: this.form.request }
+        : this.form
+      axios.post(url, payload, {
         headers: {
           'Content-Type': 'application/json'
         },
         data: {}
       })
-        .then(() => {
+        .then((response) => {
           vueState.processing = false
           vueState.form = {
             subject: '',
@@ -129,6 +137,9 @@ export default {
             customClass: 'success-toast',
             color: 'success'
           })
+          if (useTickets && response.data.url) {
+            router.visit(response.data.url)
+          }
         })
         .catch((error) => {
           const response = error.response

@@ -62,6 +62,7 @@ return [
         'sub-organizations' => env('TOGGLE_SUB_ORGANIZATIONS', false),
         'emails' => env('TOGGLE_EMAILS', false),
         'shared-apps' => env('TOGGLE_SHARED_APPS', false),
+        'tickets' => env('TOGGLE_TICKETS', false),
     ],
 
     'database_flags' => [
