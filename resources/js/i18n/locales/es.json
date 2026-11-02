@@ -552,8 +552,6 @@
       "categoryMessage": "Descripción general de la categoría para que los usuarios sepan cuál es la función principal de esta aplicación",
       "image": "Imagen de la Aplicación",
       "imageMessage": "Aparecerá en la página de Descubrimiento junto con la aplicación",
-      "primaryDomainAllowed": "Dominio Principal Permitido",
-      "primaryDomainAllowedMessage": "La configuración se reemplaza por la opción de Dominio",
       "canUpdateDomain": "Puede Actualizar Dominio",
       "canUpdateDomainMessage": "Una vez activada la aplicación, ¿se puede cambiar el nombre de dominio?",
       "domainTypeAllowed": "Tipo de Dominio Permitido",

@@ -552,8 +552,6 @@
       "categoryMessage": "Broad category description to users know what the primary function of this app is",
       "image": "App Image",
       "imageMessage": "Will appear in the Discovery page with the app",
-      "primaryDomainAllowed": "Primary Domain Allowed",
-      "primaryDomainAllowedMessage": "Setting is replaced by Domain option",
       "canUpdateDomain": "Can Update Domain",
       "canUpdateDomainMessage": "Once app is activated, can domain name be changed?",
       "domainTypeAllowed": "Domain Type Allowed",
