@@ -93,6 +93,27 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
             />
             <va-button type="submit" id="saveTicket" :disabled="form.processing">{{ $t('common.save') }}</va-button>
           </form>
+
+          <va-select
+            v-model="watchers"
+            id="watchers"
+            class="mt-4"
+            :label="$t('tickets.watchers.label')"
+            :messages="$t('tickets.admin.watchersHelp')"
+            :options="watcher_options"
+            value-by="id"
+            text-by="name"
+            multiple
+            @update:model-value="saveWatchers"
+          />
+
+          <va-switch
+            v-model="mutedLocal"
+            id="mute"
+            class="mt-3"
+            :label="$t('tickets.mute.label')"
+            @update:model-value="saveMuted"
+          />
         </va-card-content>
       </va-card>
 
@@ -145,7 +166,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
   </div>
 </template>
 <script>
-import { useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
+import { useToast } from 'vuestic-ui'
+import { createPoller } from '@/composables/ticketPoller'
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -161,24 +184,76 @@ export default {
     categories: Array,
     me: Number,
     attachment_limits: Object,
+    version: String,
+    last_message_id: Number,
+    watcher_ids: Array,
+    watcher_options: Array,
+    muted: Boolean,
   },
   data () {
     return {
       internal: false,
       attachments: [],
+      watchers: [...this.watcher_ids],
+      mutedLocal: this.muted,
+      toast: useToast(),
       replyForm: useForm({ body: '', internal: false }),
       form: this.makeForm(),
     }
   },
   watch: {
-    // Fresh props arrive after every save; keep the form in step with them
+    version (value) {
+      this.poller?.setVersion(value)
+    },
+    watcher_ids (value) {
+      this.watchers = [...value]
+    },
+    muted (value) {
+      this.mutedLocal = value
+    },
+    // Fresh props arrive after a save or when someone else changes the ticket.
+    // Keep what is being typed; the stale version number will flag a clash on save.
     ticket: {
       handler () {
-        this.form = this.makeForm()
+        if (!this.form.isDirty) {
+          this.form = this.makeForm()
+        }
       },
     },
   },
+  mounted () {
+    this.poller = createPoller({
+      url: `${this.ticket.url}/poll`,
+      version: this.version,
+      params: () => ({ after: this.last_message_id }),
+      slow: () => this.ticket.status.value === 'closed',
+      onChange: (data) => this.refresh(data),
+    })
+    this.poller.start()
+  },
+  beforeUnmount () {
+    this.poller?.stop()
+  },
   methods: {
+    // Reload only what changed. State is preserved, so a half-written reply and unsaved edits stay put.
+    refresh (data) {
+      router.reload({
+        only: ['ticket', 'messages', 'timeline', 'context', 'version', 'last_message_id', 'watcher_ids', 'watcher_options', 'muted'],
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          if (data.new_messages > 0) {
+            this.toast.init({ message: this.$t('tickets.newReplies', { count: data.new_messages }, data.new_messages), color: 'info' })
+          }
+        },
+      })
+    },
+    saveWatchers (value) {
+      router.put(`${this.ticket.url}/watchers`, { user_ids: value }, { preserveScroll: true, preserveState: true })
+    },
+    saveMuted (value) {
+      router.put(`${this.ticket.url}/subscription`, { muted: !!value }, { preserveScroll: true, preserveState: true })
+    },
     makeForm () {
       return useForm({
         lock_version: this.ticket.lock_version,
@@ -205,7 +280,11 @@ export default {
       this.attachments.push({ ...attachment, inline: true })
     },
     save () {
-      this.form.post(this.ticket.url, { preserveScroll: true })
+      this.form.post(this.ticket.url, {
+        preserveScroll: true,
+        // The saved ticket is the new starting point (fresh version number included)
+        onSuccess: () => { this.form = this.makeForm() },
+      })
     },
   },
 }

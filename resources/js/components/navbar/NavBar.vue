@@ -6,6 +6,7 @@ import VaIconMenuCollapsed from '@/components/icons/VaIconMenuCollapsed.vue'
 import AppNavbarActions from './components/AppNavbarActions.vue'
 import NotificationsDropdown from './components/dropdowns/NotificationsDropdown.vue'
 import HelpDeskModal from './components/modals/HelpDeskModal.vue'
+import TicketsBadge from '@/components/tickets/TicketsBadge.vue'
 
 const { getColors } = useColors()
 const colors = computed(() => getColors())
@@ -33,6 +34,9 @@ const colors = computed(() => getColors())
     </va-navbar-item>
     </template>
     <template #right>
+      <va-navbar-item>
+      <tickets-badge />
+      </va-navbar-item>
       <va-navbar-item>
       <notifications-dropdown />
       </va-navbar-item>

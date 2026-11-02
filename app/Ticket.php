@@ -164,6 +164,14 @@ class Ticket extends Model
     }
 
     /**
+     * @return HasMany<TicketSubscription, $this>
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(TicketSubscription::class);
+    }
+
+    /**
      * @return BelongsToMany<TicketTag, $this>
      */
     public function tags(): BelongsToMany

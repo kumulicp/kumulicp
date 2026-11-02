@@ -19,4 +19,6 @@ class TicketMessageRevision extends Model
     public const UPDATED_AT = null;
 
     protected $table = 'ticket_message_revisions';
+
+    protected $fillable = ['ticket_message_id', 'body_html', 'edited_by'];
 }

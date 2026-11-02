@@ -8,6 +8,7 @@ use App\Notifications\Tickets\TicketActivity;
 use App\Support\Facades\Settings;
 use App\Ticket;
 use App\TicketMessage;
+use App\TicketSubscription;
 use App\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -15,11 +16,15 @@ use Illuminate\Support\Str;
 
 /**
  * Decides who is told about what. The rule that matters: internal notes only
- * ever reach staff.
+ * ever reach staff. Whether a particular person actually gets the message by
+ * email or in the panel is decided later, per person, in TicketActivity.
  */
 class TicketNotifier
 {
-    public function __construct(private TicketStaff $staff) {}
+    public function __construct(
+        private TicketStaff $staff,
+        private TicketSubscriptions $subscriptions,
+    ) {}
 
     public function created(Ticket $ticket): void
     {
@@ -46,22 +51,29 @@ class TicketNotifier
         ];
 
         if ($message->isInternal()) {
-            if ($ticket->support_assignee_id && $ticket->support_assignee_id !== $message->author_id) {
-                $this->send($this->only($ticket->supportAssignee), new TicketActivity($ticket, 'note', true, $context));
-            }
+            $this->send(
+                $this->supportSide($ticket)->reject(fn (User $user) => $user->is($author)),
+                new TicketActivity($ticket, 'note', true, $context, null, $message->id),
+            );
 
             return;
         }
 
         if ($message->isStaff()) {
-            $this->send($this->customerSide($ticket, $author), new TicketActivity($ticket, 'reply', false, $context));
+            $this->send($this->customerSide($ticket, $author), new TicketActivity($ticket, 'reply', false, $context, null, $message->id));
+
+            // Colleagues on the support side who are watching
+            $this->send(
+                $this->subscriptions->watchers($ticket, TicketSubscription::SUPPORT)->reject(fn (User $user) => $user->is($author)),
+                new TicketActivity($ticket, 'reply', true, $context, null, $message->id),
+            );
 
             return;
         }
 
         // A customer replied: tell support, and any colleagues on the customer side
-        $this->toSupport($ticket, 'reply', $context, $author);
-        $this->send($this->customerSide($ticket, $author), new TicketActivity($ticket, 'reply', false, $context));
+        $this->toSupport($ticket, 'reply', $context, $author, $message->id);
+        $this->send($this->customerSide($ticket, $author), new TicketActivity($ticket, 'reply', false, $context, null, $message->id));
     }
 
     public function statusChanged(Ticket $ticket, TicketStatus $from, ?User $actor): void
@@ -69,10 +81,10 @@ class TicketNotifier
         $context = ['status' => $ticket->status->label(), 'name' => $actor?->name ?? ''];
 
         $this->send($this->customerSide($ticket, $actor), new TicketActivity($ticket, 'status', false, $context));
-
-        if ($ticket->support_assignee_id && $ticket->support_assignee_id !== $actor?->id) {
-            $this->send($this->only($ticket->supportAssignee), new TicketActivity($ticket, 'status', true, $context));
-        }
+        $this->send(
+            $this->supportSide($ticket)->reject(fn (User $user) => $user->is($actor)),
+            new TicketActivity($ticket, 'status', true, $context),
+        );
     }
 
     /**
@@ -106,16 +118,18 @@ class TicketNotifier
     }
 
     /**
-     * Support side: the assignee, or (unassigned) every staff member via the panel.
+     * Support side: the assignee and watchers, or (unassigned) every staff
+     * member via the panel.
      *
      * @param  array<string, string>  $context
      */
-    private function toSupport(Ticket $ticket, string $event, array $context, ?User $exclude = null): void
+    private function toSupport(Ticket $ticket, string $event, array $context, ?User $exclude = null, ?int $messageId = null): void
     {
         if ($ticket->support_assignee_id) {
-            if ($ticket->support_assignee_id !== $exclude?->id) {
-                $this->send($this->only($ticket->supportAssignee), new TicketActivity($ticket, $event, true, $context));
-            }
+            $this->send(
+                $this->supportSide($ticket)->reject(fn (User $user) => $user->is($exclude)),
+                new TicketActivity($ticket, $event, true, $context, null, $messageId),
+            );
 
             return;
         }
@@ -123,18 +137,25 @@ class TicketNotifier
         // Unassigned: the whole team sees it in the panel; no email blast
         $this->send(
             $this->staff->users()->reject(fn (User $user) => $user->is($exclude)),
-            new TicketActivity($ticket, $event, true, $context, [PanelChannel::class]),
+            new TicketActivity($ticket, $event, true, $context, [PanelChannel::class], $messageId),
+        );
+
+        // Staff watching an unassigned ticket still get their email
+        $this->send(
+            $this->subscriptions->watchers($ticket, TicketSubscription::SUPPORT)->reject(fn (User $user) => $user->is($exclude)),
+            new TicketActivity($ticket, $event, true, $context, ['mail'], $messageId),
         );
     }
 
     /**
-     * Requester and customer assignee, minus the person who did the thing.
+     * Requester, customer assignee and CC'd colleagues, minus the person who did the thing.
      *
      * @return Collection<int, User>
      */
     private function customerSide(Ticket $ticket, ?User $exclude): Collection
     {
         return collect([$ticket->requester, $ticket->customerAssignee])
+            ->merge($this->subscriptions->watchers($ticket, TicketSubscription::CUSTOMER))
             ->filter(fn (?User $user) => $this->staff->isActive($user))
             ->unique('id')
             ->reject(fn (User $user) => $user->is($exclude))
@@ -142,11 +163,17 @@ class TicketNotifier
     }
 
     /**
+     * The support assignee and staff watchers.
+     *
      * @return Collection<int, User>
      */
-    private function only(?User $user): Collection
+    private function supportSide(Ticket $ticket): Collection
     {
-        return $this->staff->isActive($user) ? collect([$user]) : collect();
+        return collect([$ticket->supportAssignee])
+            ->merge($this->subscriptions->watchers($ticket, TicketSubscription::SUPPORT))
+            ->filter(fn (?User $user) => $this->staff->isActive($user))
+            ->unique('id')
+            ->values();
     }
 
     /**

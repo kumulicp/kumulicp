@@ -4,7 +4,7 @@ Status: proposal. Nothing here is built yet.
 
 ## Implementation status
 
-Phases 0, 1 and 2 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phases 3 to 5 are not started.
+Phases 0 to 3 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phases 4 and 5 are not started.
 
 **Done**
 - Flag, `tickets` private disk, `ticket` purifier profile, enums, `TicketPolicy` (members: whole org; staff: `admin` gate through `manage()`), `config/tickets.php`.
@@ -16,6 +16,24 @@ Phases 0, 1 and 2 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behi
 - Email + panel notifications (`TicketActivity`), panel notifications now deep-link to the ticket. Removed or deactivated assignees are handled on the user-deleted event and by a daily sweep.
 - The help desk modal creates a real ticket when the flag is on; the legacy email path is unchanged when it is off. New tickets are still copied to `support_email` (`TICKETS_COPY_SUPPORT_EMAIL`).
 - English and Spanish strings.
+
+**Phase 3 (polling and notification depth), done**
+- **Polling without WebSockets.** Open ticket pages ask `GET .../poll?v=<version>&after=<last message>` every 10 s while visible (60 s when the tab is hidden or the ticket is closed, exponential back-off on errors, immediate check when you return to the tab). Unchanged means `304` with no body. A per-ticket token held in the cache is replaced after every committed write (`TicketVersions`); there are matching tokens per organization and one overall for the staff inbox.
+- On a change the page reloads only the props that changed (Inertia partial reload with state preserved), so a half-written reply, an open message edit and unsaved staff edits are never lost. A change that arrives while the tab is hidden is held until you come back, so a background tab never shows (or marks as read) something nobody has looked at. A small toast says how many new replies arrived.
+- **Lists and badge.** `GET /support/tickets/summary` returns the unread count and whether the list is stale; the customer list, the staff inbox and the support icon in the top bar poll it (30 s). The icon shows a count of unread tickets you are involved in (opened, assigned to you, or CC'd; for staff assigned to them or watched).
+- **Unread tracking.** `ticket_reads` records the newest message each person has seen. Opening a ticket (or a visible refresh of it) marks it read; writing a reply does too. Your own messages never count, customers only count what they can see, internal notes count for staff. Lists show an unread dot and bold row. Reading never moves backwards.
+- **Watchers (CC).** Any member can CC colleagues from their own organization; staff can CC members and other staff. A customer editing the list never touches staff watchers. Watchers get the same notifications as the people on their side (customers never get internal notes). The change is recorded in the staff-only timeline.
+- **Mute per ticket**, for customers and staff. Muting silences everything except being assigned something.
+- **Notification preferences** per person: email and in-panel switches for each kind of event (staff also get internal notes), saved on the user and applied at the moment of sending. Available from a "Notification settings" button on both lists.
+- **Email coalescing.** Reply and note emails wait `TICKETS_MAIL_DELAY_SECONDS` (60) and are skipped when the person has read the message meanwhile or the same person has written a newer one in that conversation, so a burst becomes one email. Panel notifications are immediate. (A real queue worker is needed for the delay; with the `sync` queue everything is sent straight away.)
+- **Email threading.** The "ticket opened" email carries a root `Message-ID` (`ticket-<id>@<app host>`); every later email carries `In-Reply-To` and `References` pointing at it, and the subject always starts `[KCP-1042]`. Replying by email still does not add a reply.
+
+**Differences from the plan for Phase 3**
+- The poll answer says *how many* new messages there are rather than returning them; the page then refreshes through its normal props. One code path renders messages, and edits and redactions show up as well.
+- The poll costs one indexed query (to find the ticket and check access) before the cached version is compared, not zero.
+- Adding someone as a watcher does not send them a notification.
+- The plan's "typing / agent viewing" hints and the `ShouldBroadcast` upgrade path are not built; the event structure was not changed, so Reverb can still be added later.
+- Preferences are a modal on the lists rather than a settings page.
 
 **Phase 2 (attachments), done**
 - Two-step upload: `POST /support/tickets/uploads` makes a private draft owned by the uploader; sending a message with `attachment_ids` binds it. Drafts survive a failed form and are deleted after 24 hours (`PruneTicketUploads`, hourly). Uploads can be discarded with `DELETE /support/tickets/uploads/{id}`.
@@ -43,8 +61,8 @@ Phases 0, 1 and 2 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behi
 
 **Verification**
 - Vue pages compile (`vite build`) and pass ESLint; PHP passes `php -l` and Pint; the sanitiser profile was exercised directly against HTMLPurifier with XSS payloads.
-- The Pest tests in `tests/Feature/Tickets`, `tests/Unit/TicketWorkflowTest.php` and `tests/Unit/AttachmentTypesTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php tests/Unit/AttachmentTypesTest.php` before merging.
-- What was exercised for real in the sandbox: all migrations up/down on SQLite, the file-type allow-list against genuine and disguised files with the real `finfo`, and the sanitiser (including image handling) against real HTMLPurifier.
+- The Pest/PHPUnit tests in `tests/Feature/Tickets`, `tests/Unit/TicketWorkflowTest.php` and `tests/Unit/AttachmentTypesTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php tests/Unit/AttachmentTypesTest.php` before merging.
+- What was exercised for real in the sandbox: all migrations up/down on SQLite, the file-type allow-list against genuine and disguised files with the real `finfo`, the sanitiser (including image handling) against real HTMLPurifier, the real unread/coalescing/subscription services and Eloquent models against SQLite (29 checks), and the real Symfony Mime header API for email threading. That run found and fixed a missing `$fillable` on four models (which would have broken opening any ticket and editing a message) before they shipped.
 
 ## 1. Where we are today
 

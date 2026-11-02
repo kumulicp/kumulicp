@@ -73,6 +73,27 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
             @update:model-value="changeCustomerAssignee"
           />
 
+          <va-select
+            v-model="watchers"
+            id="watchers"
+            class="mt-3"
+            :label="$t('tickets.watchers.label')"
+            :messages="$t('tickets.watchers.help')"
+            :options="members"
+            value-by="id"
+            text-by="name"
+            multiple
+            @update:model-value="saveWatchers"
+          />
+
+          <va-switch
+            v-model="mutedLocal"
+            id="mute"
+            class="mt-3"
+            :label="$t('tickets.mute.label')"
+            @update:model-value="saveMuted"
+          />
+
           <div class="mt-3">
             <va-button v-if="can.edit_details" size="small" color="secondary" @click="showEdit = true">{{ $t('tickets.editDetails') }}</va-button>
             <va-button v-if="can.close" size="small" color="danger" class="ml-2" @click="close">{{ $t('tickets.closeTicket') }}</va-button>
@@ -108,6 +129,8 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
 </template>
 <script>
 import { router, useForm } from '@inertiajs/vue3'
+import { useToast } from 'vuestic-ui'
+import { createPoller } from '@/composables/ticketPoller'
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -120,6 +143,10 @@ export default {
     me: Number,
     edit_window_minutes: Number,
     attachment_limits: Object,
+    version: String,
+    last_message_id: Number,
+    watcher_ids: Array,
+    muted: Boolean,
   },
   data () {
     return {
@@ -127,6 +154,9 @@ export default {
       attachments: [],
       detailsForm: useForm({ subject: this.ticket.subject, impact: this.ticket.impact.value }),
       customerAssignee: this.ticket.customer_assignee?.id ?? null,
+      watchers: [...this.watcher_ids],
+      mutedLocal: this.muted,
+      toast: useToast(),
       showEdit: false,
     }
   },
@@ -136,12 +166,55 @@ export default {
     },
   },
   watch: {
+    version (value) {
+      this.poller?.setVersion(value)
+    },
+    watcher_ids (value) {
+      this.watchers = [...value]
+    },
+    muted (value) {
+      this.mutedLocal = value
+    },
     // Another visit to the same page (after a reply, say) brings fresh props
     'ticket.customer_assignee' (value) {
       this.customerAssignee = value?.id ?? null
     },
   },
+  mounted () {
+    // Checks every few seconds whether this ticket changed; costs a 304 when it did not
+    this.poller = createPoller({
+      url: `${this.ticket.url}/poll`,
+      version: this.version,
+      params: () => ({ after: this.last_message_id }),
+      // A closed ticket rarely changes
+      slow: () => this.ticket.status.value === 'closed',
+      onChange: (data) => this.refresh(data),
+    })
+    this.poller.start()
+  },
+  beforeUnmount () {
+    this.poller?.stop()
+  },
   methods: {
+    // Reload only what changed. State is preserved, so a half-written reply stays put.
+    refresh (data) {
+      router.reload({
+        only: ['ticket', 'messages', 'timeline', 'can', 'version', 'last_message_id', 'watcher_ids', 'muted'],
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          if (data.new_messages > 0) {
+            this.toast.init({ message: this.$t('tickets.newReplies', { count: data.new_messages }, data.new_messages), color: 'info' })
+          }
+        },
+      })
+    },
+    saveWatchers (value) {
+      router.put(`${this.ticket.url}/watchers`, { user_ids: value }, { preserveScroll: true, preserveState: true })
+    },
+    saveMuted (value) {
+      router.put(`${this.ticket.url}/subscription`, { muted: !!value }, { preserveScroll: true, preserveState: true })
+    },
     sendReply () {
       this.replyForm.transform(data => ({ ...data, attachment_ids: this.attachments.map(attachment => attachment.id) })).post(`${this.ticket.url}/messages`, {
         preserveScroll: true,

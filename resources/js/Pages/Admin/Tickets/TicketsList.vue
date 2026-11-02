@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
+import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
 </script>
 <template>
   <Head>
@@ -11,7 +12,10 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
     <va-card-title>
       <div class="flex justify-between items-center w-full">
         <span>{{ $t('tickets.admin.title') }}</span>
-        <va-button size="small" color="secondary" @click="showCategories = true">{{ $t('tickets.admin.categories') }}</va-button>
+        <span>
+          <TicketPreferences :preferences="preferences" class="mr-2" />
+          <va-button size="small" color="secondary" @click="showCategories = true">{{ $t('tickets.admin.categories') }}</va-button>
+        </span>
       </div>
     </va-card-title>
     <va-card-content>
@@ -63,8 +67,8 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
             </tr>
           </thead>
           <tbody>
-            <tr v-for="ticket in tickets.data" :key="ticket.number">
-              <td><Link :href="ticket.url">{{ ticket.reference }}</Link></td>
+            <tr v-for="ticket in tickets.data" :key="ticket.number" :class="{ 'ticket-row--unread': ticket.unread }">
+              <td><span v-if="ticket.unread" class="ticket-unread-dot" :title="$t('tickets.unread')"></span><Link :href="ticket.url">{{ ticket.reference }}</Link></td>
               <td><Link :href="ticket.url">{{ ticket.subject }}</Link></td>
               <td>{{ ticket.organization?.name }}</td>
               <td><TicketBadge :value="ticket.status.value" :label="ticket.status.label" /></td>
@@ -127,6 +131,7 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
 </template>
 <script>
 import { router, useForm } from '@inertiajs/vue3'
+import { createPoller } from '@/composables/ticketPoller'
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -138,6 +143,8 @@ export default {
     categories: Array,
     priorities: Array,
     me: Number,
+    version: String,
+    preferences: Object,
   },
   data () {
     return {
@@ -169,6 +176,31 @@ export default {
       return ['open', 'waiting_on_support', 'waiting_on_customer', 'on_hold', 'resolved', 'closed', 'all']
         .map(value => ({ value, text: this.$t(`tickets.admin.tabs.${value}`) }))
     },
+  },
+  watch: {
+    version (value) {
+      this.poller?.setVersion(value)
+    },
+  },
+  mounted () {
+    // Refresh the inbox when any ticket changes
+    this.poller = createPoller({
+      url: '/support/tickets/summary',
+      version: this.version,
+      params: () => ({ scope: 'all' }),
+      alwaysNotify: true,
+      interval: 30000,
+      hiddenInterval: 120000,
+      onChange: (data) => {
+        if (data.changed) {
+          router.reload({ only: ['tickets', 'counts', 'version'], preserveScroll: true, preserveState: true })
+        }
+      },
+    })
+    this.poller.start()
+  },
+  beforeUnmount () {
+    this.poller?.stop()
   },
   methods: {
     query (extra = {}) {
@@ -210,3 +242,17 @@ export default {
   },
 }
 </script>
+<style lang="scss">
+  .ticket-row--unread {
+    font-weight: 600;
+  }
+
+  .ticket-unread-dot {
+    display: inline-block;
+    width: 0.6em;
+    height: 0.6em;
+    margin-right: 0.4em;
+    border-radius: 50%;
+    background: var(--va-primary);
+  }
+</style>

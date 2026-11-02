@@ -3,6 +3,8 @@
 return [
     'title' => 'Support tickets',
     'new_ticket' => 'New ticket',
+    'preferences_saved' => 'Notification settings saved.',
+    'support_label' => 'support',
     'deleted_user' => 'Deleted user',
 
     'created' => 'Your ticket has been created.',
@@ -65,6 +67,7 @@ return [
         'closed' => 'This ticket is closed. Reopen it to reply.',
         'cannot_edit' => 'This can no longer be edited.',
         'invalid_transition' => 'The ticket cannot be moved to that status.',
+        'invalid_watcher' => 'That person cannot be added to this ticket.',
         'invalid_assignee' => 'That person cannot be assigned to this ticket.',
         'stale' => 'This ticket was changed by someone else. Reload the page and try again.',
     ],

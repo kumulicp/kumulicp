@@ -27,6 +27,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property string|null $locale
+ * @property array|null $ticket_preferences
  * @property Carbon|null $deleted_at
  * @property-read Organization|null $organization
  * @property-read Collection<int, Group> $groups
@@ -63,6 +64,7 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     protected $casts = [
         'access_type' => AccessType::class,
         'email_verified_at' => 'datetime',
+        'ticket_preferences' => 'array',
     ];
 
     /**
