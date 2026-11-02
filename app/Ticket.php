@@ -164,6 +164,22 @@ class Ticket extends Model
     }
 
     /**
+     * @return HasMany<TicketExternalLink, $this>
+     */
+    public function externalLinks(): HasMany
+    {
+        return $this->hasMany(TicketExternalLink::class);
+    }
+
+    /**
+     * @return HasMany<TicketTimeEntry, $this>
+     */
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TicketTimeEntry::class)->orderByDesc('worked_at')->orderByDesc('id');
+    }
+
+    /**
      * @return HasMany<TicketSubscription, $this>
      */
     public function subscriptions(): HasMany

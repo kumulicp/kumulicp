@@ -48,6 +48,29 @@ return [
         'body_too_long' => 'The message is too long (maximum :max characters).',
     ],
 
+    'integrations' => [
+        'disabled_title' => 'The :name integration was switched off',
+        'disabled_line' => 'The :name integration failed too many times in a row, so it was switched off to avoid hammering the other side.',
+        'open' => 'Open integrations',
+            'title' => 'Integrations',
+        'created' => 'Integration created.',
+        'saved' => 'Integration saved.',
+        'deleted' => 'Integration deleted.',
+        'enabled' => 'Integration switched on.',
+        'disabled' => 'Integration switched off.',
+        'rotated' => 'A new signing secret was made. The old one keeps working for 7 days.',
+        'redelivering' => 'Trying again.',
+        'not_a_tracker' => 'Choose an issue tracker.',
+        'issue_requested' => 'Opening the issue. It will appear here in a moment.',
+        'issue_exists' => 'This ticket already has an issue there, or one is on its way.',
+        'deliveries' => 'Deliveries',
+],
+
+    'time' => [
+        'logged' => 'Time logged.',
+        'deleted' => 'Time entry removed.',
+    ],
+
     'attachments' => [
         'upload_failed' => 'The file could not be uploaded: :reason',
         'not_received' => 'No file was received. It may be larger than the server allows.',
@@ -67,6 +90,7 @@ return [
         'closed' => 'This ticket is closed. Reopen it to reply.',
         'cannot_edit' => 'This can no longer be edited.',
         'invalid_transition' => 'The ticket cannot be moved to that status.',
+        'invalid_duration' => 'Enter a length of time between 1 minute and 24 hours, such as 45m, 1h30 or 1.5h.',
         'invalid_watcher' => 'That person cannot be added to this ticket.',
         'invalid_assignee' => 'That person cannot be assigned to this ticket.',
         'stale' => 'This ticket was changed by someone else. Reload the page and try again.',

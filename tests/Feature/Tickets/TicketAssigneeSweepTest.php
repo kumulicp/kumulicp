@@ -29,8 +29,8 @@ class TicketAssigneeSweepTest extends TicketsTestCase
     public function test_it_leaves_the_ticket_unassigned_when_the_requester_is_gone_too(): void
     {
         $ticket = $this->ticketFor($this->alice, ['customer_assignee_id' => $this->bob->id]);
-        $this->bob->update(['is_allowed' => false]);
-        $this->alice->update(['is_allowed' => false]);
+        $this->bob->forceFill(['is_allowed' => false])->save();
+        $this->alice->forceFill(['is_allowed' => false])->save();
 
         $this->service()->sweepRemovedAssignees();
 
@@ -40,7 +40,7 @@ class TicketAssigneeSweepTest extends TicketsTestCase
     public function test_deactivated_users_count_as_removed(): void
     {
         $ticket = $this->ticketFor($this->alice, ['customer_assignee_id' => $this->bob->id]);
-        $this->bob->update(['is_allowed' => false]);
+        $this->bob->forceFill(['is_allowed' => false])->save();
 
         $this->service()->sweepRemovedAssignees();
 
@@ -55,7 +55,7 @@ class TicketAssigneeSweepTest extends TicketsTestCase
         $open = $this->ticketFor($this->bob);
         $done = $this->ticketFor($this->bob);
         $this->service()->changeStatus($done, $this->admin, TicketStatus::RESOLVED, asStaff: true);
-        $this->bob->update(['is_allowed' => false]);
+        $this->bob->forceFill(['is_allowed' => false])->save();
         Notification::fake();
 
         $this->service()->sweepRemovedAssignees();
@@ -70,7 +70,7 @@ class TicketAssigneeSweepTest extends TicketsTestCase
     {
         $ticket = $this->ticketFor($this->alice);
         $this->service()->assign($ticket, 'support', $this->admin, $this->admin);
-        $this->admin->update(['is_allowed' => false]);
+        $this->admin->forceFill(['is_allowed' => false])->save();
 
         $this->service()->sweepRemovedAssignees();
 

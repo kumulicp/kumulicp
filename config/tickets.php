@@ -20,6 +20,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Integrations (webhooks and issue trackers)
+    |--------------------------------------------------------------------------
+    */
+    'integrations' => [
+        // Tries per delivery before it is given up on, and the wait before each retry
+        'max_attempts' => 8,
+        'backoff' => [30, 120, 600, 1800, 3600, 7200, 14400],
+        // An integration that fails this many times in a row is switched off and staff are told
+        'disable_after_failures' => 10,
+        'timeout' => 10,
+        'connect_timeout' => 5,
+        'max_response_kb' => 1024,
+        // Plain http:// targets are refused unless this is on (development only)
+        'allow_http' => (bool) env('TICKETS_INTEGRATIONS_ALLOW_HTTP', false),
+        // Delivery history is kept this many days
+        'retention_days' => 30,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Email coalescing
     |--------------------------------------------------------------------------
     | Reply and note emails wait this long before sending so a burst of replies

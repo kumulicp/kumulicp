@@ -51,7 +51,7 @@ class WatchersTest extends TicketsTestCase
     public function test_deactivated_people_cannot_be_copied(): void
     {
         $ticket = $this->ticketFor($this->alice);
-        $this->bob->update(['is_allowed' => false]);
+        $this->bob->forceFill(['is_allowed' => false])->save();
 
         $this->actingAs($this->alice)->put('/support/tickets/'.$ticket->number.'/watchers', ['user_ids' => [$this->bob->id]])->assertSessionHasErrors('user_ids');
     }

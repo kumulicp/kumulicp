@@ -14,6 +14,7 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
         <span>{{ $t('tickets.admin.title') }}</span>
         <span>
           <TicketPreferences :preferences="preferences" class="mr-2" />
+          <Link href="/admin/support/integrations"><va-button size="small" color="secondary" class="mr-2">{{ $t('tickets.integrations.title') }}</va-button></Link>
           <va-button size="small" color="secondary" @click="showCategories = true">{{ $t('tickets.admin.categories') }}</va-button>
         </span>
       </div>
