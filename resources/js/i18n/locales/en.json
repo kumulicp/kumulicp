@@ -1576,7 +1576,8 @@
       "tags_changed": "{actor} set the tags: {tags}",
       "subject_changed": "{actor} changed the subject",
       "impact_changed": "{actor} changed the impact",
-      "category_changed": "{actor} changed the category"
+      "category_changed": "{actor} changed the category",
+      "watchers_changed": "{actor} changed who is copied on the ticket"
     },
     "admin": {
       "title": "Tickets",
@@ -1606,7 +1607,8 @@
       "customer": "Customer",
       "apps": "Apps",
       "relatedToTicket": "this ticket",
-      "recentTasks": "Recent tasks"
+      "recentTasks": "Recent tasks",
+      "watchersHelp": "Customer colleagues and support staff who follow this ticket"
     },
     "attachments": {
       "title": "Attachments",
@@ -1616,6 +1618,30 @@
       "tooMany": "You can attach at most {max} files.",
       "tooLarge": "That file is too large (maximum {max} MB).",
       "uploadFailed": "The upload failed. Please try again."
+    },
+    "unread": "Unread",
+    "newReplies": "{count} new reply | {count} new replies",
+    "watchers": {
+      "label": "Also notify (CC)",
+      "help": "Colleagues who should follow this ticket"
+    },
+    "mute": {
+      "label": "Mute notifications for this ticket"
+    },
+    "preferences": {
+      "title": "Notification settings",
+      "help": "Choose what you are told about, and how. You are always told when something is assigned to you, even on a muted ticket.",
+      "event": "When",
+      "email": "Email",
+      "panel": "In the panel",
+      "events": {
+        "created": "A ticket is opened",
+        "reply": "There is a new reply",
+        "note": "There is a new internal note",
+        "status": "A ticket's status changes",
+        "assigned": "A ticket is assigned to me",
+        "assignee_removed": "Nobody is left to look after a ticket"
+      }
     }
   }
 }

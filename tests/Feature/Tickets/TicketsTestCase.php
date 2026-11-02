@@ -65,6 +65,17 @@ abstract class TicketsTestCase extends TestCase
         ]);
     }
 
+    /**
+     * Another member of the support staff (control panel admin) in the admin organization.
+     */
+    protected function staffMember(string $username): User
+    {
+        $user = $this->member(Organization::find(1), $username);
+        $user->assignRole('control_panel_admin');
+
+        return $user;
+    }
+
     protected function service(): TicketService
     {
         return app(TicketService::class);

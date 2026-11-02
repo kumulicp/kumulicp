@@ -20,6 +20,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Email coalescing
+    |--------------------------------------------------------------------------
+    | Reply and note emails wait this long before sending so a burst of replies
+    | becomes one email, and are skipped if the person has read them meanwhile.
+    | The in-app notification is never delayed.
+    */
+    'mail_delay_seconds' => (int) env('TICKETS_MAIL_DELAY_SECONDS', 60),
+
+    /*
+    |--------------------------------------------------------------------------
     | Legacy support address
     |--------------------------------------------------------------------------
     | While tickets roll out, new tickets are also mailed to the `support_email`
@@ -41,6 +51,8 @@ return [
         'create' => '10,60',
         'reply' => '30,60',
         'upload' => '60,60',
+        // Polling from open pages: ticket page every 10 s, list and badge every 30 s
+        'poll' => '240,1',
     ],
 
     /*

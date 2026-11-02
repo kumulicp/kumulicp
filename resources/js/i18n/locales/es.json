@@ -1546,7 +1546,8 @@
       "tags_changed": "{actor} definió las etiquetas: {tags}",
       "subject_changed": "{actor} cambió el asunto",
       "impact_changed": "{actor} cambió el impacto",
-      "category_changed": "{actor} cambió la categoría"
+      "category_changed": "{actor} cambió la categoría",
+      "watchers_changed": "{actor} cambió quién recibe copia del ticket"
     },
     "admin": {
       "title": "Tickets",
@@ -1576,7 +1577,8 @@
       "customer": "Cliente",
       "apps": "Aplicaciones",
       "relatedToTicket": "este ticket",
-      "recentTasks": "Tareas recientes"
+      "recentTasks": "Tareas recientes",
+      "watchersHelp": "Compañeros del cliente y personal de soporte que siguen este ticket"
     },
     "attachments": {
       "title": "Archivos adjuntos",
@@ -1586,6 +1588,30 @@
       "tooMany": "Puede adjuntar como máximo {max} archivos.",
       "tooLarge": "Ese archivo es demasiado grande (máximo {max} MB).",
       "uploadFailed": "La subida falló. Inténtelo de nuevo."
+    },
+    "unread": "Sin leer",
+    "newReplies": "{count} respuesta nueva | {count} respuestas nuevas",
+    "watchers": {
+      "label": "Notificar también (CC)",
+      "help": "Compañeros que deben seguir este ticket"
+    },
+    "mute": {
+      "label": "Silenciar las notificaciones de este ticket"
+    },
+    "preferences": {
+      "title": "Ajustes de notificaciones",
+      "help": "Elija de qué se le avisa y cómo. Siempre se le avisa cuando algo se le asigna, incluso en un ticket silenciado.",
+      "event": "Cuando",
+      "email": "Correo",
+      "panel": "En el panel",
+      "events": {
+        "created": "Se abre un ticket",
+        "reply": "Hay una respuesta nueva",
+        "note": "Hay una nota interna nueva",
+        "status": "Cambia el estado de un ticket",
+        "assigned": "Se me asigna un ticket",
+        "assignee_removed": "Nadie queda al cuidado de un ticket"
+      }
     }
   }
 }

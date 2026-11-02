@@ -111,6 +111,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('{number}', 'Admin\Tickets@update')->whereNumber('number')->name('admin.tickets.update');
                 Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply'))->name('admin.tickets.reply');
                 Route::put('{number}/messages/{message}', 'Admin\Tickets@updateMessage')->whereNumber('number')->name('admin.tickets.messages.update');
+                Route::get('{number}/poll', 'Admin\Tickets@poll')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.poll'))->name('admin.tickets.poll');
+                Route::put('{number}/watchers', 'Admin\Tickets@updateWatchers')->whereNumber('number')->name('admin.tickets.watchers');
+                Route::put('{number}/subscription', 'Admin\Tickets@updateSubscription')->whereNumber('number')->name('admin.tickets.subscription');
             });
         });
 
@@ -414,6 +417,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::post('uploads', 'Account\TicketAttachments@store')->middleware('throttle:'.config('tickets.throttle.upload'))->name('tickets.uploads.store');
         Route::delete('uploads/{attachment}', 'Account\TicketAttachments@destroy')->name('tickets.uploads.destroy');
         Route::get('attachments/{attachment}', 'Account\TicketAttachments@show')->name('tickets.attachments.show');
+        // Polled by open pages and the navigation badge; shared by customers and staff
+        Route::get('summary', 'Account\Tickets@summary')->middleware('throttle:'.config('tickets.throttle.poll'))->name('tickets.summary');
+        Route::put('preferences', 'Account\Tickets@updatePreferences')->name('tickets.preferences');
         Route::prefix('{number}')->where(['number' => '[0-9]+'])->group(function () {
             Route::get('', 'Account\Tickets@show')->name('organization.tickets.show');
             Route::put('', 'Account\Tickets@update')->name('organization.tickets.update');
@@ -421,6 +427,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::put('messages/{message}', 'Account\Tickets@updateMessage')->name('organization.tickets.messages.update');
             Route::post('close', 'Account\Tickets@close')->name('organization.tickets.close');
             Route::post('reopen', 'Account\Tickets@reopen')->name('organization.tickets.reopen');
+            Route::get('poll', 'Account\Tickets@poll')->middleware('throttle:'.config('tickets.throttle.poll'))->name('organization.tickets.poll');
+            Route::put('watchers', 'Account\Tickets@updateWatchers')->name('organization.tickets.watchers');
+            Route::put('subscription', 'Account\Tickets@updateSubscription')->name('organization.tickets.subscription');
         });
     });
 

@@ -3,6 +3,8 @@
 return [
     'title' => 'Tickets de soporte',
     'new_ticket' => 'Nuevo ticket',
+    'preferences_saved' => 'Ajustes de notificaciones guardados.',
+    'support_label' => 'soporte',
     'deleted_user' => 'Usuario eliminado',
 
     'created' => 'Su ticket ha sido creado.',
@@ -65,6 +67,7 @@ return [
         'closed' => 'Este ticket está cerrado. Reábralo para responder.',
         'cannot_edit' => 'Esto ya no se puede editar.',
         'invalid_transition' => 'El ticket no se puede mover a ese estado.',
+        'invalid_watcher' => 'Esa persona no se puede añadir a este ticket.',
         'invalid_assignee' => 'Esa persona no puede ser asignada a este ticket.',
         'stale' => 'Otra persona modificó este ticket. Recargue la página e inténtelo de nuevo.',
     ],

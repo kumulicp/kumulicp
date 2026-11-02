@@ -9,15 +9,21 @@ use App\Http\Requests\Tickets\AdminUpdateTicketRequest;
 use App\Http\Requests\Tickets\BodyRequest;
 use App\Http\Resources\Tickets\AdminMessageResource;
 use App\Http\Resources\Tickets\AdminTicketResource;
+use App\Services\Tickets\TicketPreferences;
 use App\Services\Tickets\TicketService;
 use App\Services\Tickets\TicketStaff;
+use App\Services\Tickets\TicketSubscriptions;
 use App\Services\Tickets\TicketTimeline;
+use App\Services\Tickets\TicketUnread;
+use App\Services\Tickets\TicketVersions;
 use App\Ticket;
 use App\TicketCategory;
 use App\TicketMessage;
 use App\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -33,6 +39,10 @@ class Tickets extends Controller
     public function __construct(
         private TicketService $tickets,
         private TicketStaff $staff,
+        private TicketUnread $unread,
+        private TicketVersions $versions,
+        private TicketPreferences $preferences,
+        private TicketSubscriptions $subscriptions,
     ) {}
 
     public function index(Request $request)
@@ -50,7 +60,7 @@ class Tickets extends Controller
             'q' => trim((string) $request->query('q', '')),
         ];
 
-        $query = Ticket::query()->with(['organization', 'requester', 'customerAssignee', 'supportAssignee', 'category']);
+        $query = $this->unread->annotate(Ticket::query(), $user, true)->with(['organization', 'requester', 'customerAssignee', 'supportAssignee', 'category']);
 
         match (true) {
             $filters['assigned'] === 'me' => $query->where('support_assignee_id', $user->id),
@@ -97,6 +107,11 @@ class Tickets extends Controller
             'categories' => $this->categoryOptions(),
             'priorities' => collect(TicketPriority::cases())->map(fn ($p) => ['value' => $p->value, 'text' => $p->label()])->all(),
             'me' => $user->id,
+            'version' => $this->versions->all(),
+            'preferences' => [
+                'events' => $this->preferences->eventsFor(true),
+                'matrix' => $this->preferences->matrix($user),
+            ],
             'breadcrumbs' => [
                 ['label' => __('tickets.admin.title')],
             ],
@@ -109,6 +124,9 @@ class Tickets extends Controller
 
         $ticket = Ticket::where('number', $number)->firstOrFail();
         $ticket->load(['organization.plan', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'tags']);
+        $user = $request->user();
+
+        $this->unread->markRead($ticket, $user, true);
 
         return inertia('Admin/Tickets/TicketShow', [
             'ticket' => AdminTicketResource::make($ticket)->resolve($request),
@@ -121,7 +139,12 @@ class Tickets extends Controller
             'statuses' => collect(TicketStatus::cases())->map(fn ($s) => ['value' => $s->value, 'text' => $s->label()])->all(),
             'priorities' => collect(TicketPriority::cases())->map(fn ($p) => ['value' => $p->value, 'text' => $p->label()])->all(),
             'categories' => $this->categoryOptions(),
-            'me' => $request->user()->id,
+            'me' => $user->id,
+            'version' => $this->versions->ticket($ticket),
+            'last_message_id' => (int) $ticket->messages()->max('id'),
+            'watcher_ids' => $this->subscriptions->watcherIds($ticket),
+            'watcher_options' => $this->watcherOptions($ticket),
+            'muted' => $this->subscriptions->isMuted($ticket, $user),
             'attachment_limits' => [
                 'files' => config('tickets.attachments.max_files'),
                 'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
@@ -131,6 +154,48 @@ class Tickets extends Controller
                 ['label' => $ticket->reference],
             ],
         ]);
+    }
+
+    public function poll(Request $request, int $number): JsonResponse|HttpResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        $version = $this->versions->ticket($ticket);
+
+        if ($request->query('v') === $version) {
+            return response()->noContent(304);
+        }
+
+        return response()->json([
+            'version' => $version,
+            'status' => $ticket->status->value,
+            'new_messages' => $this->unread->newMessagesSince($ticket, $request->user(), true, $request->integer('after')),
+        ]);
+    }
+
+    public function updateWatchers(Request $request, int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        $data = $request->validate(['user_ids' => ['present', 'array', 'max:25'], 'user_ids.*' => ['integer']]);
+
+        $this->tickets->syncWatchers($ticket, $data['user_ids'], $request->user(), asStaff: true);
+
+        return redirect('/admin/support/tickets/'.$ticket->number)->with('success', __('tickets.updated'));
+    }
+
+    public function updateSubscription(Request $request, int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        $data = $request->validate(['muted' => ['required', 'boolean']]);
+
+        $this->tickets->setMuted($ticket, $request->user(), (bool) $data['muted'], asStaff: true);
+
+        return redirect('/admin/support/tickets/'.$ticket->number);
     }
 
     public function reply(BodyRequest $request, int $number): RedirectResponse
@@ -284,6 +349,20 @@ class Tickets extends Controller
     {
         return TicketCategory::where('active', true)->orderBy('sort')->orderBy('name')->get(['id', 'name'])
             ->map(fn (TicketCategory $category) => ['value' => $category->id, 'text' => $category->name])->all();
+    }
+
+    /**
+     * Who can be CC'd: the customer's active members and the support staff.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function watcherOptions(Ticket $ticket): array
+    {
+        $members = User::where('organization_id', $ticket->organization_id)->where('is_allowed', true)->orderBy('name')->get(['id', 'name'])
+            ->map(fn (User $member) => ['id' => $member->id, 'name' => $member->name]);
+        $staff = $this->staff->users()->map(fn (User $member) => ['id' => $member->id, 'name' => $member->name.' ('.__('tickets.support_label').')']);
+
+        return $members->concat($staff->reject(fn (array $option) => $members->contains('id', $option['id'])))->values()->all();
     }
 
     private function assignedFilter(mixed $value): string

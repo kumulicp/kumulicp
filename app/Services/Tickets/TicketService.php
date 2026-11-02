@@ -11,6 +11,7 @@ use App\TicketCategory;
 use App\TicketEvent;
 use App\TicketMessage;
 use App\TicketMessageRevision;
+use App\TicketSubscription;
 use App\TicketTag;
 use App\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -35,6 +36,9 @@ class TicketService
         private TicketHtml $html,
         private TicketStaff $staff,
         private AttachmentService $attachments,
+        private TicketVersions $versions,
+        private TicketUnread $unread,
+        private TicketSubscriptions $subscriptions,
     ) {}
 
     /**
@@ -80,7 +84,7 @@ class TicketService
         });
 
         $this->afterCommit(function () use ($ticket) {
-            $ticket->loadMissing(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $this->notifier->created($ticket);
         });
 
@@ -112,6 +116,8 @@ class TicketService
                 $prepared,
             );
             $this->attachments->bind($drafts, $ticket, $message, $prepared['images']);
+            // Writing a reply means having read what came before it
+            $this->unread->markReadUpTo($ticket, $author, $message->id);
 
             if (! $internal) {
                 $ticket->last_activity_at = now();
@@ -138,7 +144,7 @@ class TicketService
         // The status moving because of a reply is not worth a second email: the
         // reply notification already says what happened.
         $this->afterCommit(function () use ($ticket, $message, $author) {
-            $ticket->loadMissing(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $message->setRelation('author', $author);
             $this->notifier->messageAdded($ticket, $message);
         });
@@ -262,7 +268,7 @@ class TicketService
         });
 
         $this->afterCommit(function () use ($ticket, $from, $actor) {
-            $ticket->loadMissing(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $this->notifier->statusChanged($ticket, $from, $actor);
         });
 
@@ -358,6 +364,67 @@ class TicketService
         });
 
         return $ticket;
+    }
+
+    /**
+     * Make exactly $userIds the watchers (CC) of the ticket.
+     *
+     * Customers can CC active members of their own organization. Staff can CC
+     * those too, and other staff. A customer changing the list never touches
+     * the staff watchers.
+     *
+     * @param  array<int, mixed>  $userIds
+     */
+    public function syncWatchers(Ticket $ticket, array $userIds, User $actor, bool $asStaff): Ticket
+    {
+        $ids = collect($userIds)->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id)->unique()->values();
+        $users = User::whereIn('id', $ids)->get()->keyBy('id');
+
+        if ($users->count() !== $ids->count()) {
+            throw ValidationException::withMessages(['user_ids' => __('tickets.errors.invalid_watcher')]);
+        }
+
+        $desired = [];
+
+        foreach ($users as $user) {
+            $side = match (true) {
+                ! $this->staff->isActive($user) => null,
+                $asStaff && $this->staff->isStaff($user) => TicketSubscription::SUPPORT,
+                $user->organization_id === $ticket->organization_id => TicketSubscription::CUSTOMER,
+                default => null,
+            };
+
+            if ($side === null) {
+                throw ValidationException::withMessages(['user_ids' => __('tickets.errors.invalid_watcher')]);
+            }
+
+            $desired[$user->id] = $side;
+        }
+
+        DB::transaction(function () use ($ticket, $desired, $actor, $asStaff) {
+            $changes = $this->subscriptions->sync(
+                $ticket,
+                $desired,
+                $asStaff ? [TicketSubscription::CUSTOMER, TicketSubscription::SUPPORT] : [TicketSubscription::CUSTOMER],
+            );
+
+            if ($changes['added'] || $changes['removed']) {
+                $this->record($ticket, 'watchers_changed', $actor, $changes, true);
+            }
+
+            return $changes;
+        });
+
+        return $ticket;
+    }
+
+    /**
+     * Mute or unmute the ticket for one person. Muting silences everything
+     * except being assigned something.
+     */
+    public function setMuted(Ticket $ticket, User $user, bool $muted, bool $asStaff): void
+    {
+        $this->subscriptions->setMuted($ticket, $user, $muted, $asStaff ? TicketSubscription::SUPPORT : TicketSubscription::CUSTOMER);
     }
 
     /**
@@ -498,6 +565,9 @@ class TicketService
         $event->context = $context ?: null;
         $event->internal = $internal;
         $event->save();
+
+        // Open pages poll with this token: change it once the write is visible
+        $this->afterCommit(fn () => $this->versions->bump($ticket));
 
         return $event;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Tickets;
 
+use App\Services\Tickets\TicketUnread;
 use App\Ticket;
 use App\User;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class AdminTicketResource extends JsonResource
         return [
             'number' => $this->number,
             'reference' => $this->reference,
+            'unread' => app(TicketUnread::class)->isUnread($this->resource),
             'subject' => $this->subject,
             'type' => ['value' => $this->type->value, 'label' => $this->type->label()],
             'status' => ['value' => $this->status->value, 'label' => $this->status->label(), 'open' => $this->status->isOpen()],

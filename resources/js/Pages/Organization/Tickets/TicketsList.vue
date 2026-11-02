@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
+import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
 </script>
 <template>
   <Head>
@@ -11,9 +12,12 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
     <va-card-title>
       <div class="flex justify-between items-center w-full">
         <span>{{ $t('tickets.title') }}</span>
-        <Link href="/support/tickets/create">
-          <va-button id="newTicket">{{ $t('tickets.newTicket') }}</va-button>
-        </Link>
+        <span>
+          <TicketPreferences :preferences="preferences" class="mr-2" />
+          <Link href="/support/tickets/create">
+            <va-button id="newTicket">{{ $t('tickets.newTicket') }}</va-button>
+          </Link>
+        </span>
       </div>
     </va-card-title>
     <va-card-content>
@@ -62,8 +66,8 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
             </tr>
           </thead>
           <tbody>
-            <tr v-for="ticket in tickets.data" :key="ticket.number">
-              <td><Link :href="ticket.url">{{ ticket.reference }}</Link></td>
+            <tr v-for="ticket in tickets.data" :key="ticket.number" :class="{ 'ticket-row--unread': ticket.unread }">
+              <td><span v-if="ticket.unread" class="ticket-unread-dot" :title="$t('tickets.unread')"></span><Link :href="ticket.url">{{ ticket.reference }}</Link></td>
               <td><Link :href="ticket.url">{{ ticket.subject }}</Link></td>
               <td><TicketBadge :value="ticket.status.value" :label="ticket.status.label" /></td>
               <td>{{ ticket.customer_assignee?.name || '-' }}</td>
@@ -100,6 +104,7 @@ import TicketBadge from '@/components/tickets/TicketBadge.vue'
 </template>
 <script>
 import { router } from '@inertiajs/vue3'
+import { createPoller } from '@/composables/ticketPoller'
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -109,6 +114,8 @@ export default {
     counts: Object,
     members: Array,
     me: Number,
+    version: String,
+    preferences: Object,
   },
   data () {
     return {
@@ -131,6 +138,31 @@ export default {
         .map(value => ({ value, text: this.$t(`tickets.tabs.${value}`) }))
     },
   },
+  watch: {
+    version (value) {
+      this.poller?.setVersion(value)
+    },
+  },
+  mounted () {
+    // Refresh the list when anything in the organization's tickets changes
+    this.poller = createPoller({
+      url: '/support/tickets/summary',
+      version: this.version,
+      params: () => ({ scope: 'org' }),
+      alwaysNotify: true,
+      interval: 30000,
+      hiddenInterval: 120000,
+      onChange: (data) => {
+        if (data.changed) {
+          router.reload({ only: ['tickets', 'counts', 'version'], preserveScroll: true, preserveState: true })
+        }
+      },
+    })
+    this.poller.start()
+  },
+  beforeUnmount () {
+    this.poller?.stop()
+  },
   methods: {
     apply () {
       router.get('/support/tickets', { assigned: this.assigned, status: this.status, q: this.q || undefined }, { preserveState: true, replace: true })
@@ -144,3 +176,17 @@ export default {
   },
 }
 </script>
+<style lang="scss">
+  .ticket-row--unread {
+    font-weight: 600;
+  }
+
+  .ticket-unread-dot {
+    display: inline-block;
+    width: 0.6em;
+    height: 0.6em;
+    margin-right: 0.4em;
+    border-radius: 50%;
+    background: var(--va-primary);
+  }
+</style>

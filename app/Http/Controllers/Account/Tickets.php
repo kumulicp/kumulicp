@@ -11,17 +11,23 @@ use App\Http\Requests\Tickets\StoreTicketRequest;
 use App\Http\Requests\Tickets\UpdateTicketRequest;
 use App\Http\Resources\Tickets\OrgMessageResource;
 use App\Http\Resources\Tickets\OrgTicketResource;
+use App\Services\Tickets\TicketPreferences;
 use App\Services\Tickets\TicketService;
 use App\Services\Tickets\TicketStaff;
+use App\Services\Tickets\TicketSubscriptions;
 use App\Services\Tickets\TicketTimeline;
+use App\Services\Tickets\TicketUnread;
+use App\Services\Tickets\TicketVersions;
 use App\Ticket;
 use App\TicketCategory;
 use App\TicketMessage;
+use App\TicketSubscription;
 use App\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
@@ -35,6 +41,10 @@ class Tickets extends Controller
     public function __construct(
         private TicketService $tickets,
         private TicketStaff $staff,
+        private TicketUnread $unread,
+        private TicketVersions $versions,
+        private TicketPreferences $preferences,
+        private TicketSubscriptions $subscriptions,
     ) {}
 
     public function index(Request $request): Response
@@ -50,7 +60,7 @@ class Tickets extends Controller
             'q' => trim((string) $request->query('q', '')),
         ];
 
-        $query = Ticket::forOrganization($organization_id)
+        $query = $this->unread->annotate(Ticket::forOrganization($organization_id), $user, false)
             ->with(['requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance']);
 
         match (true) {
@@ -84,6 +94,8 @@ class Tickets extends Controller
             ],
             'members' => $this->members($user),
             'me' => $user->id,
+            'version' => $this->versions->organization($organization_id),
+            'preferences' => $this->preferencesFor($user),
             'breadcrumbs' => [
                 ['label' => __('tickets.title')],
             ],
@@ -139,6 +151,9 @@ class Tickets extends Controller
         $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance']);
         $user = $request->user();
 
+        // Opening the ticket (or a background refresh of it while it is visible) is reading it
+        $this->unread->markRead($ticket, $user, false);
+
         return inertia('Organization/Tickets/TicketShow', [
             'ticket' => OrgTicketResource::make($ticket)->resolve($request),
             'messages' => OrgMessageResource::collection($ticket->publicMessages()->with(['author', 'attachments'])->get())->resolve($request),
@@ -151,6 +166,10 @@ class Tickets extends Controller
             ],
             'members' => $this->members($user),
             'me' => $user->id,
+            'version' => $this->versions->ticket($ticket),
+            'last_message_id' => (int) $ticket->publicMessages()->max('id'),
+            'watcher_ids' => $this->subscriptions->watcherIds($ticket, TicketSubscription::CUSTOMER),
+            'muted' => $this->subscriptions->isMuted($ticket, $user),
             'edit_window_minutes' => config('tickets.edit_window_minutes'),
             'attachment_limits' => [
                 'files' => config('tickets.attachments.max_files'),
@@ -204,6 +223,86 @@ class Tickets extends Controller
         return redirect('/support/tickets/'.$ticket->number)->with('success', __('tickets.updated'));
     }
 
+    /**
+     * Has anything on this ticket changed since the page was rendered? Answers
+     * 304 when not, so an open ticket page costs almost nothing to keep fresh.
+     */
+    public function poll(Request $request, int $number): JsonResponse|HttpResponse
+    {
+        $ticket = $this->find($request, $number);
+        Gate::authorize('view', $ticket);
+
+        $version = $this->versions->ticket($ticket);
+
+        if ($request->query('v') === $version) {
+            return response()->noContent(304);
+        }
+
+        return response()->json([
+            'version' => $version,
+            'status' => $ticket->status->value,
+            'new_messages' => $this->unread->newMessagesSince($ticket, $request->user(), false, $request->integer('after')),
+        ]);
+    }
+
+    /**
+     * Unread count for the navigation badge, and whether the list is stale.
+     * Used by customers and staff alike; `scope=all` (staff inbox) is only
+     * honoured for staff.
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $staff = Gate::allows('manage', Ticket::class);
+        $version = $staff && $request->query('scope') === 'all'
+            ? $this->versions->all()
+            : $this->versions->organization($user->organization_id);
+
+        return response()->json([
+            'unread' => $this->unread->countFor($user, $staff),
+            'version' => $version,
+            'changed' => $request->query('v') !== null && $request->query('v') !== $version,
+        ]);
+    }
+
+    public function updateWatchers(Request $request, int $number): RedirectResponse
+    {
+        $ticket = $this->find($request, $number);
+        Gate::authorize('update', $ticket);
+
+        $data = $request->validate(['user_ids' => ['present', 'array', 'max:25'], 'user_ids.*' => ['integer']]);
+        $this->tickets->syncWatchers($ticket, $data['user_ids'], $request->user(), asStaff: false);
+
+        return redirect('/support/tickets/'.$ticket->number)->with('success', __('tickets.updated'));
+    }
+
+    public function updateSubscription(Request $request, int $number): RedirectResponse
+    {
+        $ticket = $this->find($request, $number);
+        Gate::authorize('view', $ticket);
+
+        $data = $request->validate(['muted' => ['required', 'boolean']]);
+        $this->tickets->setMuted($ticket, $request->user(), (bool) $data['muted'], asStaff: false);
+
+        return redirect('/support/tickets/'.$ticket->number);
+    }
+
+    /**
+     * The person's own notification settings. Shared by customers and staff.
+     */
+    public function updatePreferences(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'preferences' => ['required', 'array'],
+            'preferences.*' => ['array'],
+            'preferences.*.*' => ['boolean'],
+        ]);
+
+        $this->preferences->update($request->user(), $data['preferences']);
+
+        return back()->with('success', __('tickets.preferences_saved'));
+    }
+
     public function close(Request $request, int $number): RedirectResponse
     {
         $ticket = $this->find($request, $number);
@@ -222,6 +321,19 @@ class Tickets extends Controller
         $this->tickets->changeStatus($ticket, $request->user(), TicketStatus::OPEN, asStaff: false);
 
         return redirect('/support/tickets/'.$ticket->number)->with('success', __('tickets.reopened'));
+    }
+
+    /**
+     * The notification switches to offer this person.
+     *
+     * @return array{events: list<string>, matrix: array<string, array<string, bool>>}
+     */
+    private function preferencesFor(User $user): array
+    {
+        return [
+            'events' => $this->preferences->eventsFor(false),
+            'matrix' => $this->preferences->matrix($user),
+        ];
     }
 
     private function find(Request $request, int $number): Ticket

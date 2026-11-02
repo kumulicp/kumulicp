@@ -16,7 +16,7 @@ class TicketCategory extends Model
 {
     protected $table = 'ticket_categories';
 
-    protected $fillable = ['name', 'slug', 'active', 'sort'];
+    protected $fillable = ['name', 'slug', 'active', 'sort', 'default_support_assignee_id'];
 
     protected $casts = [
         'active' => 'boolean',
