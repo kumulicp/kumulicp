@@ -48,6 +48,29 @@ return [
         'body_too_long' => 'El mensaje es demasiado largo (máximo :max caracteres).',
     ],
 
+    'integrations' => [
+        'disabled_title' => 'La integración :name se desactivó',
+        'disabled_line' => 'La integración :name falló demasiadas veces seguidas, por lo que se desactivó para no sobrecargar al otro lado.',
+        'open' => 'Abrir integraciones',
+            'title' => 'Integraciones',
+        'created' => 'Integración creada.',
+        'saved' => 'Integración guardada.',
+        'deleted' => 'Integración eliminada.',
+        'enabled' => 'Integración activada.',
+        'disabled' => 'Integración desactivada.',
+        'rotated' => 'Se generó un nuevo secreto de firma. El anterior seguirá funcionando 7 días.',
+        'redelivering' => 'Reintentando.',
+        'not_a_tracker' => 'Elija un gestor de incidencias.',
+        'issue_requested' => 'Abriendo la incidencia. Aparecerá aquí en un momento.',
+        'issue_exists' => 'Este ticket ya tiene una incidencia allí, o hay una en camino.',
+        'deliveries' => 'Envíos',
+],
+
+    'time' => [
+        'logged' => 'Tiempo registrado.',
+        'deleted' => 'Entrada de tiempo eliminada.',
+    ],
+
     'attachments' => [
         'upload_failed' => 'No se pudo subir el archivo: :reason',
         'not_received' => 'No se recibió ningún archivo. Puede ser mayor de lo que permite el servidor.',
@@ -67,6 +90,7 @@ return [
         'closed' => 'Este ticket está cerrado. Reábralo para responder.',
         'cannot_edit' => 'Esto ya no se puede editar.',
         'invalid_transition' => 'El ticket no se puede mover a ese estado.',
+        'invalid_duration' => 'Introduzca una duración entre 1 minuto y 24 horas, como 45m, 1h30 o 1.5h.',
         'invalid_watcher' => 'Esa persona no se puede añadir a este ticket.',
         'invalid_assignee' => 'Esa persona no puede ser asignada a este ticket.',
         'stale' => 'Otra persona modificó este ticket. Recargue la página e inténtelo de nuevo.',

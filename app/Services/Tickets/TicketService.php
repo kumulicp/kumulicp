@@ -6,19 +6,23 @@ use App\Enums\TicketImpact;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
+use App\Services\Tickets\Integrations\IntegrationDispatcher;
 use App\Ticket;
 use App\TicketCategory;
 use App\TicketEvent;
+use App\TicketIntegration;
 use App\TicketMessage;
 use App\TicketMessageRevision;
 use App\TicketSubscription;
 use App\TicketTag;
+use App\TicketTimeEntry;
 use App\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * All ticket writes go through here: one transaction each, one timeline entry
@@ -39,6 +43,7 @@ class TicketService
         private TicketVersions $versions,
         private TicketUnread $unread,
         private TicketSubscriptions $subscriptions,
+        private IntegrationDispatcher $integrations,
     ) {}
 
     /**
@@ -86,6 +91,7 @@ class TicketService
         $this->afterCommit(function () use ($ticket) {
             $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $this->notifier->created($ticket);
+            $this->integrate('ticket.created', $ticket, [], $ticket->id);
         });
 
         return $ticket;
@@ -147,6 +153,11 @@ class TicketService
             $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $message->setRelation('author', $author);
             $this->notifier->messageAdded($ticket, $message);
+
+            // Internal notes never leave the system
+            if (! $message->isInternal()) {
+                $this->integrate('message.created', $ticket, ['message' => $message], $message->id);
+            }
         });
 
         return $message;
@@ -259,17 +270,20 @@ class TicketService
             throw ValidationException::withMessages(['status' => __('tickets.errors.invalid_transition')]);
         }
 
-        DB::transaction(function () use ($ticket, $actor, $from, $to) {
+        $event = null;
+
+        DB::transaction(function () use ($ticket, $actor, $from, $to, &$event) {
             $this->workflow->apply($ticket, $to);
             $ticket->last_activity_at = now();
             $ticket->save();
 
-            $this->record($ticket, 'status_changed', $actor, ['from' => $from->value, 'to' => $to->value]);
+            $event = $this->record($ticket, 'status_changed', $actor, ['from' => $from->value, 'to' => $to->value]);
         });
 
-        $this->afterCommit(function () use ($ticket, $from, $actor) {
+        $this->afterCommit(function () use ($ticket, $from, $actor, &$event) {
             $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
             $this->notifier->statusChanged($ticket, $from, $actor);
+            $this->integrate('status.changed', $ticket, ['from' => $from->value], $event->id);
         });
 
         return $ticket;
@@ -330,16 +344,19 @@ class TicketService
             return $ticket;
         }
 
-        DB::transaction(function () use ($ticket, $side, $assignee, $actor, $column) {
+        $event = null;
+
+        DB::transaction(function () use ($ticket, $side, $assignee, $actor, $column, &$event) {
             $from = $ticket->{$column};
             $ticket->{$column} = $assignee?->id;
             $ticket->save();
 
-            $this->record($ticket, 'assigned', $actor, ['side' => $side, 'from' => $from, 'to' => $assignee?->id]);
+            $event = $this->record($ticket, 'assigned', $actor, ['side' => $side, 'from' => $from, 'to' => $assignee?->id]);
         });
 
-        $this->afterCommit(function () use ($ticket, $side, $assignee, $actor) {
+        $this->afterCommit(function () use ($ticket, $side, $assignee, $actor, &$event) {
             $this->notifier->assigned($ticket, $side, $assignee, $actor);
+            $this->integrate('assigned', $ticket, ['side' => $side, 'assignee' => $assignee?->name], $event->id);
         });
 
         return $ticket;
@@ -364,6 +381,69 @@ class TicketService
         });
 
         return $ticket;
+    }
+
+    /**
+     * Record time a staff member spent on the ticket. It is internal (never
+     * shown to the customer) but is sent on to trackers that follow the ticket.
+     */
+    public function logTime(Ticket $ticket, User $actor, int $minutes, ?string $note = null, bool $billable = true, ?string $workedAt = null): TicketTimeEntry
+    {
+        if ($minutes < 1 || $minutes > 1440) {
+            throw ValidationException::withMessages(['duration' => __('tickets.errors.invalid_duration')]);
+        }
+
+        $entry = DB::transaction(function () use ($ticket, $actor, $minutes, $note, $billable, $workedAt) {
+            $entry = new TicketTimeEntry;
+            $entry->ticket_id = $ticket->id;
+            $entry->user_id = $actor->id;
+            $entry->minutes = $minutes;
+            $entry->note = $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 500) : null;
+            $entry->billable = $billable;
+            $entry->worked_at = $workedAt ?: now()->toDateString();
+            $entry->save();
+
+            $this->record($ticket, 'time_logged', $actor, ['minutes' => $minutes, 'billable' => $billable], true);
+
+            return $entry;
+        });
+
+        $this->afterCommit(function () use ($ticket, $entry) {
+            $this->integrate('time.logged', $ticket, ['time' => $entry], $entry->id);
+        });
+
+        return $entry;
+    }
+
+    /**
+     * Remove an entry made by mistake. Trackers that already heard about it are
+     * not told: time cannot be taken back out of a comment or a tracker's total.
+     */
+    public function deleteTimeEntry(Ticket $ticket, TicketTimeEntry $entry, User $actor): void
+    {
+        if ($entry->ticket_id !== $ticket->id) {
+            throw new AuthorizationException(__('tickets.errors.cannot_edit'));
+        }
+
+        DB::transaction(function () use ($ticket, $entry, $actor) {
+            $minutes = $entry->minutes;
+            $entry->delete();
+            $this->record($ticket, 'time_deleted', $actor, ['minutes' => $minutes], true);
+        });
+    }
+
+    /**
+     * Ask a tracker integration to open this ticket's issue now.
+     */
+    public function createIssue(Ticket $ticket, TicketIntegration $integration, User $actor): bool
+    {
+        $delivery = $this->integrations->createIssue($integration, $ticket);
+
+        if ($delivery) {
+            DB::transaction(fn () => $this->record($ticket, 'issue_requested', $actor, ['integration' => $integration->name], true));
+        }
+
+        return $delivery !== null;
     }
 
     /**
@@ -591,6 +671,21 @@ class TicketService
                     throw $e;
                 }
             }
+        }
+    }
+
+    /**
+     * Tell integrations about something. A broken integration must never get in
+     * the way of the ticket itself, so any failure is reported and swallowed.
+     *
+     * @param  array<string, mixed>  $subject
+     */
+    private function integrate(string $event, Ticket $ticket, array $subject, string|int $key): void
+    {
+        try {
+            $this->integrations->dispatch($event, $ticket, $subject, $key);
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

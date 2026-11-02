@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contracts\Tickets\TracksIssues;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
@@ -9,6 +10,8 @@ use App\Http\Requests\Tickets\AdminUpdateTicketRequest;
 use App\Http\Requests\Tickets\BodyRequest;
 use App\Http\Resources\Tickets\AdminMessageResource;
 use App\Http\Resources\Tickets\AdminTicketResource;
+use App\Services\Tickets\DurationParser;
+use App\Services\Tickets\Integrations\TicketIntegrationRegistry;
 use App\Services\Tickets\TicketPreferences;
 use App\Services\Tickets\TicketService;
 use App\Services\Tickets\TicketStaff;
@@ -18,7 +21,10 @@ use App\Services\Tickets\TicketUnread;
 use App\Services\Tickets\TicketVersions;
 use App\Ticket;
 use App\TicketCategory;
+use App\TicketDelivery;
+use App\TicketIntegration;
 use App\TicketMessage;
+use App\TicketTimeEntry;
 use App\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +49,7 @@ class Tickets extends Controller
         private TicketVersions $versions,
         private TicketPreferences $preferences,
         private TicketSubscriptions $subscriptions,
+        private TicketIntegrationRegistry $registry,
     ) {}
 
     public function index(Request $request)
@@ -145,6 +152,7 @@ class Tickets extends Controller
             'watcher_ids' => $this->subscriptions->watcherIds($ticket),
             'watcher_options' => $this->watcherOptions($ticket),
             'muted' => $this->subscriptions->isMuted($ticket, $user),
+            ...$this->integrationProps($ticket, $user),
             'attachment_limits' => [
                 'files' => config('tickets.attachments.max_files'),
                 'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
@@ -196,6 +204,66 @@ class Tickets extends Controller
         $this->tickets->setMuted($ticket, $request->user(), (bool) $data['muted'], asStaff: true);
 
         return redirect('/admin/support/tickets/'.$ticket->number);
+    }
+
+    /**
+     * Record time spent on the ticket. Never visible to the customer.
+     */
+    public function logTime(Request $request, int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        $data = $request->validate([
+            'duration' => ['required', 'string', 'max:30'],
+            'note' => ['nullable', 'string', 'max:500'],
+            'billable' => ['sometimes', 'boolean'],
+            'worked_at' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        $minutes = DurationParser::parse($data['duration']);
+
+        if ($minutes === null) {
+            throw ValidationException::withMessages(['duration' => __('tickets.errors.invalid_duration')]);
+        }
+
+        $this->tickets->logTime($ticket, $request->user(), $minutes, $data['note'] ?? null, (bool) ($data['billable'] ?? true), $data['worked_at'] ?? null);
+
+        return redirect('/admin/support/tickets/'.$ticket->number)->with('success', __('tickets.time.logged'));
+    }
+
+    public function deleteTime(Request $request, int $number, TicketTimeEntry $entry): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        abort_unless($entry->ticket_id === $ticket->id, 404);
+
+        $this->tickets->deleteTimeEntry($ticket, $entry, $request->user());
+
+        return redirect('/admin/support/tickets/'.$ticket->number)->with('success', __('tickets.time.deleted'));
+    }
+
+    /**
+     * Open this ticket's issue in a tracker now (rather than waiting for auto-create).
+     */
+    public function createIssue(Request $request, int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        $data = $request->validate(['integration_id' => ['required', 'integer']]);
+
+        $integration = TicketIntegration::where('enabled', true)->find($data['integration_id']);
+
+        if (! $integration || ! $this->registry->driver($integration->driver) instanceof TracksIssues) {
+            throw ValidationException::withMessages(['integration_id' => __('tickets.integrations.not_a_tracker')]);
+        }
+
+        $started = $this->tickets->createIssue($ticket, $integration, $request->user());
+
+        return redirect('/admin/support/tickets/'.$ticket->number)
+            ->with($started ? 'success' : 'error', $started ? __('tickets.integrations.issue_requested') : __('tickets.integrations.issue_exists'));
     }
 
     public function reply(BodyRequest $request, int $number): RedirectResponse
@@ -349,6 +417,62 @@ class Tickets extends Controller
     {
         return TicketCategory::where('active', true)->orderBy('sort')->orderBy('name')->get(['id', 'name'])
             ->map(fn (TicketCategory $category) => ['value' => $category->id, 'text' => $category->name])->all();
+    }
+
+    /**
+     * Time, linked issues and recent deliveries for the staff ticket page.
+     *
+     * @return array<string, mixed>
+     */
+    private function integrationProps(Ticket $ticket, User $viewer): array
+    {
+        $entries = $ticket->timeEntries()->with('user')->get();
+        $total = $entries->sum('minutes');
+        $billable = $entries->where('billable', true)->sum('minutes');
+
+        $links = $ticket->externalLinks()->with('integration')->get();
+        $linkedTo = $links->pluck('integration_id');
+
+        return [
+            'time_entries' => $entries->map(fn (TicketTimeEntry $entry) => [
+                'id' => $entry->id,
+                'by' => $entry->user?->name ?? __('tickets.deleted_user'),
+                'minutes' => $entry->minutes,
+                'duration' => DurationParser::format($entry->minutes),
+                'note' => $entry->note,
+                'billable' => $entry->billable,
+                'worked_at' => $entry->worked_at->toDateString(),
+            ])->values()->all(),
+            'time_total' => [
+                'total' => DurationParser::format($total),
+                'billable' => DurationParser::format($billable),
+                'minutes' => $total,
+            ],
+            'links' => $links->map(fn ($link) => [
+                'id' => $link->id,
+                'integration' => $link->integration?->name,
+                'key' => $link->external_key,
+                'url' => $link->external_url,
+                'state' => $link->external_state,
+            ])->values()->all(),
+            // Trackers that could open an issue for this ticket and have not yet
+            'issue_targets' => TicketIntegration::where('enabled', true)->get()
+                ->filter(fn (TicketIntegration $integration) => $this->registry->driver($integration->driver) instanceof TracksIssues
+                    && $integration->matches($ticket)
+                    && ! $linkedTo->contains($integration->id))
+                ->map(fn (TicketIntegration $integration) => ['id' => $integration->id, 'name' => $integration->name])
+                ->values()->all(),
+            'deliveries' => TicketDelivery::with('integration')->where('ticket_id', $ticket->id)->latest('id')->limit(8)->get()
+                ->map(fn (TicketDelivery $delivery) => [
+                    'id' => $delivery->id,
+                    'integration' => $delivery->integration?->name,
+                    'event' => $delivery->event,
+                    'status' => $delivery->status,
+                    'attempts' => $delivery->attempts,
+                    'error' => $delivery->error,
+                    'created_at' => $delivery->created_at?->toIso8601String(),
+                ])->values()->all(),
+        ];
     }
 
     /**

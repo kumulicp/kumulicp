@@ -156,6 +156,71 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         </va-card-content>
       </va-card>
 
+      <va-card class="mb-4" id="time">
+        <va-card-title>
+          <div class="flex justify-between items-center w-full">
+            <span>{{ $t('tickets.time.title') }}</span>
+            <span v-if="time_entries.length" class="ticket-context__muted">{{ $t('tickets.time.total', { total: time_total.total, billable: time_total.billable }) }}</span>
+          </div>
+        </va-card-title>
+        <va-card-content>
+          <ul v-if="time_entries.length" class="ticket-context__list mb-3">
+            <li v-for="entry in time_entries" :key="entry.id" class="ticket-time-entry">
+              <span>
+                <strong>{{ entry.duration }}</strong>
+                <span class="ticket-context__muted"> · {{ entry.worked_at }} · {{ entry.by }}<template v-if="!entry.billable"> · {{ $t('tickets.time.nonBillable') }}</template></span>
+                <span v-if="entry.note" class="d-block">{{ entry.note }}</span>
+              </span>
+              <va-button size="small" preset="plain" color="danger" @click="deleteTime(entry)">{{ $t('common.remove') }}</va-button>
+            </li>
+          </ul>
+          <form @submit.prevent="addTime">
+            <va-input
+              v-model="timeForm.duration"
+              id="duration"
+              class="mb-2"
+              :label="$t('tickets.time.duration')"
+              placeholder="1h 30m"
+              :error="!!timeForm.errors.duration"
+              :error-messages="timeForm.errors.duration"
+            />
+            <va-input v-model="timeForm.note" class="mb-2" :label="$t('tickets.time.note')" maxlength="500" />
+            <va-input v-model="timeForm.worked_at" class="mb-2" type="date" :label="$t('tickets.time.date')" :max="today" />
+            <va-switch v-model="timeForm.billable" class="mb-2" :label="$t('tickets.time.billable')" />
+            <div><va-button type="submit" size="small" :disabled="timeForm.processing">{{ $t('tickets.time.add') }}</va-button></div>
+          </form>
+        </va-card-content>
+      </va-card>
+
+      <va-card v-if="links.length || issue_targets.length || deliveries.length" class="mb-4" id="trackers">
+        <va-card-title>{{ $t('tickets.integrations.linkedIssues') }}</va-card-title>
+        <va-card-content>
+          <ul v-if="links.length" class="ticket-context__list mb-3">
+            <li v-for="link in links" :key="link.id">
+              <a v-if="link.url" :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.integration }} {{ link.key }}</a>
+              <span v-else>{{ link.integration }} {{ link.key }}</span>
+              <span class="ticket-context__muted"> ({{ link.state }})</span>
+            </li>
+          </ul>
+
+          <div v-if="issue_targets.length" class="mb-3">
+            <va-select v-model="issueTarget" class="mb-2" :label="$t('tickets.integrations.openIssueIn')" :options="issue_targets" value-by="id" text-by="name" />
+            <va-button size="small" :disabled="!issueTarget" @click="openIssue">{{ $t('tickets.integrations.openIssue') }}</va-button>
+          </div>
+
+          <template v-if="deliveries.length">
+            <div><strong>{{ $t('tickets.integrations.recent') }}</strong></div>
+            <ul class="ticket-context__list">
+              <li v-for="delivery in deliveries" :key="delivery.id">
+                <va-chip size="small" :color="deliveryColors[delivery.status]">{{ $t(`tickets.integrations.statuses.${delivery.status}`) }}</va-chip>
+                {{ delivery.integration }} · {{ delivery.event }}
+                <div v-if="delivery.error" class="delivery-error ticket-context__muted">{{ delivery.error }}</div>
+              </li>
+            </ul>
+          </template>
+        </va-card-content>
+      </va-card>
+
       <va-card class="mb-4">
         <va-card-title>{{ $t('tickets.activity') }}</va-card-title>
         <va-card-content>
@@ -189,6 +254,11 @@ export default {
     watcher_ids: Array,
     watcher_options: Array,
     muted: Boolean,
+    time_entries: Array,
+    time_total: Object,
+    links: Array,
+    issue_targets: Array,
+    deliveries: Array,
   },
   data () {
     return {
@@ -197,6 +267,10 @@ export default {
       watchers: [...this.watcher_ids],
       mutedLocal: this.muted,
       toast: useToast(),
+      timeForm: useForm({ duration: '', note: '', worked_at: new Date().toISOString().slice(0, 10), billable: true }),
+      today: new Date().toISOString().slice(0, 10),
+      issueTarget: null,
+      deliveryColors: { pending: 'warning', delivered: 'success', failed: 'danger' },
       replyForm: useForm({ body: '', internal: false }),
       form: this.makeForm(),
     }
@@ -238,7 +312,7 @@ export default {
     // Reload only what changed. State is preserved, so a half-written reply and unsaved edits stay put.
     refresh (data) {
       router.reload({
-        only: ['ticket', 'messages', 'timeline', 'context', 'version', 'last_message_id', 'watcher_ids', 'watcher_options', 'muted'],
+        only: ['ticket', 'messages', 'timeline', 'context', 'version', 'last_message_id', 'watcher_ids', 'watcher_options', 'muted', 'time_entries', 'time_total', 'links', 'issue_targets', 'deliveries'],
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
@@ -246,6 +320,21 @@ export default {
             this.toast.init({ message: this.$t('tickets.newReplies', { count: data.new_messages }, data.new_messages), color: 'info' })
           }
         },
+      })
+    },
+    addTime () {
+      this.timeForm.post(`${this.ticket.url}/time`, {
+        preserveScroll: true,
+        onSuccess: () => this.timeForm.reset('duration', 'note'),
+      })
+    },
+    deleteTime (entry) {
+      router.delete(`${this.ticket.url}/time/${entry.id}`, { preserveScroll: true })
+    },
+    openIssue () {
+      router.post(`${this.ticket.url}/issues`, { integration_id: this.issueTarget }, {
+        preserveScroll: true,
+        onSuccess: () => { this.issueTarget = null },
       })
     },
     saveWatchers (value) {
@@ -299,5 +388,18 @@ export default {
     list-style: none;
     padding: 0;
     margin: 0.25em 0 0;
+  }
+</style>
+<style lang="scss">
+  .ticket-time-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.3em 0;
+    border-bottom: 1px solid var(--va-background-border);
+  }
+
+  .delivery-error {
+    color: var(--va-danger);
   }
 </style>

@@ -103,6 +103,23 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         });
 
         Route::prefix('support')->middleware('toggle:tickets')->group(function () {
+            Route::prefix('integrations')->group(function () {
+                Route::get('', 'Admin\TicketIntegrations@index')->name('admin.tickets.integrations.index');
+                Route::get('create', 'Admin\TicketIntegrations@create')->name('admin.tickets.integrations.create');
+                Route::post('', 'Admin\TicketIntegrations@store')->name('admin.tickets.integrations.store');
+                Route::prefix('{integration}')->where(['integration' => '[0-9]+'])->group(function () {
+                    Route::get('edit', 'Admin\TicketIntegrations@edit')->name('admin.tickets.integrations.edit');
+                    Route::put('', 'Admin\TicketIntegrations@update')->name('admin.tickets.integrations.update');
+                    Route::delete('', 'Admin\TicketIntegrations@destroy')->name('admin.tickets.integrations.destroy');
+                    Route::put('enabled', 'Admin\TicketIntegrations@setEnabled')->name('admin.tickets.integrations.enabled');
+                    Route::post('test', 'Admin\TicketIntegrations@test')->middleware('throttle:20,1')->name('admin.tickets.integrations.test');
+                    Route::post('secret/rotate', 'Admin\TicketIntegrations@rotateSecret')->name('admin.tickets.integrations.secret.rotate');
+                    Route::post('secret/reveal', 'Admin\TicketIntegrations@revealSecret')->name('admin.tickets.integrations.secret.reveal');
+                    Route::get('deliveries', 'Admin\TicketIntegrations@deliveries')->name('admin.tickets.integrations.deliveries');
+                    Route::get('deliveries/{delivery}', 'Admin\TicketIntegrations@delivery')->name('admin.tickets.integrations.delivery');
+                    Route::post('deliveries/{delivery}/redeliver', 'Admin\TicketIntegrations@redeliver')->name('admin.tickets.integrations.redeliver');
+                });
+            });
             Route::post('categories', 'Admin\Tickets@storeCategory')->name('admin.tickets.categories.store');
             Route::delete('categories/{category}', 'Admin\Tickets@destroyCategory')->name('admin.tickets.categories.destroy');
             Route::prefix('tickets')->group(function () {
@@ -111,6 +128,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('{number}', 'Admin\Tickets@update')->whereNumber('number')->name('admin.tickets.update');
                 Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply'))->name('admin.tickets.reply');
                 Route::put('{number}/messages/{message}', 'Admin\Tickets@updateMessage')->whereNumber('number')->name('admin.tickets.messages.update');
+                Route::post('{number}/time', 'Admin\Tickets@logTime')->whereNumber('number')->name('admin.tickets.time.store');
+                Route::delete('{number}/time/{entry}', 'Admin\Tickets@deleteTime')->whereNumber('number')->name('admin.tickets.time.destroy');
+                Route::post('{number}/issues', 'Admin\Tickets@createIssue')->whereNumber('number')->name('admin.tickets.issues.store');
                 Route::get('{number}/poll', 'Admin\Tickets@poll')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.poll'))->name('admin.tickets.poll');
                 Route::put('{number}/watchers', 'Admin\Tickets@updateWatchers')->whereNumber('number')->name('admin.tickets.watchers');
                 Route::put('{number}/subscription', 'Admin\Tickets@updateSubscription')->whereNumber('number')->name('admin.tickets.subscription');

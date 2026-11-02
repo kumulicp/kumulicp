@@ -4,12 +4,17 @@ namespace Tests\Feature\Tickets;
 
 use App\Enums\TicketStatus;
 use App\Organization;
+use App\Services\Tickets\Integrations\HostResolver;
 use App\Services\Tickets\TicketService;
 use App\Ticket;
+use App\TicketIntegration;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\FakeHostResolver;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -44,6 +49,11 @@ abstract class TicketsTestCase extends TestCase
         config(['toggle.flags.tickets' => true]);
         Notification::fake();
         Storage::fake('tickets');
+        // Jobs only run when a test runs them, and nothing may reach the real network
+        Queue::fake();
+        Http::preventStrayRequests();
+        // No test ever does a real DNS lookup
+        $this->app->instance(HostResolver::class, new FakeHostResolver);
 
         $this->admin = User::find(1);
         $this->orgA = Organization::factory()->create(['slug' => 'acme', 'name' => 'Acme', 'plan_id' => 1]);
@@ -74,6 +84,35 @@ abstract class TicketsTestCase extends TestCase
         $user->assignRole('control_panel_admin');
 
         return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $attributes  Columns to set: options, filters, events, enabled...
+     */
+    protected function integration(string $driver, array $config, array $attributes = []): TicketIntegration
+    {
+        $integration = new TicketIntegration(['driver' => $driver, 'name' => ucfirst($driver)]);
+        $integration->config = $config;
+        $integration->enabled = true;
+
+        foreach ($attributes as $column => $value) {
+            $integration->{$column} = $value;
+        }
+
+        $integration->save();
+
+        return $integration;
+    }
+
+    protected function webhook(array $events = ['ticket.created', 'message.created', 'status.changed', 'assigned', 'time.logged'], array $attributes = []): TicketIntegration
+    {
+        return $this->integration('generic_webhook', ['url' => 'https://hooks.example.test/in', 'secret' => 'sekrit'], array_merge(['events' => $events], $attributes));
+    }
+
+    protected function github(array $options = ['auto_create' => true], array $attributes = []): TicketIntegration
+    {
+        return $this->integration('github', ['token' => 'ghp_secret', 'repository' => 'acme/platform', 'labels' => 'support'], array_merge(['options' => $options], $attributes));
     }
 
     protected function service(): TicketService

@@ -12,6 +12,7 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
+use Illuminate\Support\Facades\Queue;
 use Tests\Support\TestSupports;
 
 /**
@@ -358,12 +359,12 @@ it('has nothing to run for an action that is not registered', function () {
 });
 
 it('retries a task whose action has no fresh action to give', function () {
-    Illuminate\Support\Facades\Queue::fake();
+    Queue::fake();
     $task = runnerTask('native', ['status' => 'failed', 'error_message' => 'before']);
 
     ActionFacade::retry($task);
 
     // RunnerNative::retry() returns null: the task is retried as it is
     expect($task->fresh()->status)->toBe(TaskStatus::QUEUED);
-    Illuminate\Support\Facades\Queue::assertPushed(RunAction::class, 1);
+    Queue::assertPushed(RunAction::class, 1);
 });
