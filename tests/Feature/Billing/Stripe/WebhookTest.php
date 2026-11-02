@@ -13,8 +13,38 @@ function signStripeSignatureHeader(array $payload, string $secret): string
 }
 
 beforeEach(function () {
-    config(['cashier.webhook.secret' => 'whsec_test_secret']);
+    config([
+        'cashier.webhook.secret' => 'whsec_test_secret',
+        'billing.default' => 'stripe',
+    ]);
 });
+
+it('ignores webhooks when stripe is not the billing driver', function (?string $driver) {
+    config(['billing.default' => $driver]);
+
+    $organization = Organization::factory()->create(['stripe_id' => 'cus_'.Str::random(14)]);
+    $organization->status = 'active';
+    $organization->save();
+
+    $payload = [
+        'id' => 'evt_'.Str::random(10),
+        'type' => 'invoice.payment_failed',
+        'data' => [
+            'object' => [
+                'id' => 'in_'.Str::random(10),
+                'customer' => $organization->stripe_id,
+                'status' => 'open',
+            ],
+        ],
+    ];
+
+    $response = $this->postJson('/api/stripe/webhook', $payload, [
+        'Stripe-Signature' => signStripeSignatureHeader($payload, 'whsec_test_secret'),
+    ]);
+
+    $response->assertStatus(404);
+    expect($organization->refresh()->status)->toBe('active');
+})->with(['fake driver' => 'fake', 'no driver' => null]);
 
 it('rejects an invalid signature', function () {
     $organization = Organization::factory()->create(['stripe_id' => 'cus_'.Str::random(14)]);
