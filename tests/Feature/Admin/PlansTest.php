@@ -635,4 +635,80 @@ class PlansTest extends TestCase
             ->post('/admin/service/plans/update_order', ['plans' => []])
             ->assertRedirect('/admin/service/plans');
     }
+
+    // ---------------------------------------------------------------------------
+    // Clone tests
+    // ---------------------------------------------------------------------------
+
+    public function test_clone_copies_a_plan_under_a_new_name()
+    {
+        $user = $this->adminUser();
+
+        $plan = Plan::factory()->create([
+            'name' => 'Original Plan',
+            'description' => 'Original description',
+            'type' => 'package',
+            'org_type' => 'nonprofit',
+            'is_default' => true,
+            'archive' => true,
+            'status' => 'available',
+            'display_order' => 1,
+            'payment_enabled' => true,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan']);
+
+        $clone = Plan::where('name', 'Cloned Plan')->firstOrFail();
+        $response->assertRedirect("/admin/service/plans/{$clone->id}");
+
+        $this->assertNotEquals($plan->id, $clone->id);
+        $this->assertSame('Original description', $clone->description);
+        $this->assertSame('package', $clone->type);
+        $this->assertSame('nonprofit', $clone->org_type);
+        $this->assertTrue($clone->payment_enabled);
+        $this->assertEquals($plan->settings, $clone->settings);
+        $this->assertEquals($plan->app_plans, $clone->app_plans);
+
+        // The clone is a fresh draft that doesn't take over from the original
+        $this->assertFalse($clone->is_default);
+        $this->assertFalse($clone->archive);
+        $this->assertSame('hidden', $clone->status);
+        $this->assertGreaterThan($plan->display_order, $clone->display_order);
+
+        // The original is untouched
+        $plan->refresh();
+        $this->assertSame('Original Plan', $plan->name);
+        $this->assertTrue($plan->is_default);
+    }
+
+    public function test_clone_requires_a_name()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+        $count = Plan::count();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", [])
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame($count, Plan::count());
+    }
+
+    public function test_non_admin_user_cannot_clone_a_plan()
+    {
+        $support = new TestSupports;
+        $support->seed();
+
+        $user = User::find(1);
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
+
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('plans', ['name' => 'Cloned Plan']);
+    }
 }

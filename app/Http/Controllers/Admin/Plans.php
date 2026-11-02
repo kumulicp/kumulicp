@@ -93,6 +93,28 @@ class Plans extends Controller
         return redirect('/admin/service/plans/'.$plan->id)->with('success', __('admin.plans.added', ['plan' => $plan->name]));
     }
 
+    public function clone(Request $request, Plan $plan)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
+
+        // Copies every attribute (settings, app plans, pricing, ...) apart from
+        // the id and timestamps; the copy starts as a hidden, non-default,
+        // unarchived draft with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->status = 'hidden';
+        $clone->save();
+
+        return redirect('/admin/service/plans/'.$clone->id)->with('success', __('admin.plans.cloned', ['plan' => $clone->name]));
+    }
+
     public function edit(Plan $plan)
     {
         $apps = Application::all();

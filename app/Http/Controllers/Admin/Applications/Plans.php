@@ -160,6 +160,33 @@ class Plans extends Controller
         return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
     }
 
+    public function clone(Request $request, Application $app, AppPlan $plan)
+    {
+        // Hidden plans belong to a shared app and can't be duplicated
+        abort_if($plan->application_id !== $app->id || $plan->hidden, 404);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = AppPlan::where('application_id', $app->id)
+            ->where('display_order', '>', 0)
+            ->orderBy('display_order', 'desc')
+            ->first();
+
+        // Copies every attribute (settings, servers, pricing, secrets, ...)
+        // apart from the id and timestamps; the copy starts as a non-default,
+        // unarchived plan with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->save();
+
+        return redirect("/admin/apps/{$app->slug}/plans/{$clone->id}")->with('success', __('admin.applications.plans.cloned', ['plan' => $clone->name]));
+    }
+
     public function edit(Application $app, AppPlan $plan)
     {
         $organization = auth()->user()->organization;
