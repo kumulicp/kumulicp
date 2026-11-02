@@ -339,6 +339,8 @@
       "description": "Descripción",
       "archivedPlan": "Plan Archivado",
       "default": "Predeterminado",
+      "available": "Disponible",
+      "availableCaption": "Los planes sin marcar están ocultos y los clientes no pueden seleccionarlos",
       "defaultPlan": "Plan Predeterminado",
       "defaultPlanCaption": "Marcar esta casilla anulará el plan predeterminado actual si otro plan está establecido como predeterminado",
       "features": "Funciones",
