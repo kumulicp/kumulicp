@@ -7,10 +7,12 @@ use App\AppInstance;
 use App\AppPlan;
 use App\Enums\AccessType;
 use App\Enums\PlanEntity;
+use App\Services\Organization\BasePlanService;
 use App\Support\AccountManager\UserManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
 use App\Support\Facades\FastCache;
+use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
@@ -55,6 +57,43 @@ class AppInstancePlanService
         return $this->plan->setting("$entity.price");
     }
 
+    private function baseSubscription(): BasePlanService
+    {
+        // The current account's base subscription may be a dry run of a plan change, so prefer it
+        if (OrganizationFacade::account()?->is($this->organization)) {
+            return Subscription::base();
+        }
+
+        return new BasePlanService($this->organization);
+    }
+
+    /**
+     * A Packaged base plan carries all prices and per-user storage itself. The app plan
+     * is then only a technical description of the app, so it must never be billed.
+     */
+    public function isPackaged(): bool
+    {
+        return $this->baseSubscription()->get()?->type === 'package';
+    }
+
+    /**
+     * Storage in GB for one user with the given access type ('standard' or 'basic').
+     * Under a Packaged base plan the package's value wins; the app plan's value is only
+     * used when the package leaves it blank.
+     */
+    public function userStorage(string $access_type): mixed
+    {
+        if ($this->isPackaged()) {
+            $package_storage = $this->baseSubscription()->setting("{$access_type}.storage");
+
+            if (! is_null($package_storage)) {
+                return $package_storage;
+            }
+        }
+
+        return $this->plan->setting("{$access_type}.storage");
+    }
+
     public function itemName(): string
     {
         return $this->app_instance->application->slug;
@@ -67,6 +106,10 @@ class AppInstancePlanService
 
     public function pricing(): array
     {
+        if ($this->isPackaged()) {
+            return [];
+        }
+
         $pricing = [];
         $currency = $this->organization->billingCurrency();
 
@@ -94,6 +137,10 @@ class AppInstancePlanService
 
     public function pricingOptions()
     {
+        if ($this->isPackaged()) {
+            return [];
+        }
+
         $pricing = [];
         $options = [];
 
@@ -140,6 +187,10 @@ class AppInstancePlanService
 
     public function stats(): array
     {
+        if ($this->isPackaged()) {
+            return [];
+        }
+
         $app_plan = $this;
 
         return FastCache::retrieve('app_plan_stats_'.$this->plan->id, function () use ($app_plan) {
@@ -416,6 +467,10 @@ class AppInstancePlanService
 
     public function totalPrice(): float
     {
+        if ($this->isPackaged()) {
+            return 0.0;
+        }
+
         return $this->plan->setting('base.price')
             + $this->standardPriceTotal()
             + $this->basicPriceTotal()
@@ -447,7 +502,7 @@ class AppInstancePlanService
 
     public function standardStorageTotal(): float
     {
-        return ($this->plan->setting('standard.storage')) ? $this->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
+        return ($this->userStorage('standard')) ? $this->countEntity('standard') * $this->userStorage('standard') : 0;
     }
 
     public function basicPriceTotal(): float

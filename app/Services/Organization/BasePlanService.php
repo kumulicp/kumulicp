@@ -123,16 +123,23 @@ class BasePlanService
         return in_array($plan->id, $this->appPlansList($plan->application));
     }
 
+    /**
+     * Pay per App plans bill everything through the app plans, except the org-level
+     * services that no single app owns (email). Packaged plans bill every entity.
+     *
+     * @return array<int, PlanEntity>
+     */
+    public function billableEntities(): array
+    {
+        return $this->plan->type === 'app' ? [PlanEntity::EMAIL] : $this->pricing_options;
+    }
+
     public function pricingOptions()
     {
-        if ($this->plan->type === 'app') {
-            return [];
-        }
-
         $pricing = [];
         $options = [];
 
-        $entities = $this->pricing_options;
+        $entities = $this->billableEntities();
 
         $currency = $this->organization->billingCurrency();
 
@@ -161,15 +168,11 @@ class BasePlanService
 
     public function stats()
     {
-        if ($this->plan->type === 'app') {
-            return [];
-        }
-
         $base = $this;
 
         return FastCache::retrieve('base_plan_stats_'.$this->plan->id, function () use ($base) {
             $stats = [];
-            foreach ($base->pricing_options as $option) {
+            foreach ($base->billableEntities() as $option) {
                 $option_stats = $base->optionStats($option->value);
                 if ($option_stats['price'] > 0) {
                     $stats[$option->value] = $option_stats;
@@ -373,7 +376,7 @@ class BasePlanService
     public function totalPrice()
     {
         if ($this->plan->type === 'app') {
-            return 0;
+            return $this->emailPriceTotal();
         }
 
         $base = $this;

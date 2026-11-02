@@ -114,13 +114,32 @@ class SubscriptionService
 
     public function updateBase(Plan $plan)
     {
+        // Looked up by id because the loaded plan relation goes stale once plan_id is reassigned
+        $previous_plan = $this->organization->plan_id ? Plan::find($this->organization->plan_id) : null;
+
         $this->organization->plan_id = $plan->id;
         $this->organization->save();
 
         $this->plans['base'] = new BasePlanService($this->organization, $plan);
         $this->updateAppInstancesFromBase($plan);
 
+        // Under a Packaged plan the package decides per-user storage, so a new package can change it for every app
+        if ($plan->type === 'package' && $this->userStorageDiffers($previous_plan, $plan)) {
+            UserStorageUpdated::dispatch($this->organization);
+        }
+
         return $this;
+    }
+
+    private function userStorageDiffers(?Plan $previous_plan, Plan $plan): bool
+    {
+        foreach (['standard', 'basic'] as $access_type) {
+            if ($previous_plan?->setting("{$access_type}.storage") !== $plan->setting("{$access_type}.storage")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function updateApp(AppPlan $plan, AppInstance $app_instance)
@@ -132,7 +151,10 @@ class SubscriptionService
 
         $this->plans[$app_instance->id] = new AppInstancePlanService($plan, $app_instance);
 
-        if ($previous_plan && $previous_plan->setting('standard.storage') !== $plan->setting('standard.storage')) {
+        // A Packaged plan decides per-user storage itself, so swapping the app plan changes nothing
+        if ($this->base()->get()?->type !== 'package'
+            && $previous_plan
+            && $previous_plan->setting('standard.storage') !== $plan->setting('standard.storage')) {
             UserStorageUpdated::dispatch($this->organization, app_instance: $app_instance);
         }
 
