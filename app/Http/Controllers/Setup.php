@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Plan;
 use App\ServerSetting;
+use App\Services\Plans\ExamplePlansService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
@@ -131,6 +132,13 @@ class Setup extends Controller
         }
 
         $organization->save();
+
+        // Example tiers are a convenience for admins, so a failure here must not abort the install
+        try {
+            (new ExamplePlansService)->create();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $subscription = Subscription::all();
         // This task will confirm cronjob running and setup domain
