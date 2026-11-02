@@ -24,9 +24,20 @@ Status: proposal. Nothing here is built yet.
 
 **Goals (from the request):** orgs can list, create, view, reply to, and edit their tickets; admins can list, view, and respond; TinyMCE rich text; attachments; polling for new replies; notifications on replies; extensible webhooks/integrations that push issues to GitHub, GitLab and similar tools for time and issue tracking.
 
-**Added after review (section 11):** internal notes, SLA, canned responses, ticket context (org/app/server state), email threading and inbound replies, CSAT, merge, time entries, reporting, retention and privacy, API, and security hardening.
+**Added after review (section 11):** an "assigned to" field on both sides, internal notes, SLA, canned responses, ticket context (org/app/server state), outbound email threading, CSAT, merge, time entries, reporting, retention and privacy, API, and security hardening.
 
-**Non-goals for v1:** live chat, WebSocket push, a public knowledge base, multi-brand/multi-queue routing, voice/phone.
+**Non-goals for v1:** inbound email (replies are made in the portal only), fine-grained permissions, live chat, WebSocket push, a public knowledge base, multi-brand/multi-queue routing, voice/phone.
+
+### Decisions confirmed
+
+| Question | Decision |
+|---|---|
+| Who sees an org's tickets? | **All members of the org** see all of the org's tickets. No per-org visibility setting. |
+| Agent permissions | Keep the existing `admin` gate for now. Fine-grained permissions (`manage-tickets`, category-restricted agents) are a separate later piece of work. Policies call a single `TicketPolicy` method so this is a one-place change later. |
+| Inbound email | Not included. Outgoing emails link to the portal ("reply in the control panel"). |
+| First integrations | Generic webhook, GitHub, GitLab. Jira, Linear and others come later via the same driver contract. |
+| Assignment | Two assignee fields: a **customer-side** assignee (an org member) and a **support-side** assignee (a staff member). Both are visible on both sides (see §3.1). |
+| Default list view | Lists open filtered to **tickets assigned to you** (see §3.1 and §10). |
 
 ## 3. Data model
 
@@ -34,14 +45,17 @@ All tables are new migrations (`2026_11_*`). `organization_id` is on every row t
 
 ```
 tickets
-  id, number (unique, human: "KCP-1042"), organization_id, requester_id (users.id),
-  assignee_id (users.id, null), subject, type (question|bug|feature),
-  status (enum, §3.1), priority (low|normal|high|urgent), impact (requester-supplied: minor|degraded|outage),
+  id, number (unique, human: "KCP-1042"), organization_id, requester_id (users.id, who opened it),
+  customer_assignee_id (users.id, null; org member responsible on the customer side, defaults to requester),
+  support_assignee_id (users.id, null; staff member handling it),
+  subject, type (question|bug|feature),
+  status (enum, §3.2), priority (low|normal|high|urgent), impact (requester-supplied: minor|degraded|outage),
   category_id, app_instance_id (null), source (web|email|api|system),
   first_response_at, last_activity_at, last_requester_reply_at, last_staff_reply_at,
   resolved_at, closed_at, due_at, sla_first_response_due_at, sla_resolution_due_at,
   merged_into_id (null), csat_score/csat_comment (null), lock_version, deleted_at, timestamps
-  indexes: (organization_id, status, last_activity_at), (assignee_id, status), (number)
+  indexes: (organization_id, status, last_activity_at), (support_assignee_id, status, last_activity_at),
+           (customer_assignee_id, status, last_activity_at), (number)
 
 ticket_messages
   id, ticket_id, author_id, author_kind (requester|staff|system),
@@ -67,7 +81,21 @@ ticket_deliveries            id, integration_id, ticket_id, event, idempotency_k
                              attempts, response_code, request/response (redacted), next_attempt_at
 ```
 
-### 3.1 Status model
+### 3.1 Assignment ("Assigned to" on both sides)
+
+| Field | Who it is | Who can change it | Defaults |
+|---|---|---|---|
+| **Customer assignee** (`customer_assignee_id`) | The org member responsible for the ticket on the customer's side (the one support should expect answers from) | Any member of the org, and staff. Must be an active user of the ticket's own organization (validated server-side; cross-org ids are rejected) | The requester at creation; if that user is later removed or deactivated, it falls back to the requester, then to null |
+| **Support assignee** (`support_assignee_id`) | The staff member handling the ticket | Staff only (`admin` gate for now). Customers see the name, read-only | Null (goes to the Unassigned view) or set by category default / auto-assign rule later |
+
+- Both appear in the ticket header and in list columns on **both** sides. The customer UI shows staff by display name only (no email or internal details).
+- Changes go through `TicketService::assign($ticket, side, user)`, which writes a `ticket_events` row (`type = assigned`, `context.side = customer|support`) and fires `TicketAssigned`.
+- Notifications use the assignees: a reply from support goes to the customer assignee, the requester and watchers; a customer reply goes to the support assignee (or the support team when unassigned). Reassigning notifies the new assignee.
+- **Default list filter** (both sides): `?assigned=me` is the initial view. It means `customer_assignee_id = me` for org users, and `support_assignee_id = me` for staff. Other filters in the same control: `all`, `unassigned` (support side: no support assignee; customer side: no customer assignee), and "assigned to a specific person". The choice is kept in the URL (so it is shareable and survives reloads) and remembered per user in `localStorage` (guarded by try/catch). The initial default is always "me".
+- A "mine" list with nothing in it shows an explicit empty state with the counts of other tickets ("0 assigned to you, 12 open in your organization — view all") so nobody mistakes it for "no tickets". On the support side, the **Unassigned** view carries a count badge so new tickets are not missed.
+- Bulk assign (support side) and a quick "assign to me" button on each row.
+
+### 3.2 Status model
 
 `open` → `pending_support` ⇄ `pending_customer` → `on_hold` → `resolved` → `closed`.
 
@@ -77,11 +105,11 @@ ticket_deliveries            id, integration_id, ticket_id, event, idempotency_k
 
 ## 4. Authorization and tenancy
 
-- **Org side:** `TicketPolicy`. A requester sees their own tickets; org owners/billing managers see all tickets for the org (and parent orgs see child orgs, using the existing `view-organization` gate). Suggest a per-org setting "all members can see all org tickets" (default off).
-- **Admin side:** add a `manage-tickets` gate rather than reusing `admin`, so support staff do not need full control-panel admin. Initially it resolves to `admin`; later it can map to a dedicated permission via `PermissionsManager`.
+- **Org side:** `TicketPolicy`. **Every member of an organization can view, create, reply to, and watch all of that organization's tickets.** Only the message author can edit their own message (§6, §10). Whether a parent org sees child-org tickets is left out of v1 (child orgs are separate tenants); revisit with permissions.
+- **Admin side:** staff are users who pass the existing `admin` gate. All policy checks for staff go through one `TicketPolicy::manage()` method, so introducing a dedicated `manage-tickets` permission or category-restricted agents later changes one place, not every controller. Fine-grained permissions are explicitly deferred.
 - **Isolation tests are mandatory:** route-model binding is scoped by `organization_id` (`Ticket::forOrganization()`), and a Pest test per endpoint asserts that org B gets 404 for org A's ticket, message, and attachment.
 - **Internal notes never reach org-side responses.** Org and admin controllers use separate API Resource classes. The org-side query always filters `visibility = public`, and a test asserts no internal text appears in any org payload (including poll responses and notification bodies).
-- Roles: requester, watcher, agent, admin. Agents can be restricted to categories (later).
+- Roles for v1: org member (including requester, customer assignee, watcher) and staff/admin. Per-agent restrictions come later.
 
 ## 5. Backend structure
 
@@ -101,7 +129,7 @@ app/Http/Resources/Tickets/{Org,Admin}*.php   separate resources per audience
 app/Policies/TicketPolicy.php
 app/Events/Tickets/*                          TicketCreated, MessageAdded, StatusChanged, Assigned, ...
 app/Notifications/Tickets/*                   (§8)
-app/Jobs/Tickets/*                            delivery, inbound mail, sweeps
+app/Jobs/Tickets/*                            integration delivery, sweeps (orphan uploads, auto-close, SLA)
 ```
 
 - All writes go through `TicketService`, inside a DB transaction. Events are dispatched after commit (`afterCommit`).
@@ -155,19 +183,19 @@ Laravel `Notification` classes, queued, following `NewAnnouncement` (`PanelChann
 
 | Event | Requester / watchers | Staff |
 |---|---|---|
-| Ticket created | confirmation (mail) | to assignee, or the support team if unassigned |
-| Public staff reply | mail + panel | none |
-| Requester reply | none | assignee (or team) mail + panel |
-| Internal note | never | assignee / mentioned agents |
+| Ticket created | confirmation (mail) to requester and customer assignee | to support assignee, or the support team if unassigned |
+| Public staff reply | mail + panel to customer assignee, requester, watchers | none |
+| Customer reply (any org member) | none (author excluded) | support assignee (or team) mail + panel; also the customer assignee/requester if they are not the author |
+| Internal note | never | support assignee / mentioned agents |
 | Status change / resolved | mail + panel (resolved includes "reopen" link and CSAT) | n/a |
-| Assignment | n/a | new assignee |
+| Assignment | new customer assignee is notified when changed by someone else | new support assignee is notified |
 | SLA at risk / breached | n/a | assignee + lead |
 | Auto-close / pending reminder | mail | n/a |
 
 - Extend `PanelChannel`/`Account\Notifications@index` to carry a `url` so a panel notification deep-links to the ticket.
 - Per-user preferences (mail on/off per event type, stored on a `notification_preferences`-style JSON on the user) and per-ticket mute.
 - **Coalescing:** replies in rapid succession send one email (queue with a ~1 minute delay and skip if the recipient already read it via `ticket_reads`).
-- **Email threading:** `Message-ID` / `In-Reply-To` / `References` headers, subject `[KCP-1042] ...`, `Reply-To` as plus-address (`support+KCP-1042.<token>@domain`) for inbound (§9).
+- **Email threading (outbound only):** `Message-ID` / `In-Reply-To` / `References` headers and subject `[KCP-1042] ...` so mail clients group a ticket's notifications into one conversation. Emails contain an excerpt and a button linking to the ticket; **replying to the email does not add a reply** (inbound email is out of scope), and the footer says so.
 - Replace `Mail\SupportTicket`'s use of the `errors` mailer for staff alerts with the default mailer (keep `errors` as fallback for the legacy path).
 - Notification content for email/panel is built from sanitized `body_text` excerpts; internal notes never appear in any requester-facing channel (tested).
 
@@ -204,7 +232,7 @@ interface TicketTrackerDriver
 1. **Generic webhook** (signed JSON, any URL).
 2. **GitHub Issues** (token or GitHub App; issue + comments + labels + state; time logged as a structured comment since GitHub has no native time tracking).
 3. **GitLab Issues** (self-hosted or gitlab.com; supports native time tracking via `/spend` and time stats).
-4. **Jira** (issue + worklog API for time), **Linear**, then Gitea/Forgejo, Azure DevOps, Redmine, Plane, ClickUp, Trello, Asana, and time tools such as Clockify/Toggl/Harvest as "time" drivers. All added later without core changes.
+4. **Later, not in the first release:** Jira (issue + worklog API for time), Linear, Gitea/Forgejo, Azure DevOps, Redmine, Plane, ClickUp, Trello, Asana, and time tools such as Clockify/Toggl/Harvest as "time" drivers. All added without core changes through the driver contract.
 
 ### 9.4 Behaviour
 - **Triggers:** manual "Create issue in…" button in the admin ticket view, and optional auto-rules per integration (type, category, priority, org plan, tag).
@@ -220,14 +248,14 @@ interface TicketTrackerDriver
 ## 10. UI
 
 ### Org side (`resources/js/Pages/Organization/Tickets/`)
-- **List:** tabs (Open / Waiting on us / Waiting on you / Resolved / All), search, filter by type/app, unread dots, "mine vs organisation".
-- **Create:** subject, type, category, related app (dropdown of the org's app instances), impact, rich text, attachments, CC colleagues. Show relevant active **announcements** and the documentation link before submit (deflection). Detect pasted secrets (password/API-key patterns) and warn.
-- **Detail:** threaded conversation (public only), status chip, attachments list, reply composer, quote reply, edit own message (until a staff reply or a time window, with "edited" badge and revision history kept), close/reopen, watchers, CSAT prompt on resolve, "new replies" banner driven by polling.
+- **List:** opens on **"Assigned to me"** (`?assigned=me`, §3.1); switch to All / Unassigned / a colleague. Status tabs (Open / Waiting on us / Waiting on you / Resolved / All), search, filter by type/app, unread dots. Columns include **Customer assignee** and **Support assignee** (name only).
+- **Create:** subject, type, category, related app (dropdown of the org's app instances), impact, rich text, attachments, CC colleagues, and an **Assigned to** picker for the customer assignee (org members, default: me). The support assignee is not selectable by customers. Show relevant active **announcements** and the documentation link before submit (deflection). Detect pasted secrets (password/API-key patterns) and warn.
+- **Detail:** header shows **Customer assignee** (editable by any org member) and **Support assignee** (read-only); threaded conversation (public only), status chip, attachments list, reply composer, quote reply, edit own message (until a staff reply or a time window, with "edited" badge and revision history kept), close/reopen, watchers, CSAT prompt on resolve, "new replies" banner driven by polling.
 - **Entry points:** sidebar item with unread badge (via `MenuService`), and the existing `?` help-desk icon becomes "New ticket" (modal reused for quick create → redirects to the created ticket).
 
 ### Admin side (`resources/js/Pages/Admin/Tickets/`, under `/admin/support`)
-- **Inbox:** saved views (Unassigned, Mine, All open, Overdue/At risk, Waiting on customer, Closed), column sort, filters (org, assignee, status, priority, category, tag, app, SLA state), full-text search, bulk actions (assign, status, priority, tag, close, merge).
-- **Detail:** conversation with a public-reply / internal-note toggle, canned-response picker with variables (`{{requester.name}}`, `{{org.name}}`), assignee/priority/status/category/tag controls, time-entry panel, linked-issues panel (create/link issue, external state), activity timeline, collision hint ("Alex is replying") via polling, merge/duplicate.
+- **Inbox:** opens on **Mine** (`support_assignee_id = me`, §3.1). Other saved views: Unassigned (with count badge), All open, Overdue/At risk, Waiting on customer, Closed. Columns include support assignee and customer assignee. Column sort, filters (org, assignee, status, priority, category, tag, app, SLA state), full-text search, bulk actions (assign, status, priority, tag, close, merge).
+- **Detail:** conversation with a public-reply / internal-note toggle, canned-response picker with variables (`{{requester.name}}`, `{{org.name}}`), support-assignee and customer-assignee pickers (customer picker limited to that org's members), priority/status/category/tag controls, time-entry panel, linked-issues panel (create/link issue, external state), activity timeline, collision hint ("Alex is replying") via polling, merge/duplicate.
 - **Context sidebar** (the most valuable differentiator here): organization (plan, status, subscription), the requester, app instances and their status, recent failed tasks and `TaskEvent`s, domains, with deep links to the existing `admin/organizations/{id}` pages. Any of this is only readable by agents.
 - **Settings:** categories, SLA policies and business hours, canned responses, auto-assign rules (round-robin/least-loaded), email settings, attachment limits, retention, integrations.
 - **Reports** (extend the admin dashboard): volume, first-response and resolution times, SLA compliance, CSAT, by category/app/org, time spent per org and app.
@@ -241,12 +269,13 @@ interface TicketTrackerDriver
 
 | Feature | Why | Phase |
 |---|---|---|
+| Assigned-to on both sides, default "assigned to me" list | Requested; keeps each person's list focused | 1 |
 | Internal notes and @mentions | Agents need private discussion without leaking it | 1 |
 | Ticket context (org, app instance, server state, recent failed tasks) | Biggest time saver for hosting-style support | 1 |
 | Activity timeline / audit log (`ticket_events`) | Accountability; also feeds integrations | 1 |
 | Categories, tags, priority and impact | Routing and triage | 1 |
 | Unread tracking and watchers/CC | Teams share one ticket | 3 |
-| Email threading + **inbound reply by email** | Most users reply from their inbox. Reply parsing strips quoted text and signatures; verify the sender; plus-address token; Mailgun/Postmark/SES inbound webhook or IMAP poll as drivers | 5 |
+| Outbound email threading | Notifications group into one conversation in mail clients (inbound reply-by-email is out of scope) | 3 |
 | SLA policies, business hours, breach notifications | Core expectation for paid support | 5 |
 | Canned responses / macros | Agent efficiency | 5 |
 | Auto-assign, auto-close, pending reminders | Hygiene without manual work | 5 |
@@ -275,21 +304,21 @@ interface TicketTrackerDriver
 
 Each phase is a separate PR (or short stack) that ships behind the `tickets` flag, with Pest tests and updated translations.
 
-**Phase 0: decisions and foundations (1–2 days).** Resolve the open questions below, add the `tickets` toggle, `tickets` private disk, `ticket` purifier profile, enums, and `TicketPolicy`/`manage-tickets` gate skeletons.
+**Phase 0: foundations (1–2 days).** Settle the remaining open questions below, add the `tickets` toggle, `tickets` private disk, `ticket` purifier profile, enums, and the `TicketPolicy` skeleton (members: full org access; staff: `admin` gate via `manage()`).
 
 **Phase 1: core tickets (MVP, replaces the email-only modal).**
-Migrations, models, `TicketService`/`TicketWorkflow`, number generator. Org list/create/detail/reply/close/reopen/edit-own-message. Admin inbox/detail/reply/internal-notes/assign/status/priority/category/tags. `TicketEditor.vue` + sanitization. Context sidebar. `ticket_events`. Basic mail + panel notifications (create, reply, status). Help-desk modal now creates a real ticket. Legacy email path kept when the flag is off.
+Migrations, models, `TicketService`/`TicketWorkflow`, number generator. Org list/create/detail/reply/close/reopen/edit-own-message. Admin inbox/detail/reply/internal-notes/status/priority/category/tags. Customer-assignee and support-assignee fields with the default "assigned to me" list on both sides (§3.1), including `TicketService::assign()` and its event/notification. `TicketEditor.vue` + sanitization. Context sidebar. `ticket_events`. Basic mail + panel notifications (create, reply, status). Help-desk modal now creates a real ticket. Legacy email path kept when the flag is off.
 *Exit:* an org user and an admin can complete a full conversation; isolation and XSS tests pass.
 
 **Phase 2: attachments.** Private disk, upload endpoint, binding on create/reply, inline pasted images, download authorization, limits, orphan sweep, thumbnails, optional scanner interface.
 
 **Phase 3: polling and notification depth.** Poll endpoints and `useTicketPolling`, unread tracking, nav badge, watchers/CC, notification preferences, coalescing, email threading headers, panel deep links.
 
-**Phase 4: integrations framework.** Registry, driver contract, schema-driven admin UI, delivery pipeline (queue, retry, circuit breaker, log, redeliver), SSRF guard, generic webhook, then GitHub and GitLab drivers, then Jira and Linear. Time entries and driver time logging.
+**Phase 4: integrations framework.** Registry, driver contract, schema-driven admin UI, delivery pipeline (queue, retry, circuit breaker, log, redeliver), SSRF guard, generic webhook, then GitHub and GitLab drivers. Time entries and driver time logging.
 
-**Phase 5: operations.** SLA and business hours, canned responses, auto-assign/auto-close/reminders, merge, CSAT, reports, inbound email, inbound tracker webhooks (two-way sync), retention and export.
+**Phase 5: operations.** SLA and business hours, canned responses, auto-assign/auto-close/reminders, merge, CSAT, reports, inbound tracker webhooks (two-way sync), retention and export.
 
-**Later:** API, system-generated tickets, incident banner, WebSocket push (Reverb), more tracker/time drivers.
+**Later:** fine-grained permissions (`manage-tickets`, per-category agents), Jira/Linear and further tracker/time drivers, API, system-generated tickets, incident banner, WebSocket push (Reverb). Inbound email is not planned.
 
 ## 14. Testing strategy
 
@@ -299,15 +328,15 @@ Migrations, models, `TicketService`/`TicketWorkflow`, number generator. Org list
 - **Browser tests** (`tests/Browser`): create ticket with an attachment, reply, see polled reply appear, admin reply, edit.
 - **Static analysis and formatting:** phpstan (larastan, already configured), Pint, `vue-tsc`, ESLint.
 
-## 15. Open questions (need your call before Phase 1)
+## 15. Open questions
 
-1. **Visibility:** should every member of an org see all of that org's tickets, or only the requester plus org owners/billing managers (my default)?
-2. **Agent permission:** is a new `manage-tickets` permission desirable, or is control-panel admin enough for now?
-3. **Edit window:** how long may a requester edit a message (my default: until a staff reply, max 15 minutes), and may they edit the subject?
-4. **Priority:** requester picks "impact" only and staff set priority (my default), or can customers choose priority?
-5. **Inbound email:** is it required for v1, or is outbound email + in-app replies enough (my default: phase 5)?
-6. **Storage:** local disk or S3-compatible for attachments in production?
-7. **First integrations:** is generic webhook + GitHub + GitLab the right first set, or do you need Jira/Linear sooner?
-8. **Existing `support_email`:** keep as a CC destination for new tickets, or retire it once the inbox exists?
-9. **Suborganizations:** should a parent org see child-org tickets?
-10. **Retention:** default retention period for closed tickets and attachments (my default: indefinite until an admin sets one)?
+Resolved (see "Decisions confirmed" near the top): ticket visibility, permissions, inbound email, first integrations, assignment model and default list view.
+
+Still open, with my defaults if you have no preference:
+
+1. **Edit window:** how long may a member edit their own message? Default: until a staff reply, max 15 minutes. May they edit the subject? Default: yes, until the first staff reply.
+2. **Priority:** members choose "impact" only and staff set priority (default), or can customers choose priority?
+3. **Storage:** local disk or S3-compatible for attachments in production? Default: local disk, S3 selectable by config.
+4. **Existing `support_email`:** keep as a copy/CC destination for new tickets (default during rollout), or retire once the inbox is live?
+5. **Customer-assignee removal:** when the customer assignee leaves the org, fall back to the requester, then null (default), or notify org owners?
+6. **Retention:** default retention for closed tickets and attachments. Default: indefinite until an admin sets one.
