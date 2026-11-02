@@ -104,8 +104,9 @@ class UserPermissionsService
                 );
 
                 $new_access_type = $user->appUserAccessType($app_instance);
-                $previous_storage = $app_instance->plan->setting("{$previous_access_type}.storage") ?? 0;
-                $new_storage = $app_instance->plan->setting("{$new_access_type}.storage") ?? 0;
+                $app_subscription = Subscription::appInstanceSubscription($app_instance, $app_instance->plan);
+                $previous_storage = $app_subscription->userStorage($previous_access_type) ?? 0;
+                $new_storage = $app_subscription->userStorage($new_access_type) ?? 0;
 
                 if ($previous_storage !== $new_storage) {
                     Action::dispatch($app_instance->application->slug, 'process_user_options', [$app_instance, $user, $permissions_input], $task);

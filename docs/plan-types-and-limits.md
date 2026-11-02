@@ -1,6 +1,6 @@
 # Plan types (Pay per App vs Packaged) and their limits
 
-Status: proposal with the four open questions answered (section 6). Nothing here is implemented yet.
+Status: the four open questions are answered (section 6). Phase 0 (partly), Phase 1 and Phase 4 are implemented; see "Implementation status" in section 5. Phases 2 and 3 are not started.
 
 ## 1. How the two plan types work today
 
@@ -83,6 +83,21 @@ The numbers in the "Suggested default" column are **starting points, not busines
 
 Do these in order. Each phase is separately shippable.
 
+### Implementation status
+
+| Step | State |
+|---|---|
+| Phase 0: characterization tests | Partly done. Tests added for the changed behavior (`tests/Feature/Subscription/PlanTypeBillingTest.php`); the `add-user` / `domain_max = 0` / `{slug}.max = 0` characterization tests and the production data query are still to do |
+| Phase 1.1: no billing through app plans under Packaged (gap 4) | Done (`AppInstancePlanService::isPackaged()`) |
+| Phase 1.2: bill email under Pay per App (gap 3) | Done (`BasePlanService::billableEntities()`) |
+| Phase 1.3: package per-user storage wins (gap 5) | Done for per-user storage (`AppInstancePlanService::userStorage()`). **Not yet done:** add-on storage block size and cap (`storage.amount`, `storage.max`), which `AdditionalStorageService` still reads from the app plan |
+| Phase 1.4: org-wide cap for Pay per App (gap 2) | No code, by decision |
+| Phase 1.5: block removing app plans still in use (gap 6) | Done for Pay per App plans, server side only (`Admin\Plans::update()`). Packaged plans (swapping the single app plan) and the "move these instances" UI are not done |
+| Phase 2, Phase 3 | Not started |
+| Phase 4: example tiers on first install | Done (`ExamplePlansService`, called from `Setup::build()`) |
+
+Behavior to be aware of: under a Packaged plan the package's per-user storage is used only when it is set. A blank package value falls back to the app plan's, so existing packages with blank storage keep their current quotas. Phase 3 makes the package value required.
+
 ### Phase 0: Lock in current behavior (small)
 - Add characterization tests for each gap above so any change is intentional. There is already coverage in `tests/Feature/Subscription/` (`BasePlanTypePricingTest`, `BaseMaximumsTest`, `ActivateAppGateTest`) and `tests/Feature/Admin/PlansTest.php`. Extend those, covering `add-user` on an `app`-type plan, `domain_max = 0` on both services, and `{slug}.max = 0`.
 - Query production data (or a staging copy) for plans where the old and new semantics would differ, e.g. `domain_max = 0` on an app plan, `{slug}.max = 0`. This sizes the migration in Phase 2.
@@ -103,6 +118,27 @@ Do these in order. Each phase is separately shippable.
 1. `config/plans.php` with the platform ceilings from section 4. `Plans::update()` and `Admin/Applications/Plans` (and `BulkEdit`) validate against it, and against the cross-field rules (`basic.storage ≤ standard.storage`, `{slug}.max ≤ application.max`, `max` is a multiple of `amount`).
 2. Warn on save when a new limit is below the current usage of any subscriber (count via `Plan::subscribers()` / `AppPlan::subscribers()`). Grandfather, but surface it on the plan page.
 3. On the subscriber pages (`Account/Subscription`), show usage against each limit and the next plan that would raise it. `SubscriptionService::plansWithHigherAppLimit()` already does this for apps.
+
+### Phase 4: Example tiers on first install
+When kumulicp is installed for the first time (`Setup::build()`), create three example Packaged plans so a new administrator has something to copy from instead of an empty plan list. They use the "suggested default" values from section 4.
+
+| | Starter | Standard | Plus |
+|---|---|---|---|
+| Active users (`standard.max`) | 10 | 50 | 200 |
+| Volunteers (`basic.max`, bundle of 5) | 50 | 250 | 1,000 |
+| Storage per user (active / volunteer) | 5 / 1 GB | 5 / 1 GB | 5 / 1 GB |
+| Add-on storage | 10 GB blocks, max 10 | 10 GB blocks, max 10 | 10 GB blocks, max 10 |
+| Apps in total (`application.max`) | 3 | 6 | 12 |
+| Email accounts / GB each (set, but email is off) | 5 / 1 | 25 / 2 | 100 / 5 |
+| Domains (`domain_max`, connect only) | 1 | 3 | 10 |
+
+Rules:
+- Type `package`, org type `business`, status `hidden`, not default, not archived. Nothing is offered to organizations until an administrator reviews and publishes a tier.
+- No prices or Stripe price ids, and `payment_enabled` is off. Those belong to the administrator.
+- No apps are attached (none exist at install time); the administrator adds them on the plan page.
+- Email stays disabled because it needs an email server; the email limits are pre-filled for when it is turned on.
+- Created only if no non-archived plan exists, so a re-run or an install that already has its own plans never gets duplicates. A failure while creating them is reported but does not abort the install.
+- Names and descriptions are translated (`resources/lang/*/setup.php`, `example_plans`).
 
 ### Out of scope until decided
 - Whether Pay per App should also support an org-wide minimum or base fee (currently no base price at the org level).

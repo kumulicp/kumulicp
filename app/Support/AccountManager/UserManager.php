@@ -29,7 +29,7 @@ abstract class UserManager
         $subscription = Subscription::app_instance($app_instance);
         $additional_storage = new AdditionalStorageService($app_instance->organization, 'user', $this->attribute('username'), $app_instance);
         $access_type = $this->appUserAccessType($app_instance);
-        $base_storage = $subscription->setting("{$access_type}.storage");
+        $base_storage = $subscription->userStorage($access_type);
 
         return $base_storage + $additional_storage->quota();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\AppInstance;
 use App\Application;
 use App\Http\Controllers\Controller;
 use App\Plan;
@@ -232,6 +233,13 @@ class Plans extends Controller
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
         $plan = Plan::where('id', $plan_id)->first();
+
+        // Pay per App instances pick their own app plan, so one still in use must not silently disappear from the plan
+        $in_use = $this->removedAppPlansInUse($plan, $request->type, $request->app_plans ?? []);
+        if ($in_use !== []) {
+            return redirect()->back()->withInput()->with('error', __('admin.plans.app_plans_in_use', ['apps' => implode(', ', $in_use)]));
+        }
+
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->org_type = $request->org_type;
@@ -307,6 +315,42 @@ class Plans extends Controller
         Cache::flush();
 
         return redirect('/admin/service/plans')->with('success', __('admin.plans.updated', ['plan' => $plan->name]));
+    }
+
+    /**
+     * Names of the apps whose app plans would be removed from a Pay per App plan while
+     * active instances of its subscribers still use them.
+     *
+     * @return array<int, string>
+     */
+    private function removedAppPlansInUse(Plan $plan, string $new_type, array $new_app_plans): array
+    {
+        if ($plan->type !== 'app' || $new_type !== 'app') {
+            return [];
+        }
+
+        $in_use = [];
+        foreach (Application::all() as $app) {
+            $current_ids = collect(Arr::wrap(Arr::get($plan->app_plans, "{$app->slug}.plans")))->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id);
+            $kept_ids = collect(Arr::wrap(Arr::get($new_app_plans, "{$app->slug}.plans")))->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id);
+            $removed_ids = $current_ids->diff($kept_ids)->values()->all();
+
+            if ($removed_ids === []) {
+                continue;
+            }
+
+            $used = AppInstance::notDeactivated()
+                ->where('application_id', $app->id)
+                ->whereIn('plan_id', $removed_ids)
+                ->whereHas('organization', fn ($query) => $query->where('plan_id', $plan->id))
+                ->exists();
+
+            if ($used) {
+                $in_use[] = $app->name;
+            }
+        }
+
+        return $in_use;
     }
 
     public function remove($plan_id)

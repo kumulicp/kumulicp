@@ -259,6 +259,7 @@ return [
         'deleted' => ':plan eliminado',
         'archived' => ':plan archivado',
         'unarchived' => ':plan desarchivado',
+        'app_plans_in_use' => 'Una o más organizaciones de este plan aún usan planes de estas aplicaciones: :apps. Muévalas a otro plan antes de quitarlas de este plan.',
         'order_updated' => 'Orden de planes actualizado',
         'bulkEdit' => 'Edición Masiva',
     ],

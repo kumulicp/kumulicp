@@ -335,6 +335,7 @@ return [
         'deleted' => ':plan deleted',
         'archived' => ':plan archived',
         'unarchived' => ':plan unarchived',
+        'app_plans_in_use' => 'One or more organizations on this plan still use plans of these apps: :apps. Move them to another plan before removing them from this plan.',
         'order_updated' => 'Plan order updated',
         'bulkEdit' => 'Bulk Edit',
     ],

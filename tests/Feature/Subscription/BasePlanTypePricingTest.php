@@ -36,16 +36,16 @@ it('package plan exposes pricing options when price ids are configured', functio
     expect($service->pricingOptions())->not->toBeEmpty();
 });
 
-it('app plan with price ids still returns empty pricing options due to type guard', function () {
+it('app plan with price ids only exposes email as a pricing option', function () {
     $organization = Organization::find(1);
     OrganizationFacade::setOrganization($organization);
 
-    // base_1 is type='app' and has price_ids set in its settings
+    // base_1 is type='app' and has price_ids set for every component; only email is org-level
     $service = new BasePlanService($organization, $this->support->base_1);
 
     expect($this->support->base_1->type)->toBe('app');
     expect($this->support->base_1->setting('base.price_id'))->not->toBeNull();
-    expect($service->pricingOptions())->toBe([]);
+    expect(array_keys($service->pricingOptions()))->toBe(['email']);
 });
 
 it('package plan returns non-zero total price when base price is configured', function () {
@@ -80,12 +80,12 @@ it('package plan returns stats from base plan settings when prices are configure
     expect($service->stats())->not->toBeEmpty();
 });
 
-it('app plan returns empty stats regardless of settings', function () {
+it('app plan returns only email stats regardless of other settings', function () {
     $organization = Organization::find(1);
     OrganizationFacade::setOrganization($organization);
 
     $service = new BasePlanService($organization, $this->support->base_1);
 
     expect($this->support->base_1->type)->toBe('app');
-    expect($service->stats())->toBe([]);
+    expect(array_keys($service->stats()))->toBe(['email']);
 });

@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Admin;
 
+use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\AppVersion;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\AccountManager;
@@ -597,6 +599,93 @@ class PlansTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('plans', ['id' => $plan->id]);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Removing app plans that subscribers still use
+    // ---------------------------------------------------------------------------
+
+    /**
+     * A Pay per App plan offering two plans of one app, with the seeded organization
+     * subscribed to it and running an instance on $instance_on ('kept' or 'removed').
+     *
+     * @return array{plan: Plan, app: Application, kept: AppPlan, removed: AppPlan}
+     */
+    private function payPerAppPlanWithInstance(string $instance_on): array
+    {
+        $app = Application::factory()->create(['slug' => 'in_use_app', 'name' => 'In Use App', 'enabled' => true]);
+        [$kept, $removed] = AppPlan::factory()->count(2)->create(['application_id' => $app->id])->all();
+        $plan = Plan::factory()->create([
+            'type' => 'app',
+            'app_plans' => [$app->slug => ['max' => 1, 'plans' => [$kept->id, $removed->id]]],
+        ]);
+
+        $organization = Organization::find(1);
+        $organization->plan_id = $plan->id;
+        $organization->save();
+
+        AppInstance::factory()->create([
+            'organization_id' => $organization->id,
+            'application_id' => $app->id,
+            'version_id' => AppVersion::factory()->create(['application_id' => $app->id])->id,
+            'plan_id' => $instance_on === 'kept' ? $kept->id : $removed->id,
+        ]);
+
+        return ['plan' => $plan, 'app' => $app, 'kept' => $kept, 'removed' => $removed];
+    }
+
+    public function test_pay_per_app_plan_cannot_drop_an_app_plan_that_an_instance_still_uses()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('removed');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [$setup['app']->slug => ['max' => 1, 'plans' => [$setup['kept']->id]]],
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(
+            [$setup['kept']->id, $setup['removed']->id],
+            $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']
+        );
+    }
+
+    public function test_pay_per_app_plan_cannot_drop_an_app_whose_plans_are_in_use()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('removed');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [],
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(
+            [$setup['kept']->id, $setup['removed']->id],
+            $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']
+        );
+    }
+
+    public function test_pay_per_app_plan_can_drop_an_app_plan_that_no_instance_uses()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('kept');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [$setup['app']->slug => ['max' => 1, 'plans' => [$setup['kept']->id]]],
+            ]))
+            ->assertRedirect('/admin/service/plans')
+            ->assertSessionMissing('error');
+
+        $this->assertEquals([$setup['kept']->id], $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']);
     }
 
     // ---------------------------------------------------------------------------
