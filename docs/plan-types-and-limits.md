@@ -1,6 +1,6 @@
 # Plan types (Pay per App vs Packaged) and their limits
 
-Status: proposal. Nothing here is implemented yet.
+Status: proposal with the four open questions answered (section 6). Nothing here is implemented yet.
 
 ## 1. How the two plan types work today
 
@@ -31,7 +31,7 @@ All are from reading the code. I have not run the test suite or reproduced them.
    - `BasePlanService::isMaxApps()` treats `{slug}.max = 0` as "no instances allowed", and the form defaults it to 0. A missing key defaults to 1.
    - `domain_max`: base plan `0` means none allowed (`!is_null` check), app plan `0` means unlimited (`!$domain_max`).
    - The controllers cast blanks with `(int)`, so an emptied field is stored as 0.
-2. **Pay per App has no org-wide ceilings.** `standard.max` and `application.max` are nulled on save. `add-user` checks `Subscription::base()->isMax('standard')`, which can never be true for this type, so control-panel users are unlimited. Total apps is unlimited too, bounded only by `{slug}.max` for each app.
+2. **Pay per App has no org-wide ceilings.** `standard.max` and `application.max` are nulled on save. `add-user` checks `Subscription::base()->isMax('standard')`, which can never be true for this type, so control-panel users are unlimited. Total apps is bounded only by `{slug}.max` for each app. **Decision: this is intended.** App plan limits are the only caps for Pay per App, so the work here is to make those required and consistent, not to add an org-wide ceiling.
 3. **Email price is editable but never billed on Pay per App.** The email section of `PlanEdit.vue` is not behind the `package` condition, and `email.*` prices are kept on save. But `BasePlanService::pricingOptions()` returns `[]` for `app`, so Stripe never sees them.
 4. **Packaged plans can double-bill if an app plan carries prices.** `SubscriptionService::paidSubscriptions()` includes every app instance plan with `payment_enabled`, and `StripeGateway::stripePricing()` sums all of their `pricingOptions()`. `AppInstancePlanService` has no guard for `package`, unlike `BasePlanService` for `app`. This only happens if an admin gave the app plan prices, but nothing prevents it.
 5. **Per-user storage comes from different places.** `AppStorageService::userStorage()` always reads `standard.storage` and `basic.storage` from the app plan. The package form sets them on the base plan (`BasePlanService::standardStorageTotal()` uses those). On a packaged plan the value the admin types in the package form is not what the app gets.
@@ -54,14 +54,14 @@ The numbers in the "Suggested default" column are **starting points, not busines
 
 | Setting | Packaged | Pay per App | Suggested default / ceiling |
 |---|---|---|---|
-| `standard.max` (active users) | **Required.** Org-wide cap | Not used. Cap comes from the app plan. See `application.max` row for the org-level backstop | Tiers, e.g. 10 / 50 / 200. Ceiling 10,000 |
+| `standard.max` (active users) | **Required.** Org-wide cap | Not used. The app plan's cap governs (decided: no org-wide ceiling) | Tiers, e.g. 10 / 50 / 200. Ceiling 10,000 |
 | `basic.max`, `basic.amount` (volunteer users and bundle size) | Required if `basic.name` is set. `max` must be a multiple of `amount` and at least `amount` | Not used | e.g. bundle 5, max 5 to 10 times standard max |
 | `standard.storage`, `basic.storage` (GB per user) | **Required.** `basic` must be ≤ `standard`. This value is what apps use (gap 5) | Not used. App plan owns it | e.g. 5 / 1 GB. Ceiling 100 GB |
 | `storage.amount`, `storage.max` (add-on block size, max blocks) | Required if add-on price is set. Explicit `max` | Not used. App plan owns it | Block 10 GB, max 10 blocks (matches today's silent default) |
-| `application.max` (total active apps) | **Required.** Must be ≥ the largest `{slug}.max` | Optional org-wide ceiling. Re-enable it for this type (it is nulled today). Gives the backstop missing in gap 2 | e.g. 3 / 6 / 12. Ceiling 50 |
-| `{slug}.max` (instances per app) | Default 1. Allow more only for apps that make sense to run twice. Must be ≤ `application.max` | Same, per app | Default 1. Ceiling 10 |
+| `application.max` (total active apps) | **Required.** Must be ≥ the largest `{slug}.max` | Not used (decided). Total apps is bounded by the enabled apps and each `{slug}.max`. Keep it nulled on save | e.g. 3 / 6 / 12 for Packaged. Ceiling 50 |
+| `{slug}.max` (instances per app) | Default 1. Allow more only for apps that make sense to run twice. Must be ≤ `application.max` | Same, per app. This is the only app-count limit on this type | Default 1. Ceiling 10 |
 | App plans per app | Exactly 1 (already enforced) | 1 or more (already allowed). Each must be non-archived | n/a |
-| `email.max` (accounts) | Required when `email_enabled` | Required when `email_enabled`, and **billed** (gap 3) | e.g. 5 / 25 / 100. Ceiling 1,000 |
+| `email.max` (accounts) | Required when `email_enabled` | Required when `email_enabled`, and **billed at the org level** (decided, gap 3) | e.g. 5 / 25 / 100. Ceiling 1,000 |
 | `email.storage` (GB per mailbox) | Required when `email_enabled` | Same | e.g. 1 to 5 GB. Ceiling 50 |
 | `domain_max` | Required when `domain_enabled`. 0 = none | Same, using the same 0 = none meaning | e.g. 1 / 3 / 10. Ceiling 100 |
 | `suborganizations.enabled` | Allowed. Joint invoicing counts suborgs against the parent's limits (`JointSubscriptionService`) | Allowed. Each suborg keeps its own plan | Off by default |
@@ -89,9 +89,9 @@ Do these in order. Each phase is separately shippable.
 
 ### Phase 1: Fix billing and enforcement gaps (no data migration)
 1. **Gap 4:** in `AppInstancePlanService`, return empty pricing and 0 totals when `Subscription::base()->type === 'package'`. This mirrors the guard `BasePlanService` already has. Add the corresponding admin validation that rejects prices on an app plan only when it is the sole plan selected by a packaged plan.
-2. **Gap 3:** decide email billing at the org level. Recommended: bill it. Change `BasePlanService::pricingOptions()/stats()/totalPrice()` so that for `app` they return only the `email` entity instead of nothing.
-3. **Gap 5:** add one accessor (e.g. `effectiveStoragePerUser($app_instance, $access_type)`) that reads from the base plan when the type is `package` and from the app plan otherwise. Use it in `AppStorageService::userStorage()` and `AdditionalStorageService`.
-4. **Gap 2:** stop nulling `application.max` for `app` in `Plans::update()`. Add an `add-user` backstop for Pay per App: allow if the org has no ceiling, otherwise compare against it.
+2. **Gap 3:** bill email at the org level (decided). Change `BasePlanService::pricingOptions()/stats()/totalPrice()` so that for `app` they return only the `email` entity instead of nothing.
+3. **Gap 5:** the package form wins (decided). Add one accessor (e.g. `effectiveStoragePerUser($app_instance, $access_type)`) that reads from the base plan when the type is `package` and from the app plan otherwise. Use it in `AppStorageService::userStorage()` and `AdditionalStorageService`.
+4. **Gap 2:** no code change (decided). Instead, make `standard.max` and `basic.max` required on every priced app plan so that "unlimited because someone left it blank" can't happen on Pay per App. This is enforced in Phase 3 validation.
 5. **Gap 6:** when an app plan is removed from a Pay per App plan's list, or the plan type changes, list the affected instances in the admin UI and block the save (or require an explicit "move these to plan X" choice). This replaces today's warning-only text.
 
 ### Phase 2: One meaning for limits (needs migration and UI change)
@@ -106,11 +106,12 @@ Do these in order. Each phase is separately shippable.
 
 ### Out of scope until decided
 - Whether Pay per App should also support an org-wide minimum or base fee (currently no base price at the org level).
+- An org-wide user or app ceiling for Pay per App (decided against).
 - Metered or overage billing instead of hard caps.
 
-## 6. Questions to resolve before Phase 1
+## 6. Decisions
 
-1. Email on Pay per App: bill it (recommended) or hide the fields?
-2. Packaged storage: confirm the package form's per-user storage should win over the app plan's.
-3. Should Pay per App have an org-wide ceiling for users and apps at all, or is "sum of app-plan limits" enough? This plan assumes an optional ceiling.
-4. Final numbers for the "Suggested default" column.
+1. **Email on Pay per App is billed** at the org level (Phase 1, step 2).
+2. **Packaged storage:** the package form's per-user storage wins over the app plan's (Phase 1, step 3).
+3. **Pay per App has no org-wide user or app ceiling.** App plan limits are enough, so they become required (gap 2, Phase 3).
+4. **Defaults:** the suggested defaults in section 4 are the starting values. Tune them per plan when creating real tiers.
