@@ -71,6 +71,14 @@ class TicketMessage extends Model
     }
 
     /**
+     * @return HasMany<TicketAttachment, $this>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class, 'ticket_message_id')->orderBy('id');
+    }
+
+    /**
      * @return HasMany<TicketMessageRevision, $this>
      */
     public function revisions(): HasMany

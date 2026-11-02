@@ -9,6 +9,7 @@ use App\Ticket;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -42,6 +43,7 @@ abstract class TicketsTestCase extends TestCase
         (new TestSupports)->seed();
         config(['toggle.flags.tickets' => true]);
         Notification::fake();
+        Storage::fake('tickets');
 
         $this->admin = User::find(1);
         $this->orgA = Organization::factory()->create(['slug' => 'acme', 'name' => 'Acme', 'plan_id' => 1]);
@@ -79,9 +81,12 @@ abstract class TicketsTestCase extends TestCase
         ], $data));
     }
 
-    protected function reply(Ticket $ticket, User $author, string $body = '<p>Reply</p>', bool $staff = false, bool $internal = false)
+    /**
+     * @param  list<int>  $attachmentIds
+     */
+    protected function reply(Ticket $ticket, User $author, string $body = '<p>Reply</p>', bool $staff = false, bool $internal = false, array $attachmentIds = [])
     {
-        return $this->service()->reply($ticket, $author, $body, $staff, $internal);
+        return $this->service()->reply($ticket, $author, $body, $staff, $internal, $attachmentIds);
     }
 
     protected function status(Ticket $ticket): TicketStatus

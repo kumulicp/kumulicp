@@ -4,7 +4,7 @@ Status: proposal. Nothing here is built yet.
 
 ## Implementation status
 
-Phases 0 and 1 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phases 2 to 5 are not started.
+Phases 0, 1 and 2 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phases 3 to 5 are not started.
 
 **Done**
 - Flag, `tickets` private disk, `ticket` purifier profile, enums, `TicketPolicy` (members: whole org; staff: `admin` gate through `manage()`), `config/tickets.php`.
@@ -17,14 +17,34 @@ Phases 0 and 1 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind 
 - The help desk modal creates a real ticket when the flag is on; the legacy email path is unchanged when it is off. New tickets are still copied to `support_email` (`TICKETS_COPY_SUPPORT_EMAIL`).
 - English and Spanish strings.
 
+**Phase 2 (attachments), done**
+- Two-step upload: `POST /support/tickets/uploads` makes a private draft owned by the uploader; sending a message with `attachment_ids` binds it. Drafts survive a failed form and are deleted after 24 hours (`PruneTicketUploads`, hourly). Uploads can be discarded with `DELETE /support/tickets/uploads/{id}`.
+- Private `tickets` disk, random object names, original name kept only for display (path and control characters stripped). Nothing is served except through `GET /support/tickets/attachments/{id}`.
+- Accepted by an allow-list of extensions **and** the type detected from the file contents (`finfo`), so a renamed program, an HTML page called `logo.png`, or a PDF called `.png` is refused. SVG, HTML, scripts and executables are not on the list.
+- Limits: 10 MB per file, 10 files and 25 MB per message, 50 waiting uploads per person (`config/tickets.php`, overridable with `TICKETS_ATTACHMENT_*`).
+- Downloads: `nosniff`, a sandboxing CSP of their own (the global CSP middleware no longer overwrites a stricter one), `private` caching; only raster images may display in the browser, everything else downloads (`?download=1` forces it for images too).
+- Access follows the message: customers of the ticket's organization open files on public messages; files on internal notes are staff-only; drafts are private to the uploader. Anything not allowed is a 404.
+- Screenshots pasted or dropped into the editor are uploaded as attachments and shown inline. The sanitiser keeps an `<img>` only when it points at one of the sender's own attachments for that message (checked against real HTMLPurifier output with remote, `data:`, `javascript:` and path-trick sources). A message may be only files or only a picture.
+- `AttachmentScanner` contract (`tickets.attachments.scanner`); an infected or rejected file is refused at upload.
+- Picker with drag and drop, progress bars and per-file errors on the new-ticket, customer reply and staff reply forms; attachments listed under each message with image previews.
+
+**Left out of Phase 2 on purpose**
+- Thumbnails and EXIF stripping (images are shown at their original size, capped by CSS). The `intervention/image` 4 API could not be exercised in the build sandbox; worth adding with a test environment that can run it.
+- A ClamAV implementation of the scanner (only the contract and hook).
+- A per-organization storage quota, and deleting files when a ticket is purged or a message is redacted (there is no purge or redaction flow yet; that is Phase 5).
+- Adding files while editing a sent message (edits keep the message's own images but cannot add new ones).
+- One neutral download URL is used instead of a per-ticket path, so the same link in message HTML works for customers and staff.
+- Deployment: PHP's `upload_max_filesize`/`post_max_size` and the proxy/ingress body size must be at least the limits above.
+
 **Differences from the plan above**
 - The assigned filter is not remembered in `localStorage`; the list always opens on "assigned to me" and the choice lives in the URL. This follows the instruction that only your own tickets show initially.
 - "Leave the page with an unsent message" warning is not built; unsent text is kept as a draft in the browser instead.
-- Watchers/CC, unread tracking and polling are Phase 3. Attachments are Phase 2, so the `ticket` sanitiser profile allows no images yet.
+- Watchers/CC, unread tracking and polling are Phase 3.
 
 **Verification**
 - Vue pages compile (`vite build`) and pass ESLint; PHP passes `php -l` and Pint; the sanitiser profile was exercised directly against HTMLPurifier with XSS payloads.
-- The Pest tests in `tests/Feature/Tickets` and `tests/Unit/TicketWorkflowTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php` before merging.
+- The Pest tests in `tests/Feature/Tickets`, `tests/Unit/TicketWorkflowTest.php` and `tests/Unit/AttachmentTypesTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php tests/Unit/AttachmentTypesTest.php` before merging.
+- What was exercised for real in the sandbox: all migrations up/down on SQLite, the file-type allow-list against genuine and disguised files with the real `finfo`, and the sanitiser (including image handling) against real HTMLPurifier.
 
 ## 1. Where we are today
 

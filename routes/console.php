@@ -10,6 +10,7 @@ use App\Console\Calls\DispatchTasks;
 use App\Console\Calls\ExpiredSubscriptionsCheck;
 use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
+use App\Console\Calls\PruneTicketUploads;
 use App\Console\Calls\RecurringBackups;
 use App\Console\Calls\ScanUpdateDrift;
 use App\Console\Calls\ScheduledOrganizationDeletionCheck;
@@ -54,6 +55,7 @@ Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-
 Schedule::call(new ApplyPendingAppChanges)->name('apply-pending-app-changes')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new SweepTicketAssignees)->daily()->at('04:00');
+Schedule::call(new PruneTicketUploads)->hourly();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::call(new SyncApplicationReadiness)->name('sync-application-readiness')->hourly()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();

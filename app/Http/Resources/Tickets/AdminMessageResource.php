@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Tickets;
 
+use App\Services\Tickets\AttachmentPresenter;
 use App\Services\Tickets\TicketService;
 use App\TicketMessage;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class AdminMessageResource extends JsonResource
             'mine' => $mine,
             'body_html' => $this->redacted_at ? '' : $this->body_html,
             'redacted' => $this->redacted_at !== null,
+            'attachments' => AttachmentPresenter::collection($this->resource->attachments),
             'edited_at' => $this->edited_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'can_edit' => $mine && app(TicketService::class)->canEditMessage($this->resource, $viewer, true),

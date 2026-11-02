@@ -102,10 +102,11 @@ return [
         'custom_elements' => [
             ['u', 'Inline', 'Inline', 'Common'],
         ],
-        // Ticket messages. No images/styles/iframes; attachments are added separately.
+        // Ticket messages. No styles/iframes; images only survive if they point at a ticket attachment.
         'ticket' => [
             'HTML.Doctype' => 'HTML 4.01 Transitional',
-            'HTML.Allowed' => 'p,br,b,strong,i,em,u,s,strike,ul,ol,li,h3,h4,blockquote,pre,code,a[href|title]',
+            // img is allowed here but TicketHtml then drops every image that is not one of our own attachments
+            'HTML.Allowed' => 'p,br,b,strong,i,em,u,s,strike,ul,ol,li,h3,h4,blockquote,pre,code,a[href|title],img[src|alt]',
             'AutoFormat.RemoveEmpty' => true,
             'URI.AllowedSchemes' => ['http' => true, 'https' => true, 'mailto' => true],
             'HTML.TargetBlank' => true,

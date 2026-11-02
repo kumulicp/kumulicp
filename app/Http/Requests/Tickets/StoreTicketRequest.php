@@ -30,6 +30,8 @@ class StoreTicketRequest extends FormRequest
             'category_id' => ['nullable', 'integer', Rule::exists('ticket_categories', 'id')->where('active', true)],
             'app_instance_id' => ['nullable', 'integer', Rule::exists('app_instances', 'id')->where('organization_id', $organization_id)],
             'customer_assignee_id' => ['nullable', 'integer'],
+            'attachment_ids' => ['sometimes', 'array', 'max:'.config('tickets.attachments.max_files')],
+            'attachment_ids.*' => ['integer'],
         ];
     }
 }
