@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Plan;
+use App\Policies\TicketPolicy;
 use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Application\ApplicationReadiness;
 use App\Services\Organization\JointSubscriptionService;
@@ -17,6 +18,7 @@ use App\Support\Facades\Billing;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\Support\Facades\Tenancy;
+use App\Ticket;
 use App\User;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\Gate;
@@ -31,6 +33,8 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Gate::policy(Ticket::class, TicketPolicy::class);
+
         /* Admin */
         Gate::define('admin', function (User $user, ?UserManager $other_user = null) {
             $user = $other_user ?? AccountManager::users()->find($user->username);

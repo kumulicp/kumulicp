@@ -2,6 +2,30 @@
 
 Status: proposal. Nothing here is built yet.
 
+## Implementation status
+
+Phases 0 and 1 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phases 2 to 5 are not started.
+
+**Done**
+- Flag, `tickets` private disk, `ticket` purifier profile, enums, `TicketPolicy` (members: whole org; staff: `admin` gate through `manage()`), `config/tickets.php`.
+- Tables: `tickets`, `ticket_messages`, `ticket_message_revisions`, `ticket_events`, `ticket_categories`, `ticket_tags` (+ pivot).
+- `TicketService` (create, reply, edit message, subject/impact, status, priority, category, assign, tags, assignee sweep), `TicketWorkflow`, `TicketNotifier`, `TicketHtml`, `TicketStaff`, `TicketTimeline`.
+- Customer side at `/support/tickets`: list (defaults to "assigned to me", empty state shows the other counts), create, detail, reply, edit own message (until staff reply, 15 minutes), edit subject/impact (until first staff response), customer assignee picker, close/reopen.
+- Staff side at `/admin/support/tickets`: inbox (defaults to "Mine", Unassigned view with count, filters, search, "assign to me"), detail with public reply / internal note, status, priority, category, tags, both assignees, optimistic locking, customer context (org, plan, requester, apps, recent tasks), categories modal.
+- `TicketEditor.vue` (TinyMCE, no file browser), in-place message editing, activity timeline, local draft autosave.
+- Email + panel notifications (`TicketActivity`), panel notifications now deep-link to the ticket. Removed or deactivated assignees are handled on the user-deleted event and by a daily sweep.
+- The help desk modal creates a real ticket when the flag is on; the legacy email path is unchanged when it is off. New tickets are still copied to `support_email` (`TICKETS_COPY_SUPPORT_EMAIL`).
+- English and Spanish strings.
+
+**Differences from the plan above**
+- The assigned filter is not remembered in `localStorage`; the list always opens on "assigned to me" and the choice lives in the URL. This follows the instruction that only your own tickets show initially.
+- "Leave the page with an unsent message" warning is not built; unsent text is kept as a draft in the browser instead.
+- Watchers/CC, unread tracking and polling are Phase 3. Attachments are Phase 2, so the `ticket` sanitiser profile allows no images yet.
+
+**Verification**
+- Vue pages compile (`vite build`) and pass ESLint; PHP passes `php -l` and Pint; the sanitiser profile was exercised directly against HTMLPurifier with XSS payloads.
+- The Pest tests in `tests/Feature/Tickets` and `tests/Unit/TicketWorkflowTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php` before merging.
+
 ## 1. Where we are today
 
 | What exists | Where | Limitation |

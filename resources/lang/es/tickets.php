@@ -1,0 +1,92 @@
+<?php
+
+return [
+    'title' => 'Tickets de soporte',
+    'new_ticket' => 'Nuevo ticket',
+    'deleted_user' => 'Usuario eliminado',
+
+    'created' => 'Su ticket ha sido creado.',
+    'reply_sent' => 'Su respuesta ha sido enviada.',
+    'note_added' => 'Nota interna añadida.',
+    'message_updated' => 'Su mensaje ha sido actualizado.',
+    'updated' => 'Ticket actualizado.',
+    'closed' => 'El ticket ha sido cerrado.',
+    'reopened' => 'El ticket ha sido reabierto.',
+
+    'status' => [
+        'open' => 'Abierto',
+        'pending_support' => 'Esperando a soporte',
+        'pending_customer' => 'Esperando su respuesta',
+        'on_hold' => 'En espera',
+        'resolved' => 'Resuelto',
+        'closed' => 'Cerrado',
+    ],
+
+    'priority' => [
+        'low' => 'Baja',
+        'normal' => 'Normal',
+        'high' => 'Alta',
+        'urgent' => 'Urgente',
+    ],
+
+    'type' => [
+        'question' => 'Pregunta',
+        'bug' => 'Problema',
+        'feature' => 'Solicitud de función',
+    ],
+
+    'impact' => [
+        'minor' => 'Menor: una molestia pequeña',
+        'degraded' => 'Degradado: algo no funciona correctamente',
+        'outage' => 'Interrupción: algo no funciona',
+    ],
+
+    'validation' => [
+        'body_required' => 'Escriba un mensaje.',
+        'body_too_long' => 'El mensaje es demasiado largo (máximo :max caracteres).',
+    ],
+
+    'errors' => [
+        'internal_staff_only' => 'Solo el personal de soporte puede añadir notas internas.',
+        'closed' => 'Este ticket está cerrado. Reábralo para responder.',
+        'cannot_edit' => 'Esto ya no se puede editar.',
+        'invalid_transition' => 'El ticket no se puede mover a ese estado.',
+        'invalid_assignee' => 'Esa persona no puede ser asignada a este ticket.',
+        'stale' => 'Otra persona modificó este ticket. Recargue la página e inténtelo de nuevo.',
+    ],
+
+    'admin' => [
+        'title' => 'Tickets',
+        'category_saved' => 'Categoría guardada.',
+        'category_archived' => 'Categoría archivada.',
+    ],
+
+    'notifications' => [
+        'view' => 'Ver ticket',
+        'reply_in_panel' => 'Responda en el panel de control. Las respuestas a este correo no se añaden al ticket.',
+        'created' => [
+            'title' => 'Nuevo ticket :reference',
+            'line' => ':name abrió el ticket ":subject".',
+        ],
+        'reply' => [
+            'title' => 'Nueva respuesta en :reference',
+            'line' => ':name respondió al ticket ":subject".',
+        ],
+        'note' => [
+            'title' => 'Nueva nota interna en :reference',
+            'line' => ':name añadió una nota interna a ":subject".',
+        ],
+        'status' => [
+            'title' => ':reference ahora está :status',
+            'line' => 'El estado de ":subject" cambió a :status.',
+        ],
+        'assigned' => [
+            'title' => ':reference le fue asignado',
+            'line' => ':name le asignó el ticket ":subject".',
+        ],
+        'assignee_removed' => [
+            'title' => ':reference necesita un responsable',
+            'line' => 'La persona responsable de ":subject" ya no está disponible. Asigne a otra persona de su lado.',
+        ],
+    ],
+];

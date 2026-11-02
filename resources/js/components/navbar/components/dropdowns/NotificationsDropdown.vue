@@ -1,5 +1,5 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 import axios from 'axios'
 </script>
 <template>
@@ -28,7 +28,10 @@ import axios from 'axios'
 
           <va-list-item-section>
             <va-list-item-label>
-              <div v-if="notification.title">{{ notification.title }}</div>
+              <div v-if="notification.title">
+                <Link v-if="notification.url" :href="notification.url">{{ notification.title }}</Link>
+                <template v-else>{{ notification.title }}</template>
+              </div>
               <div v-else>{{ notification.description }}</div>
             </va-list-item-label>
 
