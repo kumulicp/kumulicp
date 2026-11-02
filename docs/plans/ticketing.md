@@ -38,6 +38,12 @@ Status: proposal. Nothing here is built yet.
 | First integrations | Generic webhook, GitHub, GitLab. Jira, Linear and others come later via the same driver contract. |
 | Assignment | Two assignee fields: a **customer-side** assignee (an org member) and a **support-side** assignee (a staff member). Both are visible on both sides (see §3.1). |
 | Default list view | Lists open filtered to **tickets assigned to you** (see §3.1 and §10). |
+| Message editing | A member may edit their own message until a staff reply, for at most 15 minutes. The subject is editable until the first staff reply. Revisions are kept. |
+| Priority | Customers set **impact** only (minor / degraded / outage). Staff set priority. |
+| Attachment storage | Local private disk by default; S3-compatible selectable by config. |
+| Existing `support_email` | Kept as a copy destination for new tickets during rollout, with a setting to switch it off. **Retired eventually** (cleanup task in Phase 5: remove the setting, `Mail\SupportTicket`, and the legacy `Account\Support@submit` path). |
+| Customer assignee leaves the org | Reassign to the requester if they are still an active member. Otherwise leave it unassigned. **Org owners are notified only if the ticket is still open** (not resolved or closed). Resolved/closed tickets are changed silently. |
+| Retention | Indefinite until an admin sets a retention period. |
 
 ## 3. Data model
 
@@ -85,7 +91,7 @@ ticket_deliveries            id, integration_id, ticket_id, event, idempotency_k
 
 | Field | Who it is | Who can change it | Defaults |
 |---|---|---|---|
-| **Customer assignee** (`customer_assignee_id`) | The org member responsible for the ticket on the customer's side (the one support should expect answers from) | Any member of the org, and staff. Must be an active user of the ticket's own organization (validated server-side; cross-org ids are rejected) | The requester at creation; if that user is later removed or deactivated, it falls back to the requester, then to null |
+| **Customer assignee** (`customer_assignee_id`) | The org member responsible for the ticket on the customer's side (the one support should expect answers from) | Any member of the org, and staff. Must be an active user of the ticket's own organization (validated server-side; cross-org ids are rejected) | The requester at creation. If the assignee is later removed or deactivated: reassign to the requester if still active, else null; org owners are notified only while the ticket is still open (see "Decisions confirmed") |
 | **Support assignee** (`support_assignee_id`) | The staff member handling the ticket | Staff only (`admin` gate for now). Customers see the name, read-only | Null (goes to the Unassigned view) or set by category default / auto-assign rule later |
 
 - Both appear in the ticket header and in list columns on **both** sides. The customer UI shows staff by display name only (no email or internal details).
@@ -330,13 +336,7 @@ Migrations, models, `TicketService`/`TicketWorkflow`, number generator. Org list
 
 ## 15. Open questions
 
-Resolved (see "Decisions confirmed" near the top): ticket visibility, permissions, inbound email, first integrations, assignment model and default list view.
+All earlier questions are resolved (see "Decisions confirmed" near the top). Remaining implementation details to settle during Phase 1, none of which block starting:
 
-Still open, with my defaults if you have no preference:
-
-1. **Edit window:** how long may a member edit their own message? Default: until a staff reply, max 15 minutes. May they edit the subject? Default: yes, until the first staff reply.
-2. **Priority:** members choose "impact" only and staff set priority (default), or can customers choose priority?
-3. **Storage:** local disk or S3-compatible for attachments in production? Default: local disk, S3 selectable by config.
-4. **Existing `support_email`:** keep as a copy/CC destination for new tickets (default during rollout), or retire once the inbox is live?
-5. **Customer-assignee removal:** when the customer assignee leaves the org, fall back to the requester, then null (default), or notify org owners?
-6. **Retention:** default retention for closed tickets and attachments. Default: indefinite until an admin sets one.
+1. **"Org owners"** for the removed-assignee notification: use the organization's primary contact plus users with organization-admin access (and billing managers if there is no one else). Confirm against `PermissionsManager` when building it.
+2. **Removal hook:** the assignee check runs from the user-deleted/deactivated events (`UserDeleted`, `DeletingUser`) via a listener, plus a daily sweep as a safety net.
