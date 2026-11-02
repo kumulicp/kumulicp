@@ -1,6 +1,6 @@
 # Plan types (Pay per App vs Packaged) and their limits
 
-Status: the four open questions are answered (section 6). Phase 0 (partly), Phase 1 and Phase 4 are implemented; see "Implementation status" in section 5. Phases 2 and 3 are not started.
+Status: the open questions are answered (section 6). Phase 0 (partly), Phase 1 and Phase 4 are implemented; see "Implementation status" in section 5. Phases 2, 3 and 5 are not started.
 
 ## 1. How the two plan types work today
 
@@ -35,7 +35,7 @@ All are from reading the code. I have not run the test suite or reproduced them.
 3. **Email price is editable but never billed on Pay per App.** The email section of `PlanEdit.vue` is not behind the `package` condition, and `email.*` prices are kept on save. But `BasePlanService::pricingOptions()` returns `[]` for `app`, so Stripe never sees them.
 4. **Packaged plans can double-bill if an app plan carries prices.** `SubscriptionService::paidSubscriptions()` includes every app instance plan with `payment_enabled`, and `StripeGateway::stripePricing()` sums all of their `pricingOptions()`. `AppInstancePlanService` has no guard for `package`, unlike `BasePlanService` for `app`. This only happens if an admin gave the app plan prices, but nothing prevents it.
 5. **Per-user storage comes from different places.** `AppStorageService::userStorage()` always reads `standard.storage` and `basic.storage` from the app plan. The package form sets them on the base plan (`BasePlanService::standardStorageTotal()` uses those). On a packaged plan the value the admin types in the package form is not what the app gets.
-6. **App-plan changes are only handled for packaged plans with one app plan.** `updateAppInstancesFromBase()` skips any app that has more than one offered plan. Nothing handles an instance whose app plan is later removed from the Pay per App plan's list, or a plan-type switch while subscribers exist (the UI only shows a warning).
+6. **App-plan changes are only handled for packaged plans with one app plan.** `updateAppInstancesFromBase()` skips any app that has more than one offered plan. Nothing handles an instance whose app plan is later removed from the Pay per App plan's list. A plan-type switch while subscribers exist is only warned about in the UI; Phase 5 removes the ability to switch altogether.
 7. **Storage cap defaults are hidden.** `storage.max` falls back to 10 blocks in `AdditionalStorageService::maxAllowedAdditionalStorage()` when unset, and the dropdown never offers more than 10 per request.
 
 ## 3. Principles
@@ -44,6 +44,7 @@ All are from reading the code. I have not run the test suite or reproduced them.
 - Packaged: the **org plan is the only source** of prices, user limits and per-user storage. App plans only describe what the app needs technically.
 - Pay per App: the **app plan owns** prices, user limits and storage per instance. The org plan only owns entitlements (which apps, which app plans, how many instances) and the org-level services that no single app owns (email, domains, suborganizations).
 - Every limit has a platform ceiling in config, so a typo cannot create an effectively unlimited priced plan.
+- **A plan's type is chosen once, when the plan is created, and never changes afterwards** (Phase 5). Switching type rewrites how every subscriber is priced and limited, so the only way to move customers between types is to move them to a plan of the other type.
 - Raising a limit is always safe. Lowering a limit below current usage must be blocked or warn, and existing usage is grandfathered (this is what `isMaxBroken()` does today).
 
 ## 4. Proposed limits per setting
@@ -95,19 +96,21 @@ Do these in order. Each phase is separately shippable.
 | Phase 1.5: block removing app plans still in use (gap 6) | Done for Pay per App plans, server side only (`Admin\Plans::update()`). Packaged plans (swapping the single app plan) and the "move these instances" UI are not done |
 | Phase 2, Phase 3 | Not started |
 | Phase 4: example tiers on first install | Done (`ExamplePlansService`, called from `Setup::build()`) |
+| Phase 5: plan type fixed at creation, shown in the plan list | **Planned, not started** |
 
 Behavior to be aware of: under a Packaged plan the package's per-user storage is used only when it is set. A blank package value falls back to the app plan's, so existing packages with blank storage keep their current quotas. Phase 3 makes the package value required.
 
 ### Phase 0: Lock in current behavior (small)
 - Add characterization tests for each gap above so any change is intentional. There is already coverage in `tests/Feature/Subscription/` (`BasePlanTypePricingTest`, `BaseMaximumsTest`, `ActivateAppGateTest`) and `tests/Feature/Admin/PlansTest.php`. Extend those, covering `add-user` on an `app`-type plan, `domain_max = 0` on both services, and `{slug}.max = 0`.
 - Query production data (or a staging copy) for plans where the old and new semantics would differ, e.g. `domain_max = 0` on an app plan, `{slug}.max = 0`. This sizes the migration in Phase 2.
+- In the same query, count `plans` rows whose `type` is NULL (the column is nullable and `PlanFactory` leaves it empty). They matter for Phase 5.
 
 ### Phase 1: Fix billing and enforcement gaps (no data migration)
 1. **Gap 4:** in `AppInstancePlanService`, return empty pricing and 0 totals when `Subscription::base()->type === 'package'`. This mirrors the guard `BasePlanService` already has. Add the corresponding admin validation that rejects prices on an app plan only when it is the sole plan selected by a packaged plan.
 2. **Gap 3:** bill email at the org level (decided). Change `BasePlanService::pricingOptions()/stats()/totalPrice()` so that for `app` they return only the `email` entity instead of nothing.
 3. **Gap 5:** the package form wins (decided). Add one accessor (e.g. `effectiveStoragePerUser($app_instance, $access_type)`) that reads from the base plan when the type is `package` and from the app plan otherwise. Use it in `AppStorageService::userStorage()` and `AdditionalStorageService`.
 4. **Gap 2:** no code change (decided). Instead, make `standard.max` and `basic.max` required on every priced app plan so that "unlimited because someone left it blank" can't happen on Pay per App. This is enforced in Phase 3 validation.
-5. **Gap 6:** when an app plan is removed from a Pay per App plan's list, or the plan type changes, list the affected instances in the admin UI and block the save (or require an explicit "move these to plan X" choice). This replaces today's warning-only text.
+5. **Gap 6:** when an app plan is removed from a Pay per App plan's list, list the affected instances in the admin UI and block the save (or require an explicit "move these to plan X" choice). The plan-type half of this step is replaced by Phase 5, which stops type changes entirely.
 
 ### Phase 2: One meaning for limits (needs migration and UI change)
 1. Add `app/Support/Plans/Limit.php` (or similar): `Limit::fromSetting($value)` returns `unlimited | none | cap(N)`, and `reached($count)` / `exceeded($count)`. Route `isMax`, `isMaxBroken`, `isMaxApps`, `isDomainMax` and `maxAllowedAdditionalStorage` through it so the semantics live in one place.
@@ -140,6 +143,33 @@ Rules:
 - Created only if no non-archived plan exists, so a re-run or an install that already has its own plans never gets duplicates. A failure while creating them is reported but does not abort the install.
 - Names and descriptions are translated (`resources/lang/*/setup.php`, `example_plans`).
 
+### Phase 5: Plan type is fixed at creation (planned, not started)
+Today the type (`package` or `app`) can be edited on an existing plan, with only a warning (`planTypeChangeWarning` in `PlanEdit.vue`). The server accepts the change (`Plans::update()` validates `type` and assigns it), and nothing checks for subscribers. Change it so the type is a creation-time setting only.
+
+This applies to **organization plans only** (`Plan`, `/admin/service/plans`). App plans (`AppPlan`) have no type and are not touched.
+
+**What changes**
+1. **Creation.** Keep the type selector in the add-plan modal (`PlansList.vue`; `Plans::store()` already requires `package` or `app`). Add a line under it saying the type cannot be changed later. Consider removing the preselected `package` default so the choice is deliberate.
+2. **Edit page.** Replace the type select in `PlanEdit.vue` with a read-only line showing the label and its description. Remove the `typeChanged` / `originalType` logic and the `planTypeChangeWarning` alert and string (`en.json`, `es.json`).
+3. **Server.** `Plans::update()` must not take the type from the request. It reads `$plan->type` for everything it currently derives from `$request->type` (`$isAppType`, the one-app-plan slice, the nulled price fields). If a request sends a different type than the stored one, reject it with a validation error on `type` instead of ignoring it silently; sending the same value is accepted.
+4. **Model guard (defense in depth).** In `Plan`, a `booted()` `updating` hook that refuses to change `type` once it is set, so Tinker, a future API or another controller cannot bypass the form. Creating a plan and setting a NULL type are unaffected.
+5. **Plan list.** The org plan list already has a "Plan Type" column, but it prints the raw stored value (`package`, `app`) in both the active and archived tables. Show the same translated labels the rest of the UI uses ("Package", "Pay per App", from `admin.plans.package` / `admin.plans.payPerApp`), as a badge so the two types are easy to tell apart. A NULL type shows "Not set". Do not add a type column to the app plan lists.
+6. **Existing plans with no type (NULL).** Do not guess one from the settings. Allow the type to be set once while it is NULL, and show a notice on those plans' edit pages asking an administrator to pick it (it then locks). This is the only case where the edit page still shows a selector. Count them with the Phase 0 query. Making the column NOT NULL is a later migration, after every row is set, and is out of scope here.
+7. **Simplify.** `Plans::removedAppPlansInUse()` no longer needs its "type must be `app` before and after" check, since the type cannot change.
+
+**What stays allowed**
+- An organization can still move to a plan of the other type through the normal subscription change (`SubscriptionService::updateBase()`, `dryBaseChange()`), because that is a customer choice, not an edit of the plan. This is how customers are migrated between types.
+- Cloning is the way to "change" a plan's type: create a new plan of the other type and move subscribers to it. A duplicate-plan action is a possible follow-up, not part of this phase.
+
+**Tests**
+- `tests/Feature/Admin/PlansTest.php`:
+  - `test_update_nulls_out_users_and_storage_settings_for_app_type_plans` creates a `package` plan and updates it to `app`. Rewrite it to create the plan as `app` instead.
+  - Add: changing the type of a plan that has one is rejected and leaves it unchanged; sending the same type succeeds; a NULL-type plan can be given a type once and then locked.
+  - Most other update tests build a plan with `PlanFactory`, which has no type, and post `type: package`. They keep working through the set-once rule. Consider giving `PlanFactory` a default type so tests stop relying on NULL.
+- A model test for the `updating` guard.
+- `tests/Browser/PlansTest.php`: remove "shows a warning when the plan type is changed on edit"; change "shows the plan edit page with type selector…" to assert the read-only type line; add an assertion that the list shows the type label.
+- Run `npm run build` after the Vue changes, as the repo's testing rules require.
+
 ### Out of scope until decided
 - Whether Pay per App should also support an org-wide minimum or base fee (currently no base price at the org level).
 - An org-wide user or app ceiling for Pay per App (decided against).
@@ -151,3 +181,4 @@ Rules:
 2. **Packaged storage:** the package form's per-user storage wins over the app plan's (Phase 1, step 3).
 3. **Pay per App has no org-wide user or app ceiling.** App plan limits are enough, so they become required (gap 2, Phase 3).
 4. **Defaults:** the suggested defaults in section 4 are the starting values. Tune them per plan when creating real tiers.
+5. **Plan type is fixed at creation** and shown in the org plan list (Phase 5). Plans with no type yet can be given one once.
