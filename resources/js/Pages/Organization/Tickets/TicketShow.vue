@@ -11,7 +11,7 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
     <title>{{ ticket.reference }} {{ ticket.subject }} - Control Panel</title>
   </Head>
   <div class="row">
-    <div class="flex xs12 lg8 pr-2">
+    <div class="flex flex-col xs12 lg8">
       <va-card class="mb-4">
         <va-card-title>
           <div class="flex justify-between items-center w-full">
@@ -38,7 +38,7 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
       <va-alert v-else color="info" class="mb-4">{{ $t('tickets.closedNotice') }}</va-alert>
     </div>
 
-    <div class="flex xs12 lg4">
+    <div class="flex flex-col xs12 lg4">
       <va-card class="mb-4">
         <va-card-title>{{ $t('tickets.details') }}</va-card-title>
         <va-card-content>
