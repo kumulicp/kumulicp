@@ -54,6 +54,14 @@ return [
             'internal_address' => 'This is used for apps that need to add a proxy server as a trusted IP',
             'settings' => 'Requires creating a new project for organizations to be stored. Add the settings: project_id.
         Optional: "rancher_cluster_id" (default "local") names the cluster whose Kubernetes API is reached through Rancher\'s proxy (/k8s/clusters/<id>) to create Secrets for charts and jobs. Not needed if the Address already points at a cluster (…/k8s/clusters/<id>). The Rancher API key must be allowed to create Secrets in the organization namespaces.',
+            'test_success' => 'Success — created and deleted a test namespace and secret in Rancher.',
+            'test_failed' => 'Test failed at :reason',
+            'test_missing_credentials' => 'Set the address, API key, and API secret before running a test.',
+            'test_missing_project' => 'Add the project_id setting before running a test.',
+            'test_step' => [
+                'namespace' => 'Namespace',
+                'secret' => 'Secret',
+            ],
         ],
         'app_database' => [
             'host' => 'IP or domain used by the Control Panel to connect to this database',
