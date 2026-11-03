@@ -218,7 +218,7 @@ it('only rolls a step back once, even when the task is then compensated again', 
     runSteps($task);
     $before = StepsFixture::$log;
 
-    ActionFacade::revert($task->fresh());
+    app(TaskRunner::class)->compensate($task->fresh());
     app(StepRunner::class)->rollback($task->fresh(), StepsFixtureAction::class);
 
     expect(StepsFixture::$log)->toBe($before);
