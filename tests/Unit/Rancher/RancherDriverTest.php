@@ -385,3 +385,39 @@ it('is the Kubernetes web interface, minus recovery of releases Rancher manages 
     expect($interface->canRecoverStuckRelease())->toBeFalse();
     expect((new KubernetesWebInterface($org_server))->canRecoverStuckRelease())->toBeTrue();
 });
+
+it('reads a job\'s status through Rancher in the namespace it is given', function () {
+    $org_server = steveOrgServer();
+    Http::fake(['*' => Http::response(['status' => ['succeeded' => 1]])]);
+
+    expect((new RancherWebInterface($org_server))->jobStatus('demo-job-abc', 'hub'))->toBe('success');
+
+    Http::assertSent(fn (Request $request) => $request->url() === RANCHER_API.'/v1/batch.jobs/hub/demo-job-abc');
+});
+
+it('reads a job\'s logs from the namespace it is given through the standard API', function () {
+    $org_server = steveOrgServer();
+
+    Http::fake(function (Request $request) {
+        $path = parse_url($request->url(), PHP_URL_PATH);
+
+        if ($path === '/api/v1/namespaces/hub/pods') {
+            return Http::response(['items' => [['metadata' => ['name' => 'demo-job-abc-x1'], 'spec' => ['containers' => [['name' => 'scan']]]]]]);
+        }
+
+        return $path === '/api/v1/namespaces/hub/pods/demo-job-abc-x1/log'
+            ? Http::response("scan output\n")
+            : Http::response('unexpected', 500);
+    });
+
+    expect((new RancherWebInterface($org_server))->jobLogs('demo-job-abc', 'hub'))->toBe('scan output');
+});
+
+it('reports a job Rancher refused as failed, so callers can tell without a throw', function () {
+    $org_server = steveOrgServer();
+    Http::fake(fn (Request $request) => $request->method() === 'GET' ? rancherNotFound() : Http::response(['type' => 'error', 'status' => 403, 'message' => 'denied'], 403));
+
+    $result = (new RancherWebInterface($org_server))->runJob(jobChart(), 'hub');
+
+    expect($result['status'])->toBe('failed');
+});

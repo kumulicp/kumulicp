@@ -4,8 +4,6 @@ namespace App\Actions\Security;
 
 use App\Actions\Action;
 use App\Enums\TaskStatus;
-use App\Integrations\ServerManagers\Rancher\API\Job;
-use App\Integrations\ServerManagers\Rancher\API\Pod;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\SecurityScanJobChart;
 use App\OrgServer;
 use App\SecurityScan;
@@ -46,24 +44,29 @@ class RunSecurityScan extends Action
         $namespace = $org_server->organization->slug;
         $chart = (new SecurityScanJobChart($tool, $namespace, $targets, $options))->run();
 
-        $job = new Job($org_server->organization, $org_server);
-        $job->setNamespace($namespace);
-        $response = $job->create($chart);
+        // runJob() returns a result either way (it does not throw when the
+        // cluster refuses the Job), so success has to be checked explicitly.
+        $response = $org_server->connect()->runJob($chart, $namespace);
+
+        if (Arr::get($response, 'status') !== 'success') {
+            $error_message = 'Failed to create scan job in cluster';
+            $security_scan->fail($error_message);
+            $task->error_message = $error_message;
+            $task->status = TaskStatus::FAILED;
+            $task->save();
+
+            return;
+        }
+
+        $security_scan->status = 'running';
+        $security_scan->started_at = now();
+        $security_scan->save();
 
         $run = new self($org_server, $tool, $security_scan, $targets, $options);
-
-        if ($response) {
-            $security_scan->status = 'running';
-            $security_scan->started_at = now();
-            $security_scan->save();
-
-            $run->addCustomValue([
-                'job_name' => $chart->name,
-                'namespace' => $namespace,
-            ]);
-        } else {
-            $security_scan->fail('Failed to create scan job in cluster');
-        }
+        $run->addCustomValue([
+            'job_name' => $chart->name,
+            'namespace' => $namespace,
+        ]);
 
         return $run;
     }
@@ -76,19 +79,15 @@ class RunSecurityScan extends Action
         $job_name = $task->getValue('job_name');
         $namespace = $task->getValue('namespace');
 
-        $job = new Job($task->organization, $org_server);
-        $job->setNamespace($namespace);
-        $job_status = $job->status($job_name);
+        $web_server = $org_server->connect();
+        $job_status = $web_server->jobStatus($job_name, $namespace);
 
         if ($job_status === 'running') {
             return;
         }
 
-        $pod = new Pod($task->organization, $org_server);
-        $pod->setNamespace($namespace);
-
         try {
-            $raw_output = $pod->logsForJob($job_name);
+            $raw_output = $web_server->jobLogs($job_name, $namespace);
         } catch (\Throwable $exception) {
             $error_message = 'Failed to retrieve scan job logs: '.$exception->getMessage();
             $security_scan->fail($error_message);

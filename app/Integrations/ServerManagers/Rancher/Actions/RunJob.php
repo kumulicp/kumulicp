@@ -6,7 +6,6 @@ use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Enums\TaskStatus;
-use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\OrgServer;
 use App\Task;
@@ -37,15 +36,20 @@ class RunJob extends NativeAction
         $job_chart = unserialize($task->getValue('job'));
         $job_method = Str::camel($task->getValue('job_name'));
         $chart = $job_chart->$job_method();
-        $job = new Job($org_server->organization, $org_server);
-        if ($namespace = $task->getValue('namespace')) {
-            $job->setNamespace($namespace);
-        }
+        $namespace = $task->getValue('namespace');
 
-        $response = $job->create($chart);
+        // The server's own driver runs the Job. It returns a result either way
+        // (it does not throw when the cluster refuses the Job), so success has
+        // to be checked explicitly.
+        $response = $org_server->connect()->runJob($chart, $namespace);
 
-        if (! $response) {
-            return ActionResult::fail(__('messages.api.rancher.error.job', ['job' => $job_name, 'message' => '']), 'job_create_failed');
+        if (Arr::get($response, 'status') !== 'success') {
+            $message = $response['response'] ?? '';
+
+            return ActionResult::fail(__('messages.api.rancher.error.job', [
+                'job' => $job_name,
+                'message' => is_string($message) ? $message : json_encode($message),
+            ]), 'job_create_failed');
         }
 
         return ActionResult::wait([
@@ -68,11 +72,7 @@ class RunJob extends NativeAction
     {
         $org_server = OrgServer::find($task->getValue('org_server_id'));
         $job_id = $task->getValue('job_id');
-        $job = new Job($task->organization, $org_server);
-        if ($namespace = $task->getValue('namespace')) {
-            $job->setNamespace($namespace);
-        }
 
-        return $job->status($job_id) == 'success' ? ActionResult::done() : ActionResult::wait();
+        return $org_server->connect()->jobStatus($job_id, $task->getValue('namespace')) == 'success' ? ActionResult::done() : ActionResult::wait();
     }
 }

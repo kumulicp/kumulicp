@@ -5,12 +5,14 @@ namespace App\Integrations\ServerManagers\Rancher\Interfaces;
 use App\Integrations\ServerManagers\Kubernetes\API\Application as BaseApplication;
 use App\Integrations\ServerManagers\Kubernetes\API\Job as BaseJob;
 use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace as BaseKubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\Pod as BasePod;
 use App\Integrations\ServerManagers\Kubernetes\API\Secret as BaseSecret;
 use App\Integrations\ServerManagers\Kubernetes\Interfaces\KubernetesWebInterface;
 use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService as BaseDomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\API\Application;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\Rancher\API\Pod;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
 use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -40,6 +42,11 @@ class RancherWebInterface extends KubernetesWebInterface
     protected function makeJob(): BaseJob
     {
         return new Job($this->organization, $this->server);
+    }
+
+    protected function makePod(): BasePod
+    {
+        return new Pod($this->organization, $this->server);
     }
 
     protected function makeDomainMiddleware(): BaseDomainMiddlewareService
