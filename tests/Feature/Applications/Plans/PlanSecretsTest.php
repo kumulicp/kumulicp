@@ -4,7 +4,7 @@ use App\AppInstance;
 use App\Application;
 use App\Integrations\Applications\AppFeature;
 use App\Integrations\Applications\Feature;
-use App\Integrations\ServerManagers\Rancher\Charts\Chart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Chart;
 use App\OrgServer;
 use App\Server;
 use App\Support\Facades\Application as ApplicationFacade;

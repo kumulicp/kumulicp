@@ -6,7 +6,7 @@ use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
 use App\Contracts\ServerManager\JobInterface;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\OrgServer;
 
 /**

@@ -7,7 +7,7 @@ use App\Actions\Apps\ApplicationUpdateJob;
 use App\AppInstance;
 use App\AppPlan;
 use App\Events\Apps\AppInstanceDomainChanged;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\OrgSubdomain;
 use App\Services\AppInstance\AppInstancePlanService;

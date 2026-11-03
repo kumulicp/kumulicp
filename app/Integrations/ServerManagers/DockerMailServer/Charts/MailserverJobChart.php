@@ -2,7 +2,7 @@
 
 namespace App\Integrations\ServerManagers\DockerMailServer\Charts;
 
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\OrgDomain;
 use Illuminate\Support\Str;
 

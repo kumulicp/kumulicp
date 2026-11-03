@@ -6,15 +6,16 @@
 use App\AppInstance;
 use App\Application;
 use App\Contracts\ServerManager\JobInterface;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Kubernetes\Interfaces\KubernetesWebInterface;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
+use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-function jobsInterface(): KubernetesWebInterface
+function jobsOrgServer(): OrgServer
 {
     $server = Server::factory()->create([
         'interface' => 'kubernetes',
@@ -24,12 +25,15 @@ function jobsInterface(): KubernetesWebInterface
         'settings' => ['k8s_auth_type' => 'bearer_token'],
     ]);
 
-    $org_server = OrgServer::create([
+    return OrgServer::create([
         'organization_id' => Organization::factory()->create()->id,
         'server_id' => $server->id,
     ]);
+}
 
-    return new KubernetesWebInterface($org_server);
+function jobsInterface(): KubernetesWebInterface
+{
+    return new KubernetesWebInterface(jobsOrgServer());
 }
 
 // A Job manifest that doesn't say where it runs, so the namespace comes from the caller.
@@ -117,4 +121,43 @@ it('has no logs for a job with no pod', function () {
     Http::fake(['*' => Http::response(['items' => []])]);
 
     expect(jobsInterface()->jobLogs('demo-job-abc', 'hub'))->toBeNull();
+});
+
+// A shared-plan child has no release of its own: what happens to it is applied
+// by rebuilding its parent's release (see AppInstance::sharedPlanParent()).
+it('rebuilds the parent\'s release instead of deploying a shared-plan child\'s own', function (string $method) {
+    $parent = (new AppInstance)->forceFill(['name' => 'hub']);
+
+    $parent_server = Mockery::mock();
+    $parent_server->shouldReceive('update')->once()->andReturn('parent-updated');
+    $parent_instance = Mockery::mock();
+    $parent_instance->shouldReceive('connect')->with('web')->andReturn($parent_server);
+    ApplicationFacade::shouldReceive('instance')->with($parent)->andReturn($parent_instance);
+
+    $child = Mockery::mock(AppInstance::class)->makePartial();
+    $child->shouldReceive('sharedPlanParent')->andReturn($parent);
+    $child->shouldReceive('save')->andReturn(true);
+
+    Http::fake();
+
+    expect((new KubernetesWebInterface(jobsOrgServer(), $child))->$method())->toBe('parent-updated');
+
+    Http::assertNothingSent();
+})->with(['add', 'update', 'delete']);
+
+it('marks a deleted shared-plan child deactivated before its parent is rebuilt', function () {
+    $parent = (new AppInstance)->forceFill(['name' => 'hub']);
+    $child = Mockery::mock(AppInstance::class)->makePartial();
+    $child->shouldReceive('sharedPlanParent')->andReturn($parent);
+    $child->shouldReceive('save')->once()->andReturn(true);
+
+    $parent_server = Mockery::mock();
+    $parent_server->shouldReceive('update')->once()->andReturnUsing(function () use ($child) {
+        expect($child->status)->toBe('deactivated');
+    });
+    $parent_instance = Mockery::mock();
+    $parent_instance->shouldReceive('connect')->with('web')->andReturn($parent_server);
+    ApplicationFacade::shouldReceive('instance')->with($parent)->andReturn($parent_instance);
+
+    (new KubernetesWebInterface(jobsOrgServer(), $child))->delete();
 });

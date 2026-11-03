@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts\Job;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
-use App\Integrations\ServerManagers\Rancher\Charts\Chart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Chart;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;

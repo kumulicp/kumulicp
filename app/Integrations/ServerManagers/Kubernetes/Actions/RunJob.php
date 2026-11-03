@@ -1,17 +1,24 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Actions;
+namespace App\Integrations\ServerManagers\Kubernetes\Actions;
 
 use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Enums\TaskStatus;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\OrgServer;
 use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
+/**
+ * Runs a one-off Job through the server's own driver (Kubernetes or Rancher).
+ *
+ * The slug and group keep their original "rancher" names: they are stored on
+ * existing tasks and looked up by name (see the DKIM controller), so renaming
+ * them would orphan those rows.
+ */
 class RunJob extends NativeAction
 {
     public $slug = 'run_rancher_job';

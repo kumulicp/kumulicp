@@ -15,12 +15,11 @@ use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
 use App\Integrations\ServerManagers\Rancher\API\Pod;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
 use App\Integrations\ServerManagers\Rancher\Services\DomainMiddlewareService;
-use App\Support\Facades\Application as ApplicationFacade;
 
 /**
  * The Kubernetes web interface, run against a cluster managed by Rancher.
- * Differs only in which API classes it uses, and in apps that share another
- * app's release.
+ * Differs only in which API classes it uses, and in not recovering stuck
+ * releases (Rancher manages its own).
  */
 class RancherWebInterface extends KubernetesWebInterface
 {
@@ -58,39 +57,5 @@ class RancherWebInterface extends KubernetesWebInterface
     public function canRecoverStuckRelease(): bool
     {
         return false;
-    }
-
-    public function add()
-    {
-        if ($parent = $this->app_instance->sharedPlanParent()) {
-            return ApplicationFacade::instance($parent)->connect('web')->update();
-        }
-
-        return parent::add();
-    }
-
-    public function update()
-    {
-        if ($parent = $this->app_instance->sharedPlanParent()) {
-            return ApplicationFacade::instance($parent)->connect('web')->update();
-        }
-
-        return parent::update();
-    }
-
-    public function delete()
-    {
-        if ($parent = $this->app_instance->sharedPlanParent()) {
-            // Mark deactivated first so the parent's chart-building excludes this
-            // child (e.g. B1ChurchChart filters children via notDeactivated())
-            // before it rebuilds its ingress host list — no Rancher uninstall
-            // to run since this child never had its own release.
-            $this->app_instance->status = 'deactivated';
-            $this->app_instance->save();
-
-            return ApplicationFacade::instance($parent)->connect('web')->update();
-        }
-
-        return parent::delete();
     }
 }

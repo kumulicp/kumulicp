@@ -7,7 +7,7 @@ use App\Integrations\Applications\Nextcloud\Features\CalendarAddon;
 use App\Integrations\Applications\Nextcloud\Features\ContactsAddon;
 use App\Integrations\Applications\Nextcloud\Features\DeckAddon;
 use App\Integrations\Applications\Nextcloud\Features\TalkAddon;
-use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 
 class NextcloudProfile extends AppProfile
 {

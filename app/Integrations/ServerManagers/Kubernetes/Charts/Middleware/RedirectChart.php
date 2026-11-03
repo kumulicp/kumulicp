@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts\Middleware;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts\Middleware;
 
 use App\AppInstance;
 use App\Organization;

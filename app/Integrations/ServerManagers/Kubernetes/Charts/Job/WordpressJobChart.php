@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts\Job;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
 use Illuminate\Support\Str;
 
-class NextcloudJobChart extends JobChart
+class WordpressJobChart extends JobChart
 {
     public $chart = [];
 
-    public function run(array $command, array $env, ?array $args = null, ?string $job_name = null)
+    public function run(array $command, array $env, ?string $job_name = null)
     {
         $app_instance = $this->app_instance;
 
@@ -50,7 +50,7 @@ class NextcloudJobChart extends JobChart
                                                     'key' => 'app.kubernetes.io/instance',
                                                     'operator' => 'In',
                                                     'values' => [
-                                                        $app_instance->setting('override.chart.nextcloud.name'),
+                                                        $app_instance->setting('override.chart.wordpress.name'),
                                                     ],
                                                 ],
                                             ],
@@ -62,10 +62,9 @@ class NextcloudJobChart extends JobChart
                         'containers' => [[
                             'env' => $env,
                             'command' => $command,
-                            'args' => $args,
                             'image' => $this->image(),
                             'imagePullPolicy' => 'Always',
-                            'name' => 'nextcloud-job',
+                            'name' => 'wordpress-job',
                             'ports' => [[
                                 'containerPort' => 80,
                                 'name' => 'http',
@@ -73,58 +72,24 @@ class NextcloudJobChart extends JobChart
                             ]],
                             'terminationMessagePath' => '/dev/termination-log',
                             'terminationMessagePolicy' => 'File',
-                            'volumeMounts' => [
-                                [
-                                    'mountPath' => '/var/www/',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'root',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/html',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'html',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/html/config',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'config',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/html/custom_apps',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'custom_apps',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/tmp',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'tmp',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/html/themes',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'themes',
-                                ],
-                                [
-                                    'mountPath' => '/var/www/html/data',
-                                    'name' => 'nextcloud-storage',
-                                    'subPath' => 'data',
-                                ],
-                            ],
+                            'volumeMounts' => [[
+                                'mountPath' => '/wordpress',
+                                'name' => 'wordpress-storage',
+                                'subPath' => 'wordpress',
+                            ]],
                         ]],
                         'dnsPolicy' => 'ClusterFirst',
                         'imagePullSecrets' => array_map(fn ($name) => ['name' => $name], $this->imagePullSecrets()),
                         'restartPolicy' => 'Never',
                         'schedulerName' => 'default-scheduler',
                         'securityContext' => [
-                            'fsGroup' => 33,
-                            'allowPrivilegeEscalation' => true,
-                            'runAsUser' => 33,
+                            'fsGroup' => 0,
                         ],
                         'serviceAccount' => 'default',
                         'serviceAccountName' => 'default',
                         'terminationGracePeriodSeconds' => 30,
                         'volumes' => [[
-                            'name' => 'nextcloud-storage',
+                            'name' => 'wordpress-storage',
                             'persistentVolumeClaim' => [
                                 'claimName' => $this->persistentVolumeClaim(),
                             ],

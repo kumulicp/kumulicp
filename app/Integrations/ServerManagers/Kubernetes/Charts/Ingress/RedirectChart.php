@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts\Ingress;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts\Ingress;
 
 use App\AppInstance;
 use App\Organization;

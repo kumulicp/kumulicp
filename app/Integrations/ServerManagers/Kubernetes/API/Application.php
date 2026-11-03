@@ -3,8 +3,8 @@
 namespace App\Integrations\ServerManagers\Kubernetes\API;
 
 use App\AppInstance;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Yaml\Yaml;
 

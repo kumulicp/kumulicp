@@ -5,8 +5,8 @@ namespace App\Integrations\ServerManagers\Kubernetes\Services;
 use App\AppInstance;
 use App\Integrations\ServerManagers\Kubernetes\API\Ingress;
 use App\Integrations\ServerManagers\Kubernetes\API\Middleware;
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 use App\Organization;
 use App\OrgServer;
 

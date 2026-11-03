@@ -3,7 +3,7 @@
 use App\AppInstance;
 use App\Application;
 use App\Integrations\ServerManagers\Kubernetes\API\Job;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;

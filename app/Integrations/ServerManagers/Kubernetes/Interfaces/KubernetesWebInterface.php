@@ -11,12 +11,9 @@ use App\Integrations\ServerManagers\Kubernetes\API\Job;
 use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace;
 use App\Integrations\ServerManagers\Kubernetes\API\Pod;
 use App\Integrations\ServerManagers\Kubernetes\API\Secret;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
-// Driver-agnostic: existsOrganization()/addOrganization()/deleteOrganization()
-// only depend on $this->namespace having isActive()/create()/remove(), which
-// both drivers' KubernetesNamespace classes implement identically.
-use App\Integrations\ServerManagers\Rancher\Services\OrganizationServices;
+use App\Integrations\ServerManagers\Kubernetes\Services\OrganizationServices;
 use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -202,6 +199,10 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
 
     public function add()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return $this->updateSharedParent($parent);
+        }
+
         if ($this->existsOrganization()) {
             $this->ensureImageRegistryAuth();
 
@@ -225,6 +226,10 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
 
     public function update()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return $this->updateSharedParent($parent);
+        }
+
         $this->ensureImageRegistryAuth();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
@@ -245,6 +250,13 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
         return true;
     }
 
+    // A shared-plan child has no release of its own (see AppInstance::sharedPlanParent()),
+    // so whatever happens to it is applied by rebuilding its parent's release.
+    protected function updateSharedParent(AppInstance $parent)
+    {
+        return ApplicationFacade::instance($parent)->connect('web')->update();
+    }
+
     // create()/update() return ['status' => 'failed', 'response' => <helm
     // error text>] rather than throwing (they're also used for polling via
     // isActive()), so callers that need the queue/task error-reporting
@@ -262,6 +274,17 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
 
     public function delete()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            // Mark deactivated first so the parent's chart-building excludes this
+            // child (e.g. B1ChurchChart filters children via notDeactivated())
+            // before it rebuilds its ingress host list -- there is no release of
+            // its own to remove, since this child never had one.
+            $this->app_instance->status = 'deactivated';
+            $this->app_instance->save();
+
+            return $this->updateSharedParent($parent);
+        }
+
         $this->updateRedirectDomains();
 
         $this->app_instance->refresh();

@@ -2,12 +2,12 @@
 
 use App\AppInstance;
 use App\Application;
+use App\Integrations\ServerManagers\Kubernetes\Charts\ChartSecrets;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Rancher\API\Application as RancherApplication;
 use App\Integrations\ServerManagers\Rancher\API\Job;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
-use App\Integrations\ServerManagers\Rancher\Charts\ChartSecrets;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
