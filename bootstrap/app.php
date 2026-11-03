@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetupAwareAuthenticate;
+use App\Support\SafeErrorMessage;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -84,7 +85,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // Inertia shows non-Inertia responses like this one in a modal.
             // Debug pages are dev-only by definition, so skip the app's CSP
             // for them entirely rather than try to patch Ignition's markup.
-            if (config('app.debug') && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
+            // APP_DEBUG alone isn't trusted: it also exposes SQL, bound values
+            // and stack traces, so a deployed environment that carries it over
+            // from a dev config must still get the plain error page.
+            if (config('app.debug') && app()->environment(['local', 'development']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 return $response;
             }
 
@@ -94,7 +98,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         return SecurityHeaders::apply(
                             inertia('ErrorPage', [
                                 'status' => $response->getStatusCode(),
-                                'message' => $exception->getMessage(),
+                                'message' => SafeErrorMessage::forErrorPage($exception, $response->getStatusCode()),
                             ])
                                 ->toResponse($request)
                                 ->setStatusCode($response->getStatusCode()),
@@ -108,7 +112,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         return SecurityHeaders::apply(
                             inertia('UnauthenticatedErrorPage', [
                                 'status' => $response->getStatusCode(),
-                                'message' => $exception->getMessage(),
+                                'message' => SafeErrorMessage::forErrorPage($exception, $response->getStatusCode()),
                             ])
                                 ->toResponse($request)
                                 ->setStatusCode($response->getStatusCode()),

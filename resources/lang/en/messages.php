@@ -30,6 +30,7 @@ return [
         'time_range' => 'This will run between :start and :end',
     ],
     'exception' => [
+        'database_error' => 'A database error occurred. Check the application logs for details.',
         'database_failed' => "Database couldn't be created",
         'sso_failed' => "SSO couldn't be created",
         'account_manager_driver_fail' => "Account manager driver doesn't exist",

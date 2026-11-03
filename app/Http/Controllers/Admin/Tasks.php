@@ -8,6 +8,7 @@ use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Jobs\RunSchedule;
 use App\Support\Facades\Action;
+use App\Support\SafeErrorMessage;
 use App\Support\TaskHelpers;
 use App\Support\Time;
 use App\Task;
@@ -72,7 +73,7 @@ class Tasks extends Controller
                     'status' => $task->status->value,
                     'time' => $duration,
                     'description' => $task->description,
-                    'error_message' => $task->error_message,
+                    'error_message' => SafeErrorMessage::scrub($task->error_message),
                 ];
             }),
             'meta' => [
