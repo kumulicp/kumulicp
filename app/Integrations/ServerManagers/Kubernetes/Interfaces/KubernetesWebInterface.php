@@ -5,9 +5,11 @@ namespace App\Integrations\ServerManagers\Kubernetes\Interfaces;
 use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
+use App\Contracts\ServerManager\JobInterface;
 use App\Integrations\ServerManagers\Kubernetes\API\Application;
 use App\Integrations\ServerManagers\Kubernetes\API\Job;
 use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\Pod;
 use App\Integrations\ServerManagers\Kubernetes\API\Secret;
 use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
@@ -24,7 +26,7 @@ use App\Support\Facades\Application as ApplicationFacade;
  * overrides the make*() factories to swap in its own API classes, and any
  * of the public methods where its behaviour differs.
  */
-class KubernetesWebInterface implements AppInterface, OrganizationInterface
+class KubernetesWebInterface implements AppInterface, JobInterface, OrganizationInterface
 {
     use OrganizationServices;
 
@@ -65,6 +67,11 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
     protected function makeJob(): Job
     {
         return new Job($this->organization, $this->server);
+    }
+
+    protected function makePod(): Pod
+    {
+        return new Pod($this->organization, $this->server);
     }
 
     protected function makeDomainMiddleware(): DomainMiddlewareService
@@ -277,13 +284,27 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         $this->makeDomainMiddleware()->update();
     }
 
-    public function runJob(JobChart $job_chart)
+    public function runJob(JobChart $job_chart, ?string $namespace = null)
     {
-        return $this->makeJob()->create($job_chart);
+        $job = $this->makeJob();
+        $job->setNamespace($namespace);
+
+        return $job->create($job_chart);
     }
 
-    public function jobStatus(string $job_id)
+    public function jobStatus(string $job_id, ?string $namespace = null)
     {
-        return $this->makeJob()->status($job_id);
+        $job = $this->makeJob();
+        $job->setNamespace($namespace);
+
+        return $job->status($job_id);
+    }
+
+    public function jobLogs(string $job_id, ?string $namespace = null): ?string
+    {
+        $pod = $this->makePod();
+        $pod->setNamespace($namespace);
+
+        return $pod->logsForJob($job_id);
     }
 }

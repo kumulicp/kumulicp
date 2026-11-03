@@ -5,6 +5,7 @@ namespace Tests\Support\ServerManagers;
 use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
+use App\Contracts\ServerManager\JobInterface;
 use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
 use App\OrgServer;
 
@@ -15,7 +16,7 @@ use App\OrgServer;
  * so that any action calling $app_instance->connect('web') receives this fake
  * instead of a real Rancher connection. No HTTP calls, no sleeps.
  */
-class FakeServerManager implements AppInterface, OrganizationInterface
+class FakeServerManager implements AppInterface, JobInterface, OrganizationInterface
 {
     private static array $deleted_instances = [];
 
@@ -150,13 +151,18 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function updateRedirectDomains(): void {}
 
-    public function runJob(JobChart $job_chart): array
+    public function runJob(JobChart $job_chart, ?string $namespace = null): array
     {
-        return ['metadata' => ['name' => 'fake-job-'.uniqid()]];
+        return ['status' => 'success', 'response' => ['metadata' => ['name' => 'fake-job-'.uniqid()]]];
     }
 
-    public function jobStatus(string $job_id): string
+    public function jobStatus(string $job_id, ?string $namespace = null): string
     {
-        return 'Succeeded';
+        return 'success';
+    }
+
+    public function jobLogs(string $job_id, ?string $namespace = null): ?string
+    {
+        return null;
     }
 }
