@@ -156,6 +156,10 @@ public function onCreate(Task $task)
 `handle()` and `poll()` get everything from the `Task` (its custom values and
 relations); don't rebuild the action with `new self(...)` in them.
 
+`onCreate` is also where an action makes what its task is about: `ApplicationActivate`
+creates its app instance there (saving the id on the task straight away, so a retry
+carries on with that instance instead of making another).
+
 (Older actions use `postGenerate()` for this. It does the same, but also counts
 the creation as a first attempt on the task, which is why new code uses `onCreate`.)
 
