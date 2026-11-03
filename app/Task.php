@@ -176,21 +176,21 @@ class Task extends Model
     /**
      * The tasks this one waits for, whichever gate (see the pivot's gate).
      *
-     * @return BelongsToMany<Task, $this>
+     * @return BelongsToMany<Task, $this, TaskDependency>
      */
     public function dependencies(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'task_dependencies', 'task_id', 'depends_on_task_id')->withPivot('gate');
+        return $this->belongsToMany(self::class, 'task_dependencies', 'task_id', 'depends_on_task_id')->using(TaskDependency::class)->withPivot('gate');
     }
 
     /**
      * The tasks waiting for this one.
      *
-     * @return BelongsToMany<Task, $this>
+     * @return BelongsToMany<Task, $this, TaskDependency>
      */
     public function dependents(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'task_dependencies', 'depends_on_task_id', 'task_id')->withPivot('gate');
+        return $this->belongsToMany(self::class, 'task_dependencies', 'depends_on_task_id', 'task_id')->using(TaskDependency::class)->withPivot('gate');
     }
 
     /**
