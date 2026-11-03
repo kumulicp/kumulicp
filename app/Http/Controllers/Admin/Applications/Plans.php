@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Applications;
 
+use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
@@ -159,6 +160,33 @@ class Plans extends Controller
         return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
     }
 
+    public function clone(Request $request, Application $app, AppPlan $plan)
+    {
+        // Hidden plans belong to a shared app and can't be duplicated
+        abort_if($plan->application_id !== $app->id || $plan->hidden, 404);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = AppPlan::where('application_id', $app->id)
+            ->where('display_order', '>', 0)
+            ->orderBy('display_order', 'desc')
+            ->first();
+
+        // Copies every attribute (settings, servers, pricing, secrets, ...)
+        // apart from the id and timestamps; the copy starts as a non-default,
+        // unarchived plan with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->save();
+
+        return redirect("/admin/apps/{$app->slug}/plans/{$clone->id}")->with('success', __('admin.applications.plans.cloned', ['plan' => $clone->name]));
+    }
+
     public function edit(Application $app, AppPlan $plan)
     {
         $organization = auth()->user()->organization;
@@ -292,13 +320,23 @@ class Plans extends Controller
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
+        $web_server = $request->web_server;
+        $database_server = $request->database_server;
+        $sso_server = $request->sso_server;
+
+        if ($request->server_type === 'shared' && ($shared_app = AppInstance::find($request->shared_app)) && $shared_app->plan) {
+            $web_server = $shared_app->plan->web_server_id;
+            $database_server = $shared_app->plan->database_server_id;
+            $sso_server = $shared_app->plan->sso_server_id;
+        }
+
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->features = $request->displayed_features;
         $plan->payment_enabled = $request->payment_enabled;
-        $plan->web_server_id = $request->web_server;
-        $plan->database_server_id = $request->database_server;
-        $plan->sso_server_id = $request->sso_server;
+        $plan->web_server_id = $web_server;
+        $plan->database_server_id = $database_server;
+        $plan->sso_server_id = $sso_server;
         $plan->shared_app_id = $request->shared_app;
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;

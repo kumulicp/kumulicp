@@ -21,6 +21,9 @@ class Integration
 
     protected $error_codes = [0, 400, 401, 404, 405, 422, 500, 503, 504]; // 405 Method not allowed
 
+    // Codes a caller opted out of via ignoreErrorCode() for the current request
+    protected array $ignored_error_codes = [];
+
     protected $error_code;
 
     protected $error_fatal;
@@ -212,6 +215,8 @@ class Integration
 
     public function ignoreErrorCode($code)
     {
+        $this->ignored_error_codes[] = $code;
+
         if ($key = array_search($code, $this->error_codes)) {
             unset($this->error_codes[$key]);
         }
@@ -297,6 +302,7 @@ class Integration
         }
         $this->parseResponse($contents);
         $this->error_codes = [0, 400, 401, 404, 405, 422, 500, 503, 504];
+        $this->ignored_error_codes = [];
 
         if (! $this->save_session) {
             $this->resetClient();

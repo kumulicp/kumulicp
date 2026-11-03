@@ -93,6 +93,28 @@ class Plans extends Controller
         return redirect('/admin/service/plans/'.$plan->id)->with('success', __('admin.plans.added', ['plan' => $plan->name]));
     }
 
+    public function clone(Request $request, Plan $plan)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
+
+        // Copies every attribute (settings, app plans, pricing, ...) apart from
+        // the id and timestamps; the copy starts as a hidden, non-default,
+        // unarchived draft with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->status = 'hidden';
+        $clone->save();
+
+        return redirect('/admin/service/plans/'.$clone->id)->with('success', __('admin.plans.cloned', ['plan' => $clone->name]));
+    }
+
     public function edit(Plan $plan)
     {
         $apps = Application::all();
@@ -106,7 +128,8 @@ class Plans extends Controller
             $plans = Arr::get($plan->app_plans, "{$app->slug}.plans");
             $app_plans[$app->slug] = [
                 'max' => Arr::get($plan->app_plans, "{$app->slug}.max") ?? 0,
-                'plans' => is_array($plans) ? ($plans[0] ?? null) : null,
+                // Always a list of app plan ids; only pay-per-app plans may hold more than one
+                'plans' => is_array($plans) ? array_values($plans) : [],
             ];
         }
 
@@ -242,6 +265,10 @@ class Plans extends Controller
         foreach ($rawAppPlans as $slug => &$config) {
             if (array_key_exists('plans', $config) && ! is_array($config['plans'])) {
                 $config['plans'] = $config['plans'] !== null ? [$config['plans']] : [];
+            }
+            // Pay per app plans can offer several app plans per app; packaged plans only a single one
+            if (isset($config['plans']) && $request->type !== 'app') {
+                $config['plans'] = array_slice(array_values($config['plans']), 0, 1);
             }
         }
         unset($config);

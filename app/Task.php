@@ -282,6 +282,14 @@ class Task extends Model
     }
 
     /**
+     * @return HasMany<TaskStep, $this>
+     */
+    public function steps(): HasMany
+    {
+        return $this->hasMany(TaskStep::class)->orderBy('position');
+    }
+
+    /**
      * @return HasMany<TaskEvent, $this>
      */
     public function events(): HasMany

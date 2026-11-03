@@ -29,6 +29,13 @@ class ApplicationUpdate extends Action
     {
         $app_instance = Application::instance($task->app_instance);
         $app_update = new self($app_instance->app_instance);
+
+        // A shared child without multisite has no release of its own to
+        // update -- the hub's own settings cover it entirely.
+        if (! $app_instance->usesOwnResources()) {
+            return $app_update;
+        }
+
         $server = $app_instance->connect('web');
 
         if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'update_settings'), $task, true)) {
@@ -48,6 +55,21 @@ class ApplicationUpdate extends Action
     public static function complete(Task &$task)
     {
         $app_instance = Application::instance($task->app_instance);
+
+        // A shared child without multisite has nothing of its own to wait
+        // on -- the hub's own update task tracks completion for it.
+        if (! $app_instance->usesOwnResources()) {
+            $app_instance->status = 'active';
+            $app_instance->save();
+
+            $task->complete();
+            $task->groupNotified();
+
+            event(new AppInstanceUpdated($app_instance->app_instance));
+
+            return;
+        }
+
         $child_app = null;
 
         if ($parent_app = $app_instance->parent) {

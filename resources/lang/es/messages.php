@@ -22,6 +22,8 @@ return [
         'waiting_for' => 'Esperando a que finalicen otras tareas',
         'dependency_failed' => 'Falló una tarea de la que depende esta',
         'deadline_exceeded' => 'Esta tarea no terminó a tiempo',
+        'step_timed_out' => 'El paso :step no terminó a tiempo',
+        'release_reset' => 'La versión estaba bloqueada y se restableció; se intentará la actualización de nuevo',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
         'parent_app' => ':app necesita instalarse primero',

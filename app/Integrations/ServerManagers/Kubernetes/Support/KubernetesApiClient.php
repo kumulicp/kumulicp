@@ -98,7 +98,7 @@ class KubernetesApiClient
 
             $existing = $http->get($this->path($resource, $namespace, $name));
 
-            if ($existing->status() === 404) {
+            if ($this->isMissing($existing, $resource)) {
                 return $this->result($this->createObject($http, $resource, $namespace, $manifest));
             }
 
@@ -112,6 +112,15 @@ class KubernetesApiClient
 
             return $this->result($this->updateObject($http, $resource, $namespace, $name, $manifest, $existing->json() ?? []));
         });
+    }
+
+    /**
+     * Whether the response to a lookup means the object doesn't exist yet,
+     * so apply() should create it. $resource is as returned by resolve().
+     */
+    protected function isMissing(Response $response, array $resource): bool
+    {
+        return $response->status() === 404;
     }
 
     /**

@@ -4,10 +4,12 @@ namespace App;
 
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -30,6 +32,7 @@ use Illuminate\Support\Str;
  * @property string $label
  * @property string|null $status
  * @property string|null $api_password
+ * @property string|null $db_password
  * @property array|null $settings
  * @property Carbon|null $deactivate_at
  * @property Carbon|null $trial_ends_at
@@ -51,6 +54,8 @@ use Illuminate\Support\Str;
  */
 class AppInstance extends Model
 {
+    use HasFactory;
+
     protected $table = 'app_instances';
 
     private $extensions = [
@@ -58,7 +63,12 @@ class AppInstance extends Model
         'demo_app' => DemoAppExtensions::class,
     ];
 
+    protected $hidden = [
+        'db_password',
+    ];
+
     protected $casts = [
+        'db_password' => 'encrypted',
         'settings' => 'array',
         'deactivate_at' => 'date',
         'trial_ends_at' => 'date',
@@ -196,16 +206,21 @@ class AppInstance extends Model
     }
 
     // Whether a shared-plan child's site lives under its parent's domain
-    // (e.g. B1Church -- every child is a subdomain of the hub) or keeps
-    // whatever domain its own org admin picked on activation (e.g. ERPNext,
-    // which supports any domain) is an application-level choice, not
-    // something implied by server_type=shared alone -- see
-    // Application::hasDomainOption() / the 'parent' domain_option, set per
-    // app via the admin Applications screen.
+    // (e.g. B1Church/Nextcloud -- every child is addressed via the hub) or
+    // keeps whatever domain its own org admin picked on activation (e.g.
+    // ERPNext, which supports any domain) is an application-level choice --
+    // see Application::hasDomainOption() / the 'parent' domain_option, set
+    // per app via the admin Applications screen.
+    //
+    // hasDomainOption('parent') alone isn't enough to decide that, though:
+    // it's the same flag for every instance of the app, hub and children
+    // alike. Gating on $this->parent too is what keeps the hub (and any
+    // standalone instance) resolving its own domain normally instead of
+    // redirecting to a parent it doesn't have and returning null.
     public function domain()
     {
-        if ($this->application->hasDomainOption('parent')) {
-            return $this->parent ? $this->parent->domain() : null;
+        if ($this->parent && $this->application->hasDomainOption('parent')) {
+            return $this->parent->domain();
         }
 
         if ($this->primary_domain) {
@@ -275,6 +290,21 @@ class AppInstance extends Model
             : null;
     }
 
+    public function usesMultisitePermissions(): bool
+    {
+        return ApplicationFacade::profile($this->application)->isCompatible('multisite');
+    }
+
+    // False for a shared-plan child without multisite (e.g. Nextcloud) --
+    // it has no release/site/permissions of its own and defers entirely to
+    // its parent. True for a standalone/hub instance, or a shared-plan
+    // child that IS multisite (e.g. ERPNext), which keeps its own identity
+    // even when shared.
+    public function usesOwnResources(): bool
+    {
+        return ! $this->sharedPlanParent() || $this->usesMultisitePermissions();
+    }
+
     public function canEnableSelfRegistration(): bool
     {
         return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;
@@ -305,15 +335,8 @@ class AppInstance extends Model
 
     public function dbPassword(): string
     {
-        try {
-            if ($encrypted = $this->setting('db_password')) {
-                return Crypt::decryptString($encrypted);
-            }
-        } catch (\Throwable $e) {
-            // fall through to org secretpw for existing instances
-        }
-
-        return $this->organization->secretpw;
+        return $this->db_password
+            ?? throw new \RuntimeException("App instance {$this->id} has no database password");
     }
 
     public function siteApiKey(): string

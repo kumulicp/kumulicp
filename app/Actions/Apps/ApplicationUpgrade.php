@@ -3,10 +3,11 @@
 namespace App\Actions\Apps;
 
 use App\Actions\Action;
+use App\Actions\ActionResult;
+use App\Actions\NativeAction;
 use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\AppVersion;
-use App\Enums\TaskStatus;
 use App\Events\AppInstanceSubscriptionChanged;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Notifications\ApplicationUpgraded;
@@ -16,7 +17,7 @@ use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Carbon;
 
-class ApplicationUpgrade extends Action
+class ApplicationUpgrade extends NativeAction
 {
     public $slug = 'application_upgrade';
 
@@ -33,25 +34,37 @@ class ApplicationUpgrade extends Action
         }
         $this->addCustomValue(['notify' => $notify]);
 
-        $application = $version->application;
+        $this->description = __('actions.upgrading_app', ['app' => $version->application->name]);
+        $this->app_instance = Application::instance($app_instance);
+    }
 
-        $this->description = __('actions.upgrading_app', ['app' => $application->name]);
-        $app_instance = Application::instance($app_instance);
-        $app_instance->version_id = $version->id;
+    // Once the task exists, and again when it is retried
+    public function onCreate(Task $task)
+    {
+        $app_instance = $this->app_instance;
+        $app_instance->version_id = $this->version->id;
         $app_instance->status = 'updating';
         $app_instance->save();
-        $this->app_instance = $app_instance;
 
+        // An app that is a job on a shared hub is upgraded by a job; the task
+        // isn't done until that is
         if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->get(), 'upgrade'), null, true)) {
-            $this->waitFor($job);
+            $task->dependOn($job, Task::GATE_FINISH);
         }
     }
 
-    public static function run(Task $task)
+    public static function handle(Task $task): ActionResult
     {
+        $app_instance = Application::instance($task->app_instance);
+
+        // A shared child without multisite has no release of its own to
+        // upgrade -- the hub's own upgrade covers it entirely.
+        if (! $app_instance->usesOwnResources()) {
+            return ActionResult::wait();
+        }
+
         // Add ldap groups
         AddLdapGroups::dispatch($task->app_instance);
-        $app_instance = Application::instance($task->app_instance);
         if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
@@ -78,26 +91,31 @@ class ApplicationUpgrade extends Action
             $app_instance->updateSetting('expand_storage', true);
             $app_instance->updateSetting('storage_quota', $calculated_storage);
         }
+
+        return ActionResult::wait();
     }
 
-    public static function retry(Task $task)
+    public static function retry(Task $task): ?Action
     {
-        $app_instance = $task->app_instance;
-        $app_instance->status = 'updating';
-        $app_instance->save();
-
-        $task->status = TaskStatus::READY;
-        $task->save();
-
-        return new self($app_instance, $task->version);
+        return new self($task->app_instance, $task->version);
     }
 
-    public static function complete(Task $task)
+    public static function poll(Task $task): ActionResult
     {
         $app_instance = Application::instance($task->app_instance);
 
-        // A shared child has no web release of its own to poll -- same
-        // hub redirect as run() above.
+        // A shared child without multisite has nothing of its own to wait
+        // on -- the hub's own upgrade task tracks completion for it.
+        if (! $app_instance->usesOwnResources()) {
+            $app_instance->version_id = $task->version_id;
+            $app_instance->status = 'active';
+            $app_instance->save();
+
+            return ActionResult::done();
+        }
+
+        // A multisite shared child (e.g. ERPNext) has no web release of its
+        // own to poll -- same hub redirect as run() above.
         $server = (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = $app_instance->parent)
             ? Application::instance($parent_app)->connect('web')
             : $app_instance->connect('web');
@@ -110,7 +128,7 @@ class ApplicationUpgrade extends Action
                 $server->update();
             }
 
-            return;
+            return ActionResult::wait();
         }
 
         $status = $server->checkStatus();
@@ -121,21 +139,20 @@ class ApplicationUpgrade extends Action
             $app_instance->status = 'active';
             $app_instance->save();
 
-            $task->complete();
-
-            if ($task->getValue('notify') && in_array($app_instance->version->announcement_location, ['local', 'remote'])) {
-                $task->organization->notifyAdmins(new ApplicationUpgraded($task));
-                $task->groupNotified();
-            }
-
-            return;
+            return ActionResult::done()->then(function (Task $task) use ($app_instance) {
+                if ($task->getValue('notify') && in_array($app_instance->version->announcement_location, ['local', 'remote'])) {
+                    $task->organization->notifyAdmins(new ApplicationUpgraded($task));
+                    $task->groupNotified();
+                }
+            });
         }
 
         if ($status['pending'] ?? false) {
             if (method_exists($server, 'recoverStuckRelease')
                 && (! method_exists($server, 'canRecoverStuckRelease') || $server->canRecoverStuckRelease())
                 && static::recoverStuckPendingRelease($task, $server)) {
-                return;
+                // The next run starts the upgrade fresh
+                return ActionResult::retryLater(__('messages.action.release_reset'), 0);
             }
         } else {
             static::forgetPendingSince($task);
@@ -147,6 +164,8 @@ class ApplicationUpgrade extends Action
         // just looking stuck with no explanation.
         $task->error_message = $status['message'];
         $task->save();
+
+        return ActionResult::wait();
     }
 
     /**
@@ -156,8 +175,8 @@ class ApplicationUpgrade extends Action
      * (e.g. the container restarted) rather than the operation still
      * genuinely running -- helm refuses any further action on a release
      * stuck like that, so it can never recover on its own. Deletes the
-     * stuck release secret and restarts the task so the next attempt runs
-     * `helm upgrade --install` fresh.
+     * stuck release secret so the next attempt (the caller retries the task)
+     * runs `helm upgrade --install` fresh.
      *
      * @return bool true if recovery was triggered (caller should stop)
      */
@@ -179,7 +198,6 @@ class ApplicationUpgrade extends Action
 
         $server->recoverStuckRelease();
         static::forgetPendingSince($task);
-        $task->restart();
 
         return true;
     }

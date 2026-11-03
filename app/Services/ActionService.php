@@ -156,6 +156,8 @@ class ActionService
         $task->blocked_from = null;
         $task->save();
         $task->syncFinishDependencies([]);
+        // A stepped action starts over from its first step
+        $task->steps()->delete();
 
         if ($handler = $this->handlerFor($task)) {
             try {
@@ -168,6 +170,10 @@ class ActionService
                     if (method_exists($retry, 'postGenerate')) {
                         $task->status = $retry->status;
                         $retry->postGenerate($task);
+                    }
+
+                    if (method_exists($retry, 'onCreate')) {
+                        $retry->onCreate($task);
                     }
                 }
             } catch (ConnectionFailedException $e) {
@@ -248,6 +254,18 @@ class ActionService
 
             try {
                 $action->postGenerate($task);
+            } catch (Throwable $e) {
+                report($e);
+                $task->error_message = $e->getMessage();
+                $task->status = TaskStatus::FAILED;
+                $task->save();
+            }
+        }
+
+        // A task onCreate() just failed must stay failed too
+        if (method_exists($action, 'onCreate')) {
+            try {
+                $action->onCreate($task);
             } catch (Throwable $e) {
                 report($e);
                 $task->error_message = $e->getMessage();

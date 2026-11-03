@@ -20,6 +20,7 @@ auth.json
 /storage/app/purifier/*
 /storage/app/public/photos
 /storage/app/images/screenshots
+/storage/app/tickets
 
 # handled by composer
 /vendor
@@ -67,3 +68,7 @@ test-results/
 .claude/security
 scripts/kmanager-test/.generated.env
 scripts/kmanager-test/.generated.env
+
+# DevSpace
+.devspace/
+devspace.yaml

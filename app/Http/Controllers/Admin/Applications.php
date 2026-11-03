@@ -163,7 +163,6 @@ class Applications extends Controller
                 'parent_app' => [
                     'id' => $app->parent_app_id != 0 ? $app->parent_app_id : null,
                 ],
-                'primary_domain_allowed' => $app->primary_domain_allowed,
                 'domain_option' => $app->domain_option,
                 'access_type' => $app->access_type,
                 'short_description' => $app->short_description,
@@ -220,7 +219,6 @@ class Applications extends Controller
             'access_type' => ['required', 'string', 'max:15', Rule::enum(AccessType::class)],
             'short_description' => 'required',
             'description' => 'required',
-            'primary_domain_allowed' => 'boolean',
             'domain_option' => 'present|array',
             'domain_option.*' => 'in:subdomains,primary,base,parent',
             'can_update_domain' => 'boolean',
@@ -264,7 +262,6 @@ class Applications extends Controller
         $app->description = clean($request->description, 'rich_text');
         $app->parent_app_id = $request->parent_app ?? 0;
         $app->access_type = $request->access_type;
-        $app->primary_domain_allowed = $request->primary_domain_allowed ?? false;
         $app->domain_option = $request->domain_option ?? [];
         $app->can_update_domain = $request->can_update_domain;
         $app->save();

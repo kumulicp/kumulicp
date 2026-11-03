@@ -329,6 +329,7 @@ class ApplicationService
         $app_instance->version_id = $version->id;
         $app_instance->status = 'activating';
         $app_instance->api_password = Crypt::encrypt(Str::random(15));
+        $app_instance->db_password = Str::random(32);
         $app_instance->plan_id = $plan->id;
 
         if ($plan->setting('expires_after') > 0) {
@@ -343,7 +344,6 @@ class ApplicationService
             $app_instance->parent()->associate($parent_app);
         }
         $app_instance->updateSetting('configurations', $this->persistentConfigurations($application, $plan));
-        $app_instance->updateSetting('db_password', Crypt::encryptString(Str::random(32)));
 
         if ($domain) {
             $app_instance->primary_domain()->associate($domain);

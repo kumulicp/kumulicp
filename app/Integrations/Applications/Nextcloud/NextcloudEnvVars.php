@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Nextcloud;
 use App\AppInstance;
 use App\Integrations\Applications\EnvVar;
 use App\Ldap\Actions\Dn;
+use App\Ldap\LdapSupport;
 use App\Support\Facades\Application;
 use Illuminate\Support\Facades\Crypt;
 
@@ -13,16 +14,42 @@ class NextcloudEnvVars extends EnvVar
     public function get(AppInstance $app_instance)
     {
         $app_instance = Application::instance($app_instance);
-        $base_dn = Dn::create($app_instance->organization);
-        $admin_dn = 'cn=admin,'.Dn::create($app_instance->organization);
+
+        // RancherWebInterface reroutes any child's add/update/delete to a
+        // rebuild of the hub's own chart (see sharedPlanParent()), so
+        // $app_instance here is always either the hub or a genuinely
+        // standalone instance -- never a child directly. Having any
+        // (non-deactivated) child at all is what distinguishes the two.
+        $is_shared_hub = $app_instance->children()->notDeactivated()->exists();
+        $global_base = config('ldap.connections.default.base_dn');
+
+        if ($is_shared_hub && (! config('ldap.connections.directory_reader.username') || ! config('ldap.connections.directory_reader.password'))) {
+            // Without the reader account the widened hub would bind with empty
+            // credentials and silently break login for every org on it.
+            throw new \RuntimeException('Shared Nextcloud requires LDAP_DIRECTORY_READER_USERNAME and LDAP_DIRECTORY_READER_PASSWORD (run `php artisan ldap:provision-directory-reader`).');
+        }
+
+        $base_dn = $is_shared_hub ? $global_base : Dn::create($app_instance->organization);
+        // Each org's own admin DN is ACL-restricted to just that org's
+        // subtree -- widening LDAP_BASE above is useless for a shared hub
+        // unless the bind account can actually read across every child
+        // org's branch too. Use the dedicated, read-only "directory reader"
+        // service account (o=server) for that -- never the app's own
+        // default/rootDN connection, which has unrestricted read/write to
+        // the entire directory and must never be handed to a third-party pod.
+        $admin_dn = $is_shared_hub ? config('ldap.connections.directory_reader.username') : 'cn=admin,'.Dn::create($app_instance->organization);
         $group_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
-        $secretpw = $app_instance->organization->secretpw;
+        $secretpw = $is_shared_hub ? config('ldap.connections.directory_reader.password') : $app_instance->organization->secretpw;
         $sso_server = $app_instance->server('sso')?->serverInfo();
         $sso_slug = $app_instance->setting('sso.slug') ?? "{$app_instance->id}-{$app_instance->organization->slug}-{$app_instance->name}";
         $standard = $app_instance->name.'-standard';
         $basic = $app_instance->name.'-basic';
 
-        $group_base = "ou=groups,$base_dn\n$group_dn";
+        // For a shared hub, every registered child org's own per-org role
+        // group (LdapSupport::getAppRoleGroup()) lives under that org's own
+        // branch, not this instance's -- widen the group search base to the
+        // whole shared LDAP tree so they're all visible.
+        $group_base = $is_shared_hub ? "ou=groups,$global_base\n$global_base" : "ou=groups,$base_dn\n$group_dn";
 
         $default_settings = [
             'IS_PROXY' => 'true',
@@ -34,7 +61,17 @@ class NextcloudEnvVars extends EnvVar
             'PHP_MEMORY_LIMIT' => $app_instance->configuration('nextcloud-php-memory-limit'),
             'PHP_UPLOAD_LIMIT' => $app_instance->configuration('nextcloud-php-upload-limit'),
             'PHP_OPCACHE_MEMORY_CONSUMPTION' => (string) $app_instance->configuration('nextcloud-php-opcache-memory-consumption'),
+            'SHARED_INSTANCE' => $is_shared_hub ? 'true' : 'false',
         ];
+
+        // For a shared hub, login is gated on the central access group, which
+        // child orgs are synced into as they're granted roles (see
+        // Permissions::syncCentralAccessGroup()). The hub's own org is never
+        // synced into it, so its standard/basic role groups stay accepted too
+        // -- otherwise registering the first child would lock the hub's own
+        // users out.
+        $own_role_filter = "(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)";
+        $login_group_dn = $is_shared_hub ? LdapSupport::centralAccessGroupDn($app_instance->get()) : null;
 
         $ldap_settings = config('account_manager.driver') === 'ldap' ? [
             'USE_LDAP' => 'true',
@@ -44,8 +81,12 @@ class NextcloudEnvVars extends EnvVar
             'LDAP_AGENT_PASSWORD' => $secretpw,
             'LDAP_BASE' => $base_dn,
             'LDAP_GROUP_BASE' => $group_base,
-            'LOGIN_FILTER' => "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn))(|(cn=%uid)(mail=%uid)))",
-            'USER_FILTER' => "(&(objectclass=inetOrgPerson)(|(memberof=cn=$standard,$group_dn)(memberof=cn=$basic,$group_dn)))",
+            'LOGIN_FILTER' => $is_shared_hub
+                ? "(&(objectclass=inetOrgPerson)(|(memberof=$login_group_dn)$own_role_filter)(|(cn=%uid)(mail=%uid)))"
+                : "(&(objectclass=inetOrgPerson)(|$own_role_filter)(|(cn=%uid)(mail=%uid)))",
+            'USER_FILTER' => $is_shared_hub
+                ? "(&(objectclass=inetOrgPerson)(|(memberof=$login_group_dn)$own_role_filter))"
+                : "(&(objectclass=inetOrgPerson)(|$own_role_filter))",
         ] : [];
 
         $sso_settings = $app_instance->configuration('enable-sso') ? [

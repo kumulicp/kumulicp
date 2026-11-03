@@ -58,6 +58,27 @@ import draggable from 'vuedraggable'
             </form>
           </template>
         </va-modal>
+        <va-modal v-model="showClonePlan" no-outside-dismiss no-padding size="small" class="p-0">
+          <template #content="{ ok }">
+            <form v-if="cloneTarget" @submit.prevent="submitClone">
+              <va-card-title class="m-0">{{ $t('admin.plans.clonePlanTitle', { name: cloneTarget.name }) }}</va-card-title>
+              <va-card-content class="m-0">
+                <p class="va-text-secondary mb-3">{{ $t('admin.plans.cloneHelp', { name: cloneTarget.name }) }}</p>
+                <va-input id="cloneName" v-model="cloneForm.name"
+                  :label="$t('admin.plans.name')"
+                  class="mb-3"
+                  required-mark
+                  :error="!!cloneForm.errors.name"
+                  :error-messages="cloneForm.errors.name"
+                  />
+              </va-card-content>
+              <va-card-actions align="right" class="">
+                <va-button color="textInverted" :disabled="cloneForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+                <va-button id="cloneSubmit" type="submit" :disabled="cloneForm.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+              </va-card-actions>
+            </form>
+          </template>
+        </va-modal>
       </div>
       <div class="plans-list">
         <div class="row">
@@ -73,6 +94,7 @@ import draggable from 'vuedraggable'
                     <th>{{ $t('admin.plans.planType') }}</th>
                     <th>{{ $t('admin.plans.organizationType') }}</th>
                     <th>{{ $t('admin.plans.activeSubscribers') }}</th>
+                    <th style="width: 100px"></th>
                   </tr>
                 </thead>
                 <draggable v-model="order.plans" tag="tbody" item-key="id">
@@ -84,6 +106,15 @@ import draggable from 'vuedraggable'
                       <td>{{ element.type }}</td>
                       <td>{{ element.org_type }}</td>
                       <td>{{ element.active_subscribers }}</td>
+                      <td>
+                        <va-button
+                          :id="'clone-plan-'+element.id"
+                          type="button"
+                          size="small"
+                          preset="secondary"
+                          @click="openClone(element)"
+                        >{{ $t('admin.plans.clone') }}</va-button>
+                      </td>
                     </tr>
                   </template>
                 </draggable>
@@ -103,6 +134,7 @@ import draggable from 'vuedraggable'
                     <th>{{ $t('admin.plans.planType') }}</th>
                     <th>{{ $t('admin.plans.organizationType') }}</th>
                     <th>{{ $t('admin.plans.activeSubscribers') }}</th>
+                    <th style="width: 100px"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,6 +144,15 @@ import draggable from 'vuedraggable'
                     <td>{{ plan.type }}</td>
                     <td>{{ plan.org_type }}</td>
                     <td>{{ plan.active_subscribers }}</td>
+                    <td>
+                      <va-button
+                        :id="'clone-plan-'+plan.id"
+                        type="button"
+                        size="small"
+                        preset="secondary"
+                        @click="openClone(plan)"
+                      >{{ $t('admin.plans.clone') }}</va-button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -134,6 +175,11 @@ export default {
   data () {
     return {
       showAddPlan: false,
+      showClonePlan: false,
+      cloneTarget: null,
+      cloneForm: useForm({
+        name: ''
+      }),
       curPageValue: 1,
       pageSize: 10,
       planTypes: [
@@ -147,6 +193,22 @@ export default {
       }),
       order: useForm({
         plans: this.plans
+      })
+    }
+  },
+  methods: {
+    openClone (plan) {
+      this.cloneTarget = plan
+      this.cloneForm.reset()
+      this.cloneForm.clearErrors()
+      this.cloneForm.name = this.$t('admin.plans.cloneNameDefault', { name: plan.name })
+      this.showClonePlan = true
+    },
+    submitClone () {
+      this.cloneForm.post(`/admin/service/plans/${this.cloneTarget.id}/clone`, {
+        onSuccess: () => {
+          this.showClonePlan = false
+        }
       })
     }
   }

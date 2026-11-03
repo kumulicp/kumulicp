@@ -5,6 +5,7 @@ namespace App\Jobs\Applications;
 use App\AppInstance;
 use App\AppRole;
 use App\Ldap\Actions\Dn;
+use App\Ldap\LdapSupport;
 use App\Ldap\Models\Group;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization;
@@ -47,22 +48,18 @@ class AddLdapGroups implements ShouldQueue
         $version = $app_instance->version;
 
         Organization::setOrganization($organization);
-        if ($app_instance->parent_id == 0) {
-            /** @LDAP **/
-            $LdapApp = Group::find(Dn::create($organization, 'applications', $app_instance->name));
-            if (! $LdapApp) {
-                $LdapApp = new Group;
-                $LdapApp->inside(Dn::create($organization, 'applications'));
-                $LdapApp->setAttribute('cn', $app_instance->name);
-                $LdapApp->setAttribute('description', $app->name);
-                $LdapApp->member = Dn::create($organization);
-                $LdapApp->save();
-            }
 
-            $add_group_app = $app_instance;
-        } else {
-            $add_group_app = $app_instance->parent;
-        }
+        $is_shared_child = (bool) $app_instance->sharedPlanParent();
+        // A multisite child (e.g. ERPNext) keeps its own app container and role
+        // groups -- same rule as LdapSupport::getAppInstanceID()/AppRole::app_slug(),
+        // so the groups created here are the ones getAppRoleGroup() later finds.
+        $add_group_app = $app_instance->parent_id == 0 || $app_instance->usesMultisitePermissions() ? $app_instance : $app_instance->parent;
+
+        // For a shared-app child, this org never otherwise gets an
+        // app-level container of its own -- the hub's own activation only
+        // creates one under its own org -- so the first role group created
+        // below would fail to save with "No such object" without this.
+        LdapSupport::ensureAppContainer($organization, $add_group_app->name, $app->name);
 
         $default_admin_roles = [];
 
@@ -70,9 +67,13 @@ class AddLdapGroups implements ShouldQueue
             $default_admin_roles[] = $default_group->slug;
         }
 
+        // For a shared-app child, the org name is what lets this group be
+        // told apart from every other org's group in the shared app's own
+        // group picker/sharing UI -- the generic role name/label is the
+        // same across every org otherwise.
         $roles = $version->roles();
         foreach ($roles as $role) {
-            $this->createRole($organization, $add_group_app, $role->app_slug($add_group_app));
+            $this->createRole($organization, $add_group_app, $role->app_slug($add_group_app), $is_shared_child ? $organization->name : null);
 
             // If app has a default group, add cp admins to default admin group
             if (in_array($role->slug, $default_admin_roles)) {
@@ -81,7 +82,7 @@ class AddLdapGroups implements ShouldQueue
 
             // Add implied groups
             foreach ($role->implied_roles as $implied_role) {
-                $this->createRole($organization, $add_group_app, $implied_role->app_slug($add_group_app), $implied_role->label);
+                $this->createRole($organization, $add_group_app, $implied_role->app_slug($add_group_app), $is_shared_child ? $organization->name : $implied_role->label);
 
                 // If app has a default group, add cp admins to default admin group
                 if (in_array($implied_role->slug, $default_admin_roles)) {

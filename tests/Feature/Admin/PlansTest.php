@@ -504,6 +504,67 @@ class PlansTest extends TestCase
         $this->assertEquals([$appPlan->id], $saved);
     }
 
+    public function test_pay_per_app_plan_can_store_multiple_app_plans_per_app()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'app']);
+
+        $app = Application::factory()->create(['slug' => 'test_app_multi', 'name' => 'Test App Multi', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [
+                    $app->slug => ['max' => 1, 'plans' => $ids],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertEquals($ids, $plan->refresh()->app_plans[$app->slug]['plans']);
+    }
+
+    public function test_package_plan_keeps_only_a_single_app_plan_per_app()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'package']);
+
+        $app = Application::factory()->create(['slug' => 'test_app_single', 'name' => 'Test App Single', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'package',
+                'app_plans' => [
+                    $app->slug => ['max' => 1, 'plans' => $ids],
+                ],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $this->assertEquals([$ids[0]], $plan->refresh()->app_plans[$app->slug]['plans']);
+    }
+
+    public function test_edit_returns_every_selected_app_plan()
+    {
+        $user = $this->adminUser();
+
+        $app = Application::factory()->create(['slug' => 'test_app_edit', 'name' => 'Test App Edit', 'enabled' => true]);
+        $appPlans = AppPlan::factory()->count(2)->create(['application_id' => $app->id]);
+        $ids = $appPlans->pluck('id')->all();
+        $plan = Plan::factory()->create([
+            'type' => 'app',
+            'app_plans' => [$app->slug => ['max' => 2, 'plans' => $ids]],
+        ]);
+
+        $this->actingAs($user)
+            ->get("/admin/service/plans/{$plan->id}")
+            ->assertInertia(fn ($page) => $page
+                ->where("plan.app_plans.{$app->slug}.plans", $ids)
+                ->where("plan.app_plans.{$app->slug}.max", 2));
+    }
+
     // ---------------------------------------------------------------------------
     // Remove tests
     // ---------------------------------------------------------------------------
@@ -573,5 +634,81 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans/update_order', ['plans' => []])
             ->assertRedirect('/admin/service/plans');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Clone tests
+    // ---------------------------------------------------------------------------
+
+    public function test_clone_copies_a_plan_under_a_new_name()
+    {
+        $user = $this->adminUser();
+
+        $plan = Plan::factory()->create([
+            'name' => 'Original Plan',
+            'description' => 'Original description',
+            'type' => 'package',
+            'org_type' => 'nonprofit',
+            'is_default' => true,
+            'archive' => true,
+            'status' => 'available',
+            'display_order' => 1,
+            'payment_enabled' => true,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan']);
+
+        $clone = Plan::where('name', 'Cloned Plan')->firstOrFail();
+        $response->assertRedirect("/admin/service/plans/{$clone->id}");
+
+        $this->assertNotEquals($plan->id, $clone->id);
+        $this->assertSame('Original description', $clone->description);
+        $this->assertSame('package', $clone->type);
+        $this->assertSame('nonprofit', $clone->org_type);
+        $this->assertTrue($clone->payment_enabled);
+        $this->assertEquals($plan->settings, $clone->settings);
+        $this->assertEquals($plan->app_plans, $clone->app_plans);
+
+        // The clone is a fresh draft that doesn't take over from the original
+        $this->assertFalse($clone->is_default);
+        $this->assertFalse($clone->archive);
+        $this->assertSame('hidden', $clone->status);
+        $this->assertGreaterThan($plan->display_order, $clone->display_order);
+
+        // The original is untouched
+        $plan->refresh();
+        $this->assertSame('Original Plan', $plan->name);
+        $this->assertTrue($plan->is_default);
+    }
+
+    public function test_clone_requires_a_name()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+        $count = Plan::count();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", [])
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame($count, Plan::count());
+    }
+
+    public function test_non_admin_user_cannot_clone_a_plan()
+    {
+        $support = new TestSupports;
+        $support->seed();
+
+        $user = User::find(1);
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
+
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('plans', ['name' => 'Cloned Plan']);
     }
 }

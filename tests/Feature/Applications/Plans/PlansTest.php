@@ -245,3 +245,50 @@ it('rejects a currency amount that is not numeric for the app plan', function ()
         ])
     )->assertSessionHasErrors('prices.base.CAD.amount');
 });
+
+it('clones an app plan under a new name', function () {
+    $this->appPlan->update(['is_default' => true, 'archive' => true, 'display_order' => 1]);
+
+    $response = $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/clone",
+        ['name' => 'Cloned App Plan']
+    );
+
+    $clone = AppPlan::where('name', 'Cloned App Plan')->firstOrFail();
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/plans/{$clone->id}");
+
+    expect($clone->id)->not->toBe($this->appPlan->id)
+        ->and($clone->application_id)->toBe($this->demoApp->id)
+        ->and($clone->description)->toBe('Original description')
+        ->and($clone->settings)->toEqual($this->appPlan->settings)
+        ->and($clone->is_default)->toBeFalse()
+        ->and($clone->archive)->toBeFalse()
+        ->and($clone->display_order)->toBeGreaterThan(1);
+
+    $this->appPlan->refresh();
+    expect($this->appPlan->name)->toBe('Original App Plan')
+        ->and($this->appPlan->is_default)->toBeTrue();
+});
+
+it('requires a name to clone an app plan', function () {
+    $count = AppPlan::count();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/clone",
+        []
+    )->assertSessionHasErrors('name');
+
+    expect(AppPlan::count())->toBe($count);
+});
+
+it('does not clone a hidden shared app plan', function () {
+    $this->appPlan->update(['hidden' => true]);
+    $count = AppPlan::count();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/clone",
+        ['name' => 'Cloned App Plan']
+    )->assertNotFound();
+
+    expect(AppPlan::count())->toBe($count);
+});

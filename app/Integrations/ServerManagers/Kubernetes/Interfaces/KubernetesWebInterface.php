@@ -102,7 +102,8 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function notFoundMessage(): string
     {
-        return __('messages.exception.app_not_found_rancher');
+        // What the status check actually saw, so "not found" can be told apart from "failed".
+        return trim(__('messages.exception.app_not_found_rancher').' ('.$this->checkStatus()['message'].')');
     }
 
     public function get()

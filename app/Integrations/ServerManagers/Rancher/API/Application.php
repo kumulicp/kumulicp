@@ -67,6 +67,11 @@ class Application extends BaseApplication
         $result = $this->rancher()->get('catalog.cattle.io/v1', 'App', $release_name, $namespace);
 
         if (! $result['success']) {
+            // A 404 just means the release isn't there (yet); anything else is worth knowing about.
+            if ($result['status'] !== 404) {
+                Log::warning('Rancher catalog app lookup failed', ['release' => $release_name, 'namespace' => $namespace, 'status' => $result['status'], 'error' => $result['error']]);
+            }
+
             return null;
         }
 
@@ -76,7 +81,13 @@ class Application extends BaseApplication
 
         $state = Arr::get($result['data'], 'metadata.state.name');
 
-        return in_array($state, ['deployed', 'failed'], true) ? $state : null;
+        if (! in_array($state, ['deployed', 'failed'], true)) {
+            Log::warning('Rancher catalog app is in a state this driver does not recognise', ['release' => $release_name, 'namespace' => $namespace, 'state' => $state, 'metadata_state' => Arr::get($result['data'], 'metadata.state')]);
+
+            return null;
+        }
+
+        return $state;
     }
 
     // Rancher manages its own releases; there is no Helm Secret of ours to clear.

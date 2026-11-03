@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('', 'Admin\Applications\Plans@show')->name('app.plans.show');
                         Route::get('edit', 'Admin\Applications\Plans@edit')->name('app.plans.edit');
                         Route::post('', 'Admin\Applications\Plans@update')->name('app.plans.update');
+                        Route::post('clone', 'Admin\Applications\Plans@clone')->name('app.plans.clone');
                         Route::get('remove', 'Admin\Applications\Plans@remove')->name('app.plans.remove');
                         Route::get('archive', 'Admin\Applications\Plans@archive')->name('app.plans.archive');
                         Route::get('unarchive', 'Admin\Applications\Plans@unarchive')->name('app.plans.unarchive');
@@ -220,6 +221,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('update_order', 'Admin\Plans@updateOrder')->name('service.plans.update_order');
                 Route::get('{plan}', 'Admin\Plans@edit')->name('service.plans.edit');
                 Route::post('{plan}', 'Admin\Plans@update')->name('service.plans.update');
+                Route::post('{plan}/clone', 'Admin\Plans@clone')->name('service.plans.clone');
                 Route::get('{plan}/remove', 'Admin\Plans@remove')->name('service.plans.remove');
                 Route::get('{plan}/archive', 'Admin\Plans@archive')->name('service.plans.archive');
                 Route::get('{plan}/unarchive', 'Admin\Plans@unarchive')->name('service.plans.unarchive');
