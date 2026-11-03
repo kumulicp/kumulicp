@@ -23,6 +23,10 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     private static array $inactive_instances = [];
 
+    private static array $missing_instances = [];
+
+    private static bool $organization_missing = false;
+
     public static int $recover_stuck_release_calls = 0;
 
     public static function reset(): void
@@ -30,6 +34,8 @@ class FakeServerManager implements AppInterface, OrganizationInterface
         self::$deleted_instances = [];
         self::$pending_instances = [];
         self::$inactive_instances = [];
+        self::$missing_instances = [];
+        self::$organization_missing = false;
         self::$recover_stuck_release_calls = 0;
     }
 
@@ -56,6 +62,19 @@ class FakeServerManager implements AppInterface, OrganizationInterface
         self::$inactive_instances = array_diff(self::$inactive_instances, [$app_instance_id]);
     }
 
+    // Simulates an app that isn't on the server at all (exists() is false)
+    public static function markMissing(int $app_instance_id): void
+    {
+        self::$missing_instances[] = $app_instance_id;
+    }
+
+    // Simulates an organization that has to be created on the server first;
+    // addOrganization() then creates it
+    public static function missingOrganization(bool $missing = true): void
+    {
+        self::$organization_missing = $missing;
+    }
+
     public function __construct(
         private OrgServer $server,
         private ?AppInstance $app_instance = null,
@@ -63,7 +82,7 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function exists(): bool
     {
-        return true;
+        return ! ($this->app_instance && in_array($this->app_instance->id, self::$missing_instances));
     }
 
     public function notFoundMessage(): string
@@ -128,13 +147,15 @@ class FakeServerManager implements AppInterface, OrganizationInterface
 
     public function existsOrganization(): bool
     {
-        return true;
+        return ! self::$organization_missing;
     }
 
     public function organization(): void {}
 
     public function addOrganization(): bool
     {
+        self::$organization_missing = false;
+
         return true;
     }
 
