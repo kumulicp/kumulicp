@@ -20,6 +20,7 @@ use App\Integrations\SSO\Authentik\Listeners\UpdateAppInfo;
 use App\Jobs\Users\UpdateUserStorage;
 use App\Listeners\NotifyCpAdminOfNewOrganization;
 use App\Listeners\SendEmailVerificationNotification;
+use App\Listeners\SweepTicketAssignees;
 use App\Listeners\UpdateAppLdapGroups;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -50,5 +51,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(OrganizationCreated::class, NotifyCpAdminOfNewOrganization::class);
 
         Event::listen(OrganizationRegistered::class, SendEmailVerificationNotification::class);
+
+        Event::listen(UserDeleted::class, SweepTicketAssignees::class);
     }
 }

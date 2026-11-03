@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Webhooks\TicketInbound;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use UniSharp\LaravelFilemanager\Lfm;
@@ -99,6 +101,64 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('disable', 'Admin\Applications\Roles@disable')->name('admin.roles.disable');
                     });
                 });
+            });
+        });
+
+        Route::prefix('support')->middleware('toggle:tickets')->group(function () {
+            Route::prefix('settings')->group(function () {
+                Route::get('', 'Admin\TicketSettings@show')->name('admin.tickets.settings');
+                Route::post('policies', 'Admin\TicketSettings@storePolicy')->name('admin.tickets.settings.policies.store');
+                Route::put('policies/{policy}', 'Admin\TicketSettings@updatePolicy')->name('admin.tickets.settings.policies.update');
+                Route::delete('policies/{policy}', 'Admin\TicketSettings@destroyPolicy')->name('admin.tickets.settings.policies.destroy');
+                Route::put('categories/{category}', 'Admin\TicketSettings@updateCategory')->name('admin.tickets.settings.categories.update');
+                Route::put('automation', 'Admin\TicketSettings@updateAutomation')->name('admin.tickets.settings.automation');
+            });
+            Route::prefix('canned')->group(function () {
+                Route::get('', 'Admin\TicketCannedResponses@index')->name('admin.tickets.canned.index');
+                Route::post('', 'Admin\TicketCannedResponses@store')->name('admin.tickets.canned.store');
+                Route::put('{response}', 'Admin\TicketCannedResponses@update')->name('admin.tickets.canned.update');
+                Route::delete('{response}', 'Admin\TicketCannedResponses@destroy')->name('admin.tickets.canned.destroy');
+            });
+            Route::prefix('reports')->group(function () {
+                Route::get('', 'Admin\TicketReports@index')->name('admin.tickets.reports');
+                Route::get('export.csv', 'Admin\TicketReports@export')->name('admin.tickets.reports.export');
+            });
+            Route::get('people/{user}/export', 'Admin\TicketReports@exportPerson')->name('admin.tickets.people.export');
+            Route::prefix('integrations')->group(function () {
+                Route::get('', 'Admin\TicketIntegrations@index')->name('admin.tickets.integrations.index');
+                Route::get('create', 'Admin\TicketIntegrations@create')->name('admin.tickets.integrations.create');
+                Route::post('', 'Admin\TicketIntegrations@store')->name('admin.tickets.integrations.store');
+                Route::prefix('{integration}')->where(['integration' => '[0-9]+'])->group(function () {
+                    Route::get('edit', 'Admin\TicketIntegrations@edit')->name('admin.tickets.integrations.edit');
+                    Route::put('', 'Admin\TicketIntegrations@update')->name('admin.tickets.integrations.update');
+                    Route::delete('', 'Admin\TicketIntegrations@destroy')->name('admin.tickets.integrations.destroy');
+                    Route::put('enabled', 'Admin\TicketIntegrations@setEnabled')->name('admin.tickets.integrations.enabled');
+                    Route::post('test', 'Admin\TicketIntegrations@test')->middleware('throttle:20,1')->name('admin.tickets.integrations.test');
+                    Route::post('secret/rotate', 'Admin\TicketIntegrations@rotateSecret')->name('admin.tickets.integrations.secret.rotate');
+                    Route::post('secret/reveal', 'Admin\TicketIntegrations@revealSecret')->name('admin.tickets.integrations.secret.reveal');
+                    Route::get('deliveries', 'Admin\TicketIntegrations@deliveries')->name('admin.tickets.integrations.deliveries');
+                    Route::get('deliveries/{delivery}', 'Admin\TicketIntegrations@delivery')->name('admin.tickets.integrations.delivery');
+                    Route::post('deliveries/{delivery}/redeliver', 'Admin\TicketIntegrations@redeliver')->name('admin.tickets.integrations.redeliver');
+                });
+            });
+            Route::post('categories', 'Admin\Tickets@storeCategory')->name('admin.tickets.categories.store');
+            Route::delete('categories/{category}', 'Admin\Tickets@destroyCategory')->name('admin.tickets.categories.destroy');
+            Route::prefix('tickets')->group(function () {
+                Route::get('', 'Admin\Tickets@index')->name('admin.tickets.index');
+                Route::get('{number}', 'Admin\Tickets@show')->whereNumber('number')->name('admin.tickets.show');
+                Route::post('{number}', 'Admin\Tickets@update')->whereNumber('number')->name('admin.tickets.update');
+                Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply'))->name('admin.tickets.reply');
+                Route::put('{number}/messages/{message}', 'Admin\Tickets@updateMessage')->whereNumber('number')->name('admin.tickets.messages.update');
+                Route::post('{number}/merge', 'Admin\Tickets@merge')->whereNumber('number')->name('admin.tickets.merge');
+                Route::post('{number}/messages/{message}/redact', 'Admin\Tickets@redact')->whereNumber('number')->name('admin.tickets.messages.redact');
+                Route::post('{number}/canned/{response}', 'Admin\TicketCannedResponses@render')->whereNumber('number')->name('admin.tickets.canned.render');
+                Route::delete('{number}', 'Admin\Tickets@destroy')->whereNumber('number')->name('admin.tickets.destroy');
+                Route::post('{number}/time', 'Admin\Tickets@logTime')->whereNumber('number')->name('admin.tickets.time.store');
+                Route::delete('{number}/time/{entry}', 'Admin\Tickets@deleteTime')->whereNumber('number')->name('admin.tickets.time.destroy');
+                Route::post('{number}/issues', 'Admin\Tickets@createIssue')->whereNumber('number')->name('admin.tickets.issues.store');
+                Route::get('{number}/poll', 'Admin\Tickets@poll')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.poll'))->name('admin.tickets.poll');
+                Route::put('{number}/watchers', 'Admin\Tickets@updateWatchers')->whereNumber('number')->name('admin.tickets.watchers');
+                Route::put('{number}/subscription', 'Admin\Tickets@updateSubscription')->whereNumber('number')->name('admin.tickets.subscription');
             });
         });
 
@@ -394,10 +454,43 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::post('', 'Profile@update')->name('profile.update');
     });
 
+    Route::prefix('support/tickets')->middleware('toggle:tickets')->group(function () {
+        Route::get('', 'Account\Tickets@index')->name('organization.tickets.index');
+        Route::get('create', 'Account\Tickets@create')->name('organization.tickets.create');
+        Route::post('', 'Account\Tickets@store')->middleware('throttle:'.config('tickets.throttle.create'))->name('organization.tickets.store');
+        // Shared by customers and staff; access is decided per file
+        Route::post('uploads', 'Account\TicketAttachments@store')->middleware('throttle:'.config('tickets.throttle.upload'))->name('tickets.uploads.store');
+        Route::delete('uploads/{attachment}', 'Account\TicketAttachments@destroy')->name('tickets.uploads.destroy');
+        Route::get('attachments/{attachment}', 'Account\TicketAttachments@show')->name('tickets.attachments.show');
+        // Polled by open pages and the navigation badge; shared by customers and staff
+        Route::get('summary', 'Account\Tickets@summary')->middleware('throttle:'.config('tickets.throttle.poll'))->name('tickets.summary');
+        Route::put('preferences', 'Account\Tickets@updatePreferences')->name('tickets.preferences');
+        Route::prefix('{number}')->where(['number' => '[0-9]+'])->group(function () {
+            Route::get('', 'Account\Tickets@show')->name('organization.tickets.show');
+            Route::put('', 'Account\Tickets@update')->name('organization.tickets.update');
+            Route::post('messages', 'Account\Tickets@reply')->middleware('throttle:'.config('tickets.throttle.reply'))->name('organization.tickets.reply');
+            Route::put('messages/{message}', 'Account\Tickets@updateMessage')->name('organization.tickets.messages.update');
+            Route::post('close', 'Account\Tickets@close')->name('organization.tickets.close');
+            Route::post('reopen', 'Account\Tickets@reopen')->name('organization.tickets.reopen');
+            Route::post('rating', 'Account\Tickets@rate')->name('organization.tickets.rating');
+            Route::get('poll', 'Account\Tickets@poll')->middleware('throttle:'.config('tickets.throttle.poll'))->name('organization.tickets.poll');
+            Route::put('watchers', 'Account\Tickets@updateWatchers')->name('organization.tickets.watchers');
+            Route::put('subscription', 'Account\Tickets@updateSubscription')->name('organization.tickets.subscription');
+        });
+    });
+
     Route::post('/support/ticket/submit', 'Account\Support@submit')->name('organization.support.submit');
 
     Route::get('/', 'HomeController@index')->name('home');
 });
+
+// Called by GitHub/GitLab, not by a person: no session, no CSRF token. The address
+// holds a secret and the call must carry the tracker's own signature (see TicketInbound).
+Route::post('webhooks/tickets/{integration}/{token}', TicketInbound::class)
+    ->where(['integration' => '[0-9]+', 'token' => '[A-Za-z0-9]{20,80}'])
+    ->middleware(['toggle:tickets', 'throttle:120,1'])
+    ->withoutMiddleware(ValidateCsrfToken::class)
+    ->name('tickets.inbound');
 
 Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
     Route::get('{account}/{email}/changepassword', 'Pub\ChangePassword@edit')->name('public.password.edit');

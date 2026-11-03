@@ -35,6 +35,14 @@ class MenuService
                 'external' => false,
                 'order' => 100,
             ],
+            'tickets' => [
+                'name' => __('labels.tickets'),
+                'url' => '/admin/support/tickets',
+                'icon' => 'fa-life-ring',
+                'perm' => $admin && Toggle::active('tickets'),
+                'external' => false,
+                'order' => 150,
+            ],
             'apps' => [
                 'name' => __('labels.apps'),
                 'url' => '/admin/apps',
@@ -224,6 +232,14 @@ class MenuService
                 'perm' => $organization_status != 'new',
                 'external' => false,
                 'order' => 600,
+            ],
+            'support' => [
+                'name' => __('labels.tickets'),
+                'url' => '/support/tickets',
+                'icon' => 'fa-life-ring',
+                'perm' => $organization_status != 'new' && Toggle::active('tickets'),
+                'external' => false,
+                'order' => 650,
             ],
             'settings' => [
                 'name' => __('labels.settings'),
