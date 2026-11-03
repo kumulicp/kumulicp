@@ -13,6 +13,7 @@ use App\Http\Resources\Tickets\AdminTicketResource;
 use App\Services\Tickets\DurationParser;
 use App\Services\Tickets\Integrations\TicketIntegrationRegistry;
 use App\Services\Tickets\TicketPreferences;
+use App\Services\Tickets\TicketPurger;
 use App\Services\Tickets\TicketService;
 use App\Services\Tickets\TicketStaff;
 use App\Services\Tickets\TicketSubscriptions;
@@ -20,6 +21,7 @@ use App\Services\Tickets\TicketTimeline;
 use App\Services\Tickets\TicketUnread;
 use App\Services\Tickets\TicketVersions;
 use App\Ticket;
+use App\TicketCannedResponse;
 use App\TicketCategory;
 use App\TicketDelivery;
 use App\TicketIntegration;
@@ -50,6 +52,7 @@ class Tickets extends Controller
         private TicketPreferences $preferences,
         private TicketSubscriptions $subscriptions,
         private TicketIntegrationRegistry $registry,
+        private TicketPurger $purger,
     ) {}
 
     public function index(Request $request)
@@ -64,6 +67,7 @@ class Tickets extends Controller
             'priority' => Arr::first(TicketPriority::cases(), fn ($p) => $p->value === $request->query('priority'))?->value,
             'category' => $request->integer('category') ?: null,
             'organization' => $request->integer('organization') ?: null,
+            'sla' => in_array($request->query('sla'), ['breached', 'at_risk'], true) ? $request->query('sla') : null,
             'q' => trim((string) $request->query('q', '')),
         ];
 
@@ -85,6 +89,11 @@ class Tickets extends Controller
             'closed' => $query->where('status', TicketStatus::CLOSED->value),
             default => null,
         };
+
+        // Service level views: open tickets with a clock that has run out, or is about to
+        $query->when($filters['sla'] === 'breached', fn ($q) => $q->whereIn('status', TicketStatus::openValues())->where(fn ($q) => $q->whereNotNull('sla_first_response_breached_at')->orWhereNotNull('sla_resolution_breached_at')))
+            ->when($filters['sla'] === 'at_risk', fn ($q) => $q->whereIn('status', TicketStatus::openValues())->where(fn ($q) => $q->whereNotNull('sla_first_response_warned_at')->orWhereNotNull('sla_resolution_warned_at'))
+                ->whereNull('sla_first_response_breached_at')->whereNull('sla_resolution_breached_at'));
 
         $query->when($filters['priority'], fn ($q, $priority) => $q->where('priority', $priority))
             ->when($filters['category'], fn ($q, $category) => $q->where('category_id', $category))
@@ -109,6 +118,7 @@ class Tickets extends Controller
                 'mine_open' => Ticket::where('support_assignee_id', $user->id)->whereIn('status', TicketStatus::openValues())->count(),
                 'unassigned_open' => Ticket::whereNull('support_assignee_id')->whereIn('status', TicketStatus::openValues())->count(),
                 'open' => Ticket::whereIn('status', TicketStatus::openValues())->count(),
+                'sla_breached' => Ticket::whereIn('status', TicketStatus::openValues())->where(fn ($q) => $q->whereNotNull('sla_first_response_breached_at')->orWhereNotNull('sla_resolution_breached_at'))->count(),
             ],
             'staff' => $this->staffOptions(),
             'categories' => $this->categoryOptions(),
@@ -130,7 +140,7 @@ class Tickets extends Controller
         Gate::authorize('manage', Ticket::class);
 
         $ticket = Ticket::where('number', $number)->firstOrFail();
-        $ticket->load(['organization.plan', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'tags']);
+        $ticket->load(['organization.plan', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'tags', 'mergedInto']);
         $user = $request->user();
 
         $this->unread->markRead($ticket, $user, true);
@@ -153,6 +163,8 @@ class Tickets extends Controller
             'watcher_options' => $this->watcherOptions($ticket),
             'muted' => $this->subscriptions->isMuted($ticket, $user),
             ...$this->integrationProps($ticket, $user),
+            'canned' => TicketCannedResponse::usableBy($user)->orderBy('title')->get(['id', 'title', 'scope'])->map(fn ($response) => ['id' => $response->id, 'title' => $response->title, 'scope' => $response->scope])->all(),
+            'merged_from' => Ticket::where('merged_into_id', $ticket->id)->orderBy('number')->get(['id', 'number'])->map(fn (Ticket $merged) => ['reference' => $merged->reference, 'url' => '/admin/support/tickets/'.$merged->number])->all(),
             'attachment_limits' => [
                 'files' => config('tickets.attachments.max_files'),
                 'file_mb' => (int) floor(config('tickets.attachments.max_file_kb') / 1024),
@@ -264,6 +276,54 @@ class Tickets extends Controller
 
         return redirect('/admin/support/tickets/'.$ticket->number)
             ->with($started ? 'success' : 'error', $started ? __('tickets.integrations.issue_requested') : __('tickets.integrations.issue_exists'));
+    }
+
+    /**
+     * Fold this ticket into another of the same organization.
+     */
+    public function merge(Request $request, int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $source = Ticket::where('number', $number)->firstOrFail();
+        $data = $request->validate(['target_number' => ['required', 'integer', 'min:1']]);
+
+        $target = Ticket::where('number', $data['target_number'])->first();
+
+        if (! $target) {
+            throw ValidationException::withMessages(['target_number' => __('tickets.errors.merge_not_found')]);
+        }
+
+        $this->tickets->merge($source, $target, $request->user());
+
+        return redirect('/admin/support/tickets/'.$target->number)->with('success', __('tickets.merged_done'));
+    }
+
+    /**
+     * Remove a message's text and files for good (something that should never have been posted).
+     */
+    public function redact(Request $request, int $number, TicketMessage $message): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $ticket = Ticket::where('number', $number)->firstOrFail();
+        abort_unless($message->ticket_id === $ticket->id, 404);
+
+        $this->tickets->redactMessage($ticket, $message, $request->user());
+
+        return redirect('/admin/support/tickets/'.$ticket->number)->with('success', __('tickets.redacted'));
+    }
+
+    /**
+     * Delete the ticket and everything attached to it, for good.
+     */
+    public function destroy(int $number): RedirectResponse
+    {
+        Gate::authorize('manage', Ticket::class);
+
+        $this->purger->purge(Ticket::where('number', $number)->firstOrFail());
+
+        return redirect('/admin/support/tickets')->with('success', __('tickets.deleted_forever'));
     }
 
     public function reply(BodyRequest $request, int $number): RedirectResponse

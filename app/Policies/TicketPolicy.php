@@ -49,6 +49,11 @@ class TicketPolicy
             return false;
         }
 
+        // The conversation continues on the ticket it was merged into
+        if ($ticket->isMerged()) {
+            return false;
+        }
+
         // A closed ticket has to be reopened first, except by staff
         return $ticket->status !== TicketStatus::CLOSED || $this->manage($user);
     }

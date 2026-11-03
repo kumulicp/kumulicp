@@ -45,7 +45,7 @@ import { Link } from '@inertiajs/vue3'
               <div class="va-input-label">{{ field.label }}</div>
               <div class="integration-help">{{ field.help }}</div>
               <va-button size="small" color="secondary" class="mr-2 mt-1" @click.prevent="reveal">{{ $t('tickets.integrations.reveal') }}</va-button>
-              <va-button size="small" color="warning" class="mt-1" @click.prevent="rotate">{{ $t('tickets.integrations.rotate') }}</va-button>
+              <va-button v-if="integration.has_generated_secret" size="small" color="warning" class="mt-1" @click.prevent="rotate">{{ $t('tickets.integrations.rotate') }}</va-button>
             </div>
             <div v-else class="mb-3 integration-help">{{ $t('tickets.integrations.secretWillBeGenerated') }}</div>
           </template>
@@ -110,6 +110,22 @@ import { Link } from '@inertiajs/vue3'
           <va-switch v-model="form.options.auto_create" class="d-block mb-2" :label="$t('tickets.integrations.autoCreate')" />
           <va-switch v-model="form.options.sync_state" class="d-block mb-2" :label="$t('tickets.integrations.syncState')" />
           <va-switch v-model="form.options.sync_time" class="d-block mb-2" :label="timeLabel" />
+        </div>
+
+        <!-- What the tracker may send back -->
+        <div v-if="driver.inbound" class="mb-3">
+          <div class="va-input-label">{{ $t('tickets.integrations.inbound.title') }}</div>
+          <div class="integration-help mb-2">{{ $t('tickets.integrations.inbound.help') }}</div>
+          <div v-if="integration && integration.inbound_url" class="mb-2" id="inboundUrl">
+            <div class="integration-help">{{ $t('tickets.integrations.inbound.url') }}</div>
+            <div class="integration-secret">
+              <code>{{ integration.inbound_url }}</code>
+              <va-button size="small" preset="plain" @click.prevent="copy(integration.inbound_url)">{{ $t('tickets.integrations.copy') }}</va-button>
+            </div>
+          </div>
+          <div v-else class="integration-help mb-2">{{ $t('tickets.integrations.inbound.urlAfterSave') }}</div>
+          <va-switch v-model="form.options.inbound_comments" class="d-block mb-2" :label="$t('tickets.integrations.inbound.comments')" />
+          <va-switch v-model="form.options.inbound_resolve" class="d-block mb-2" :label="$t('tickets.integrations.inbound.resolve')" />
         </div>
 
         <!-- What is allowed to leave -->
@@ -211,6 +227,8 @@ export default {
           sync_time: true,
           include_requester: false,
           allow_internal: false,
+          inbound_comments: true,
+          inbound_resolve: false,
           ...(integration?.options ?? {}),
         },
       }),
@@ -256,7 +274,8 @@ export default {
     async reveal () {
       try {
         const { data } = await axios.post(`/admin/support/integrations/${this.integration.id}/secret/reveal`)
-        this.toast.init({ message: data.secret, color: 'info', duration: 20000 })
+        const secrets = Object.values(data).filter(value => !!value)
+        this.toast.init({ message: secrets.join('  ·  '), color: 'info', duration: 20000 })
       } catch {
         this.toast.init({ message: this.$t('tickets.integrations.testFailed'), color: 'danger' })
       }

@@ -46,7 +46,7 @@ class TicketNotifier
     {
         $author = $message->author;
         $context = [
-            'name' => $author?->name ?? '',
+            'name' => $author?->name ?? ($message->author_kind === TicketMessage::KIND_SYSTEM ? __('tickets.system_label') : ''),
             'excerpt' => Str::limit($message->body_text, 300),
         ];
 
@@ -100,6 +100,38 @@ class TicketNotifier
             collect([$assignee]),
             new TicketActivity($ticket, 'assigned', $side === 'support', ['name' => $actor?->name ?? '', 'side' => $side]),
         );
+    }
+
+    /**
+     * The ticket has been waiting on the customer for a while.
+     */
+    public function reminder(Ticket $ticket): void
+    {
+        $this->send($this->customerSide($ticket, null), new TicketActivity($ticket, 'reminder'));
+    }
+
+    /**
+     * The ticket was folded into another one.
+     */
+    public function merged(Ticket $source, Ticket $target): void
+    {
+        $this->send($this->customerSide($source, null), new TicketActivity($source, 'merged', false, ['target' => $target->reference]));
+    }
+
+    /**
+     * A service target is about to run out (kind "warning") or has (kind "breached").
+     */
+    public function slaAlert(Ticket $ticket, string $kind, string $clock): void
+    {
+        $this->toSupport($ticket, 'sla_'.$kind, ['clock' => __('tickets.sla.clocks.'.$clock)]);
+    }
+
+    /**
+     * A customer gave a poor rating.
+     */
+    public function lowRating(Ticket $ticket, User $by, int $score): void
+    {
+        $this->toSupport($ticket, 'rating', ['name' => $by->name, 'score' => (string) $score]);
     }
 
     /**

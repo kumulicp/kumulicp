@@ -5,6 +5,7 @@ namespace App\Services\Tickets\Integrations;
 use App\Contracts\Tickets\ReceivesEvents;
 use App\Contracts\Tickets\TracksIssues;
 use App\Services\Tickets\TicketVersions;
+use App\Ticket;
 use App\TicketDelivery;
 use App\TicketEvent;
 use App\TicketExternalLink;
@@ -72,7 +73,11 @@ class DeliveryService
                 return $driver->addComment($config, $this->issue($link), $payload);
 
             case 'status.changed':
-                $desired = ($payload['ticket']['open'] ?? true) ? 'open' : 'closed';
+                // What the ticket is now, not what it was when this was queued: if it was
+                // resolved and reopened since, the issue should not be closed and reopened too
+                $current = Ticket::find($delivery->ticket_id);
+                $open = $current ? $current->status->isOpen() : ($payload['ticket']['open'] ?? true);
+                $desired = $open ? 'open' : 'closed';
                 $issue = $this->issue($link);
 
                 if (($link->external_state ?? 'open') === $desired) {

@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
+import { Link } from '@inertiajs/vue3'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
 import TicketEditor from '@/components/tickets/TicketEditor.vue'
 import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
@@ -24,6 +25,33 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         </va-card-content>
       </va-card>
 
+      <va-alert v-if="ticket.merged_into" color="info" class="mb-4" id="mergedNotice">
+        {{ $t('tickets.merge.mergedInto') }}
+        <Link :href="ticket.merged_into.url" class="ml-1">{{ ticket.merged_into.reference }}</Link>
+      </va-alert>
+
+      <va-card v-if="can.rate" id="ratingCard" class="mb-4">
+        <va-card-title>{{ $t('tickets.rating.title') }}</va-card-title>
+        <va-card-content>
+          <p class="mb-2">{{ ticket.rating ? $t('tickets.rating.thanks') : $t('tickets.rating.prompt') }}</p>
+          <form @submit.prevent="sendRating">
+            <va-rating v-model="ratingForm.score" :max="5" color="warning" clearable class="mb-2" />
+            <div v-if="ratingForm.errors.score" class="va-message-list__message text-danger">{{ ratingForm.errors.score }}</div>
+            <va-textarea
+              v-model="ratingForm.comment"
+              :label="$t('tickets.rating.comment')"
+              :max-length="1000"
+              :min-rows="2"
+              autosize
+              class="mb-2"
+              :error="!!ratingForm.errors.comment"
+              :error-messages="ratingForm.errors.comment"
+            />
+            <va-button type="submit" id="sendRating" size="small" :disabled="ratingForm.processing || !ratingForm.score">{{ $t('tickets.rating.send') }}</va-button>
+          </form>
+        </va-card-content>
+      </va-card>
+
       <va-card v-if="can.reply" class="mb-4">
         <va-card-title>{{ $t('tickets.reply') }}</va-card-title>
         <va-card-content>
@@ -35,7 +63,7 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
           </form>
         </va-card-content>
       </va-card>
-      <va-alert v-else color="info" class="mb-4">{{ $t('tickets.closedNotice') }}</va-alert>
+      <va-alert v-else-if="!ticket.merged_into" color="info" class="mb-4">{{ $t('tickets.closedNotice') }}</va-alert>
     </div>
 
     <div class="flex flex-col xs12 lg4">
@@ -152,6 +180,7 @@ export default {
     return {
       replyForm: useForm({ body: '' }),
       attachments: [],
+      ratingForm: useForm({ score: this.ticket.rating?.score ?? 0, comment: this.ticket.rating?.comment ?? '' }),
       detailsForm: useForm({ subject: this.ticket.subject, impact: this.ticket.impact.value }),
       customerAssignee: this.ticket.customer_assignee?.id ?? null,
       watchers: [...this.watcher_ids],
@@ -224,6 +253,9 @@ export default {
           this.attachments = []
         },
       })
+    },
+    sendRating () {
+      this.ratingForm.post(`${this.ticket.url}/rating`, { preserveScroll: true })
     },
     imageUploaded (attachment) {
       this.attachments.push({ ...attachment, inline: true })

@@ -6,6 +6,7 @@ use App\Services\Tickets\Integrations\Drivers\GenericWebhookDriver;
 use App\Services\Tickets\Integrations\Drivers\GitHubDriver;
 use App\Services\Tickets\Integrations\Drivers\GitLabDriver;
 use App\Services\Tickets\Integrations\TicketIntegrationRegistry;
+use App\Services\Tickets\TicketSla;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -18,6 +19,9 @@ class TicketIntegrationServiceProvider extends ServiceProvider
     {
         // A real singleton so what modules register survives for the life of an Octane worker
         $this->app->singleton(TicketIntegrationRegistry::class);
+
+        // Remembers policies while one request is served, and is fresh for the next
+        $this->app->scoped(TicketSla::class);
     }
 
     public function boot(): void

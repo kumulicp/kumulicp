@@ -5,6 +5,15 @@ return [
     'new_ticket' => 'Nuevo ticket',
     'preferences_saved' => 'Ajustes de notificaciones guardados.',
     'support_label' => 'soporte',
+    'system_label' => 'Servicio de soporte',
+    'merged_note' => 'Este ticket se fusionó con :target. La conversación continúa allí.',
+    'sla' => [
+        'clocks' => ['first_response' => 'primera respuesta', 'resolution' => 'resolución'],
+    ],
+    'rated' => 'Gracias por sus comentarios.',
+    'merged_done' => 'Los tickets se fusionaron.',
+    'redacted' => 'El mensaje fue eliminado.',
+    'deleted_forever' => 'El ticket fue eliminado.',
     'deleted_user' => 'Usuario eliminado',
 
     'created' => 'Su ticket ha sido creado.',
@@ -71,6 +80,13 @@ return [
         'deleted' => 'Entrada de tiempo eliminada.',
     ],
 
+    'inbound' => [
+        'comment' => ':author comentó en :issue de :integration: :text',
+        'closed' => 'La incidencia vinculada :issue se cerró en :integration.',
+        'reopened' => 'La incidencia vinculada :issue se reabrió en :integration.',
+        'someone' => 'Alguien',
+    ],
+
     'attachments' => [
         'upload_failed' => 'No se pudo subir el archivo: :reason',
         'not_received' => 'No se recibió ningún archivo. Puede ser mayor de lo que permite el servidor.',
@@ -91,6 +107,13 @@ return [
         'cannot_edit' => 'Esto ya no se puede editar.',
         'invalid_transition' => 'El ticket no se puede mover a ese estado.',
         'invalid_duration' => 'Introduzca una duración entre 1 minuto y 24 horas, como 45m, 1h30 o 1.5h.',
+        'merged' => 'Este ticket se fusionó con otro.',
+        'merge_not_found' => 'No hay ningún ticket con ese número.',
+        'merge_self' => 'Un ticket no se puede fusionar consigo mismo.',
+        'merge_organization' => 'Solo se pueden fusionar tickets de la misma organización.',
+        'merge_target_closed' => 'Elija un ticket abierto con el que fusionar.',
+        'cannot_rate' => 'Puede valorar un ticket una vez resuelto.',
+        'invalid_score' => 'Elija una valoración de 1 a 5.',
         'invalid_watcher' => 'Esa persona no se puede añadir a este ticket.',
         'invalid_assignee' => 'Esa persona no puede ser asignada a este ticket.',
         'stale' => 'Otra persona modificó este ticket. Recargue la página e inténtelo de nuevo.',
@@ -104,6 +127,7 @@ return [
 
     'notifications' => [
         'view' => 'Ver ticket',
+        'rate_prompt' => 'Abra el ticket para decirnos qué tal lo hicimos. Lleva unos segundos y nos ayuda a mejorar.',
         'reply_in_panel' => 'Responda en el panel de control. Las respuestas a este correo no se añaden al ticket.',
         'created' => [
             'title' => 'Nuevo ticket :reference',
@@ -124,6 +148,26 @@ return [
         'assigned' => [
             'title' => ':reference le fue asignado',
             'line' => ':name le asignó el ticket ":subject".',
+        ],
+        'reminder' => [
+            'title' => ':reference espera su respuesta',
+            'line' => 'Estamos esperando noticias suyas sobre ":subject". Responda cuando pueda o avísenos si ya no es necesario.',
+        ],
+        'merged' => [
+            'title' => ':reference se fusionó con :target',
+            'line' => 'El ticket ":subject" era un duplicado y se ha fusionado con :target. La conversación continúa allí.',
+        ],
+        'sla_warning' => [
+            'title' => ':reference está cerca de su objetivo de :clock',
+            'line' => 'El objetivo de :clock de ":subject" se agotará pronto.',
+        ],
+        'sla_breached' => [
+            'title' => ':reference incumplió su objetivo de :clock',
+            'line' => 'Se agotó el objetivo de :clock de ":subject".',
+        ],
+        'rating' => [
+            'title' => ':reference fue valorado con :score de 5',
+            'line' => ':name no quedó satisfecho con cómo se gestionó ":subject".',
         ],
         'assignee_removed' => [
             'title' => ':reference necesita un responsable',

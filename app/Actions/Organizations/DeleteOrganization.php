@@ -8,6 +8,7 @@ use App\Enums\TaskStatus;
 use App\Mail\OrganizationDeleted;
 use App\Organization;
 use App\Services\Tasks\TaskRunner;
+use App\Services\Tickets\TicketPurger;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
@@ -62,6 +63,9 @@ class DeleteOrganization extends Action
         // the tasks waiting for them, like a test step's clean-up, are told at the end
         $runner = app(TaskRunner::class);
         $waiting = $runner->dependentsOf($task->organization->tasks()->pluck('id')->push($task->id));
+
+        // Support tickets (and their uploaded files) go with the organization
+        app(TicketPurger::class)->purgeOrganization($task->organization->id);
 
         $task->organization->domains()->delete();
         $task->organization->app_instances()->delete();

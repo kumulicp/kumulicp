@@ -45,6 +45,22 @@ class TicketSubscriptions
             ->all();
     }
 
+    /**
+     * Add one person as a watcher without touching anyone else. Someone already
+     * on the list keeps the side they are on.
+     */
+    public function addWatcher(Ticket $ticket, int $userId, string $side): void
+    {
+        $subscription = TicketSubscription::firstOrNew(['ticket_id' => $ticket->id, 'user_id' => $userId]);
+
+        if (! $subscription->exists) {
+            $subscription->side = $side;
+        }
+
+        $subscription->watching = true;
+        $subscription->save();
+    }
+
     public function isMuted(Ticket $ticket, User $user): bool
     {
         return TicketSubscription::where('ticket_id', $ticket->id)->where('user_id', $user->id)->where('muted', true)->exists();

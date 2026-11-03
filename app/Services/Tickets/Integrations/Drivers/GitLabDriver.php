@@ -2,10 +2,12 @@
 
 namespace App\Services\Tickets\Integrations\Drivers;
 
+use App\Contracts\Tickets\ReceivesInbound;
 use App\Services\Tickets\DurationParser;
 use App\Services\Tickets\Integrations\Capability;
 use App\Services\Tickets\Integrations\DeliveryResult;
 use App\Services\Tickets\Integrations\ExternalIssue;
+use App\Services\Tickets\Integrations\InboundEvent;
 use App\Services\Tickets\Integrations\IntegrationConfig;
 use App\Services\Tickets\Integrations\IntegrationException;
 use App\Services\Tickets\Integrations\TestResult;
@@ -15,7 +17,7 @@ use App\Services\Tickets\Integrations\TestResult;
  * tracking. Needs a project or personal access token with the "api" scope and
  * at least the Reporter role.
  */
-class GitLabDriver extends AbstractTracker
+class GitLabDriver extends AbstractTracker implements ReceivesInbound
 {
     public static function key(): string
     {
@@ -34,12 +36,58 @@ class GitLabDriver extends AbstractTracker
             ['key' => 'project', 'type' => 'text', 'label' => 'Project', 'help' => 'The project path (group/project) or its numeric id.', 'required' => true, 'pattern' => '^([0-9]+|[A-Za-z0-9_.\-]+(/[A-Za-z0-9_.\-]+)+)$'],
             ['key' => 'base_url', 'type' => 'url', 'label' => 'GitLab address', 'help' => 'Leave as it is for gitlab.com. For a self-managed server use its address.', 'default' => 'https://gitlab.com'],
             ['key' => 'labels', 'type' => 'text', 'label' => 'Labels', 'help' => 'Comma separated, added to every new issue.', 'default' => 'support'],
+            ['key' => 'webhook_secret', 'type' => 'secret', 'label' => 'Webhook secret token', 'help' => 'Generated for you. Enter it as the secret token when adding the webhook in GitLab so we can check calls really come from it.', 'generated' => true],
         ];
     }
 
     public function capabilities(): array
     {
         return [Capability::CREATE_ISSUE, Capability::COMMENT, Capability::STATE_SYNC, Capability::TIME_TRACKING];
+    }
+
+    public function verifyInbound(string $body, array $headers, IntegrationConfig $config): bool
+    {
+        $secret = $config->string('webhook_secret');
+
+        return $secret !== '' && hash_equals($secret, $headers['x-gitlab-token'] ?? '');
+    }
+
+    public function parseInbound(string $body, array $headers, IntegrationConfig $config): ?InboundEvent
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || ! $this->isOurProject($data, $config)) {
+            return null;
+        }
+
+        $key = $headers['x-gitlab-event-uuid'] ?? sha1($body);
+        $attributes = $data['object_attributes'] ?? [];
+
+        return match ($data['object_kind'] ?? '') {
+            'issue' => match ($attributes['action'] ?? '') {
+                'close' => new InboundEvent(InboundEvent::STATE, (string) ($attributes['iid'] ?? ''), $key, 'closed'),
+                'reopen' => new InboundEvent(InboundEvent::STATE, (string) ($attributes['iid'] ?? ''), $key, 'open'),
+                default => null,
+            },
+            'note' => ($attributes['noteable_type'] ?? '') === 'Issue' && isset($data['issue']['iid'])
+                ? new InboundEvent(InboundEvent::COMMENT, (string) $data['issue']['iid'], $key, null, (string) ($data['user']['username'] ?? ''), (string) ($attributes['note'] ?? ''))
+                : null,
+            default => null,
+        };
+    }
+
+    /**
+     * A call about some other project (the token is shared by the whole group) is not ours.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function isOurProject(array $data, IntegrationConfig $config): bool
+    {
+        $project = $config->string('project');
+
+        return ctype_digit($project)
+            ? (string) ($data['project']['id'] ?? '') === $project
+            : strcasecmp((string) ($data['project']['path_with_namespace'] ?? ''), $project) === 0;
     }
 
     public function testConnection(IntegrationConfig $config): TestResult

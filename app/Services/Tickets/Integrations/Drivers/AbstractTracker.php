@@ -18,6 +18,16 @@ use Illuminate\Support\Str;
  */
 abstract class AbstractTracker implements TracksIssues
 {
+    /**
+     * An invisible tag on everything we post, so when the tracker tells us about
+     * a comment we can tell it is our own and not post it back (an endless loop).
+     */
+    public const MARKER = '<!-- kcp:ticket -->';
+
+    protected const MARKER_BLOCK = "\n\n".self::MARKER;
+
+    protected const MARKER_INLINE = ' '.self::MARKER;
+
     public function __construct(protected OutboundHttp $http) {}
 
     public function capabilities(): array
@@ -47,12 +57,12 @@ abstract class AbstractTracker implements TracksIssues
             $body .= "\n\n---\n\n".$this->messageBlock($payload['message'], false);
         }
 
-        return TrackerText::neutralize($body);
+        return TrackerText::neutralize($body).self::MARKER_BLOCK;
     }
 
     protected function commentBody(array $payload): string
     {
-        return TrackerText::neutralize($this->messageBlock($payload['message'], true));
+        return TrackerText::neutralize($this->messageBlock($payload['message'], true)).self::MARKER_BLOCK;
     }
 
     protected function timeComment(array $payload): string
@@ -65,7 +75,7 @@ abstract class AbstractTracker implements TracksIssues
             $line .= ': '.preg_replace('/\s+/', ' ', $entry['note']);
         }
 
-        return TrackerText::neutralize($line);
+        return TrackerText::neutralize($line).self::MARKER_INLINE;
     }
 
     protected function title(array $payload): string

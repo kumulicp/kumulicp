@@ -14,6 +14,9 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
         <span>{{ $t('tickets.admin.title') }}</span>
         <span>
           <TicketPreferences :preferences="preferences" class="mr-2" />
+          <Link href="/admin/support/reports"><va-button size="small" color="secondary" class="mr-2">{{ $t('tickets.reports.title') }}</va-button></Link>
+          <Link href="/admin/support/canned"><va-button size="small" color="secondary" class="mr-2">{{ $t('tickets.canned.title') }}</va-button></Link>
+          <Link href="/admin/support/settings"><va-button size="small" color="secondary" class="mr-2">{{ $t('tickets.settings.title') }}</va-button></Link>
           <Link href="/admin/support/integrations"><va-button size="small" color="secondary" class="mr-2">{{ $t('tickets.integrations.title') }}</va-button></Link>
           <va-button size="small" color="secondary" @click="showCategories = true">{{ $t('tickets.admin.categories') }}</va-button>
         </span>
@@ -31,6 +34,12 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
           </va-button>
           <va-button :preset="view === 'all' ? undefined : 'secondary'" @click="setView('all')">
             {{ $t('tickets.admin.allOpen') }} ({{ counts.open }})
+          </va-button>
+          <va-button :preset="filters.sla === 'breached' ? undefined : 'secondary'" color="danger" @click="setSla('breached')">
+            {{ $t('tickets.sla.breachedView') }} ({{ counts.sla_breached }})
+          </va-button>
+          <va-button :preset="filters.sla === 'at_risk' ? undefined : 'secondary'" color="warning" @click="setSla('at_risk')">
+            {{ $t('tickets.sla.atRiskView') }}
           </va-button>
         </va-button-group>
       </div>
@@ -62,6 +71,7 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
               <th>{{ $t('tickets.organization') }}</th>
               <th>{{ $t('tickets.statusColumn') }}</th>
               <th>{{ $t('tickets.priorityLabel') }}</th>
+              <th>{{ $t('tickets.sla.title') }}</th>
               <th>{{ $t('tickets.supportAssignee') }}</th>
               <th>{{ $t('tickets.customerAssignee') }}</th>
               <th>{{ $t('tickets.lastActivity') }}</th>
@@ -74,6 +84,10 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
               <td>{{ ticket.organization?.name }}</td>
               <td><TicketBadge :value="ticket.status.value" :label="ticket.status.label" /></td>
               <td><TicketBadge :value="ticket.priority.value" :label="ticket.priority.label" /></td>
+              <td>
+                <va-chip v-if="slaOf(ticket)" size="small" :color="slaOf(ticket) === 'breached' ? 'danger' : 'warning'">{{ $t(`tickets.sla.states.${slaOf(ticket)}`) }}</va-chip>
+                <span v-if="ticket.csat" class="ticket-context__muted" :title="$t('tickets.rating.title')"> {{ ticket.csat.score }}★</span>
+              </td>
               <td>
                 {{ ticket.support_assignee?.name || $t('tickets.unassigned') }}
                 <va-button
@@ -208,6 +222,7 @@ export default {
       return {
         assigned: this.assigned,
         status: this.status,
+        sla: this.filters.sla || undefined,
         priority: this.priority || undefined,
         category: this.category || undefined,
         q: this.q || undefined,
@@ -220,10 +235,23 @@ export default {
     goToPage (page) {
       router.get('/admin/support/tickets', this.query({ page }), { preserveState: true })
     },
+    // Worst state of the two clocks, if it is worth showing
+    slaOf (ticket) {
+      const states = ticket.sla ? [ticket.sla.first_response.state, ticket.sla.resolution.state] : []
+      if (!ticket.status.open) return null
+      if (states.includes('breached')) return 'breached'
+      if (states.includes('warning')) return 'warning'
+      return null
+    },
+    setSla (kind) {
+      this.status = 'open'
+      this.assigned = 'all'
+      router.get('/admin/support/tickets', { assigned: 'all', status: 'open', sla: this.filters.sla === kind ? undefined : kind }, { preserveState: true, replace: true })
+    },
     setView (view) {
       this.status = 'open'
       this.assigned = { mine: 'me', unassigned: 'unassigned', all: 'all' }[view]
-      this.apply()
+      router.get('/admin/support/tickets', { assigned: this.assigned, status: this.status }, { preserveState: true, replace: true })
     },
     assignToMe (ticket) {
       router.post(ticket.url, { support_assignee_id: this.me, lock_version: ticket.lock_version }, { preserveScroll: true })

@@ -11,6 +11,15 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
   <Head>
     <title>{{ ticket.reference }} {{ ticket.subject }} - Control Panel</title>
   </Head>
+  <va-alert v-if="ticket.merged_into" color="info" class="mb-4">
+    {{ $t('tickets.merge.mergedInto') }}
+    <Link :href="ticket.merged_into.url">{{ ticket.merged_into.reference }}</Link>
+  </va-alert>
+  <va-alert v-if="merged_from.length" color="info" class="mb-4">
+    {{ $t('tickets.merge.mergedFrom') }}
+    <Link v-for="item in merged_from" :key="item.reference" :href="item.url" class="mr-2">{{ item.reference }}</Link>
+  </va-alert>
+
   <div class="row">
     <div class="flex flex-col xs12 lg8">
       <va-card class="mb-4">
@@ -38,6 +47,17 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         <va-card-content>
           <va-alert v-if="internal" color="warning" class="mb-3">{{ $t('tickets.admin.internalWarning') }}</va-alert>
           <form @submit.prevent="sendReply">
+            <va-select
+              v-if="canned.length"
+              v-model="cannedChoice"
+              class="mb-3"
+              :label="$t('tickets.canned.insert')"
+              :options="canned"
+              value-by="id"
+              text-by="title"
+              clearable
+              @update:model-value="insertCanned"
+            />
             <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:admin:${ticket.number}`" :error="replyForm.errors.body" @uploaded="imageUploaded" />
             <AttachmentPicker v-model="attachments" class="mt-3" :max-files="attachment_limits.files" :max-file-mb="attachment_limits.file_mb" />
             <div v-if="replyForm.errors.attachment_ids" class="va-message-list__message text-danger mt-1">{{ replyForm.errors.attachment_ids }}</div>
@@ -156,6 +176,36 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         </va-card-content>
       </va-card>
 
+      <va-card v-if="ticket.sla || ticket.csat" class="mb-4" id="service">
+        <va-card-title>{{ $t('tickets.sla.title') }}</va-card-title>
+        <va-card-content>
+          <dl v-if="ticket.sla" class="ticket-details">
+            <template v-for="clock in ['first_response', 'resolution']" :key="clock">
+              <dt>{{ $t(`tickets.sla.clocks.${clock}`) }}</dt>
+              <dd>
+                <va-chip size="small" :color="slaColors[ticket.sla[clock].state]">{{ $t(`tickets.sla.states.${ticket.sla[clock].state}`) }}</va-chip>
+                <span v-if="ticket.sla[clock].due_at" class="ticket-context__muted"> {{ $t('tickets.sla.due') }} {{ formatDate(ticket.sla[clock].due_at) }}</span>
+              </dd>
+            </template>
+          </dl>
+          <div v-if="ticket.csat" class="mt-2" id="csat">
+            <strong>{{ $t('tickets.rating.title') }}:</strong> {{ '★'.repeat(ticket.csat.score) }}{{ '☆'.repeat(5 - ticket.csat.score) }}
+            <div v-if="ticket.csat.comment" class="ticket-context__muted">{{ ticket.csat.comment }}</div>
+          </div>
+        </va-card-content>
+      </va-card>
+
+      <va-card v-if="!ticket.merged_into" class="mb-4" id="merge">
+        <va-card-title>{{ $t('tickets.merge.title') }}</va-card-title>
+        <va-card-content>
+          <p class="ticket-context__muted mb-2">{{ $t('tickets.merge.help') }}</p>
+          <form @submit.prevent="showMerge = true">
+            <va-input v-model="mergeForm.target_number" class="mb-2" type="number" min="1" :label="$t('tickets.merge.target')" :error="!!(mergeForm.errors.target_number || mergeForm.errors.target)" :error-messages="mergeForm.errors.target_number || mergeForm.errors.target" />
+            <va-button type="submit" size="small" color="secondary" :disabled="!mergeForm.target_number">{{ $t('tickets.merge.button') }}</va-button>
+          </form>
+        </va-card-content>
+      </va-card>
+
       <va-card class="mb-4" id="time">
         <va-card-title>
           <div class="flex justify-between items-center w-full">
@@ -227,12 +277,36 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
           <TicketTimeline :events="timeline" />
         </va-card-content>
       </va-card>
+
+      <va-card class="mb-4" id="danger">
+        <va-card-title>{{ $t('tickets.delete.title') }}</va-card-title>
+        <va-card-content>
+          <p class="ticket-context__muted mb-2">{{ $t('tickets.delete.help') }}</p>
+          <va-button size="small" color="danger" @click="showDelete = true">{{ $t('tickets.delete.button') }}</va-button>
+          <a :href="`/admin/support/people/${ticket.requester?.id}/export`" v-if="ticket.requester" class="ml-3">{{ $t('tickets.delete.exportRequester') }}</a>
+        </va-card-content>
+      </va-card>
     </div>
   </div>
+
+  <va-modal v-model="showMerge" hide-default-actions :title="$t('tickets.merge.confirmTitle')" :message="$t('tickets.merge.confirmMessage', { source: ticket.reference, target: mergeForm.target_number })">
+    <template #footer="{ cancel }">
+      <va-button color="backgroundSecondary" @click="cancel">{{ $t('common.cancel') }}</va-button>
+      <va-button color="warning" @click="merge">{{ $t('tickets.merge.button') }}</va-button>
+    </template>
+  </va-modal>
+
+  <va-modal v-model="showDelete" hide-default-actions :title="$t('tickets.delete.confirmTitle')" :message="$t('tickets.delete.confirmMessage', { reference: ticket.reference })">
+    <template #footer="{ cancel }">
+      <va-button color="backgroundSecondary" @click="cancel">{{ $t('common.cancel') }}</va-button>
+      <va-button color="danger" @click="destroyTicket">{{ $t('tickets.delete.button') }}</va-button>
+    </template>
+  </va-modal>
 </template>
 <script>
 import { router, useForm } from '@inertiajs/vue3'
 import { useToast } from 'vuestic-ui'
+import axios from 'axios'
 import { createPoller } from '@/composables/ticketPoller'
 
 export default {
@@ -259,6 +333,8 @@ export default {
     links: Array,
     issue_targets: Array,
     deliveries: Array,
+    canned: Array,
+    merged_from: Array,
   },
   data () {
     return {
@@ -270,6 +346,11 @@ export default {
       timeForm: useForm({ duration: '', note: '', worked_at: new Date().toISOString().slice(0, 10), billable: true }),
       today: new Date().toISOString().slice(0, 10),
       issueTarget: null,
+      cannedChoice: null,
+      mergeForm: useForm({ target_number: '' }),
+      showMerge: false,
+      showDelete: false,
+      slaColors: { ok: 'success', warning: 'warning', breached: 'danger', paused: 'secondary', met: 'success', missed: 'danger', none: 'secondary' },
       deliveryColors: { pending: 'warning', delivered: 'success', failed: 'danger' },
       replyForm: useForm({ body: '', internal: false }),
       form: this.makeForm(),
@@ -312,7 +393,7 @@ export default {
     // Reload only what changed. State is preserved, so a half-written reply and unsaved edits stay put.
     refresh (data) {
       router.reload({
-        only: ['ticket', 'messages', 'timeline', 'context', 'version', 'last_message_id', 'watcher_ids', 'watcher_options', 'muted', 'time_entries', 'time_total', 'links', 'issue_targets', 'deliveries'],
+        only: ['ticket', 'messages', 'timeline', 'context', 'version', 'last_message_id', 'watcher_ids', 'watcher_options', 'muted', 'time_entries', 'time_total', 'links', 'issue_targets', 'deliveries', 'merged_from'],
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
@@ -321,6 +402,25 @@ export default {
           }
         },
       })
+    },
+    // Drop a canned response into the reply box, with this ticket's details filled in
+    async insertCanned (id) {
+      if (!id) return
+      try {
+        const { data } = await axios.post(`${this.ticket.url}/canned/${id}`)
+        this.replyForm.body = (this.replyForm.body || '') + data.html
+      } finally {
+        this.cannedChoice = null
+      }
+    },
+    merge () {
+      this.mergeForm.post(`${this.ticket.url}/merge`, { onFinish: () => { this.showMerge = false } })
+    },
+    destroyTicket () {
+      router.delete(this.ticket.url)
+    },
+    formatDate (value) {
+      return value ? new Date(value).toLocaleString() : ''
     },
     addTime () {
       this.timeForm.post(`${this.ticket.url}/time`, {

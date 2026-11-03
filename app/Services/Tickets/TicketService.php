@@ -8,7 +8,9 @@ use App\Enums\TicketStatus;
 use App\Enums\TicketType;
 use App\Services\Tickets\Integrations\IntegrationDispatcher;
 use App\Ticket;
+use App\TicketAttachment;
 use App\TicketCategory;
+use App\TicketDelivery;
 use App\TicketEvent;
 use App\TicketIntegration;
 use App\TicketMessage;
@@ -44,6 +46,8 @@ class TicketService
         private TicketUnread $unread,
         private TicketSubscriptions $subscriptions,
         private IntegrationDispatcher $integrations,
+        private TicketSla $sla,
+        private TicketAutomation $automation,
     ) {}
 
     /**
@@ -69,12 +73,21 @@ class TicketService
             $ticket->priority = TicketPriority::NORMAL;
             $ticket->last_activity_at = now();
             $ticket->last_requester_reply_at = now();
+            $ticket->sla_paused_minutes = 0;
 
             if ($category = $this->activeCategory(Arr::get($data, 'category_id'))) {
                 $ticket->category_id = $category->id;
                 $ticket->support_assignee_id = $this->defaultAssigneeFor($category);
             }
 
+            // Nobody chosen by the category: the automatic rules may pick someone
+            $autoAssigned = false;
+            if (! $ticket->support_assignee_id && ($picked = $this->automation->pickAssignee())) {
+                $ticket->support_assignee_id = $picked->id;
+                $autoAssigned = true;
+            }
+
+            $this->sla->apply($ticket);
             $this->saveWithNumber($ticket);
 
             $message = $this->addMessage($ticket, $requester, TicketMessage::KIND_REQUESTER, TicketMessage::PUBLIC, $body, $source);
@@ -82,7 +95,7 @@ class TicketService
             $this->record($ticket, 'created', $requester);
 
             if ($ticket->support_assignee_id) {
-                $this->record($ticket, 'assigned', $requester, ['side' => self::SUPPORT, 'to' => $ticket->support_assignee_id]);
+                $this->record($ticket, 'assigned', $autoAssigned ? null : $requester, ['side' => self::SUPPORT, 'to' => $ticket->support_assignee_id] + ($autoAssigned ? ['auto' => true] : []));
             }
 
             return $ticket;
@@ -137,6 +150,7 @@ class TicketService
 
                 if ($next = $this->workflow->statusAfterReply($ticket, $asStaff, false)) {
                     $this->workflow->apply($ticket, $next);
+                    $this->afterStatusChange($ticket);
                 }
             }
 
@@ -262,9 +276,13 @@ class TicketService
         });
     }
 
-    public function changeStatus(Ticket $ticket, User $actor, TicketStatus $to, bool $asStaff): Ticket
+    public function changeStatus(Ticket $ticket, ?User $actor, TicketStatus $to, bool $asStaff): Ticket
     {
         $from = $ticket->status;
+
+        if ($ticket->isMerged()) {
+            throw ValidationException::withMessages(['status' => __('tickets.errors.merged')]);
+        }
 
         if (! $this->workflow->canChange($from, $to, $asStaff)) {
             throw ValidationException::withMessages(['status' => __('tickets.errors.invalid_transition')]);
@@ -274,10 +292,11 @@ class TicketService
 
         DB::transaction(function () use ($ticket, $actor, $from, $to, &$event) {
             $this->workflow->apply($ticket, $to);
+            $this->afterStatusChange($ticket);
             $ticket->last_activity_at = now();
             $ticket->save();
 
-            $event = $this->record($ticket, 'status_changed', $actor, ['from' => $from->value, 'to' => $to->value]);
+            $event = $this->record($ticket, 'status_changed', $actor, ['from' => $from->value, 'to' => $to->value] + ($actor === null ? ['auto' => true] : []));
         });
 
         $this->afterCommit(function () use ($ticket, $from, $actor, &$event) {
@@ -299,6 +318,7 @@ class TicketService
 
         DB::transaction(function () use ($ticket, $actor, $priority, $from) {
             $ticket->priority = $priority;
+            $this->sla->apply($ticket);
             $ticket->save();
             $this->record($ticket, 'priority_changed', $actor, ['from' => $from->value, 'to' => $priority->value], true);
         });
@@ -317,6 +337,7 @@ class TicketService
         DB::transaction(function () use ($ticket, $actor, $category) {
             $from = $ticket->category_id;
             $ticket->category_id = $category?->id;
+            $this->sla->apply($ticket);
             $ticket->save();
             $this->record($ticket, 'category_changed', $actor, ['from' => $from, 'to' => $category?->id], true);
         });
@@ -444,6 +465,262 @@ class TicketService
         }
 
         return $delivery !== null;
+    }
+
+    /**
+     * Fold one ticket into another (a duplicate, or the same problem reported
+     * twice). The conversation, files and time move to the target so there is
+     * one thread; the source is closed with a pointer to where it went.
+     * Only tickets of the same organization can be merged.
+     */
+    public function merge(Ticket $source, Ticket $target, User $actor): Ticket
+    {
+        $invalid = match (true) {
+            $source->is($target) => __('tickets.errors.merge_self'),
+            $source->organization_id !== $target->organization_id => __('tickets.errors.merge_organization'),
+            $source->isMerged() || $target->isMerged() => __('tickets.errors.merged'),
+            ! $target->status->isOpen() => __('tickets.errors.merge_target_closed'),
+            default => null,
+        };
+
+        if ($invalid) {
+            throw ValidationException::withMessages(['target' => $invalid]);
+        }
+
+        $moved = 0;
+
+        DB::transaction(function () use ($source, $target, $actor, &$moved) {
+            $moved = TicketMessage::where('ticket_id', $source->id)->update(['ticket_id' => $target->id]);
+            TicketAttachment::where('ticket_id', $source->id)->update(['ticket_id' => $target->id]);
+            TicketTimeEntry::where('ticket_id', $source->id)->update(['ticket_id' => $target->id]);
+
+            // The person who opened the source stays in the loop on the surviving ticket
+            if ($source->requester_id && $source->requester_id !== $target->requester_id && $source->requester_id !== $target->customer_assignee_id) {
+                $this->subscriptions->addWatcher($target, $source->requester_id, TicketSubscription::CUSTOMER);
+            }
+
+            foreach ($source->tags as $tag) {
+                $target->tags()->syncWithoutDetaching([$tag->id]);
+            }
+
+            $target->first_response_at = collect([$target->first_response_at, $source->first_response_at])->filter()->min();
+            $target->last_activity_at = now();
+            $target->save();
+
+            $this->workflow->apply($source, TicketStatus::CLOSED);
+            $source->merged_into_id = $target->id;
+            $source->last_activity_at = now();
+            $source->save();
+
+            // So the closed ticket does not look empty to the people who opened it
+            $note = new TicketMessage;
+            $note->ticket_id = $source->id;
+            $note->author_kind = TicketMessage::KIND_SYSTEM;
+            $note->visibility = TicketMessage::PUBLIC;
+            $note->body_html = '<p>'.e(__('tickets.merged_note', ['target' => $target->reference])).'</p>';
+            $note->body_text = __('tickets.merged_note', ['target' => $target->reference]);
+            $note->save();
+
+            $this->record($source, 'merged_into', $actor, ['target' => $target->reference, 'target_number' => $target->number]);
+            $this->record($target, 'merged', $actor, ['source' => $source->reference, 'messages' => $moved]);
+        });
+
+        $this->afterCommit(function () use ($source, $target) {
+            $source->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $this->notifier->merged($source, $target);
+        });
+
+        return $target;
+    }
+
+    /**
+     * A customer's rating of how the ticket was handled (1 to 5). Only once
+     * the ticket is resolved or closed; the latest rating stands.
+     */
+    public function rate(Ticket $ticket, User $by, int $score, ?string $comment = null): Ticket
+    {
+        if ($ticket->status->isOpen() || $ticket->isMerged()) {
+            throw ValidationException::withMessages(['score' => __('tickets.errors.cannot_rate')]);
+        }
+
+        if ($score < 1 || $score > 5) {
+            throw ValidationException::withMessages(['score' => __('tickets.errors.invalid_score')]);
+        }
+
+        DB::transaction(function () use ($ticket, $by, $score, $comment) {
+            $ticket->csat_score = $score;
+            $ticket->csat_comment = $comment !== null && trim($comment) !== '' ? mb_substr(trim($comment), 0, 1000) : null;
+            $ticket->csat_at = now();
+            $ticket->save();
+
+            $this->record($ticket, 'rated', $by, ['score' => $score], true);
+        });
+
+        $this->afterCommit(function () use ($ticket, $by, $score) {
+            if ($score <= 2) {
+                $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+                $this->notifier->lowRating($ticket, $by, $score);
+            }
+        });
+
+        return $ticket;
+    }
+
+    /**
+     * Take a message out for good (a password pasted by mistake, personal data).
+     * The text, its edit history and its files are deleted; a placeholder stays
+     * so the conversation still reads in order. Copies already sent to
+     * integrations are scrubbed too.
+     */
+    public function redactMessage(Ticket $ticket, TicketMessage $message, User $actor): TicketMessage
+    {
+        if ($message->ticket_id !== $ticket->id) {
+            throw new AuthorizationException(__('tickets.errors.cannot_edit'));
+        }
+
+        DB::transaction(function () use ($ticket, $message, $actor) {
+            TicketAttachment::where('ticket_message_id', $message->id)->each(fn (TicketAttachment $attachment) => $attachment->delete());
+            TicketMessageRevision::where('ticket_message_id', $message->id)->delete();
+
+            $message->body_html = '';
+            $message->body_text = '';
+            $message->redacted_at = now();
+            $message->save();
+
+            TicketDelivery::where('ticket_id', $ticket->id)->each(function (TicketDelivery $delivery) use ($message) {
+                $payload = $delivery->payload;
+
+                if (($payload['message']['id'] ?? null) === $message->id) {
+                    foreach (['body_markdown', 'body_text', 'body_html'] as $field) {
+                        $payload['message'][$field] = '';
+                    }
+                    $payload['message']['attachments'] = [];
+                    $delivery->payload = $payload;
+                    $delivery->save();
+                }
+            });
+
+            $this->record($ticket, 'message_redacted', $actor, ['message_id' => $message->id], true);
+        });
+
+        return $message;
+    }
+
+    /**
+     * Add a note written by the system itself (for example "the linked issue
+     * was closed"). Internal by default, so customers never see it.
+     */
+    public function addSystemNote(Ticket $ticket, string $text, bool $internal = true): TicketMessage
+    {
+        $prepared = $this->html->prepare('<p>'.e($text).'</p>');
+
+        $message = DB::transaction(function () use ($ticket, $prepared, $internal) {
+            $message = new TicketMessage;
+            $message->ticket_id = $ticket->id;
+            $message->author_kind = TicketMessage::KIND_SYSTEM;
+            $message->visibility = $internal ? TicketMessage::INTERNAL : TicketMessage::PUBLIC;
+            $message->body_html = $prepared['html'];
+            $message->body_text = $prepared['text'];
+            $message->source = 'system';
+            $message->save();
+            $message->setRelation('ticket', $ticket);
+
+            $this->record($ticket, $internal ? 'note' : 'reply', null, ['message_id' => $message->id], $internal);
+
+            return $message;
+        });
+
+        $this->afterCommit(function () use ($ticket, $message) {
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $this->notifier->messageAdded($ticket, $message);
+        });
+
+        return $message;
+    }
+
+    /**
+     * Tell the customer a ticket has been waiting on them. Once per wait.
+     */
+    public function sendReminder(Ticket $ticket): void
+    {
+        DB::transaction(function () use ($ticket) {
+            $ticket->reminder_sent_at = now();
+            $ticket->save();
+            $this->record($ticket, 'reminder_sent', null, [], false);
+        });
+
+        $this->afterCommit(function () use ($ticket) {
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $this->notifier->reminder($ticket);
+        });
+    }
+
+    /**
+     * Mark tickets whose service targets have run out, and warn about those
+     * about to. Run on a schedule; each ticket is flagged once per clock.
+     *
+     * @return array{warned: int, breached: int}
+     */
+    public function sweepSla(): array
+    {
+        $counts = ['warned' => 0, 'breached' => 0];
+
+        $candidates = Ticket::query()
+            ->whereIn('status', TicketStatus::openValues())
+            ->whereNull('merged_into_id')
+            ->whereNotNull('sla_policy_id')
+            ->where(function ($query) {
+                $query->where(fn ($q) => $q->whereNull('first_response_at')->whereNotNull('sla_first_response_due_at')->whereNull('sla_first_response_breached_at'))
+                    ->orWhere(fn ($q) => $q->whereNotNull('sla_resolution_due_at')->whereNull('sla_resolution_breached_at')->whereNull('sla_paused_at'));
+            })
+            ->get();
+
+        foreach ($candidates as $ticket) {
+            $state = $this->sla->state($ticket);
+
+            foreach (['first_response' => 'sla_first_response', 'resolution' => 'sla_resolution'] as $clock => $column) {
+                if ($ticket->{$column.'_breached_at'} !== null) {
+                    continue;
+                }
+
+                if ($state[$clock] === 'breached') {
+                    $this->flagSla($ticket, $clock, $column, 'breached');
+                    $counts['breached']++;
+                } elseif ($state[$clock] === 'warning' && $ticket->{$column.'_warned_at'} === null) {
+                    $this->flagSla($ticket, $clock, $column, 'warning');
+                    $counts['warned']++;
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    private function flagSla(Ticket $ticket, string $clock, string $column, string $kind): void
+    {
+        DB::transaction(function () use ($ticket, $clock, $column, $kind) {
+            $ticket->{$column.($kind === 'breached' ? '_breached_at' : '_warned_at')} = now();
+            $ticket->save();
+            $this->record($ticket, 'sla_'.$kind, null, ['clock' => $clock], true);
+        });
+
+        $this->afterCommit(function () use ($ticket, $clock, $kind) {
+            $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'organization']);
+            $this->notifier->slaAlert($ticket, $kind, $clock);
+        });
+    }
+
+    /**
+     * After any status change: keep the SLA clock and the reminder in step.
+     */
+    private function afterStatusChange(Ticket $ticket): void
+    {
+        $this->sla->statusChanged($ticket);
+
+        // A new wait on the customer gets its own reminder
+        if ($ticket->status !== TicketStatus::PENDING_CUSTOMER) {
+            $ticket->reminder_sent_at = null;
+        }
     }
 
     /**

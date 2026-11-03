@@ -13,6 +13,7 @@ use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\PruneTicketUploads;
 use App\Console\Calls\RecurringBackups;
+use App\Console\Calls\RunTicketAutomation;
 use App\Console\Calls\ScanUpdateDrift;
 use App\Console\Calls\ScheduledOrganizationDeletionCheck;
 use App\Console\Calls\SweepTicketAssignees;
@@ -58,6 +59,7 @@ Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')
 Schedule::call(new SweepTicketAssignees)->daily()->at('04:00');
 Schedule::call(new PruneTicketUploads)->hourly();
 Schedule::call(new MaintainTicketDeliveries)->everyTenMinutes();
+Schedule::call(new RunTicketAutomation)->everyFiveMinutes()->withoutOverlapping(10)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::call(new SyncApplicationReadiness)->name('sync-application-readiness')->hourly()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();
