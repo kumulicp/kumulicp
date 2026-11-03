@@ -14,7 +14,7 @@ class TaskDependencies
 {
     /**
      * The unfinished tasks $task waits for at $gate, split into those that have
-     * failed (or are blocked themselves) and those still on their way.
+     * failed (or are blocked or cancelled) and those still on their way.
      *
      * @return array{waiting: Collection<int, Task>, failed: Collection<int, Task>}
      */
@@ -26,7 +26,7 @@ class TaskDependencies
             ->get();
 
         [$failed, $waiting] = $unfinished->partition(
-            fn (Task $dependency) => in_array($dependency->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true)
+            fn (Task $dependency) => in_array($dependency->status, [TaskStatus::FAILED, TaskStatus::BLOCKED, TaskStatus::CANCELLED], true)
         );
 
         return ['waiting' => $waiting->values(), 'failed' => $failed->values()];

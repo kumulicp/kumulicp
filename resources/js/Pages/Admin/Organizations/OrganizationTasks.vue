@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import OrganizationLayout from './OrganizationLayout.vue'
+import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
+import { useToast } from 'vuestic-ui'
 
 </script>
 <template>
@@ -62,9 +64,9 @@ import axios from 'axios'
           :label="$t('admin.tasks.actions')"
           class="mt-3"
         >
-          <Link href="/admin/server/tasks/run_schedule"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
-          <Link href="/admin/server/tasks/restart_queue"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
-          <Link href="/admin/server/tasks/dummy"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
+          <Link href="/admin/server/tasks/run_schedule" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
+          <Link href="/admin/server/tasks/restart_queue" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
+          <Link href="/admin/server/tasks/dummy" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
         </VaButtonDropdown>
       </div>
     </div>
@@ -81,16 +83,25 @@ import axios from 'axios'
           preset="secondary"
           icon="fa-trash-restore"
           color="primary"
-          @click="bulkRestart"
+          @click="bulk('retry')"
         >
-          {{ $t('admin.tasks.restartSelected') }}
+          {{ $t('admin.tasks.retrySelected') }}
+        </VaButton>
+        <VaButton
+          preset="secondary"
+          icon="cancel"
+          color="warning"
+          class="ml-2"
+          @click="bulk('cancel')"
+        >
+          {{ $t('admin.tasks.cancelSelected') }}
         </VaButton>
         <VaButton
           preset="secondary"
           icon="delete"
           color="danger"
           class="ml-2"
-          @click="bulkDelete"
+          @click="bulk('delete')"
         >
           {{ $t('admin.tasks.deleteSelected') }}
         </VaButton>
@@ -109,24 +120,42 @@ import axios from 'axios'
       :current-page="meta.page"
   >
     <template #cell(actions)="{ row, rowIndex, isExpanded }">
-      <VaButton
-        preset="plain"
-        icon="fa-trash-restore"
-        color="primary"
-        class="ml-3"
-        :disabled="liveMode"
-        :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
-        @click="restartTaskById(rowIndex)"
-      />
-      <VaButton
-        preset="plain"
-        icon="delete"
-        color="danger"
-        class="ml-3"
-        :disabled="liveMode"
-        :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
-        @click="deleteTaskById(rowIndex)"
-      />
+      <Link :href="'/admin/server/tasks/' + task_list[rowIndex].id">
+              <VaButton
+                preset="plain"
+                icon="visibility"
+                color="primary"
+                class="ml-3"
+                :title="$t('admin.tasks.details')"
+              />
+            </Link>
+            <VaButton
+              preset="plain"
+              icon="fa-trash-restore"
+              color="primary"
+              class="ml-3"
+              :disabled="liveMode || !task_list[rowIndex].can_retry"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.retry')"
+              @click="retryTaskById(rowIndex)"
+            />
+            <VaButton
+              preset="plain"
+              icon="cancel"
+              color="warning"
+              class="ml-3"
+              :disabled="liveMode || !task_list[rowIndex].can_cancel"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.cancel')"
+              @click="cancelTaskById(rowIndex)"
+            />
+            <VaButton
+              preset="plain"
+              icon="delete"
+              color="danger"
+              class="ml-3"
+              :disabled="liveMode || !task_list[rowIndex].can_delete"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.delete')"
+              @click="deleteTaskById(rowIndex)"
+            />
       <VaButton
         v-if="hasError(rowIndex)"
         preset="plain"
@@ -182,6 +211,7 @@ export default {
       perPage: 20,
       perPageOptions: [10, 20, 50, 100],
       liveMode: true,
+      toast: useToast(),
       columns: [
         { key: 'id', sortable: true },
         { key: 'organization', sortable: true },
@@ -197,7 +227,8 @@ export default {
         { text: this.$t('admin.tasks.blocked'), value: 'blocked' },
         { text: this.$t('admin.tasks.pending'), value: 'pending' },
         { text: this.$t('admin.tasks.inProgress'), value: 'in_progress' },
-        { text: this.$t('admin.tasks.completed'), value: 'complete' }
+        { text: this.$t('admin.tasks.completed'), value: 'complete' },
+        { text: this.$t('admin.tasks.cancelled'), value: 'cancelled' }
       ],
       interval: ''
     }
@@ -226,56 +257,51 @@ export default {
           vueState.$emit('expand')
         })
     },
-    retryTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.delete('/admin/server/tasks/' + task.id)
-        .then(function () {
-          vueState.updateTaskList()
-        })
+    operate (method, url) {
+      return axios({ method, url })
+        .then(() => this.updateTaskList())
+        .catch((error) => this.showError(error))
     },
-    restartTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.get('/admin/server/tasks/' + task.id + '/restart')
-        .then(function () {
-          vueState.updateTaskList()
-        })
+    retryTaskById (id) {
+      this.operate('post', '/admin/server/tasks/' + this.task_list[id].id + '/retry')
+    },
+    cancelTaskById (id) {
+      if (!window.confirm(this.$t('admin.tasks.confirmCancel'))) {
+        return
+      }
+      this.operate('post', '/admin/server/tasks/' + this.task_list[id].id + '/cancel')
     },
     deleteTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.delete('/admin/server/tasks/' + task.id)
-        .then(function () {
-          vueState.updateTaskList()
-        })
+      if (!window.confirm(this.$t('admin.tasks.confirmDelete'))) {
+        return
+      }
+      this.operate('delete', '/admin/server/tasks/' + this.task_list[id].id)
     },
-    bulkRestart () {
-      const vueState = this
+    bulk (operation) {
       const ids = this.selectedItems.map(task => task.id)
       if (ids.length === 0) {
         return
       }
-      axios.post('/admin/server/tasks/bulk/restart', { tasks: ids })
-        .then(function () {
-          vueState.selectedItems = []
-          vueState.updateTaskList()
+      if (operation !== 'retry' && !window.confirm(this.$t(operation === 'cancel' ? 'admin.tasks.confirmBulkCancel' : 'admin.tasks.confirmBulkDelete', { count: ids.length }))) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/' + operation, { tasks: ids })
+        .then((response) => {
+          this.selectedItems = []
+          // Some may not have been allowed: say so
+          if (response.data.message) {
+            this.toast.init({ message: response.data.message, color: 'warning', duration: 10000 })
+          }
+          this.updateTaskList()
         })
+        .catch((error) => this.showError(error))
     },
-    bulkDelete () {
-      const vueState = this
-      const ids = this.selectedItems.map(task => task.id)
-      if (ids.length === 0) {
-        return
-      }
-      if (!window.confirm(this.$t('admin.tasks.confirmBulkDelete', { count: ids.length }))) {
-        return
-      }
-      axios.post('/admin/server/tasks/bulk/delete', { tasks: ids })
-        .then(function () {
-          vueState.selectedItems = []
-          vueState.updateTaskList()
-        })
+    showError (error) {
+      this.toast.init({
+        message: error.response?.data?.message || error.message,
+        color: 'danger',
+        duration: 10000
+      })
     },
     hasError (id) {
       const task = this.task_list[id]

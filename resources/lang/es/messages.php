@@ -25,6 +25,8 @@ return [
         'step_timed_out' => 'El paso :step no terminó a tiempo',
         'release_reset' => 'La versión estaba bloqueada y se restableció; se intentará la actualización de nuevo',
         'organization_created' => 'La organización se creó en el servidor; se continúa con la activación',
+        'cancelled_upgrade_started' => 'La actualización ya había empezado: la aplicación se marcó como activa de nuevo, pero puede estar actualizada a medias. Ejecuta una actualización para dejarla en orden.',
+        'cancelled_delete_started' => 'La eliminación ya había empezado: la aplicación está eliminada a medias y se ha dejado como estaba.',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
         'parent_app' => ':app necesita instalarse primero',

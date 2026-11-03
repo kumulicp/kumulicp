@@ -6,6 +6,7 @@ return [
         'warning_messages' => [
             'failed_jobs' => ':count queued job(s) have failed and need attention.',
             'failed_tasks' => ':count task(s) have failed recently.',
+            'blocked_tasks' => ':count task(s) are blocked by a failed or cancelled task.',
             'critical_findings' => ':count critical security finding(s) are unresolved.',
             'high_findings' => ':count high-severity security finding(s) are unresolved.',
             'servers_pending' => ':count server(s) are pending validation.',
@@ -255,6 +256,14 @@ return [
     'tasks' => [
         'tasks' => 'Tasks',
         'restarted' => 'Task will attempt to run again',
+        'retried' => 'Task will attempt to run again',
+        'cancelled' => 'Task cancelled',
+        'not_retryable' => 'Only a failed, blocked or cancelled task can be retried.',
+        'not_cancellable' => 'This task is already over, so there is nothing to cancel.',
+        'running_now' => 'This task is running right now. Try again in a moment.',
+        'not_deletable' => 'Only a finished, failed or cancelled task can be deleted. Cancel it first.',
+        'cancelled_by_admin' => 'Cancelled by an administrator',
+        'bulk_result' => ':done done, :refused skipped (see the task list for why)',
         'deleted' => 'Task deleted',
         'restart_queue' => 'Queue restarted',
         'run_schedule' => 'Running scheduled jobs',

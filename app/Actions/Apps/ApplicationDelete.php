@@ -115,6 +115,28 @@ class ApplicationDelete extends NativeAction
         return $result;
     }
 
+    /**
+     * An app whose delete hadn't started goes back to active. One that had is
+     * partly deleted: it stays as it is.
+     */
+    public static function cancelled(Task $task): ?string
+    {
+        $app_instance = $task->app_instance;
+
+        if (! $app_instance || $app_instance->status !== 'deleting') {
+            return null;
+        }
+
+        if ($task->attempts > 0) {
+            return __('messages.action.cancelled_delete_started');
+        }
+
+        $app_instance->status = 'active';
+        $app_instance->save();
+
+        return null;
+    }
+
     public static function retry(Task $task): ?Action
     {
         return new self($task->app_instance);

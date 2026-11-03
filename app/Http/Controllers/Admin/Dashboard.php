@@ -112,6 +112,7 @@ class Dashboard extends Controller
             'warnings' => $this->buildWarnings(
                 $failed_jobs_count,
                 (int) ($task_statuses['failed'] ?? 0),
+                (int) ($task_statuses['blocked'] ?? 0),
                 $security_findings,
                 $servers_pending,
                 $error_logs_last_day
@@ -171,6 +172,7 @@ class Dashboard extends Controller
     private function buildWarnings(
         int $failed_jobs_count,
         int $failed_tasks_count,
+        int $blocked_tasks_count,
         $security_findings,
         int $servers_pending,
         int $error_logs_last_day
@@ -189,6 +191,14 @@ class Dashboard extends Controller
             $warnings[] = [
                 'level' => 'warning',
                 'message' => __('admin.dashboard.warning_messages.failed_tasks', ['count' => $failed_tasks_count]),
+                'url' => '/admin/server/tasks',
+            ];
+        }
+
+        if ($blocked_tasks_count > 0) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => __('admin.dashboard.warning_messages.blocked_tasks', ['count' => $blocked_tasks_count]),
                 'url' => '/admin/server/tasks',
             ];
         }
