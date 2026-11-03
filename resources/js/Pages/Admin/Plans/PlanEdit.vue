@@ -36,6 +36,13 @@ import { currencyByCode } from '@/constants/currencies'
             :error="$page.props.errors.default"
             :error-messages="$page.props.errors.default"
             />
+          <va-checkbox v-model="form.status"
+            :label="$t('admin.plans.available')"
+            :messages="$t('admin.plans.availableCaption')"
+            class="my-2"
+            :error="$page.props.errors.status"
+            :error-messages="$page.props.errors.status"
+            />
           <va-select
             id="planType"
             v-model="form.type"
@@ -618,6 +625,7 @@ export default {
         type: this.plan.type,
         displayed_features: this.plan.features,
         default: this.plan.is_default,
+        status: this.plan.status === 'available',
         domain_enabled: this.plan.domain_enabled,
         domain_max: this.plan.domain_max,
         email_enabled: this.plan.email_enabled,

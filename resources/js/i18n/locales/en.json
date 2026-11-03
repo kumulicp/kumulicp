@@ -339,6 +339,8 @@
       "description": "Description",
       "archivedPlan": "Archived Plan",
       "default": "Default",
+      "available": "Available",
+      "availableCaption": "Unchecked plans are hidden and can't be selected by customers",
       "defaultPlan": "Default Plan",
       "defaultPlanCaption": "Checking this box will override the current default plan if another plan is set as your default",
       "features": "Features",

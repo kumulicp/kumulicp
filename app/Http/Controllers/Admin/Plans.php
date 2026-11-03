@@ -141,6 +141,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
+                'status' => $plan->status,
                 'features' => $plan->features ?? [],
                 'type' => $plan->type,
                 'description' => $plan->description,
@@ -221,7 +222,7 @@ class Plans extends Controller
         /* Validate */
         $validated = $request->validate(array_merge([
             'name' => 'required',
-            'status' => 'nullable',
+            'status' => 'nullable|boolean',
             'default' => 'nullable',
             'type' => 'required|in:package,app',
             'description' => 'required',
@@ -310,7 +311,7 @@ class Plans extends Controller
         }
 
         $plan->updateSettings($settingsToUpdate);
-        $plan->status = $request->status ? 'available' : 'hidden';
+        $plan->status = $request->boolean('status') ? 'available' : 'hidden';
         if (Arr::get($validated, 'default') && (! $plan->is_default || $plan->isDirty('org_type'))) {
             // Replace old default with new one
             $current_default_plan = Plan::where('is_default', true)->where('org_type', $plan->org_type)->first();
