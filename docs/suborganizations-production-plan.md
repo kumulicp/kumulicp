@@ -1,6 +1,6 @@
 # Suborganizations: plan to reach production
 
-Status: draft, based on a code read of `claude/peaceful-hypatia-bvedls` at `c9725da`.
+Status: draft, with product decisions recorded in section 7. Based on a code read of `claude/peaceful-hypatia-bvedls` at `c9725da`.
 Nothing below was run. `vendor/` is not installed in this environment, so no tests were executed.
 Items marked **(verify)** are suspected from reading the code and need a failing test before they are fixed.
 
@@ -10,7 +10,7 @@ Items marked **(verify)** are suspected from reading the code and need a failing
 |---|---|
 | Feature flag | `sub-organizations` toggle gates `/settings/suborganizations` (`routes/web.php:308`) |
 | Create / list / edit | `Account\Organization\Suborganization` (index, store, edit, update) |
-| Delete | Stub. `destroy()` has no `return` and does nothing |
+| Delete | Out of scope (decided). Only deactivation ships. `destroy()` is a stub and should be removed (section 4) |
 | Users | `suborg_users` table plus `SuborgUser`. Both account managers filter by it |
 | Billing | `include_in_parent_invoice` setting, `JointSubscriptionService`, `SubscriptionUpdate` |
 | Apps / domains | Parent sees suborg apps and domains (`allAppsIncludingChildren`, `Domains` controller) |
@@ -32,31 +32,43 @@ Items marked **(verify)** are suspected from reading the code and need a failing
   - `Ldap\Group::updateMembers` and `updateManagers` accept any username and do no org check. The DB driver does check.
   - Group names collide across suborgs, because `GroupNameNotUsed` calls `find()` over the shared tree.
 
-The first task is a product decision, not code (see 2.2).
+LDAP is the production driver (decided), so the LDAP fix is the priority and the DB driver is secondary.
+A suborg also has no `o=` entry of its own in LDAP. `Accounts::create` calls `Dn::create`, which resolves to the parent's DN.
+So there is currently nothing in the directory that says which org a group belongs to.
 
-### 2.2 Decision needed: group scoping model
+### 2.2 Group scoping model (decided)
 
-Recommended option: **per-org groups, and the parent can see and manage its suborgs' groups**, which matches how users, apps and domains already behave.
+**Per-org groups. The parent admin can see and manage its suborgs' groups.**
 
 - Suborg users only ever see their own org's groups.
-- The parent admin gets a group list that includes suborg groups, labelled by org.
-- A group may only contain users from its own org. Whether a parent user may join a suborg group is a rule to confirm.
-- LDAP gets a per-suborg groups OU (for example `ou=groups,ou=<suborg-slug>,o=<parent>`), or a stored owner attribute.
-
-Alternative: one shared group namespace for the whole tenant, with suborgs as members. It is simpler for LDAP, but it breaks the DB driver's existing scoping and is a bigger behaviour change.
+- The parent admin gets a group list that includes suborg groups, labelled by org, and can create, edit and delete them.
+- A parent user cannot belong to a suborg group (decided). The DB driver already enforces this. LDAP must too.
+- Assumption to confirm: a parent group may still contain suborg users, which is what the DB driver allows today (`belongsToGroupOrganization`).
+- In LDAP, store each suborg's groups under their own subtree inside the parent's, for example `ou=<category>,ou=<suborg-slug>,ou=groups,o=<parent>`, built by a group-specific DN helper.
+  - The parent's own groups stay where they are.
+  - Subtree searches must be restricted to one level. `LdapGroup::in(...)` is a subtree search by default, so a plain lookup of `ou=groups` would otherwise return suborg groups as well.
+  - Existing groups that suborg users created sit in the parent's tree and cannot be attributed to an org. Decide how to backfill them (assign to the parent, or tag by creator) before release.
 
 ### 2.3 Group work items
 
-1. **Write failing tests first** for both drivers, parameterised with the existing `account_manager_drivers` dataset:
+0. **Make the LDAP tests run.** `skipUnlessDriver('ldap')` skips every LDAP case unless the driver is configured. `docker-compose.yml.sample` has an `openldap` service, but I found no CI workflow that starts one.
+   - Add an LDAP service to CI (or a documented local command) before relying on any LDAP result.
+   - Without it, the production driver is the untested one.
+1. **Write failing tests first**, LDAP first, using the existing `account_manager_drivers` dataset:
    - create, edit, delete as a suborg user;
    - a suborg cannot see, edit or delete the parent's or a sibling's groups;
-   - the parent can see suborg groups (per 2.2);
+   - the parent can see, edit and delete suborg groups;
+   - a parent user is rejected as a member or manager of a suborg group;
    - cross-org members are rejected on both drivers;
-   - the same group name can exist in two suborgs.
-2. **Fix LDAP scoping.** Stop collapsing to the parent in group DNs, or add an org-owner attribute. Reconcile this with `Dn::create`, which is also used for users, apps and domains, so do not change it globally. Add a group-specific DN builder.
-3. **Fix LDAP membership validation.** Mirror `belongsToGroupOrganization` in `Ldap\Group::updateMembers` and `updateManagers`.
+   - the same group name can exist in two suborgs;
+   - existing parent groups still resolve after the DN change.
+2. **Fix LDAP scoping.** Add a group-specific DN builder (see 2.2). `Dn::create` is shared with users, apps and domains, so do not change it globally. Restrict group searches to one level.
+   - Use the same builder in `Groups` (add, find, collect, count) and `Group` (updateMembers, updateManagers, updateCategory, rename).
+   - Check `AddLdapGroups` (a job that sets the organization) and any other code that builds group DNs.
+3. **Fix LDAP membership validation.** Mirror `belongsToGroupOrganization` in `Ldap\Group::updateMembers` and `updateManagers`. Org membership must come from `SuborgUser`, because parent and suborg users share one `ou=users` tree and the DN says nothing about the org.
+   - Also keep the base `member` value on a new group (`Groups::add` sets it to the org DN) valid for a suborg group. It currently resolves to the parent's DN.
 4. **Fix `GroupNameNotUsed`.** It must be scoped the same way as the groups themselves.
-5. **DB driver correctness (verify):**
+5. **DB driver correctness (verify, lower priority since LDAP is production):**
    - `Database\Group::updateManagers` detaches all members before re-attaching managers. This only works because `updateMembers` runs second. Make each method idempotent and independent.
    - `updateMembers` never removes users who were unselected.
    - `members()` and `managers()` read the cached `$this->group->members` relation. They may return stale data after an update in the same request.
@@ -142,11 +154,17 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - Create the base domain.
   - Dispatch whatever the normal registration path dispatches in `Pub\Register` and the setup flow.
   - Compare the three paths and extract the shared logic into one action, instead of the current copy.
-- **Delete is a stub.**
-  - `destroy()` is missing `return`. It also has no gate. `delete-organization` exists in the gates, but no code uses it for suborgs.
-  - Implement deactivate and then delete, covering apps, domains, `suborg_users`, the LDAP subtree, subscription items and the invoice effect.
-  - Alternatively, remove the route and UI button and ship without delete.
-- **No limit enforcement on create.** Nothing checks `plan->setting('suborganizations.enabled')` on store. `view-suborganizations` checks it, `add-suborganization` does not. Add it, plus a max-count setting if one is wanted.
+- **No delete (decided). Suborgs are deactivated only.**
+  - Remove the `destroy()` stub and the `DELETE /settings/suborganizations/{organization}` route, and any UI for it. The `// not deleted yet` message and its translations go with it.
+  - The `delete-organization` gate then has no caller for suborgs. Leave it, or remove it if nothing else uses it.
+  - Deactivation lives in `Subscription@cancel` and `resubscribe`. Both need work first (next item).
+- **Deactivation and reactivation are not safe for suborgs (verify).**
+  - `Subscription@cancel(Organization $organization)` has no `Gate::authorize('unsubscribe', ...)`. The gate exists and is used only to decide whether to show the button. If nothing else guards the route, any authenticated user can cancel any organization by id. Write a test for this first.
+  - `Subscription@resubscribe()` takes no organization argument and uses `auth()->user()->organization`, although the route is `/subscription/{organization}/resubscribe`. Resubscribing a suborg from the parent resubscribes the parent and all its children instead.
+  - `cancel` passes the viewer's `SubscriptionFacade::all()` to `SubscriptionUpdate` for the suborg. `run()` rebuilds from the DB, so it works but is misleading.
+  - Define what deactivating a suborg does: apps to `deactivating`, billing roll-up on the parent invoice, users unable to log in (`active` gate), and what the parent sees afterwards. Then test deactivate and reactivate on a suborg alone, and cascade from the parent.
+  - Deactivated suborgs must be excluded from the activation target list (section 3) and from `add-suborganization` style checks.
+- **Enforce the plan flag on create.** Nothing checks `plan->setting('suborganizations.enabled')` on store. `view-suborganizations` checks it, `add-suborganization` does not. Add it. There is no cap on the number of suborgs (decided), so no max-count setting.
 - **The suborg inherits the parent's `plan_id`.** The create form offers `org_types`, but `type` does not drive plan selection. Decide the intended behaviour and test it.
 
 ### Correctness
@@ -159,14 +177,14 @@ via an unlabeled `organization` select on the review page. It only appears when 
 
 ### Product and UI
 - Suborg users should not see the Suborganizations menu. `view-suborganizations` already denies them.
-- Translate `Suborganizations cannot be deleted yet! :(` and its siblings (`en` and `es`).
+- Show deactivated suborgs clearly in the list (status badge, no edit, reactivate action for the parent).
 - Decide whether suborg admins can log in to a parent-scoped view or only to their own.
 
 ## 5. Tests required before release
 
-- `tests/Feature/Organization/SuborganizationTest.php`: index, store (valid, invalid, duplicate subdomain, limit reached), edit, update, billing toggle, destroy.
+- `tests/Feature/Organization/SuborganizationTest.php`: index, store (valid, invalid, duplicate subdomain, plan flag off), edit, update, billing toggle, deactivate, reactivate, and the removed delete route returning 404/405.
 - Authorization matrix: parent admin, suborg admin, sibling suborg admin, unrelated org user, against each action.
-- Groups: the cases in 2.3.1, run on both `db` and `ldap` (the LDAP cases are skipped in CI without an LDAP server; document how to run them).
+- Groups: the cases in 2.3.1, run on `ldap` first and then `db`. They must actually run in CI (2.3.0).
 - App activation (`tests/Feature/Applications/SuborgActivationTest.php`), driving the real `Discover` routes:
   - activate into the parent and into a suborg;
   - the limit is evaluated on the target org, for jointly billed and separately billed suborgs;
@@ -176,26 +194,31 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - the string-id case for `OrgSuborganization`;
   - admins are notified when the suborg has no admins.
 - Unit tests for `JointSubscriptionService` (repeated calls, separate billing, `countEntity`).
-- One end-to-end test: create a suborg, add a user, create a group, add the user to it, activate an app, check the invoice, deactivate.
+- One end-to-end test: create a suborg, add a user, create a group, add the user to it, activate an app, check the invoice, deactivate, reactivate.
 
 ## 6. Suggested order
 
-1. Decide the group model (2.2) and the delete scope (3). These unblock everything else.
-2. Add failing tests (section 5), starting with groups.
-3. Fix group scoping and membership (2.3.2 to 2.3.5), then the parent view (2.3.6 to 2.3.9).
-4. Fix the creation provisioning and limit enforcement.
+1. Get an LDAP service running in CI (2.3.0). Group scoping, delete scope and driver are already decided (section 7).
+2. Add failing tests (section 5), LDAP groups first, plus the cancel/resubscribe authorization test.
+3. Fix LDAP group scoping and membership (2.3.2 to 2.3.4), backfill existing groups, then the parent view (2.3.6 to 2.3.9). DB driver fixes (2.3.5) after that.
+4. Fix the creation provisioning and plan-flag enforcement.
 5. Rework app activation (section 3): fix `JointSubscriptionService`, add the activation context and gates, move the org selector first, then update the UI and notifications.
 6. Fix the update and billing issues.
-7. Implement delete (or cut it).
+7. Remove the delete stub and route; harden suborg deactivation and reactivation.
 8. Staging soak with the toggle on for a single real tenant, then enable it by default.
 
-## 7. Open questions
+## 7. Decisions and open questions
 
-1. Should the parent admin manage suborg groups, or only see them?
-2. Can a parent user belong to a suborg group?
-3. Is delete in scope for the first production release?
-4. Is the DB driver or LDAP the production driver for the first tenants? That decides which group fix is urgent.
-5. Is there a cap on how many suborgs a plan allows?
+### Decided
+1. The parent admin can manage (not just see) suborg groups.
+2. A parent user cannot belong to a suborg group.
+3. Suborgs can be deactivated but not deleted.
+4. LDAP is the production account-manager driver.
+5. There is no cap on the number of suborgs per plan.
+
+### Still open
 6. Activation limits: should a suborg be limited by its own plan, the parent's plan, or both when jointly billed?
 7. When a suborg is billed separately, can a parent admin activate an app in it? If yes, who is asked for the payment method?
 8. May a suborg app use a parent-owned domain or parent app? May it use a sibling's?
+9. Existing groups that suborg users already created sit in the parent's LDAP tree. Should they move to the parent, or be matched to the creator's suborg? (Is anyone using suborg groups in production yet?)
+10. May a parent group contain suborg users? (Assumed yes, as the DB driver allows today.)
