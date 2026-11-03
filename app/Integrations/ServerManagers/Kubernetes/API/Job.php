@@ -22,7 +22,16 @@ class Job extends Kubernetes
             return ['status' => 'failed', 'response' => $secret_result['response']];
         }
 
-        $result = $this->api()->apply($this->manifest($job), $namespace);
+        try {
+            $result = $this->api()->apply($this->manifest($job), $namespace);
+        } catch (\Throwable $exception) {
+            // The Job was not created, so nothing will ever own its Secret.
+            if (! $job->secrets()->isEmpty()) {
+                $this->secret()->removeStore($job->secrets());
+            }
+
+            throw $exception;
+        }
 
         if (! $job->secrets()->isEmpty()) {
             $this->settleJobSecret($job, $result);
@@ -94,7 +103,10 @@ class Job extends Kubernetes
     }
 
     // A job's Secret is owned by the Job: gone with it on success, and removed
-    // straight away if the Job was never created.
+    // once the Job is confirmed not to exist. The Job's uid comes from the
+    // create response, else from the cluster; if that lookup fails for any
+    // other reason the Secret is left alone, since removing it would break a
+    // Job that did start.
     private function settleJobSecret(JobChart $job, array $result): void
     {
         if (! $result['success']) {
@@ -103,11 +115,23 @@ class Job extends Kubernetes
             return;
         }
 
-        // Re-apply with an ownerReference now the Job's uid is known.
+        $name = Arr::get($job->chart, 'metadata.name');
         $uid = Arr::get($result['data'] ?? [], 'metadata.uid');
 
-        if ($uid) {
-            $this->secret()->applyStore($job->secrets(), ['name' => Arr::get($job->chart, 'metadata.name'), 'uid' => $uid]);
+        if (! $uid) {
+            $found = $this->clusterApi()->get('batch/v1', 'Job', $name, $job->secrets()->namespace());
+            $uid = Arr::get($found['data'] ?? [], 'metadata.uid');
+
+            if (! $uid) {
+                if ($found['status'] === 404) {
+                    $this->secret()->removeStore($job->secrets());
+                }
+
+                return;
+            }
         }
+
+        // Re-apply with an ownerReference now the Job's uid is known.
+        $this->secret()->applyStore($job->secrets(), ['name' => $name, 'uid' => $uid]);
     }
 }

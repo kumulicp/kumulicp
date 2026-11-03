@@ -148,7 +148,9 @@ class ApplicationUpgrade extends NativeAction
         }
 
         if ($status['pending'] ?? false) {
-            if (method_exists($server, 'recoverStuckRelease') && static::recoverStuckPendingRelease($task, $server)) {
+            if (method_exists($server, 'recoverStuckRelease')
+                && (! method_exists($server, 'canRecoverStuckRelease') || $server->canRecoverStuckRelease())
+                && static::recoverStuckPendingRelease($task, $server)) {
                 // The next run starts the upgrade fresh
                 return ActionResult::retryLater(__('messages.action.release_reset'), 0);
             }

@@ -102,7 +102,8 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function notFoundMessage(): string
     {
-        return __('messages.exception.app_not_found_rancher');
+        // What the status check actually saw, so "not found" can be told apart from "failed".
+        return trim(__('messages.exception.app_not_found_rancher').' ('.$this->checkStatus()['message'].')');
     }
 
     public function get()
@@ -137,6 +138,17 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         }
 
         return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
+    }
+
+    /**
+     * Whether this driver can clear a release left pending by a killed
+     * process. Checked by ApplicationUpgrade before it calls
+     * recoverStuckRelease(); a driver whose releases are managed elsewhere
+     * returns false.
+     */
+    public function canRecoverStuckRelease(): bool
+    {
+        return true;
     }
 
     /**
