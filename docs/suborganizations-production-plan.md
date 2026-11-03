@@ -14,6 +14,7 @@ Items marked **(verify)** are suspected from reading the code and need a failing
 | Users | `suborg_users` table plus `SuborgUser`. Both account managers filter by it |
 | Billing | `include_in_parent_invoice` setting, `JointSubscriptionService`, `SubscriptionUpdate` |
 | Apps / domains | Parent sees suborg apps and domains (`allAppsIncludingChildren`, `Domains` controller) |
+| App activation | Works, but the target suborg is picked last and most checks run against the parent (section 3) |
 | Groups | Controllers and account managers are written but are not suborg-aware (section 2) |
 | Tests | No feature test covers the `Suborganization` controller. Group tests only cover single-org cases, plus one cross-tenant DB test |
 
@@ -66,7 +67,74 @@ Alternative: one shared group namespace for the whole tenant, with suborgs as me
 8. **User-side group assignment.** `Account\User\Groups@edit/add/remove` builds its list from `AccountManager::groups()->all()`. Check that a parent editing a suborg user sees that suborg's groups, not its own. Test it.
 9. **Authorization.** Groups are gated only by `active` (a user in an active org). That is the documented, tested behaviour. Add an explicit gate on the group's owning org so a crafted slug cannot reach another org's group. This follows from 2.1.
 
-## 3. Rest of the suborganization flow
+## 3. App activation with suborganizations
+
+### 3.1 How it works today
+
+`/discover` -> `/discover/{app}` -> plan list -> `/discover/{app}/plans/{plan}/review` -> `POST .../activate`
+(`Account\Discover`). Every step runs in the logged-in (parent) org's context. The target suborg is chosen last,
+via an unlabeled `organization` select on the review page. It only appears when suborgs exist and defaults to the parent.
+`ApplicationActivate` then runs for the chosen org.
+
+### 3.2 Problems
+
+1. **Checks run against the wrong org.** The target is only known at the end, but everything before it uses the viewer's org:
+   - `show`, `plans` and `review` use `Subscription::base()` and `availablePlans($app, $organization)`.
+   - The `activate-app` and `select-app-plan` gates use the viewer's base plan.
+   - A suborg on a different plan is offered the parent's plans, and limits are checked against the parent.
+   - The suborg's `status` is never checked. `activate-app` tests the parent's status.
+2. **The limit logic is hard to reason about.** When suborgs exist, `activate-app` consults `JointSubscriptionService::isAppLimitReached`.
+   - Its result is named `plans_with_higher_app_limit` and produces two different denial codes (`plan_limit_reached`, `limit_reached`).
+   - The existing test only asserts "denied", without saying why.
+   - `JointSubscriptionService` has no tests of its own, and has real bugs **(verify)**:
+     - `allSubscriptions()` appends to `$this->subscriptions` on every call, so a repeated call duplicates entries and `totalPrice()` can double count.
+     - `countEntity($entity)` ignores its argument.
+     - `allSubscriptions()` excludes the parent and any suborg billed separately.
+3. **Discover shows the parent's view only.** `installed` and `count` on `/discover` and `/discover/{app}` count only the viewer's own instances.
+   - An app that is active only in a suborg looks "not activated".
+   - `default_label` numbering counts the parent's instances only, so labels collide across orgs.
+4. **Domains ignore the target org.**
+   - `review` lists the parent's domains (`availableDomains`, `main_domains`).
+   - `AppInstanceService::availableDomains` merges every suborg's subdomains regardless of the chosen target.
+   - The duplicate-subdomain check and `Domain::addSubdomain` run before `$organization` is switched to the suborg. They use the parent's id.
+   - `OrgSubdomain::find($value)` is not constrained to the target's family **(verify)**. A sibling suborg's domain could be accepted.
+5. **Parent-app selection crosses orgs.** `availableParents` merges the parent's and every suborg's instances. A suborg app can be attached under a sibling's app. `OrgAppInstance` validates against the parent only.
+6. **Payment check uses the wrong payer.** `Billing::hasDefaultPaymentMethod()` is checked for the viewer.
+   - If the suborg is billed on the parent invoice (`include_in_parent_invoice`) this is right. `StripeGateway` rolls the update up to the parent.
+   - If it is billed separately, the payer is the suborg, whose payment method a parent admin can't manage.
+7. **Target validation is weak.** `OrgSuborganization` uses `$value === $organization->id`. The request value is a numeric string, so selecting the parent itself can fail **(verify)**. It also accepts deactivated suborgs, while `review` only lists non-deactivated ones.
+8. **After activation, nobody may be told.** `ApplicationActivate` notifies `$task->organization->admins()`.
+   - A suborg created in `Suborganization@store` only has the parent's `primary_contact` associated. It has no users in `suborg_users` **(verify)**.
+   - So the suborg's admin list may be empty and no one is notified.
+   - `AppEdit` builds `registration_url` from the viewer's org slug, not the app's org (`Applications.php:146`) **(verify)**.
+9. **No cost preview.** The review page doesn't say whose invoice the app lands on, or what it adds.
+10. **Cleanup.** `Applications@reactivate` and `destroy` pass `Subscription::all()` (viewer's) next to `$app->organization`. It is harmless because `SubscriptionUpdate::run` rebuilds from the DB, but it is misleading.
+
+### 3.3 Proposed flow
+
+1. **Choose the org first.**
+   - Add an "Activating for" selector at the start (the app page).
+   - Show it only when the viewer's org has non-deactivated suborgs. Default to the parent.
+   - Carry the choice through plans, review and activate as `?organization=<id>`.
+2. **One activation context.** Build a single object from (app, target org) and use it in `show`, `plans`, `review`, `activate` and the gates. It holds:
+   - the target's base plan and subscription;
+   - the payer (parent if jointly billed, otherwise the suborg);
+   - the allowed domains;
+   - the allowed parent apps;
+   - the limit result.
+
+   The existing `sharedParentOnlyDomain` comment already describes this pattern: one source of truth so display and validation can't drift.
+3. **Gates take the target.** `activate-app` and `select-app-plan` accept the target org. Authorization means: the target is the viewer's org or a non-deactivated child.
+4. **Write the limit rules down, then implement them.** For example: evaluate the target's own plan, and when jointly billed also the parent's aggregate. Fix `JointSubscriptionService` and unit-test it.
+5. **Review page content.** Show the target org, the plan, who pays and how much it adds, and the domain options for that org only.
+6. **Discover counts.** Show per-target counts, plus a roll-up such as "also active in 2 suborganizations".
+7. **Revalidate on `activate`.** Recompute the context server-side instead of trusting the earlier steps.
+8. **After activation.**
+   - Notify parent admins when the suborg has none.
+   - Redirect to `/apps`, filtered to that org.
+   - Use the app's org for the registration URL.
+
+## 4. Rest of the suborganization flow
 
 ### Blockers
 - **Creation does not provision anything.** `Suborganization@store` only saves the row. The `// Add domain` comment has no code under it.
@@ -94,27 +162,40 @@ Alternative: one shared group namespace for the whole tenant, with suborgs as me
 - Translate `Suborganizations cannot be deleted yet! :(` and its siblings (`en` and `es`).
 - Decide whether suborg admins can log in to a parent-scoped view or only to their own.
 
-## 4. Tests required before release
+## 5. Tests required before release
 
 - `tests/Feature/Organization/SuborganizationTest.php`: index, store (valid, invalid, duplicate subdomain, limit reached), edit, update, billing toggle, destroy.
 - Authorization matrix: parent admin, suborg admin, sibling suborg admin, unrelated org user, against each action.
 - Groups: the cases in 2.3.1, run on both `db` and `ldap` (the LDAP cases are skipped in CI without an LDAP server; document how to run them).
+- App activation (`tests/Feature/Applications/SuborgActivationTest.php`), driving the real `Discover` routes:
+  - activate into the parent and into a suborg;
+  - the limit is evaluated on the target org, for jointly billed and separately billed suborgs;
+  - a deactivated suborg, a sibling org and a non-family org are rejected;
+  - a domain from another org and a parent app from another org are rejected;
+  - the payment-method gate checks the right payer;
+  - the string-id case for `OrgSuborganization`;
+  - admins are notified when the suborg has no admins.
+- Unit tests for `JointSubscriptionService` (repeated calls, separate billing, `countEntity`).
 - One end-to-end test: create a suborg, add a user, create a group, add the user to it, activate an app, check the invoice, deactivate.
 
-## 5. Suggested order
+## 6. Suggested order
 
 1. Decide the group model (2.2) and the delete scope (3). These unblock everything else.
-2. Add failing tests (section 4), starting with groups.
+2. Add failing tests (section 5), starting with groups.
 3. Fix group scoping and membership (2.3.2 to 2.3.5), then the parent view (2.3.6 to 2.3.9).
 4. Fix the creation provisioning and limit enforcement.
-5. Fix the update and billing issues.
-6. Implement delete (or cut it).
-7. Staging soak with the toggle on for a single real tenant, then enable it by default.
+5. Rework app activation (section 3): fix `JointSubscriptionService`, add the activation context and gates, move the org selector first, then update the UI and notifications.
+6. Fix the update and billing issues.
+7. Implement delete (or cut it).
+8. Staging soak with the toggle on for a single real tenant, then enable it by default.
 
-## 6. Open questions
+## 7. Open questions
 
 1. Should the parent admin manage suborg groups, or only see them?
 2. Can a parent user belong to a suborg group?
 3. Is delete in scope for the first production release?
 4. Is the DB driver or LDAP the production driver for the first tenants? That decides which group fix is urgent.
 5. Is there a cap on how many suborgs a plan allows?
+6. Activation limits: should a suborg be limited by its own plan, the parent's plan, or both when jointly billed?
+7. When a suborg is billed separately, can a parent admin activate an app in it? If yes, who is asked for the payment method?
+8. May a suborg app use a parent-owned domain or parent app? May it use a sibling's?
