@@ -2,7 +2,7 @@
 
 use App\AppPlan;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\GenericChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\GenericChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;

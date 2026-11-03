@@ -2,12 +2,12 @@
 
 use App\AppPlan;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\MySQLJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\MySQLJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\NextcloudJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\WordpressJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 use App\Organization;
 use App\Support\Facades\Application;
 use Tests\Support\Applications\DemoAppProfile;

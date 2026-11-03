@@ -2,7 +2,7 @@
 
 namespace Tests\Support\Applications;
 
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Support\Facades\Application;
 
 class DemoHelmChart extends HelmChart

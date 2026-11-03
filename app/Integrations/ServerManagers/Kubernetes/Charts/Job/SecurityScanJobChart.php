@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts\Job;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
 use App\Support\Facades\SecurityTool;
 use Illuminate\Support\Str;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Charts;
+namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;

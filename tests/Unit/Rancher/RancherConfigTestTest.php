@@ -1,9 +1,9 @@
 <?php
 
 use App\AppInstance;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Integrations\ServerManagers\Rancher\API\Application;
 use App\Integrations\ServerManagers\Rancher\API\KubernetesNamespace;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
 use App\Integrations\ServerManagers\Rancher\RancherConfigTest;
 use App\Integrations\ServerManagers\Rancher\RancherProfile;
 use App\Organization;

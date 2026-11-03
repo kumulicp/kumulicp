@@ -2,7 +2,7 @@
 
 namespace App\Contracts\ServerManager;
 
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 
 /**
  * Running one-off Jobs on a web server. $namespace is where the Job runs when

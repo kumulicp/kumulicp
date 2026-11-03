@@ -2,8 +2,8 @@
 
 namespace App\Integrations\ServerManagers\Concerns;
 
+use App\Integrations\ServerManagers\Kubernetes\Charts\ChartSecrets;
 use App\Integrations\ServerManagers\Kubernetes\Support\KubernetesApiClient;
-use App\Integrations\ServerManagers\Rancher\Charts\ChartSecrets;
 use Illuminate\Support\Facades\Log;
 
 /**

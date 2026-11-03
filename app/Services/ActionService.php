@@ -42,7 +42,7 @@ use App\Integrations\Applications\Nextcloud\Actions\ManageAddon;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
-use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
+use App\Integrations\ServerManagers\Kubernetes\Actions\RunJob;
 use App\Organization;
 use App\Services\Tasks\Handlers\LegacyHandler;
 use App\Services\Tasks\Handlers\NativeHandler;

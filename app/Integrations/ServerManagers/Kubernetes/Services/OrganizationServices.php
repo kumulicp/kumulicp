@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Integrations\ServerManagers\Rancher\Services;
+namespace App\Integrations\ServerManagers\Kubernetes\Services;
 
 trait OrganizationServices
 {

@@ -4,7 +4,7 @@ namespace App\Actions\Security;
 
 use App\Actions\Action;
 use App\Enums\TaskStatus;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\SecurityScanJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\SecurityScanJobChart;
 use App\OrgServer;
 use App\SecurityScan;
 use App\Support\Security\Parsers\ParserFactory;

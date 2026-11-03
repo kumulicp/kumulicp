@@ -4,12 +4,12 @@ namespace App\Integrations\ServerManagers\Rancher\Services;
 
 use App\Integrations\ServerManagers\Kubernetes\API\Ingress as BaseIngress;
 use App\Integrations\ServerManagers\Kubernetes\API\Middleware as BaseMiddleware;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\MiddlewareChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService as BaseDomainMiddlewareService;
 use App\Integrations\ServerManagers\Rancher\API\Ingress;
 use App\Integrations\ServerManagers\Rancher\API\Middleware;
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\MiddlewareChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 
 class DomainMiddlewareService extends BaseDomainMiddlewareService
 {

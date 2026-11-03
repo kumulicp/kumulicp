@@ -2,8 +2,8 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\API;
 
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\IngressChart;
 use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\IngressChart;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 

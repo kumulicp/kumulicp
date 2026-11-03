@@ -2,7 +2,7 @@
 
 namespace App\Integrations\Applications\CiviCRMStandalone;
 
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Support\Facades\Application;
 
 class CiviCRMStandaloneChart extends HelmChart

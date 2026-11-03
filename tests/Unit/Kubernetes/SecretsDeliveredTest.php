@@ -1,7 +1,7 @@
 <?php
 
 use App\AppInstance;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
