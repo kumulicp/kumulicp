@@ -77,6 +77,16 @@ class RancherApiClient extends KubernetesApiClient
         return '/v1/'.$this->steveType($resource);
     }
 
+    // For a project-scoped API key Rancher answers 403, not 404, when asked
+    // about a namespace that doesn't exist yet (it can't tell "absent" from
+    // "not yours"). Creating it is the only way to find out: a key that really
+    // may not create it gets the 403 back from the POST.
+    protected function isMissing(Response $response, array $resource): bool
+    {
+        return parent::isMissing($response, $resource)
+            || ($response->status() === 403 && $resource[1] === 'namespaces');
+    }
+
     // Rancher takes the whole object back, so start from what it returned and
     // lay the manifest over it: metadata is merged (to keep resourceVersion
     // and anything Rancher added), everything else is replaced.
