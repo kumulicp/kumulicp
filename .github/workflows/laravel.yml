@@ -52,6 +52,14 @@ jobs:
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
+        LDAP_HOST: localhost
+        LDAP_PORT: 389
+        LDAP_USERNAME: "cn=admin,dc=example,dc=com"
+        LDAP_PASSWORD: admin
+        LDAP_BASE_DN: "dc=example,dc=com"
+        LDAP_DIRECTORY_READER_USERNAME: "cn=directory-reader,o=server,dc=example,dc=com"
+        LDAP_DIRECTORY_READER_PASSWORD: readeradmin
+        LDAP_TLS: false
       run: php artisan test --testsuite=Feature
     - name: Execute AccountManagerLdap tests
       env:

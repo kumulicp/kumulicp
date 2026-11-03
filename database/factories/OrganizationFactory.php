@@ -37,7 +37,7 @@ class OrganizationFactory extends Factory
             'contact_last_name' => fake()->lastName,
             'contact_phone_number' => fake()->phoneNumber(),
             'contact_email' => fake()->email(),
-            'settings' => '{}',
+            'settings' => [],
             'status' => 'active',
         ];
     }
