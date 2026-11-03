@@ -14,11 +14,13 @@ use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Billing;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
+use App\Exceptions\AccountManagerException;
 use App\User;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use LdapRecord\LdapRecordException;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -31,11 +33,20 @@ class AuthServiceProvider extends ServiceProvider
     {
         /* Admin */
         Gate::define('admin', function (User $user, ?UserManager $other_user = null) {
-            $user = $other_user ?? AccountManager::users()->find($user->username);
+            // This gate is evaluated on every authenticated page load (shared
+            // Inertia props), so an LDAP outage must not crash every page —
+            // fail closed (deny admin) instead of throwing.
+            try {
+                $user = $other_user ?? AccountManager::users()->find($user->username);
 
-            return $user->permissions()->hasControlPanelAdminAccess()
-                ? Response::allow()
-                : Response::deny(__('admin.denied'));
+                return $user->permissions()->hasControlPanelAdminAccess()
+                    ? Response::allow()
+                    : Response::deny(__('admin.denied'));
+            } catch (LdapRecordException|AccountManagerException $e) {
+                report($e);
+
+                return Response::deny(__('admin.denied'));
+            }
         });
 
         /* Organization */

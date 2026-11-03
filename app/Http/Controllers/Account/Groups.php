@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\Exceptions\AccountManagerException;
 use App\Http\Controllers\Controller;
 use App\Rules\GroupNameNotUsed;
 use App\Support\Facades\AccountManager;
@@ -41,11 +42,12 @@ class Groups extends Controller
 
         $organization = Organization::account();
 
-        // Check if groups exists and create if not
-        $group = AccountManager::groups()->find($validatedData['name']);
-
         // Check if groups ou exists and create if not
-        $group = AccountManager::groups()->add($validatedData);
+        try {
+            $group = AccountManager::groups()->add($validatedData);
+        } catch (AccountManagerException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
 
         $task = null;
         $active_apps = $organization->active_apps();
@@ -62,7 +64,11 @@ class Groups extends Controller
         Gate::authorize('active');
         $organization = Organization::account();
 
-        $group = AccountManager::groups()->find($group);
+        try {
+            $group = AccountManager::groups()->find($group);
+        } catch (AccountManagerException $e) {
+            return redirect('/groups')->with('error', $e->getMessage());
+        }
         if (! $group) {
             return redirect('/groups')->with('error', 'Group not found');
         }
@@ -117,7 +123,19 @@ class Groups extends Controller
 
         $validator->after(function ($validator) {
             $validatedData = $validator->validated();
-            if ($validatedData['original_name'] != $validatedData['name'] && AccountManager::groups()->find($validatedData['name'])) {
+            if ($validatedData['original_name'] == $validatedData['name']) {
+                return;
+            }
+
+            try {
+                $exists = AccountManager::groups()->find($validatedData['name']);
+            } catch (AccountManagerException) {
+                // Can't verify uniqueness right now — let the write attempt
+                // below fail (and report) instead of blocking the request.
+                return;
+            }
+
+            if ($exists) {
                 $validator->errors()->add(
                     'name', $validatedData['name'].' already exists!'
                 );
@@ -125,14 +143,18 @@ class Groups extends Controller
         });
         $validatedData = $validator->validate();
 
-        // Update Group settings
-        $group = AccountManager::groups()->find($group_name);
-        $group->disableAutoSave();
-        $group->updateManagers($validatedData['managers']);
-        $group->updateMembers($validatedData['members']);
-        $group->updateName($validatedData['name']);
-        $group->updateCategory($validatedData['category']);
-        $group->save();
+        try {
+            // Update Group settings
+            $group = AccountManager::groups()->find($group_name);
+            $group->disableAutoSave();
+            $group->updateManagers($validatedData['managers']);
+            $group->updateMembers($validatedData['members']);
+            $group->updateName($validatedData['name']);
+            $group->updateCategory($validatedData['category']);
+            $group->save();
+        } catch (AccountManagerException $e) {
+            return back()->with('error', $e->getMessage())->withInput();
+        }
 
         $active_apps = $organization->active_apps();
 
@@ -151,13 +173,17 @@ class Groups extends Controller
 
         $active_apps = $organization->active_apps();
 
-        $group = AccountManager::groups()->find($group_name);
+        try {
+            $group = AccountManager::groups()->find($group_name);
 
-        if ($group) {
-            foreach ($active_apps as $app) {
-                Action::dispatch($app->application->slug, 'process_group_options', [$app, $group, ['original_name' => $group_name, 'group_name' => $group_name, 'action' => 'remove']]);
+            if ($group) {
+                foreach ($active_apps as $app) {
+                    Action::dispatch($app->application->slug, 'process_group_options', [$app, $group, ['original_name' => $group_name, 'group_name' => $group_name, 'action' => 'remove']]);
+                }
+                $group->delete();
             }
-            $group->delete();
+        } catch (AccountManagerException $e) {
+            return redirect('/groups')->with('error', $e->getMessage());
         }
 
         return redirect('/groups')->with('success', __('organization.group.deleted', ['group' => $group_name]));

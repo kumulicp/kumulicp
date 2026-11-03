@@ -3,8 +3,10 @@
 namespace App\Integrations\AccountManagers\Ldap;
 
 use App\Contracts\AccountManager\AccountContract;
+use App\Exceptions\AccountManagerException;
 use App\Ldap\Actions\Dn;
 use App\Organization;
+use LdapRecord\LdapRecordException;
 use LdapRecord\Models\OpenLDAP\Entry;
 
 class Account implements AccountContract
@@ -30,8 +32,12 @@ class Account implements AccountContract
 
     public function destroy()
     {
-        if ($org = Entry::find($this->organization_id)) {
-            $org->delete($recursive = true);
+        try {
+            if ($org = Entry::find($this->organization_id)) {
+                $org->delete($recursive = true);
+            }
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
         }
     }
 }

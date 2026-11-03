@@ -3,12 +3,14 @@
 namespace App\Integrations\AccountManagers\Ldap;
 
 use App\AppInstance;
+use App\Exceptions\AccountManagerException;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\Organization;
+use LdapRecord\LdapRecordException;
 
 class Group extends GroupManager
 {
@@ -107,7 +109,11 @@ class Group extends GroupManager
 
             $this->auto_save();
 
-            $this->group->rename('cn='.Dn::escape($name));
+            try {
+                $this->group->rename('cn='.Dn::escape($name));
+            } catch (LdapRecordException $e) {
+                throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
+            }
         }
     }
 
@@ -118,17 +124,21 @@ class Group extends GroupManager
             return;
         }
 
-        $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$category, 'groups']));
+        try {
+            $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$category, 'groups']));
 
-        if (! $group_category_ou) {
-            $group_category_ou = new OrganizationalUnit;
-            $group_category_ou->ou = $category;
-            $group_category_ou->setDn(Dn::create($organization, [$category, 'groups']));
-            $group_category_ou->save();
-        }
+            if (! $group_category_ou) {
+                $group_category_ou = new OrganizationalUnit;
+                $group_category_ou->ou = $category;
+                $group_category_ou->setDn(Dn::create($organization, [$category, 'groups']));
+                $group_category_ou->save();
+            }
 
-        if ($new_category = OrganizationalUnit::find(Dn::create($this->organization, [$category, 'groups']))) {
-            $this->group->move($group_category_ou);
+            if ($new_category = OrganizationalUnit::find(Dn::create($this->organization, [$category, 'groups']))) {
+                $this->group->move($group_category_ou);
+            }
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
         }
     }
 
@@ -155,19 +165,27 @@ class Group extends GroupManager
             $all_additional_storage->delete();
         }
 
-        $this->group->delete();
+        try {
+            $this->group->delete();
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
+        }
     }
 
     private function auto_save()
     {
         if ($this->auto_save) {
-            $this->group->save();
+            $this->save();
         }
     }
 
     public function save()
     {
-        $this->group->save();
+        try {
+            $this->group->save();
+        } catch (LdapRecordException $e) {
+            throw new AccountManagerException(__('messages.exception.account_manager_write_failed'), previous: $e);
+        }
     }
 
     public function disableAutoSave()
