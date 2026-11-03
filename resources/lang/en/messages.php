@@ -22,6 +22,8 @@ return [
         'waiting_for' => 'Waiting for other tasks to complete',
         'dependency_failed' => 'A task this one depends on has failed',
         'deadline_exceeded' => 'This task did not finish in time',
+        'step_timed_out' => 'Step :step did not finish in time',
+        'release_reset' => 'The release was stuck and has been reset; trying the upgrade again',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
         'parent_app' => ':app needs to be installed first',
