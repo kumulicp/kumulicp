@@ -15,6 +15,7 @@ use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
+use App\Support\SafeErrorMessage;
 use Illuminate\Http\Request;
 
 class Applications extends Controller
@@ -245,7 +246,7 @@ class Applications extends Controller
         try {
             $task = Action::execute(new ApplicationDelete($app, start_time: $start, end_time: $end));
         } catch (\Throwable $e) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', $e->getMessage());
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', SafeErrorMessage::from($e));
         }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.deleting', ['app' => $app->label]));

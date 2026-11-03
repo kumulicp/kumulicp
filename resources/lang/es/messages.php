@@ -44,6 +44,7 @@ return [
         'migrated' => ':app ahora usa el servidor de base de datos :server',
     ],
     'exception' => [
+        'database_error' => 'Ocurrió un error de base de datos. Revise los registros de la aplicación para más detalles.',
         'database_failed' => 'No se pudo crear la base de datos',
         'sso_failed' => 'No se pudo crear el SSO',
         'account_manager_driver_fail' => 'El controlador del gestor de cuentas no existe',

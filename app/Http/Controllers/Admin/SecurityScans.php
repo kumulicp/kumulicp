@@ -12,6 +12,7 @@ use App\SecurityScan;
 use App\SecurityScanSavedValue;
 use App\Support\Facades\Action;
 use App\Support\Facades\SecurityTool;
+use App\Support\SafeErrorMessage;
 use App\Support\Security\Tools\TrivyTool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -323,7 +324,7 @@ class SecurityScans extends Controller
             'org_server_id' => $scan->org_server_id,
             'started_at' => $scan->started_at?->format('Y-m-d H:i:s'),
             'finished_at' => $scan->finished_at?->format('Y-m-d H:i:s'),
-            'error_message' => $scan->error_message,
+            'error_message' => SafeErrorMessage::scrub($scan->error_message),
             'created_at' => $scan->created_at?->format('Y-m-d H:i:s'),
             'findings_count' => $findings_count,
             'resolved_findings_count' => $resolved_findings_count,

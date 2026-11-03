@@ -13,6 +13,7 @@ use App\Plan;
 use App\SecurityFinding;
 use App\SecurityScan;
 use App\Server;
+use App\Support\SafeErrorMessage;
 use App\Task;
 use Illuminate\Support\Carbon;
 
@@ -62,7 +63,7 @@ class Dashboard extends Controller
                 'organization' => $task->organization->name ?? '',
                 'application' => $task->application->name ?? '',
                 'description' => $task->description,
-                'error_message' => $task->error_message,
+                'error_message' => SafeErrorMessage::scrub($task->error_message),
                 'time' => optional($task->updated_at)->diffForHumans(),
             ]);
 
@@ -82,7 +83,7 @@ class Dashboard extends Controller
                 'id' => $scan->id,
                 'server' => $scan->org_server->name ?? '',
                 'tool' => $scan->tool,
-                'error_message' => $scan->error_message,
+                'error_message' => SafeErrorMessage::scrub($scan->error_message),
                 'time' => optional($scan->finished_at)->diffForHumans(),
             ]);
 
