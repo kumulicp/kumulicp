@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\AppVersion;
+use App\Enums\TaskStatus;
 use App\Enums\VersionTestRunStatus;
 use App\Enums\VersionTestStepStatus;
 use App\Enums\VersionTestStepType;
@@ -49,14 +50,15 @@ class VersionTestingTest extends TestCase
         AppPlan::factory()->count(2)->create(['application_id' => $this->application->id]);
 
         // Provisioning and clearing are separate tasks, covered by their own tests
-        $next_task_id = 900;
-        Action::shouldReceive('execute')->andReturnUsing(function () use (&$next_task_id) {
+        Action::shouldReceive('execute')->andReturnUsing(function () {
             $this->executed_actions++;
 
-            $task = new Task;
-            $task->id = $next_task_id++;
-
-            return $task;
+            return Task::forceCreate([
+                'organization_id' => 1,
+                'action_group' => 'system',
+                'action_slug' => 'fake',
+                'status' => TaskStatus::IN_PROGRESS,
+            ]);
         });
     }
 

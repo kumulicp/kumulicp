@@ -116,7 +116,7 @@ class VersionTestRunner
                 throw new VersionTestException(__('admin.version_tests.errors.not_running'));
             }
 
-            $this->assertSlotFree();
+            $this->assertSlotFree($run);
 
             $step = $run->steps()->where('status', VersionTestStepStatus::PENDING->value)->first();
             if (! $step) {
@@ -326,7 +326,12 @@ class VersionTestRunner
         $steps = VersionTestStep::where('status', VersionTestStepStatus::PROVISIONING->value)->get();
 
         foreach ($steps as $step) {
-            $task = $step->task_id ? Task::find($step->task_id) : null;
+            // The task id is saved just after the step starts; until then there is nothing to check
+            if (! $step->task_id) {
+                continue;
+            }
+
+            $task = Task::find($step->task_id);
 
             if ($task && ! in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true)) {
                 continue;
@@ -349,9 +354,18 @@ class VersionTestRunner
         return VersionTestRun::where('status', VersionTestRunStatus::RUNNING->value)->first();
     }
 
-    private function assertSlotFree(): void
+    /**
+     * @param  VersionTestRun|null  $continuing  The run the caller is carrying on with, which is allowed to be running
+     *
+     * @throws VersionTestException
+     */
+    private function assertSlotFree(?VersionTestRun $continuing = null): void
     {
-        $running = VersionTestRun::where('status', VersionTestRunStatus::RUNNING->value)->lockForUpdate()->first();
+        $running = VersionTestRun::where('status', VersionTestRunStatus::RUNNING->value)
+            ->when($continuing, fn ($query) => $query->whereKeyNot($continuing->id))
+            ->lockForUpdate()
+            ->first();
+
         if ($running) {
             throw new VersionTestException(__('admin.version_tests.errors.run_in_progress', [
                 'app' => $running->application->name,

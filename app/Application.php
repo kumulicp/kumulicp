@@ -97,7 +97,7 @@ class Application extends Model
         $comparator = new VersionComparator;
 
         return $this->instances()
-            ->whereHas('organization', fn ($query) => $query->notTest())
+            ->whereIn('organization_id', Organization::notTest()->select('organizations.id'))
             ->with('version')
             ->get()
             ->filter(fn (AppInstance $instance) => $instance->version && $comparator->compare($version->name, $instance->version->name) > 0)
