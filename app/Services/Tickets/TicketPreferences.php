@@ -11,12 +11,12 @@ use App\User;
 class TicketPreferences
 {
     /** Events a person can switch off. */
-    public const EVENTS = ['created', 'reply', 'note', 'status', 'assigned', 'assignee_removed'];
+    public const EVENTS = ['created', 'reply', 'note', 'status', 'assigned', 'assignee_removed', 'reminder', 'sla', 'rating'];
 
     public const CHANNELS = ['mail', 'panel'];
 
     /** Internal notes are staff-only, so customers are not offered that switch. */
-    public const STAFF_ONLY = ['note'];
+    public const STAFF_ONLY = ['note', 'sla', 'rating'];
 
     /**
      * The full matrix with defaults filled in.

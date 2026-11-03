@@ -3,6 +3,7 @@
 namespace App\Notifications\Tickets;
 
 use App\Channels\PanelChannel;
+use App\Enums\TicketStatus;
 use App\Services\Tickets\TicketPreferences;
 use App\Services\Tickets\TicketSubscriptions;
 use App\Services\Tickets\TicketUnread;
@@ -69,7 +70,7 @@ class TicketActivity extends Notification implements ShouldQueue
 
         $kind = $channel === 'mail' ? 'mail' : 'panel';
 
-        if (! app(TicketPreferences::class)->allows($notifiable, $this->event, $kind)) {
+        if (! app(TicketPreferences::class)->allows($notifiable, $this->preferenceKey(), $kind)) {
             return false;
         }
 
@@ -101,6 +102,18 @@ class TicketActivity extends Notification implements ShouldQueue
             : null;
     }
 
+    /**
+     * Which of the person's switches governs this event.
+     */
+    private function preferenceKey(): string
+    {
+        return match ($this->event) {
+            'sla_warning', 'sla_breached' => 'sla',
+            'merged' => 'status',
+            default => $this->event,
+        };
+    }
+
     public function url(): string
     {
         return url(($this->staffView ? '/admin/support/tickets/' : '/support/tickets/').$this->ticket->number);
@@ -125,6 +138,11 @@ class TicketActivity extends Notification implements ShouldQueue
 
         if (! empty($this->context['excerpt'])) {
             $mail->line('> '.str_replace("\n", "\n> ", $this->context['excerpt']));
+        }
+
+        // Once a ticket is resolved the customer is invited to say how it went
+        if ($this->event === 'status' && ! $this->staffView && $this->ticket->status === TicketStatus::RESOLVED) {
+            $mail->line(__('tickets.notifications.rate_prompt'));
         }
 
         return $mail

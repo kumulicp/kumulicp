@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Tickets;
 
+use App\Services\Tickets\TicketSla;
 use App\Services\Tickets\TicketUnread;
 use App\Ticket;
 use App\User;
@@ -38,10 +39,32 @@ class AdminTicketResource extends JsonResource
             'support_assignee' => $this->person($this->supportAssignee),
             'tags' => $this->relationLoaded('tags') ? $this->tags->pluck('name')->values() : [],
             'lock_version' => $this->lock_version,
+            'sla' => $this->sla(),
+            'csat' => $this->csat_score ? ['score' => $this->csat_score, 'comment' => $this->csat_comment] : null,
+            'merged_into' => $this->mergedInto ? ['reference' => $this->mergedInto->reference, 'url' => '/admin/support/tickets/'.$this->mergedInto->number] : null,
             'first_response_at' => $this->first_response_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),
             'url' => '/admin/support/tickets/'.$this->number,
+        ];
+    }
+
+    /**
+     * Where the service level clocks stand, with due times. Null without a policy.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sla(): ?array
+    {
+        if (! $this->sla_policy_id) {
+            return null;
+        }
+
+        $state = app(TicketSla::class)->state($this->resource);
+
+        return [
+            'first_response' => ['state' => $state['first_response'], 'due_at' => $this->sla_first_response_due_at?->toIso8601String()],
+            'resolution' => ['state' => $state['resolution'], 'due_at' => $this->sla_resolution_due_at?->toIso8601String()],
         ];
     }
 

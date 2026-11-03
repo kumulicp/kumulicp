@@ -36,6 +36,20 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $resolved_at
  * @property Carbon|null $closed_at
  * @property int $lock_version
+ * @property int|null $sla_policy_id
+ * @property Carbon|null $sla_first_response_due_at
+ * @property Carbon|null $sla_resolution_due_at
+ * @property Carbon|null $sla_first_response_warned_at
+ * @property Carbon|null $sla_resolution_warned_at
+ * @property Carbon|null $sla_first_response_breached_at
+ * @property Carbon|null $sla_resolution_breached_at
+ * @property Carbon|null $sla_paused_at
+ * @property int $sla_paused_minutes
+ * @property Carbon|null $reminder_sent_at
+ * @property int|null $csat_score
+ * @property string|null $csat_comment
+ * @property Carbon|null $csat_at
+ * @property int|null $merged_into_id
  * @property-read string $reference
  * @property-read Organization $organization
  * @property-read User|null $requester
@@ -65,6 +79,15 @@ class Ticket extends Model
         'last_staff_reply_at' => 'datetime',
         'resolved_at' => 'datetime',
         'closed_at' => 'datetime',
+        'sla_first_response_due_at' => 'datetime',
+        'sla_resolution_due_at' => 'datetime',
+        'sla_first_response_warned_at' => 'datetime',
+        'sla_resolution_warned_at' => 'datetime',
+        'sla_first_response_breached_at' => 'datetime',
+        'sla_resolution_breached_at' => 'datetime',
+        'sla_paused_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
+        'csat_at' => 'datetime',
     ];
 
     /**
@@ -161,6 +184,19 @@ class Ticket extends Model
     public function events(): HasMany
     {
         return $this->hasMany(TicketEvent::class)->orderBy('id');
+    }
+
+    /**
+     * @return BelongsTo<Ticket, $this>
+     */
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(Ticket::class, 'merged_into_id');
+    }
+
+    public function isMerged(): bool
+    {
+        return $this->merged_into_id !== null;
     }
 
     /**

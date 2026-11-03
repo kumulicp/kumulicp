@@ -1,10 +1,10 @@
 # Plan: Full Ticket Support
 
-Status: proposal. Nothing here is built yet.
+Status: implemented (see the status section below); the rest of this document is the original plan.
 
 ## Implementation status
 
-Phases 0 to 4 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`). Phase 5 is not started.
+Phases 0 to 5 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind the `tickets` flag (`TOGGLE_TICKETS=true`).
 
 **Done**
 - Flag, `tickets` private disk, `ticket` purifier profile, enums, `TicketPolicy` (members: whole org; staff: `admin` gate through `manage()`), `config/tickets.php`.
@@ -16,6 +16,25 @@ Phases 0 to 4 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind t
 - Email + panel notifications (`TicketActivity`), panel notifications now deep-link to the ticket. Removed or deactivated assignees are handled on the user-deleted event and by a daily sweep.
 - The help desk modal creates a real ticket when the flag is on; the legacy email path is unchanged when it is off. New tickets are still copied to `support_email` (`TICKETS_COPY_SUPPORT_EMAIL`).
 - English and Spanish strings.
+
+**Phase 5 (service levels, automation and reporting), done**
+- **SLA policies and business hours** (`/admin/support/settings`). A policy sets a first-response and a resolution target per priority (typed in hours, stored in minutes) and optionally business hours: time zone, weekdays, one daily window and holidays. One policy is the default; a category can use another; an inactive or deleted policy falls back to the default. Due times are computed when a ticket is opened and recomputed from the opening time when its priority or category changes (`TicketSla`, with the pure `BusinessCalendar` doing the working-minutes arithmetic, daylight-saving safe). The resolution clock pauses while the ticket waits on the customer or is on hold and gives the paused working time back when it resumes. States per clock: ok, warning (20% of the target left), breached, paused, met, missed, none.
+- **Alerts.** A 5-minute task (`RunTicketAutomation`, no overlap, one server) flags a warning once and a breach once per clock, as staff-only timeline events, and notifies the assignee (or the whole team when unassigned). Customers never see deadlines. The staff inbox has "Deadline missed" and "Deadline close" views and an SLA chip per row; the ticket page has a service-level card.
+- **Automation** (also at `/admin/support/settings`): auto-assign new tickets (`round_robin` or `least_loaded`, optionally from a chosen pool; stragglers are picked up by the task), reminder to the customer after N quiet days (once per wait), auto-resolve a ticket the customer never answered, auto-close resolved tickets, and retention (delete closed tickets after N days). Each rule is off at 0. Changes made by a rule have no actor ("the system") and carry `auto` in the event context.
+- **Canned responses** (`/admin/support/canned`), shared or personal, with `{{requester.name}}`, `{{org.name}}`, `{{ticket.reference}}` and a few other variables. The template is sanitised when saved; values from people are escaped; unknown variables stay visible. A selector in the staff reply box fills the editor (nothing is sent).
+- **Merge.** Staff merge a duplicate into another ticket of the same organization: the messages, time and tags move to the survivor in order, the earliest first response is kept, the other requester follows the surviving ticket, the source is closed with a public note, and both sides are told. A merged ticket is read-only for everyone and cannot be merged again. Deleting the survivor leaves merged tickets in place without the pointer.
+- **Customer satisfaction.** Once a ticket is resolved or closed any member can rate it 1-5 with a comment (the latest rating stands); staff see it on the ticket, in the report and in the export; a rating of 1 or 2 alerts support. The resolved email asks for a rating.
+- **Reports and export** (`/admin/support/reports`). Volume per day, open/unassigned now, median and average first response and resolution, SLA compliance, satisfaction distribution, time logged (billable and not), and breakdowns by priority, category, support person and organization, for the last N days (up to a year) or a date range; CSV export of the tickets in the period (formula-injection safe, UTF-8 BOM). A subject-access export of everything one person has put into the desk is available per user as JSON.
+- **Redaction and deletion.** Staff can remove the content of a message for good (text, edit history, attachments and any copy already queued for an integration; a placeholder and a staff-only event remain) or delete a whole ticket and everything attached to it. Deleting an organization purges its tickets (`DeleteOrganization`).
+- **Two-way tracker sync.** GitHub and GitLab integrations get a webhook address (`/webhooks/tickets/{integration}/{token}`) and a generated secret (GitHub: `X-Hub-Signature-256` HMAC; GitLab: `X-Gitlab-Token`). Comments on a linked issue arrive as staff-only system notes; closing or reopening an issue is noted, and, if the integration option "resolve when the issue is closed" is on, resolves or reopens the ticket as the system. Events are de-duplicated (7 days), our own posted comments (marker `<!-- kcp:ticket -->`) are ignored so nothing loops, the status changes caused this way are not echoed back to the tracker, and merged tickets are never changed. The endpoint answers 404 for an unknown, disabled or mis-tokened address, 401 for a bad signature, 413 above 1 MB, and has no session or CSRF token (the secret in the address plus the signature are its credentials).
+
+**Differences from the plan for Phase 5**
+- Business hours are a single daily window on chosen weekdays (plus holidays), not multiple windows per day.
+- Ticket links beyond merge ("related tickets") and per-organization ticket caps / spam controls are not built.
+- Inbound tracker comments are always staff-only notes; there is no option to publish one to the customer.
+- Reports are computed in PHP over the period (bounded to a year); a very large installation would want pre-aggregated tables.
+- The legacy `support_email` copy and the old `Support@submit` email path are **still kept** behind the flag; retiring them is a separate change once the desk has been used in production.
+- Redaction cannot reach into a tracker that already received the text.
 
 **Phase 4 (integrations), done**
 - **Driver framework.** `TicketIntegrationDriver` (name, settings schema, capabilities, connection test) with two kinds on top: `TracksIssues` (create issue, comment, set state, log time) and `ReceivesEvents` (webhooks). `TicketIntegrationRegistry` is a real singleton holding class names only (the Octane-safe pattern used for billing drivers); drivers themselves are built fresh per use. A module adds a driver with `app(TicketIntegrationRegistry::class)->register(MyDriver::class)` from its own provider. The admin form is drawn from each driver's schema, so a new driver needs no front-end work. `AbstractTracker` gives tracker drivers the safe issue/comment/time wording.
@@ -78,9 +97,10 @@ Phases 0 to 4 are implemented on branch `claude/ecstatic-euler-ouvfr8`, behind t
 - Watchers/CC, unread tracking and polling are Phase 3.
 
 **Verification**
-- Vue pages compile (`vite build`) and pass ESLint; PHP passes `php -l` and Pint; the sanitiser profile was exercised directly against HTMLPurifier with XSS payloads.
-- The Pest/PHPUnit tests in `tests/Feature/Tickets`, `tests/Unit/TicketWorkflowTest.php` and `tests/Unit/AttachmentTypesTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit/TicketWorkflowTest.php tests/Unit/AttachmentTypesTest.php` before merging.
+- Vue pages compile (`vite build`) and pass ESLint (also after the Phase 5 screens and strings); PHP passes `php -l` and Pint; the sanitiser profile was exercised directly against HTMLPurifier with XSS payloads.
+- The Pest/PHPUnit tests in `tests/Feature/Tickets`, `tests/Unit/TicketWorkflowTest.php` and `tests/Unit/AttachmentTypesTest.php` have **not been run**: the sandbox this was written in has PHP 8.3 and the locked dependencies need 8.4. Phase 5 added `tests/Unit/Tickets/BusinessCalendarTest.php` and, in `tests/Feature/Tickets`, `TicketSlaTest`, `TicketAutomationTest`, `TicketMergeRatingTest`, `TicketSettingsTest`, `CannedResponsesTest`, `TicketReportsTest` and `InboundWebhookTest`; they are not run either. Run `vendor/bin/pest tests/Feature/Tickets tests/Unit` before merging.
 - What was exercised for real in the sandbox: all migrations up/down on SQLite, the SSRF address guard against 48 public/private/IPv6-wrapped addresses, the Markdown converter and mention/slash-command defusing, the real GitHub/GitLab/webhook drivers against Laravel's fake HTTP client (request shapes, signatures, error classification, redirects, SSRF refusals: 45 checks), the whole delivery pipeline (queueing, privacy options, idempotency, retries and waits, circuit breaker, ordering, issue linking, state and time sync, time entries through the real `TicketService`: 56 checks), the file-type allow-list against genuine and disguised files with the real `finfo`, the sanitiser (including image handling) against real HTMLPurifier, the real unread/coalescing/subscription services and Eloquent models against SQLite (29 checks), and the real Symfony Mime header API for email threading. That run found and fixed a missing `$fillable` on four models (which would have broken opening any ticket and editing a message) before they shipped.
+- Phase 5, exercised for real in the same way: 28 calendar checks (working-minute arithmetic, holidays, time zones, daylight saving), and 103 checks of the real services against SQLite and real HTMLPurifier (SLA due times, pause/resume, sweep, automation rules and the runner, merge, rating, redaction, purge, reports, CSV escaping, canned responses, GitHub/GitLab inbound parsing and the inbound handler). That run found one real flaw, fixed: a `status.changed` delivery used the status at queue time instead of the ticket's current one, which could flap a linked issue.
 
 ## 1. Where we are today
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Contracts\Tickets\ReceivesEvents;
+use App\Contracts\Tickets\ReceivesInbound;
 use App\Contracts\Tickets\TicketIntegrationDriver;
 use App\Contracts\Tickets\TracksIssues;
 use App\Enums\TicketPriority;
@@ -192,12 +193,20 @@ class TicketIntegrations extends Controller
             ->with(self::REVEALED, ['secret' => $config['secret']]);
     }
 
+    /**
+     * The generated secrets (signing secret, webhook secret), on request.
+     */
     public function revealSecret(TicketIntegration $integration): JsonResponse
     {
         $this->authorizeStaff();
-        abort_unless($this->hasGeneratedSecret($integration), 404);
 
-        return response()->json(['secret' => ($integration->config ?? [])['secret'] ?? null]);
+        $driver = $this->registry->driver($integration->driver);
+        $generated = collect($driver?->configSchema() ?? [])->filter(fn (array $field) => ($field['generated'] ?? false))->pluck('key');
+        abort_if($generated->isEmpty(), 404);
+
+        $config = $integration->config ?? [];
+
+        return response()->json($generated->mapWithKeys(fn (string $key) => [$key => $config[$key] ?? null])->all());
     }
 
     public function deliveries(Request $request, TicketIntegration $integration)
@@ -312,6 +321,10 @@ class TicketIntegrations extends Controller
                 'secrets_set' => collect($driver->configSchema())->filter(fn (array $field) => $field['type'] === 'secret')
                     ->mapWithKeys(fn (array $field) => [$field['key'] => ! empty($config[$field['key']])])->all(),
                 'has_generated_secret' => $this->hasGeneratedSecret($integration),
+                // Where the tracker should send its notifications
+                'inbound_url' => $driver instanceof ReceivesInbound && ! empty($config['inbound_token'])
+                    ? url('/webhooks/tickets/'.$integration->id.'/'.$config['inbound_token'])
+                    : null,
             ] : null,
             'driver' => [
                 'key' => $driver::key(),
@@ -320,6 +333,7 @@ class TicketIntegrations extends Controller
                 'capabilities' => $driver->capabilities(),
                 'schema' => $driver->configSchema(),
                 'events' => $driver instanceof ReceivesEvents ? $driver->events() : [],
+                'inbound' => $driver instanceof ReceivesInbound,
             ],
             'choices' => [
                 'types' => collect(TicketType::cases())->map(fn ($case) => ['value' => $case->value, 'text' => $case->label()])->all(),
@@ -351,6 +365,8 @@ class TicketIntegrations extends Controller
             'options.sync_time' => ['sometimes', 'boolean'],
             'options.include_requester' => ['sometimes', 'boolean'],
             'options.allow_internal' => ['sometimes', 'boolean'],
+            'options.inbound_comments' => ['sometimes', 'boolean'],
+            'options.inbound_resolve' => ['sometimes', 'boolean'],
             'filters' => ['sometimes', 'array'],
             'filters.types' => ['sometimes', 'array'],
             'filters.types.*' => [Rule::enum(TicketType::class)],
@@ -408,6 +424,11 @@ class TicketIntegrations extends Controller
     {
         $config = $existing;
 
+        // The address the tracker calls back on contains its own secret token
+        if ($driver instanceof ReceivesInbound && empty($config['inbound_token'])) {
+            $config['inbound_token'] = Str::random(40);
+        }
+
         foreach ($driver->configSchema() as $field) {
             $key = $field['key'];
             $value = $submitted[$key] ?? null;
@@ -435,7 +456,7 @@ class TicketIntegrations extends Controller
      */
     private function fill(TicketIntegration $integration, TicketIntegrationDriver $driver, array $data): void
     {
-        $options = Arr::only($data['options'] ?? [], ['auto_create', 'sync_state', 'sync_time', 'include_requester', 'allow_internal']);
+        $options = Arr::only($data['options'] ?? [], ['auto_create', 'sync_state', 'sync_time', 'include_requester', 'allow_internal', 'inbound_comments', 'inbound_resolve']);
 
         $integration->options = array_map('boolval', $options);
         $integration->filters = collect($data['filters'] ?? [])->only(['types', 'priorities', 'categories'])->map(fn ($values) => array_values($values))->all();

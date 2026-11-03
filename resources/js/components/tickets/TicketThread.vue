@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import TicketEditor from './TicketEditor.vue'
 
 // The conversation. Each message is already sanitized server-side; it is the
@@ -15,6 +15,7 @@ const props = defineProps({
 })
 
 const editingId = ref(null)
+const redactTarget = ref(null)
 const form = useForm({ body: '' })
 
 function formatDate (value) {
@@ -31,6 +32,13 @@ function startEdit (message) {
   editingId.value = message.id
   form.body = message.body_html
   form.clearErrors()
+}
+
+function redact () {
+  router.post(`${props.messagesUrl}/${redactTarget.value.id}/redact`, {}, {
+    preserveScroll: true,
+    onFinish: () => { redactTarget.value = null },
+  })
 }
 
 function cancelEdit () {
@@ -64,6 +72,14 @@ function save (message) {
           <span class="ticket-message__date ml-2">{{ formatDate(message.created_at) }}</span>
           <span v-if="message.edited_at" class="ticket-message__date ml-2" :title="formatDate(message.edited_at)">({{ $t('tickets.edited') }})</span>
           <va-button
+            v-if="staffView && !message.redacted && editingId !== message.id"
+            preset="plain"
+            size="small"
+            color="danger"
+            class="ml-2"
+            @click="redactTarget = message"
+          >{{ $t('tickets.redact.button') }}</va-button>
+          <va-button
             v-if="message.can_edit && editingId !== message.id"
             preset="plain"
             size="small"
@@ -94,6 +110,13 @@ function save (message) {
         </ul>
       </va-card-content>
     </va-card>
+
+    <va-modal :model-value="redactTarget !== null" hide-default-actions :title="$t('tickets.redact.title')" :message="$t('tickets.redact.message')" @update:model-value="redactTarget = null">
+      <template #footer>
+        <va-button color="backgroundSecondary" @click="redactTarget = null">{{ $t('common.cancel') }}</va-button>
+        <va-button color="danger" @click="redact">{{ $t('tickets.redact.confirm') }}</va-button>
+      </template>
+    </va-modal>
   </div>
 </template>
 <style lang="scss">

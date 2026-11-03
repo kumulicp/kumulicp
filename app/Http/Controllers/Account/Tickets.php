@@ -148,7 +148,7 @@ class Tickets extends Controller
         $ticket = $this->find($request, $number);
         Gate::authorize('view', $ticket);
 
-        $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance']);
+        $ticket->load(['requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'mergedInto']);
         $user = $request->user();
 
         // Opening the ticket (or a background refresh of it while it is visible) is reading it
@@ -162,7 +162,8 @@ class Tickets extends Controller
                 'reply' => Gate::allows('reply', $ticket),
                 'edit_details' => $ticket->first_response_at === null,
                 'close' => $ticket->status->isOpen(),
-                'reopen' => ! $ticket->status->isOpen(),
+                'reopen' => ! $ticket->status->isOpen() && ! $ticket->isMerged(),
+                'rate' => ! $ticket->status->isOpen() && ! $ticket->isMerged(),
             ],
             'members' => $this->members($user),
             'me' => $user->id,
@@ -301,6 +302,25 @@ class Tickets extends Controller
         $this->preferences->update($request->user(), $data['preferences']);
 
         return back()->with('success', __('tickets.preferences_saved'));
+    }
+
+    /**
+     * How the customer thinks the ticket went. Any member of the organization
+     * may rate it; the latest rating stands.
+     */
+    public function rate(Request $request, int $number): RedirectResponse
+    {
+        $ticket = $this->find($request, $number);
+        Gate::authorize('update', $ticket);
+
+        $data = $request->validate([
+            'score' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $this->tickets->rate($ticket, $request->user(), $data['score'], $data['comment'] ?? null);
+
+        return redirect('/support/tickets/'.$ticket->number)->with('success', __('tickets.rated'));
     }
 
     public function close(Request $request, int $number): RedirectResponse

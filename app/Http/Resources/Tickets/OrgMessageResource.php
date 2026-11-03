@@ -29,7 +29,7 @@ class OrgMessageResource extends JsonResource
         return [
             'id' => $this->id,
             'kind' => $this->author_kind,
-            'author' => $this->author?->name ?? __('tickets.deleted_user'),
+            'author' => $this->author?->name ?? ($this->author_kind === 'system' ? __('tickets.system_label') : __('tickets.deleted_user')),
             'mine' => $mine,
             'body_html' => $this->redacted_at ? '' : $this->body_html,
             'redacted' => $this->redacted_at !== null,

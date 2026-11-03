@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Apps\ApplicationDelete;
 use App\Enums\TaskStatus;
 use App\Organization;
+use App\Services\Tickets\TicketPurger;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
@@ -49,6 +50,9 @@ class DeleteOrganization extends Action
     {
         // Polled only once the apps' delete tasks are complete or gone
         AccountManager::account($task->organization)->destroy();
+
+        // Support tickets (and their uploaded files) go with the organization
+        app(TicketPurger::class)->purgeOrganization($task->organization->id);
 
         $task->organization->domains()->delete();
         $task->organization->app_instances()->delete();

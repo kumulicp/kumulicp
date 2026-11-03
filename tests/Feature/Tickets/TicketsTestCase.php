@@ -8,6 +8,7 @@ use App\Services\Tickets\Integrations\HostResolver;
 use App\Services\Tickets\TicketService;
 use App\Ticket;
 use App\TicketIntegration;
+use App\TicketSlaPolicy;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -113,6 +114,33 @@ abstract class TicketsTestCase extends TestCase
     protected function github(array $options = ['auto_create' => true], array $attributes = []): TicketIntegration
     {
         return $this->integration('github', ['token' => 'ghp_secret', 'repository' => 'acme/platform', 'labels' => 'support'], array_merge(['options' => $options], $attributes));
+    }
+
+    /**
+     * @param  array<string, array{first_response?: int, resolution?: int}>  $targets  Minutes, per priority
+     * @param  array<string, mixed>|null  $hours  Business hours, or null to count around the clock
+     */
+    protected function slaPolicy(string $name, array $targets, ?array $hours = null, bool $default = false, bool $active = true): TicketSlaPolicy
+    {
+        $policy = new TicketSlaPolicy(['name' => $name]);
+        $policy->targets = $targets;
+        $policy->business_hours = $hours;
+        $policy->is_default = $default;
+        $policy->active = $active;
+        $policy->save();
+
+        return $policy;
+    }
+
+    /** First response in an hour, resolution in a working day, tighter for the urgent */
+    protected function standardTargets(): array
+    {
+        return [
+            'low' => ['first_response' => 480, 'resolution' => 4320],
+            'normal' => ['first_response' => 60, 'resolution' => 480],
+            'high' => ['first_response' => 30, 'resolution' => 240],
+            'urgent' => ['first_response' => 15, 'resolution' => 120],
+        ];
     }
 
     protected function service(): TicketService

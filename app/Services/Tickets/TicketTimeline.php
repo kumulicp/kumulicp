@@ -14,7 +14,7 @@ class TicketTimeline
 {
     /** Events a customer may see. Internal events are filtered out as well. */
     private const CUSTOMER_TYPES = [
-        'created', 'status_changed', 'assigned', 'assignee_removed', 'subject_changed', 'impact_changed',
+        'created', 'status_changed', 'assigned', 'assignee_removed', 'subject_changed', 'impact_changed', 'merged', 'merged_into',
     ];
 
     /** Messages are shown in the conversation, so these are not repeated here. */

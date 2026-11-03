@@ -2,9 +2,11 @@
 
 namespace App\Services\Tickets\Integrations\Drivers;
 
+use App\Contracts\Tickets\ReceivesInbound;
 use App\Services\Tickets\Integrations\Capability;
 use App\Services\Tickets\Integrations\DeliveryResult;
 use App\Services\Tickets\Integrations\ExternalIssue;
+use App\Services\Tickets\Integrations\InboundEvent;
 use App\Services\Tickets\Integrations\IntegrationConfig;
 use App\Services\Tickets\Integrations\IntegrationException;
 use App\Services\Tickets\Integrations\TestResult;
@@ -14,7 +16,7 @@ use App\Services\Tickets\Integrations\TestResult;
  * create and edit issues in the repository (fine-grained: Issues read/write).
  * GitHub has no time tracking, so time is posted as a comment.
  */
-class GitHubDriver extends AbstractTracker
+class GitHubDriver extends AbstractTracker implements ReceivesInbound
 {
     public static function key(): string
     {
@@ -33,6 +35,7 @@ class GitHubDriver extends AbstractTracker
             ['key' => 'repository', 'type' => 'text', 'label' => 'Repository', 'help' => 'owner/name, for example acme/platform', 'required' => true, 'pattern' => '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'],
             ['key' => 'api_url', 'type' => 'url', 'label' => 'API address', 'help' => 'Leave as it is for github.com. For GitHub Enterprise use https://your-host/api/v3', 'default' => 'https://api.github.com'],
             ['key' => 'labels', 'type' => 'text', 'label' => 'Labels', 'help' => 'Comma separated, added to every new issue.', 'default' => 'support'],
+            ['key' => 'webhook_secret', 'type' => 'secret', 'label' => 'Webhook secret', 'help' => 'Generated for you. Enter it as the secret when adding the webhook in GitHub so we can check calls really come from it.', 'generated' => true],
         ];
     }
 
@@ -107,6 +110,39 @@ class GitHubDriver extends AbstractTracker
         }
 
         return $this->http->send($method, $base.'/repos/'.$config->string('repository').$path, $options, $config->allowInternal());
+    }
+
+    public function verifyInbound(string $body, array $headers, IntegrationConfig $config): bool
+    {
+        $secret = $config->string('webhook_secret');
+        $given = $headers['x-hub-signature-256'] ?? '';
+
+        return $secret !== '' && str_starts_with($given, 'sha256=') && hash_equals('sha256='.hash_hmac('sha256', $body, $secret), $given);
+    }
+
+    public function parseInbound(string $body, array $headers, IntegrationConfig $config): ?InboundEvent
+    {
+        $data = json_decode($body, true);
+
+        if (! is_array($data) || strcasecmp((string) ($data['repository']['full_name'] ?? ''), $config->string('repository')) !== 0) {
+            return null;
+        }
+
+        $number = (string) ($data['issue']['number'] ?? '');
+        $key = $headers['x-github-delivery'] ?? sha1($body);
+
+        return match ($headers['x-github-event'] ?? '') {
+            'issues' => match ($data['action'] ?? '') {
+                'closed' => new InboundEvent(InboundEvent::STATE, $number, $key, 'closed'),
+                'reopened' => new InboundEvent(InboundEvent::STATE, $number, $key, 'open'),
+                default => null,
+            },
+            // Pull requests are issues too in GitHub's eyes; they are not what we track
+            'issue_comment' => ($data['action'] ?? '') === 'created' && $number !== '' && ! isset($data['issue']['pull_request'])
+                ? new InboundEvent(InboundEvent::COMMENT, $number, $key, null, (string) ($data['comment']['user']['login'] ?? ''), (string) ($data['comment']['body'] ?? ''))
+                : null,
+            default => null,
+        };
     }
 
     public function capabilities(): array

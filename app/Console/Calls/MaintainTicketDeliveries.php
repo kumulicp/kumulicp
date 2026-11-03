@@ -4,6 +4,7 @@ namespace App\Console\Calls;
 
 use App\Jobs\Tickets\DeliverTicketIntegration;
 use App\TicketDelivery;
+use App\TicketInboundEvent;
 use OffloadProject\Toggle\Facades\Toggle;
 
 /**
@@ -27,6 +28,9 @@ class MaintainTicketDeliveries
                     ->orWhere(fn ($query) => $query->whereNull('last_attempt_at')->where('created_at', '<', now()->subMinutes(30)));
             })
             ->each(fn (TicketDelivery $delivery) => DeliverTicketIntegration::dispatch($delivery->id));
+
+        // Repeat protection only needs to remember for a short while
+        TicketInboundEvent::where('created_at', '<', now()->subDays(7))->delete();
 
         TicketDelivery::where('status', '!=', TicketDelivery::PENDING)
             ->where('created_at', '<', now()->subDays(config('tickets.integrations.retention_days')))

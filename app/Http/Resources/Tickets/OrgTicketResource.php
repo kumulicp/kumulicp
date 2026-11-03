@@ -34,6 +34,8 @@ class OrgTicketResource extends JsonResource
             'requester' => $this->person($this->requester),
             'customer_assignee' => $this->person($this->customerAssignee),
             'support_assignee' => $this->supportAssignee ? ['name' => $this->supportAssignee->name] : null,
+            'rating' => $this->csat_score ? ['score' => $this->csat_score, 'comment' => $this->csat_comment] : null,
+            'merged_into' => $this->mergedInto ? ['reference' => $this->mergedInto->reference, 'url' => '/support/tickets/'.$this->mergedInto->number] : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'last_activity_at' => $this->last_activity_at?->toIso8601String(),
             'url' => '/support/tickets/'.$this->number,

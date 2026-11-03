@@ -1551,7 +1551,14 @@
       "time_logged": "{actor} registró tiempo",
       "time_deleted": "{actor} eliminó una entrada de tiempo",
       "issue_linked": "Vinculado a una incidencia en un gestor",
-      "issue_requested": "{actor} pidió abrir una incidencia"
+      "issue_requested": "{actor} pidió abrir una incidencia",
+      "sla_warning": "El plazo de {clock} está próximo",
+      "sla_breached": "Se superó el plazo de {clock}",
+      "merged": "Se fusionó otro ticket en este",
+      "merged_into": "{actor} fusionó este ticket con otro",
+      "reminder_sent": "Se envió un recordatorio",
+      "rated": "{actor} valoró la atención",
+      "message_redacted": "{actor} eliminó el contenido de un mensaje"
     },
     "admin": {
       "title": "Tickets",
@@ -1614,7 +1621,10 @@
         "note": "Hay una nota interna nueva",
         "status": "Cambia el estado de un ticket",
         "assigned": "Se me asigna un ticket",
-        "assignee_removed": "Nadie queda al cuidado de un ticket"
+        "assignee_removed": "Nadie queda al cuidado de un ticket",
+        "reminder": "Un ticket espera una respuesta mía",
+        "sla": "Un plazo está próximo o se superó",
+        "rating": "Un cliente da una valoración baja"
       }
     },
     "integrations": {
@@ -1688,7 +1698,15 @@
       "linkedIssues": "Gestores de incidencias",
       "openIssueIn": "Abrir una incidencia en",
       "openIssue": "Abrir incidencia",
-      "recent": "Envíos recientes"
+      "recent": "Envíos recientes",
+      "inbound": {
+        "title": "Novedades del gestor de incidencias",
+        "help": "Permite que el gestor nos avise cuando se comenta o cierra una incidencia. Solo aparecen en el ticket como notas internas.",
+        "url": "Añade esta URL como webhook en el gestor:",
+        "urlAfterSave": "Guarda la integración para obtener la dirección del webhook.",
+        "comments": "Añadir los comentarios del gestor como notas internas",
+        "resolve": "Resolver el ticket al cerrar la incidencia y reabrirlo al reabrirla"
+      }
     },
     "time": {
       "title": "Tiempo",
@@ -1699,6 +1717,150 @@
       "billable": "Facturable",
       "nonBillable": "no facturable",
       "add": "Registrar tiempo"
+    },
+    "sla": {
+      "title": "Nivel de servicio",
+      "due": "vence",
+      "breachedView": "Plazo superado",
+      "atRiskView": "Plazo próximo",
+      "clocks": {
+        "first_response": "Primera respuesta",
+        "resolution": "Resolución"
+      },
+      "states": {
+        "ok": "En plazo",
+        "warning": "Próximo",
+        "breached": "Superado",
+        "paused": "En pausa",
+        "met": "Cumplido",
+        "missed": "Incumplido",
+        "none": "Sin objetivo"
+      }
+    },
+    "merge": {
+      "title": "Fusionar",
+      "help": "Mueve la conversación de este ticket a otro. Este ticket se cierra y quien lo abrió sigue el otro.",
+      "target": "Número del ticket de destino",
+      "button": "Fusionar",
+      "mergedInto": "Este ticket se fusionó con",
+      "mergedFrom": "Fusionados en este ticket:",
+      "confirmTitle": "¿Fusionar tickets?",
+      "confirmMessage": "{source} se fusionará con #{target}. No se puede deshacer."
+    },
+    "rating": {
+      "title": "Valoración",
+      "prompt": "¿Cómo lo hicimos? Tu valoración nos ayuda a mejorar.",
+      "thanks": "¡Gracias! Puedes cambiar tu valoración si quieres.",
+      "comment": "¿Algo que añadir? (opcional)",
+      "send": "Enviar valoración"
+    },
+    "redact": {
+      "button": "Eliminar contenido",
+      "title": "¿Eliminar el contenido de este mensaje?",
+      "message": "El texto y los adjuntos se borran para todos y no se pueden recuperar. Queda una nota en la actividad.",
+      "confirm": "Eliminar"
+    },
+    "delete": {
+      "title": "Eliminar definitivamente",
+      "help": "Elimina para siempre este ticket, sus mensajes y adjuntos. Úsalo para spam o datos que deban borrarse.",
+      "button": "Eliminar ticket",
+      "confirmTitle": "¿Eliminar este ticket definitivamente?",
+      "confirmMessage": "{reference} y todo lo adjunto se borrarán. No se puede deshacer.",
+      "exportRequester": "Descargar los datos del solicitante"
+    },
+    "canned": {
+      "title": "Respuestas predefinidas",
+      "intro": "Respuestas listas para insertar en una respuesta. Estos marcadores se rellenan para cada ticket:",
+      "new": "Nueva respuesta",
+      "edit": "Editar respuesta",
+      "none": "Aún no hay respuestas predefinidas.",
+      "titleLabel": "Título",
+      "scope": "Quién puede usarla",
+      "scopes": {
+        "shared": "Todo el equipo de soporte",
+        "personal": "Solo yo"
+      },
+      "deleteTitle": "¿Eliminar esta respuesta?",
+      "insert": "Insertar una respuesta predefinida"
+    },
+    "reports": {
+      "title": "Informes",
+      "exportCsv": "Exportar CSV",
+      "period": "Periodo",
+      "lastDays": "Últimos {days} días",
+      "perDay": "Por día",
+      "created": "Abiertos",
+      "resolved": "Resueltos",
+      "openNow": "Abiertos ahora",
+      "unassigned": "Sin asignar",
+      "firstResponseMedian": "Mediana de primera respuesta",
+      "resolutionMedian": "Mediana de resolución",
+      "slaFirst": "Plazos de primera respuesta cumplidos",
+      "slaResolution": "Plazos de resolución cumplidos",
+      "satisfaction": "Satisfacción del cliente",
+      "satisfactionAverage": "Valoración media",
+      "noRatings": "Aún no hay valoraciones",
+      "timeLogged": "Tiempo registrado",
+      "total": "Total",
+      "noTime": "Sin tiempo registrado",
+      "name": "Nombre",
+      "tickets": "Tickets",
+      "firstResponse": "Primera respuesta",
+      "rating": "Valoración",
+      "byPriority": "Por prioridad",
+      "byCategory": "Por categoría",
+      "byAssignee": "Por persona de soporte",
+      "byOrganization": "Por organización"
+    },
+    "settings": {
+      "title": "Ajustes de soporte",
+      "slaTitle": "Políticas de nivel de servicio",
+      "slaIntro": "Define con qué rapidez deben recibir primera respuesta y resolverse los tickets, por prioridad. Los objetivos son en horas y cuentan solo el horario laboral si se define.",
+      "newPolicy": "Nueva política",
+      "default": "Predeterminada",
+      "inactive": "Inactiva",
+      "active": "Activa",
+      "makeDefault": "Usar para tickets sin política de categoría",
+      "targets": "Objetivos (horas)",
+      "targetsHelp": "Puedes usar decimales (0,5 es media hora). Deja vacío un campo para no fijar objetivo.",
+      "businessHours": "Horario laboral",
+      "businessHoursHelp": "Los relojes solo corren en los días y horas elegidos. Si no marcas ningún día, cuentan las 24 horas.",
+      "timezone": "Zona horaria",
+      "days": {
+        "1": "Lunes",
+        "2": "Martes",
+        "3": "Miércoles",
+        "4": "Jueves",
+        "5": "Viernes",
+        "6": "Sábado",
+        "7": "Domingo"
+      },
+      "from": "Desde",
+      "until": "Hasta",
+      "holidays": "Festivos",
+      "holidaysHelp": "Una fecha por línea (AAAA-MM-DD).",
+      "deletePolicy": "Eliminar política",
+      "deletePolicyMessage": "Los tickets que la usan pasan a la política predeterminada.",
+      "categoryPolicies": "Política por categoría",
+      "categoryPoliciesHelp": "Elige una política para cada categoría y quién recibe primero sus tickets.",
+      "useDefault": "Usar la predeterminada",
+      "automationTitle": "Automatización",
+      "autoAssign": "Asignar tickets nuevos",
+      "autoAssignHelp": "Elige a una persona de soporte para los tickets sin asignar.",
+      "assignModes": {
+        "off": "Desactivado",
+        "round_robin": "Por turnos",
+        "least_loaded": "Menos tickets abiertos"
+      },
+      "pool": "Quién puede recibir tickets",
+      "poolHelp": "Déjalo vacío para usar a todo el equipo de soporte.",
+      "reminderDays": "Recordar al cliente tras (días)",
+      "autoResolveDays": "Resolver si el cliente no responde en (días)",
+      "autoCloseDays": "Cerrar tickets resueltos tras (días)",
+      "retentionDays": "Eliminar tickets cerrados tras (días)",
+      "retentionHelp": "Elimina para siempre los tickets cerrados y sus adjuntos.",
+      "zeroOff": "0 lo desactiva.",
+      "more": "Más"
     }
   }
 }
