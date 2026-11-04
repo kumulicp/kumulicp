@@ -613,7 +613,16 @@
       "description": "Page Description",
       "screenshots": "Screenshots",
       "screenshotsMessage": "Shown on the app view and Discover pages",
-      "source": "Source"
+      "source": "Source",
+      "tags": "Tags",
+      "tagsMessage": "Keywords used to find and filter apps. Type a tag and press enter to add it.",
+      "search": "Search by name",
+      "filterStatusEnabled": "Enabled",
+      "filterStatusDisabled": "Disabled",
+      "filterStatusAll": "All",
+      "filterTags": "Filter by tags",
+      "resetFilters": "Reset filters",
+      "noApps": "No apps match these filters"
     },
     "backups": {
       "action": "Action",

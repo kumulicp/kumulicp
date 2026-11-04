@@ -9,6 +9,7 @@ use App\Enums\ApplicationSource;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\VersionUpdates\ChartPackage;
 use App\Support\VersionUpdates\HttpChartRepository;
+use App\Tag;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -131,11 +132,34 @@ class ChartCatalogSync
         $application->catalog = $catalog;
         $application->save();
 
+        // Only seeded, never overwritten: an admin may have curated the tags
+        if ($created || ! $application->tags()->exists()) {
+            $application->tags()->sync(Tag::findOrCreateMany($this->tagNames($chart_name, $latest))->modelKeys());
+        }
+
         foreach (array_slice($entries, 0, (int) config('catalog.versions_per_chart', 3)) as $entry) {
             $this->syncVersion($source, $application, $entry);
         }
 
         return ['created' => $created, 'missing' => $this->missingConcerns($catalog['convention'])];
+    }
+
+    /**
+     * The chart's keywords and Artifact Hub category, minus the ones that say
+     * nothing about what the app does (its own name, "kubernetes", ...).
+     *
+     * @return array<int, string>
+     */
+    private function tagNames(string $chart_name, array $entry): array
+    {
+        $category = $entry['annotations']['artifacthub.io/category'] ?? null;
+        $names = array_merge($category === 'skip-prediction' ? [] : [$category], $entry['keywords'] ?? []);
+        $ignored = array_map(Tag::slugFor(...), [...config('catalog.ignored_tags', []), $chart_name, Str::headline($chart_name)]);
+
+        return array_values(array_filter(
+            array_map('strval', array_filter($names)),
+            fn ($name) => ! in_array(Tag::slugFor($name), $ignored, true),
+        ));
     }
 
     private function catalog(string $chart_name, array $entry, ChartPackage $package): array

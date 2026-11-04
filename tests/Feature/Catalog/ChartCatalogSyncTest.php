@@ -7,12 +7,13 @@ use App\Enums\ApplicationSource;
 use App\Integrations\Applications\HelmForge\HelmForgeProfile;
 use App\Support\Catalog\ChartCatalogSync;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Tag;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\Yaml\Yaml;
 use Tests\Support\VersionUpdates\ChartArchive;
 
-function catalogIndex(array $charts): string
+function catalogIndex(array $charts, array $meta = []): string
 {
     $entries = [];
 
@@ -22,15 +23,16 @@ function catalogIndex(array $charts): string
             'version' => $version,
             'description' => "The $name app",
             'urls' => ["$name-$version.tgz"],
+            ...($meta[$name] ?? []),
         ], $versions);
     }
 
     return Yaml::dump(['apiVersion' => 'v1', 'entries' => $entries], 6);
 }
 
-function fakeCatalog(array $charts, array $values = []): void
+function fakeCatalog(array $charts, array $values = [], array $meta = []): void
 {
-    $fakes = ['repo.test/index.yaml' => Http::response(catalogIndex($charts))];
+    $fakes = ['repo.test/index.yaml' => Http::response(catalogIndex($charts, $meta))];
 
     foreach ($charts as $name => $versions) {
         foreach ($versions as $version) {
@@ -197,4 +199,45 @@ it('does not sync a chart source without a supported chart schema', function () 
     expect($report['error'])->toContain('cloudpirates');
     expect($report['created'])->toBe([]);
     expect(Application::where('slug', 'gitea')->exists())->toBeFalse();
+});
+
+it('tags new apps with the chart keywords and category, minus packaging noise', function () {
+    fakeCatalog(['gitea' => ['1.0.0']], [], ['gitea' => [
+        'keywords' => ['gitea', 'git', 'Self-Hosted', 'kubernetes', 'code-review', 'git'],
+        'annotations' => ['artifacthub.io/category' => 'integration-delivery'],
+    ]]);
+
+    app(ChartCatalogSync::class)->sync($this->source);
+
+    expect(Application::where('slug', 'gitea')->first()->tags->pluck('name')->sort()->values()->all())
+        ->toBe(['code-review', 'git', 'integration-delivery']);
+});
+
+it('does not tag with the unclassified Artifact Hub category', function () {
+    fakeCatalog(['ghost' => ['1.0.0']], [], ['ghost' => [
+        'keywords' => ['cms'],
+        'annotations' => ['artifacthub.io/category' => 'skip-prediction'],
+    ]]);
+
+    app(ChartCatalogSync::class)->sync($this->source);
+
+    expect(Application::where('slug', 'ghost')->first()->tags->pluck('name')->all())->toBe(['cms']);
+});
+
+it('keeps curated tags on re-sync but tags apps that have none', function () {
+    fakeCatalog(['gitea' => ['1.0.0']], [], ['gitea' => ['keywords' => ['git']]]);
+    app(ChartCatalogSync::class)->sync($this->source);
+
+    $gitea = Application::where('slug', 'gitea')->first();
+    $gitea->tags()->sync(Tag::findOrCreateMany(['scm'])->modelKeys());
+
+    fakeCatalog(['gitea' => ['1.0.0']], [], ['gitea' => ['keywords' => ['git', 'forge']]]);
+    app(ChartCatalogSync::class)->sync($this->source);
+
+    expect($gitea->fresh()->tags->pluck('name')->all())->toBe(['scm']);
+
+    $gitea->tags()->detach();
+    app(ChartCatalogSync::class)->sync($this->source);
+
+    expect($gitea->fresh()->tags->pluck('name')->sort()->values()->all())->toBe(['forge', 'git']);
 });

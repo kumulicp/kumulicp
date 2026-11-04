@@ -4,6 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Application;
 use App\AppScreenshot;
+use App\Enums\ApplicationSource;
+use App\Tag;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +16,8 @@ use Tests\TestCase;
 class ApplicationsTest extends TestCase
 {
     use RefreshDatabase;
+
+    private ?User $adminUser = null;
 
     private function adminUser(): User
     {
@@ -233,5 +237,135 @@ class ApplicationsTest extends TestCase
             ->assertSessionHasErrors('screenshots.0');
 
         $this->assertDatabaseCount('app_screenshots', 0);
+    }
+
+    private function listedSlugs($response): array
+    {
+        return collect($response->viewData('page')['props']['apps'])->pluck('slug')->sort()->values()->all();
+    }
+
+    private function listApps(array $query = []): array
+    {
+        $this->adminUser ??= $this->adminUser();
+        $response = $this->actingAs($this->adminUser)->get('/admin/apps?'.http_build_query($query));
+        $response->assertOk();
+
+        return $this->listedSlugs($response);
+    }
+
+    public function test_apps_list_defaults_to_enabled_apps()
+    {
+        Application::factory()->create(['slug' => 'on_app', 'enabled' => true]);
+        Application::factory()->create(['slug' => 'off_app', 'enabled' => false]);
+
+        $this->assertSame(['on_app'], array_values(array_intersect($this->listApps(), ['on_app', 'off_app'])));
+        $this->assertSame(['off_app'], array_values(array_intersect($this->listApps(['status' => 'disabled']), ['on_app', 'off_app'])));
+        $this->assertSame(['off_app', 'on_app'], array_values(array_intersect($this->listApps(['status' => 'all']), ['on_app', 'off_app'])));
+    }
+
+    public function test_apps_list_reports_the_active_filters_and_the_options()
+    {
+        Application::factory()->create(['slug' => 'tagged'])->tags()->attach(Tag::findOrCreateMany(['Wiki']));
+        Tag::findOrCreateMany(['unused']);
+
+        $this->actingAs($this->adminUser())
+            ->get('/admin/apps?source=generic&tags[]=wiki&search=tag')
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Applications/AppsList')
+                ->where('filters', ['search' => 'tag', 'status' => 'enabled', 'source' => 'generic', 'tags' => ['wiki']])
+                ->where('filter_options.sources', collect(ApplicationSource::cases())
+                    ->map(fn ($source) => ['value' => $source->value, 'text' => $source->label()])->all())
+                // Only tags that are in use are offered
+                ->where('filter_options.tags', [['value' => 'wiki', 'text' => 'Wiki']])
+                ->where('apps.0.tags', ['Wiki'])
+                ->where('apps.0.source', 'Generic')
+            );
+    }
+
+    public function test_apps_list_filters_by_source()
+    {
+        Application::factory()->create(['slug' => 'from_profile', 'source' => ApplicationSource::Profile]);
+        Application::factory()->create(['slug' => 'from_ui', 'source' => ApplicationSource::Generic]);
+        Application::factory()->create(['slug' => 'from_helmforge', 'source' => ApplicationSource::HelmForge]);
+        $mine = ['from_profile', 'from_ui', 'from_helmforge'];
+
+        $this->assertSame(['from_helmforge'], array_values(array_intersect($this->listApps(['source' => 'helmforge']), $mine)));
+        $this->assertSame(['from_profile'], array_values(array_intersect($this->listApps(['source' => 'profile']), $mine)));
+    }
+
+    public function test_apps_list_filters_by_any_of_the_selected_tags()
+    {
+        $one = Application::factory()->create(['slug' => 'tag_one']);
+        $two = Application::factory()->create(['slug' => 'tag_two']);
+        Application::factory()->create(['slug' => 'tag_none']);
+        $one->tags()->attach(Tag::findOrCreateMany(['cms', 'blog']));
+        $two->tags()->attach(Tag::findOrCreateMany(['wiki']));
+        $mine = ['tag_one', 'tag_two', 'tag_none'];
+
+        $this->assertSame(['tag_one'], array_values(array_intersect($this->listApps(['tags' => ['blog']]), $mine)));
+        $this->assertSame(['tag_one', 'tag_two'], array_values(array_intersect($this->listApps(['tags' => ['blog', 'wiki']]), $mine)));
+    }
+
+    public function test_apps_list_searches_by_name_and_combines_filters()
+    {
+        Application::factory()->create(['slug' => 'nextcloud', 'name' => 'Nextcloud', 'source' => ApplicationSource::Profile]);
+        Application::factory()->create(['slug' => 'next_wiki', 'name' => 'Wiki', 'source' => ApplicationSource::Generic]);
+        Application::factory()->create(['slug' => 'ghost', 'name' => 'Ghost', 'source' => ApplicationSource::Generic]);
+
+        $this->assertSame(['next_wiki', 'nextcloud'], $this->listApps(['search' => 'next']));
+        $this->assertSame(['nextcloud'], $this->listApps(['search' => 'Next', 'source' => 'profile']));
+        // LIKE wildcards in the term are literal
+        $this->assertSame([], $this->listApps(['search' => '%']));
+    }
+
+    public function test_apps_list_rejects_unknown_filter_values()
+    {
+        $this->actingAs($this->adminUser())
+            ->get('/admin/apps?status=bogus&source=bogus')
+            ->assertSessionHasErrors(['status', 'source']);
+    }
+
+    public function test_admin_can_set_tags_on_an_application()
+    {
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_tags']);
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['tags' => ['CMS', ' cms ', 'Blog Engine']]))
+            ->assertRedirect("/admin/apps/{$app->slug}/edit");
+
+        // "CMS" and " cms " are the same tag
+        $this->assertSame(['Blog Engine', 'CMS'], $app->fresh()->tags->pluck('name')->sort()->values()->all());
+        $this->assertDatabaseCount('tags', 2);
+
+        $this->actingAs($user)
+            ->get("/admin/apps/{$app->slug}/edit")
+            ->assertInertia(fn ($page) => $page
+                ->where('app.tags', ['Blog Engine', 'CMS'])
+                ->where('tag_options', ['Blog Engine', 'CMS'])
+            );
+    }
+
+    public function test_updating_without_tags_removes_them_but_keeps_the_tag()
+    {
+        $user = $this->adminUser();
+        $app = Application::factory()->create(['slug' => 'test_app_untag']);
+        $app->tags()->attach(Tag::findOrCreateMany(['cms']));
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload())
+            ->assertRedirect("/admin/apps/{$app->slug}/edit");
+
+        $this->assertCount(0, $app->fresh()->tags);
+        $this->assertDatabaseHas('tags', ['slug' => 'cms']);
+    }
+
+    public function test_update_rejects_invalid_tags()
+    {
+        $app = Application::factory()->create(['slug' => 'test_app_bad_tags']);
+
+        $this->actingAs($this->adminUser())
+            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['tags' => [str_repeat('a', 51)]]))
+            ->assertSessionHasErrors('tags.0');
     }
 }

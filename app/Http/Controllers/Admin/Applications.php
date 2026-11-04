@@ -11,6 +11,7 @@ use App\Enums\ApplicationSource;
 use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Tag;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,11 +20,25 @@ use Illuminate\Validation\Rule;
 
 class Applications extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $apps = ApplicationFacade::all();
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:100',
+            'status' => ['nullable', Rule::in(['enabled', 'disabled', 'all'])],
+            'source' => ['nullable', Rule::enum(ApplicationSource::class)],
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:100',
+        ]);
+        $status = $filters['status'] ?? 'enabled';
 
-        $apps = Application::with(['versions' => fn ($query) => $query->where('status', 'active')])->paginate(20);
+        $apps = Application::with(['tags', 'versions' => fn ($query) => $query->where('status', 'active')])
+            ->search($filters['search'] ?? null)
+            ->withAnyTag($filters['tags'] ?? [])
+            ->when($status !== 'all', fn ($query) => $query->where('enabled', $status === 'enabled'))
+            ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
 
         return inertia()->render('Admin/Applications/AppsList', [
             'apps' => $apps->map(function ($app) {
@@ -33,6 +48,7 @@ class Applications extends Controller
                     'name' => $app->name,
                     'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
                     'source' => $app->source->label(),
+                    'tags' => $app->tags->sortBy('name')->pluck('name')->values()->all(),
                     'versions' => $app->versions->map(fn (AppVersion $version) => [
                         'id' => $version->id,
                         'version' => $version->name,
@@ -41,6 +57,21 @@ class Applications extends Controller
                     ])->all(),
                 ];
             }),
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'status' => $status,
+                'source' => $filters['source'] ?? '',
+                'tags' => $filters['tags'] ?? [],
+            ],
+            // Built from the enum so a new source shows up here without UI changes
+            'filter_options' => [
+                'sources' => collect(ApplicationSource::cases())
+                    ->map(fn (ApplicationSource $source) => ['value' => $source->value, 'text' => $source->label()])
+                    ->all(),
+                'tags' => Tag::has('applications')->orderBy('name')->get(['name', 'slug'])
+                    ->map(fn (Tag $tag) => ['value' => $tag->slug, 'text' => $tag->name])
+                    ->all(),
+            ],
             'meta' => [
                 'total' => $apps->total(),
                 'pages' => $apps->lastPage(),
@@ -163,6 +194,7 @@ class Applications extends Controller
                 'name' => $app->name,
                 'slug' => $app->slug,
                 'category' => $app->category,
+                'tags' => $app->tags->sortBy('name')->pluck('name')->values()->all(),
                 'parent_app' => [
                     'id' => $app->parent_app_id != 0 ? $app->parent_app_id : null,
                 ],
@@ -199,6 +231,7 @@ class Applications extends Controller
                     'text' => $app->name,
                 ];
             }),
+            'tag_options' => Tag::orderBy('name')->pluck('name'),
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
@@ -217,6 +250,8 @@ class Applications extends Controller
         $validatedData = $request->validate([
             'name' => 'required',
             'category' => 'required|string|max:100',
+            'tags' => 'nullable|array|max:30',
+            'tags.*' => 'string|max:50',
             'image' => 'nullable|file|image|mimes:png',
             'parent_app' => 'nullable|numeric',
             'access_type' => ['required', 'string', 'max:15', Rule::enum(AccessType::class)],
@@ -268,6 +303,7 @@ class Applications extends Controller
         $app->domain_option = $request->domain_option ?? [];
         $app->can_update_domain = $request->can_update_domain;
         $app->save();
+        $app->tags()->sync(Tag::findOrCreateMany($request->input('tags', []))->modelKeys());
 
         return redirect("/admin/apps/{$app->slug}/edit")->with('success', __('admin.applications.apps', ['app' => $app->name]));
     }

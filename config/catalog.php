@@ -22,6 +22,19 @@ return [
         'generic',
     ],
 
+    // Chart keywords that are never turned into tags because they describe
+    // how the chart is packaged rather than what the app does.
+    'ignored_tags' => [
+        'kubernetes',
+        'k8s',
+        'helm',
+        'helm-chart',
+        'self-hosted',
+        'selfhosted',
+        'docker',
+        'open-source',
+    ],
+
     /*
     | Per-chart tweaks for the few charts that don't follow the common values
     | layout. Keyed by chart name; any key of the detected convention (see
