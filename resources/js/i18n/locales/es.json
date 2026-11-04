@@ -964,6 +964,8 @@
       "appUrl": "Dirección de la aplicación",
       "username": "Usuario",
       "password": "Contraseña",
+      "adminAccount": "Cuenta de administrador local (sin LDAP)",
+      "ldapAccount": "Cuenta LDAP (usuario de la organización de prueba)",
       "itWorked": "Funcionó",
       "itDidNotWork": "No funcionó",
       "failReason": "¿Qué salió mal? (opcional)",

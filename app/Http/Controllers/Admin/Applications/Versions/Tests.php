@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin\Applications\Versions;
 
+use App\AppInstance;
 use App\Application;
 use App\AppVersion;
 use App\Enums\VersionTestStepStatus;
 use App\Exceptions\VersionTestException;
 use App\Http\Controllers\Controller;
 use App\Services\VersionTesting\VersionTestRunner;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\VersionTestEvent;
 use App\VersionTestRun;
 use App\VersionTestStep;
@@ -83,8 +85,11 @@ class Tests extends Controller
                 'plan' => $current->plan->name,
                 'type' => $current->type->value,
                 'app_url' => $current->app_url,
+                // The org's own user, who signs in through LDAP
                 'username' => $current->test_username,
                 'password' => $current->test_password,
+                // The app's local admin, which works even when LDAP sign-in is broken
+                'admin_account' => $this->adminAccount($current),
             ] : null,
             'can' => [
                 'start_next' => $run->isRunning() && ! $has_active_step && $steps->contains(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::PENDING),
@@ -109,6 +114,25 @@ class Tests extends Controller
                 ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
             ],
         ]);
+    }
+
+    /**
+     * The local admin of the step's app, so a broken LDAP sign-in can be told
+     * apart from a broken app.
+     *
+     * @return array{username: string, password: string}|null
+     */
+    private function adminAccount(VersionTestStep $step): ?array
+    {
+        $app_instance = $step->app_instance_id ? AppInstance::find($step->app_instance_id) : null;
+        if (! $app_instance) {
+            return null;
+        }
+
+        return [
+            'username' => ApplicationFacade::instance($app_instance)->configuration('username') ?? 'support',
+            'password' => $app_instance->api_password(),
+        ];
     }
 
     public function store(Application $app, AppVersion $version)

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\AccountTest;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -14,11 +15,13 @@ use App\Exceptions\VersionTestException;
 use App\Organization;
 use App\Services\VersionTesting\VersionTestRunner;
 use App\Support\Facades\Action;
+use App\Support\VersionTesting\VersionFingerprint;
 use App\Task;
 use App\User;
 use App\VersionTestRun;
 use App\VersionTestStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -73,7 +76,7 @@ class VersionTestingTest extends TestCase
         $run->application_id = $version->application_id;
         $run->app_version_id = $version->id;
         $run->status = $status;
-        $run->fingerprint = (new \App\Support\VersionTesting\VersionFingerprint)->for($version);
+        $run->fingerprint = (new VersionFingerprint)->for($version);
         $run->finished_at = now();
         $run->save();
 
@@ -413,6 +416,27 @@ class VersionTestingTest extends TestCase
         );
     }
 
+    public function test_the_run_page_gives_the_local_admin_account_alongside_the_ldap_one()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $app_instance = $this->installOn(Organization::first(), $this->candidate);
+        $app_instance->api_password = Crypt::encrypt('local-admin-pw');
+        $app_instance->save();
+        $step->app_instance_id = $app_instance->id;
+        $step->save();
+
+        $this->runner()->provisioned($step->id);
+
+        $this->actingAs($this->admin)
+            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->assertInertia(fn ($page) => $page
+                ->where('current_step.admin_account.username', 'support')
+                ->where('current_step.admin_account.password', 'local-admin-pw')
+                ->where('current_step.password', $step->refresh()->test_password)
+            );
+    }
+
     public function test_the_next_test_button_appears_once_the_previous_org_is_cleared()
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
@@ -537,7 +561,7 @@ class VersionTestingTest extends TestCase
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
-        $adhoc = new \App\AccountTest;
+        $adhoc = new AccountTest;
         $adhoc->organization_id = 1;
         $adhoc->created_by_id = $this->admin->id;
         $adhoc->test_number = 1;

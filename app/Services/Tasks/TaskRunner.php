@@ -298,6 +298,9 @@ class TaskRunner
      */
     public function failTask(Task $task, string $reason, string $code, ?Throwable $e = null): void
     {
+        // Set before rolling back: compensate() handlers read the reason from the task
+        $task->error_message = $reason;
+
         try {
             $this->compensate($task);
         } catch (Throwable $compensating) {

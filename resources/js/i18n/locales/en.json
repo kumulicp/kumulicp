@@ -967,6 +967,8 @@
       "appUrl": "App address",
       "username": "Username",
       "password": "Password",
+      "adminAccount": "Local admin account (not LDAP)",
+      "ldapAccount": "LDAP account (the test org's user)",
       "itWorked": "It worked",
       "itDidNotWork": "It didn't work",
       "failReason": "What went wrong? (optional)",

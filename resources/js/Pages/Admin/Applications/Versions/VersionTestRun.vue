@@ -58,6 +58,22 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
             <td class="font-bold">{{ $t('admin.versionTests.appUrl') }}</td>
             <td><a v-if="current_step.app_url" id="testAppUrl" :href="current_step.app_url" target="_blank" rel="noopener noreferrer">{{ current_step.app_url }}</a></td>
           </tr>
+          <template v-if="current_step.admin_account">
+            <tr>
+              <td colspan="2" class="font-bold va-text-secondary">{{ $t('admin.versionTests.adminAccount') }}</td>
+            </tr>
+            <tr>
+              <td class="font-bold">{{ $t('admin.versionTests.username') }}</td>
+              <td><code id="testAdminUsername">{{ current_step.admin_account.username }}</code></td>
+            </tr>
+            <tr>
+              <td class="font-bold">{{ $t('admin.versionTests.password') }}</td>
+              <td><code id="testAdminPassword">{{ current_step.admin_account.password }}</code></td>
+            </tr>
+          </template>
+          <tr>
+            <td colspan="2" class="font-bold va-text-secondary">{{ $t('admin.versionTests.ldapAccount') }}</td>
+          </tr>
           <tr>
             <td class="font-bold">{{ $t('admin.versionTests.username') }}</td>
             <td><code id="testUsername">{{ current_step.username }}</code></td>
