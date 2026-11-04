@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Calls\ActivateBackup;
+use App\Console\Calls\CheckUnavailableAppInstances;
 use App\Console\Calls\CheckVersionUpdates;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Console\Calls\DeleteBackups;
@@ -38,6 +39,9 @@ Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
 Schedule::call(new ExpiredSubscriptionsCheck)->everyMinute();
 Schedule::call(new DeactivatedAppInstanceCheck)->everyMinute();
+// Each unavailable app is only probed once its last check is 5 minutes old; a probe can take
+// its full timeout, so a slow pass must not overlap the next
+Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');

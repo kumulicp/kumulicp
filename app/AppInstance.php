@@ -56,6 +56,13 @@ class AppInstance extends Model
 {
     use HasFactory;
 
+    /**
+     * The app's API stopped answering (see AvailabilityService). The previous
+     * status is kept in settings.availability.previous_status and put back
+     * when the app responds again.
+     */
+    public const STATUS_UNAVAILABLE = 'unavailable';
+
     protected $table = 'app_instances';
 
     private $extensions = [
@@ -400,6 +407,25 @@ class AppInstance extends Model
     public function scopeNotDeactivated(Builder $query)
     {
         return $query->where('status', '!=', 'deactivated')->where('status', '!=', 'deactivating');
+    }
+
+    public function scopeUnavailable(Builder $query)
+    {
+        return $query->where('status', self::STATUS_UNAVAILABLE);
+    }
+
+    public function isUnavailable(): bool
+    {
+        return $this->status === self::STATUS_UNAVAILABLE;
+    }
+
+    /**
+     * Unavailable and confirmed so by a recheck: API calls to the app are
+     * refused until it answers again.
+     */
+    public function isApiBlocked(): bool
+    {
+        return $this->isUnavailable() && $this->setting('availability.blocked_at') !== null;
     }
 
     public function standard_user_name()
