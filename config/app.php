@@ -125,4 +125,20 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Previous Encryption Keys
+    |--------------------------------------------------------------------------
+    |
+    | Comma separated list of retired APP_KEY values. The encrypter falls back
+    | to these when a payload can't be decrypted with the current key, which
+    | keeps existing data and sessions readable while `php artisan keys:rotate`
+    | re-encrypts it. Remove a key once `php artisan keys:check` passes.
+    |
+    */
+
+    'previous_keys' => array_values(array_filter(
+        array_map('trim', explode(',', (string) env('APP_PREVIOUS_KEYS', '')))
+    )),
+
 ];

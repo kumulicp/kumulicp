@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
 /**
@@ -25,8 +24,10 @@ class OrganizationFactory extends Factory
             'slug' => Str::lower(Str::random(5)),
             'description' => fake()->sentence(),
             'email' => fake()->email(),
-            'api_token' => Crypt::encrypt(Str::random(20)),
-            'secretpw' => Crypt::encrypt(Str::random(20)),
+            // Plain values: the model's `hashed` / `encrypted` casts do the rest. Wrapping
+            // them in Crypt here encrypts twice and overflows the varchar(255) column.
+            'api_token' => Str::random(60),
+            'secretpw' => Str::random(20),
             'phone_number' => fake()->phoneNumber(),
             'street' => fake()->address(),
             'zipcode' => fake()->postcode(),
