@@ -2,6 +2,7 @@
 
 namespace App\Support\Encryption;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -83,9 +84,7 @@ class KeyScanner
 
                     // Only write if the row is untouched since it was read, so a
                     // concurrent app write is never overwritten. Re-run to pick it up.
-                    $written = DB::table($store['table'])
-                        ->where('id', $row->id)
-                        ->where($store['column'], $original)
+                    $written = $this->unchangedSince(DB::table($store['table'])->where('id', $row->id), $store, $original)
                         ->update([$store['column'] => $updated]);
 
                     $written ? $totals['rotated']++ : $totals['conflicts']++;
@@ -93,6 +92,20 @@ class KeyScanner
             }, 'id');
 
         return $totals;
+    }
+
+    // MySQL won't compare a JSON column to a plain string (it never matches), so the
+    // value read earlier has to be cast back to JSON to detect that the row is untouched.
+    private function unchangedSince(Builder $query, array $store, string $original): Builder
+    {
+        $column = $query->getGrammar()->wrap($store['column']);
+        $type = collect(Schema::getColumns($store['table']))->firstWhere('name', $store['column'])['type_name'] ?? '';
+
+        return match (true) {
+            DB::getDriverName() === 'mysql' && $type === 'json' => $query->whereRaw("{$column} = CAST(? AS JSON)", [$original]),
+            DB::getDriverName() === 'pgsql' && $type === 'jsonb' => $query->whereRaw("{$column} = ?::jsonb", [$original]),
+            default => $query->where($store['column'], $original),
+        };
     }
 
     // Plaintext inside a JSON column is normal and never reaches here (scanJson
