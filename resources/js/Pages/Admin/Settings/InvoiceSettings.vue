@@ -98,7 +98,56 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
   >
     {{ $t('common.update') }}
   </va-button>
+  <va-button v-if="stripe"
+    id="stripe-webhook-help"
+    type="button"
+    preset="secondary"
+    class="my-2"
+    @click="showStripeWebhook = true"
+  >
+    {{ $t('settings.stripeWebhook.button') }}
+  </va-button>
 </form>
+<va-modal v-if="stripe"
+  v-model="showStripeWebhook"
+  :title="$t('settings.stripeWebhook.title')"
+  hide-default-actions
+  size="medium"
+>
+  <p class="mb-3">{{ $t('settings.stripeWebhook.about') }}</p>
+  <va-alert v-if="! stripe.secret_configured" color="warning" class="mb-3">
+    {{ $t('settings.stripeWebhook.secretMissing') }}
+  </va-alert>
+  <div class="mb-3">
+    <va-input :model-value="stripe.webhook_url"
+      id="stripeWebhookUrl"
+      :label="$t('settings.stripeWebhook.url')"
+      readonly
+    >
+      <template #appendInner>
+        <va-button type="button"
+          size="small"
+          preset="secondary"
+          @click="copyWebhookUrl"
+        >
+          {{ copied ? $t('settings.stripeWebhook.copied') : $t('common.copy') }}
+        </va-button>
+      </template>
+    </va-input>
+  </div>
+  <p class="va-text-bold mb-1">{{ $t('settings.stripeWebhook.events') }}</p>
+  <ul class="mb-3">
+    <li v-for="event in stripe.events" :key="event"><code>{{ event }}</code></li>
+  </ul>
+  <p>
+    <a href="https://docs.stripe.com/webhooks" target="_blank" rel="noopener noreferrer">
+      {{ $t('settings.stripeWebhook.docs') }}
+    </a>
+  </p>
+  <template #footer>
+    <va-button type="button" @click="showStripeWebhook = false">{{ $t('modal.ok') }}</va-button>
+  </template>
+</va-modal>
 </template>
 
 <script lang="ts">
@@ -108,10 +157,25 @@ export default {
   },
   props: {
     settings: Object,
+    stripe: Object,
     errors: Object
+  },
+  methods: {
+    async copyWebhookUrl () {
+      try {
+        await navigator.clipboard.writeText(this.stripe.webhook_url)
+      } catch {
+        return
+      }
+
+      this.copied = true
+      setTimeout(() => { this.copied = false }, 2000)
+    }
   },
   data () {
     return {
+      showStripeWebhook: false,
+      copied: false,
       form: useForm({
         invoice_vendor_name: this.settings.invoice_vendor_name,
         invoice_vendor_product: this.settings.invoice_vendor_product,

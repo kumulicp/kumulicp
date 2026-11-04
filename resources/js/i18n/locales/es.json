@@ -1389,6 +1389,16 @@
     "invoice": "Factura",
     "editServerSettings": "Editar Configuración del Servidor",
     "invoiceInfo": "Información de Factura",
+    "stripeWebhook": {
+      "button": "Configuración del Webhook de Stripe",
+      "title": "Configuración del Webhook de Stripe",
+      "about": "Stripe usa un webhook para informar a KumuliCP sobre cambios en pagos y suscripciones, como un pago fallido o una suscripción cancelada. KumuliCP usa estos eventos para mantener actualizado el estado de cada organización.",
+      "secretMissing": "No hay un secreto de firma del webhook configurado (STRIPE_WEBHOOK_SECRET), por lo que las solicitudes entrantes no se verifican como provenientes de Stripe.",
+      "url": "URL del Webhook",
+      "copied": "¡Copiado!",
+      "events": "Eventos a los que responde KumuliCP",
+      "docs": "Documentación de webhooks de Stripe"
+    },
     "sso": {
       "editSsoProvider": "Editar Proveedor SSO",
       "label": "Etiqueta",
