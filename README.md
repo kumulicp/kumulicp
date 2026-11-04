@@ -18,6 +18,7 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 - SSO: Add multiple SSO providers
 - Backups/Restore: Basic scheduled backup and restore available for MySQL databases, including restoring a backup to a different database server and migrating an app to a new database server (fresh backup, restore, switch, standard app update, automatic rollback on failure)
 - Shared apps: Allow different clients to login to the same app by making it shared.
+- App availability: An app whose API stops answering is marked unavailable, admins are emailed once, it is rechecked every 5 minutes and API calls to it are paused until it responds (see docs/app-availability.md)
 
 ### End-users
 

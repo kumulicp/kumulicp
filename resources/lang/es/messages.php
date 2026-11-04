@@ -111,6 +111,20 @@ return [
         'create_dkim_key' => 'Estamos creando tu clave DKIM mientras lees esto. Esto tomará unos momentos',
     ],
     'notification' => [
+        'app_unavailable_warning' => [
+            'title' => ':app no responde',
+            'message' => 'No pudimos conectarnos con :app. Volveremos a comprobarlo en :minutes minutos. Si sigue sin responder, pausaremos nuestra conexión con la aplicación y te avisaremos.',
+        ],
+        'app_unavailable' => [
+            'title' => ':app no está disponible',
+            'message' => ':app sigue sin responder, así que hemos pausado nuestra conexión con ella. Seguimos comprobándolo cada :minutes minutos y la reanudaremos en cuanto responda. No recibirás más correos sobre esto.',
+        ],
+        'app_unavailable_details' => [
+            'app' => 'Aplicación',
+            'organization' => 'Organización',
+            'since' => 'Sin responder desde',
+            'reason' => 'Motivo',
+        ],
         'subscription_cancelled' => 'Suscripción cancelada',
         'cancellation_notice' => 'Tu suscripción ha sido cancelada. Tu cuenta se desactivará el :date. Si esto fue un error, puedes volver a suscribirte en cualquier momento antes de esta fecha.',
         'cancellation_notice_short' => 'Tu cuenta se desactivará el :date',
