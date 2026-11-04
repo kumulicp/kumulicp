@@ -26,9 +26,9 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
   <Head>
     <title>{{ $t('admin.versionTests.runNumber', { id: run.id }) }} - Control Panel</title>
   </Head>
-  <div class="row items-center mb-3">
+  <div class="mb-3" style="display: flex; align-items: center; gap: 0.75rem">
     <h5 class="va-h5 m-0">{{ $t('admin.versionTests.runNumber', { id: run.id }) }}</h5>
-    <va-badge id="runStatus" class="ml-3" :color="statusColor(run.status)" :text="$t('admin.versionTests.status.' + run.status)" />
+    <va-badge id="runStatus" :color="statusColor(run.status)" :text="$t('admin.versionTests.status.' + run.status)" />
   </div>
   <div class="va-text-secondary mb-3">
     <div>{{ $t('admin.versionTests.startedBy') }}: {{ run.started_by }} ({{ run.created_at }})</div>

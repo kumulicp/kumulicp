@@ -50,6 +50,7 @@ const submit = () => {
             id="bypassReason"
             :label="$t('admin.versionTests.bypass.reason')"
             class="mb-3"
+            style="width: 100%"
             required-mark
             :min-rows="3"
             :error="!!form.errors.reason"
