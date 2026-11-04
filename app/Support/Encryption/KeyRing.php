@@ -23,6 +23,9 @@ class KeyRing
 
     public const PLAINTEXT = 'plaintext';
 
+    /** Starts like an encrypted payload but is cut off or mangled, so it can never be decrypted. */
+    public const CORRUPT = 'corrupt';
+
     private Encrypter $current;
 
     /** @var array<int, Encrypter> */
@@ -75,12 +78,21 @@ class KeyRing
     }
 
     /**
+     * Whether $value starts the way every Laravel payload does (base64 of `{"iv":`)
+     * without being a complete one, e.g. cut off by a column that was too short.
+     */
+    public static function looksLikePayload(string $value): bool
+    {
+        return (bool) preg_match('/^eyJpdiI6[A-Za-z0-9+\/]+={0,2}$/', $value);
+    }
+
+    /**
      * @return array{status: string, plain: string|null}
      */
     public function inspect(string $value): array
     {
         if (! self::isPayload($value)) {
-            return ['status' => self::PLAINTEXT, 'plain' => null];
+            return ['status' => self::looksLikePayload($value) ? self::CORRUPT : self::PLAINTEXT, 'plain' => null];
         }
 
         try {

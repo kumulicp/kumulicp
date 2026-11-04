@@ -32,14 +32,15 @@ class RotateEncryptionKeys extends Command
             ->scan(! $dry_run, $this->option('table') ?: null);
 
         $this->table(
-            ['Location', 'Current key', 'Previous key', 'Rotated', 'Plaintext', 'Unreadable', 'Changed meanwhile'],
+            ['Location', 'Current key', 'Previous key', 'Rotated', 'Plaintext', 'Corrupt', 'Unreadable', 'Changed meanwhile'],
             array_map(fn (array $row) => [
                 $row['location'], $row['current'], $row['previous'], $row['rotated'],
-                $row['plaintext'], $row['undecryptable'], $row['conflicts'],
+                $row['plaintext'], $row['corrupt'], $row['undecryptable'], $row['conflicts'],
             ], $report)
         );
 
         $unreadable = array_sum(array_column($report, 'undecryptable'));
+        $corrupt = array_sum(array_column($report, 'corrupt'));
         $conflicts = array_sum(array_column($report, 'conflicts'));
         $pending = array_sum(array_column($report, 'previous'));
 
@@ -51,14 +52,18 @@ class RotateEncryptionKeys extends Command
             $this->error("{$unreadable} value(s) can't be decrypted with any configured key and were left untouched. Add the key that encrypted them to APP_PREVIOUS_KEYS and run again.");
         }
 
+        if ($corrupt > 0) {
+            $this->error("{$corrupt} value(s) are truncated or damaged encrypted payloads and were left untouched. No key can read them; reset the value.");
+        }
+
         if ($conflicts > 0) {
             $this->warn("{$conflicts} row(s) changed while rotating and were skipped. Run keys:rotate again.");
         }
 
-        if (! $dry_run && $unreadable === 0 && $conflicts === 0) {
+        if (! $dry_run && $unreadable === 0 && $corrupt === 0 && $conflicts === 0) {
             $this->info('Done. Run keys:check to confirm, then remove the old key from APP_PREVIOUS_KEYS.');
         }
 
-        return $unreadable > 0 || $conflicts > 0 ? self::FAILURE : self::SUCCESS;
+        return $unreadable > 0 || $corrupt > 0 || $conflicts > 0 ? self::FAILURE : self::SUCCESS;
     }
 }

@@ -16,7 +16,7 @@ class KeyScanner
     public function __construct(private KeyRing $key_ring, private int $chunk_size = 500) {}
 
     /**
-     * @return array<int, array{location: string, current: int, previous: int, rotated: int, plaintext: int, undecryptable: int, conflicts: int}>
+     * @return array<int, array{location: string, current: int, previous: int, rotated: int, plaintext: int, corrupt: int, undecryptable: int, conflicts: int}>
      */
     public function scan(bool $rotate = false, ?string $only_table = null): array
     {
@@ -55,6 +55,7 @@ class KeyScanner
             'previous' => 0,
             'rotated' => 0,
             'plaintext' => 0,
+            'corrupt' => 0,
             'undecryptable' => 0,
             'conflicts' => 0,
         ];
@@ -66,7 +67,7 @@ class KeyScanner
             ->chunkById($this->chunk_size, function ($rows) use ($store, $is_json, $rotate, &$totals) {
                 foreach ($rows as $row) {
                     $original = $row->{$store['column']};
-                    $counts = ['current' => 0, 'previous' => 0, 'plaintext' => 0, 'undecryptable' => 0];
+                    $counts = ['current' => 0, 'previous' => 0, 'plaintext' => 0, 'corrupt' => 0, 'undecryptable' => 0];
 
                     $updated = $is_json
                         ? $this->scanJson($original, $rotate, $counts)

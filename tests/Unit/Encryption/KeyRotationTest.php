@@ -85,6 +85,7 @@ it('classifies a value by the key that reads it', function () {
     expect($ring->inspect($payload)['status'])->toBe(KeyRing::PREVIOUS);
     expect($ring->inspect($ring->reencrypt($payload))['status'])->toBe(KeyRing::CURRENT);
     expect($ring->inspect('plain value')['status'])->toBe(KeyRing::PLAINTEXT);
+    expect($ring->inspect(substr($ring->reencrypt($payload), 0, 100))['status'])->toBe(KeyRing::CORRUPT);
     expect((new KeyRing($unrelated, [], config('app.cipher')))->inspect($payload)['status'])->toBe(KeyRing::UNDECRYPTABLE);
 
     expect($ring->reencrypt($ring->reencrypt($payload)))->toBeNull();
@@ -189,6 +190,16 @@ it('leaves values it cannot decrypt untouched and fails', function () {
     $this->artisan('keys:check')->assertFailed();
 
     expect(rawEncryptedValues())->toBe($before);
+});
+
+it('fails keys:check and keys:rotate on truncated payloads and says they are corrupt, not plaintext', function () {
+    $server = Server::factory()->create();
+    DB::table('servers')->where('id', $server->id)->update(['api_key' => substr(Crypt::encryptString('secret'), 0, 100)]);
+
+    $this->artisan('keys:check')->assertFailed()->expectsOutputToContain('truncated or damaged');
+    $this->artisan('keys:rotate')->assertFailed();
+
+    expect(DB::table('servers')->where('id', $server->id)->value('api_key'))->toHaveLength(100);
 });
 
 it('only fails keys:check on legacy plaintext when strict', function () {
