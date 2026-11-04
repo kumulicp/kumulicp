@@ -37,7 +37,7 @@ class ApplicationUpdateJob extends Action
         $existing_task = Task::where('action_slug', $this->slug)
             ->whereIn('app_instance_id', $sibling_instance_ids)
             ->where('app_instance_id', '!=', $app_instance->id)
-            ->where('status', '!=', TaskStatus::COMPLETE->value)
+            ->whereIn('status', TaskStatus::openValues())
             ->latest('id')
             ->first();
 

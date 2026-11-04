@@ -42,6 +42,13 @@ class ApplicationUpgrade extends NativeAction
     public function onCreate(Task $task)
     {
         $app_instance = $this->app_instance;
+
+        // Where cancelling goes back to; not overwritten when retried
+        if (! $task->getValue('previous_version_id')) {
+            $task->custom_values = array_merge($task->customValues(), ['previous_version_id' => $app_instance->version_id]);
+            $task->save();
+        }
+
         $app_instance->version_id = $this->version->id;
         $app_instance->status = 'updating';
         $app_instance->save();
@@ -95,9 +102,40 @@ class ApplicationUpgrade extends NativeAction
         return ActionResult::wait();
     }
 
+    /**
+     * The app goes back to active; if the upgrade hadn't started it goes back
+     * to the version it was on too.
+     */
+    public static function cancelled(Task $task): ?string
+    {
+        $app_instance = $task->app_instance;
+
+        if (! $app_instance || $app_instance->status !== 'updating') {
+            return null;
+        }
+
+        $started = $task->attempts > 0;
+
+        if (! $started && $previous = $task->getValue('previous_version_id')) {
+            $app_instance->version_id = $previous;
+        }
+
+        $app_instance->status = 'active';
+        $app_instance->save();
+
+        return $started ? __('messages.action.cancelled_upgrade_started') : null;
+    }
+
     public static function retry(Task $task): ?Action
     {
-        return new self($task->app_instance, $task->version);
+        $retry = new self($task->app_instance, $task->version);
+
+        // The version the app was on before the first try, which cancelling goes back to
+        if ($previous = $task->getValue('previous_version_id')) {
+            $retry->addCustomValue(['previous_version_id' => $previous]);
+        }
+
+        return $retry;
     }
 
     public static function poll(Task $task): ActionResult

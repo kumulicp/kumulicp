@@ -31,6 +31,13 @@ interface TaskAction
     public static function compensate(Task $task): void;
 
     /**
+     * Called when an admin cancels the task, after compensate(): undo what
+     * creating the task changed (an app marked "updating", say). Returns a note
+     * for the task's history when something couldn't be undone, or null.
+     */
+    public static function cancelled(Task $task): ?string;
+
+    /**
      * A fresh action for retrying the task, or null to retry it as it is.
      */
     public static function retry(Task $task): ?Action;

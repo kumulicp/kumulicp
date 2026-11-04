@@ -38,6 +38,11 @@ class NativeHandler implements TaskHandler
         ($this->class)::compensate($task);
     }
 
+    public function cancelled(Task $task): ?string
+    {
+        return ($this->class)::cancelled($task);
+    }
+
     public function retry(Task $task): ?Action
     {
         return ($this->class)::retry($task);

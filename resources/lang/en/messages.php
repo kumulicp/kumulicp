@@ -25,6 +25,8 @@ return [
         'step_timed_out' => 'Step :step did not finish in time',
         'release_reset' => 'The release was stuck and has been reset; trying the upgrade again',
         'organization_created' => 'The organization was created on the server; continuing the activation',
+        'cancelled_upgrade_started' => 'The upgrade had already started: the app was marked active again but may be partly upgraded. Run an update to settle it.',
+        'cancelled_delete_started' => 'The delete had already started: the app is partly deleted and has been left as it is.',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
         'parent_app' => ':app needs to be installed first',

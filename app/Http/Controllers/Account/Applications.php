@@ -33,7 +33,7 @@ class Applications extends Controller
         if (! $apps->isEmpty()) {
             return inertia('Organization/Apps/AppsList', [
                 'apps' => $apps->map(function ($app) {
-                    $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
+                    $tasks = $app->tasks()->where('background', 0)->whereIn('status', TaskStatus::openValues())->get();
 
                     return [
                         'id' => $app->id,
@@ -111,7 +111,7 @@ class Applications extends Controller
             $domains = $domains->all();
         }
 
-        $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
+        $tasks = $app->tasks()->where('background', 0)->whereIn('status', TaskStatus::openValues())->get();
 
         $features = collect(Application::instance($app)->features()->optional($app))->map(function ($customization) {
             return [

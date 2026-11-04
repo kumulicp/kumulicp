@@ -22,8 +22,8 @@ class TaskDispatcher
     /**
      * One scheduled pass, in the order a task moves: poll the ones running,
      * release the ones that were blocked, ready the ones whose prerequisites
-     * pass, queue the ones that are ready, then clean up after the ones that
-     * stalled.
+     * pass, queue the ones that are ready, clean up after the ones that
+     * stalled, then say so about the ones that are stuck.
      */
     public function tick(): void
     {
@@ -32,6 +32,7 @@ class TaskDispatcher
         $this->promote();
         $this->queueReady();
         $this->reap();
+        $this->watch();
     }
 
     /**
@@ -199,6 +200,76 @@ class TaskDispatcher
     {
         $this->requeueLostJobs();
         $this->failExpired();
+    }
+
+    /**
+     * Logs an error for each task that has been stuck for longer than the
+     * thresholds in config/tasks.php allow. A task is reported once for each
+     * reason, so it is emailed once and not every minute.
+     */
+    public function watch(): void
+    {
+        $limits = config('tasks.alerts');
+        $ago = fn (string $limit) => now()->subMinutes((int) $limits[$limit]);
+
+        foreach (Task::where('status', TaskStatus::BLOCKED->value)->where('updated_at', '<=', $ago('blocked_after'))->get() as $task) {
+            $this->alert($task, 'blocked', "blocked for over {$limits['blocked_after']} minutes: ".$task->error_message);
+        }
+
+        $stalled = Task::where('status', TaskStatus::IN_PROGRESS->value)
+            ->notClaimed()
+            ->whereNull('deadline_at')
+            ->where('updated_at', '<=', $ago('stalled_after'))
+            ->get();
+
+        foreach ($stalled as $task) {
+            $this->alert($task, 'stalled', "in progress with no change for over {$limits['stalled_after']} minutes");
+        }
+
+        // Pending tasks are checked every minute, which touches updated_at, so
+        // for these it is how long since they were made, and they never ran
+        $waiting = Task::where('status', TaskStatus::PENDING->value)
+            ->where('attempts', 0)
+            ->where('created_at', '<=', $ago('waiting_after'))
+            ->get();
+
+        foreach ($waiting as $task) {
+            $this->alert($task, 'waiting', "still waiting to start after over {$limits['waiting_after']} minutes: ".$task->error_message);
+        }
+
+        $requeued = TaskEvent::where('type', 'requeued')
+            ->groupBy('task_id')
+            ->havingRaw('count(*) >= ?', [(int) $limits['requeued_times']])
+            ->pluck('task_id');
+
+        $not_started = [TaskStatus::PENDING->value, TaskStatus::READY->value, TaskStatus::QUEUED->value];
+
+        foreach (Task::whereIn('id', $requeued)->whereIn('status', $not_started)->get() as $task) {
+            $this->alert($task, 'requeued', "queued but never started {$limits['requeued_times']} times or more: are the queue workers running?");
+        }
+    }
+
+    private function alert(Task $task, string $condition, string $what): void
+    {
+        $already = TaskEvent::where('task_id', $task->id)
+            ->where('type', 'alerted')
+            ->where('context->condition', $condition)
+            ->exists();
+
+        if ($already) {
+            return;
+        }
+
+        $message = "Task #{$task->id} ({$task->description}) {$what}";
+
+        TaskEvent::record($task, 'alerted', $message, ['condition' => $condition]);
+
+        Log::error($message, [
+            'task_id' => $task->id,
+            'action' => $task->action(),
+            'condition' => $condition,
+            'organization_id' => $task->organization_id,
+        ]);
     }
 
     /**

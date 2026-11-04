@@ -221,6 +221,59 @@ class Copy extends Step
 Most actions don't need steps: one that starts something and polls for it is just
 `handle()` and `poll()`.
 
+## Cancelling
+
+An admin can cancel a task that hasn't finished (not one a worker is running at that
+moment). The task stops and is marked `cancelled`; its action's `compensate()` runs
+(for a `StepAction`, the started steps are rolled back, last first), and then
+`cancelled(Task $task): ?string`, for undoing what *creating* the task changed - an
+app marked "updating" or "deleting", say. Return a note if something couldn't be
+undone; it goes in the task's history.
+
+```php
+public static function cancelled(Task $task): ?string
+{
+    if ($task->attempts > 0) {
+        return 'Already started: the app was left as it is.';
+    }
+
+    $task->app_instance->update(['status' => 'active']);
+
+    return null;
+}
+```
+
+Whatever waited for a cancelled task becomes `blocked`, as it does for a failed one,
+until the task is retried or deleted.
+
+## Operating tasks
+
+The admin Tasks page lists tasks; a task's own page (`/admin/server/tasks/{id}`) shows its
+history (`task_events`), steps, what it waits for and what waits for it, and its values
+(secrets masked).
+
+| Status | Retry | Cancel | Delete |
+| --- | --- | --- | --- |
+| pending, ready, queued, in progress | | yes | |
+| blocked | yes | yes | |
+| failed | yes | | yes |
+| cancelled | yes | | yes |
+| complete | | | yes |
+
+A task can't be cancelled while a worker is running it (try again in a moment). Deleting
+a task releases whatever waited for it, so cancel one that is still going first.
+Retry, cancel and delete are POST/DELETE requests and are recorded with who made them.
+
+A task that has stopped getting anywhere logs one error for each reason - which reaches
+the Logs page, the dashboard, email and Matrix - and is not reported again for the same
+reason. The limits are in `config/tasks.php`:
+
+* **blocked** - blocked for an hour;
+* **stalled** - in progress, not being run, with no change for six hours (and no deadline
+  of its own);
+* **waiting** - never started after a day;
+* **requeued** - queued but never started three times: the queue workers are probably down.
+
 ## Older actions
 
 Actions written before `TaskAction` have static `run()`, `complete()`, `retry()`

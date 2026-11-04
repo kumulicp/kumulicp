@@ -137,17 +137,18 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('tasks')->group(function () {
                 Route::get('', 'Admin\Tasks@index')->name('tasks');
                 Route::post('api', 'Admin\Tasks@api')->name('tasks.api');
-                Route::delete('{task}', 'Admin\Tasks@delete_api')->name('tasks.delete.api');
-                Route::post('bulk/restart', 'Admin\Tasks@bulk_restart')->name('tasks.bulk.restart');
+                Route::post('bulk/retry', 'Admin\Tasks@bulk_retry')->name('tasks.bulk.retry');
+                Route::post('bulk/cancel', 'Admin\Tasks@bulk_cancel')->name('tasks.bulk.cancel');
                 Route::post('bulk/delete', 'Admin\Tasks@bulk_delete')->name('tasks.bulk.delete');
-                Route::get('pending', 'Admin\Tasks@pending')->name('tasks.pending');
-                Route::get('{task}/restart', 'Admin\Tasks@restart')->name('tasks.restart');
-                Route::get('{task}/delete', 'Admin\Tasks@delete')->name('tasks.delete');
-                Route::post('{task}/delete_completed', 'API\Account\Tasks@delete')->name('tasks.delete_completed');
+                Route::post('dummy', 'Admin\Tasks@dummy')->name('tasks.dummy');
+                Route::post('run_schedule', 'Admin\Tasks@run_schedule')->name('tasks.run_schedule');
+                Route::post('restart_queue', 'Admin\Tasks@restart_queue')->name('tasks.restart_queue');
                 Route::get('retrieve/notifications', 'API\Account\Tasks@index')->name('tasks.index');
-                Route::get('dummy', 'Admin\Tasks@dummy')->name('tasks.dummy');
-                Route::get('run_schedule', 'Admin\Tasks@run_schedule')->name('tasks.run_schedule');
-                Route::get('restart_queue', 'Admin\Tasks@restart_queue')->name('tasks.restart_queue');
+                Route::get('{task}', 'Admin\Tasks@show')->whereNumber('task')->name('tasks.show');
+                Route::post('{task}/retry', 'Admin\Tasks@retry')->whereNumber('task')->name('tasks.retry');
+                Route::post('{task}/cancel', 'Admin\Tasks@cancel')->whereNumber('task')->name('tasks.cancel');
+                Route::post('{task}/delete_completed', 'API\Account\Tasks@delete')->name('tasks.delete_completed');
+                Route::delete('{task}', 'Admin\Tasks@destroy')->whereNumber('task')->name('tasks.destroy');
             });
             Route::prefix('logs')->group(function () {
                 Route::get('', 'Admin\Logs@index')->name('admin.logs.index');

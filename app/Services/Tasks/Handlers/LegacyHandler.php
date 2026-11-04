@@ -59,6 +59,12 @@ class LegacyHandler implements TaskHandler
         }
     }
 
+    public function cancelled(Task $task): ?string
+    {
+        // Nothing older actions know to undo beyond compensate()
+        return null;
+    }
+
     public function retry(Task $task): ?Action
     {
         if (! method_exists($this->class, 'retry')) {

@@ -20,5 +20,11 @@ interface TaskHandler
 
     public function compensate(Task $task): void;
 
+    /**
+     * Undoes what creating the task changed, when it is cancelled. A note for
+     * the task's history if something couldn't be undone.
+     */
+    public function cancelled(Task $task): ?string;
+
     public function retry(Task $task): ?Action;
 }
