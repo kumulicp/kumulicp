@@ -55,6 +55,7 @@ return [
         'sources' => [
             'profile' => 'Registrada',
             'generic' => 'Genérica',
+            'helmforge' => 'HelmForge',
         ],
         'added' => ':app agregada',
         'updated' => ':app actualizada',

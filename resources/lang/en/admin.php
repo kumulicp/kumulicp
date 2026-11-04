@@ -111,6 +111,7 @@ return [
         'sources' => [
             'profile' => 'Registered',
             'generic' => 'Generic',
+            'helmforge' => 'HelmForge',
         ],
         'added' => ':app added',
         'updated' => ':app updated',

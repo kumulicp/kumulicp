@@ -5,9 +5,11 @@ namespace App;
 use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Support\VersionUpdates\VersionComparator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -32,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Collection<int, AppPlan> $plans
  * @property-read Collection<int, AppRole> $roles
  * @property-read Collection<int, AppScreenshot> $screenshots
+ * @property-read Collection<int, Tag> $tags
  */
 class Application extends Model
 {
@@ -89,6 +92,41 @@ class Application extends Model
     public function chartSource()
     {
         return $this->belongsTo(ChartSource::class, 'chart_source_id');
+    }
+
+    /**
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'application_tag');
+    }
+
+    /**
+     * @param  Builder<Application>  $query
+     */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        if ($term === null || trim($term) === '') {
+            return;
+        }
+
+        $like = '%'.addcslashes(trim($term), '\%_').'%';
+
+        $query->where(fn (Builder $query) => $query->where('name', 'like', $like)->orWhere('slug', 'like', $like));
+    }
+
+    /**
+     * Applications carrying any of the given tag slugs.
+     *
+     * @param  Builder<Application>  $query
+     * @param  array<int, string>  $slugs
+     */
+    public function scopeWithAnyTag(Builder $query, array $slugs): void
+    {
+        if ($slugs) {
+            $query->whereHas('tags', fn (Builder $query) => $query->whereIn('tags.slug', $slugs));
+        }
     }
 
     public function organizations()
