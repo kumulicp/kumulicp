@@ -14,6 +14,11 @@ body {
     font-family: var(--font-sans);
 }
 
+/* Stretch a Vuestic input to its container; used in pages and in modals, which render outside the page */
+.full-width {
+    width: 100%;
+}
+
 a {
     color: var(--va-primary);
 }

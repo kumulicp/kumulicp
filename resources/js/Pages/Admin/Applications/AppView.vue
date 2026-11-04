@@ -71,10 +71,6 @@ export default {
 </script>
 
 <style>
-.full-width {
-  width: 100%
-}
-
 .compatibility-list {
   display: flex;
   flex-wrap: wrap;
