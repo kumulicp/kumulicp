@@ -49,8 +49,7 @@ const submit = () => {
             v-model="form.reason"
             id="bypassReason"
             :label="$t('admin.versionTests.bypass.reason')"
-            class="mb-3"
-            style="width: 100%"
+            class="mb-3 full-width"
             required-mark
             :min-rows="3"
             :error="!!form.errors.reason"
