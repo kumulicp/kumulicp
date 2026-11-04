@@ -2,7 +2,8 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import VersionLayout from './VersionLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
-import { useForm } from '@inertiajs/vue3'
+import BypassTestsModal from '@/components/BypassTestsModal.vue'
+import { Link, useForm } from '@inertiajs/vue3'
 
 </script>
 <template>
@@ -11,7 +12,14 @@ import { useForm } from '@inertiajs/vue3'
   </Head>
   <div class="app-profile">
     <div class="row justify-center">
-      <va-button id="showEnableDisable" @click="showEnableDisable = !showEnableDisable">{{ version.toggle.label }}</va-button>
+      <va-button v-if="version.toggle.state == 'disable' || version.test.can_enable" id="showEnableDisable" @click="showEnableDisable = !showEnableDisable">{{ version.toggle.label }}</va-button>
+      <template v-else>
+        <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
+        <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
+        <va-button id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
+      </template>
+      <va-button v-if="version.is_active && mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: version.version }) }}</va-button>
+      <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
       <va-modal v-model="showEnableDisable" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
           <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.version+'/'+version.toggle.state)">
@@ -31,7 +39,31 @@ import { useForm } from '@inertiajs/vue3'
           </form>
         </template>
       </va-modal>
+      <va-modal v-model="showMassUpgrade" no-outside-dismiss no-padding size="small" class="p-0">
+        <template #content="{ ok }">
+          <form @submit.prevent="massUpgradeForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
+            <va-card-title class="m-0">{{ $t('admin.versions.massUpgradeTitle') }}</va-card-title>
+            <va-card-content class="m-0">
+              {{ $t('admin.versions.massUpgradeWarning', { count: mass_upgrade.count, version: version.version }) }}
+            </va-card-content>
+            <va-card-actions align="right" class="">
+              <va-button color="textInverted" :disabled="massUpgradeForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+              <va-button type="submit" id="confirmMassUpgrade" :disabled="massUpgradeForm.processing" class="mr-2 mb-2">{{ $t('admin.versions.massUpgradeConfirm') }}</va-button>
+            </va-card-actions>
+          </form>
+        </template>
+      </va-modal>
+      <BypassTestsModal v-model="showBypass" :app="app" :version="version" />
     </div>
+    <va-alert v-if="!version.is_active && !version.test.can_enable && version.test.gate !== 'running'" id="testRequired" color="warning" border="top" border-color="warning" class="my-3">
+      {{ version.test.gate === 'stale' ? $t('admin.versions.testStale') : $t('admin.versions.testRequired') }}
+    </va-alert>
+    <va-alert v-if="version.test.gate === 'bypassed' && version.test.bypassed_by" id="testBypassed" color="warning" outline class="my-3">
+      {{ $t('admin.versions.testBypassedBy', { name: version.test.bypassed_by }) }} {{ version.test.bypass_reason }}
+    </va-alert>
+    <va-alert v-if="version.is_active && version.test.gate === 'stale'" id="testChanged" color="info" outline class="my-3">
+      {{ $t('admin.versions.testChangedEnabled') }}
+    </va-alert>
     <va-alert v-if="recommendations.length > 0" outline>
       <va-accordion
         v-model="showRecommendations"
@@ -337,6 +369,7 @@ export default {
     app: Object,
     can: Object,
     recommendations: Object,
+    mass_upgrade: Object,
     image_registries: Array,
     helm_repo_secrets: Array
   },
@@ -348,6 +381,10 @@ export default {
         { value: 'remote', text: this.$t('admin.versions.remote') }
       ],
       showEnableDisable: false,
+      showBypass: false,
+      showMassUpgrade: false,
+      testForm: useForm({}),
+      massUpgradeForm: useForm({}),
       showRecommendations: false,
       showAddImageRegistry: false,
       showAddHelmRepo: false,

@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Enums\AccessType;
+use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -83,6 +84,24 @@ class Application extends Model
     public function instances(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'application_id');
+    }
+
+    /**
+     * The installs of real customers running an older version than the given
+     * one. Test orgs are left out: they are deleted, not upgraded.
+     *
+     * @return Collection<int, AppInstance>
+     */
+    public function instancesBehind(AppVersion $version): Collection
+    {
+        $comparator = new VersionComparator;
+
+        return $this->instances()
+            ->whereIn('organization_id', Organization::notTest()->select('organizations.id'))
+            ->with('version')
+            ->get()
+            ->filter(fn (AppInstance $instance) => $instance->version && $comparator->compare($version->name, $instance->version->name) > 0)
+            ->values();
     }
 
     public function children()

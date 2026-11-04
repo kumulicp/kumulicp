@@ -6,7 +6,6 @@ use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Actions\Prerequisites;
-use App\AppInstance;
 use App\AppVersion;
 use App\Notifications\TimedAppUpgrade;
 use App\Organization;
@@ -35,13 +34,9 @@ class MassApplicationUpgrade extends NativeAction
 
     public static function handle(Task $task): ActionResult
     {
-        $organizations_with_version = AppInstance::where('application_id', $task->application_id)->get();
-
-        foreach ($organizations_with_version as $app_instance) {
-            if ($app_instance->organization && $app_instance->version->name < $task->version->name) {
-                ActionFacade::execute(new ApplicationUpgrade($app_instance, $task->version));
-                $app_instance->organization->notifyAdmins(new TimedAppUpgrade($app_instance));
-            }
+        foreach ($task->application->instancesBehind($task->version) as $app_instance) {
+            ActionFacade::execute(new ApplicationUpgrade($app_instance, $task->version));
+            $app_instance->organization->notifyAdmins(new TimedAppUpgrade($app_instance));
         }
 
         return ActionResult::done();

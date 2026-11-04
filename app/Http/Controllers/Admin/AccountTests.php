@@ -10,6 +10,7 @@ use App\AppVersion;
 use App\Http\Controllers\Controller;
 use App\Plan;
 use App\Support\Facades\Action;
+use App\VersionTestStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
@@ -17,7 +18,8 @@ class AccountTests extends Controller
 {
     public function index()
     {
-        $tests = AccountTest::paginate(10);
+        // Version test runs keep a test of their own per step; they are followed on the version
+        $tests = AccountTest::whereNotIn('id', VersionTestStep::whereNotNull('account_test_id')->select('account_test_id'))->paginate(10);
 
         return inertia()->render('Admin/Tests/TestsList', [
             'tests' => $tests->map(function ($test) {

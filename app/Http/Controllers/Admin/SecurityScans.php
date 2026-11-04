@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Security\RunSecurityScan;
 use App\AppInstance;
 use App\Http\Controllers\Controller;
+use App\Organization;
 use App\OrgDomain;
 use App\OrgServer;
 use App\SecurityFinding;
@@ -73,7 +74,7 @@ class SecurityScans extends Controller
                 'page' => $scans->currentPage(),
             ],
             'summary' => $summary,
-            'org_servers' => OrgServer::with('organization', 'server')->get()->map(fn ($org_server) => [
+            'org_servers' => OrgServer::with('organization', 'server')->whereIn('organization_id', Organization::notTest()->select('organizations.id'))->get()->map(fn ($org_server) => [
                 'id' => $org_server->id,
                 'organization_id' => $org_server->organization_id,
                 'name' => ($org_server->organization->name ?? 'Org').' - '.($org_server->server->name ?? $org_server->id),

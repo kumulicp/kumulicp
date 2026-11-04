@@ -2,12 +2,15 @@
 
 namespace App;
 
+use App\Enums\VersionTestRunStatus;
+use App\Support\VersionTesting\VersionFingerprint;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
 use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
@@ -52,6 +55,61 @@ class AppVersion extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
+    }
+
+    /**
+     * @return HasMany<VersionTestRun, $this>
+     */
+    public function testRuns(): HasMany
+    {
+        return $this->hasMany(VersionTestRun::class, 'app_version_id')->orderByDesc('id');
+    }
+
+    /**
+     * Where this version stands before it can be enabled: running, passed,
+     * bypassed, failed, stale (changed since it was approved) or untested.
+     */
+    public function testGate(): string
+    {
+        if ($this->testRuns()->where('status', VersionTestRunStatus::RUNNING->value)->exists()) {
+            return 'running';
+        }
+
+        $run = $this->latestFinishedTestRun();
+
+        if (! $run) {
+            return 'untested';
+        }
+
+        if ($run->status === VersionTestRunStatus::FAILED) {
+            return 'failed';
+        }
+
+        if ($run->fingerprint !== (new VersionFingerprint)->for($this)) {
+            return 'stale';
+        }
+
+        return $run->status->value;
+    }
+
+    /**
+     * Whether the tests were passed or bypassed and nothing has changed since.
+     */
+    public function canBeEnabled(): bool
+    {
+        return in_array($this->testGate(), ['passed', 'bypassed'], true);
+    }
+
+    // The most recent run that reached a verdict; cancelled and running runs say nothing
+    public function latestFinishedTestRun(): ?VersionTestRun
+    {
+        return $this->testRuns()
+            ->whereIn('status', [
+                VersionTestRunStatus::PASSED->value,
+                VersionTestRunStatus::BYPASSED->value,
+                VersionTestRunStatus::FAILED->value,
+            ])
+            ->first();
     }
 
     public function imageRegistry()
