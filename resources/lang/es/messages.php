@@ -168,7 +168,9 @@ return [
         ],
         'subscription' => [
             'updated_title' => '¡Suscripción actualizada!',
-            'updated' => 'La suscripción de tu organización se ha actualizado a: :plan',
+            'base_plan_changed' => 'El plan de tu organización se cambió de :from a :to.',
+            'app_plan_changed' => 'El plan de :app se cambió de :from a :to.',
+            'no_plan' => 'sin plan',
             'update_failed' => 'Tu suscripción no pudo actualizarse. Lo estamos investigando de inmediato.',
         ],
         'critical_log' => [
