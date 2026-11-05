@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b4a5f0821b8fd9f16e87de5d7fde942b",
+    "content-hash": "b8d3d569b91ae7e210b80e8f99b38709",
     "packages": [
         {
             "name": "api-ecosystem-for-laravel/dingo-api",
@@ -4502,16 +4502,16 @@
         },
         {
             "name": "nnjeim/world",
-            "version": "1.1.39",
+            "version": "2.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nnjeim/world.git",
-                "reference": "1a419baf4e9dc6e83bdb392c8c8ebf328135856a"
+                "reference": "69629f92266b7cb0a429ab53ed84b580588f32fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nnjeim/world/zipball/1a419baf4e9dc6e83bdb392c8c8ebf328135856a",
-                "reference": "1a419baf4e9dc6e83bdb392c8c8ebf328135856a",
+                "url": "https://api.github.com/repos/nnjeim/world/zipball/69629f92266b7cb0a429ab53ed84b580588f32fe",
+                "reference": "69629f92266b7cb0a429ab53ed84b580588f32fe",
                 "shasum": ""
             },
             "require": {
@@ -4569,9 +4569,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nnjeim/world/issues",
-                "source": "https://github.com/nnjeim/world/tree/1.1.39"
+                "source": "https://github.com/nnjeim/world/tree/2.0.1"
             },
-            "time": "2026-09-22T05:29:27+00:00"
+            "time": "2026-10-10T03:18:50+00:00"
         },
         {
             "name": "nunomaduro/termwind",
