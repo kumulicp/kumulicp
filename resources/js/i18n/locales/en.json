@@ -260,7 +260,10 @@
       "subdomainPlaceholder": "Type your subdomain",
       "primaryDomainPlaceholder": "Choose your primary domain",
       "noDomainsWarning": "Register, transfer or connect an exist domain to create a subdomain",
-      "version": "Version"
+      "version": "Version",
+      "testRequired": "Version {version} has to pass its tests, or have them bypassed, before this shared app can be activated.",
+      "noVersion": "No enabled version",
+      "viewTests": "View tests"
     },
     "logs": {
       "logs": "Logs",

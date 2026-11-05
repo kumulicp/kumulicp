@@ -260,7 +260,10 @@
       "subdomainPlaceholder": "Escribe tu subdominio",
       "primaryDomainPlaceholder": "Elige tu dominio principal",
       "noDomainsWarning": "Registra, transfiere o conecta un dominio existente para crear un subdominio",
-      "version": "Versión"
+      "version": "Versión",
+      "testRequired": "La versión {version} debe superar sus pruebas, o tenerlas omitidas, antes de poder activar esta aplicación compartida.",
+      "noVersion": "Sin versión habilitada",
+      "viewTests": "Ver pruebas"
     },
     "logs": {
       "logs": "Registros",

@@ -4,9 +4,13 @@ namespace Tests\Feature\Admin;
 
 use App\Application;
 use App\AppPlan;
+use App\AppVersion;
+use App\Enums\VersionTestRunStatus;
 use App\Organization;
 use App\Server;
+use App\Support\VersionTesting\VersionFingerprint;
 use App\User;
+use App\VersionTestRun;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -100,5 +104,110 @@ class SharedAppsTest extends TestCase
         $this->assertFalse($visiblePlan->isSharedAppActive());
         $this->assertFalse($hiddenWithoutServer->isSharedAppActive());
         $this->assertTrue($hiddenWithServer->isSharedAppActive());
+    }
+
+    private function recordTestRun(AppVersion $version, VersionTestRunStatus $status): void
+    {
+        $run = new VersionTestRun;
+        $run->application_id = $version->application_id;
+        $run->app_version_id = $version->id;
+        $run->status = $status;
+        $run->fingerprint = (new VersionFingerprint)->for($version);
+        $run->finished_at = now();
+        $run->save();
+    }
+
+    private function activeVersion(Application $app): AppVersion
+    {
+        $version = $app->versions()->where('status', 'active')->firstOrFail();
+        $version->testRuns()->delete();
+
+        return $version;
+    }
+
+    private function activationRequest(User $admin, Application $app)
+    {
+        return $this->actingAs($admin)->post('/admin/service/shared-apps', [
+            'app' => $app->id,
+            'label' => 'My Shared App',
+            'activate' => true,
+            'web_server' => Server::factory()->create(['type' => 'web'])->id,
+        ]);
+    }
+
+    public function test_cannot_activate_a_shared_app_whose_version_has_not_been_tested()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $this->activeVersion($app);
+
+        $this->activationRequest($admin, $app)->assertSessionHasErrors('app');
+
+        $this->assertNull(AppPlan::where('name', 'My Shared App')->first());
+    }
+
+    public function test_cannot_activate_a_shared_app_whose_version_failed_or_changed_since_testing()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $version = $this->activeVersion($app);
+
+        $this->recordTestRun($version, VersionTestRunStatus::FAILED);
+        $this->activationRequest($admin, $app)->assertSessionHasErrors('app');
+
+        $version->testRuns()->delete();
+        $this->recordTestRun($version, VersionTestRunStatus::PASSED);
+        $version->admin_path = '/changed-after-testing';
+        $version->save();
+        $this->activationRequest($admin, $app)->assertSessionHasErrors('app');
+    }
+
+    public function test_the_version_gate_does_not_apply_when_the_shared_app_is_not_activated()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $this->activeVersion($app);
+
+        $this->actingAs($admin)->post('/admin/service/shared-apps', [
+            'app' => $app->id,
+            'label' => 'My Independent App',
+            'activate' => false,
+        ])->assertSessionDoesntHaveErrors();
+    }
+
+    public function test_a_shared_app_can_be_activated_once_its_version_passed_or_was_bypassed()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $version = $this->activeVersion($app);
+
+        foreach ([VersionTestRunStatus::PASSED, VersionTestRunStatus::BYPASSED] as $status) {
+            $version->testRuns()->delete();
+            $this->recordTestRun($version, $status);
+
+            $this->activationRequest($admin, $app)->assertSessionDoesntHaveErrors('app');
+        }
+    }
+
+    public function test_the_list_reports_whether_each_apps_version_can_be_activated()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $version = $this->activeVersion($app);
+
+        $this->actingAs($admin)->get('/admin/service/shared-apps')->assertInertia(fn ($page) => $page
+            ->where('available_apps.0.test.gate', 'untested')
+            ->where('available_apps.0.test.can_activate', false)
+            ->where('available_apps.0.test.version', $version->name));
+
+        $this->recordTestRun($version, VersionTestRunStatus::BYPASSED);
+
+        $this->actingAs($admin)->get('/admin/service/shared-apps')->assertInertia(fn ($page) => $page
+            ->where('available_apps.0.test.can_activate', true));
     }
 }
