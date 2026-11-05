@@ -222,4 +222,32 @@ class SharedAppsTest extends TestCase
         // MariaDB rejects the insert outright when settings is left out
         $this->assertSame([], $shared->settings);
     }
+
+    public function test_the_list_only_offers_apps_that_can_be_shared()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $sharable = Application::where('slug', 'demo_app')->firstOrFail();
+        // WordPress's profile doesn't declare it as shareable
+        $wordpress = Application::factory()->create(['slug' => 'wordpress', 'name' => 'WordPress']);
+
+        $this->actingAs($admin)->get('/admin/service/shared-apps')->assertInertia(fn ($page) => $page
+            ->where('available_apps', fn ($apps) => collect($apps)->pluck('id')->contains($sharable->id)
+                && collect($apps)->pluck('id')->doesntContain($wordpress->id)));
+    }
+
+    public function test_an_app_that_cannot_be_shared_cannot_be_added()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $wordpress = Application::factory()->create(['slug' => 'wordpress', 'name' => 'WordPress']);
+
+        $this->actingAs($admin)->post('/admin/service/shared-apps', [
+            'app' => $wordpress->id,
+            'label' => 'My WordPress',
+            'activate' => false,
+        ])->assertSessionHasErrors('app');
+
+        $this->assertNull(AppPlan::where('name', 'My WordPress')->first());
+    }
 }
