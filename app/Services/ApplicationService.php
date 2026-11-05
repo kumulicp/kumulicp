@@ -7,6 +7,7 @@ use App\Application;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\Enums\ApplicationSource;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneProfile;
 use App\Integrations\Applications\GenericAppProfile;
@@ -309,6 +310,7 @@ class ApplicationService
         if (Arr::has($this->applications, $app_name)) {
             $application = new Application;
             $application->slug = $app_name;
+            $application->source = ApplicationSource::Profile;
             $application->name = Str::headline($app_name);
             $application->short_description = '';
             $application->description = '';

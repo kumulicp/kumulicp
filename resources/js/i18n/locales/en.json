@@ -612,7 +612,8 @@
       "shortDescriptionMessage": "Shows in the Discover list and should be kept brief",
       "description": "Page Description",
       "screenshots": "Screenshots",
-      "screenshotsMessage": "Shown on the app view and Discover pages"
+      "screenshotsMessage": "Shown on the app view and Discover pages",
+      "source": "Source"
     },
     "backups": {
       "action": "Action",

@@ -612,7 +612,8 @@
       "status": "Estado",
       "shortDescription": "Descripción Corta",
       "shortDescriptionMessage": "Aparece en la lista de Descubrir y debe mantenerse breve",
-      "description": "Descripción de la Página"
+      "description": "Descripción de la Página",
+      "source": "Origen"
     },
     "backups": {
       "action": "Acción",

@@ -108,6 +108,10 @@ return [
     'denied' => 'You must be an administrator to continue',
     'applications' => [
         'apps' => 'Apps',
+        'sources' => [
+            'profile' => 'Registered',
+            'generic' => 'Generic',
+        ],
         'added' => ':app added',
         'updated' => ':app updated',
         'enabled' => ':app is enabled',
