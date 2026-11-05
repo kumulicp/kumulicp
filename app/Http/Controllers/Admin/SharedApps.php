@@ -283,8 +283,13 @@ class SharedApps extends Controller
             $shared->slug = 'shared';
             $shared->name = __('admin.shared_apps.shared_apps');
             $shared->type = 'shared';
-            // The column is NOT NULL JSON with no default, so MariaDB rejects an insert that omits it
+            // These columns are NOT NULL with no default. The shared organization has no
+            // contact or address, but leaving them out only works when the database isn't
+            // strict, and MariaDB rejects a missing JSON settings value either way.
             $shared->settings = [];
+            foreach (['email', 'phone_number', 'contact_first_name', 'contact_last_name', 'contact_email', 'contact_phone_number', 'street', 'zipcode', 'city', 'state', 'country'] as $column) {
+                $shared->{$column} = '';
+            }
             $shared->secretpw = Str::password(20, true, true, false, false);
             $shared->description = __('admin.shared_apps.shared_apps_description');
             $shared->status = 'active';
