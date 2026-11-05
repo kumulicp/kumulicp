@@ -143,9 +143,9 @@ export default {
         active: 'check-circle',
         activating: 'rocket',
         updating: 'spinner',
-        deactivating: 'trash',
+        deactivating: 'explosion',
         deactivated: 'ban',
-        deleting: 'trash'
+        deleting: 'explosion'
       },
       deactivate: useForm({}),
       interval: ''
