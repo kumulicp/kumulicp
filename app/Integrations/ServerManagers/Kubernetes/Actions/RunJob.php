@@ -2,11 +2,9 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\Actions;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Enums\TaskErrorCode;
-use App\Enums\TaskStatus;
 use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Kubernetes\Charts\Job\RebuildableJobChart;
 use App\OrgServer;
@@ -83,19 +81,14 @@ class RunJob extends NativeAction
         ]);
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        // A task made before charts were stored this way can't be rebuilt: it keeps
-        // its values and fails clearly when it runs
-        if (! $job_chart = self::chart($task)) {
-            return null;
+        // A task made before charts were stored this way keeps its values and
+        // fails clearly when it runs. Otherwise only what it was made with stays:
+        // not the previous run's job.
+        if ($task->getValue('chart')) {
+            $task->custom_values = Arr::only($task->customValues(), ['chart', 'chart_args', 'job_name', 'org_server_id', 'namespace']);
         }
-
-        $org_server = OrgServer::find($task->getValue('org_server_id'));
-        $retry = new self($org_server, $job_chart, $task->getValue('job_name'), $task->getValue('namespace'));
-        $retry->status = TaskStatus::READY;
-
-        return $retry;
     }
 
     /**

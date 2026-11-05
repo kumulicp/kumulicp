@@ -4,10 +4,10 @@ use App\Actions\NativeAction;
 use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Integrations\ServerManagers\DockerMailServer\MailserverJobs;
-use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
-use App\OrgDomain;
+use App\Integrations\ServerManagers\Kubernetes\Actions\RunJob;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\NextcloudJobChart;
 use App\Organization;
+use App\OrgDomain;
 use App\OrgServer;
 use App\Support\Facades\Action;
 use App\Task;
@@ -90,7 +90,10 @@ it('fails clearly, without touching the cluster, a task made before charts were 
 
     expect($result->outcome)->toBe('fail');
     expect($result->code)->toBe(TaskErrorCode::JOB_UNAVAILABLE->value);
-    expect(RunJob::retry($task))->toBeNull();
+
+    // Retrying keeps its values for the message to be read
+    RunJob::reset($task);
+    expect($task->custom_values)->toHaveKey('job');
 });
 
 it('uses no serialize or unserialize on database contents anywhere in the application', function () {

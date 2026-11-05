@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\AppInstance;
@@ -42,13 +41,5 @@ class ApplicationSSOSetup extends NativeAction
 
         // The tasks waiting on this one are started as soon as it is complete
         return ActionResult::done();
-    }
-
-    public static function retry(Task $task): ?Action
-    {
-        $action = new self($task->app_instance);
-        $action->setCustomValues($task->custom_values);
-
-        return $action;
     }
 }

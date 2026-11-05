@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Actions\Organizations\SubscriptionUpdate;
@@ -24,13 +23,7 @@ class ApplicationDelete extends NativeAction
 
     public function __construct(AppInstance $app_instance, ?string $start_time = null, ?string $end_time = null)
     {
-        // Other instances' parent_id points here (shared-app children, or a
-        // type-level "same org" parent) -- deleting it out from under them
-        // orphans the FK and breaks anything that assumes a shared child's
-        // ->parent still resolves (e.g. LdapSupport::getAppRoleGroup()).
-        if ($app_instance->children()->notDeactivated()->exists()) {
-            throw new \Exception(__('messages.exception.shared_app_has_children', ['app' => $app_instance->label]));
-        }
+        self::guardNoChildren($app_instance);
 
         $this->organization = $app_instance->organization;
         $this->app_instance = Application::instance($app_instance);
@@ -46,11 +39,29 @@ class ApplicationDelete extends NativeAction
         $this->background = 1;
     }
 
-    // Once the task exists, and again when it is retried
+    /**
+     * Other instances' parent_id points here (shared-app children, or a
+     * type-level "same org" parent) -- deleting it out from under them
+     * orphans the FK and breaks anything that assumes a shared child's
+     * ->parent still resolves (e.g. LdapSupport::getAppRoleGroup()).
+     */
+    private static function guardNoChildren(AppInstance $app_instance): void
+    {
+        if ($app_instance->children()->notDeactivated()->exists()) {
+            throw new \Exception(__('messages.exception.shared_app_has_children', ['app' => $app_instance->label]));
+        }
+    }
+
+    // Once the task exists
     public function onCreate(Task $task)
     {
-        $this->app_instance->status = 'deleting';
-        $this->app_instance->save();
+        self::begin($task);
+    }
+
+    private static function begin(Task $task): void
+    {
+        $task->app_instance->status = 'deleting';
+        $task->app_instance->save();
     }
 
     public static function handle(Task $task): ActionResult
@@ -140,9 +151,14 @@ class ApplicationDelete extends NativeAction
         return null;
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        return new self($task->app_instance);
+        // Apps may have been given children since it failed
+        self::guardNoChildren($task->app_instance);
+
+        $task->custom_values = [];
+
+        self::begin($task);
     }
 
     public static function poll(Task $task): ActionResult
