@@ -60,7 +60,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
       </div>
 
       <div class="row mt-3">
-        <div class="flex flex-col md3">
+        <div class="flex flex-col md2">
           <va-input
             v-model="selected.search"
             id="filterSearch"
@@ -90,7 +90,18 @@ import { Link, useForm, router } from '@inertiajs/vue3'
             @update:modelValue="applyFilters"
           />
         </div>
-        <div class="flex flex-col md4">
+        <div class="flex flex-col md2">
+          <va-select
+            v-model="selected.capability"
+            id="filterCapability"
+            :label="$t('admin.apps.capability')"
+            :options="filter_options.capabilities"
+            value-by="value"
+            clearable
+            @update:modelValue="applyFilters"
+          />
+        </div>
+        <div class="flex flex-col md3">
           <va-select
             v-model="selected.tags"
             id="filterTags"
@@ -164,7 +175,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
 
 <script lang="ts">
 const STORAGE_KEY = 'admin.apps.filters'
-const DEFAULT_FILTERS = { search: '', status: 'enabled', source: '', tags: [] }
+const DEFAULT_FILTERS = { search: '', status: 'enabled', source: '', tags: [], capability: '' }
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -227,6 +238,7 @@ export default {
         search: (filters.search ?? '').trim(),
         status: filters.status || DEFAULT_FILTERS.status,
         source: filters.source || '',
+        capability: filters.capability || '',
         tags: [...(filters.tags ?? [])].sort()
       }
     },
@@ -245,6 +257,7 @@ export default {
       if (filters.search) query.search = filters.search
       if (filters.status !== DEFAULT_FILTERS.status) query.status = filters.status
       if (filters.source) query.source = filters.source
+      if (filters.capability) query.capability = filters.capability
       if (filters.tags.length) query.tags = filters.tags
       if (page && page > 1) query.page = page
 

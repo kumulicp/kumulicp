@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Application;
 use App\AppScreenshot;
 use App\Enums\ApplicationSource;
+use App\Integrations\Applications\AppProfile;
 use App\Tag;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -272,7 +273,7 @@ class ApplicationsTest extends TestCase
             ->get('/admin/apps?source=generic&tags[]=wiki&search=tag')
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Applications/AppsList')
-                ->where('filters', ['search' => 'tag', 'status' => 'enabled', 'source' => 'generic', 'tags' => ['wiki']])
+                ->where('filters', ['search' => 'tag', 'status' => 'enabled', 'source' => 'generic', 'tags' => ['wiki'], 'capability' => ''])
                 ->where('filter_options.sources', collect(ApplicationSource::cases())
                     ->map(fn ($source) => ['value' => $source->value, 'text' => $source->label()])->all())
                 // Only tags that are in use are offered
@@ -291,6 +292,32 @@ class ApplicationsTest extends TestCase
 
         $this->assertSame(['from_helmforge'], array_values(array_intersect($this->listApps(['source' => 'helmforge']), $mine)));
         $this->assertSame(['from_profile'], array_values(array_intersect($this->listApps(['source' => 'profile']), $mine)));
+    }
+
+    public function test_apps_list_filters_by_capability()
+    {
+        // The generic profile (used for unknown slugs) declares ldap, openid, shareable and helm_chart.
+        Application::factory()->create(['slug' => 'capable_generic']);
+        $mine = ['capable_generic'];
+
+        $this->assertSame($mine, array_values(array_intersect($this->listApps(['capability' => 'ldap']), $mine)));
+        $this->assertSame([], array_values(array_intersect($this->listApps(['capability' => 'multisite']), $mine)));
+
+        $this->actingAs($this->adminUser)
+            ->get('/admin/apps?capability=ldap')
+            ->assertInertia(fn ($page) => $page
+                ->where('filters.capability', 'ldap')
+                ->has('filter_options.capabilities', count(AppProfile::compatibilityCatalog()))
+            );
+    }
+
+    public function test_apps_list_rejects_an_unknown_capability()
+    {
+        $this->adminUser ??= $this->adminUser();
+
+        $this->actingAs($this->adminUser)
+            ->get('/admin/apps?capability=nonsense')
+            ->assertSessionHasErrors('capability');
     }
 
     public function test_apps_list_filters_by_any_of_the_selected_tags()

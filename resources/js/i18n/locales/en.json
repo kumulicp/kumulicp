@@ -599,6 +599,7 @@
       "settings": "Settings",
       "appWord": "App",
       "appsTitle": "Apps",
+      "capability": "Capability",
       "version": "Version",
       "chartVersion": "Helm Chart",
       "updatesAvailable": "Updates",

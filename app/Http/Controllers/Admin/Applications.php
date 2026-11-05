@@ -22,20 +22,33 @@ class Applications extends Controller
 {
     public function index(Request $request)
     {
+        $catalog = AppProfile::compatibilityCatalog();
+
         $filters = $request->validate([
             'search' => 'nullable|string|max:100',
             'status' => ['nullable', Rule::in(['enabled', 'disabled', 'all'])],
             'source' => ['nullable', Rule::enum(ApplicationSource::class)],
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:100',
+            'capability' => ['nullable', Rule::in(array_keys($catalog))],
         ]);
         $status = $filters['status'] ?? 'enabled';
+
+        // Capabilities live on the PHP app profiles rather than in the database,
+        // so resolve the matching slugs up front and filter the query by them.
+        $capability_slugs = ($filters['capability'] ?? null)
+            ? Application::pluck('slug')
+                ->filter(fn (string $slug) => ApplicationFacade::profile($slug)->isCompatible($filters['capability']))
+                ->values()
+                ->all()
+            : null;
 
         $apps = Application::with(['tags', 'versions' => fn ($query) => $query->where('status', 'active')])
             ->search($filters['search'] ?? null)
             ->withAnyTag($filters['tags'] ?? [])
             ->when($status !== 'all', fn ($query) => $query->where('enabled', $status === 'enabled'))
             ->when($filters['source'] ?? null, fn ($query, $source) => $query->where('source', $source))
+            ->when($capability_slugs !== null, fn ($query) => $query->whereIn('slug', $capability_slugs))
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
@@ -62,9 +75,14 @@ class Applications extends Controller
                 'status' => $status,
                 'source' => $filters['source'] ?? '',
                 'tags' => $filters['tags'] ?? [],
+                'capability' => $filters['capability'] ?? '',
             ],
             // Built from the enum so a new source shows up here without UI changes
             'filter_options' => [
+                'capabilities' => collect($catalog)
+                    ->map(fn ($flag, $key) => ['value' => $key, 'text' => $flag['label']])
+                    ->values()
+                    ->all(),
                 'sources' => collect(ApplicationSource::cases())
                     ->map(fn (ApplicationSource $source) => ['value' => $source->value, 'text' => $source->label()])
                     ->all(),

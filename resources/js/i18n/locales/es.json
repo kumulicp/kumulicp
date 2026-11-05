@@ -601,6 +601,7 @@
       "settings": "Configuración",
       "appWord": "Aplicación",
       "appsTitle": "Aplicaciones",
+      "capability": "Capacidad",
       "version": "Versión",
       "chartVersion": "Chart de Helm",
       "updatesAvailable": "Actualizaciones",
