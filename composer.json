@@ -22,7 +22,7 @@
         "offload-project/laravel-toggle": "*",
         "socialiteproviders/manager": "^4.9",
         "spatie/laravel-backup": "^10.0",
-        "spatie/laravel-permission": "^6.9",
+        "spatie/laravel-permission": "^8.3",
         "spatie/laravel-uptime-monitor": "^4.5",
         "tightenco/ziggy": "^2.3",
         "unisharp/laravel-filemanager": "^2.12"
