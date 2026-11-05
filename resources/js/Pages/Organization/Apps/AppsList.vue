@@ -145,7 +145,7 @@ export default {
         updating: 'spinner',
         deactivating: 'explosion',
         deactivated: 'ban',
-        deleting: 'trash'
+        deleting: 'explosion'
       },
       deactivate: useForm({}),
       interval: ''

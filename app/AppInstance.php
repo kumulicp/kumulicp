@@ -402,6 +402,22 @@ class AppInstance extends Model
         return $query->where('status', '!=', 'deactivated')->where('status', '!=', 'deactivating');
     }
 
+    /**
+     * Whether the app is being (or is about to be) removed rather than just
+     * scheduled for a later date. Uses the raw column because the 'date' cast
+     * truncates the time, which DeactivatedAppInstanceCheck does not.
+     */
+    public function isBeingRemoved(): bool
+    {
+        if ($this->status === 'deleting') {
+            return true;
+        }
+
+        $deactivate_at = $this->getRawOriginal('deactivate_at');
+
+        return $deactivate_at !== null && Carbon::parse($deactivate_at)->lte(now());
+    }
+
     public function standard_user_name()
     {
         return $this->name.'-standard';
