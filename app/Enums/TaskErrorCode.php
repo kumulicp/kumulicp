@@ -32,6 +32,8 @@ enum TaskErrorCode: string
     case UPDATE_USER_ROLE_FAILED = 'update_user_role_failed';
     case UPDATE_USER_ROLES_FAILED = 'update_user_roles_failed';
     case PROCESS_PERMISSIONS = 'process_permissions';
+    case JOB_CREATE_FAILED = 'job_create_failed';
+    case JOB_UNAVAILABLE = 'job_unavailable';
 
     /**
      * Whether it means something went wrong and the task is being tried again,

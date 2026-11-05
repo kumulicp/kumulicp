@@ -294,6 +294,7 @@ return [
             ],
             'error' => [
                 'job' => 'Tarea de Rancher - :job - :message',
+                'job_unavailable' => 'Tarea de Rancher - :job - esta tarea la creó una versión anterior y no se puede volver a ejecutar; vuelva a iniciarla desde donde se creó',
             ],
         ],
         'authentik' => [
