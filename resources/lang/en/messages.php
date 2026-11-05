@@ -173,7 +173,9 @@ return [
         ],
         'subscription' => [
             'updated_title' => 'Subscription Updated!',
-            'updated' => 'Your organization\'s subscription has been updated to: :plan',
+            'base_plan_changed' => 'Your organization\'s plan was changed from :from to :to.',
+            'app_plan_changed' => 'The plan for :app was changed from :from to :to.',
+            'no_plan' => 'no plan',
             'update_failed' => 'You\'re subscription failed to update. We\'re looking into immediately.',
         ],
         'critical_log' => [

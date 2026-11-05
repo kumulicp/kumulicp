@@ -64,7 +64,7 @@ class PaymentMethod extends Controller
 
         $payment_method = Billing::defaultPaymentMethod();
 
-        Action::execute(new SubscriptionUpdate($organization, Subscription::all()), background: true);
+        Action::execute(new SubscriptionUpdate($organization, Subscription::all(), forceBilling: true), background: true);
 
         $info = [
             'success' => 'success',
@@ -86,7 +86,7 @@ class PaymentMethod extends Controller
 
         if (Billing::hasDefaultPaymentMethod()) {
             Billing::deleteDefaultPaymentMethod();
-            Action::execute(new SubscriptionUpdate($organization, Subscription::all()), background: true);
+            Action::execute(new SubscriptionUpdate($organization, Subscription::all(), forceBilling: true), background: true);
 
             $subscription = Subscription::all();
             $plans = $subscription->get();
