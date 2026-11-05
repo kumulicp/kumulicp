@@ -11,6 +11,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Inertia\Middleware;
 use OffloadProject\Toggle\Facades\Toggle;
 use Tightenco\Ziggy\Ziggy;
@@ -125,10 +126,12 @@ class HandleInertiaRequests extends Middleware
                 ]);
             },*/
             'menu' => $request->user() ? $this->menu() : null,
-            'notices' => [
+            // Always included so partial reloads (e.g. polling) pick up the now-empty flash
+            // instead of keeping the previous notice and re-showing its toast every time.
+            'notices' => Inertia::always(fn () => [
                 'success' => session('success'),
                 'error' => session('error'),
-            ],
+            ]),
             'reset' => [
                 'menu' => session('reset_menu') !== null,
                 'step' => session('reset_step') !== null,
