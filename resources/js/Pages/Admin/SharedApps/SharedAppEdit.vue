@@ -9,6 +9,56 @@ import { useForm, Link } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('admin.sharedApps.appSettings') }} - Control Panel</title>
   </Head>
+  <va-card v-if="activation.pending" class="mb-4">
+    <va-card-title>{{ $t('admin.sharedApps.activateTitle') }}</va-card-title>
+    <va-card-content>
+      <p class="mb-3">{{ $t('admin.sharedApps.activateDescription', { app: app.label }) }}</p>
+      <va-alert v-if="!activation.can_activate" color="warning" icon="warning" class="mb-3">
+        {{ $t('admin.sharedApps.activationBlocked', { version: activation.version }) }}
+        <Link :href="activation.tests_url" class="ml-1">{{ $t('admin.sharedApps.viewTests') }}</Link>
+      </va-alert>
+      <form @submit.prevent="activateForm.post('/admin/service/shared-apps/' + app.id + '/activate')">
+        <va-select v-model="activateForm.web_server"
+          id="webServer"
+          required-mark
+          immediateValidation
+          :label="$t('admin.plans.webServer')"
+          class="mb-3"
+          value-by="value"
+          text-by="text"
+          :options="web_servers"
+          :error="$page.props.errors.web_server"
+          :error-messages="$page.props.errors.web_server" />
+        <va-select v-model="activateForm.database_server"
+          id="databaseServer"
+          immediateValidation
+          :label="$t('admin.plans.databaseServer')"
+          class="mb-3"
+          clearable
+          value-by="value"
+          text-by="text"
+          :options="database_servers"
+          :error="$page.props.errors.database_server"
+          :error-messages="$page.props.errors.database_server" />
+        <va-select v-model="activateForm.sso_server"
+          id="ssoServer"
+          immediateValidation
+          :label="$t('admin.plans.ssoServer')"
+          class="mb-3"
+          clearable
+          value-by="value"
+          text-by="text"
+          :options="sso_servers"
+          :error="$page.props.errors.sso_server"
+          :error-messages="$page.props.errors.sso_server" />
+        <va-button type="submit"
+          id="activate"
+          :disabled="activateForm.processing || !activation.can_activate">
+          {{ $t('admin.sharedApps.activate') }}
+        </va-button>
+      </form>
+    </va-card-content>
+  </va-card>
   <va-card class="mb-4">
     <va-card-content>
       <Link v-for="(tab, index) in planTabs" :href="tab.url" :key="index" class="mr-2">
@@ -100,6 +150,10 @@ export default {
     app: Object,
     domains: Object,
     errors: Object,
+    activation: Object,
+    web_servers: Array,
+    database_servers: Array,
+    sso_servers: Array,
     versions: Object,
     parent_domains: Object
   },
@@ -112,6 +166,11 @@ export default {
 
     return {
       planTabs,
+      activateForm: useForm({
+        web_server: null,
+        database_server: null,
+        sso_server: null
+      }),
       form: useForm({
         domain: this.app.domain,
         label: this.app.label,

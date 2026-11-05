@@ -21,6 +21,7 @@ use App\Jobs\Apps\CreateApplicationDatabase;
 use App\Notifications\ApplicationActivated;
 use App\Organization;
 use App\OrgSubdomain;
+use App\Services\AppInstanceService;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
@@ -38,6 +39,10 @@ class ApplicationActivate extends NativeAction
     // What to create the instance with. Only used by onCreate() when the task is
     // for a new activation; a retry already has its instance.
     private ?AppInstance $parent_app_instance = null;
+
+    // An instance that already exists but was never deployed (a shared app that
+    // was added and is now being activated). Deployed in place of making a new one.
+    private ?AppInstance $existing_instance = null;
 
     private ?string $label;
 
@@ -57,9 +62,10 @@ class ApplicationActivate extends NativeAction
      * is rebuilt for a retry, everything the task already holds (including the
      * app_instance_id of the instance it made).
      */
-    public function __construct(Organization $organization, App $app, AppPlan $plan, ?array $custom_values = [], ?AppInstance $parent_app_instance = null, ?AppVersion $version = null, ?string $label = null, ?OrgSubdomain $domain = null, ?array $configurations = null)
+    public function __construct(Organization $organization, App $app, AppPlan $plan, ?array $custom_values = [], ?AppInstance $parent_app_instance = null, ?AppVersion $version = null, ?string $label = null, ?OrgSubdomain $domain = null, ?array $configurations = null, ?AppInstance $existing_instance = null)
     {
         $custom_values ??= [];
+        $this->existing_instance = $existing_instance;
 
         $this->organization = $organization;
         $this->application = $app;
@@ -115,7 +121,7 @@ class ApplicationActivate extends NativeAction
      */
     public function onCreate(Task $task)
     {
-        if (! $task->app_instance_id) {
+        if (! $task->getValue('app_instance_id')) {
             $this->createInstance($task);
         }
 
@@ -128,17 +134,28 @@ class ApplicationActivate extends NativeAction
         }
     }
 
+    // Takes an instance that was set up earlier through to activation
+    private function adoptInstance(AppInstance $instance): AppInstanceService
+    {
+        $instance->status = 'activating';
+        $instance->save();
+
+        return Application::instance($instance);
+    }
+
     private function createInstance(Task $task): void
     {
-        $application = Application::activate(
-            organization: $this->organization,
-            application: $this->application,
-            version: $this->version,
-            plan: $this->plan,
-            parent_app: $this->parent_app_instance,
-            label: $this->label,
-            domain: $this->domain,
-        );
+        $application = $this->existing_instance
+            ? $this->adoptInstance($this->existing_instance)
+            : Application::activate(
+                organization: $this->organization,
+                application: $this->application,
+                version: $this->version,
+                plan: $this->plan,
+                parent_app: $this->parent_app_instance,
+                label: $this->label,
+                domain: $this->domain,
+            );
 
         // Straight away, so that a failure further on can't lead a retry to make a second one
         $task->app_instance_id = $application->id;
