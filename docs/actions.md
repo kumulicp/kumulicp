@@ -77,6 +77,11 @@ Register it in `ActionService::$actions` under a group and slug.
 `$values` are merged into `$task->custom_values`. `->then(fn (Task $task) => ...)`
 runs once the new state is saved.
 
+`$code` is a `App\Enums\TaskErrorCode` (a plain string still works for a code
+only your action uses). Add a case to the enum for each code you introduce;
+`Task::errorCode()` reads it back (null for a string the enum doesn't know), and a
+test fails if an `error_code` literal appears in `app/`.
+
 ### Exceptions
 
 Throw these from `handle()` or `poll()` instead of catching and setting a status:

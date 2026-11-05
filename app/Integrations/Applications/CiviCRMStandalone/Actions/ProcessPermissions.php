@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\CiviCRMStandalone\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\API\User;
@@ -50,7 +51,7 @@ class ProcessPermissions extends Action
             $user->find($username);
         } catch (ConnectionFailedException $e) {
             $task->error_message = $e->getMessage();
-            $task->error_code = 'connection_failed';
+            $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
             $task->restart();
 
             return;
@@ -61,7 +62,7 @@ class ProcessPermissions extends Action
                 $user->create($username, $roles);
             } catch (ConnectionFailedException $e) {
                 $task->error_message = $e->getMessage();
-                $task->error_code = 'connection_failed';
+                $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
                 $task->restart();
 
                 return;
@@ -70,7 +71,7 @@ class ProcessPermissions extends Action
             if ($user->hasError()) {
                 $task->error_message = $user->error();
                 $task->status = TaskStatus::PENDING;
-                $task->error_code = 'create_user_failed';
+                $task->error_code = TaskErrorCode::CREATE_USER_FAILED->value;
                 $task->save();
 
                 return;
@@ -80,7 +81,7 @@ class ProcessPermissions extends Action
                 $user->updateRoles($roles);
             } catch (ConnectionFailedException $e) {
                 $task->error_message = $e->getMessage();
-                $task->error_code = 'connection_failed';
+                $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
                 $task->restart();
 
                 return;
@@ -90,7 +91,7 @@ class ProcessPermissions extends Action
         if ($user->hasError()) {
             $task->error_message = $user->error();
             $task->status = TaskStatus::PENDING;
-            $task->error_code = 'update_user_roles_failed';
+            $task->error_code = TaskErrorCode::UPDATE_USER_ROLES_FAILED->value;
             $task->save();
 
             return;

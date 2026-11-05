@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Nextcloud\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\API\Users;
 use App\Support\AccountManager\UserManager;
@@ -81,7 +82,7 @@ class ProcessUserOptions extends Action
         } catch (\Throwable $e) {
             $task->status = TaskStatus::PENDING;
             $task->error_message = $e->getMessage();
-            $task->error_code = 'user_not_found';
+            $task->error_code = TaskErrorCode::USER_NOT_FOUND->value;
             $task->save();
         }
     }

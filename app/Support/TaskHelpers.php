@@ -8,12 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class TaskHelpers
 {
-    // Why a task is being retried, when it is because something went wrong.
-    // (TaskRunner::retryLater() also uses 'waiting' for a routine poll of a
-    // slow job, which isn't a problem.) `attempts` can't tell the two apart:
-    // it counts every run, and an action with a postGenerate() starts at 1.
-    private const RETRY_ERROR_CODES = ['connection_failed', 'error'];
-
     public $count;
 
     public function groupTasks($filters = [])
@@ -40,7 +34,7 @@ class TaskHelpers
         foreach ($tasks as $task) {
             $status = 'In Progress';
             $message = 'In Progress';
-            if (in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true) || in_array($task->error_code, self::RETRY_ERROR_CODES, true)) {
+            if (in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true) || $task->errorCode()?->isTransient()) {
                 $status = 'Failed';
                 $message = __('messages.action.tech_difficulties');
             }

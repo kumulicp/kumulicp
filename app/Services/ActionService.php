@@ -36,6 +36,7 @@ use App\Actions\Tests\ProvisionVersionTestSite;
 use App\Actions\Tests\ProvisionVersionTestStep;
 use App\AppInstance;
 use App\Contracts\Actions\TaskAction;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
@@ -184,7 +185,7 @@ class ActionService
                 $task->job_id = 0;
                 $task->status = TaskStatus::PENDING;
                 $task->error_message = $e->getMessage();
-                $task->error_code = 'connection_failed';
+                $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
                 $task->save();
             } catch (Throwable $e) {
                 $task->error_message = $e->getMessage();

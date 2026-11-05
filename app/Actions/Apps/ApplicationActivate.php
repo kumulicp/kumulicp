@@ -12,6 +12,7 @@ use App\AppInstance;
 use App\Application as App;
 use App\AppPlan;
 use App\AppVersion;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Events\ApplicationActivated as EventApplicationActivated;
 use App\Events\Apps\ApplicationActivating;
@@ -273,7 +274,7 @@ class ApplicationActivate extends NativeAction
                 return ActionResult::fail(__('messages.exception.app_not_found_on_server', [
                     'app' => $app_instance->application->name,
                     'guidance' => $server->notFoundMessage(),
-                ]), 'app_not_found');
+                ]), TaskErrorCode::APP_NOT_FOUND);
             }
 
             if ($server->isActive()) {

@@ -2,6 +2,7 @@
 
 namespace App\Services\Tasks;
 
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Jobs\RunAction;
 use App\Support\Facades\Action;
@@ -130,7 +131,7 @@ class TaskDispatcher
             } catch (Throwable $e) {
                 report($e);
                 $task->transition(TaskStatus::FAILED, TaskStatus::PENDING, [
-                    'error_code' => 'exception',
+                    'error_code' => TaskErrorCode::EXCEPTION->value,
                     'error_message' => $e->getMessage(),
                 ]);
             }
@@ -145,7 +146,7 @@ class TaskDispatcher
     {
         $blocked = $task->transition(TaskStatus::BLOCKED, TaskStatus::PENDING, [
             'blocked_from' => TaskStatus::PENDING->value,
-            'error_code' => 'dependency_failed',
+            'error_code' => TaskErrorCode::DEPENDENCY_FAILED->value,
             'error_message' => $message,
         ]);
 
@@ -331,7 +332,7 @@ class TaskDispatcher
             $message = __('messages.action.deadline_exceeded');
 
             $failed = $task->transition(TaskStatus::FAILED, $open, [
-                'error_code' => 'deadline_exceeded',
+                'error_code' => TaskErrorCode::DEADLINE_EXCEEDED->value,
                 'error_message' => $message,
             ]);
 
