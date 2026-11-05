@@ -367,6 +367,7 @@ return [
         'plan_description' => 'Auto-generated plan for the :app shared app',
         'plan_settings' => 'Plan Settings',
         'errors' => [
+            'not_shareable' => ':app can\'t be run as a shared app.',
             'no_version' => 'This app has no enabled version to activate.',
             'not_tested' => 'Version :version has to pass its tests, or have them bypassed, before this shared app can be activated.',
         ],

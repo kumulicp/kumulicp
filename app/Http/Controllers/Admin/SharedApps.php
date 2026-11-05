@@ -41,7 +41,7 @@ class SharedApps extends Controller
                     'status' => $app->status === 'active' ? __('labels.enabled') : __('labels.disabled'),
                 ];
             }),
-            'available_apps' => Application::all()->map(function ($app) {
+            'available_apps' => Application::all()->filter(fn ($app) => $this->isShareable($app))->values()->map(function ($app) {
                 $version = $app->versions()->where('status', 'active')->first();
 
                 return [
@@ -86,6 +86,14 @@ class SharedApps extends Controller
         ]);
     }
 
+    /**
+     * Whether the app's profile says it can be run as a shared app.
+     */
+    private function isShareable(Application $app): bool
+    {
+        return ApplicationFacade::profile($app)->isCompatible('shareable');
+    }
+
     public function store(Request $request)
     {
         /* Validate */
@@ -93,6 +101,13 @@ class SharedApps extends Controller
             'app' => [
                 'required',
                 'exists:applications,id',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $app = Application::find($value);
+
+                    if ($app && ! $this->isShareable($app)) {
+                        $fail(__('admin.shared_apps.errors.not_shareable', ['app' => $app->name]));
+                    }
+                },
                 // Deploying a shared app puts the app's enabled version in front of
                 // real users, so it must have passed its tests (or had them bypassed)
                 function (string $attribute, mixed $value, \Closure $fail) use ($request) {

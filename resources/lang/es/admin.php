@@ -282,6 +282,7 @@ return [
         'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
         'plan_settings' => 'Configuración del plan',
         'errors' => [
+            'not_shareable' => ':app no se puede ejecutar como aplicación compartida.',
             'no_version' => 'Esta aplicación no tiene ninguna versión habilitada para activar.',
             'not_tested' => 'La versión :version debe superar sus pruebas, o tenerlas omitidas, antes de poder activar esta aplicación compartida.',
         ],
