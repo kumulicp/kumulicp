@@ -51,6 +51,7 @@ use App\Services\Tasks\Handlers\NativeHandler;
 use App\Services\Tasks\Handlers\TaskHandler;
 use App\Services\Tasks\TaskDispatcher;
 use App\Task;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -218,10 +219,6 @@ class ActionService
 
     public function execute(Action $action, ?Task $parent_task = null, ?bool $background = null, bool $delay = false)
     {
-        if ($action->task_exists()) {
-            return;
-        }
-
         $task_group = rand();
 
         $task = new Task;
@@ -239,7 +236,11 @@ class ActionService
         $task->deadline_at = $action->deadline_minutes ? now()->addMinutes($action->deadline_minutes) : null;
         $task->custom_values = $action->customValues();
         $task->background = $background ?? $action->background;
-        $task->save();
+        $task->dedup_key = $action->dedupKey();
+
+        if (! $this->saveUnlessDuplicate($task, $action->replace)) {
+            return;
+        }
 
         // A delayed task with a parent starts once the parent is complete
         if ($parent_task && $delay) {
@@ -287,6 +288,43 @@ class ActionService
         Log::info(__('labels.task').': '.$task->description, ['organization_id' => $task->organization->id]);
 
         return $task;
+    }
+
+    /**
+     * Saves a new task, unless an identical one is still open: the unique index
+     * on tasks.dedup_open decides, so of two requests made at once exactly one
+     * gets a task. With $replace the open one is swapped out first, but only if
+     * it hasn't started: a task that is running is left to finish and the
+     * request is dropped.
+     */
+    private function saveUnlessDuplicate(Task $task, bool $replace): bool
+    {
+        if ($replace && $task->dedup_key) {
+            $this->removeSupersededTask($task->dedup_key);
+        }
+
+        try {
+            $task->save();
+        } catch (UniqueConstraintViolationException) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function removeSupersededTask(string $dedup_key): void
+    {
+        $not_started = array_map(
+            fn (TaskStatus $status) => $status->value,
+            [TaskStatus::PENDING, TaskStatus::READY, TaskStatus::FAILED, TaskStatus::BLOCKED],
+        );
+
+        // One statement, so a task that starts meanwhile can't be caught by it
+        Task::query()
+            ->where('dedup_key', $dedup_key)
+            ->whereIn('status', $not_started)
+            ->whereNull('claimed_at')
+            ->delete();
     }
 
     public function dispatch($category, $action, $params, $parent_task = null)

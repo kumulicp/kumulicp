@@ -221,6 +221,13 @@ class Copy extends Step
 Most actions don't need steps: one that starts something and polls for it is just
 `handle()` and `poll()`.
 
+## Duplicates
+
+`Action::execute()` creates no second task for a request identical to one that is still open (same action, organization, app instance and values; a failed or blocked task is still open, a complete or cancelled one isn't). The task stores a `dedup_key` and a unique index over the open tasks decides, so two requests made at once can't both get through: `execute()` returns `null` for the loser.
+
+- Override `dedupKey()` to return `null` for an action every request of which must run (`ApplicationActivate`), or put something that differs per request in the values (`SubscriptionUpdate`'s `requested_at`).
+- `public $replace = true` makes a new task stand in for the open one of the action whatever its values (`RunSecurityScan`). The old task is deleted only if it hasn't started (pending, ready, failed or blocked, and not claimed); if it is queued or running the new request is dropped, since the running one already covers it.
+
 ## Cancelling
 
 An admin can cancel a task that hasn't finished (not one a worker is running at that

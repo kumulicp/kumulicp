@@ -104,9 +104,9 @@ class ApplicationActivate extends NativeAction
 
     // Each request is its own activation, as it always was (the instance each made
     // used to keep two identical requests apart)
-    public function task_exists()
+    public function dedupKey(): ?string
     {
-        return false;
+        return null;
     }
 
     /**

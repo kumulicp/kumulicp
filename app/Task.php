@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Log;
  * @property string|null $task_group
  * @property int $notified
  * @property array|null $custom_values
+ * @property string|null $dedup_key
  * @property Carbon|null $queued_at
  * @property Carbon|null $claimed_at
  * @property Carbon|null $deadline_at
