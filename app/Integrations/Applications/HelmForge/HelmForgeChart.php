@@ -3,7 +3,7 @@
 namespace App\Integrations\Applications\HelmForge;
 
 use App\AppInstance;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
