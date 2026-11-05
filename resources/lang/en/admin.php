@@ -302,10 +302,6 @@ return [
     ],
     'tests' => [
         'tests' => 'Tests',
-        'updated' => 'Test updated',
-        'deleted' => 'Test deleted',
-        'running' => 'Test running',
-        'clearing' => 'Test accounts are being completed cleared',
     ],
     'announcements' => [
         'announcements' => 'Announcements',
