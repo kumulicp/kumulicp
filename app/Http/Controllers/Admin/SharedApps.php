@@ -283,6 +283,8 @@ class SharedApps extends Controller
             $shared->slug = 'shared';
             $shared->name = __('admin.shared_apps.shared_apps');
             $shared->type = 'shared';
+            // The column is NOT NULL JSON with no default, so MariaDB rejects an insert that omits it
+            $shared->settings = [];
             $shared->secretpw = Str::password(20, true, true, false, false);
             $shared->description = __('admin.shared_apps.shared_apps_description');
             $shared->status = 'active';

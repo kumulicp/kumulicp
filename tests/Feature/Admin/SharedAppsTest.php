@@ -210,4 +210,16 @@ class SharedAppsTest extends TestCase
         $this->actingAs($admin)->get('/admin/service/shared-apps')->assertInertia(fn ($page) => $page
             ->where('available_apps.0.test.can_activate', true));
     }
+
+    public function test_enabling_shared_apps_creates_the_shared_organization_with_settings()
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)->get('/admin/service/shared-apps/activate')->assertRedirect('/admin/service/shared-apps');
+
+        $shared = Organization::where('type', 'shared')->firstOrFail();
+
+        // MariaDB rejects the insert outright when settings is left out
+        $this->assertSame([], $shared->settings);
+    }
 }
