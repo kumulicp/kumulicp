@@ -59,30 +59,6 @@ class Application extends Integration
         return true;
     }
 
-    /**
-     * Whether the app answers at its address. Used to recheck an unavailable
-     * app, so it skips the block on API calls and doesn't touch the app's
-     * status itself. Any answer but a gateway error counts: the app doesn't
-     * need to like the request.
-     */
-    public function isReachable(): bool
-    {
-        $url = $this->baseURI();
-        $client = $this->client();
-
-        if ($this->useDevIngressResolve() && $resolve = $this->devIngressResolve($url)) {
-            $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
-        }
-
-        try {
-            return ! $this->isUnavailableStatus($client->get($url)->status());
-        } catch (ConnectionException) {
-            return false;
-        } finally {
-            $this->resetClient();
-        }
-    }
-
     // A confirmed-unavailable app gets no API calls until a recheck finds it
     // answering. Read from the database, not from $this->app_instance: that
     // model may have been loaded before another process marked the app.
