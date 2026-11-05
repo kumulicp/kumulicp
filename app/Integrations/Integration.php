@@ -4,6 +4,8 @@ namespace App\Integrations;
 
 use App\Exceptions\ConnectionFailedException;
 use App\Organization;
+use App\Services\AppInstance\AvailabilityService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -288,7 +290,17 @@ class Integration
             $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
         }
 
-        $response = $client->$request_type($url, $data);
+        $this->beforeRequest();
+
+        try {
+            $response = $client->$request_type($url, $data);
+        } catch (ConnectionException $e) {
+            // Nothing answered (refused, DNS, timeout)
+            $this->requestFailed($e->getMessage());
+
+            throw $this->connectionError($e, $url);
+        }
+
         $this->storeCookies($response->cookies());
 
         $this->status_code = $response->getStatusCode();
@@ -296,6 +308,12 @@ class Integration
 
         $body = $response->getBody();
         $contents = $body->getContents();
+
+        if ($this->isUnavailableStatus($this->status_code) && ! in_array($this->status_code, $this->ignored_error_codes)) {
+            $this->requestFailed("{$url} [{$this->status_code}] {$this->status_message}");
+        } else {
+            $this->requestSucceeded();
+        }
 
         if (in_array($this->status_code, $this->statusErrorCodes())) {
             $this->httpError(__('messages.exception.http_error'), $contents, $url);
@@ -307,6 +325,39 @@ class Integration
         if (! $this->save_session) {
             $this->resetClient();
         }
+    }
+
+    /**
+     * Called before every request. An integration that can refuse to talk to
+     * its target (an app that is down) throws here.
+     */
+    protected function beforeRequest(): void {}
+
+    /**
+     * The request got no answer from the target, or an answer that means the
+     * target is down (see isUnavailableStatus()).
+     */
+    protected function requestFailed(string $reason): void {}
+
+    /**
+     * The target answered, with anything but a down answer.
+     */
+    protected function requestSucceeded(): void {}
+
+    /**
+     * What to throw when the target can't be reached at all.
+     */
+    protected function connectionError(ConnectionException $exception, string $url): \Throwable
+    {
+        return $exception;
+    }
+
+    // Gateway answers that mean nothing is serving behind the address. 500 is
+    // deliberately not one: the app answered, one endpoint is just broken. The
+    // app monitors use the same rule (App\Monitoring\ResponseChecker).
+    protected function isUnavailableStatus(int $status): bool
+    {
+        return AvailabilityService::isDownStatus($status);
     }
 
     // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite below.

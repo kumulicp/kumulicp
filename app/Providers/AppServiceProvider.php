@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\AppInstance;
+use App\Monitoring\AppInstanceObserver;
 use App\Organization;
 use App\Services\AppProfileRegistry;
 use App\Services\BillingDriverRegistry;
@@ -47,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.proxy') == 'true') {
             URL::forceScheme('https');
         }
+
+        AppInstance::observe(AppInstanceObserver::class);
 
         Paginator::useBootstrap();
         Cashier::useCustomerModel(Organization::class);

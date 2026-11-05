@@ -37,7 +37,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                       :color="
                         app.status === 'active'
                           ? 'success'
-                          : app.status === 'updating'
+                          : app.status === 'updating' || app.status === 'unavailable'
                           ? 'warning'
                           : app.status === 'deactivating' || app.status === 'deactivated'
                           ? 'danger'
@@ -143,6 +143,7 @@ export default {
         active: 'check-circle',
         activating: 'rocket',
         updating: 'spinner',
+        unavailable: 'triangle-exclamation',
         deactivating: 'explosion',
         deactivated: 'ban',
         deleting: 'trash'
