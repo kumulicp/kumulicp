@@ -44,6 +44,13 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   class="mb-3"
                   :error="$page.props.errors.activate"
                   :error-messages="$page.props.errors.activate" />
+                <va-alert v-if="blockedByTests" color="warning" class="mb-3" icon="warning">
+                  <template v-if="selectedApp.test.version">
+                    {{ $t('admin.sharedApps.testRequired', { version: selectedApp.test.version }) }}
+                    <Link :href="selectedApp.test.url" class="ml-1">{{ $t('admin.sharedApps.viewTests') }}</Link>
+                  </template>
+                  <template v-else>{{ $t('admin.sharedApps.noVersion') }}</template>
+                </va-alert>
                 <template v-if="form.activate">
                   <va-select v-model="form.web_server"
                     id="webServer"
@@ -82,7 +89,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
               </va-card-content>
               <va-card-actions align="right" class="">
                 <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-                <va-button type="submit" :disabled="form.processing" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+                <va-button type="submit" :disabled="form.processing || blockedByTests" id="submit" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
               </va-card-actions>
             </form>
           </template>
@@ -157,6 +164,15 @@ export default {
         database_server: null,
         sso_server: null
       })
+    }
+  },
+  computed: {
+    selectedApp () {
+      return this.available_apps.find(app => app.id === this.form.app)
+    },
+    // Deploying a shared app needs its version to have passed testing or had it bypassed
+    blockedByTests () {
+      return this.form.activate && !!this.selectedApp && !this.selectedApp.test.can_activate
     }
   },
   watch: {

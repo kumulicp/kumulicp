@@ -42,9 +42,17 @@ class SharedApps extends Controller
                 ];
             }),
             'available_apps' => Application::all()->map(function ($app) {
+                $version = $app->versions()->where('status', 'active')->first();
+
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
+                    'test' => [
+                        'version' => $version?->name,
+                        'gate' => $version?->testGate(),
+                        'can_activate' => $version?->canBeEnabled() ?? false,
+                        'url' => $version ? "/admin/apps/{$app->slug}/versions/{$version->name}/tests" : null,
+                    ],
                 ];
             }),
             'web_servers' => Server::where('type', 'web')->get()->map(function ($server) {
@@ -82,7 +90,25 @@ class SharedApps extends Controller
     {
         /* Validate */
         $validated = $request->validate([
-            'app' => 'required|exists:applications,id',
+            'app' => [
+                'required',
+                'exists:applications,id',
+                // Deploying a shared app puts the app's enabled version in front of
+                // real users, so it must have passed its tests (or had them bypassed)
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    if (! $request->boolean('activate')) {
+                        return;
+                    }
+
+                    $version = Application::find($value)?->versions()->where('status', 'active')->first();
+
+                    if (! $version) {
+                        $fail(__('admin.shared_apps.errors.no_version'));
+                    } elseif (! $version->canBeEnabled()) {
+                        $fail(__('admin.shared_apps.errors.not_tested', ['version' => $version->name]));
+                    }
+                },
+            ],
             'label' => 'required|string',
             'activate' => 'boolean',
             'web_server' => [Rule::requiredIf($request->boolean('activate')), 'nullable', 'numeric', 'exists:servers,id'],
