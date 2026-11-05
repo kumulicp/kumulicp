@@ -48,10 +48,12 @@ class Applications extends Controller
                                 'name' => $task->action_slug,
                                 'description' => $task->description,
                             ];
-                        })->push($app->deactivate_at ? [
+                        })->push($app->deactivate_at || $app->status === 'deleting' ? [
                             'id' => 0,
                             'name' => '',
-                            'description' => __('labels.deactivates', ['date' => $app->deactivate_at->format('M d Y')]),
+                            'description' => $app->isBeingRemoved()
+                                ? __('labels.deleting')
+                                : __('labels.deactivates', ['date' => $app->deactivate_at->format('M d Y')]),
                         ] : []),
                         'organization' => [
                             'name' => $app->organization->name,

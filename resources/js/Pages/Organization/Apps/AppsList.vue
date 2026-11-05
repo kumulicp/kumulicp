@@ -143,7 +143,7 @@ export default {
         active: 'check-circle',
         activating: 'rocket',
         updating: 'spinner',
-        deactivating: 'explosion',
+        deactivating: 'trash',
         deactivated: 'ban',
         deleting: 'trash'
       },

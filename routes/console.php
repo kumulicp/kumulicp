@@ -39,7 +39,7 @@ Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
 Schedule::call(new ExpiredSubscriptionsCheck)->everyMinute();
-Schedule::call(new DeactivatedAppInstanceCheck)->everyMinute();
+Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
