@@ -28,8 +28,5 @@ abstract class NativeAction extends Action implements TaskAction
         return null;
     }
 
-    public static function retry(Task $task): ?Action
-    {
-        return null;
-    }
+    public static function reset(Task $task): void {}
 }

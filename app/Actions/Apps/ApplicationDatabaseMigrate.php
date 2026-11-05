@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\Apps\DatabaseMigrate\BackupDatabase;
 use App\Actions\Apps\DatabaseMigrate\CutOver;
 use App\Actions\Apps\DatabaseMigrate\PrepareMigration;
@@ -14,6 +13,7 @@ use App\OrgServer;
 use App\Server;
 use App\Support\Facades\Backup;
 use App\Task;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -66,11 +66,16 @@ class ApplicationDatabaseMigrate extends StepAction
     }
 
     // Only once the task really exists (not for a duplicate that
-    // Action::execute() turns away), and again when it is retried.
+    // Action::execute() turns away)
     public function onCreate(Task $task)
     {
-        $this->app_instance->status = 'updating';
-        $this->app_instance->save();
+        self::begin($task);
+    }
+
+    private static function begin(Task $task): void
+    {
+        $task->app_instance->status = 'updating';
+        $task->app_instance->save();
     }
 
     /**
@@ -123,10 +128,13 @@ class ApplicationDatabaseMigrate extends StepAction
         return [PrepareMigration::class, BackupDatabase::class, RestoreDatabase::class, CutOver::class];
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        // Starts over; the previous attempt already rolled itself back.
-        return new self($task->app_instance, Server::findOrFail($task->getValue('target_server_id')));
+        // Starts over; the previous attempt already rolled itself back, so only
+        // where it was going stays.
+        $task->custom_values = Arr::only($task->customValues(), ['target_server_id']);
+
+        self::begin($task);
     }
 
     /**

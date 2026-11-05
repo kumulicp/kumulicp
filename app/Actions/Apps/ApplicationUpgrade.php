@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Actions\Prerequisites;
@@ -15,6 +14,7 @@ use App\Services\AppInstance\AppStorageService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
 class ApplicationUpgrade extends NativeAction
@@ -38,10 +38,18 @@ class ApplicationUpgrade extends NativeAction
         $this->app_instance = Application::instance($app_instance);
     }
 
-    // Once the task exists, and again when it is retried
+    // Once the task exists
     public function onCreate(Task $task)
     {
-        $app_instance = $this->app_instance;
+        self::begin($task);
+    }
+
+    /**
+     * What making the task did to the app, which retrying it does again.
+     */
+    private static function begin(Task $task): void
+    {
+        $app_instance = Application::instance($task->app_instance);
 
         // Where cancelling goes back to; not overwritten when retried
         if (! $task->getValue('previous_version_id')) {
@@ -49,7 +57,7 @@ class ApplicationUpgrade extends NativeAction
             $task->save();
         }
 
-        $app_instance->version_id = $this->version->id;
+        $app_instance->version_id = $task->version_id;
         $app_instance->status = 'updating';
         $app_instance->save();
 
@@ -126,16 +134,13 @@ class ApplicationUpgrade extends NativeAction
         return $started ? __('messages.action.cancelled_upgrade_started') : null;
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        $retry = new self($task->app_instance, $task->version);
+        // What it was made with, and the version the app was on before the first
+        // try, which cancelling goes back to; not what the last run left
+        $task->custom_values = Arr::only($task->customValues(), ['notify', 'previous_version_id']);
 
-        // The version the app was on before the first try, which cancelling goes back to
-        if ($previous = $task->getValue('previous_version_id')) {
-            $retry->addCustomValue(['previous_version_id' => $previous]);
-        }
-
-        return $retry;
+        self::begin($task);
     }
 
     public static function poll(Task $task): ActionResult

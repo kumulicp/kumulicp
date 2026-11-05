@@ -31,11 +31,11 @@ class DummyAction extends NativeAction
         return ActionResult::wait();
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
         Log::info(__('actions.dummy.retry'), ['organization_id' => $task->organization->id]);
 
-        return new self;
+        $task->custom_values = ['id' => Str::random(3)];
     }
 
     public static function poll(Task $task): ActionResult

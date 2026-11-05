@@ -166,21 +166,7 @@ class ActionService
 
         if ($handler = $this->handlerFor($task)) {
             try {
-                if ($retry = $handler->retry($task)) {
-                    $task->attempts++;
-                    $task->error_message = '';
-                    $task->custom_values = $retry->custom_values;
-                    $task->save();
-
-                    if (method_exists($retry, 'postGenerate')) {
-                        $task->status = $retry->status;
-                        $retry->postGenerate($task);
-                    }
-
-                    if (method_exists($retry, 'onCreate')) {
-                        $retry->onCreate($task);
-                    }
-                }
+                $handler->reset($task);
             } catch (ConnectionFailedException $e) {
                 $task->job_id = 0;
                 $task->status = TaskStatus::PENDING;
