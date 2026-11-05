@@ -4,6 +4,7 @@ namespace App;
 
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
+use App\Monitoring\AppMonitor;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -51,6 +53,7 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, AdditionalStorage> $additional_storage
  * @property-read Collection<int, OrgSubdomain> $domains
  * @property-read OrgSubdomain|null $primary_domain
+ * @property-read AppMonitor|null $monitor
  */
 class AppInstance extends Model
 {
@@ -177,6 +180,17 @@ class AppInstance extends Model
     public function primary_domain()
     {
         return $this->belongsTo('App\OrgSubdomain', 'primary_domain_id');
+    }
+
+    /**
+     * The uptime monitor checking this app's address. An app that lives at
+     * its parent's address has none; see AppMonitors::monitorFor().
+     *
+     * @return HasOne<AppMonitor, $this>
+     */
+    public function monitor(): HasOne
+    {
+        return $this->hasOne(AppMonitor::class, 'app_instance_id');
     }
 
     public function base_domain()

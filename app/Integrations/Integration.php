@@ -4,6 +4,7 @@ namespace App\Integrations;
 
 use App\Exceptions\ConnectionFailedException;
 use App\Organization;
+use App\Services\AppInstance\AvailabilityService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -359,10 +360,11 @@ class Integration
     }
 
     // Gateway answers that mean nothing is serving behind the address. 500 is
-    // deliberately not here: the app answered, one endpoint is just broken.
+    // deliberately not one: the app answered, one endpoint is just broken. The
+    // app monitors use the same rule (App\Monitoring\ResponseChecker).
     protected function isUnavailableStatus(int $status): bool
     {
-        return in_array($status, [502, 503, 504], true);
+        return AvailabilityService::isDownStatus($status);
     }
 
     // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite below.
@@ -383,7 +385,7 @@ class Integration
      * published), this overrides just the connection target for the
      * request's host, leaving the Host header/TLS SNI untouched.
      */
-    protected function devIngressResolve(string $url): ?string
+    private function devIngressResolve(string $url): ?string
     {
         $gateway = config('services.dev_ingress_gateway');
 

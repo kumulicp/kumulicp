@@ -10,6 +10,7 @@ use App\Console\Calls\ExpiredSubscriptionsCheck;
 use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
+use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use App\Services\VersionTesting\VersionTestRunner;
 use Illuminate\Support\Facades\Schedule;
@@ -49,4 +50,8 @@ Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command(CheckUptime::class)->everyMinute();
+// Reads what CheckUptime found out about the apps marked unavailable (no HTTP of its own).
+// Registered after CheckUptime so a minute's results are acted on in the same minute.
+Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new SyncAppMonitors)->name('sync-app-monitors')->daily()->at('02:30')->onOneServer();
 Schedule::command(CheckCertificates::class)->daily();
