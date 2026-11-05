@@ -362,7 +362,9 @@ return [
         'updated' => ':app updated',
         'plan_description' => 'Auto-generated plan for the :app shared app',
         'plan_settings' => 'Plan Settings',
+        'activation_started' => 'Activation of :app has started. This takes roughly 10 minutes.',
         'errors' => [
+            'already_activated' => 'The shared app has already been activated.',
             'not_shareable' => ':app can\'t be run as a shared app.',
             'no_version' => 'This app has no enabled version to activate.',
             'not_tested' => 'Version :version has to pass its tests, or have them bypassed, before this shared app can be activated.',

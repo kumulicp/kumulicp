@@ -227,9 +227,11 @@
       "primaryDomainPlaceholder": "Elige tu dominio principal",
       "noDomainsWarning": "Registra, transfiere o conecta un dominio existente para crear un subdominio",
       "version": "Versión",
-      "testRequired": "La versión {version} debe superar sus pruebas, o tenerlas omitidas, antes de poder activar esta aplicación compartida.",
-      "noVersion": "Sin versión habilitada",
-      "viewTests": "Ver pruebas"
+      "viewTests": "Ver pruebas",
+      "activateTitle": "Activar esta aplicación compartida",
+      "activateDescription": "Al activar se despliega {app} para usuarios reales. Necesita un servidor donde ejecutarse.",
+      "activationBlocked": "La activación está bloqueada hasta que las pruebas de la versión {version} se hayan superado u omitido.",
+      "notActivated": "Aún no activada"
     },
     "logs": {
       "logs": "Registros",

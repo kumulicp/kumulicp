@@ -249,6 +249,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('shared-apps')->middleware('toggle:shared-apps')->group(function () {
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
             });
+            Route::post('shared-apps/{shared_app}/activate', 'Admin\SharedApps@deploy')->middleware('toggle:shared-apps')->name('service.shared-apps.deploy');
             Route::resource('shared-apps', 'Admin\SharedApps')->middleware('toggle:shared-apps');
             Route::prefix('domains')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');

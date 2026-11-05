@@ -227,9 +227,11 @@
       "primaryDomainPlaceholder": "Choose your primary domain",
       "noDomainsWarning": "Register, transfer or connect an exist domain to create a subdomain",
       "version": "Version",
-      "testRequired": "Version {version} has to pass its tests, or have them bypassed, before this shared app can be activated.",
-      "noVersion": "No enabled version",
-      "viewTests": "View tests"
+      "viewTests": "View tests",
+      "activateTitle": "Activate this shared app",
+      "activateDescription": "Activating deploys {app} for real users. It needs a server to run on.",
+      "activationBlocked": "Activating is blocked until the tests for version {version} have passed or been bypassed.",
+      "notActivated": "Not activated yet"
     },
     "logs": {
       "logs": "Logs",

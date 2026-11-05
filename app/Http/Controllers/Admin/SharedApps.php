@@ -9,7 +9,6 @@ use App\Application;
 use App\AppPlan;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
-use App\Jobs\Applications\AddLdapGroups;
 use App\Organization;
 use App\OrgDomain;
 use App\OrgSubdomain;
@@ -42,35 +41,9 @@ class SharedApps extends Controller
                 ];
             }),
             'available_apps' => Application::all()->filter(fn ($app) => $this->isShareable($app))->values()->map(function ($app) {
-                $version = $app->versions()->where('status', 'active')->first();
-
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
-                    'test' => [
-                        'version' => $version?->name,
-                        'gate' => $version?->testGate(),
-                        'can_activate' => $version?->canBeEnabled() ?? false,
-                        'url' => $version ? "/admin/apps/{$app->slug}/versions/{$version->name}/tests" : null,
-                    ],
-                ];
-            }),
-            'web_servers' => Server::where('type', 'web')->get()->map(function ($server) {
-                return [
-                    'value' => $server->id,
-                    'text' => $server->name.' ('.$server->status.')',
-                ];
-            }),
-            'database_servers' => Server::where('type', 'database')->get()->map(function ($server) {
-                return [
-                    'value' => $server->id,
-                    'text' => $server->name.' ('.$server->status.')',
-                ];
-            }),
-            'sso_servers' => Server::where('type', 'sso')->get()->map(function ($server) {
-                return [
-                    'value' => $server->id,
-                    'text' => $server->name.' ('.$server->status.')',
                 ];
             }),
             'meta' => $apps ? [
@@ -94,6 +67,11 @@ class SharedApps extends Controller
         return ApplicationFacade::profile($app)->isCompatible('shareable');
     }
 
+    /**
+     * Registers a shared app. Nothing is deployed here: that happens from the
+     * shared app's page (see deploy()), once its version has passed its tests
+     * or had them bypassed.
+     */
     public function store(Request $request)
     {
         /* Validate */
@@ -104,31 +82,18 @@ class SharedApps extends Controller
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $app = Application::find($value);
 
-                    if ($app && ! $this->isShareable($app)) {
-                        $fail(__('admin.shared_apps.errors.not_shareable', ['app' => $app->name]));
-                    }
-                },
-                // Deploying a shared app puts the app's enabled version in front of
-                // real users, so it must have passed its tests (or had them bypassed)
-                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
-                    if (! $request->boolean('activate')) {
+                    if (! $app) {
                         return;
                     }
 
-                    $version = Application::find($value)?->versions()->where('status', 'active')->first();
-
-                    if (! $version) {
+                    if (! $this->isShareable($app)) {
+                        $fail(__('admin.shared_apps.errors.not_shareable', ['app' => $app->name]));
+                    } elseif (! $app->versions()->where('status', 'active')->exists()) {
                         $fail(__('admin.shared_apps.errors.no_version'));
-                    } elseif (! $version->canBeEnabled()) {
-                        $fail(__('admin.shared_apps.errors.not_tested', ['version' => $version->name]));
                     }
                 },
             ],
             'label' => 'required|string',
-            'activate' => 'boolean',
-            'web_server' => [Rule::requiredIf($request->boolean('activate')), 'nullable', 'numeric', 'exists:servers,id'],
-            'database_server' => 'nullable|numeric|exists:servers,id',
-            'sso_server' => 'nullable|numeric|exists:servers,id',
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
@@ -138,7 +103,7 @@ class SharedApps extends Controller
         // Every shared app gets its own dedicated, hidden plan -- it's not
         // meant to be picked by organizations subscribing to the app, just
         // to hold the settings/features/configurations for this one shared
-        // instance.
+        // instance. It has no servers until the app is activated.
         $plan = new AppPlan;
         $plan->application_id = $application->id;
         $plan->name = $validated['label'];
@@ -152,37 +117,101 @@ class SharedApps extends Controller
             'storage' => [],
             'application' => [],
         ];
-
-        // A web server is only ever set when we're actually deploying this
-        // shared app through kumulicp -- it's what tells a hidden plan apart
-        // from one that's just a pointer to an independently installed app.
-        if ($validated['activate'] ?? false) {
-            $plan->web_server_id = $validated['web_server'] ?? null;
-            $plan->database_server_id = $validated['database_server'] ?? null;
-            $plan->sso_server_id = $validated['sso_server'] ?? null;
-        }
-
         $plan->save();
 
-        if ($validated['activate'] ?? false) {
-            // Dispatches the same deploy-and-track-to-completion flow as a
-            // normal app activation, instead of just creating an inert
-            // AppInstance row.
-            $task = Action::execute(new ApplicationActivate($organization, $application, $plan, version: $version, label: $validated['label']));
-            $app_instance = $task->app_instance;
-        } else {
-            $app_instance = ApplicationFacade::activate(
-                organization: $organization,
-                application: $application,
-                version: $version,
-                plan: $plan,
-                label: $validated['label']
-            )->get();
-        }
+        $app_instance = ApplicationFacade::activate(
+            organization: $organization,
+            application: $application,
+            version: $version,
+            plan: $plan,
+            label: $validated['label']
+        )->get();
 
-        AddLdapGroups::dispatch($app_instance);
+        // Added, not activated: it stays that way until deploy() is run
+        $app_instance->status = 'deactivated';
+        $app_instance->save();
 
         return redirect("/admin/service/shared-apps/{$app_instance->id}");
+    }
+
+    /**
+     * Deploys a shared app that was added but not yet activated. Only allowed
+     * once its version has passed its tests, or had them bypassed, since this
+     * puts it in front of real users.
+     */
+    public function deploy(Request $request, AppInstance $shared_app)
+    {
+        abort_unless($shared_app->organization->type === 'shared', 404);
+
+        $redirect = redirect("/admin/service/shared-apps/{$shared_app->id}");
+
+        if (! $this->canBeActivated($shared_app)) {
+            return $redirect->with('error', __('admin.shared_apps.errors.already_activated'));
+        }
+
+        $version = $shared_app->version;
+
+        if (! $version->canBeEnabled()) {
+            return $redirect->with('error', __('admin.shared_apps.errors.not_tested', ['version' => $version->name]));
+        }
+
+        $validated = $request->validate([
+            'web_server' => ['required', 'numeric', Rule::exists('servers', 'id')->where('type', 'web')],
+            'database_server' => ['nullable', 'numeric', Rule::exists('servers', 'id')->where('type', 'database')],
+            'sso_server' => ['nullable', 'numeric', Rule::exists('servers', 'id')->where('type', 'sso')],
+        ]);
+
+        // A web server is what tells a hidden plan apart from one that's just a
+        // pointer to an independently installed app.
+        $plan = $shared_app->plan;
+        $plan->web_server_id = $validated['web_server'];
+        $plan->database_server_id = $validated['database_server'] ?? null;
+        $plan->sso_server_id = $validated['sso_server'] ?? null;
+        $plan->save();
+
+        // The same deploy-and-track-to-completion flow as a normal app
+        // activation, run against the instance that was added earlier
+        Action::execute(new ApplicationActivate($shared_app->organization, $shared_app->application, $plan, version: $version, label: $shared_app->label, existing_instance: $shared_app));
+
+        return $redirect->with('success', __('admin.shared_apps.activation_started', ['app' => $shared_app->label]));
+    }
+
+    /**
+     * Where the shared app stands for activation: whether it can be activated
+     * yet and, if not, why (its version's tests).
+     *
+     * @return array<string, mixed>
+     */
+    private function activationSummary(AppInstance $shared_app): array
+    {
+        $version = $shared_app->version;
+
+        return [
+            'pending' => $this->canBeActivated($shared_app),
+            'can_activate' => $version->canBeEnabled(),
+            'version' => $version->name,
+            'gate' => $version->testGate(),
+            'tests_url' => "/admin/apps/{$shared_app->application->slug}/versions/{$version->name}/tests",
+        ];
+    }
+
+    /**
+     * @return list<array{value: mixed, text: string}>
+     */
+    private function serverOptions(string $type): array
+    {
+        return Server::where('type', $type)->get()->map(fn ($server) => [
+            'value' => $server->id,
+            'text' => $server->name.' ('.$server->status.')',
+        ])->all();
+    }
+
+    /**
+     * Whether the shared app was added but never deployed.
+     */
+    private function canBeActivated(AppInstance $shared_app): bool
+    {
+        return $shared_app->status === 'deactivated' && ! $shared_app->plan?->isSharedAppActive();
     }
 
     public function show(AppInstance $shared_app)
@@ -200,7 +229,12 @@ class SharedApps extends Controller
                 'domain' => $shared_app->primary_domain_id ?? 0,
                 'active' => $shared_app->status === 'active',
                 'organization_id' => $shared_app->organization_id,
+                'status' => $shared_app->status,
             ],
+            'activation' => $this->activationSummary($shared_app),
+            'web_servers' => $this->serverOptions('web'),
+            'database_servers' => $this->serverOptions('database'),
+            'sso_servers' => $this->serverOptions('sso'),
             'versions' => AppVersion::where('application_id', $shared_app->application_id)->get()->map(function ($version) {
                 return [
                     'id' => $version->id,
