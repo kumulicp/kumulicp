@@ -69,6 +69,19 @@ import { useForm } from '@inertiajs/vue3'
           :error="$page.props.errors.category"
           :error-messages="$page.props.errors.category"
           />
+        <va-select
+          v-model="form.tags"
+          :label="$t('admin.apps.tags')"
+          :messages="$t('admin.apps.tagsMessage')"
+          :options="tag_options"
+          id="tags"
+          class="my-2"
+          multiple
+          searchable
+          allow-create="unique"
+          :error="!!$page.props.errors.tags"
+          :error-messages="$page.props.errors.tags"
+          />
         <VaFileUpload
           v-model="form.image"
           :label="$t('admin.apps.image')"
@@ -188,6 +201,7 @@ export default {
   props: {
     app: Object,
     apps: Object,
+    tag_options: Array,
     errors: Object
   },
   data () {
@@ -197,6 +211,7 @@ export default {
         id: this.app.id,
         name: this.app.name,
         category: this.app.category,
+        tags: this.app.tags ?? [],
         image: this.app.image,
         parent_app: this.app.parent_app.id,
         access_type: this.app.access_type,

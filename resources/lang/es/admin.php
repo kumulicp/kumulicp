@@ -52,6 +52,11 @@ return [
     'denied' => 'Debes ser administrador para continuar',
     'applications' => [
         'apps' => 'Aplicaciones',
+        'sources' => [
+            'profile' => 'Registrada',
+            'generic' => 'Genérica',
+            'helmforge' => 'HelmForge',
+        ],
         'added' => ':app agregada',
         'updated' => ':app actualizada',
         'enabled' => ':app está habilitada',

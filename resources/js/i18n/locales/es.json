@@ -567,6 +567,7 @@
       "settings": "Configuración",
       "appWord": "Aplicación",
       "appsTitle": "Aplicaciones",
+      "capability": "Capacidad",
       "version": "Versión",
       "chartVersion": "Chart de Helm",
       "updatesAvailable": "Actualizaciones",
@@ -578,7 +579,17 @@
       "status": "Estado",
       "shortDescription": "Descripción Corta",
       "shortDescriptionMessage": "Aparece en la lista de Descubrir y debe mantenerse breve",
-      "description": "Descripción de la Página"
+      "description": "Descripción de la Página",
+      "source": "Origen",
+      "tags": "Etiquetas",
+      "tagsMessage": "Palabras clave para encontrar y filtrar aplicaciones. Escribe una etiqueta y presiona Enter para agregarla.",
+      "search": "Buscar por nombre",
+      "filterStatusEnabled": "Habilitadas",
+      "filterStatusDisabled": "Deshabilitadas",
+      "filterStatusAll": "Todas",
+      "filterTags": "Filtrar por etiquetas",
+      "resetFilters": "Restablecer filtros",
+      "noApps": "Ninguna aplicación coincide con estos filtros"
     },
     "backups": {
       "action": "Acción",
