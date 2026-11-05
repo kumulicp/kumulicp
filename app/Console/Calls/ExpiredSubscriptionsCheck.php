@@ -19,7 +19,7 @@ class ExpiredSubscriptionsCheck
         foreach ($organizations as $organization) {
             OrganizationFacade::setOrganization($organization);
             // Checks if subscription has finished grace period
-            if (is_null($organization->plan) || ($organization->plan->payment_enabled && Billing::status() === 'ended')) {
+            if (is_null($organization->plan) || ($organization->plan->payment_enabled && Billing::status('key') === 'ended')) {
                 $task = Action::execute(new DeactivateOrganization($organization));
             } elseif ($organization->app_instances()->where('trial_ends_at', '<', now())->count() > 0) {
                 $organization->app_instances()->where('trial_ends_at', '<', now())->update(['trial_ends_at' => null]);

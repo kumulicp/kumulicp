@@ -21,6 +21,9 @@ class RecordingBillingGateway extends FakeBillingGateway
     /** @var array<int, int> Organization ids sendInvoices() was called for, in call order. */
     public static array $invoiced = [];
 
+    /** @var array<int, int> Organization ids whose subscription has ended. */
+    public static array $ended = [];
+
     private int $organization_id;
 
     public function __construct(?Organization $organization = null)
@@ -34,6 +37,20 @@ class RecordingBillingGateway extends FakeBillingGateway
     {
         self::$billable = [];
         self::$invoiced = [];
+        self::$ended = [];
+    }
+
+    /**
+     * Mirrors the real gateway's contract: a translated label by default, the
+     * machine key ('ended') when asked for anything else.
+     */
+    public function status(string $type = 'label'): string
+    {
+        if (in_array($this->organization_id, self::$ended, true)) {
+            return $type === 'label' ? 'Cancelled' : 'ended';
+        }
+
+        return 'active';
     }
 
     public function isBillable(): bool

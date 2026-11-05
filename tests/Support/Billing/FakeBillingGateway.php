@@ -50,7 +50,7 @@ class FakeBillingGateway implements BillingContract
         return [];
     }
 
-    public function status(): string
+    public function status(string $type = 'label'): string
     {
         return 'active';
     }
