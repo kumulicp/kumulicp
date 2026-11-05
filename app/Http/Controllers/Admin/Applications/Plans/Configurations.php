@@ -7,6 +7,7 @@ use App\AppPlan;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\PlanBreadcrumbs;
+use App\Support\PlanValuesPreview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 
@@ -32,6 +33,23 @@ class Configurations extends Controller
             'configs' => array_merge($configs, $additionalConfigs),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
+    }
+
+    // Renders the Helm values the plan's charts would produce with the form's
+    // unsaved values, for the live example beside the editor. Nothing is saved.
+    public function preview(Request $request, Application $app, AppPlan $plan, PlanValuesPreview $preview)
+    {
+        $validated = $request->validate([
+            'configurations' => 'nullable|array',
+            'additionalConfigs' => 'nullable|array',
+        ]);
+
+        return response()->json($preview->render(
+            $app,
+            $plan,
+            $validated['configurations'] ?? [],
+            $validated['additionalConfigs'] ?? [],
+        ));
     }
 
     public function update(Request $request, Application $app, AppPlan $plan)

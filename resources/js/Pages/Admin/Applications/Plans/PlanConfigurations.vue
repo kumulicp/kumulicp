@@ -3,6 +3,8 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import { useForm } from '@inertiajs/vue3'
+import axios from 'axios'
+import { stringify } from 'yaml'
 import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/services/arrayConfigs'
 
 </script>
@@ -10,7 +12,21 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
   <Head>
     <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
-  <form @submit.prevent="submit">
+  <div class="config-editor__toolbar">
+    <va-button
+      preset="secondary"
+      size="small"
+      icon="fa-code"
+      class="values-preview-toggle"
+      :aria-expanded="previewOpen"
+      aria-controls="values-preview"
+      @click="togglePreview"
+      >
+      {{ previewOpen ? $t('admin.plans.hideValuesPreview') : $t('admin.plans.showValuesPreview') }}
+    </va-button>
+  </div>
+  <div class="config-editor" :class="{ 'config-editor--with-preview': previewOpen }">
+  <form class="config-editor__form" @submit.prevent="submit">
     <va-list>
       <va-list-item class="py-3">
         <va-list-item-section label>
@@ -162,6 +178,25 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
     <va-button v-if="! showAddNewConfigOptions" class="mr-2 mb-2" @click="showAddNewConfigOptions = ! showAddNewConfigOptions">{{ $t('admin.plans.addConfig') }}</va-button>
     <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
+  <aside v-if="previewOpen" id="values-preview" class="config-editor__preview" :aria-label="$t('admin.plans.valuesPreview')">
+    <div class="values-preview__header">
+      <h4 class="va-h5">{{ $t('admin.plans.valuesPreview') }}</h4>
+      <va-progress-circle v-if="previewLoading" indeterminate size="small" :thickness="0.2" />
+    </div>
+    <p class="values-preview__caption va-text-secondary">
+      <template v-if="preview.instance">
+        {{ $t('admin.plans.valuesPreviewSource', { app: preview.instance.label, organization: preview.instance.organization }) }}
+      </template>
+      {{ $t('admin.plans.valuesPreviewNotice') }}
+    </p>
+    <va-alert v-if="preview.status === 'no_instance'" color="info" class="mb-2">{{ $t('admin.plans.valuesPreviewNoInstance') }}</va-alert>
+    <va-alert v-else-if="preview.status === 'failed'" color="danger" class="mb-2">{{ $t('admin.plans.valuesPreviewFailed') }}</va-alert>
+    <div v-for="chart in preview.charts" :key="chart.name" class="mb-3">
+      <h5 class="mb-1">{{ chart.name }}</h5>
+      <pre class="values-preview__yaml" tabindex="0">{{ toYaml(chart.values) }}</pre>
+    </div>
+  </aside>
+  </div>
 </template>
 
 <script lang="ts">
@@ -196,6 +231,11 @@ export default {
         { text: this.$t('admin.plans.perUser'), value: 'user' },
         { text: this.$t('admin.plans.addToBill'), value: 'addon' }
       ],
+      previewOpen: this.storedPreviewOpen(),
+      previewLoading: false,
+      previewRequestId: 0,
+      previewTimer: null,
+      preview: { status: null, charts: [], instance: null },
       form: useForm({
         configurations: configs,
         additionalConfigs: {}
@@ -220,12 +260,81 @@ export default {
   computed: {
     rows () {
       return buildRows(this.configList, this.profileConfigs)
+    },
+    // Everything the example depends on; a change to it refreshes the preview.
+    previewPayload () {
+      return JSON.stringify({
+        configurations: this.form.configurations,
+        additionalConfigs: this.form.additionalConfigs
+      })
+    }
+  },
+  watch: {
+    previewPayload () {
+      if (this.previewOpen) this.schedulePreview()
     }
   },
   mounted () {
     this.scrollToFirstError()
+    if (this.previewOpen) this.fetchPreview()
+  },
+  beforeUnmount () {
+    clearTimeout(this.previewTimer)
+    // Discard any response still in flight
+    this.previewRequestId++
   },
   methods: {
+    storedPreviewOpen () {
+      try {
+        return window.localStorage.getItem('plan-configurations-values-preview') === 'open'
+      } catch {
+        return false
+      }
+    },
+    togglePreview () {
+      this.previewOpen = ! this.previewOpen
+
+      try {
+        window.localStorage.setItem('plan-configurations-values-preview', this.previewOpen ? 'open' : 'closed')
+      } catch {
+        // The panel just won't be remembered
+      }
+
+      if (this.previewOpen) {
+        this.fetchPreview()
+      } else {
+        clearTimeout(this.previewTimer)
+        this.previewRequestId++
+        this.previewLoading = false
+      }
+    },
+    schedulePreview () {
+      clearTimeout(this.previewTimer)
+      this.previewTimer = setTimeout(() => this.fetchPreview(), 500)
+    },
+    async fetchPreview () {
+      clearTimeout(this.previewTimer)
+      const requestId = ++this.previewRequestId
+      this.previewLoading = true
+
+      try {
+        const { data } = await axios.post(
+          '/admin/apps/' + this.app.slug + '/plans/' + this.plan.id + '/configurations/preview',
+          { configurations: this.form.configurations, additionalConfigs: this.form.additionalConfigs }
+        )
+        // A newer request (or closing the panel) supersedes this response
+        if (requestId !== this.previewRequestId) return
+        this.preview = data
+      } catch {
+        if (requestId !== this.previewRequestId) return
+        this.preview = { status: 'failed', charts: [], instance: null }
+      } finally {
+        if (requestId === this.previewRequestId) this.previewLoading = false
+      }
+    },
+    toYaml (values) {
+      return stringify(values ?? {})
+    },
     hasSeparatorAfter (rowIndex) {
       const row = this.rows[rowIndex]
 
@@ -349,6 +458,74 @@ export default {
 </script>
 
 <style scoped>
+.config-editor__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.5rem 0;
+}
+
+.config-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.config-editor__form {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.config-editor__preview {
+  flex: 0 0 min(34rem, 40%);
+  min-width: 0;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: 1rem;
+  border: 1px solid var(--va-background-border);
+  border-radius: 0.5rem;
+  background: var(--va-background-secondary);
+}
+
+.values-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.values-preview__caption {
+  font-size: 0.85em;
+  margin-bottom: 0.75rem;
+}
+
+.values-preview__yaml {
+  margin: 0;
+  padding: 0.75rem;
+  font-size: 0.8em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 0.25rem;
+  background: var(--va-background-primary);
+}
+
+@media (max-width: 1023px) {
+  .config-editor {
+    flex-direction: column;
+  }
+
+  .config-editor__form,
+  .config-editor__preview {
+    flex: none;
+    width: 100%;
+  }
+
+  .config-editor__preview {
+    position: static;
+    max-height: none;
+  }
+}
+
 .array-item {
   border-left: 3px solid var(--va-primary);
   padding-left: 1rem;
