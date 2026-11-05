@@ -28,8 +28,6 @@ return [
     'updating_subscription' => 'Updating Subscription',
     'updating_subscription_settings' => 'Updating Subscription Settings',
     'activating_server' => 'Activating Server :server',
-    'clear_test_accounts' => 'Clear test accounts',
-    'create_tests' => 'Create :number test accounts',
     'validate_server' => 'Validate Server',
     'adding_domain' => 'Adding :domain',
     'sso_setup' => 'Setting up SSO for :app',

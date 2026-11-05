@@ -257,9 +257,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{domain}', 'Admin\Domains@update')->name('service.domains.update');
             });
         });
-        Route::resource('server/tests', 'Admin\AccountTests');
-        Route::get('server/tests/{test}/clear', 'Admin\AccountTests@clear');
-        Route::get('server/tests/{test}/run', 'Admin\AccountTests@run');
+        Route::get('server/tests', 'Admin\TestsOverview@index')->name('server.tests');
 
         Route::prefix('packages')->group(function () {
             Route::get('', 'Admin\Packages@index')->name('admin.packages.index');
