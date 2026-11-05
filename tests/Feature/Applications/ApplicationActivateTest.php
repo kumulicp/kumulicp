@@ -158,6 +158,24 @@ it('starts an app on a shared plan in progress, and puts it back there when retr
     expect($task->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);
 });
 
+it('makes the app a child of the parent it is activated under, and waits for that parent to be active', function () {
+    [$app, $plan, $org] = activationFixture();
+    $parent = $this->runActivate($plan, $org, $app);
+    Queue::fake();
+
+    $task = Action::execute(new ApplicationActivate($org, $app, $plan, [], $parent));
+
+    expect($task->app_instance->parent_id)->toBe($parent->id);
+    expect(json_decode($task->fresh()->prerequisites, true)['prereqs'])->toContain(['type' => 'application_required', 'app_id' => $parent->id]);
+});
+
+it('has no parent, and nothing to wait for, when none is given and the plan is not shared', function () {
+    $task = activationTask();
+
+    expect($task->app_instance->parent_id)->toBeNull();
+    expect(collect(json_decode($task->fresh()->prerequisites, true)['prereqs'])->pluck('type')->all())->not->toContain('application_required');
+});
+
 it('fails the task, and keeps the one app instance, when something goes wrong creating it', function () {
     [$app, $plan, $org] = activationFixture();
     Queue::fake();
