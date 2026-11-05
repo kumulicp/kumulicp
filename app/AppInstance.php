@@ -116,7 +116,10 @@ class AppInstance extends Model
         return $this->hasMany('App\AppInstance', 'parent_id');
     }
 
-    public function parent()
+    /**
+     * @return BelongsTo<AppInstance, $this>
+     */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'parent_id');
     }
@@ -169,7 +172,10 @@ class AppInstance extends Model
         return $this->hasMany('App\OrgSubdomain', 'app_instance_id');
     }
 
-    public function primary_domain()
+    /**
+     * @return BelongsTo<OrgSubdomain, $this>
+     */
+    public function primary_domain(): BelongsTo
     {
         return $this->belongsTo('App\OrgSubdomain', 'primary_domain_id');
     }
