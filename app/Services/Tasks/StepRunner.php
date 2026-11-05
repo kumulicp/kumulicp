@@ -5,6 +5,7 @@ namespace App\Services\Tasks;
 use App\Actions\ActionResult;
 use App\Actions\Steps\Step;
 use App\Actions\Steps\StepAction;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\Tasks\RetryableException;
 use App\Exceptions\Tasks\WaitingException;
@@ -133,7 +134,7 @@ class StepRunner
 
         $report = $this->rollback($task, $action);
 
-        return ActionResult::fail($action::failureMessage($task, $reason, $report['notes'], $report['errors']), 'step_failed');
+        return ActionResult::fail($action::failureMessage($task, $reason, $report['notes'], $report['errors']), TaskErrorCode::STEP_FAILED);
     }
 
     /**

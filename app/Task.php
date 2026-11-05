@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -327,6 +328,15 @@ class Task extends Model
     public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
+    }
+
+    /**
+     * The code as one this system knows. Null for none, and for an older or
+     * stray string that isn't in the enum.
+     */
+    public function errorCode(): ?TaskErrorCode
+    {
+        return TaskErrorCode::tryFrom((string) $this->error_code);
     }
 
     public function action()

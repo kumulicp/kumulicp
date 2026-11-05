@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\Domains\UpdateDnsRecords;
 use App\Actions\NativeAction;
@@ -12,6 +11,7 @@ use App\AppInstance;
 use App\Application as App;
 use App\AppPlan;
 use App\AppVersion;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Events\ApplicationActivated as EventApplicationActivated;
 use App\Events\Apps\ApplicationActivating;
@@ -110,8 +110,7 @@ class ApplicationActivate extends NativeAction
     }
 
     /**
-     * Once the task exists, and again when it is retried. A new activation makes
-     * its app instance here.
+     * Once the task exists. A new activation makes its app instance here.
      */
     public function onCreate(Task $task)
     {
@@ -119,8 +118,18 @@ class ApplicationActivate extends NativeAction
             $this->createInstance($task);
         }
 
-        // What it was created with also applies when it is retried
-        $task->status = $this->status;
+        self::begin($task);
+    }
+
+    /**
+     * What the task is created with, which also applies when it is retried: a
+     * shared app starts in progress, and its groups are added.
+     */
+    private static function begin(Task $task): void
+    {
+        if ($task->getValue('shared_app')) {
+            $task->status = TaskStatus::IN_PROGRESS;
+        }
 
         if ($task->app_instance->usesOwnResources()) {
             // Add ldap groups
@@ -211,9 +220,11 @@ class ApplicationActivate extends NativeAction
         return $result;
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        return new self($task->organization, $task->application, AppPlan::find($task->getValue('app_plan')), $task->custom_values, version: $task->version);
+        // The app instance is already made and linked: it keeps what it was
+        // created with, and is not made again
+        self::begin($task);
     }
 
     public static function poll(Task $task): ActionResult
@@ -235,7 +246,7 @@ class ApplicationActivate extends NativeAction
                 return ActionResult::fail(__('messages.exception.app_not_found_on_server', [
                     'app' => $app_instance->application->name,
                     'guidance' => $server->notFoundMessage(),
-                ]), 'app_not_found');
+                ]), TaskErrorCode::APP_NOT_FOUND);
             }
 
             if ($server->isActive()) {

@@ -12,6 +12,7 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
+use Illuminate\Support\Arr;
 use Tests\Support\TestSupports;
 
 /**
@@ -61,6 +62,19 @@ class RunnerCompensateExploding extends RunnerNative
     }
 }
 
+class RunnerNativeResetting extends RunnerNative
+{
+    public static function reset(Task $task): void
+    {
+        if ($task->getValue('refuse')) {
+            throw new RuntimeException('can\'t go again');
+        }
+
+        // Keeps what it was made with, not what the last run left
+        $task->custom_values = Arr::only($task->customValues(), ['kept']);
+    }
+}
+
 // Written the old way: static methods that change the task themselves, one
 // taking it by reference
 class RunnerLegacy extends Action
@@ -89,6 +103,7 @@ beforeEach(function () {
 
     app('actions')->register('runner.native', RunnerNative::class);
     app('actions')->register('runner.retrying', RunnerNativeRetrying::class);
+    app('actions')->register('runner.resetting', RunnerNativeResetting::class);
     app('actions')->register('runner.legacy', RunnerLegacy::class);
     app('actions')->register('runner.exploding', RunnerCompensateExploding::class);
 });
@@ -357,13 +372,45 @@ it('has nothing to run for an action that is not registered', function () {
     expect(fn () => app(TaskRunner::class)->execute($task))->toThrow(Exception::class, 'hasn\'t been registered');
 });
 
-it('retries a task whose action has no fresh action to give', function () {
+it('retries a task whose action does nothing to reset it', function () {
     Illuminate\Support\Facades\Queue::fake();
     $task = runnerTask('native', ['status' => 'failed', 'error_message' => 'before']);
 
     ActionFacade::retry($task);
 
-    // RunnerNative::retry() returns null: the task is retried as it is
+    // RunnerNative::reset() does nothing: the task is retried as it is
     expect($task->fresh()->status)->toBe(TaskStatus::QUEUED);
+    expect($task->fresh()->attempts)->toBe(1);
+    expect($task->fresh()->error_message)->toBe('');
     Illuminate\Support\Facades\Queue::assertPushed(RunAction::class, 1);
+});
+
+it('lets the action reset what the last run left before the task is retried', function () {
+    Illuminate\Support\Facades\Queue::fake();
+    $task = runnerTask('resetting', [
+        'status' => 'failed',
+        'error_code' => 'throwable',
+        'error_message' => 'before',
+        'custom_values' => ['kept' => 1, 'job_id' => 'abc'],
+    ]);
+
+    ActionFacade::retry($task);
+
+    $fresh = $task->fresh();
+    expect($fresh->custom_values)->toBe(['kept' => 1]);
+    expect($fresh->error_message)->toBe('');
+    expect($fresh->error_code)->toBeNull();
+    expect($fresh->attempts)->toBe(1);
+    expect($fresh->status)->toBe(TaskStatus::QUEUED);
+});
+
+it('fails the task, with the message, when the action cannot be reset', function () {
+    Illuminate\Support\Facades\Queue::fake();
+    $task = runnerTask('resetting', ['status' => 'failed', 'custom_values' => ['refuse' => true]]);
+
+    ActionFacade::retry($task);
+
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED);
+    expect($task->fresh()->error_message)->toBe('can\'t go again');
+    Illuminate\Support\Facades\Queue::assertNothingPushed();
 });

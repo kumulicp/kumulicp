@@ -2,6 +2,7 @@
 
 namespace App\Services\Tasks;
 
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\Tasks\TaskOperationRefused;
 use App\Support\Facades\Organization;
@@ -56,7 +57,7 @@ class TaskOperator
                 'queued_at' => null,
                 'next_attempt_at' => null,
                 'blocked_from' => null,
-                'error_code' => 'cancelled',
+                'error_code' => TaskErrorCode::CANCELLED->value,
                 'error_message' => __('admin.tasks.cancelled_by_admin'),
             ]);
 

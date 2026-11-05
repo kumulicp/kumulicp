@@ -4,6 +4,7 @@ namespace App\Actions\Domains;
 
 use App\Actions\Action;
 use App\Actions\Organizations\InvoiceOrganization;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgDomain;
@@ -38,7 +39,7 @@ class RegisterDomainName extends Action
 
         if (! $org_domain) {
             $task->status = TaskStatus::FAILED;
-            $task->error_code = 'no_org_domain';
+            $task->error_code = TaskErrorCode::NO_ORG_DOMAIN->value;
             $task->error_message = __('organization.domain.denied.exists');
             $task->save();
 

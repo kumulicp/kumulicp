@@ -308,6 +308,7 @@ return [
             ],
             'error' => [
                 'job' => 'Rancher Job - :job - :message',
+                'job_unavailable' => 'Rancher Job - :job - this task was created by an older version and can\'t be run again; start it again from where it was made',
             ],
         ],
         'authentik' => [

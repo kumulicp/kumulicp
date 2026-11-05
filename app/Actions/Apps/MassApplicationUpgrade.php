@@ -2,7 +2,6 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\Actions\Prerequisites;
@@ -40,10 +39,5 @@ class MassApplicationUpgrade extends NativeAction
         }
 
         return ActionResult::done();
-    }
-
-    public static function retry(Task $task): ?Action
-    {
-        return new self($task->version);
     }
 }

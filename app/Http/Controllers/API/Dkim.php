@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Organization;
+use App\OrgDomain;
 use App\Task;
 use Illuminate\Http\Request;
 
@@ -28,8 +29,13 @@ class Dkim extends Controller
         $explode[$end_key] = $p;
         $dkim_public_key = implode('=', $explode);
 
-        $job = unserialize($task->getValue('job'));
-        $domain = $job->domain;
+        // The domain the task was made for, as long as it is this organization's
+        $domain = OrgDomain::where('organization_id', $organization->id)->find($task->getValue('chart_args.org_domain_id'));
+
+        if (! $domain) {
+            return response()->json(['status' => 'failed'], 404);
+        }
+
         $domain->dkim_public_key = $dkim_public_key;
         $domain->save();
 

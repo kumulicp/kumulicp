@@ -2,11 +2,13 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\Actions;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Actions\NativeAction;
-use App\Enums\TaskStatus;
+use App\Enums\TaskErrorCode;
 use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\RebuildableJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\RebuildableJobChart;
 use App\OrgServer;
 use App\Task;
 use Illuminate\Support\Arr;
@@ -27,9 +29,20 @@ class RunJob extends NativeAction
 
     public function __construct(private OrgServer $org_server, private JobChart $job_chart, private string $job_name, ?string $namespace = null)
     {
+        if (! $job_chart instanceof RebuildableJobChart) {
+            throw new \InvalidArgumentException($job_chart::class.' must implement '.RebuildableJobChart::class.' to be run as a task');
+        }
+
         $this->organization = $org_server->organization;
         $job_title = ucwords(str_replace('_', ' ', $job_name));
-        $this->setCustomValues(['job' => serialize($job_chart), 'job_name' => $job_name, 'org_server_id' => $org_server->id, 'namespace' => $namespace]);
+        // The chart is stored as the class and the ids it is built from, not as the object
+        $this->setCustomValues([
+            'chart' => $job_chart::class,
+            'chart_args' => $job_chart->taskValues(),
+            'job_name' => $job_name,
+            'org_server_id' => $org_server->id,
+            'namespace' => $namespace,
+        ]);
 
         $this->description = $job_title;
 
@@ -38,10 +51,14 @@ class RunJob extends NativeAction
 
     public static function handle(Task $task): ActionResult
     {
-        $org_server = OrgServer::find($task->getValue('org_server_id'));
         $job_name = $task->getValue('job_name');
-        $job_chart = unserialize($task->getValue('job'));
-        $job_method = Str::camel($task->getValue('job_name'));
+
+        if (! $job_chart = self::chart($task)) {
+            return ActionResult::fail(__('messages.api.rancher.error.job_unavailable', ['job' => $job_name]), TaskErrorCode::JOB_UNAVAILABLE);
+        }
+
+        $org_server = OrgServer::find($task->getValue('org_server_id'));
+        $job_method = Str::camel($job_name);
         $chart = $job_chart->$job_method();
         $namespace = $task->getValue('namespace');
 
@@ -56,7 +73,7 @@ class RunJob extends NativeAction
             return ActionResult::fail(__('messages.api.rancher.error.job', [
                 'job' => $job_name,
                 'message' => is_string($message) ? $message : json_encode($message),
-            ]), 'job_create_failed');
+            ]), TaskErrorCode::JOB_CREATE_FAILED);
         }
 
         return ActionResult::wait([
@@ -66,13 +83,29 @@ class RunJob extends NativeAction
         ]);
     }
 
-    public static function retry(Task $task): ?Action
+    public static function reset(Task $task): void
     {
-        $org_server = OrgServer::find($task->getValue('org_server_id'));
-        $retry = new self($org_server, unserialize($task->getValue('job')), $task->getValue('job_name'), $task->getValue('namespace'));
-        $retry->status = TaskStatus::READY;
+        // A task made before charts were stored this way keeps its values and
+        // fails clearly when it runs. Otherwise only what it was made with stays:
+        // not the previous run's job.
+        if ($task->getValue('chart')) {
+            $task->custom_values = Arr::only($task->customValues(), ['chart', 'chart_args', 'job_name', 'org_server_id', 'namespace']);
+        }
+    }
 
-        return $retry;
+    /**
+     * The chart the task was made with, built again from what it stored. Only a
+     * class that says it can be rebuilt is ever built from the database.
+     */
+    public static function chart(Task $task): ?JobChart
+    {
+        $class = $task->getValue('chart');
+
+        if (! is_string($class) || ! is_subclass_of($class, RebuildableJobChart::class) || ! is_subclass_of($class, JobChart::class)) {
+            return null;
+        }
+
+        return $class::fromTaskValues($task->getValue('chart_args') ?? []);
     }
 
     public static function poll(Task $task): ActionResult

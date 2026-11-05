@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\TaskErrorCode;
 use App\Task;
 
 /**
@@ -64,9 +65,9 @@ final class ActionResult
     /**
      * The task failed: it is rolled back and marked failed.
      */
-    public static function fail(string $reason, ?string $code = null): self
+    public static function fail(string $reason, TaskErrorCode|string|null $code = null): self
     {
-        return new self(self::FAIL, [], $reason, null, $code);
+        return new self(self::FAIL, [], $reason, null, TaskErrorCode::valueOf($code));
     }
 
     /**

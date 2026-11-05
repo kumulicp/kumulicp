@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Nextcloud\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\API\Users;
 use App\Support\Facades\AccountManager;
@@ -13,7 +14,7 @@ use Illuminate\Support\Str;
 
 class ProcessPermissions extends Action
 {
-    public $slug = 'process_permissions';
+    public $slug = TaskErrorCode::PROCESS_PERMISSIONS->value;
 
     public $action_group = 'nextcloud';
 
@@ -54,7 +55,7 @@ class ProcessPermissions extends Action
             }
 
             $task->error_message = $e->getMessage();
-            $task->error_code = 'process_permissions';
+            $task->error_code = TaskErrorCode::PROCESS_PERMISSIONS->value;
             $task->status = TaskStatus::PENDING;
             $task->save();
 
