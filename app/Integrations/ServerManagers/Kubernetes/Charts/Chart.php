@@ -140,10 +140,15 @@ class Chart
 
             // Check if feature is registered
             if (in_array($name, $app_features_keys)) {
-                $env_vars[] = [
-                    'name' => $app_features[$name]->var_name,
-                    'value' => $feature['status'] == 'enabled' ? '1' : '0',
-                ];
+                // Not every feature has an env var of its own (and not every feature class declares one)
+                $var_name = $app_features[$name]->var_name ?? '';
+
+                if ($var_name !== '') {
+                    $env_vars[] = [
+                        'name' => $var_name,
+                        'value' => $feature['status'] == 'enabled' ? '1' : '0',
+                    ];
+                }
 
                 // If feature enabled, check for settings and include them in chart
                 if ($feature['status'] == 'enabled') {

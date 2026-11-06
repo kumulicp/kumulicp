@@ -58,24 +58,42 @@ class AppVersion extends Model
     }
 
     /**
+     * The runs that test the version itself with the plans customers can pick.
+     * Runs for a shared app's own plan are kept apart: see planTestRuns().
+     *
      * @return HasMany<VersionTestRun, $this>
      */
     public function testRuns(): HasMany
     {
-        return $this->hasMany(VersionTestRun::class, 'app_version_id')->orderByDesc('id');
+        return $this->hasMany(VersionTestRun::class, 'app_version_id')->whereNull('app_plan_id')->orderByDesc('id');
+    }
+
+    /**
+     * The runs that tested this version on one specific plan.
+     *
+     * @return HasMany<VersionTestRun, $this>
+     */
+    public function planTestRuns(AppPlan $plan): HasMany
+    {
+        return $this->hasMany(VersionTestRun::class, 'app_version_id')->where('app_plan_id', $plan->id)->orderByDesc('id');
     }
 
     /**
      * Where this version stands before it can be enabled: running, passed,
      * bypassed, failed, stale (changed since it was approved) or untested.
+     *
+     * With a plan, where it stands on that plan alone. A shared app is judged
+     * by its own plan's runs, never by how the version did on the others.
      */
-    public function testGate(): string
+    public function testGate(?AppPlan $plan = null): string
     {
-        if ($this->testRuns()->where('status', VersionTestRunStatus::RUNNING->value)->exists()) {
+        $runs = $plan ? $this->planTestRuns($plan) : $this->testRuns();
+
+        if ($runs->where('status', VersionTestRunStatus::RUNNING->value)->exists()) {
             return 'running';
         }
 
-        $run = $this->latestFinishedTestRun();
+        $run = $this->latestFinishedTestRun($plan);
 
         if (! $run) {
             return 'untested';
@@ -85,7 +103,9 @@ class AppVersion extends Model
             return 'failed';
         }
 
-        if ($run->fingerprint !== (new VersionFingerprint)->for($this)) {
+        $fingerprint = $plan ? (new VersionFingerprint)->forPlan($this, $plan) : (new VersionFingerprint)->for($this);
+
+        if ($run->fingerprint !== $fingerprint) {
             return 'stale';
         }
 
@@ -100,10 +120,18 @@ class AppVersion extends Model
         return in_array($this->testGate(), ['passed', 'bypassed'], true);
     }
 
-    // The most recent run that reached a verdict; cancelled and running runs say nothing
-    public function latestFinishedTestRun(): ?VersionTestRun
+    /**
+     * Whether this version has passed, or had bypassed, its tests on this plan.
+     */
+    public function canBeActivatedOn(AppPlan $plan): bool
     {
-        return $this->testRuns()
+        return in_array($this->testGate($plan), ['passed', 'bypassed'], true);
+    }
+
+    // The most recent run that reached a verdict; cancelled and running runs say nothing
+    public function latestFinishedTestRun(?AppPlan $plan = null): ?VersionTestRun
+    {
+        return ($plan ? $this->planTestRuns($plan) : $this->testRuns())
             ->whereIn('status', [
                 VersionTestRunStatus::PASSED->value,
                 VersionTestRunStatus::BYPASSED->value,

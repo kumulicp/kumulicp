@@ -13,6 +13,8 @@ class Features extends Controller
 {
     public function edit(Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         $features = ApplicationFacade::profile($app->slug)->features();
         $settings = $plan->publicSettings();
 
@@ -30,7 +32,7 @@ class Features extends Controller
                 'name' => $plan->name,
                 'settings' => $settings,
                 'hidden' => $plan->hidden,
-                'shared_app_active' => $plan->isSharedAppActive(),
+                'full_settings' => $plan->hasFullSettings(),
             ],
             'features' => $features->map(function ($feature) {
                 return [
@@ -48,6 +50,8 @@ class Features extends Controller
 
     public function update(Request $request, Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         $validated = $request->validate([
             'features' => 'array|nullable',
         ]);

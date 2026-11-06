@@ -68,7 +68,7 @@ class Tests extends Controller
                 'bypass_reason' => $run->bypass_reason,
                 'created_at' => $run->created_at->format('Y-m-d H:i:s'),
                 'finished_at' => $run->finished_at?->format('Y-m-d H:i:s'),
-                'gate' => $version->testGate(),
+                'gate' => $version->testGate($run->plan),
             ],
             'steps' => $steps->map(fn (VersionTestStep $step) => [
                 'id' => $step->id,
@@ -108,11 +108,7 @@ class Tests extends Controller
                 'user' => $event->user?->name,
                 'created_at' => $event->created_at->format('Y-m-d H:i:s'),
             ]),
-            'breadcrumbs' => [
-                ...$this->breadcrumbs($app, $version, null),
-                ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->name.'/tests', 'label' => __('admin.version_tests.tests')],
-                ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
-            ],
+            'breadcrumbs' => $this->runBreadcrumbs($app, $version, $run),
         ]);
     }
 
@@ -280,6 +276,32 @@ class Tests extends Controller
             'version' => $run->version->name,
             'url' => $this->runUrl($run->application, $run->version, $run),
         ] : null;
+    }
+
+    /**
+     * A run of a shared app's plan belongs to that shared app, so it leads back
+     * there. Any other run belongs to its version.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function runBreadcrumbs(Application $app, AppVersion $version, VersionTestRun $run): array
+    {
+        $shared_app = $run->app_plan_id ? AppInstance::where('plan_id', $run->app_plan_id)->first() : null;
+
+        if ($shared_app) {
+            return [
+                ['url' => '/admin/service/shared-apps', 'label' => __('admin.shared_apps.shared_apps')],
+                ['url' => '/admin/service/shared-apps/'.$shared_app->id, 'label' => $shared_app->label],
+                ['url' => '/admin/service/shared-apps/'.$shared_app->id.'/activation', 'label' => __('admin.shared_apps.activation')],
+                ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
+            ];
+        }
+
+        return [
+            ...$this->breadcrumbs($app, $version, null),
+            ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->name.'/tests', 'label' => __('admin.version_tests.tests')],
+            ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
+        ];
     }
 
     /**

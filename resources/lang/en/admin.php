@@ -294,6 +294,8 @@ return [
         ],
         'errors' => [
             'no_plans' => 'This app has no plans to test. Add a plan first.',
+            'no_default_plan' => 'There is no default plan set, which the test organization needs. Set one first.',
+            'no_shared_base_plan' => 'Shared apps has no plan, and there is no default plan to fall back on. Enable shared apps, or set a default plan, first.',
             'not_running' => 'This test run is no longer running.',
             'no_next_step' => 'There are no more tests to run.',
             'not_awaiting' => 'This test is not waiting to be confirmed.',
@@ -366,12 +368,16 @@ return [
         'updated' => ':app updated',
         'plan_description' => 'Auto-generated plan for the :app shared app',
         'plan_settings' => 'Plan Settings',
+        'activation' => 'Activation',
+        'tests_bypassed' => 'The tests for this shared app were bypassed. It can now be activated.',
         'activation_started' => 'Activation of :app has started. This takes roughly 10 minutes.',
         'errors' => [
+            'not_deployable' => 'Only apps with a registered profile can be activated through Kumuli CP. This one is installed separately.',
+            'no_servers' => 'Choose a web server for this shared app first.',
             'already_activated' => 'The shared app has already been activated.',
             'not_shareable' => ':app can\'t be run as a shared app.',
             'no_version' => 'This app has no enabled version to activate.',
-            'not_tested' => 'Version :version has to pass its tests, or have them bypassed, before this shared app can be activated.',
+            'not_tested' => 'Version :version has to pass its tests on this shared app\'s plan, or have them bypassed, before it can be activated.',
         ],
     ],
     'domains' => [

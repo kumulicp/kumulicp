@@ -18,6 +18,8 @@ class Secrets extends Controller
     // but never read back.
     public function edit(Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         return inertia()->render('Admin/Applications/Plans/PlanSecrets', [
             'app' => [
                 'id' => $app->id,
@@ -28,7 +30,7 @@ class Secrets extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'hidden' => $plan->hidden,
-                'shared_app_active' => $plan->isSharedAppActive(),
+                'full_settings' => $plan->hasFullSettings(),
             ],
             'secrets' => ApplicationFacade::plan($plan)->secrets()->names(),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
@@ -37,6 +39,8 @@ class Secrets extends Controller
 
     public function update(Request $request, Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         $validated = $request->validate([
             'secrets' => 'array',
             // Names become the env var name, and (lowercased) the Secret key, so they must differ ignoring case
@@ -62,6 +66,8 @@ class Secrets extends Controller
     // on the page): it is never part of a page load. Each reveal is logged by name.
     public function reveal(Request $request, Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         abort_unless($plan->application_id === $app->id, 404);
 
         $name = $request->validate(['name' => 'required|string'])['name'];

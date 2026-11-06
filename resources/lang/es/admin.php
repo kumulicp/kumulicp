@@ -236,6 +236,8 @@ return [
             'upgrade' => 'Actualización',
         ],
         'errors' => [
+            'no_default_plan' => 'No hay un plan predeterminado, que la organización de prueba necesita. Establece uno primero.',
+            'no_shared_base_plan' => 'Las aplicaciones compartidas no tienen un plan y no hay un plan predeterminado alternativo. Habilita las aplicaciones compartidas o establece un plan predeterminado primero.',
             'no_plans' => 'Esta aplicación no tiene planes que probar. Añade un plan primero.',
             'not_running' => 'Esta ejecución de pruebas ya no está en curso.',
             'no_next_step' => 'No quedan más pruebas por ejecutar.',
@@ -281,12 +283,16 @@ return [
         'updated' => ':app actualizada',
         'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
         'plan_settings' => 'Configuración del plan',
+        'activation' => 'Activación',
+        'tests_bypassed' => 'Se omitieron las pruebas de esta aplicación compartida. Ya se puede activar.',
         'activation_started' => 'Ha comenzado la activación de :app. Esto tarda aproximadamente 10 minutos.',
         'errors' => [
+            'not_deployable' => 'Solo las aplicaciones con un perfil registrado se pueden activar desde Kumuli CP. Esta se instala por separado.',
+            'no_servers' => 'Primero elige un servidor web para esta aplicación compartida.',
             'already_activated' => 'La aplicación compartida ya se ha activado.',
             'not_shareable' => ':app no se puede ejecutar como aplicación compartida.',
             'no_version' => 'Esta aplicación no tiene ninguna versión habilitada para activar.',
-            'not_tested' => 'La versión :version debe superar sus pruebas, o tenerlas omitidas, antes de poder activar esta aplicación compartida.',
+            'not_tested' => 'La versión :version debe superar sus pruebas en el plan de esta aplicación compartida, o tenerlas omitidas, antes de poder activarla.',
         ],
     ],
     'domains' => [
