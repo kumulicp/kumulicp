@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\ApplicationSource;
 use App\Services\Application\PlanSecretsService;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Collection;
@@ -91,19 +92,19 @@ class AppPlan extends Model
         return $this->hasOne('App\AppInstance', 'plan_id');
     }
 
-    // A hidden plan only has anything meaningful to configure once it was
-    // actually deployed through kumulicp -- an admin can also create a
-    // shared app as just a pointer to an independently installed instance,
-    // which never gets a web_server_id assigned since kumulicp never
-    // deployed it.
+    // Whether the plan has settings, features, configurations and secrets worth
+    // showing. A plan a customer can pick always does. A shared app's hidden plan
+    // only does for an app with a registered profile (source `profile`): the
+    // profile is what defines those. A generic app, like GitLab, has none, and
+    // kumulicp only manages its users centrally.
     //
     // Uses getAttribute() rather than $this->hidden: the "hidden" column
     // collides with Eloquent Model's own protected $hidden property (used
     // for array/JSON serialization), so a direct property access here would
     // silently read that instead of the database column.
-    public function isSharedAppActive(): bool
+    public function hasFullSettings(): bool
     {
-        return $this->getAttribute('hidden') && $this->web_server_id !== null;
+        return ! $this->getAttribute('hidden') || $this->application->source === ApplicationSource::Profile;
     }
 
     public function displayFeatures()

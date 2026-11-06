@@ -43,25 +43,36 @@ class VersionTestRunner
     /**
      * Start testing a version. The first step starts straight away.
      *
+     * With a plan, only that plan is tested, with a fresh install: this is how a
+     * shared app's own hidden plan is tested, since it is not one of the plans
+     * customers can pick and there is nothing to upgrade from.
+     *
      * @throws VersionTestException
      */
-    public function start(AppVersion $version, User $user): VersionTestRun
+    public function start(AppVersion $version, User $user, ?AppPlan $plan = null): VersionTestRun
     {
-        $plans = AppPlan::where('application_id', $version->application_id)
-            ->where('archive', 0)
-            ->visible()
-            ->orderBy('display_order')
-            ->orderBy('id')
-            ->get();
+        $plans = $plan
+            ? new Collection([$plan])
+            : AppPlan::where('application_id', $version->application_id)
+                ->where('archive', 0)
+                ->visible()
+                ->orderBy('display_order')
+                ->orderBy('id')
+                ->get();
 
         if ($plans->isEmpty()) {
             throw new VersionTestException(__('admin.version_tests.errors.no_plans'));
         }
 
-        $run = DB::transaction(function () use ($version, $user, $plans) {
+        // Found out now, not by every step failing once it is queued
+        if (! $this->basePlanFor($plan)) {
+            throw new VersionTestException(__($plan ? 'admin.version_tests.errors.no_shared_base_plan' : 'admin.version_tests.errors.no_default_plan'));
+        }
+
+        $run = DB::transaction(function () use ($version, $user, $plans, $plan) {
             $this->assertSlotFree();
 
-            $baseline = $version->application->active_version();
+            $baseline = $plan ? null : $version->application->active_version();
             if ($baseline && $baseline->is($version)) {
                 $baseline = null;
             }
@@ -69,9 +80,10 @@ class VersionTestRunner
             $run = new VersionTestRun;
             $run->application_id = $version->application_id;
             $run->app_version_id = $version->id;
+            $run->app_plan_id = $plan?->id;
             $run->baseline_version_id = $baseline?->id;
             $run->status = VersionTestRunStatus::RUNNING;
-            $run->fingerprint = (new VersionFingerprint)->for($version);
+            $run->fingerprint = $plan ? (new VersionFingerprint)->forPlan($version, $plan) : (new VersionFingerprint)->for($version);
             $run->started_by_id = $user->id;
             $run->save();
 
@@ -90,7 +102,7 @@ class VersionTestRunner
                 'baseline' => $baseline?->name,
             ]);
 
-            if (! $baseline) {
+            if (! $baseline && ! $plan) {
                 $this->log($run, 'no_baseline', user: $user);
             }
 
@@ -100,6 +112,24 @@ class VersionTestRunner
         $this->startStep($run->steps()->first(), $user);
 
         return $run->refresh();
+    }
+
+    /**
+     * The base plan a test organization is given. A shared app's own plan is
+     * tested under the plan the shared apps organization is on, as it will run;
+     * everything else is tested under the default plan.
+     */
+    public function basePlanFor(?AppPlan $plan = null): ?Plan
+    {
+        if ($plan) {
+            $shared_plan = Organization::where('type', 'shared')->first()?->plan;
+
+            if ($shared_plan) {
+                return $shared_plan;
+            }
+        }
+
+        return Plan::where('is_default', 1)->first();
     }
 
     /**
@@ -213,11 +243,13 @@ class VersionTestRunner
      * Enable a version without testing it. Recorded as a run of its own so the
      * version page says who skipped the tests, when and why.
      *
+     * With a plan, only the tests of that plan are bypassed.
+     *
      * @throws VersionTestException
      */
-    public function bypass(AppVersion $version, User $user, string $reason): VersionTestRun
+    public function bypass(AppVersion $version, User $user, string $reason, ?AppPlan $plan = null): VersionTestRun
     {
-        $running = $version->testRuns()->where('status', VersionTestRunStatus::RUNNING->value)->first();
+        $running = ($plan ? $version->planTestRuns($plan) : $version->testRuns())->where('status', VersionTestRunStatus::RUNNING->value)->first();
         if ($running) {
             $this->cancelRun($running, $user, 'cancelled_by_bypass');
         }
@@ -225,8 +257,9 @@ class VersionTestRunner
         $run = new VersionTestRun;
         $run->application_id = $version->application_id;
         $run->app_version_id = $version->id;
+        $run->app_plan_id = $plan?->id;
         $run->status = VersionTestRunStatus::BYPASSED;
-        $run->fingerprint = (new VersionFingerprint)->for($version);
+        $run->fingerprint = $plan ? (new VersionFingerprint)->forPlan($version, $plan) : (new VersionFingerprint)->for($version);
         $run->started_by_id = $user->id;
         $run->bypassed_by_id = $user->id;
         $run->bypass_reason = $reason;
@@ -407,7 +440,7 @@ class VersionTestRunner
             'type' => __('admin.version_tests.types.'.$step->type->value),
         ]);
         $account_test->status = 'in_progress';
-        $account_test->settings = ['base_plan' => Plan::where('is_default', 1)->value('id'), 'apps' => []];
+        $account_test->settings = ['base_plan' => $this->basePlanFor($run->plan)?->id, 'apps' => []];
         $account_test->save();
 
         $moved = $this->moveStep($step, [VersionTestStepStatus::PENDING], VersionTestStepStatus::PROVISIONING, [

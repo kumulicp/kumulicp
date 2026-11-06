@@ -52,6 +52,8 @@ class CreateTestOrganization
         $organization->contact_last_name = (string) $number;
         $organization->contact_email = $test_name.'@'.Settings::get('base_domain');
         $organization->contact_phone_number = '123-456-7890';
+        $organization->email = $organization->contact_email;
+        $organization->phone_number = $organization->contact_phone_number;
         $organization->street = '123 Street St';
         $organization->zipcode = '123 456';
         $organization->city = 'Town';
@@ -62,6 +64,8 @@ class CreateTestOrganization
         $organization->status = 'active';
         $organization->account_test_id = $account_test->id;
         $organization->plan_id = $base_plan->id;
+        // NOT NULL JSON with no default: MariaDB rejects an insert that leaves it out
+        $organization->settings = [];
         $organization->save();
 
         // Create base domain

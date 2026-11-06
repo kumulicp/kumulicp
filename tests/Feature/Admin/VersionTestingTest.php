@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\AccountTest;
+use App\Actions\Tests\CreateTestOrganization;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -12,6 +14,7 @@ use App\Enums\VersionTestStepStatus;
 use App\Enums\VersionTestStepType;
 use App\Exceptions\VersionTestException;
 use App\Organization;
+use App\Plan;
 use App\Services\VersionTesting\VersionTestRunner;
 use App\Support\Facades\Action;
 use App\Support\VersionTesting\VersionFingerprint;
@@ -617,5 +620,173 @@ class VersionTestingTest extends TestCase
             ->where('stats.untested', 0)
             ->where('untested_versions', [])
         );
+    }
+
+    // ─── Runs for one plan (a shared app's own plan) ─────────────────────────
+
+    private function sharedPlan(): AppPlan
+    {
+        return AppPlan::factory()->create(['application_id' => $this->application->id, 'hidden' => true, 'web_server_id' => 1]);
+    }
+
+    public function test_a_plan_run_tests_only_that_plan_with_a_fresh_install()
+    {
+        $plan = $this->sharedPlan();
+
+        // The enabled version differs from the candidate, so a version run would also upgrade
+        $run = $this->runner()->start($this->candidate, $this->admin, $plan);
+
+        $this->assertSame($plan->id, $run->app_plan_id);
+        $this->assertNull($run->baseline_version_id);
+        $this->assertSame([$plan->id], $run->steps->pluck('app_plan_id')->all());
+        $this->assertSame(['fresh_install'], $run->steps->map(fn (VersionTestStep $step) => $step->type->value)->all());
+    }
+
+    public function test_a_plan_and_its_version_are_judged_separately()
+    {
+        $plan = $this->sharedPlan();
+        $run = $this->approve($this->candidate);
+
+        $this->assertSame('passed', $this->candidate->testGate());
+        $this->assertSame('untested', $this->candidate->testGate($plan));
+        $this->assertFalse($this->candidate->canBeActivatedOn($plan));
+
+        $run->delete();
+        $plan_run = $this->approve($this->candidate, VersionTestRunStatus::BYPASSED);
+        $plan_run->app_plan_id = $plan->id;
+        $plan_run->fingerprint = (new VersionFingerprint)->forPlan($this->candidate, $plan);
+        $plan_run->save();
+
+        $this->assertSame('bypassed', $this->candidate->testGate($plan));
+        $this->assertTrue($this->candidate->canBeActivatedOn($plan));
+        $this->assertSame('untested', $this->candidate->testGate());
+        $this->assertFalse($this->candidate->canBeEnabled());
+    }
+
+    public function test_a_plan_result_goes_stale_when_that_plan_changes_but_not_when_another_does()
+    {
+        $plan = $this->sharedPlan();
+        $this->runner()->bypass($this->candidate, $this->admin, 'Trusted', $plan);
+        $this->assertSame('bypassed', $this->candidate->testGate($plan));
+
+        AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $this->assertSame('bypassed', $this->candidate->testGate($plan));
+
+        $plan->web_server_id = 2;
+        $plan->save();
+        $this->assertSame('stale', $this->candidate->testGate($plan->refresh()));
+    }
+
+    public function test_bypassing_a_plan_leaves_a_running_version_run_alone()
+    {
+        $plan = $this->sharedPlan();
+        $running = $this->runner()->start($this->candidate, $this->admin);
+
+        $bypass = $this->runner()->bypass($this->candidate, $this->admin, 'Trusted', $plan);
+
+        $this->assertSame($plan->id, $bypass->app_plan_id);
+        $this->assertSame(VersionTestRunStatus::RUNNING, $running->refresh()->status);
+        $this->assertSame('running', $this->candidate->testGate());
+        $this->assertSame('bypassed', $this->candidate->testGate($plan));
+    }
+
+    public function test_plan_runs_do_not_appear_among_the_versions_runs()
+    {
+        $plan = $this->sharedPlan();
+        $this->runner()->bypass($this->candidate, $this->admin, 'Trusted', $plan);
+
+        $this->assertSame(0, $this->candidate->testRuns()->count());
+        $this->assertSame(1, $this->candidate->planTestRuns($plan)->count());
+    }
+
+    // ─── The base plan the test organization is given ────────────────────────
+
+    private function sharedOrganizationOn(Plan $plan): Organization
+    {
+        return Organization::factory()->create(['slug' => 'shared', 'type' => 'shared', 'plan_id' => $plan->id]);
+    }
+
+    public function test_a_version_run_uses_the_default_plan()
+    {
+        $default = Plan::where('is_default', 1)->firstOrFail();
+        $this->sharedOrganizationOn(Plan::factory()->create(['is_default' => 0]));
+
+        $this->assertTrue($this->runner()->basePlanFor()->is($default));
+
+        $run = $this->runner()->start($this->candidate, $this->admin);
+
+        $this->assertSame($default->id, $run->steps->first()->account_test->setting('base_plan'));
+    }
+
+    public function test_a_shared_apps_plan_run_uses_the_plan_the_shared_apps_organization_is_on()
+    {
+        $shared_plan = Plan::factory()->create(['is_default' => 0]);
+        $this->sharedOrganizationOn($shared_plan);
+        $plan = $this->sharedPlan();
+
+        $this->assertTrue($this->runner()->basePlanFor($plan)->is($shared_plan));
+
+        $run = $this->runner()->start($this->candidate, $this->admin, $plan);
+
+        $this->assertSame($shared_plan->id, $run->steps->first()->account_test->setting('base_plan'));
+    }
+
+    public function test_a_shared_apps_plan_run_works_without_any_default_plan()
+    {
+        $shared_plan = Plan::factory()->create(['is_default' => 0]);
+        $this->sharedOrganizationOn($shared_plan);
+        Plan::query()->update(['is_default' => 0]);
+
+        $run = $this->runner()->start($this->candidate, $this->admin, $this->sharedPlan());
+
+        $this->assertSame($shared_plan->id, $run->steps->first()->account_test->setting('base_plan'));
+    }
+
+    public function test_a_shared_apps_plan_run_falls_back_to_the_default_plan_when_shared_apps_has_none()
+    {
+        $default = Plan::where('is_default', 1)->firstOrFail();
+
+        $this->assertTrue($this->runner()->basePlanFor($this->sharedPlan())->is($default));
+    }
+
+    public function test_a_run_will_not_start_when_there_is_no_plan_to_give_the_test_organization()
+    {
+        Plan::query()->update(['is_default' => 0]);
+
+        foreach ([null, $this->sharedPlan()] as $plan) {
+            try {
+                $this->runner()->start($this->candidate, $this->admin, $plan);
+                $this->fail('The run started without a plan for the test organization.');
+            } catch (VersionTestException $e) {
+                $this->assertNotEmpty($e->getMessage());
+            }
+        }
+
+        // Nothing was left half-made
+        $this->assertSame(0, VersionTestRun::count());
+        $this->assertSame(0, $this->executed_actions);
+    }
+
+    // ─── The test organization itself ────────────────────────────────────────
+
+    public function test_a_test_organization_is_created_with_the_columns_the_database_requires()
+    {
+        $account_test = new AccountTest;
+        $account_test->organization_id = 1;
+        $account_test->created_by_id = $this->admin->id;
+        $account_test->test_number = 1;
+        $account_test->description = 'A version test';
+        $account_test->settings = ['base_plan' => null, 'apps' => []];
+        $account_test->status = 'in_progress';
+        $account_test->save();
+
+        [$organization] = (new CreateTestOrganization)->create($account_test, Plan::where('is_default', 1)->firstOrFail(), CreateTestOrganization::lastNumber() + 1);
+        $organization->refresh();
+
+        // MariaDB rejects an organization without settings, and these have no default
+        $this->assertSame([], $organization->settings);
+        $this->assertNotSame('', (string) $organization->email);
+        $this->assertNotSame('', (string) $organization->phone_number);
+        $this->assertSame($account_test->id, $organization->account_test_id);
     }
 }
