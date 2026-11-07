@@ -273,6 +273,32 @@ class SharedAppsTest extends TestCase
         $this->assertActivatedInPlace(VersionTestRunStatus::PASSED);
     }
 
+    public function test_a_shared_app_takes_the_configurations_its_plan_has_when_it_is_activated()
+    {
+        [$admin, $shared, $version, $plan] = $this->readyToTest();
+
+        // Configured after the app was added: persistent configurations were copied to the instance then
+        $this->assertSame('default-persistent', $shared->refresh()->setting('configurations.persistent-value'));
+        $plan->updateSettings(['configurations' => ['persistent-value' => 'set-on-the-plan']]);
+        $plan->save();
+        $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan->refresh());
+
+        $this->activationRequest($admin, $shared)->assertSessionHas('success');
+
+        $this->assertSame('set-on-the-plan', $shared->refresh()->setting('configurations.persistent-value'));
+    }
+
+    public function test_the_activation_page_shows_the_configurations_the_plan_has_now()
+    {
+        [$admin, $shared, , $plan] = $this->readyToTest();
+        $plan->updateSettings(['configurations' => ['persistent-value' => 'set-on-the-plan']]);
+        $plan->save();
+
+        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")->assertOk();
+
+        $this->assertSame('set-on-the-plan', $shared->refresh()->setting('configurations.persistent-value'));
+    }
+
     public function test_a_shared_app_is_activated_in_place_once_its_plan_tests_were_bypassed()
     {
         $this->assertActivatedInPlace(VersionTestRunStatus::BYPASSED);
