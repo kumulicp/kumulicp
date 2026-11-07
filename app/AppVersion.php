@@ -289,26 +289,7 @@ class AppVersion extends Model
 
     public function defaultAdminRoleSlugs()
     {
-        $roles = [];
-        $role_ids = $this->roles;
-
-        if (isset($role_ids['default_admin_roles'])) {
-
-            foreach ($role_ids['default_admin_roles'] as $id) {
-
-                $role = AppRole::where('id', $id)
-                    ->where('access_type', '!=', 'disabled')
-                    ->first();
-
-                if ($role) {
-
-                    $roles[] = $role->slug;
-
-                }
-            }
-        }
-
-        return $roles;
+        return array_map(fn (AppRole $role) => $role->slug, $this->defaultAdminRoles());
     }
 
     public function defaultUserRoles()
