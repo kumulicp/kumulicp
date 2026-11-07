@@ -9,6 +9,7 @@ use App\AppPlan;
 use App\AppVersion;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Ldap\Actions\Dn;
+use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\Organization as LdapOrganization;
 use App\Organization;
 use App\Plan;
@@ -63,6 +64,58 @@ class TestSupports
             $org = LdapOrganization::find(Dn::create($slug));
             if ($org) {
                 $org->delete($recursive = true);
+            }
+        }
+    }
+
+    /**
+     * The DNs of the apps' containers in LDAP that tests may leave behind. Tests
+     * that activate apps run against the real directory and their database is
+     * rolled back, so nothing else would remove the groups they make. All of the
+     * demo and testing organizations' apps are the tests': the shared
+     * organization is a real one in a dev setup, with other apps in it, so only
+     * the demo app's are looked at there.
+     *
+     * @return array<int, string>
+     */
+    public function demoAppGroups(): array
+    {
+        if (config('account_manager.driver') !== 'ldap') {
+            return [];
+        }
+
+        $dns = [];
+
+        foreach (['demo' => '', 'testing' => '', 'shared' => 'demo_app-'] as $slug => $prefix) {
+            try {
+                if (! LdapOrganization::find(Dn::create($slug))) {
+                    continue;
+                }
+
+                foreach (LdapGroup::in(Dn::create($slug, 'applications'))->list()->where('cn', 'starts_with', $prefix)->get() as $group) {
+                    $dns[] = $group->getDn();
+                }
+            } catch (\Throwable) {
+                // The directory isn't there
+            }
+        }
+
+        return $dns;
+    }
+
+    /**
+     * Removes the apps' containers that were not there before ($before is what
+     * demoAppGroups() gave then): the ones the test made.
+     *
+     * @param  array<int, string>  $before
+     */
+    public function cleanDemoAppGroups(array $before): void
+    {
+        foreach (array_diff($this->demoAppGroups(), $before) as $dn) {
+            try {
+                LdapGroup::find($dn)?->delete($recursive = true);
+            } catch (\Throwable) {
+                // Already gone
             }
         }
     }

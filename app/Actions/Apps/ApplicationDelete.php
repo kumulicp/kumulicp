@@ -57,7 +57,9 @@ class ApplicationDelete extends NativeAction
         $app_instance = Application::instance($task->app_instance);
         $result = ActionResult::wait();
         $app_profile = Application::profile($app_instance->application->slug);
-        RemoveLDAPGroups::dispatch($task->app_instance);
+        // Not queued: the app is deleted as soon as it is gone from its server, and a
+        // queued job would find the instance already deleted and never remove the groups
+        RemoveLDAPGroups::dispatchSync($task->app_instance);
 
         // A shared child without multisite has no release/site of its own
         // to delete -- deleting the LDAP groups above is all it needs.
