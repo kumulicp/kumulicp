@@ -10,6 +10,7 @@ use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Jobs\Applications\RemoveLDAPGroups;
 use App\Services\SubscriptionService;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
@@ -170,6 +171,11 @@ class ApplicationDelete extends NativeAction
         if ($complete) {
             $organization = $task->organization;
 
+            // Deleting the app's tasks (this one included) is how it says it has
+            // finished: the tasks waiting for them are told once it is all gone
+            $runner = app(TaskRunner::class);
+            $waiting = $runner->dependentsOf($app_instance->tasks()->pluck('id')->push($task->id));
+
             AccountManager::users()->updateAllUsersAccessType();
 
             foreach ($app_instance->domains as $domain) {
@@ -188,6 +194,8 @@ class ApplicationDelete extends NativeAction
 
             $subscription = (new SubscriptionService($organization))->all();
             ActionFacade::execute(new SubscriptionUpdate($organization, $subscription), background: true, delay: true);
+
+            $runner->wake($waiting);
         }
 
         // Done: the app's tasks, this one included, are deleted with it, so
