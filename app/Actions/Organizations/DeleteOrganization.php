@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Apps\ApplicationDelete;
 use App\Enums\TaskStatus;
 use App\Organization;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
@@ -50,6 +51,11 @@ class DeleteOrganization extends Action
         // Polled only once the apps' delete tasks are complete or gone
         AccountManager::account($task->organization)->destroy();
 
+        // Deleting these tasks (this one included) is how it says it has finished:
+        // the tasks waiting for them, like a test step's clean-up, are told at the end
+        $runner = app(TaskRunner::class);
+        $waiting = $runner->dependentsOf($task->organization->tasks()->pluck('id')->push($task->id));
+
         $task->organization->domains()->delete();
         $task->organization->app_instances()->delete();
         $task->organization->backups()->delete();
@@ -60,5 +66,7 @@ class DeleteOrganization extends Action
         $task->organization->logs()->delete();
         $task->organization->delete();
         $task->delete();
+
+        $runner->wake($waiting);
     }
 }
