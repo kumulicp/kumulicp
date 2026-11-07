@@ -167,6 +167,9 @@ class SharedApps extends Controller
             return $redirect;
         }
 
+        // The chart review below should show the configurations as the plan has them now
+        ApplicationFacade::refreshPersistentConfigurations($shared_app);
+
         $plan = $shared_app->plan;
         $summary = $this->activationSummary($shared_app);
         $plan_url = "/admin/apps/{$shared_app->application->slug}/plans/{$plan->id}";
