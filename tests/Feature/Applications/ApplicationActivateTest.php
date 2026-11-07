@@ -191,6 +191,23 @@ it('runs: queues the customizations and waits for the app to come up', function 
     expect($customizations->dependencies()->wherePivot('gate', Task::GATE_START)->pluck('tasks.id')->all())->toBe([$task->id]);
 });
 
+it('has no customizations to process for a container that has no site, and completes once it is up', function () {
+    [$app, $plan, $org] = activationFixture();
+    $plan->updateSettings(['container_only' => true]);
+    $plan->save();
+    Queue::fake();
+    $task = Action::execute(new ApplicationActivate($org, $app, $plan));
+
+    (new RunAction($task))->handle();
+
+    expect(Task::where('action_slug', 'process_customizations')->exists())->toBeFalse();
+
+    app(TaskRunner::class)->poll($task->fresh());
+
+    expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
+    expect($task->app_instance->fresh()->status)->toBe('active');
+});
+
 it('runs again when the organization had to be created on the server first', function () {
     $task = activationTask();
     FakeServerManager::missingOrganization();
