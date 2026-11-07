@@ -276,6 +276,27 @@ return [
             'nuclei' => 'Ejecuta verificaciones de vulnerabilidades basadas en plantillas contra los servicios expuestos en el clúster para detectar CVEs conocidos y configuraciones incorrectas.',
         ],
     ],
+    'update_steps' => [
+        'release' => [
+            'label' => 'Release',
+            'description' => 'Aplica la configuración de la aplicación a su release en el servidor web. Puede reiniciar la aplicación.',
+        ],
+        'settings_job' => [
+            'label' => 'Tarea de configuración',
+            'description' => 'Ejecuta la tarea que aplica la configuración dentro de la aplicación, si la tiene.',
+        ],
+        'ldap_groups' => [
+            'label' => 'Grupos LDAP',
+            'description' => 'Crea los grupos en LDAP para los roles de la versión de la aplicación y elimina los desactivados.',
+        ],
+        'sso' => [
+            'label' => 'Inicio de sesión único',
+            'description' => 'Configura la aplicación con el servidor de inicio de sesión único del plan.',
+        ],
+        'feature' => [
+            'description' => 'Ejecuta la acción que aporta esta función de la aplicación.',
+        ],
+    ],
     'shared_apps' => [
         'shared_apps' => 'Aplicaciones compartidas',
         'shared_apps_description' => 'Contiene aplicaciones a las que cualquier organización puede suscribirse para usar',

@@ -9,12 +9,12 @@ use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\AppVersion;
 use App\Events\AppInstanceSubscriptionChanged;
-use App\Jobs\Applications\AddLdapGroups;
 use App\Notifications\ApplicationUpgraded;
 use App\Services\AppInstance\AppStorageService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
+use App\Updates\UpdateSteps;
 use Illuminate\Support\Carbon;
 
 class ApplicationUpgrade extends NativeAction
@@ -70,23 +70,17 @@ class ApplicationUpgrade extends NativeAction
             return ActionResult::wait();
         }
 
-        // Add ldap groups
-        AddLdapGroups::dispatch($task->app_instance);
         if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) == 'job' && $parent_app = Application::instance($app_instance->parent)) {
             $parent_app->connect('web')->update();
         } else {
             $server = $app_instance->connect('web')->update();
         }
 
-        if ($app_instance->plan->sso_server) {
-            ActionFacade::execute(new ApplicationSSOSetup($app_instance->get()), background: true);
-        }
+        // The rest of what a new version may need (groups in LDAP, single sign-on,
+        // the features' actions) is left to an update: it is recommended there
+        // once the upgrade is done
 
         AppInstanceSubscriptionChanged::dispatch($task->app_instance);
-
-        if ($app_instance->version->customizations) {
-            ActionFacade::execute(new ProcessCustomizations($task->app_instance, $app_instance->customizationsToArray()), $task);
-        }
 
         // Check if upgrade required
         $app_storage_service = new AppStorageService($task->app_instance);
@@ -176,6 +170,8 @@ class ApplicationUpgrade extends NativeAction
             $app_instance->version_id = $task->version_id;
             $app_instance->status = 'active';
             $app_instance->save();
+
+            app(UpdateSteps::class)->recommendAfterUpgrade($app_instance->get());
 
             return ActionResult::done()->then(function (Task $task) use ($app_instance) {
                 if ($task->getValue('notify') && in_array($app_instance->version->announcement_location, ['local', 'remote'])) {

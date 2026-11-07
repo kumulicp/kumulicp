@@ -136,7 +136,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
-                        Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
+                        Route::post('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
                         Route::post('migrate-database', 'Admin\Organizations\Applications@migrate_database')->name('organizations.app.migrate_database');
                         Route::delete('', 'Admin\Organizations\Applications@delete')->name('organizations.app.delete');
                         Route::get('activate/{version}', 'Admin\Organizations\Applications@activate')->name('organizations.app.activate');

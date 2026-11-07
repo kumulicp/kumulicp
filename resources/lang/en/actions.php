@@ -7,6 +7,7 @@ return [
     'emails_from' => 'Emails from',
     'deactivating_app' => 'Deactivating :app',
     'deleting_app' => 'Deleting :app',
+    'update_step' => 'Update :step: :app',
     'updating_app' => 'Updating :app',
     'migrating_app_database' => 'Migrating :app database to :server',
     'upgrading_app' => 'Upgrading :app',

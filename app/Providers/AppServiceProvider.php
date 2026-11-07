@@ -7,6 +7,11 @@ use App\Services\AppProfileRegistry;
 use App\Services\BillingDriverRegistry;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
+use App\Updates\Steps\LdapGroupsStep;
+use App\Updates\Steps\ReleaseStep;
+use App\Updates\Steps\SettingsJobStep;
+use App\Updates\Steps\SsoStep;
+use App\Updates\UpdateSteps;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
@@ -30,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(AppProfileRegistry::class);
         $this->app->singleton(BillingDriverRegistry::class);
+        $this->app->singleton(UpdateSteps::class, fn () => (new UpdateSteps)
+            ->register(new ReleaseStep)
+            ->register(new SettingsJobStep)
+            ->register(new LdapGroupsStep)
+            ->register(new SsoStep));
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);

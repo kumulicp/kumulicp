@@ -73,12 +73,30 @@ import AppsLayout from './AppsLayout.vue'
     >
       <template #content="{ ok }">
         <va-card-title class="m-0">{{ $t('admin.apps.update') }}</va-card-title>
-        <va-card-content class="m-0 p-0">
-          {{ $t('admin.apps.updateModal') }}
+        <va-card-content class="m-0">
+          <p class="mb-3">{{ $t('admin.apps.updateModal') }}</p>
+          <p v-if="update_steps.length === 0">{{ $t('admin.apps.updateNoSteps') }}</p>
+          <template v-else>
+            <va-checkbox
+              v-model="allStepsSelected"
+              :indeterminate="someStepsSelected && !allStepsSelected"
+              :label="$t('admin.apps.updateSelectAll')"
+              class="mb-2"
+            />
+            <va-divider class="my-2" />
+            <div v-for="step in update_steps" :key="step.key" class="mb-2">
+              <va-checkbox v-model="updateForm.steps" :array-value="step.key" :label="step.label" />
+              <div v-if="step.description" class="va-text-secondary ml-8">{{ step.description }}</div>
+            </div>
+          </template>
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('common.yes') }}</va-button></Link>
+          <va-button color="textInverted" :disabled="updateForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button
+            class="mr-2"
+            :disabled="updateForm.processing || updateForm.steps.length === 0"
+            @click="runUpdate(ok)"
+          >{{ $t('common.yes') }}</va-button>
         </va-card-actions>
       </template>
     </va-modal>
@@ -192,9 +210,24 @@ export default {
     app: Object,
     organization: Object,
     versions: Object,
+    update_steps: {
+      type: Array,
+      default: () => []
+    },
     database_servers: Array
   },
   computed: {
+    allStepsSelected: {
+      get () {
+        return this.update_steps.length > 0 && this.updateForm.steps.length === this.update_steps.length
+      },
+      set (selected) {
+        this.updateForm.steps = selected ? this.update_steps.map(step => step.key) : []
+      }
+    },
+    someStepsSelected () {
+      return this.updateForm.steps.length > 0
+    },
     versionOptions () {
       return this.versions.map(version => ({ text: version.version, value: version.id }))
     },
@@ -224,6 +257,9 @@ export default {
         settings
       }),
       isPasswordVisible: false,
+      updateForm: useForm({
+        steps: this.update_steps.filter(step => step.checked).map(step => step.key)
+      }),
       showUpdateAppModal: false,
       showUpgradeAppModal: false,
       showDeleteAppModal: false,
@@ -246,6 +282,13 @@ export default {
           value: 'later'
         }
       ]
+    }
+  },
+  methods: {
+    runUpdate (close) {
+      this.updateForm.post('/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/update', {
+        onSuccess: () => close()
+      })
     }
   }
 }

@@ -8,6 +8,7 @@ use App\Events\Apps\AppInstanceUpdated;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
+use App\Updates\UpdateSteps;
 
 class ApplicationUpdate extends Action
 {
@@ -15,8 +16,17 @@ class ApplicationUpdate extends Action
 
     public static bool $long_running = true;
 
-    public function __construct(AppInstance $app_instance)
+    /**
+     * @param  array<int, string>|null  $steps  The keys of the update steps to run (see UpdateSteps). Without them
+     *                                          the update does what it always did: roll out the release and run the
+     *                                          update_settings job.
+     */
+    public function __construct(AppInstance $app_instance, ?array $steps = null)
     {
+        if ($steps !== null) {
+            $this->setCustomValues(['steps' => array_values($steps)]);
+        }
+
         $this->organization = $app_instance->organization;
         $this->app_instance = $app_instance;
         $this->app_instance->status = 'updating';
@@ -27,6 +37,10 @@ class ApplicationUpdate extends Action
 
     public static function run(Task $task)
     {
+        if (is_array($task->getValue('steps'))) {
+            return static::runSteps($task);
+        }
+
         $app_instance = Application::instance($task->app_instance);
         $app_update = new self($app_instance->app_instance);
 
@@ -47,14 +61,56 @@ class ApplicationUpdate extends Action
         return $app_update;
     }
 
+    /**
+     * The steps asked for, each a task of its own, after the steps they follow.
+     * The update is complete when they all are.
+     */
+    private static function runSteps(Task $task): self
+    {
+        $app_instance = $task->app_instance;
+        $keys = $task->getValue('steps');
+        $steps = app(UpdateSteps::class)->for($app_instance)->only($keys);
+
+        $tasks = [];
+        foreach ($steps as $key => $step) {
+            $action = new ApplicationUpdateStep($app_instance, $key);
+
+            $earlier = array_filter(array_map(fn (string $before) => $tasks[$before] ?? null, $step->after()));
+            if ($earlier) {
+                $action->dependsOn(...array_values($earlier));
+            }
+
+            if ($started = ActionFacade::execute($action, $task, true)) {
+                $tasks[$key] = $started;
+            }
+        }
+
+        return (new self($app_instance, $keys))->waitFor(...array_values($tasks));
+    }
+
     public static function retry(Task $task)
     {
-        return new self($task->app_instance);
+        return new self($task->app_instance, $task->getValue('steps'));
     }
 
     public static function complete(Task &$task)
     {
         $app_instance = Application::instance($task->app_instance);
+
+        // The steps are tasks of their own and are all complete by now
+        if (is_array($task->getValue('steps'))) {
+            // The steps changed the app too: start from what is stored
+            $app_instance->app_instance->refresh();
+            $app_instance->status = 'active';
+            $app_instance->save();
+
+            $task->complete();
+            $task->groupNotified();
+
+            event(new AppInstanceUpdated($app_instance->app_instance));
+
+            return;
+        }
 
         // A shared child without multisite has nothing of its own to wait
         // on -- the hub's own update task tracks completion for it.

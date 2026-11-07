@@ -19,6 +19,7 @@ return [
     'failed' => 'Fallido',
     'action' => [
         'tech_difficulties' => 'Estamos experimentando dificultades técnicas. Resolución de problemas en curso.',
+        'update_step_unknown' => 'El paso de actualización :step ya no está disponible para esta aplicación.',
         'waiting_for' => 'Esperando a que finalicen otras tareas',
         'dependency_failed' => 'Falló una tarea de la que depende esta',
         'deadline_exceeded' => 'Esta tarea no terminó a tiempo',
