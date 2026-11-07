@@ -140,6 +140,7 @@ class HandleInertiaRequests extends Middleware
             'theme' => [
                 'primary_color' => Settings::get('primary_color', '#6042B3'),
                 'secondary_color' => Settings::get('secondary_color', '#d91698'),
+                'text_secondary_color' => Settings::get('text_secondary_color', '#64748b'),
             ],
             'language' => app()->getLocale(),
             'locales' => config('locales.available'),

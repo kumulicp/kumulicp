@@ -1478,6 +1478,7 @@
     "theme": "Configuración de Tema",
     "primaryColor": "Color Primario",
     "secondaryColor": "Color Secundario",
+    "textSecondaryColor": "Color de Texto Secundario",
     "general": "Configuración General",
     "ldapAttributes": "Mapeo de Atributos",
     "supportEmail": "Correo de Soporte",
