@@ -26,6 +26,8 @@ class Action
 
     public $error = false;
 
+    // A new task of this action supersedes the open one, as long as that hasn't
+    // started (see dedupKey()). A running task is never replaced.
     public $replace = false;
 
     public $error_data = [];
@@ -173,32 +175,38 @@ class Action
         return $this;
     }
 
-    public function task_exists()
+    /**
+     * What makes a task a duplicate of an open one: the same action for the same
+     * organization and app instance with the same values. Stored on the task, and
+     * a unique index over the open tasks keeps two of them from existing, so two
+     * requests made at once can't both get through. Null: never a duplicate.
+     *
+     * With $replace the values don't count: a new task stands in for any open one
+     * of the action, which ActionService::execute() swaps out if it hasn't started.
+     */
+    public function dedupKey(): ?string
     {
-        // Check if the same system task is already in progress
-        $task = Task::where('organization_id', $this->organization->id)
-            ->where('action_slug', $this->slug)
-            ->where('action_group', $this->action_group)
-            ->whereIn('status', TaskStatus::openValues());
+        return sha1(json_encode([
+            $this->organization->id,
+            $this->action_group,
+            $this->slug,
+            $this->app_instance?->id,
+            $this->replace ? null : self::sortKeys($this->customValues()),
+        ]));
+    }
 
-        // If action doesn't replace previous action, also confirm the custom values are the same to avoid redundancy
-        if (! $this->replace) {
-            foreach ($this->customValues() as $key => $value) {
-                $task->where("custom_values->$key", $value);
-            }
+    private static function sortKeys(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
         }
 
-        if ($this->app_instance) {
-            $task->where('app_instance_id', $this->app_instance->id);
-        }
-        $task = $task->first();
+        $value = array_map(fn ($item) => self::sortKeys($item), $value);
 
-        // If this action should be replace, delete old task
-        if ($task && $this->replace) {
-            $task->delete();
-            $task = false;
+        if (! array_is_list($value)) {
+            ksort($value);
         }
 
-        return $task ? true : false;
+        return $value;
     }
 }

@@ -138,10 +138,8 @@ it('reports a task whose queued job has not started several times: the workers a
 
 it('reports a task for each reason it is stuck, each once', function () {
     Log::spy();
-    // A blocked task can't also be "requeued" (that only applies to tasks not yet started),
-    // so use a pending one that has both waited a day and had its job requeued
-    $task = watchedTask('pending');
-    ageTask($task, 1441);
+    $task = watchedTask('blocked', ['blocked_from' => 'pending']);
+    ageTask($task, 61);
     foreach (range(1, 3) as $time) {
         TaskEvent::record($task, 'requeued');
     }
@@ -149,7 +147,11 @@ it('reports a task for each reason it is stuck, each once', function () {
     app(TaskDispatcher::class)->watch();
     app(TaskDispatcher::class)->watch();
 
+<<<<<<< HEAD
     expect(alertedFor($task))->toEqualCanonicalizing(['waiting', 'requeued']);
+=======
+    expect(alertedFor($task))->toEqualCanonicalizing(['blocked', 'requeued']);
+>>>>>>> 372141e9 (Admin task page, cancel, guarded retry/delete and stuck-task alerts (phase 6))
     Log::shouldHaveReceived('error')->twice();
 });
 

@@ -33,7 +33,7 @@ class SubscriptionUpdate extends Action
         // run() rebuilds the subscription from the database, so nothing about it
         // is stored (an unserialize() of database contents breaks across deploys
         // and is an object-injection risk). The timestamp keeps successive
-        // updates from being collapsed into one by Action::task_exists().
+        // updates from being collapsed into one by Action::dedupKey().
         $this->setCustomValues(['requested_at' => now()->toIso8601String()]);
         $this->description = __('actions.updating_subscription');
     }
