@@ -66,9 +66,9 @@ import { useToast } from 'vuestic-ui'
               :label="$t('admin.tasks.actions')"
               class="mt-3"
             >
-              <Link href="/admin/server/tasks/run_schedule" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
-              <Link href="/admin/server/tasks/restart_queue" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
-              <Link href="/admin/server/tasks/dummy" method="post" as="button"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
+              <Link href="/admin/server/tasks/run_schedule" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
+              <Link href="/admin/server/tasks/restart_queue" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
+              <Link href="/admin/server/tasks/dummy" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
             </VaButtonDropdown>
           </div>
         </div>
