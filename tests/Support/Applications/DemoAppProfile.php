@@ -2,6 +2,7 @@
 
 namespace Tests\Support\Applications;
 
+use App\AppInstance;
 use App\Integrations\Applications\AppProfile;
 use Tests\Support\Applications\Features\DisabledFeature;
 use Tests\Support\Applications\Features\EnabledFeature;
@@ -9,6 +10,26 @@ use Tests\Support\Applications\Features\OptionalFeature;
 
 class DemoAppProfile extends AppProfile
 {
+    // Set while a test needs the app's site to live in a parent's release, made by a job
+    public static bool $job_activation = false;
+
+    public function activationType(?AppInstance $app_instance = null)
+    {
+        return static::$job_activation && $app_instance ? 'job' : parent::activationType($app_instance);
+    }
+
+    // A plan can name the local admin, like an app that is not 'support' does
+    public function adminUsername(AppInstance $app_instance): string
+    {
+        return $app_instance->plan?->setting('admin_username') ?: parent::adminUsername($app_instance);
+    }
+
+    // An instance on a plan with this setting is only a container, like the shared ERPNext bench
+    public function hasOwnSite(?AppInstance $app_instance = null): bool
+    {
+        return ! $app_instance?->plan?->setting('container_only');
+    }
+
     protected $name = 'demo_app';
 
     protected $activation_type = 'chart';
