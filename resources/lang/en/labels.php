@@ -56,6 +56,7 @@ return [
     'minimal' => 'Minimal',
     'unknown' => 'Unknown',
     'deactivates' => 'Deactivates :date',
+    'deleting' => 'Being removed',
     'dummy_notification' => 'Dummy Notification',
     'success' => 'Success',
     'failed' => 'Failed',

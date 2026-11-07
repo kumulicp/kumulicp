@@ -186,3 +186,75 @@ it('does not let one blocked shared-app hub stop the rest of the sweep', functio
 
     expect(Task::where('app_instance_id', $otherInstance->id)->where('action_slug', 'application_delete')->exists())->toBeTrue();
 });
+
+it('deletes an app due earlier today without waiting for the next calendar day', function () {
+    $instance = softDeleteTestInstance();
+    $instance->status = 'deactivating';
+    $instance->deactivate_at = now()->subMinute();
+    $instance->save();
+
+    (new DeactivatedAppInstanceCheck)();
+
+    expect(Task::where('app_instance_id', $instance->id)->where('action_slug', 'application_delete')->exists())->toBeTrue();
+});
+
+it('does not re-sweep an app that is already being deleted', function () {
+    $instance = softDeleteTestInstance();
+    $instance->status = 'deleting';
+    $instance->deactivate_at = now()->subDay();
+    $instance->save();
+
+    (new DeactivatedAppInstanceCheck)();
+
+    expect(Task::where('app_instance_id', $instance->id)->where('action_slug', 'application_delete')->exists())->toBeFalse();
+});
+
+it('leaves apps of an already deactivated organization to DeactivateOrganization', function () {
+    $instance = softDeleteTestInstance();
+    $instance->status = 'deactivating';
+    $instance->deactivate_at = now()->subDay();
+    $instance->save();
+
+    $instance->organization->status = 'deactivated';
+    $instance->organization->save();
+
+    (new DeactivatedAppInstanceCheck)();
+
+    expect(Task::where('app_instance_id', $instance->id)->where('action_slug', 'application_delete')->exists())->toBeFalse();
+});
+
+function appListDescriptions(AppInstance $instance): array
+{
+    $user = User::where('username', 'demo')->firstOrFail();
+    $descriptions = [];
+
+    test()->actingAs($user)->get('/apps')->assertInertia(function ($page) use ($instance, &$descriptions) {
+        $app = collect($page->toArray()['props']['apps'])->firstWhere('id', $instance->id);
+        $descriptions = collect($app['tasks'])->pluck('description')->filter()->values()->all();
+    });
+
+    return $descriptions;
+}
+
+it('shows the future date for a scheduled deactivation', function () {
+    $instance = softDeleteTestInstance();
+    $instance->status = 'deactivating';
+    $instance->deactivate_at = now()->addDays(10);
+    $instance->save();
+
+    expect(appListDescriptions($instance))->toBe([__('labels.deactivates', ['date' => now()->addDays(10)->format('M d Y')])]);
+});
+
+it('shows a removal message instead of a date once the deactivation is due or deleting', function () {
+    $instance = softDeleteTestInstance();
+    $instance->status = 'deactivating';
+    $instance->deactivate_at = now();
+    $instance->save();
+
+    expect(appListDescriptions($instance))->toBe([__('labels.deleting')]);
+
+    $instance->status = 'deleting';
+    $instance->save();
+
+    expect(appListDescriptions($instance))->toBe([__('labels.deleting')]);
+});

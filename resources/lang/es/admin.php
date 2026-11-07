@@ -251,10 +251,6 @@ return [
     ],
     'tests' => [
         'tests' => 'Pruebas',
-        'updated' => 'Prueba actualizada',
-        'deleted' => 'Prueba eliminada',
-        'running' => 'Prueba en ejecución',
-        'clearing' => 'Las cuentas de prueba se están terminando de borrar',
     ],
     'announcements' => [
         'announcements' => 'Anuncios',

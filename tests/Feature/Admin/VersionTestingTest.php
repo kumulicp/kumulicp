@@ -2,8 +2,6 @@
 
 namespace Tests\Feature\Admin;
 
-use App\AccountTest;
-use App\Actions\Tests\CreateTestOrganization;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -582,21 +580,66 @@ class VersionTestingTest extends TestCase
         $this->actingAs($this->admin)->get("/admin/organizations/{$customer->id}/apps/{$app->id}")->assertNotFound();
     }
 
-    public function test_version_test_orgs_do_not_clutter_the_adhoc_test_list()
+    // ─── Overview ────────────────────────────────────────────────────────────
+
+    public function test_the_overview_lists_runs_in_progress_with_their_stats()
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
-        $adhoc = new AccountTest;
-        $adhoc->organization_id = 1;
-        $adhoc->created_by_id = $this->admin->id;
-        $adhoc->test_number = 1;
-        $adhoc->description = 'A manual test';
-        $adhoc->settings = ['base_plan' => '', 'apps' => []];
-        $adhoc->status = 'pending';
-        $adhoc->save();
+        $this->runner()->provisioned($step->id);
 
         $this->actingAs($this->admin)->get('/admin/server/tests')->assertInertia(fn ($page) => $page
-            ->where('tests', fn ($tests) => collect($tests)->pluck('id')->all() === [$adhoc->id])
+            ->component('Admin/Tests/TestsOverview')
+            ->where('stats.running', 1)
+            ->where('stats.awaiting', 1)
+            ->where('stats.passed', 0)
+            ->where('runs.0.id', $run->id)
+            ->where('runs.0.version', $this->candidate->name)
+            ->where('runs.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->name}/tests/{$run->id}")
+            ->where('runs.0.progress.total', $run->steps()->count())
+            ->where('runs.0.current_step.status', 'awaiting_confirmation')
+        );
+    }
+
+    public function test_the_overview_counts_recent_outcomes_and_leaves_finished_runs_out_of_the_list()
+    {
+        $this->runner()->bypass($this->candidate, $this->admin, 'Hotfix for a security issue');
+        $old = $this->runner()->bypass($this->candidate, $this->admin, 'An old bypass');
+        $old->finished_at = now()->subDays(45);
+        $old->save();
+
+        $this->actingAs($this->admin)->get('/admin/server/tests')->assertInertia(fn ($page) => $page
+            ->where('stats.running', 0)
+            ->where('stats.bypassed', 1)
+            ->where('runs', [])
+        );
+    }
+
+    public function test_the_overview_lists_untested_versions_newer_than_the_enabled_one()
+    {
+        $this->actingAs($this->admin)->get('/admin/server/tests')->assertInertia(fn ($page) => $page
+            ->where('stats.untested', 1)
+            ->where('untested_versions.0.id', $this->candidate->id)
+            ->where('untested_versions.0.gate', 'untested')
+            ->where('untested_versions.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->name}/tests")
+        );
+
+        $this->runner()->bypass($this->candidate, $this->admin, 'Hotfix for a security issue');
+
+        $this->actingAs($this->admin)->get('/admin/server/tests')->assertInertia(fn ($page) => $page
+            ->where('stats.untested', 0)
+            ->where('untested_versions', [])
+        );
+    }
+
+    public function test_the_overview_leaves_out_versions_of_apps_that_are_not_enabled()
+    {
+        $this->application->enabled = false;
+        $this->application->save();
+
+        $this->actingAs($this->admin)->get('/admin/server/tests')->assertInertia(fn ($page) => $page
+            ->where('stats.untested', 0)
+            ->where('untested_versions', [])
         );
     }
 
