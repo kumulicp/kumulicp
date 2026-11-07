@@ -1486,6 +1486,7 @@
     "theme": "Theme Settings",
     "primaryColor": "Primary Color",
     "secondaryColor": "Secondary Color",
+    "textSecondaryColor": "Secondary Text Color",
     "general": "General Settings",
     "ldapAttributes": "Attribute Mapping",
     "supportEmail": "Support Email",

@@ -50,12 +50,14 @@ class SettingsTest extends TestCase
             'welcome_page' => '<p>Welcome</p>',
             'primary_color' => '#123456',
             'secondary_color' => '#abcdef',
+            'text_secondary_color' => '#654321',
             'default_currency' => 'USD',
             'enabled_currencies' => ['USD'],
         ]);
 
         $response->assertRedirect('admin/settings');
         $this->assertDatabaseHas('server_settings', ['key' => 'base_domain', 'value' => 'newdomain.dev']);
+        $this->assertDatabaseHas('server_settings', ['key' => 'text_secondary_color', 'value' => '#654321']);
     }
 
     public function test_control_panel_settings_requires_base_domain()

@@ -178,7 +178,8 @@ export default {
 
     setColors({
       primary: this.$page.props.theme.primary_color,
-      secondary: this.$page.props.theme.secondary_color
+      secondary: this.$page.props.theme.secondary_color,
+      textSecondary: this.$page.props.theme.text_secondary_color
     })
   },
   computed: {
