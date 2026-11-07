@@ -17,8 +17,10 @@ use App\Support\Time;
 use App\Task;
 use App\TaskEvent;
 use App\TaskStep;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 class Tasks extends Controller
 {
@@ -42,9 +44,41 @@ class Tasks extends Controller
         ]);
     }
 
+    // How many levels of waiting tasks the tree view follows
+    private const TREE_MAX_DEPTH = 25;
+
+    // Task ids per query when walking the dependency table
+    private const TREE_CHUNK = 500;
+
     public function api(Request $request)
     {
-        $tasks = Task::orderByDesc('created_at');
+        $tasks = $this->filtered_tasks($request);
+        $per_page = min(max((int) $request->input('per_page', 20), 1), 100);
+
+        if ($request->input('view') === 'tree') {
+            return $this->tree($tasks, $per_page);
+        }
+
+        $tasks = $tasks->orderByDesc('created_at')
+            ->with(['application', 'version', 'organization', 'app_instance'])
+            ->paginate($per_page);
+
+        return [
+            'tasks' => $tasks->map(fn ($task) => $this->present($task)),
+            'meta' => [
+                'total' => $tasks->total(),
+                'pages' => $tasks->lastPage(),
+                'page' => $tasks->currentPage(),
+            ],
+        ];
+    }
+
+    /**
+     * @return Builder<Task>
+     */
+    private function filtered_tasks(Request $request): Builder
+    {
+        $tasks = Task::query();
         if ($request->organization) {
             $tasks->where('organization_id', $request->organization);
         }
@@ -57,39 +91,128 @@ class Tasks extends Controller
         if ($request->app_instance) {
             $tasks->where('app_instance_id', $request->app_instance);
         }
-        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
-        $tasks = $tasks->with(['application', 'version', 'organization', 'app_instance'])->paginate($perPage);
+
+        return $tasks;
+    }
+
+    /**
+     * One task as the task list shows it.
+     *
+     * @return array<string, mixed>
+     */
+    private function present(Task $task): array
+    {
+        if ($task->status->isOpen()) {
+            $duration = Time::duration($task->created_at, time());
+        } else {
+            $duration = Time::duration($task->created_at, $task->updated_at);
+        }
 
         return [
-            'tasks' => $tasks->map(function ($task) {
-                $time = new Time;
-                if ($task->status->isOpen()) {
-                    $duration = Time::duration($task->created_at, time());
+            'id' => $task->id,
+            'organization' => $task->organization ? $task->organization->name : '',
+            'application' => $task->application ? $task->application->name.($task->version ? ' ('.$task->version->name.')' : '') : '',
+            'version' => $task->version ? $task->version->name : '',
+            'status' => $task->status->value,
+            'time' => $duration,
+            'description' => $task->description,
+            'error_message' => SafeErrorMessage::scrub($task->error_message),
+            'can_retry' => $task->status->isRetryable(),
+            'can_cancel' => $task->status->isCancellable(),
+            'can_delete' => $task->status->isDeletable(),
+        ];
+    }
 
-                } else {
-                    $duration = Time::duration($task->created_at, $task->updated_at);
+    /**
+     * The task list as a tree: a task is the parent of the tasks it waits for.
+     * Pages are made of top-level tasks (nothing waits for them), each with all
+     * it waits for, so one job's tasks stay together. With filters, a top-level
+     * task is listed when it or anything beneath it matches.
+     *
+     * @param  Builder<Task>  $matching
+     * @return array<string, mixed>
+     */
+    private function tree(Builder $matching, int $per_page): array
+    {
+        $roots = $this->roots_query($matching)
+            ->orderByDesc('created_at')
+            ->with(['application', 'version', 'organization', 'app_instance'])
+            ->paginate($per_page);
+
+        // Everything beneath this page's tasks, a level at a time
+        $tasks = $roots->getCollection()->keyBy('id');
+        $children = [];
+        $level = $tasks->keys()->all();
+        for ($depth = 0; $level !== [] && $depth < self::TREE_MAX_DEPTH; $depth++) {
+            $edges = collect();
+            foreach (array_chunk($level, self::TREE_CHUNK) as $chunk) {
+                $edges = $edges->concat(DB::table('task_dependencies')->whereIn('task_id', $chunk)->get(['task_id', 'depends_on_task_id']));
+            }
+            foreach ($edges as $edge) {
+                $children[(int) $edge->task_id][] = (int) $edge->depends_on_task_id;
+            }
+
+            $unseen = $edges->pluck('depends_on_task_id')->unique()->diff($tasks->keys())->values()->all();
+            foreach (array_chunk($unseen, self::TREE_CHUNK) as $chunk) {
+                $tasks = $tasks->union(Task::whereKey($chunk)->with(['application', 'version', 'organization', 'app_instance'])->get()->keyBy('id'));
+            }
+            $level = $unseen;
+        }
+
+        // A task can be waited on by several tasks (a DAG), so it, and all beneath
+        // it, is repeated under each of them. Accepted for now.
+        $build = function (int $id, array $path) use (&$build, $tasks, $children) {
+            $node = $this->present($tasks[$id]);
+            $node['children'] = [];
+            foreach ($children[$id] ?? [] as $child_id) {
+                // A task that is waiting for itself can't happen, but must not loop if it did
+                if ($tasks->has($child_id) && ! in_array($child_id, $path, true)) {
+                    $node['children'][] = $build($child_id, [...$path, $id]);
                 }
+            }
 
-                return [
-                    'id' => $task->id,
-                    'organization' => $task->organization ? $task->organization->name : '',
-                    'application' => $task->application ? $task->application->name.($task->version ? ' ('.$task->version->name.')' : '') : '',
-                    'version' => $task->version ? $task->version->name : '',
-                    'status' => $task->status->value,
-                    'time' => $duration,
-                    'description' => $task->description,
-                    'error_message' => SafeErrorMessage::scrub($task->error_message),
-                    'can_retry' => $task->status->isRetryable(),
-                    'can_cancel' => $task->status->isCancellable(),
-                    'can_delete' => $task->status->isDeletable(),
-                ];
-            }),
+            return $node;
+        };
+
+        return [
+            'tasks' => $roots->getCollection()->map(fn ($task) => $build($task->id, []))->values(),
             'meta' => [
-                'total' => $tasks->total(),
-                'pages' => $tasks->lastPage(),
-                'page' => $tasks->currentPage(),
+                'total' => $roots->total(),
+                'pages' => $roots->lastPage(),
+                'page' => $roots->currentPage(),
             ],
         ];
+    }
+
+    /**
+     * The tasks that sit at the top of the tree: nothing waits for them. With
+     * filters, only those holding a task that matches.
+     *
+     * @param  Builder<Task>  $matching
+     * @return Builder<Task>
+     */
+    private function roots_query(Builder $matching): Builder
+    {
+        if ($matching->getQuery()->wheres === []) {
+            return Task::query()->whereNotIn('id', DB::table('task_dependencies')->select('depends_on_task_id'));
+        }
+
+        // Walk up from the matching tasks to the tasks that wait for them
+        $roots = [];
+        $seen = [];
+        $level = $matching->pluck('id')->all();
+        for ($depth = 0; $level !== [] && $depth <= self::TREE_MAX_DEPTH; $depth++) {
+            $seen = array_merge($seen, $level);
+            $parents = [];
+            foreach (array_chunk($level, self::TREE_CHUNK) as $chunk) {
+                $edges = DB::table('task_dependencies')->whereIn('depends_on_task_id', $chunk)->get(['task_id', 'depends_on_task_id']);
+                $roots = array_merge($roots, array_diff($chunk, $edges->pluck('depends_on_task_id')->all()));
+                $parents = array_merge($parents, $edges->pluck('task_id')->all());
+            }
+            $level = array_values(array_diff(array_unique($parents), $seen));
+        }
+
+        return Task::query()->whereIn('id', array_values(array_unique($roots)));
     }
 
     /**
