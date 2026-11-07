@@ -16,6 +16,7 @@ use App\Exceptions\VersionTestException;
 use App\Organization;
 use App\Plan;
 use App\Services\VersionTesting\VersionTestRunner;
+use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\VersionTesting\VersionFingerprint;
 use App\Task;
@@ -803,7 +804,8 @@ class VersionTestingTest extends TestCase
         $account_test->status = 'in_progress';
         $account_test->save();
 
-        [$organization] = (new CreateTestOrganization)->create($account_test, Plan::where('is_default', 1)->firstOrFail(), CreateTestOrganization::lastNumber() + 1);
+        // Numbered far from the real test organizations (test1, test2...): the directory is the real one
+        [$organization] = (new CreateTestOrganization)->create($account_test, Plan::where('is_default', 1)->firstOrFail(), random_int(900000, 999999));
         $organization->refresh();
 
         // MariaDB rejects an organization without settings, and these have no default
@@ -811,5 +813,8 @@ class VersionTestingTest extends TestCase
         $this->assertNotSame('', (string) $organization->email);
         $this->assertNotSame('', (string) $organization->phone_number);
         $this->assertSame($account_test->id, $organization->account_test_id);
+
+        // It made an entry in the directory too
+        AccountManager::account($organization)->destroy();
     }
 }
