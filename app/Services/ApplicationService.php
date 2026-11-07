@@ -242,6 +242,17 @@ class ApplicationService
         return $configs;
     }
 
+    /**
+     * Takes the plan's persistent configurations again, for an instance that was
+     * made before the plan was configured (a shared app, which is added first and
+     * activated once its plan is set up). Not for one that is already deployed:
+     * persistent means they stay as they were when it was activated.
+     */
+    public function refreshPersistentConfigurations(AppInstance $app_instance): void
+    {
+        $app_instance->updateSetting('configurations', $this->persistentConfigurations($app_instance->application, $app_instance->plan));
+    }
+
     public function all()
     {
         $db_applications = Application::with('roles')->get();

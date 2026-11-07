@@ -108,7 +108,8 @@ abstract class HelmChart extends Chart
 
     public function appStorage()
     {
-        if (is_int($this->app_storage)) {
+        // A chart can be given the storage of the release it belongs to; 0 is no storage worked out yet
+        if (is_int($this->app_storage) && $this->app_storage > 0) {
             return $this->app_storage;
         }
 
@@ -116,7 +117,8 @@ abstract class HelmChart extends Chart
         $total_storage = (int) $storage->totalAppStorage();
 
         $chart_storage = (int) $this->app_instance->setting('chart_storage');
-        if (! $chart_storage || $chart_storage < $total_storage) {
+        // Not a 0: the next chart built for this instance would take it for the size
+        if ($total_storage > 0 && (! $chart_storage || $chart_storage < $total_storage)) {
             $this->app_instance->updateSetting('chart_storage', $total_storage);
             $chart_storage = $total_storage;
         }
