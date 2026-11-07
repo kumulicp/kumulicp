@@ -155,12 +155,15 @@ class ApplicationDelete extends NativeAction
             // deleted in handle() above beyond its LDAP groups -- nothing left
             // to wait on.
             $complete = true;
+        } elseif (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) === 'job') {
+            // A site deleted by a job inside the hub's release (e.g. ERPNext):
+            // the job is what this waited for and it is complete or gone by
+            // the time this is polled. The release itself stays deployed, so it
+            // can't say whether the site is gone.
+            $complete = true;
         } else {
             try {
-                // connect('web')->isActive() already resolves to the
-                // parent's chart/job status for a 'job' activation type
-                // (see RancherWebInterface), so a multisite child (e.g.
-                // ERPNext) polls its own deactivate job correctly here too.
+                // connect('web')->isActive() reports the app's own release
                 $complete = ! $app_instance->connect('web')->isActive();
             } catch (\Throwable $e) {
                 // No web server assigned -- nothing to wait on.
