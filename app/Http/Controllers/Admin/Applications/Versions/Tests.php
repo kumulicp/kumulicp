@@ -126,7 +126,7 @@ class Tests extends Controller
         }
 
         return [
-            'username' => ApplicationFacade::instance($app_instance)->configuration('username') ?? 'support',
+            'username' => ApplicationFacade::profile($app_instance->application)->adminUsername($app_instance),
             'password' => $app_instance->api_password(),
         ];
     }

@@ -24,6 +24,7 @@ use App\VersionTestRun;
 use App\VersionTestStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -437,6 +438,28 @@ class VersionTestingTest extends TestCase
                 ->where('current_step.admin_account.password', 'local-admin-pw')
                 ->where('current_step.password', $step->refresh()->test_password)
             );
+    }
+
+    public function test_the_local_admin_account_is_the_one_the_app_says_it_has()
+    {
+        // The demo profile is the one that names its admin
+        $this->application->slug = 'demo_app';
+        $this->application->save();
+        \App\Support\Facades\Application::register(new DemoAppProfile);
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $app_instance = $this->installOn(Organization::first(), $this->candidate);
+        $plan = $app_instance->plan;
+        $plan->updateSettings(['admin_username' => 'Administrator']);
+        $plan->save();
+        $step->app_instance_id = $app_instance->id;
+        $step->save();
+
+        $this->runner()->provisioned($step->id);
+
+        $this->actingAs($this->admin)
+            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->assertInertia(fn ($page) => $page->where('current_step.admin_account.username', 'Administrator'));
     }
 
     public function test_the_next_test_button_appears_once_the_previous_org_is_cleared()
