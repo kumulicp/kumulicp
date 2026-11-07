@@ -357,6 +357,27 @@ return [
             'nuclei' => 'Runs template-based vulnerability checks against exposed services in the cluster to catch known CVEs and misconfigurations.',
         ],
     ],
+    'update_steps' => [
+        'release' => [
+            'label' => 'Release',
+            'description' => 'Applies the app\'s settings to its release on the web server. May restart the app.',
+        ],
+        'settings_job' => [
+            'label' => 'Settings job',
+            'description' => 'Runs the job that applies the app\'s settings inside it, if the app has one.',
+        ],
+        'ldap_groups' => [
+            'label' => 'LDAP groups',
+            'description' => 'Creates the groups in LDAP for the roles of the app\'s version and removes the ones that are turned off.',
+        ],
+        'sso' => [
+            'label' => 'Single sign-on',
+            'description' => 'Sets the app up with the plan\'s single sign-on server.',
+        ],
+        'feature' => [
+            'description' => 'Runs the action this feature of the app brings.',
+        ],
+    ],
     'shared_apps' => [
         'shared_apps' => 'Shared Apps',
         'shared_apps_description' => 'Contains apps that any organization can sign up to use',

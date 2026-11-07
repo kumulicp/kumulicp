@@ -16,7 +16,9 @@ use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
+use App\Updates\UpdateSteps;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class Applications extends Controller
 {
@@ -129,6 +131,7 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
+            'update_steps' => app(UpdateSteps::class)->options($app),
             'database_servers' => ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
                 'value' => $server->id,
                 'text' => $server->name,
@@ -174,9 +177,18 @@ class Applications extends Controller
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
     }
 
-    public function update_settings(Organization $organization, AppInstance $app)
+    public function update_settings(Request $request, Organization $organization, AppInstance $app)
     {
-        $task = Action::execute(new ApplicationUpdate($app));
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $available = app(UpdateSteps::class)->for($app)->keys()->all();
+
+        $validated = $request->validate([
+            'steps' => 'required|array|min:1',
+            'steps.*' => ['string', Rule::in($available)],
+        ]);
+
+        $task = Action::execute(new ApplicationUpdate($app, $validated['steps']));
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.updating', ['app' => $app->label]));
     }

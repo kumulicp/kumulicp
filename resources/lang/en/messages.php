@@ -19,6 +19,7 @@ return [
     'failed' => 'Failed',
     'action' => [
         'tech_difficulties' => 'Experiencing technical difficulties. Resolving issues in progress.',
+        'update_step_unknown' => 'The update step :step is no longer available for this app.',
         'waiting_for' => 'Waiting for other tasks to complete',
         'dependency_failed' => 'A task this one depends on has failed',
         'deadline_exceeded' => 'This task did not finish in time',
