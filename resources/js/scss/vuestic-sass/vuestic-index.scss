@@ -16,6 +16,9 @@
   --va-text-secondary: #64748b; // slate-500
 }
 
-.va-text-secondary {
+// Vuestic's stylesheet can end up in the document more than once (including
+// after this one, via lazily loaded page chunks), so a plain `.va-text-secondary`
+// rule loses on source order. `:root` raises specificity so it always wins.
+:root .va-text-secondary {
   color: var(--va-text-secondary);
 }
