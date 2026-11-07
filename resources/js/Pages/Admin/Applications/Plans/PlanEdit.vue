@@ -124,7 +124,7 @@ import { currencyByCode } from '@/constants/currencies'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>
-        <p v-if="plan.hidden && !plan.web_server" class="my-2">
+        <p v-if="!plan.full_settings" class="my-2">
           {{ $t('admin.plans.independentlyInstalled') }}
         </p>
         <template v-else>

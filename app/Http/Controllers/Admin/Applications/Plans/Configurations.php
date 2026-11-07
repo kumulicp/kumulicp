@@ -14,6 +14,8 @@ class Configurations extends Controller
 {
     public function edit(Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         $configs = ApplicationFacade::configurations($app, $plan, true);
         $additionalConfigs = $plan->additionalConfigs();
 
@@ -27,7 +29,7 @@ class Configurations extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'hidden' => $plan->hidden,
-                'shared_app_active' => $plan->isSharedAppActive(),
+                'full_settings' => $plan->hasFullSettings(),
             ],
             'configs' => array_merge($configs, $additionalConfigs),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
@@ -36,6 +38,8 @@ class Configurations extends Controller
 
     public function update(Request $request, Application $app, AppPlan $plan)
     {
+        abort_unless($plan->hasFullSettings(), 404);
+
         $validateConfigurations = ApplicationFacade::validateConfigurations($app);
 
         $validationTypes = [

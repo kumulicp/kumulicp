@@ -70,7 +70,17 @@ class ApplicationDeactivate extends Action
     {
         if ($app_instance = Application::instance($task->app_instance)) {
             $server = $app_instance->connect('web');
-            if (! $server->isActive()) {
+
+            // A site inside the hub's release (e.g. ERPNext) has no release of its
+            // own to go inactive: the hub's stays deployed. It is done once the
+            // hub has taken the change.
+            if (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) === 'job') {
+                $deactivated = ! (method_exists($server, 'checkStatus') && $server->checkStatus()['pending']);
+            } else {
+                $deactivated = ! $server->isActive();
+            }
+
+            if ($deactivated) {
                 $app_instance->additional_storage()->delete();
                 $app_instance->status = 'deactivated';
                 $app_instance->save();

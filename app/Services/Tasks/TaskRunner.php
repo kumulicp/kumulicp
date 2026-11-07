@@ -11,6 +11,7 @@ use App\Services\Tasks\Handlers\TaskHandler;
 use App\Support\Facades\Organization;
 use App\Task;
 use App\TaskEvent;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -159,6 +160,61 @@ class TaskRunner
                 if (Task::whereKey($dependent->id)->notClaimed()->exists()) {
                     $this->tryPoll($dependent);
                 }
+            }
+        }
+    }
+
+    /**
+     * The ids of the tasks waiting for any of $tasks, to hand to wake() once
+     * those are deleted. Taken beforehand because deleting a task takes its
+     * dependency rows with it: some actions delete their task (and their
+     * siblings) to say they have finished, which is as good as completing.
+     *
+     * @param  iterable<int, Task|int>  $tasks
+     * @return array<int, int>
+     */
+    public function dependentsOf(iterable $tasks): array
+    {
+        $ids = [];
+        foreach ($tasks as $task) {
+            $ids[] = (int) ($task instanceof Task ? $task->id : $task);
+        }
+
+        return DB::table('task_dependencies')
+            ->whereIn('depends_on_task_id', $ids)
+            ->pluck('task_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->diff($ids)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The tasks that were waiting for some that have since been deleted needn't
+     * wait for the next scheduled pass to find out: wakeDependents() for tasks
+     * that no longer exist. Each one is polled, or started, only if what it
+     * still waits for allows it.
+     *
+     * @param  array<int, int>  $task_ids  See dependentsOf()
+     */
+    public function wake(array $task_ids): void
+    {
+        $dispatcher = app(TaskDispatcher::class);
+
+        foreach (Task::whereIn('id', $task_ids)->get() as $task) {
+            try {
+                if (in_array($task->status, [TaskStatus::PENDING, TaskStatus::READY], true)) {
+                    if (app('actions')->checkPrerequisites($task)->passed) {
+                        $dispatcher->queue($task);
+                    }
+                } elseif ($task->status === TaskStatus::IN_PROGRESS && Task::whereKey($task->id)->notClaimed()->exists()) {
+                    // Not one that is still being run: complete() would race run()
+                    $this->tryPoll($task);
+                }
+            } catch (Throwable $e) {
+                // What was deleted is gone either way: the scheduled pass will pick this one up
+                report($e);
             }
         }
     }

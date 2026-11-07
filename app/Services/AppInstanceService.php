@@ -180,6 +180,12 @@ class AppInstanceService
         return $this;
     }
 
+    // See AppProfile::hasOwnSite()
+    public function hasOwnSite(): bool
+    {
+        return Application::profile($this->app_instance->application)->hasOwnSite($this->app_instance);
+    }
+
     public function configuration($configuration, $required = false)
     {
         $settings = $this->app_instance->settings;

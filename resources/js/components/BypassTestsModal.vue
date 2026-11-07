@@ -2,10 +2,14 @@
 import { useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
+// Without an action it bypasses the version's own tests. A shared app passes the
+// address that bypasses the tests of its plan, and the version to name in the title.
 const props = defineProps<{
   modelValue: boolean
-  app: { slug: string }
-  version: { version: string }
+  app?: { slug: string }
+  version?: { version: string }
+  action?: string
+  versionName?: string
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -21,7 +25,7 @@ const show = computed({
 })
 
 const submit = () => {
-  form.post('/admin/apps/' + props.app.slug + '/versions/' + props.version.version + '/tests/bypass', {
+  form.post(props.action ?? '/admin/apps/' + props.app?.slug + '/versions/' + props.version?.version + '/tests/bypass', {
     preserveScroll: true,
     onSuccess: () => {
       form.reset()
@@ -34,7 +38,7 @@ const submit = () => {
   <va-modal v-model="show" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content="{ ok }">
       <form @submit.prevent="submit">
-        <va-card-title class="m-0">{{ $t('admin.versionTests.bypass.title', { version: version.version }) }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('admin.versionTests.bypass.title', { version: versionName ?? version?.version }) }}</va-card-title>
         <va-card-content class="m-0">
           <va-alert color="warning" border="top" border-color="warning" class="mb-3">
             <div class="font-bold mb-1">{{ $t('admin.versionTests.bypass.warning') }}</div>

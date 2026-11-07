@@ -10,6 +10,7 @@ use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Jobs\Applications\RemoveLDAPGroups;
 use App\Services\SubscriptionService;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
@@ -152,12 +153,15 @@ class ApplicationDelete extends NativeAction
             // deleted in handle() above beyond its LDAP groups -- nothing left
             // to wait on.
             $complete = true;
+        } elseif (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) === 'job') {
+            // A site deleted by a job inside the hub's release (e.g. ERPNext):
+            // the job is what this waited for and it is complete or gone by
+            // the time this is polled. The release itself stays deployed, so it
+            // can't say whether the site is gone.
+            $complete = true;
         } else {
             try {
-                // connect('web')->isActive() already resolves to the
-                // parent's chart/job status for a 'job' activation type
-                // (see RancherWebInterface), so a multisite child (e.g.
-                // ERPNext) polls its own deactivate job correctly here too.
+                // connect('web')->isActive() reports the app's own release
                 $complete = ! $app_instance->connect('web')->isActive();
             } catch (\Throwable $e) {
                 // No web server assigned -- nothing to wait on.
@@ -167,6 +171,11 @@ class ApplicationDelete extends NativeAction
 
         if ($complete) {
             $organization = $task->organization;
+
+            // Deleting the app's tasks (this one included) is how it says it has
+            // finished: the tasks waiting for them are told once it is all gone
+            $runner = app(TaskRunner::class);
+            $waiting = $runner->dependentsOf($app_instance->tasks()->pluck('id')->push($task->id));
 
             AccountManager::users()->updateAllUsersAccessType();
 
@@ -186,6 +195,8 @@ class ApplicationDelete extends NativeAction
 
             $subscription = (new SubscriptionService($organization))->all();
             ActionFacade::execute(new SubscriptionUpdate($organization, $subscription), background: true, delay: true);
+
+            $runner->wake($waiting);
         }
 
         // Done: the app's tasks, this one included, are deleted with it, so

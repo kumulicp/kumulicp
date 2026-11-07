@@ -3,6 +3,7 @@
 namespace App\Integrations\Applications;
 
 use App\AppInstance;
+use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 
 class AppProfile
@@ -120,6 +121,28 @@ class AppProfile
     public function activationType(?AppInstance $app_instance = null)
     {
         return $this->activation_type;
+    }
+
+    /**
+     * The username of the app's local admin account, the one the instance's API
+     * password belongs to. Not the user's own SSO account: it is what an admin
+     * signs in with when SSO is broken. Apps whose admin is not 'support' (or
+     * their own `username` configuration) say so.
+     */
+    public function adminUsername(AppInstance $app_instance): string
+    {
+        return Application::instance($app_instance)->configuration('username') ?? 'support';
+    }
+
+    /**
+     * Whether the instance has a site of its own: users, permissions and
+     * customizations. False for a shared app that is only the container other
+     * organizations activate their own instances inside of (ERPNext's bench,
+     * database and sockets), which is deployed but never used itself.
+     */
+    public function hasOwnSite(?AppInstance $app_instance = null): bool
+    {
+        return true;
     }
 
     public function isCompatible(string|array $compatibility): bool

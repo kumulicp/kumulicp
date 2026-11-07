@@ -55,6 +55,16 @@ class VersionTestRun extends Model
     /**
      * @return BelongsTo<AppVersion, $this>
      */
+    /**
+     * The one plan this run tested, when it was a run for a shared app's plan.
+     *
+     * @return BelongsTo<AppPlan, $this>
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(AppPlan::class, 'app_plan_id');
+    }
+
     public function baseline_version(): BelongsTo
     {
         return $this->belongsTo(AppVersion::class, 'baseline_version_id');
