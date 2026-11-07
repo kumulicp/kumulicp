@@ -219,8 +219,10 @@ class ApplicationActivate extends NativeAction
             $result = $result->waitingFor(...array_filter([$new_task, $parent_app_task]));
         }
 
-        // Create task to process customizations
-        ActionFacade::execute(new ProcessCustomizations($task->app_instance, $task->customValues()), $task, delay: true);
+        // Create task to process customizations -- a container with no site of its own has none
+        if ($app_instance->hasOwnSite()) {
+            ActionFacade::execute(new ProcessCustomizations($task->app_instance, $task->customValues()), $task, delay: true);
+        }
         ApplicationActivating::dispatch($task->app_instance->refresh());
 
         // The organization has to exist on the server before the app can be added to it: run again
@@ -259,35 +261,39 @@ class ApplicationActivate extends NativeAction
             }
 
             if ($server->isActive()) {
-                // Get roles if any
+                // A container with no site has no users to give roles to, or domain to point
+                if ($app_instance->hasOwnSite()) {
+                    // Get roles if any
 
-                $default_admin_roles = $task->version->defaultAdminRoleSlugs();
+                    $default_admin_roles = $task->version->defaultAdminRoles();
+                    $default_admin_role_slugs = $task->version->defaultAdminRoleSlugs();
 
-                // Process permissions
-                foreach ($task->organization->admins() as $user) {
-                    $parent_task = $task;
+                    // Process permissions
+                    foreach ($task->organization->admins() as $user) {
+                        $parent_task = $task;
 
-                    $permissions = $user->permissions();
-                    $permissions->updateAppRoles($app_instance->get(), $default_admin_roles);
+                        $permissions = $user->permissions();
+                        $permissions->updateAppRoles($app_instance->get(), $default_admin_roles);
 
-                    $new_task = ActionFacade::dispatch(
-                        category: $app_instance->application->slug,
-                        action: 'process_permissions',
-                        params: [$app_instance->app_instance, [
-                            'permission' => $default_admin_roles,
-                            'user' => $user->attribute('username'),
-                        ]],
-                        parent_task: $parent_task);
+                        $new_task = ActionFacade::dispatch(
+                            category: $app_instance->application->slug,
+                            action: 'process_permissions',
+                            params: [$app_instance->app_instance, [
+                                'permission' => $default_admin_role_slugs,
+                                'user' => $user->attribute('username'),
+                            ]],
+                            parent_task: $parent_task);
 
-                    $new_task = ActionFacade::dispatch(
-                        category: $app_instance->application->slug,
-                        action: 'process_user_options',
-                        params: [$app_instance->app_instance, $user, []],
-                        parent_task: $parent_task);
-                }
+                        $new_task = ActionFacade::dispatch(
+                            category: $app_instance->application->slug,
+                            action: 'process_user_options',
+                            params: [$app_instance->app_instance, $user, []],
+                            parent_task: $parent_task);
+                    }
 
-                if ($app_instance->primary_domain?->domain->type === 'managed') {
-                    ActionFacade::execute(new UpdateDnsRecords($app_instance->organization, $app_instance->primary_domain->domain));
+                    if ($app_instance->primary_domain?->domain->type === 'managed') {
+                        ActionFacade::execute(new UpdateDnsRecords($app_instance->organization, $app_instance->primary_domain->domain));
+                    }
                 }
 
                 $task_complete = true;
