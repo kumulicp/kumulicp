@@ -3,6 +3,7 @@
 namespace App\Integrations\Applications;
 
 use App\AppInstance;
+use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 
 class AppProfile
