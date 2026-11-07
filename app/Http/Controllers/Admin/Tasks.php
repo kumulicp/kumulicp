@@ -159,6 +159,8 @@ class Tasks extends Controller
             $level = $unseen;
         }
 
+        // A task can be waited on by several tasks (a DAG), so it, and all beneath
+        // it, is repeated under each of them. Accepted for now.
         $build = function (int $id, array $path) use (&$build, $tasks, $children) {
             $node = $this->present($tasks[$id]);
             $node['children'] = [];
