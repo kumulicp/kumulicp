@@ -3,6 +3,7 @@
 namespace App\Integrations\Billing\Stripe;
 
 use App\Contracts\BillingContract;
+use App\Contracts\PlanContract;
 use App\Notifications\NewOrganizationSubscription;
 use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
@@ -172,13 +173,32 @@ class StripeGateway implements BillingContract
 
     public function periodEnds(): ?Carbon
     {
-        $period_end = Organization::account()->subscription('default')?->upcomingInvoice()?->period_end;
+        return $this->subscriptionPeriodEnd(Organization::account()->subscription('default'));
+    }
+
+    /**
+     * When the subscription's current billing period ends.
+     *
+     * Cashier 16 builds the upcoming invoice from Stripe's preview-invoice
+     * API, so its period_end is no longer guaranteed to be present. Fall back
+     * to the subscription's own period end (read from its items) rather than
+     * reporting no date at all.
+     */
+    public function subscriptionPeriodEnd($subscription): ?Carbon
+    {
+        if (! $subscription) {
+            return null;
+        }
+
+        $period_end = $subscription->upcomingInvoice()?->period_end;
 
         if ($period_end) {
             return Carbon::createFromTimestamp($period_end);
         }
 
-        return null;
+        $current_period_end = $subscription->currentPeriodEnd();
+
+        return $current_period_end ? Carbon::instance($current_period_end) : null;
     }
 
     public function upcomingInvoice(): array
@@ -186,10 +206,31 @@ class StripeGateway implements BillingContract
         $upcoming_invoice = $this->organization->upcomingInvoice();
 
         return [
-            'due_date' => $upcoming_invoice ? date('M d, Y', $upcoming_invoice->next_payment_attempt) : 'Never',
+            'due_date' => $this->upcomingInvoiceDueDate($upcoming_invoice),
             'amount_due' => $upcoming_invoice ? '$'.($upcoming_invoice->amount_due / 100) : '$0.00',
             'status' => $this->status(),
         ];
+    }
+
+    /**
+     * Format when the upcoming invoice is due.
+     *
+     * next_payment_attempt is not guaranteed on a preview invoice, and
+     * date() silently turns a null timestamp into "now", which would show
+     * today's date as the due date. Fall back to the invoice's period_end,
+     * and only then report 'Never'.
+     */
+    public function upcomingInvoiceDueDate($upcoming_invoice): string
+    {
+        if (! $upcoming_invoice) {
+            return 'Never';
+        }
+
+        // ?: rather than ??: Cashier's Invoice proxies properties through
+        // __get() without an __isset(), so ?? would always see them as unset.
+        $timestamp = $upcoming_invoice->next_payment_attempt ?: $upcoming_invoice->period_end;
+
+        return $timestamp ? date('M d, Y', $timestamp) : 'Never';
     }
 
     public function invoices(): Collection
@@ -265,7 +306,7 @@ class StripeGateway implements BillingContract
      * Collapse the billable lines of the given plans into
      * [price_id => ['quantity' => n]], summing lines that share a price.
      *
-     * @param  iterable<\App\Contracts\PlanContract>  $plans
+     * @param  iterable<PlanContract>  $plans
      * @return array<string, array{quantity: int}>
      */
     public function pricingFromPlans(iterable $plans): array
