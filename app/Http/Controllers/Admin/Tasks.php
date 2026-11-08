@@ -231,11 +231,7 @@ class Tasks extends Controller
     {
         $task->load(['organization', 'application', 'version', 'app_instance']);
 
-<<<<<<< HEAD
-        $describe = fn ($other) => [
-=======
         $describe = fn (Task $other) => [
->>>>>>> 372141e9 (Admin task page, cancel, guarded retry/delete and stuck-task alerts (phase 6))
             'id' => $other->id,
             'description' => $other->description,
             'status' => $other->status->value,
@@ -274,11 +270,7 @@ class Tasks extends Controller
                 'attempt' => $event->attempt,
                 'message' => SafeErrorMessage::scrub($event->message),
                 'context' => $event->context,
-<<<<<<< HEAD
-                'created_at' => $event->created_at->toIso8601String(),
-=======
                 'created_at' => $event->created_at?->toIso8601String(),
->>>>>>> 372141e9 (Admin task page, cancel, guarded retry/delete and stuck-task alerts (phase 6))
             ]),
             'steps' => $task->steps()->get()->map(fn (TaskStep $step) => [
                 'name' => $step->name,
