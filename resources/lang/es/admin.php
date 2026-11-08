@@ -150,6 +150,7 @@ return [
         'reactivated' => 'Organización reactivada',
         'deactivated' => 'Organización desactivada',
         'subscription_updating' => 'Suscripción de la organización actualizándose',
+        'plan_changed' => 'La organización se cambió al plan :plan',
         'apps' => [
             'updated' => ':app actualizada',
             'updating' => ':app actualizándose',

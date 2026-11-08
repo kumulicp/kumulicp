@@ -114,6 +114,11 @@ import OrganizationLayout from './OrganizationLayout.vue'
             </template>
           </div>
         </div>
+        <div class="row">
+          <div class="flex flex-col xs12">
+            <va-button preset="secondary" id="changePlan" class="mb-3" @click="openChangePlan">{{ $t('admin.organizations.changePlan') }}</va-button>
+          </div>
+        </div>
         <div v-if="subscription_stats.length > 0" class="row">
           <div class="flex flex-col xs12">
             <form @submit.prevent="subscription.post('/admin/organizations/'+organization.id+'/update_subscription')">
@@ -134,6 +139,46 @@ import OrganizationLayout from './OrganizationLayout.vue'
         </div>
       </div>
     </div>
+
+    <va-modal
+      v-model="showChangePlan"
+      :title="$t('admin.organizations.changePlan')"
+      :ok-text="$t('admin.organizations.changePlan')"
+      :ok-disabled="!planForm.plan_id"
+      @ok="submitChangePlan"
+    >
+      <p class="mb-3">{{ $t('admin.organizations.changePlanDescription', { name: organization.name }) }}</p>
+      <div class="flex flex-col gap-2" id="availablePlans">
+        <label
+          v-for="plan in available_plans"
+          :key="plan.id"
+          class="flex items-start gap-3 p-3 rounded border"
+          :class="{ 'opacity-60': plan.current || plan.disabled_reason }"
+          :title="plan.disabled_reason || undefined"
+        >
+          <input
+            type="radio"
+            name="plan_id"
+            class="mt-1"
+            :value="plan.id"
+            :disabled="plan.current || !!plan.disabled_reason"
+            v-model="planForm.plan_id"
+          />
+          <span class="flex-1">
+            <span class="font-bold">{{ plan.name }}</span>
+            <va-badge
+              class="ml-2"
+              :color="visibilityColors[plan.visibility]"
+              :text="$t('admin.organizations.planVisibility.' + plan.visibility)"
+            />
+            <va-badge v-if="plan.current" class="ml-2" color="primary" :text="$t('admin.organizations.currentPlan')" />
+            <span class="block text-sm">{{ plan.description }}</span>
+            <span v-if="plan.disabled_reason && !plan.current" class="block text-sm text-red-600">{{ plan.disabled_reason }}</span>
+          </span>
+        </label>
+      </div>
+      <p v-if="$page.props.errors.plan_id" class="mt-3 text-red-600">{{ $page.props.errors.plan_id }}</p>
+    </va-modal>
   </div>
 </template>
 
@@ -146,6 +191,7 @@ export default {
     organization: Object,
     apps: Object,
     base_plan: Object,
+    available_plans: Array,
     subscription_stats: Object
   },
   data () {
@@ -153,7 +199,35 @@ export default {
       subscription: useForm({
         discount_code: this.base_plan.discount_id
       }),
-      destroy: useForm({})
+      destroy: useForm({}),
+      showChangePlan: false,
+      planForm: useForm({
+        plan_id: null
+      }),
+      visibilityColors: {
+        public: 'success',
+        hidden: 'warning',
+        archived: 'secondary'
+      }
+    }
+  },
+  methods: {
+    openChangePlan () {
+      this.planForm.reset()
+      this.planForm.clearErrors()
+      this.showChangePlan = true
+    },
+    submitChangePlan () {
+      this.planForm.post('/admin/organizations/' + this.organization.id + '/change_plan', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showChangePlan = false
+        },
+        onError: () => {
+          // Keep the modal open so the reason is visible
+          this.showChangePlan = true
+        }
+      })
     }
   }
 }

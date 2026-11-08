@@ -7,11 +7,15 @@ use App\Actions\Organizations\SubscriptionUpdate;
 use App\Http\Controllers\Controller;
 use App\Log;
 use App\Organization;
+use App\Plan;
+use App\Services\Organization\BasePlanService;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
+use App\Support\Facades\FastCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class Organizations extends Controller
 {
@@ -80,6 +84,7 @@ class Organizations extends Controller
                 'description' => $organization->plan->description,
                 'discount_id' => $organization->discount_id,
             ],
+            'available_plans' => $this->selectablePlans($organization),
             'subscription_stats' => $subscription->compileCostStats(),
             'breadcrumbs' => [
                 [
@@ -203,5 +208,86 @@ class Organizations extends Controller
         Action::execute(new SubscriptionUpdate($organization, $subscription), background: true);
 
         return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.subscription_updating'));
+    }
+
+    /**
+     * Admins can move an organization to any plan of its type -- including
+     * hidden and archived plans that customers can't pick for themselves.
+     * Unlike the customer flow, this isn't limited to the plans an
+     * organization has available, but a plan the organization has outgrown
+     * is still refused so its limits can't be left broken.
+     */
+    public function change_plan(Request $request, Organization $organization)
+    {
+        $validated = $request->validate([
+            'plan_id' => ['required', 'integer', 'exists:plans,id'],
+        ]);
+
+        $plan = Plan::findOrFail($validated['plan_id']);
+
+        if ($reason = $this->planChangeBlockedReason($organization, $plan)) {
+            throw ValidationException::withMessages(['plan_id' => $reason]);
+        }
+
+        $subscription = (new SubscriptionService($organization))->all();
+        $subscription->updateBase($plan);
+
+        FastCache::clear(organization: $organization);
+
+        Action::execute(new SubscriptionUpdate($organization, $subscription));
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.plan_changed', ['plan' => $plan->name]));
+    }
+
+    private function selectablePlans(Organization $organization): array
+    {
+        return Plan::where('org_type', $organization->type)
+            ->orderBy('archive')
+            ->orderBy('display_order')
+            ->get()
+            ->map(function (Plan $plan) use ($organization) {
+                $current = $plan->id === $organization->plan_id;
+                $blocked = $current ? null : $this->planChangeBlockedReason($organization, $plan);
+
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'visibility' => match (true) {
+                        (bool) $plan->archive => 'archived',
+                        $plan->status === 'available' => 'public',
+                        default => 'hidden',
+                    },
+                    'current' => $current,
+                    'disabled_reason' => $blocked,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function planChangeBlockedReason(Organization $organization, Plan $plan): ?string
+    {
+        if ($organization->status === 'deactivated') {
+            return __('organization.plan.denied.unavailable');
+        }
+
+        if ($plan->org_type !== $organization->type) {
+            return __('organization.plan.denied.unavailable');
+        }
+
+        if ($organization->plan_id === $plan->id) {
+            return __('organization.plan.denied.subscribed');
+        }
+
+        // BasePlanService::isAnyMaxBroken() is memoized per account, not per
+        // plan, so check the limits directly rather than reuse a stale answer
+        $base_plan = new BasePlanService($organization, $plan);
+        $broken = $base_plan->isMaxAppsBroken();
+        foreach ($base_plan->pricing_options as $entity) {
+            $broken = $broken || $base_plan->isMaxBroken($entity);
+        }
+
+        return $broken ? __('organization.plan.denied.limit') : null;
     }
 }
