@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\StripeWebhookController;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,13 @@ class InvoiceSettings extends Controller
                 'invoice_vendor_url' => SettingsFacade::get('invoice_vendor_url'),
                 'invoice_vendor_vat' => SettingsFacade::get('invoice_vendor_vat'),
             ],
+            // Only present when Stripe is the billing driver; the page shows
+            // the webhook setup help only in that case.
+            'stripe' => config('billing.default') === 'stripe' ? [
+                'webhook_url' => route('cashier.webhook'),
+                'events' => StripeWebhookController::EVENTS,
+                'secret_configured' => filled(config('cashier.webhook.secret')),
+            ] : null,
             'breadcrumbs' => [
                 [
                     'label' => __('admin.settings.control_panel_settings'),

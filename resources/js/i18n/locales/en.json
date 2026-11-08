@@ -1533,6 +1533,16 @@
     "invoice": "Invoice",
     "editServerSettings": "Edit Server Settings",
     "invoiceInfo": "Invoice Info",
+    "stripeWebhook": {
+      "button": "Stripe Webhook Setup",
+      "title": "Stripe Webhook Setup",
+      "about": "Stripe uses a webhook to tell KumuliCP about payment and subscription changes, such as a failed payment or a cancelled subscription. KumuliCP uses these events to keep each organization's status up to date.",
+      "secretMissing": "No webhook signing secret is configured (STRIPE_WEBHOOK_SECRET), so incoming requests are not verified as coming from Stripe.",
+      "url": "Webhook URL",
+      "copied": "Copied!",
+      "events": "Events KumuliCP responds to",
+      "docs": "Stripe webhook documentation"
+    },
     "sso": {
       "editSsoProvider": "Edit SSO Provider",
       "label": "Label",

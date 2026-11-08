@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Http\Controllers\StripeWebhookController;
 use App\SsoProvider;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -99,6 +100,41 @@ class SettingsTest extends TestCase
 
         $response->assertRedirect('admin/settings/invoice');
         $this->assertDatabaseHas('server_settings', ['key' => 'invoice_vendor_name', 'value' => 'Acme Corp']);
+    }
+
+    public function test_invoice_settings_has_no_stripe_webhook_help_unless_stripe_is_the_billing_driver()
+    {
+        config(['billing.default' => 'fake']);
+
+        $this->get('/admin/settings/invoice')
+            ->assertInertia(fn ($page) => $page->where('stripe', null));
+    }
+
+    public function test_invoice_settings_exposes_stripe_webhook_help_when_stripe_is_the_billing_driver()
+    {
+        config([
+            'billing.default' => 'stripe',
+            'cashier.webhook.secret' => null,
+        ]);
+
+        $this->get('/admin/settings/invoice')
+            ->assertInertia(fn ($page) => $page
+                ->where('stripe.webhook_url', route('cashier.webhook'))
+                ->where('stripe.events', StripeWebhookController::EVENTS)
+                ->where('stripe.secret_configured', false));
+    }
+
+    public function test_invoice_settings_reports_the_stripe_webhook_secret_as_configured()
+    {
+        config([
+            'billing.default' => 'stripe',
+            'cashier.webhook.secret' => 'whsec_test_secret',
+        ]);
+
+        $this->get('/admin/settings/invoice')
+            ->assertInertia(fn ($page) => $page
+                ->where('stripe.secret_configured', true)
+                ->missing('stripe.secret'));
     }
 
     public function test_invoice_settings_requires_vendor_name()
