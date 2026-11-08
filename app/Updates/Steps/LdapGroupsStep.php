@@ -32,6 +32,11 @@ class LdapGroupsStep extends UpdateStep
         return config('account_manager.driver') === 'ldap';
     }
 
+    public function aspects(): array
+    {
+        return ['roles'];
+    }
+
     // A new version may have roles the old one didn't
     public function afterUpgrade(AppInstance $app_instance): bool
     {

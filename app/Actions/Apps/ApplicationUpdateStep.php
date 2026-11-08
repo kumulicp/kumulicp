@@ -7,6 +7,7 @@ use App\Actions\ActionResult;
 use App\Actions\NativeAction;
 use App\AppInstance;
 use App\Task;
+use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 
 /**
@@ -23,9 +24,15 @@ class ApplicationUpdateStep extends NativeAction
     {
         $this->organization = $app_instance->organization;
         $this->app_instance = $app_instance;
-        $this->setCustomValues(['step' => $step]);
+        $found = app(UpdateSteps::class)->find($app_instance, $step);
 
-        $label = app(UpdateSteps::class)->find($app_instance, $step)?->label() ?? $step;
+        // What the step's aspects work out now, stored once it is done (see UpdateDrift::forStep)
+        $this->setCustomValues([
+            'step' => $step,
+            'aspects' => $found ? app(UpdateDrift::class)->forStep($app_instance, $found) : [],
+        ]);
+
+        $label = $found?->label() ?? $step;
         $this->description = __('actions.update_step', ['step' => $label, 'app' => $app_instance->label]);
     }
 
@@ -56,11 +63,15 @@ class ApplicationUpdateStep extends NativeAction
         return new self($task->app_instance, (string) $task->getValue('step'));
     }
 
-    // A step that has run no longer needs to be recommended
+    // A step that has run no longer needs to be recommended, and what it brought up to date is remembered
     private static function finished(Task $task, ActionResult $result): ActionResult
     {
         if ($result->outcome === ActionResult::DONE) {
             app(UpdateSteps::class)->forget($task->app_instance, (string) $task->getValue('step'));
+
+            if (is_array($aspects = $task->getValue('aspects')) && $aspects !== []) {
+                app(UpdateDrift::class)->record($task->app_instance, $aspects, $task->id);
+            }
         }
 
         return $result;

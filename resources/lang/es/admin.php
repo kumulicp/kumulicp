@@ -277,6 +277,12 @@ return [
             'nuclei' => 'Ejecuta verificaciones de vulnerabilidades basadas en plantillas contra los servicios expuestos en el clúster para detectar CVEs conocidos y configuraciones incorrectas.',
         ],
     ],
+    'update_aspects' => [
+        'release' => 'Release',
+        'settings' => 'Configuración',
+        'roles' => 'Roles y grupos',
+        'sso' => 'Inicio de sesión único',
+    ],
     'update_steps' => [
         'release' => [
             'label' => 'Release',

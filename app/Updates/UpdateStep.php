@@ -46,6 +46,19 @@ abstract class UpdateStep
     }
 
     /**
+     * The aspects (see Aspect) this step brings up to date. When it has run,
+     * what they work out is stored, and the app is flagged as out of date for
+     * the step again once any of them changes. None means the step is never
+     * flagged and only runs when an admin asks for it.
+     *
+     * @return array<int, string>
+     */
+    public function aspects(): array
+    {
+        return [];
+    }
+
+    /**
      * The keys of the steps that have to finish before this one starts, when
      * they are part of the same update.
      *

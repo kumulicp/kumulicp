@@ -8,6 +8,7 @@ use App\Integrations\Applications\AppFeature;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
 use App\Task;
+use App\Updates\Aspects\FeatureAspect;
 use App\Updates\UpdateStep;
 
 /**
@@ -39,6 +40,11 @@ class FeatureActionStep extends UpdateStep
     public function description(): string
     {
         return __('admin.update_steps.feature.description');
+    }
+
+    public function aspects(): array
+    {
+        return [FeatureAspect::keyFor($this->feature)];
     }
 
     // Once the app has what its version needs
