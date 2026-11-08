@@ -217,6 +217,19 @@ class TasksTest extends TestCase
         $this->assertSame([$shared->id, $shared->id], collect($response->json('tasks'))->pluck('children.0.id')->all());
     }
 
+    public function test_a_task_waiting_for_another_at_both_gates_shows_it_once()
+    {
+        $admin = $this->admin();
+        $child = $this->task('complete');
+        $parent = $this->task('pending');
+        $parent->dependOn($child, Task::GATE_START);
+        $parent->dependOn($child, Task::GATE_FINISH);
+
+        $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree'])
+            ->assertOk()
+            ->assertJsonCount(1, 'tasks.0.children');
+    }
+
     public function test_a_failed_task_can_be_retried()
     {
         Queue::fake();

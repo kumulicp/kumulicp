@@ -59,9 +59,7 @@ class Tasks extends Controller
             return $this->tree($tasks, $per_page);
         }
 
-        $tasks = $tasks->orderByDesc('created_at')
-            ->with(['application', 'version', 'organization', 'app_instance'])
-            ->paginate($per_page);
+        $tasks = $this->listed($tasks->orderByDesc('created_at'))->paginate($per_page);
 
         return [
             'tasks' => $tasks->map(fn ($task) => $this->present($task)),
@@ -93,6 +91,20 @@ class Tasks extends Controller
         }
 
         return $tasks;
+    }
+
+    /**
+     * Load only what present() reads: tasks carry large columns (custom values,
+     * serialized jobs) the list never shows.
+     *
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
+     */
+    private function listed(Builder $query): Builder
+    {
+        return $query
+            ->select(['id', 'organization_id', 'application_id', 'version_id', 'status', 'description', 'error_message', 'created_at', 'updated_at'])
+            ->with(['application', 'version', 'organization']);
     }
 
     /**
@@ -134,10 +146,8 @@ class Tasks extends Controller
      */
     private function tree(Builder $matching, int $per_page): array
     {
-        $roots = $this->roots_query($matching)
-            ->orderByDesc('created_at')
-            ->with(['application', 'version', 'organization', 'app_instance'])
-            ->paginate($per_page);
+        // Newest first by id: the primary key is ordered already, created_at isn't indexed
+        $roots = $this->listed($this->roots_query($matching)->orderByDesc('id'))->paginate($per_page);
 
         // Everything beneath this page's tasks, a level at a time
         $tasks = $roots->getCollection()->keyBy('id');
@@ -146,7 +156,8 @@ class Tasks extends Controller
         for ($depth = 0; $level !== [] && $depth < self::TREE_MAX_DEPTH; $depth++) {
             $edges = collect();
             foreach (array_chunk($level, self::TREE_CHUNK) as $chunk) {
-                $edges = $edges->concat(DB::table('task_dependencies')->whereIn('task_id', $chunk)->get(['task_id', 'depends_on_task_id']));
+                // distinct: a task can wait for the same one at both gates
+                $edges = $edges->concat(DB::table('task_dependencies')->whereIn('task_id', $chunk)->distinct()->get(['task_id', 'depends_on_task_id']));
             }
             foreach ($edges as $edge) {
                 $children[(int) $edge->task_id][] = (int) $edge->depends_on_task_id;
@@ -154,15 +165,16 @@ class Tasks extends Controller
 
             $unseen = $edges->pluck('depends_on_task_id')->unique()->diff($tasks->keys())->values()->all();
             foreach (array_chunk($unseen, self::TREE_CHUNK) as $chunk) {
-                $tasks = $tasks->union(Task::whereKey($chunk)->with(['application', 'version', 'organization', 'app_instance'])->get()->keyBy('id'));
+                $tasks = $tasks->union($this->listed(Task::whereKey($chunk))->get()->keyBy('id'));
             }
             $level = $unseen;
         }
 
         // A task can be waited on by several tasks (a DAG), so it, and all beneath
         // it, is repeated under each of them. Accepted for now.
-        $build = function (int $id, array $path) use (&$build, $tasks, $children) {
-            $node = $this->present($tasks[$id]);
+        $presented = [];
+        $build = function (int $id, array $path) use (&$build, $tasks, $children, &$presented) {
+            $node = $presented[$id] ??= $this->present($tasks[$id]);
             $node['children'] = [];
             foreach ($children[$id] ?? [] as $child_id) {
                 // A task that is waiting for itself can't happen, but must not loop if it did
@@ -197,22 +209,19 @@ class Tasks extends Controller
             return Task::query()->whereNotIn('id', DB::table('task_dependencies')->select('depends_on_task_id'));
         }
 
-        // Walk up from the matching tasks to the tasks that wait for them
-        $roots = [];
-        $seen = [];
-        $level = $matching->pluck('id')->all();
-        for ($depth = 0; $level !== [] && $depth <= self::TREE_MAX_DEPTH; $depth++) {
-            $seen = array_merge($seen, $level);
-            $parents = [];
-            foreach (array_chunk($level, self::TREE_CHUNK) as $chunk) {
-                $edges = DB::table('task_dependencies')->whereIn('depends_on_task_id', $chunk)->get(['task_id', 'depends_on_task_id']);
-                $roots = array_merge($roots, array_diff($chunk, $edges->pluck('depends_on_task_id')->all()));
-                $parents = array_merge($parents, $edges->pluck('task_id')->all());
-            }
-            $level = array_values(array_diff(array_unique($parents), $seen));
-        }
+        // Walk up from the matching tasks to everything waiting for them (UNION,
+        // not UNION ALL, so it stops on a loop), and keep those nothing waits for.
+        // All in the database: a filter can match far more tasks than fit in a query.
+        $matches = $matching->clone()->select('tasks.id');
 
-        return Task::query()->whereIn('id', array_values(array_unique($roots)));
+        return Task::query()->whereRaw(
+            'tasks.id IN (WITH RECURSIVE waiting(id) AS ('.$matches->toSql().'
+                UNION
+                SELECT task_dependencies.task_id FROM task_dependencies
+                INNER JOIN waiting ON task_dependencies.depends_on_task_id = waiting.id
+            ) SELECT id FROM waiting WHERE id NOT IN (SELECT depends_on_task_id FROM task_dependencies))',
+            $matches->getBindings(),
+        );
     }
 
     /**
