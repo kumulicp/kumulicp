@@ -10,6 +10,16 @@ use Tests\Support\Applications\Features\OptionalFeature;
 
 class DemoAppProfile extends AppProfile
 {
+    // Set while a test needs the app to be one whose shared children keep a site, and groups, of their own
+    public static bool $multisite = false;
+
+    public function isCompatible(string|array $compatibility): bool
+    {
+        $flags = (array) $compatibility;
+
+        return (static::$multisite && in_array('multisite', $flags, true)) || parent::isCompatible($compatibility);
+    }
+
     // Set while a test needs the app's site to live in a parent's release, made by a job
     public static bool $job_activation = false;
 

@@ -4,6 +4,7 @@ namespace App\Integrations\Applications;
 
 use App\AppInstance;
 use App\Support\Facades\Application;
+use App\Updates\UpdateStep;
 use Illuminate\Support\Arr;
 
 class AppProfile
@@ -15,6 +16,9 @@ class AppProfile
     protected $envs = [];
 
     protected $features = [];
+
+    /** @var array<int, UpdateStep> */
+    protected $update_steps = [];
 
     protected $configurations = [];
 
@@ -221,6 +225,24 @@ class AppProfile
         }
 
         return $this;
+    }
+
+    /**
+     * Adds a step to the update of this app (see UpdateStep).
+     *
+     * @return $this
+     */
+    public function addUpdateStep(UpdateStep $step)
+    {
+        $this->update_steps[] = $step;
+
+        return $this;
+    }
+
+    /** @return array<int, UpdateStep> */
+    public function updateSteps(): array
+    {
+        return $this->update_steps;
     }
 
     public function addFeature(AppFeature $feature)

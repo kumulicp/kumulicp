@@ -12,6 +12,7 @@ use App\Actions\Apps\ApplicationDomainChecks;
 use App\Actions\Apps\ApplicationSSOSetup;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpdateJob;
+use App\Actions\Apps\ApplicationUpdateStep;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Actions\Apps\MassApplicationUpgrade;
 use App\Actions\Apps\ProcessCustomizations;
@@ -63,6 +64,7 @@ class ActionService
             'subscription_update' => SubscriptionUpdate::class,
             'application_activate' => ApplicationActivate::class,
             'application_update' => ApplicationUpdate::class,
+            'application_update_step' => ApplicationUpdateStep::class,
             'application_database_migrate' => ApplicationDatabaseMigrate::class,
             'application_upgrade' => ApplicationUpgrade::class,
             'application_delete' => ApplicationDelete::class,

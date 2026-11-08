@@ -8,6 +8,7 @@ return [
     'deactivating_app' => 'Desactivando :app',
     'deleting_app' => 'Eliminando :app',
     'migrating_app_database' => 'Migrando la base de datos de :app a :server',
+    'update_step' => 'Actualizar :step: :app',
     'updating_app' => 'Actualizando :app',
     'upgrading_app' => 'Mejorando :app',
     'provision_version_test_step' => 'Preparando una prueba de :app :version, :plan',

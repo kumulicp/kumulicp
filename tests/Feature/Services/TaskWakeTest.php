@@ -179,7 +179,9 @@ it('tells what waits for an organization delete as soon as the organization is g
     $account_test->settings = ['base_plan' => null, 'apps' => []];
     $account_test->status = 'in_progress';
     $account_test->save();
-    [$organization] = (new CreateTestOrganization)->create($account_test, Plan::where('is_default', 1)->firstOrFail(), CreateTestOrganization::lastNumber() + 1);
+    // Numbered far from the real test organizations (test1, test2...): the directory is the real one, and
+    // deleting an organization takes its entry out of it
+    [$organization] = (new CreateTestOrganization)->create($account_test, Plan::where('is_default', 1)->firstOrFail(), random_int(900000, 999999));
 
     $deletion = ActionFacade::execute(new DeleteOrganization($organization));
     $deletion->status = TaskStatus::IN_PROGRESS;
