@@ -38,7 +38,7 @@ class ApplicationUpdate extends Action
     public static function run(Task $task)
     {
         if (is_array($task->getValue('steps'))) {
-            return static::runSteps($task);
+            return self::runSteps($task);
         }
 
         $app_instance = Application::instance($task->app_instance);

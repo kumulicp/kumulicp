@@ -37,7 +37,7 @@ class ApplicationUpdateStep extends NativeAction
             return ActionResult::fail(__('messages.action.update_step_unknown', ['step' => $task->getValue('step')]), 'unknown_step');
         }
 
-        return static::finished($task, $step->handle($task, $task->app_instance));
+        return self::finished($task, $step->handle($task, $task->app_instance));
     }
 
     public static function poll(Task $task): ActionResult
@@ -48,7 +48,7 @@ class ApplicationUpdateStep extends NativeAction
             return ActionResult::fail(__('messages.action.update_step_unknown', ['step' => $task->getValue('step')]), 'unknown_step');
         }
 
-        return static::finished($task, $step->poll($task, $task->app_instance));
+        return self::finished($task, $step->poll($task, $task->app_instance));
     }
 
     public static function retry(Task $task): ?Action
