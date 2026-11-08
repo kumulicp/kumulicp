@@ -12,6 +12,11 @@ class AppFeature
 
     public $description = '';
 
+    // The env var that carries this feature's on/off state to the chart. Empty
+    // for a feature that isn't driven by one, like one that only decides which
+    // apps get installed on a site.
+    public $var_name = '';
+
     public ?AppInstance $app_instance = null;
 
     public function admin_settings()

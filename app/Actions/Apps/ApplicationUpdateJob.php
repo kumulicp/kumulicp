@@ -5,6 +5,7 @@ namespace App\Actions\Apps;
 use App\Actions\Action;
 use App\AppInstance;
 use App\Enums\TaskStatus;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Arr;
@@ -52,7 +53,12 @@ class ApplicationUpdateJob extends Action
 
         // No job class registered for this app/action -- nothing to run.
         if (! $job) {
+            // Gone counts as done: whatever was waiting for it is told now
+            $runner = app(TaskRunner::class);
+            $waiting = $runner->dependentsOf([$task]);
+
             $task->delete();
+            $runner->wake($waiting);
 
             return;
         }

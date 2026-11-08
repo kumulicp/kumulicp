@@ -42,9 +42,9 @@ export default {
     ]
 
     // A plan auto-created for a shared app is hidden from the normal plans
-    // list, and doesn't have anything meaningful to configure until the
-    // shared app has actually finished activating.
-    if (!plan.hidden || plan.shared_app_active) {
+    // list, and only has features, configurations and secrets to configure when
+    // the app has a registered profile (source `profile`).
+    if (plan.full_settings) {
       tabs.push({
         title: this.$t('admin.plans.features'),
         url: basePath + '/features'

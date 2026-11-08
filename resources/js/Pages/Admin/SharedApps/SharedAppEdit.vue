@@ -9,6 +9,15 @@ import { useForm, Link } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('admin.sharedApps.appSettings') }} - Control Panel</title>
   </Head>
+  <va-card v-if="activation_url" class="mb-4">
+    <va-card-title>{{ $t('admin.sharedApps.notActivated') }}</va-card-title>
+    <va-card-content>
+      <p class="mb-3">{{ $t('admin.sharedApps.activateDescription', { app: app.label }) }}</p>
+      <Link :href="activation_url">
+        <va-button id="setUpActivation">{{ $t('admin.sharedApps.setUpActivation') }}</va-button>
+      </Link>
+    </va-card-content>
+  </va-card>
   <va-card class="mb-4">
     <va-card-content>
       <Link v-for="(tab, index) in planTabs" :href="tab.url" :key="index" class="mr-2">
@@ -100,6 +109,7 @@ export default {
     app: Object,
     domains: Object,
     errors: Object,
+    activation_url: String,
     versions: Object,
     parent_domains: Object
   },

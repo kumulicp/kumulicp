@@ -7,6 +7,7 @@ use App\Application;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\Enums\ApplicationSource;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneProfile;
 use App\Integrations\Applications\GenericAppProfile;
@@ -241,6 +242,17 @@ class ApplicationService
         return $configs;
     }
 
+    /**
+     * Takes the plan's persistent configurations again, for an instance that was
+     * made before the plan was configured (a shared app, which is added first and
+     * activated once its plan is set up). Not for one that is already deployed:
+     * persistent means they stay as they were when it was activated.
+     */
+    public function refreshPersistentConfigurations(AppInstance $app_instance): void
+    {
+        $app_instance->updateSetting('configurations', $this->persistentConfigurations($app_instance->application, $app_instance->plan));
+    }
+
     public function all()
     {
         $db_applications = Application::with('roles')->get();
@@ -309,6 +321,7 @@ class ApplicationService
         if (Arr::has($this->applications, $app_name)) {
             $application = new Application;
             $application->slug = $app_name;
+            $application->source = ApplicationSource::Profile;
             $application->name = Str::headline($app_name);
             $application->short_description = '';
             $application->description = '';

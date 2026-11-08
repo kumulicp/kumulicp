@@ -11,7 +11,6 @@ use App\AppInstance;
 use App\Enums\VersionTestStepType;
 use App\Exceptions\Tasks\PermanentFailure;
 use App\Organization;
-use App\Plan;
 use App\Services\VersionTesting\VersionTestRunner;
 use App\Support\Facades\Action as ActionFacade;
 use App\Task;
@@ -52,7 +51,8 @@ class ProvisionVersionTestStep extends NativeAction
 
         $install_version = $step->type === VersionTestStepType::UPGRADE ? $step->from_version : $run->version;
 
-        $base_plan = Plan::where('is_default', 1)->first();
+        // A shared app's plan is tested under the shared apps organization's plan, not the default
+        $base_plan = app(VersionTestRunner::class)->basePlanFor($run->plan);
         if (! $base_plan) {
             throw new PermanentFailure(__('messages.exception.no_default_plan'));
         }
