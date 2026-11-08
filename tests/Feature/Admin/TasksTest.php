@@ -124,6 +124,112 @@ class TasksTest extends TestCase
             ->assertJsonPath('tasks.0.status', 'cancelled');
     }
 
+    public function test_the_task_tree_nests_each_task_under_the_task_waiting_for_it()
+    {
+        $admin = $this->admin();
+        $grandchild = $this->task('complete', ['description' => 'Grandchild']);
+        $child = $this->task('failed', ['description' => 'Child', 'error_message' => 'It broke']);
+        $parent = $this->task('blocked', ['description' => 'Parent']);
+        $alone = $this->task('pending', ['description' => 'Alone']);
+        $child->dependOn($grandchild);
+        $parent->dependOn($child, Task::GATE_FINISH);
+
+        $response = $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree'])->assertOk();
+
+        // Only the tasks nothing waits for are at the top, newest first
+        $this->assertSame([$alone->id, $parent->id], collect($response->json('tasks'))->pluck('id')->all());
+        $response->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('tasks.0.children', [])
+            ->assertJsonPath('tasks.1.children.0.id', $child->id)
+            ->assertJsonPath('tasks.1.children.0.status', 'failed')
+            ->assertJsonPath('tasks.1.children.0.error_message', 'It broke')
+            ->assertJsonPath('tasks.1.children.0.can_retry', true)
+            ->assertJsonPath('tasks.1.children.0.children.0.id', $grandchild->id)
+            ->assertJsonPath('tasks.1.children.0.children.0.can_delete', true);
+    }
+
+    public function test_the_task_list_stays_flat_unless_the_tree_is_asked_for()
+    {
+        $admin = $this->admin();
+        $child = $this->task('complete');
+        $parent = $this->task('pending');
+        $parent->dependOn($child);
+
+        $response = $this->actingAs($admin)->postJson('/admin/server/tasks/api')->assertOk();
+
+        $response->assertJsonPath('meta.total', 2);
+        $this->assertArrayNotHasKey('children', $response->json('tasks.0'));
+    }
+
+    public function test_a_page_of_the_task_tree_counts_top_level_tasks_only()
+    {
+        $admin = $this->admin();
+        $first = $this->task('complete', ['created_at' => now()->subMinutes(3)]);
+        $second = $this->task('pending', ['created_at' => now()->subMinutes(2)]);
+        $first->dependOn($this->task('complete', ['created_at' => now()->subMinutes(4)]));
+        $second->dependOn($this->task('complete', ['created_at' => now()->subMinutes(5)]));
+
+        $this->actingAs($admin)->postJson('/admin/server/tasks/api?page=2', ['view' => 'tree', 'per_page' => 1])
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonPath('meta.pages', 2)
+            ->assertJsonPath('meta.page', 2)
+            ->assertJsonCount(1, 'tasks')
+            ->assertJsonPath('tasks.0.id', $first->id)
+            ->assertJsonCount(1, 'tasks.0.children');
+    }
+
+    public function test_the_task_tree_lists_a_top_level_task_when_something_beneath_it_matches_the_filter()
+    {
+        $admin = $this->admin();
+        $failed = $this->task('failed', ['description' => 'Failed']);
+        $middle = $this->task('blocked', ['description' => 'Middle']);
+        $top = $this->task('blocked', ['description' => 'Top']);
+        $unrelated = $this->task('complete', ['description' => 'Unrelated']);
+        $middle->dependOn($failed);
+        $top->dependOn($middle);
+
+        $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree', 'status' => 'failed'])
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('tasks.0.id', $top->id)
+            ->assertJsonPath('tasks.0.children.0.children.0.id', $failed->id);
+
+        $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree', 'status' => 'cancelled'])
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0)
+            ->assertJsonPath('tasks', []);
+    }
+
+    public function test_a_task_waited_for_by_two_tasks_shows_under_both()
+    {
+        $admin = $this->admin();
+        $shared = $this->task('complete', ['description' => 'Shared']);
+        $one = $this->task('pending');
+        $two = $this->task('pending');
+        $one->dependOn($shared);
+        $two->dependOn($shared);
+
+        $response = $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree'])
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2);
+
+        $this->assertSame([$shared->id, $shared->id], collect($response->json('tasks'))->pluck('children.0.id')->all());
+    }
+
+    public function test_a_task_waiting_for_another_at_both_gates_shows_it_once()
+    {
+        $admin = $this->admin();
+        $child = $this->task('complete');
+        $parent = $this->task('pending');
+        $parent->dependOn($child, Task::GATE_START);
+        $parent->dependOn($child, Task::GATE_FINISH);
+
+        $this->actingAs($admin)->postJson('/admin/server/tasks/api', ['view' => 'tree'])
+            ->assertOk()
+            ->assertJsonCount(1, 'tasks.0.children');
+    }
+
     public function test_a_failed_task_can_be_retried()
     {
         Queue::fake();

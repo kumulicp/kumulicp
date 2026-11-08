@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import TaskTree from '@/components/TaskTree.vue'
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
 import { useToast } from 'vuestic-ui'
@@ -51,6 +52,18 @@ import { useToast } from 'vuestic-ui'
             />
           </div>
         </div>
+        <div class="flex flex-col md3">
+          <div class="item">
+            <VaButtonToggle
+              v-model="view"
+              :options="viewOptions"
+              preset="secondary"
+              border-color="primary"
+              class="mt-3"
+              @update:modelValue="changeView"
+            />
+          </div>
+        </div>
         <div class="flex flex-col" style="flex-grow:1">
           <div class="item va-text-right">
             <VaSwitch v-model="liveMode"
@@ -73,10 +86,10 @@ import { useToast } from 'vuestic-ui'
           </div>
         </div>
       </div>
-      <div class="row" v-if="!liveMode && selectedItems.length > 0">
+      <div class="row" v-if="!liveMode && selectedIds.length > 0">
         <div class="flex flex-col" style="flex-grow:1">
           <div class="item">
-            {{ $t('admin.tasks.selectedCount', { count: selectedItems.length }) }}
+            {{ $t('admin.tasks.selectedCount', { count: selectedIds.length }) }}
           </div>
         </div>
         <div class="flex flex-col">
@@ -110,7 +123,28 @@ import { useToast } from 'vuestic-ui'
           </div>
         </div>
       </div>
+      <div v-if="view === 'tree'">
+        <TaskTree
+          v-model:checked="checkedIds"
+          v-model:expanded="expandedIds"
+          :nodes="task_list"
+          :live-mode="liveMode"
+          @retry="retryTask"
+          @cancel="cancelTask"
+          @delete="deleteTask"
+        />
+        <div class="row justify-center mt-4" v-if="meta.pages > 1">
+          <div class="flex">
+            <VaPagination
+              :model-value="meta.page"
+              :pages="meta.pages"
+              @update:modelValue="changePage"
+            />
+          </div>
+        </div>
+      </div>
       <va-scroll-container
+        v-else
         color="primary"
         horizontal
       >
@@ -216,6 +250,13 @@ export default {
       meta: {},
       task_list: [],
       selectedItems: [],
+      checkedIds: [],
+      expandedIds: [],
+      view: this.savedView(),
+      viewOptions: [
+        { label: this.$t('admin.tasks.tableView'), value: 'table', icon: 'table_rows' },
+        { label: this.$t('admin.tasks.treeView'), value: 'tree', icon: 'account_tree' }
+      ],
       filterApp: '',
       filterStatus: '',
       perPage: 20,
@@ -245,6 +286,12 @@ export default {
       interval: ''
     }
   },
+  computed: {
+    // Ids of the checked tasks, whichever view they were checked in
+    selectedIds () {
+      return this.view === 'tree' ? this.checkedIds : this.selectedItems.map(task => task.id)
+    }
+  },
   mounted () {
     // Request updated task json every 3s
     this.interval = setInterval(this.updateTaskList, 3000)
@@ -256,13 +303,19 @@ export default {
   methods: {
     updateTaskList () {
       const vueState = this
+      const view = vueState.view
 
       axios.post('/admin/server/tasks/api?page=' + vueState.meta.page, {
         app: vueState.filterApp,
         status: vueState.filterStatus.value,
-        per_page: vueState.perPage
+        per_page: vueState.perPage,
+        view
       })
         .then(function (response) {
+          // The view changed while this was on its way: it is the wrong shape now
+          if (view !== vueState.view) {
+            return
+          }
           vueState.task_list = response.data.tasks
           vueState.meta = response.data.meta
           vueState.$emit('expand')
@@ -273,23 +326,32 @@ export default {
         .then(() => this.updateTaskList())
         .catch((error) => this.showError(error))
     },
-    retryTaskById (id) {
-      this.operate('post', '/admin/server/tasks/' + this.task_list[id].id + '/retry')
+    retryTaskById (index) {
+      this.retryTask(this.task_list[index].id)
     },
-    cancelTaskById (id) {
+    cancelTaskById (index) {
+      this.cancelTask(this.task_list[index].id)
+    },
+    deleteTaskById (index) {
+      this.deleteTask(this.task_list[index].id)
+    },
+    retryTask (id) {
+      this.operate('post', '/admin/server/tasks/' + id + '/retry')
+    },
+    cancelTask (id) {
       if (!window.confirm(this.$t('admin.tasks.confirmCancel'))) {
         return
       }
-      this.operate('post', '/admin/server/tasks/' + this.task_list[id].id + '/cancel')
+      this.operate('post', '/admin/server/tasks/' + id + '/cancel')
     },
-    deleteTaskById (id) {
+    deleteTask (id) {
       if (!window.confirm(this.$t('admin.tasks.confirmDelete'))) {
         return
       }
-      this.operate('delete', '/admin/server/tasks/' + this.task_list[id].id)
+      this.operate('delete', '/admin/server/tasks/' + id)
     },
     bulk (operation) {
-      const ids = this.selectedItems.map(task => task.id)
+      const ids = this.selectedIds
       if (ids.length === 0) {
         return
       }
@@ -298,7 +360,7 @@ export default {
       }
       axios.post('/admin/server/tasks/bulk/' + operation, { tasks: ids })
         .then((response) => {
-          this.selectedItems = []
+          this.clearSelection()
           // Some may not have been allowed: say so
           if (response.data.message) {
             this.toast.init({ message: response.data.message, color: 'warning', duration: 10000 })
@@ -340,13 +402,39 @@ export default {
         }
       }
     },
+    clearSelection () {
+      this.selectedItems = []
+      this.checkedIds = []
+    },
+    savedView () {
+      try {
+        return window.localStorage.getItem('admin.tasks.view') === 'tree' ? 'tree' : 'table'
+      } catch {
+        return 'table'
+      }
+    },
+    changeView () {
+      try {
+        window.localStorage.setItem('admin.tasks.view', this.view)
+      } catch {
+        // Remembering the choice is a convenience only
+      }
+      this.clearSelection()
+      this.task_list = []
+      this.meta.page = 1
+      this.updateTaskList()
+    },
+    changePage (page) {
+      this.meta.page = page
+      this.updateTaskList()
+    },
     changePerPage () {
       this.meta.page = 1
       this.updateTaskList()
     },
     changeLiveMode () {
       if (this.liveMode) {
-        this.selectedItems = []
+        this.clearSelection()
         this.interval = setInterval(this.updateTaskList, 3000)
       } else {
         clearInterval(this.interval)
