@@ -3,6 +3,7 @@
 use App\Integrations\Billing\Stripe\StripeGateway;
 use App\Organization;
 use App\Services\AppInstance\AppInstancePlanService;
+use App\Support\Facades\Application;
 use Tests\Support\TestSupports;
 
 /** A plan stand-in that only exposes what the gateway reads. */
@@ -87,6 +88,12 @@ it('bills the priced features that are active on an app instance', function () {
     expect($pricing)->not->toHaveKey('stripe_disabled_feature');
 
     $instance->updateSetting('features.optional-feature.status', 'enabled');
+
+    // ApplicationService memoizes the AppInstanceService (and the model it
+    // holds) per instance id for the life of a request/job. Drop it so the
+    // second read sees the setting we just changed, as a new request would.
+    app()->forgetInstance('applications');
+    Application::clearResolvedInstance('applications');
 
     $pricing = $gateway->pricingFromPlans([new AppInstancePlanService($plan, $instance->fresh())]);
 
