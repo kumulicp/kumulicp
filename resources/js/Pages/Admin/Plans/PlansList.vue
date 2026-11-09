@@ -83,6 +83,7 @@ import draggable from 'vuedraggable'
       <div class="plans-list">
         <div class="row">
           <div class="flex flex-col xs12 lg12">
+            <div class="block w-full">
             <form @submit.prevent="order.post('/admin/service/plans/update_order')">
             <va-scroll-container horizontal>
               <table class="va-table va-table--hoverable my-3">
@@ -120,10 +121,12 @@ import draggable from 'vuedraggable'
                 </draggable>
               </table>
             </va-scroll-container>
-            <p class="va-text-secondary mb-3">
-              {{ $t('admin.plans.changeOrder') }}
-            </p>
-            <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
+            <div class="block mb-6">
+              <p class="va-text-secondary mb-3">
+                {{ $t('admin.plans.changeOrder') }}
+              </p>
+              <va-button type="submit" :disabled="order.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
+            </div>
             </form>
             <va-scroll-container horizontal>
               <table class="va-table va-table--hoverable my-3">
@@ -157,6 +160,7 @@ import draggable from 'vuedraggable'
                 </tbody>
               </table>
             </va-scroll-container>
+            </div>
           </div>
         </div>
       </div>

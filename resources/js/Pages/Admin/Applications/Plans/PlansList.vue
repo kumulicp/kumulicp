@@ -119,17 +119,11 @@ import draggable from 'vuedraggable'
         </draggable>
       </table>
     </va-scroll-container>
-    <div class="row">
-      <div class="flex flex-col xs12">
-        <p class="va-text-secondary">
-          {{ $t('admin.plans.changeOrder') }}
-        </p>
-      </div>
-      <div class="flex flex-col xs12">
-        <div>
-          <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
-        </div>
-      </div>
+    <div class="block mb-6">
+      <p class="va-text-secondary mb-3">
+        {{ $t('admin.plans.changeOrder') }}
+      </p>
+      <va-button type="submit" :disabled="order.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
     </div>
   </form>
   <va-scroll-container
