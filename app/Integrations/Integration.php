@@ -32,6 +32,9 @@ class Integration
 
     protected $status_message;
 
+    // The address the last request went to, so an error says where it came from
+    private ?string $request_url = null;
+
     private $cookie_jar = false;
 
     private $client = null;
@@ -185,8 +188,10 @@ class Integration
 
     public function setError($message, $code, $fatal = false, $quiet = false)
     {
-        $url = '';
-        if (url()->current() !== '') {
+        // The request that failed. url()->current() is the page or job being run, which in
+        // a queue worker is a made-up localhost address and says nothing about the failure.
+        $url = $this->request_url ?? '';
+        if ($url === '' && url()->current() !== '') {
             $url = url()->current();
         }
 
@@ -279,6 +284,8 @@ class Integration
         //
         //     return;
         // }
+
+        $this->request_url = $url;
 
         $this->buildClient();
 
