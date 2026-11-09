@@ -51,8 +51,9 @@ when it is present but null. Either way "unlimited" is not expressible today and
   by the installer and then stored in the DB, so the DB is the source of truth afterwards.
 - A small `Tenancy` service and facade (`Tenancy::isSingle()`, `isMulti()`, `organization()`) follows the existing
   `Settings` facade pattern. The mode is also shared to Vue as `$page.props.tenancy.single`.
-- Single to multi is allowed later through the admin settings. Multi to single is only allowed by artisan, and it refuses unless exactly one
-  non-test org exists. Existing multi-tenant installs are **not** auto-converted.
+- The mode is fixed after install. The only way to change it is the `kumulicp:tenancy` artisan command (phase 7),
+  which refuses to switch to single unless exactly one non-test org exists. There is no admin UI for it.
+  Existing multi-tenant installs are **not** auto-converted.
 
 ### 2. "Unlimited plan" is computed, not stored
 
@@ -106,7 +107,7 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | Per-user "basic vs standard" user types and additional-storage upsells | Hidden. Everyone is `standard`. |
 
 App-level plans (`AppPlan`, "pick Small or Large when installing") are **kept**. Only the *organization* plan goes away.
-In single mode these could be relabeled "Profiles" in the copy, as polish.
+In single mode they are relabeled **Profiles** in the copy (decided).
 
 ### 4. App readiness (powers the Discover warnings)
 
@@ -119,13 +120,14 @@ New `ApplicationReadiness` service (`Application::readiness()`) returns an order
 | `version` | No `AppVersion` exists | `/admin/apps/{slug}/versions/create` |
 | `version_active` | Versions exist but none `active`. This usually means untested, see `AppVersion::canBeEnabled()` and the tests flow. | `/admin/apps/{slug}/versions/{name}` (tests, enable) |
 | `plan` | No non-archived `AppPlan` | `/admin/apps/{slug}/plans/create`, plus a **"Create default plan"** button that runs the same logic as `Admin\Applications::store()` |
-| `plan_features` | Default plan has no features or configurations saved, where the app's profile defines some | `/admin/apps/{slug}/plans/{id}/features`, `.../configurations` |
-| `plan_servers` | Plan lacks `web_server_id` or `database_server_id` that the app needs | `/admin/apps/{slug}/plans/{id}/edit` |
+| `plan_configured` | The plan has never been edited: `updated_at` equals `created_at`. A plan almost always needs a change or two to work on a given server, and a freshly created one has identical timestamps (decided). This replaces separate features/servers checks. | `/admin/apps/{slug}/plans/{id}/edit` (also lists features and configurations) |
 | `servers` | No usable servers at all | `/admin/server/servers` |
 | existing | `missing_parent_app`, primary domain | Existing behavior |
 
-Open item: the exact list for `plan_features` and `plan_servers` must come from auditing `ApplicationActivate`,
-`AppPlanService` and the app profiles, so it matches what a deploy truly needs. Draft only.
+`plan_configured` is only a **warning**: it never blocks installing. A plan can be saved without changing anything and still
+be right. Saving the plan from its edit page is enough to clear it.
+Caveat: any write to the plan row bumps `updated_at`, including programmatic ones (for example `AppPlanService` setting `is_default`).
+Phase 4 must check which of those can touch a brand-new plan, and compare against the timestamp of the first user save if they do.
 
 **Where it shows**
 
@@ -133,7 +135,7 @@ Open item: the exact list for `plan_features` and `plan_servers` must come from 
   Admins see everything. Non-admins see only ready apps.
 - `Discover::show`: a warning panel with the checklist and one button per failing item. Non-admins get
   "This app isn't available yet. Ask an administrator." The activate button is disabled until ready.
-- `Gate::activate-app` gets a new deny code `app_not_ready`, and `Discover::plans/review/activate` re-check it
+- `Gate::activate-app` gets a new deny code `app_not_ready` (blocking checks only; `plan_configured` just warns), and `Discover::plans/review/activate` re-check it
   server-side, so the UI is not the only guard.
 - The same checklist feeds the admin app page header, so the fix flow and the status stay in one place.
 
@@ -186,13 +188,13 @@ Servers · Backups · Tasks · Logs · Security · Packages · System settings
 
 Each phase ships independently and keeps multi-tenant behavior unchanged.
 
-1. **Foundation.** `Tenancy` service, `tenancy_mode` setting, Inertia prop, installer choice, Pest helpers.
+1. **Foundation.** `Tenancy` service, `tenancy_mode` setting, Inertia prop, installer choice, Pest helpers. *(in progress)*
 2. **Unlimited plan.** `SingleTenantBasePlanService`, gate fixes, unlimited semantics. Discover now lists apps for the superaccount.
 3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards, notification no-ops.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect.
 6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.
-7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command with its safety check, changelog.
+7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.
 
 ## Testing
 
@@ -207,13 +209,13 @@ Pest feature tests (the repo has `tests/Feature/{Admin,Subscription,Applications
 - Discover: admin vs non-admin visibility, activation refused server-side when not ready.
 - Org delete guard: cannot remove, deactivate or unsubscribe the only org.
 
-## Open questions
+## Decisions
 
-1. **Who may install apps in single mode?** Today `activate-app` has no admin check, so any org user can. Recommend: admins install, regular users only see apps they have access to. Needs a decision.
-2. **Mode switching.** Is single to multi in admin settings wanted, or install-time only?
-3. **Naming.** Rename app-level "Plans" to "Profiles" in single mode, or keep "Plans"?
-4. **Shared apps** (`toggle:shared-apps`) are cross-org by definition. The plan treats them as unavailable in single mode. Confirm.
-5. **Readiness strictness.** Should "plan has no features or configurations" block installs, or only warn?
+1. **Who installs apps:** admins only. In single mode `activate-app` (and deactivate) require the `admin` gate. Regular users only see apps they have access to.
+2. **Mode switching:** fixed at install. Changeable only through the `kumulicp:tenancy` artisan command.
+3. **Naming:** app-level "Plans" are called "Profiles" in single mode.
+4. **Shared apps:** hidden in single mode.
+5. **Readiness of a plan:** a plan whose `updated_at` equals `created_at` has never been edited, so Discover warns about it (see `plan_configured`).
 
 ## Risks
 

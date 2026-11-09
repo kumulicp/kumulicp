@@ -10,4 +10,16 @@ return [
     ],
     'complete' => 'The control panel has been sucessfully setup',
     'first_org' => 'Super admin account',
+    'tenancy' => [
+        'modes' => [
+            'single' => [
+                'label' => 'Single organization',
+                'description' => 'One organization runs its own apps. There are no plans, subscriptions, billing or self-registration.',
+            ],
+            'multi' => [
+                'label' => 'Multi-tenant',
+                'description' => 'A hosting provider serves many organizations, each subscribed to a plan.',
+            ],
+        ],
+    ],
 ];

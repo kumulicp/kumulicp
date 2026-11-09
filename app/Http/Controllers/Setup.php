@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Organizations\SubscriptionUpdate;
+use App\Enums\TenancyMode;
 use App\Plan;
 use App\ServerSetting;
 use App\Support\Facades\AccountManager;
@@ -10,9 +11,11 @@ use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use App\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Stripe\Customer;
 use Stripe\Stripe;
 
@@ -41,7 +44,10 @@ class Setup extends Controller
         $checks[__('setup.extension', ['extension' => 'curl'])] = extension_loaded('curl');
         $checks[__('setup.function', ['function' => 'curl_exec'])] = ! in_array('curl_exec', $disabled);
 
-        if (config('billing.default') === 'stripe' && ! is_null(config('services.stripe.key')) && ! is_null(config('services.stripe.secret'))) {
+        // A single-organization install has no billing, so a Stripe setup that
+        // isn't working yet must not block it (only known here when fixed ahead
+        // of time with TENANCY_MODE; the form's choice comes after these checks)
+        if (Tenancy::installerMode() !== TenancyMode::Single && config('billing.default') === 'stripe' && ! is_null(config('services.stripe.key')) && ! is_null(config('services.stripe.secret'))) {
             try {
                 Stripe::setApiKey(config('services.stripe.secret'));
                 // Attempt to retrieve a list of test customers (will be empty if new)
@@ -61,7 +67,17 @@ class Setup extends Controller
             }
         }
 
-        return inertia('Setup/SetupSettings');
+        return inertia('Setup/SetupSettings', [
+            'tenancy' => [
+                'mode' => Tenancy::installerDefault()->value,
+                'locked' => Tenancy::installerMode() !== null,
+                'options' => collect(TenancyMode::cases())->map(fn (TenancyMode $mode) => [
+                    'value' => $mode->value,
+                    'label' => $mode->label(),
+                    'description' => $mode->description(),
+                ])->values(),
+            ],
+        ]);
     }
 
     public function build(Request $request)
@@ -71,7 +87,14 @@ class Setup extends Controller
             return redirect('/');
         }
 
+        // A mode fixed with TENANCY_MODE wins over the form
+        $mode = Tenancy::installerMode()
+            ?? TenancyMode::tryFrom((string) $request->input('tenancy_mode'))
+            ?? TenancyMode::Multi;
+
         $data = $request->validate([
+            'tenancy_mode' => ['nullable', Rule::enum(TenancyMode::class)],
+            'organization_name' => [Rule::requiredIf($mode === TenancyMode::Single), 'nullable', 'string', 'max:100'],
             'username' => ['required', 'string', 'max:100', 'lowercase'],
             'contact_email' => ['required', 'string', 'max:100', 'unique:users,email', 'lowercase'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -79,6 +102,9 @@ class Setup extends Controller
             'contact_first_name' => ['required', 'string', 'max:100'],
             'contact_last_name' => ['required', 'string', 'max:100'],
         ]);
+
+        // Stored first: everything created below can depend on the mode
+        Tenancy::set($mode);
 
         // Create Subscription with unlimited access
         $plan = new Plan;
@@ -94,7 +120,7 @@ class Setup extends Controller
         // Create Organization Account
         $organization = new \App\Organization;
         $organization->slug = Str::snake($data['slug']);
-        $organization->name = __('setup.first_org');
+        $organization->name = $mode === TenancyMode::Single ? $data['organization_name'] : __('setup.first_org');
         $organization->api_token = Str::random(60);
         $organization->contact_first_name = $data['contact_first_name'];
         $organization->contact_last_name = $data['contact_last_name'];

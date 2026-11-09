@@ -1657,6 +1657,8 @@
     "other": "Otro"
   },
   "setup": {
+    "installationType": "Tipo de instalación",
+    "organizationName": "Nombre de la organización",
     "settingsHeader": "Configuración de la Cuenta",
     "slugMessage": "Nombre del sistema para identificar tu cuenta. Debe ser en minúsculas y solo guiones",
     "systemCheckFailed": "Falló la Verificación del Sistema",

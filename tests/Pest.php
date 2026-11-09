@@ -3,12 +3,14 @@
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\Enums\TenancyMode;
 use App\Services\AccountManagerService;
 use App\Services\AdditionalStorageService;
 use App\Services\UserPermissionsService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Billing;
 use App\Support\Facades\Domain;
+use App\Support\Facades\Tenancy;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -174,6 +176,27 @@ function skipUnlessDriver(string $required, ?string $driver = null): void
     if ($driver !== $required) {
         test()->markTestSkipped("Requires '{$required}' account manager driver");
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Tenancy Mode Helpers
+|--------------------------------------------------------------------------
+|
+| Installs are multi-tenant unless the `tenancy_mode` setting says otherwise,
+| so tests run as multi-tenant by default. Call useSingleTenancy() after
+| seed() to run a test as a single-organization install.
+|
+*/
+
+function useSingleTenancy(): void
+{
+    Tenancy::set(TenancyMode::Single);
+}
+
+function useMultiTenancy(): void
+{
+    Tenancy::set(TenancyMode::Multi);
 }
 
 /*

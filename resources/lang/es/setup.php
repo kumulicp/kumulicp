@@ -10,4 +10,16 @@ return [
     ],
     'complete' => 'El panel de control se ha configurado correctamente',
     'first_org' => 'Cuenta de súper administrador',
+    'tenancy' => [
+        'modes' => [
+            'single' => [
+                'label' => 'Una sola organización',
+                'description' => 'Una organización gestiona sus propias aplicaciones. No hay planes, suscripciones, facturación ni registro público.',
+            ],
+            'multi' => [
+                'label' => 'Multiinquilino',
+                'description' => 'Un proveedor de alojamiento atiende a muchas organizaciones, cada una suscrita a un plan.',
+            ],
+        ],
+    ],
 ];

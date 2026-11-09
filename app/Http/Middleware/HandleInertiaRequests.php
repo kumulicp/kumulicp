@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
 use App\Support\Facades\Settings;
+use App\Support\Facades\Tenancy;
 use App\Support\SharedAppContext;
 use App\Updates\PendingUpdates;
 use Closure;
@@ -148,6 +149,9 @@ class HandleInertiaRequests extends Middleware
                 'primary_color' => Settings::get('primary_color', '#6042B3'),
                 'secondary_color' => Settings::get('secondary_color', '#d91698'),
                 'text_secondary_color' => Settings::get('text_secondary_color', '#64748b'),
+            ],
+            'tenancy' => [
+                'single' => Tenancy::isSingle(),
             ],
             'language' => app()->getLocale(),
             'locales' => config('locales.available'),
