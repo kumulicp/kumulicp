@@ -22,10 +22,12 @@ class ChangePlanTest extends TestCase
 
     private function organization(): Organization
     {
-        return Organization::factory()->create(['type' => 'business', 'status' => 'active']);
+        $plan = Plan::factory()->create(['org_type' => 'business']);
+
+        return Organization::factory()->create(['type' => 'business', 'status' => 'active', 'plan_id' => $plan->id]);
     }
 
-    public function test_org_page_lists_public_hidden_and_archived_plans_of_the_organizations_type()
+    public function test_org_page_lists_every_plan_including_other_organization_types()
     {
         $admin = $this->adminUser();
         $org = $this->organization();
@@ -42,7 +44,8 @@ class ChangePlanTest extends TestCase
                     return $plans[$public->id]['visibility'] === 'public'
                         && $plans[$hidden->id]['visibility'] === 'hidden'
                         && $plans[$archived->id]['visibility'] === 'archived'
-                        && ! $plans->has($other_type->id);
+                        && $plans[$other_type->id]['org_type'] === 'nonprofit'
+                        && $plans[$other_type->id]['disabled_reason'] === null;
                 });
             });
     }
@@ -61,18 +64,18 @@ class ChangePlanTest extends TestCase
         $this->assertSame($plan->id, $org->fresh()->plan_id);
     }
 
-    public function test_plan_of_another_organization_type_is_rejected()
+    public function test_admin_can_move_an_organization_to_a_plan_of_another_organization_type()
     {
         $admin = $this->adminUser();
         $org = $this->organization();
-        $original = $org->plan_id;
         $plan = Plan::factory()->create(['org_type' => 'nonprofit']);
 
         $this->actingAs($admin)
             ->post("/admin/organizations/{$org->id}/change_plan", ['plan_id' => $plan->id])
-            ->assertSessionHasErrors('plan_id');
+            ->assertRedirect("/admin/organizations/{$org->id}")
+            ->assertSessionHasNoErrors();
 
-        $this->assertSame($original, $org->fresh()->plan_id);
+        $this->assertSame($plan->id, $org->fresh()->plan_id);
     }
 
     public function test_non_admins_cannot_change_the_plan()
