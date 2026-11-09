@@ -145,39 +145,58 @@ import OrganizationLayout from './OrganizationLayout.vue'
       :title="$t('admin.organizations.changePlan')"
       :ok-text="$t('admin.organizations.changePlan')"
       :ok-disabled="!planForm.plan_id"
+      size="small"
       @ok="submitChangePlan"
     >
-      <p class="mb-3">{{ $t('admin.organizations.changePlanDescription', { name: organization.name }) }}</p>
-      <div class="flex flex-col gap-2" id="availablePlans">
+      <p class="plan-modal__intro">{{ $t('admin.organizations.changePlanDescription', { name: organization.name }) }}</p>
+      <div class="plan-list" id="availablePlans" role="radiogroup">
         <label
           v-for="plan in available_plans"
           :key="plan.id"
-          class="flex items-start gap-3 p-3 rounded border"
-          :class="{ 'opacity-60': plan.current || plan.disabled_reason }"
+          class="plan-option"
+          :class="{
+            'plan-option--selected': planForm.plan_id === plan.id,
+            'plan-option--disabled': plan.current || plan.disabled_reason
+          }"
           :title="plan.disabled_reason || undefined"
         >
           <input
             type="radio"
             name="plan_id"
-            class="mt-1"
+            class="plan-option__radio"
             :value="plan.id"
             :disabled="plan.current || !!plan.disabled_reason"
             v-model="planForm.plan_id"
           />
-          <span class="flex-1">
-            <span class="font-bold">{{ plan.name }}</span>
-            <va-badge
-              class="ml-2"
-              :color="visibilityColors[plan.visibility]"
-              :text="$t('admin.organizations.planVisibility.' + plan.visibility)"
-            />
-            <va-badge v-if="plan.current" class="ml-2" color="primary" :text="$t('admin.organizations.currentPlan')" />
-            <span class="block text-sm">{{ plan.description }}</span>
-            <span v-if="plan.disabled_reason && !plan.current" class="block text-sm text-red-600">{{ plan.disabled_reason }}</span>
+          <span class="plan-option__body">
+            <span class="plan-option__header">
+              <span class="plan-option__name">{{ plan.name }}</span>
+              <va-badge
+                v-if="plan.current"
+                color="primary"
+                :text="$t('admin.organizations.currentPlan')"
+              />
+              <va-badge
+                v-if="plan.org_type !== organization.type"
+                color="info"
+                :text="plan.org_type"
+              />
+              <va-badge
+                :color="visibilityColors[plan.visibility]"
+                :text="$t('admin.organizations.planVisibility.' + plan.visibility)"
+              />
+            </span>
+            <span v-if="plan.description" class="plan-option__description">{{ plan.description }}</span>
+            <span v-if="plan.disabled_reason && !plan.current" class="plan-option__reason">
+              <va-icon name="info" size="small" />
+              {{ plan.disabled_reason }}
+            </span>
           </span>
         </label>
       </div>
-      <p v-if="$page.props.errors.plan_id" class="mt-3 text-red-600">{{ $page.props.errors.plan_id }}</p>
+      <va-alert v-if="$page.props.errors.plan_id" color="danger" class="mt-4" border="left">
+        {{ $page.props.errors.plan_id }}
+      </va-alert>
     </va-modal>
   </div>
 </template>
@@ -236,5 +255,83 @@ export default {
 <style>
   .organization {
     width: 100%;
+  }
+
+  .plan-modal__intro {
+    margin-bottom: 1rem;
+    color: var(--va-text-secondary);
+  }
+
+  .plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 2px;
+  }
+
+  .plan-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+
+  .plan-option:hover:not(.plan-option--disabled) {
+    border-color: var(--va-primary);
+  }
+
+  .plan-option--selected {
+    border-color: var(--va-primary);
+    background-color: color-mix(in srgb, var(--va-primary) 8%, transparent);
+    box-shadow: 0 0 0 1px var(--va-primary);
+  }
+
+  .plan-option--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: var(--va-background-element);
+  }
+
+  .plan-option__radio {
+    margin-top: 0.3rem;
+    accent-color: var(--va-primary);
+  }
+
+  .plan-option__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .plan-option__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .plan-option__name {
+    font-weight: 600;
+  }
+
+  .plan-option__description {
+    font-size: 0.875rem;
+    color: var(--va-text-secondary);
+  }
+
+  .plan-option__reason {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--va-danger);
   }
 </style>
