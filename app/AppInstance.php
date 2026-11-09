@@ -139,6 +139,14 @@ class AppInstance extends Model
         return $this->hasMany('App\Task', 'app_instance_id');
     }
 
+    // Added (e.g. a shared app) but never activated: it is 'deactivated' only
+    // because nothing has deployed it yet, not because it was turned off
+    public function isAwaitingActivation(): bool
+    {
+        return $this->status === 'deactivated'
+            && ! $this->tasks()->where('action_slug', 'application_activate')->exists();
+    }
+
     public function subscription()
     {
         return $this->belongsTo('App\AppPlan', 'plan_id');

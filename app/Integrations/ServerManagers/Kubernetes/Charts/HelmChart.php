@@ -10,6 +10,8 @@ abstract class HelmChart extends Chart
 {
     public $app_storage;
 
+    private ?bool $awaitingActivation = null;
+
     public $delete_method = 'remove';
 
     public $chart_name = '';
@@ -133,7 +135,17 @@ abstract class HelmChart extends Chart
 
     public function appEnabled()
     {
-        return $this->organization->status != 'deactivated' && $this->app_instance->status != 'deactivated';
+        // An app that is yet to be activated is built as the enabled app it will become,
+        // so its chart (e.g. in the activation review) isn't scaled to 0 with ingress off
+        if ($this->organization->status == 'deactivated') {
+            return false;
+        }
+
+        if ($this->app_instance->status != 'deactivated') {
+            return true;
+        }
+
+        return $this->awaitingActivation ??= $this->app_instance->isAwaitingActivation();
     }
 
     public function replicaCount()

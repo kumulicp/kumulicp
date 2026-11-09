@@ -23,7 +23,6 @@ use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Domain;
-use App\Task;
 use App\VersionTestRun;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -352,8 +351,7 @@ class SharedApps extends Controller
     private function canBeActivated(AppInstance $shared_app): bool
     {
         return $this->isDeployable($shared_app->application)
-            && $shared_app->status === 'deactivated'
-            && ! Task::where('app_instance_id', $shared_app->id)->where('action_slug', 'application_activate')->exists();
+            && $shared_app->isAwaitingActivation();
     }
 
     public function show(AppInstance $shared_app)
