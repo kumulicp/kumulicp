@@ -7,11 +7,14 @@ use App\Actions\Organizations\SubscriptionUpdate;
 use App\Http\Controllers\Controller;
 use App\Log;
 use App\Organization;
+use App\Plan;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
+use App\Support\Facades\FastCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class Organizations extends Controller
 {
@@ -80,6 +83,7 @@ class Organizations extends Controller
                 'description' => $organization->plan->description,
                 'discount_id' => $organization->discount_id,
             ],
+            'available_plans' => $this->selectablePlans($organization),
             'subscription_stats' => $subscription->compileCostStats(),
             'breadcrumbs' => [
                 [
@@ -203,5 +207,74 @@ class Organizations extends Controller
         Action::execute(new SubscriptionUpdate($organization, $subscription), background: true);
 
         return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.subscription_updating'));
+    }
+
+    /**
+     * The admin override: an organization can be moved to any plan at all --
+     * hidden and archived plans, plans of other organization types, and plans
+     * whose limits the organization has outgrown. The only things refused are
+     * a deactivated organization and a plan it is already on.
+     */
+    public function change_plan(Request $request, Organization $organization)
+    {
+        $validated = $request->validate([
+            'plan_id' => ['required', 'integer', 'exists:plans,id'],
+        ]);
+
+        $plan = Plan::findOrFail($validated['plan_id']);
+
+        if ($reason = $this->planChangeBlockedReason($organization, $plan)) {
+            throw ValidationException::withMessages(['plan_id' => $reason]);
+        }
+
+        $subscription = (new SubscriptionService($organization))->all();
+        $subscription->updateBase($plan);
+
+        FastCache::clear(organization: $organization);
+
+        Action::execute(new SubscriptionUpdate($organization, $subscription));
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.plan_changed', ['plan' => $plan->name]));
+    }
+
+    private function selectablePlans(Organization $organization): array
+    {
+        return Plan::orderBy('archive')
+            ->orderBy('org_type')
+            ->orderBy('display_order')
+            ->get()
+            ->map(function (Plan $plan) use ($organization) {
+                $current = $plan->id === $organization->plan_id;
+                $blocked = $current ? null : $this->planChangeBlockedReason($organization, $plan);
+
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'org_type' => $plan->org_type,
+                    'visibility' => match (true) {
+                        (bool) $plan->archive => 'archived',
+                        $plan->status === 'available' => 'public',
+                        default => 'hidden',
+                    },
+                    'current' => $current,
+                    'disabled_reason' => $blocked,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function planChangeBlockedReason(Organization $organization, Plan $plan): ?string
+    {
+        if ($organization->status === 'deactivated') {
+            return __('organization.plan.denied.unavailable');
+        }
+
+        if ($organization->plan_id === $plan->id) {
+            return __('organization.plan.denied.subscribed');
+        }
+
+        return null;
     }
 }

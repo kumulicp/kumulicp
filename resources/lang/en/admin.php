@@ -206,6 +206,7 @@ return [
         'reactivated' => 'Organization reactivated',
         'deactivated' => 'Organization deactivated',
         'subscription_updating' => 'Organization subscription updating',
+        'plan_changed' => 'Organization moved to the :plan plan',
         'apps' => [
             'updated' => ':app updated',
             'updating' => ':app updating',

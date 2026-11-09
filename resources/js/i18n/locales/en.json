@@ -669,6 +669,15 @@
       "basePlan": "Base Plan",
       "discountCode": "Discount Code",
       "updateSubscription": "Update Subscription",
+      "changePlan": "Change Plan",
+      "changePlanDescription": "Choose a plan for {name}. Hidden and archived plans are included.",
+      "currentPlan": "Current",
+      "selectPlan": "Select a plan",
+      "planVisibility": {
+        "public": "Public",
+        "hidden": "Hidden",
+        "archived": "Archived"
+      },
       "permanentlyDelete": "Permanently Delete",
       "logs": "Logs",
       "level": "Level",

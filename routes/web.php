@@ -125,6 +125,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('reactivate', 'Admin\Organizations@reactivate')->name('organizations.reactivate');
                 Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
+                Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
                 Route::resource('backups', 'Admin\Organizations\BackupRestore');
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore');
                 Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore');
