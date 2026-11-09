@@ -1442,7 +1442,7 @@
       "adminWarning": "You are an admin and can't remove your own admin permissions.",
       "accessType": "Access Type",
       "roleDescriptions": "Role Descriptions",
-      "updatePermissions": "Update Permissions",
+      "updatePermissions": "Change Permissions",
       "confirmPermissionChanges": "Confirm Permission Changes",
       "accessChanged": "Access changed",
       "subscriptionPriceNote": "Your subscription price may change based on these permission changes.",
