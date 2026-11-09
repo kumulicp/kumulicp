@@ -12,6 +12,7 @@ return [
     'migrating_app_database' => 'Migrating :app database to :server',
     'upgrading_app' => 'Upgrading :app',
     'provision_version_test_step' => 'Setting up a test of :app :version, :plan',
+    'provision_version_test_site' => 'Adding a site to the test of :app :version, :plan',
     'clear_version_test_step' => 'Clearing the test org for :plan',
     'upgrading_all_apps' => 'Upgrading all :app to :version',
     'updating_app_customizations' => 'Updating :app Customizations',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Applications\Versions;
 use App\AppInstance;
 use App\Application;
 use App\AppVersion;
+use App\Enums\VersionTestStepStage;
 use App\Enums\VersionTestStepStatus;
 use App\Exceptions\VersionTestException;
 use App\Http\Controllers\Controller;
@@ -55,6 +56,9 @@ class Tests extends Controller
         $steps = $run->steps()->with(['plan', 'from_version'])->get();
         $has_active_step = $steps->contains(fn (VersionTestStep $step) => $step->status->isActive());
         $current = $steps->first(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::AWAITING_CONFIRMATION);
+        // A shared app's own stage has no address when it has no site of its own to log in to
+        $failing = $steps->first(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::NEEDS_ATTENTION);
+        $hidden = $current?->stage === VersionTestStepStage::CORE && ! $current->app_url;
 
         return inertia()->render('Admin/Applications/Versions/VersionTestRun', [
             'app' => $this->appProps($app),
@@ -66,6 +70,8 @@ class Tests extends Controller
                 'started_by' => $run->started_by?->name,
                 'bypassed_by' => $run->bypassed_by?->name,
                 'bypass_reason' => $run->bypass_reason,
+                // A shared app's plan is tested in two stages: the shared app, then a site added to it
+                'staged' => (bool) $run->app_plan_id,
                 'created_at' => $run->created_at->format('Y-m-d H:i:s'),
                 'finished_at' => $run->finished_at?->format('Y-m-d H:i:s'),
                 'gate' => $version->testGate($run->plan),
@@ -77,19 +83,30 @@ class Tests extends Controller
                 'plan' => $step->plan->name,
                 'from_version' => $step->from_version?->name,
                 'status' => $step->status->value,
+                'stage' => $step->stage?->value,
                 'failure_reason' => $step->failure_reason,
             ]),
-            // Credentials are only sent while the admin has something to try out
+            // Credentials are only sent while the admin has something to try out. A shared
+            // app that is only a container has nothing to log in to until a site is added.
             'current_step' => $current ? [
                 'id' => $current->id,
                 'plan' => $current->plan->name,
                 'type' => $current->type->value,
+                'stage' => $current->stage?->value,
                 'app_url' => $current->app_url,
                 // The org's own user, who signs in through LDAP
-                'username' => $current->test_username,
-                'password' => $current->test_password,
+                'username' => $hidden ? null : $current->test_username,
+                'password' => $hidden ? null : $current->test_password,
                 // The app's local admin, which works even when LDAP sign-in is broken
-                'admin_account' => $this->adminAccount($current),
+                'admin_account' => $hidden ? null : $this->adminAccount($current),
+            ] : null,
+            // A step that failed to set up and is waiting for the admin to fix it, ignore it or give up
+            'failing_step' => $failing ? [
+                'id' => $failing->id,
+                'plan' => $failing->plan->name,
+                'stage' => $failing->stage?->value,
+                'reason' => $failing->failure_reason,
+                'task_id' => $failing->task_id,
             ] : null,
             'can' => [
                 'start_next' => $run->isRunning() && ! $has_active_step && $steps->contains(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::PENDING),
@@ -97,7 +114,7 @@ class Tests extends Controller
                 'retry_step_id' => ! $has_active_step ? $steps->first(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::FAILED)?->id : null,
             ],
             // The page refreshes itself while a test org is being built or deleted
-            'polling' => $steps->contains(fn (VersionTestStep $step) => in_array($step->status, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::CLEARING], true)),
+            'polling' => $steps->contains(fn (VersionTestStep $step) => in_array($step->status, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::NEEDS_ATTENTION, VersionTestStepStatus::CLEARING], true)),
             'events' => $run->events()->with(['user', 'step.plan'])->get()->map(fn (VersionTestEvent $event) => [
                 'id' => $event->id,
                 'type' => $event->type,
@@ -120,7 +137,9 @@ class Tests extends Controller
      */
     private function adminAccount(VersionTestStep $step): ?array
     {
-        $app_instance = $step->app_instance_id ? AppInstance::find($step->app_instance_id) : null;
+        // The site added to a shared app is what is logged in to, not the shared app
+        $app_instance_id = $step->site_app_instance_id ?? $step->app_instance_id;
+        $app_instance = $app_instance_id ? AppInstance::find($app_instance_id) : null;
         if (! $app_instance) {
             return null;
         }
@@ -185,6 +204,28 @@ class Tests extends Controller
             $this->runner->retryStep($step, auth()->user());
 
             return redirect($this->runUrl($app, $version, $run))->with('success', __('admin.version_tests.retried'));
+        }, $this->runUrl($app, $version, $run));
+    }
+
+    public function ignore(Application $app, AppVersion $version, VersionTestRun $run, VersionTestStep $step)
+    {
+        $this->ensureBelongs($version, $run, $step);
+
+        return $this->attempt(function () use ($app, $version, $run, $step) {
+            $this->runner->ignoreFailure($step, auth()->user());
+
+            return redirect($this->runUrl($app, $version, $run))->with('success', __('admin.version_tests.ignored'));
+        }, $this->runUrl($app, $version, $run));
+    }
+
+    public function abandon(Application $app, AppVersion $version, VersionTestRun $run, VersionTestStep $step)
+    {
+        $this->ensureBelongs($version, $run, $step);
+
+        return $this->attempt(function () use ($app, $version, $run, $step) {
+            $this->runner->abandon($step, auth()->user());
+
+            return redirect($this->runUrl($app, $version, $run))->with('success', __('admin.version_tests.abandoned'));
         }, $this->runUrl($app, $version, $run));
     }
 

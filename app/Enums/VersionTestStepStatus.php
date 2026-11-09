@@ -9,6 +9,10 @@ enum VersionTestStepStatus: string
     // The test org is being created and the app installed or upgraded
     case PROVISIONING = 'provisioning';
 
+    // Setting up failed. The test org is kept so the admin can fix the cause and retry the
+    // task, ignore the failure if it was a false alarm, or give up
+    case NEEDS_ATTENTION = 'needs_attention';
+
     // Ready for the admin to try out and confirm
     case AWAITING_CONFIRMATION = 'awaiting_confirmation';
 
@@ -24,7 +28,7 @@ enum VersionTestStepStatus: string
      */
     public function isActive(): bool
     {
-        return in_array($this, [self::PROVISIONING, self::AWAITING_CONFIRMATION, self::CLEARING], true);
+        return in_array($this, [self::PROVISIONING, self::NEEDS_ATTENTION, self::AWAITING_CONFIRMATION, self::CLEARING], true);
     }
 
     /**

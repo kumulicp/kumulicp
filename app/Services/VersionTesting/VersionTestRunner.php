@@ -4,12 +4,14 @@ namespace App\Services\VersionTesting;
 
 use App\AccountTest;
 use App\Actions\Tests\ClearVersionTestStep;
+use App\Actions\Tests\ProvisionVersionTestSite;
 use App\Actions\Tests\ProvisionVersionTestStep;
 use App\AppInstance;
 use App\AppPlan;
 use App\AppVersion;
 use App\Enums\TaskStatus;
 use App\Enums\VersionTestRunStatus;
+use App\Enums\VersionTestStepStage;
 use App\Enums\VersionTestStepStatus;
 use App\Enums\VersionTestStepType;
 use App\Exceptions\VersionTestException;
@@ -19,6 +21,7 @@ use App\Notifications\VersionTestStepFailed;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\Action as ActionFacade;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\VersionTesting\VersionFingerprint;
 use App\Task;
 use App\User;
@@ -163,14 +166,29 @@ class VersionTestRunner
 
     /**
      * The admin tried the app and it works. The step passes once its org is gone.
+     *
+     * For a shared app, this confirms the shared app itself. It is not done
+     * until a site has been added to it and tried, so the org is kept and the
+     * site is added instead.
      */
     public function confirmWorking(VersionTestStep $step, User $user): void
     {
-        if (! $this->moveStep($step, [VersionTestStepStatus::AWAITING_CONFIRMATION], VersionTestStepStatus::CLEARING, [
+        $adding_site = $step->stage === VersionTestStepStage::CORE;
+
+        if (! $this->moveStep($step, [VersionTestStepStatus::AWAITING_CONFIRMATION], $adding_site ? VersionTestStepStatus::PROVISIONING : VersionTestStepStatus::CLEARING, [
             'confirmed_at' => now(),
             'confirmed_by_id' => $user->id,
+            // The provisioning task is done; the site's own is saved once it has started
+            ...($adding_site ? ['stage' => VersionTestStepStage::SITE, 'task_id' => null] : []),
         ])) {
             throw new VersionTestException(__('admin.version_tests.errors.not_awaiting'));
+        }
+
+        if ($adding_site) {
+            $this->log($step->run, 'core_confirmed', $step, $user);
+            $this->startSite($step);
+
+            return;
         }
 
         $this->log($step->run, 'confirmed_working', $step, $user);
@@ -219,6 +237,9 @@ class VersionTestRunner
             $step->confirmed_at = null;
             $step->confirmed_by_id = null;
             $step->app_url = null;
+            $step->stage = null;
+            $step->site_app_instance_id = null;
+            $step->site_plan_id = null;
             $step->account_test_id = null;
             $step->save();
         });
@@ -282,11 +303,19 @@ class VersionTestRunner
         }
 
         $app_instance = $step->app_instance_id ? AppInstance::find($step->app_instance_id) : null;
-        $domain = $app_instance?->domain();
 
-        if (! $this->moveStep($step, [VersionTestStepStatus::PROVISIONING], VersionTestStepStatus::AWAITING_CONFIRMATION, [
+        // A shared app is tried out in two stages: the shared app itself, then a site added to it.
+        // One that is only a container for sites has no address or login of its own to try.
+        $shared = (bool) ($step->run->app_plan_id && $app_instance);
+        $has_site = $app_instance && ApplicationFacade::profile($app_instance->application)->hasOwnSite($app_instance);
+
+        $domain = $shared && ! $has_site ? null : $app_instance?->domain();
+
+        if (! $this->moveStep($step, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::NEEDS_ATTENTION], VersionTestStepStatus::AWAITING_CONFIRMATION, [
             'ready_at' => now(),
             'app_url' => $domain ? 'https://'.$domain : null,
+            'stage' => $shared ? VersionTestStepStage::CORE : null,
+            'failure_reason' => null,
         ])) {
             return;
         }
@@ -296,21 +325,98 @@ class VersionTestRunner
     }
 
     /**
-     * Provisioning a step's org failed. It is cleared and the run fails.
+     * The task that adds a site to a shared app finished: the site is ready to be tried.
      */
-    public function provisioningFailed(int $step_id, string $reason): void
+    public function siteProvisioned(int $step_id): void
     {
         $step = VersionTestStep::find($step_id);
         if (! $step) {
             return;
         }
 
-        if (! $this->moveStep($step, [VersionTestStepStatus::PROVISIONING], VersionTestStepStatus::CLEARING, ['failure_reason' => $reason])) {
+        $site = $step->site_app_instance_id ? AppInstance::find($step->site_app_instance_id) : null;
+        $domain = $site?->domain();
+
+        if (! $this->moveStep($step, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::NEEDS_ATTENTION], VersionTestStepStatus::AWAITING_CONFIRMATION, [
+            'ready_at' => now(),
+            'app_url' => $domain ? 'https://'.$domain : null,
+            'failure_reason' => null,
+        ])) {
+            return;
+        }
+
+        $this->log($step->run, 'site_ready_for_testing', $step);
+        $this->notify(new VersionTestReady($step->refresh()));
+    }
+
+    /**
+     * Setting up a step failed. The test org is kept, not cleared, so the admin can
+     * fix the cause and retry the task, ignore the failure if it was a false alarm,
+     * or give up on the step.
+     *
+     * @param  bool  $fixable  False when there is no task to retry, so there is nothing to fix: the org is cleared and the run fails
+     */
+    public function provisioningFailed(int $step_id, string $reason, bool $fixable = true): void
+    {
+        $step = VersionTestStep::find($step_id);
+        if (! $step) {
+            return;
+        }
+
+        $to = $fixable ? VersionTestStepStatus::NEEDS_ATTENTION : VersionTestStepStatus::CLEARING;
+
+        if (! $this->moveStep($step, [VersionTestStepStatus::PROVISIONING], $to, ['failure_reason' => $reason])) {
             return;
         }
 
         $this->log($step->run, 'provisioning_failed', $step, message: $reason);
         $this->notify(new VersionTestStepFailed($step->refresh()));
+
+        if (! $fixable) {
+            $this->clear($step, ClearVersionTestStep::FAILED);
+        }
+    }
+
+    /**
+     * The failure was a false alarm: carry on as if the task had finished.
+     *
+     * @throws VersionTestException
+     */
+    public function ignoreFailure(VersionTestStep $step, User $user): void
+    {
+        $step->refresh();
+
+        if ($step->status !== VersionTestStepStatus::NEEDS_ATTENTION) {
+            throw new VersionTestException(__('admin.version_tests.errors.not_failing'));
+        }
+
+        $at_site = $step->stage === VersionTestStepStage::SITE;
+
+        // The app the admin would try out has to exist
+        if (! ($at_site ? $step->site_app_instance_id : $step->app_instance_id)) {
+            throw new VersionTestException(__('admin.version_tests.errors.nothing_to_test'));
+        }
+
+        $this->log($step->run, 'failure_ignored', $step, $user, $step->failure_reason);
+
+        $at_site ? $this->siteProvisioned($step->id) : $this->provisioned($step->id);
+    }
+
+    /**
+     * Give up on a step that failed to set up. The run fails once the org is gone.
+     *
+     * @throws VersionTestException
+     */
+    public function abandon(VersionTestStep $step, User $user): void
+    {
+        if (! $this->moveStep($step, [VersionTestStepStatus::NEEDS_ATTENTION], VersionTestStepStatus::CLEARING, [
+            'confirmed_at' => now(),
+            'confirmed_by_id' => $user->id,
+        ])) {
+            throw new VersionTestException(__('admin.version_tests.errors.not_failing'));
+        }
+
+        $this->log($step->run, 'step_abandoned', $step, $user, $step->failure_reason);
         $this->clear($step, ClearVersionTestStep::FAILED);
     }
 
@@ -334,6 +440,11 @@ class VersionTestRunner
         $run = $step->run;
         $this->log($run, 'org_cleared', $step);
 
+        // Made for the test site, and nothing else uses it now the org is gone
+        if ($step->site_plan_id) {
+            AppPlan::whereKey($step->site_plan_id)->delete();
+        }
+
         // The step's own task is left over from provisioning when it failed
         if ($status === VersionTestStepStatus::FAILED && $step->task_id) {
             Task::whereKey($step->task_id)->whereIn('status', [TaskStatus::FAILED->value, TaskStatus::BLOCKED->value])->delete();
@@ -352,11 +463,12 @@ class VersionTestRunner
 
     /**
      * Fail steps whose provisioning task has failed or got stuck behind a failed
-     * one. A blocked task isn't run again, so nothing else would notice.
+     * one. A blocked task isn't run again, so nothing else would notice. Steps
+     * whose task finished without the step being told are moved on.
      */
     public function syncProvisioning(): void
     {
-        $steps = VersionTestStep::where('status', VersionTestStepStatus::PROVISIONING->value)->get();
+        $steps = VersionTestStep::whereIn('status', [VersionTestStepStatus::PROVISIONING->value, VersionTestStepStatus::NEEDS_ATTENTION->value])->get();
 
         foreach ($steps as $step) {
             // The task id is saved just after the step starts; until then there is nothing to check
@@ -365,8 +477,30 @@ class VersionTestRunner
             }
 
             $task = Task::find($step->task_id);
+            $parked = $step->status === VersionTestStepStatus::NEEDS_ATTENTION;
 
-            if ($task && ! in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true)) {
+            // The task finished but the step never heard, or the admin fixed it and retried it:
+            // what it does on completing may also have thrown (a database error, say). Both are
+            // safe to repeat.
+            if ($task?->status === TaskStatus::COMPLETE) {
+                $step->stage === VersionTestStepStage::SITE ? $this->siteProvisioned($step->id) : $this->provisioned($step->id);
+
+                continue;
+            }
+
+            $broken = ! $task || in_array($task->status, [TaskStatus::FAILED, TaskStatus::BLOCKED], true);
+
+            if (! $broken) {
+                // Retried by the admin: it is being set up again
+                if ($parked && $this->moveStep($step, [VersionTestStepStatus::NEEDS_ATTENTION], VersionTestStepStatus::PROVISIONING, ['failure_reason' => null])) {
+                    $this->log($step->run, 'step_resumed', $step);
+                }
+
+                continue;
+            }
+
+            // Already told the admin; it stays as it is until they fix it or decide
+            if ($parked) {
                 continue;
             }
 
@@ -465,7 +599,26 @@ class VersionTestRunner
         }
 
         if (! $task) {
-            $this->provisioningFailed($step->id, __('messages.exception.version_test_provisioning_failed'));
+            $this->provisioningFailed($step->id, __('messages.exception.version_test_provisioning_failed'), fixable: false);
+
+            return;
+        }
+
+        $step->task_id = $task->id;
+        $step->save();
+    }
+
+    private function startSite(VersionTestStep $step): void
+    {
+        try {
+            $task = ActionFacade::execute(new ProvisionVersionTestSite($step));
+        } catch (Throwable $e) {
+            report($e);
+            $task = null;
+        }
+
+        if (! $task) {
+            $this->provisioningFailed($step->id, __('messages.exception.version_test_site_failed'), fixable: false);
 
             return;
         }
@@ -484,7 +637,8 @@ class VersionTestRunner
         $active = $run->steps()->whereIn('status', VersionTestStepStatus::activeValues())->first();
 
         // A test org that is still being built can't be pulled out from under its tasks
-        if ($active && $active->status !== VersionTestStepStatus::AWAITING_CONFIRMATION) {
+        $cancellable = [VersionTestStepStatus::AWAITING_CONFIRMATION, VersionTestStepStatus::NEEDS_ATTENTION];
+        if ($active && ! in_array($active->status, $cancellable, true)) {
             throw new VersionTestException(__('admin.version_tests.errors.cannot_cancel_now'));
         }
 
@@ -495,7 +649,7 @@ class VersionTestRunner
         $this->log($run, $event, user: $user);
 
         if ($active) {
-            $this->moveStep($active, [VersionTestStepStatus::AWAITING_CONFIRMATION], VersionTestStepStatus::CLEARING, [
+            $this->moveStep($active, $cancellable, VersionTestStepStatus::CLEARING, [
                 'failure_reason' => __('admin.version_tests.cancelled_step'),
             ]);
             $this->clear($active, ClearVersionTestStep::FAILED);
