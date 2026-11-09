@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Log;
 use App\Organization;
 use App\Plan;
-use App\Services\Organization\BasePlanService;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
 use App\Support\Facades\FastCache;
@@ -211,11 +210,10 @@ class Organizations extends Controller
     }
 
     /**
-     * Admins can move an organization to any plan of its type -- including
-     * hidden and archived plans that customers can't pick for themselves.
-     * Unlike the customer flow, this isn't limited to the plans an
-     * organization has available, but a plan the organization has outgrown
-     * is still refused so its limits can't be left broken.
+     * The admin override: an organization can be moved to any plan at all --
+     * hidden and archived plans, plans of other organization types, and plans
+     * whose limits the organization has outgrown. The only things refused are
+     * a deactivated organization and a plan it is already on.
      */
     public function change_plan(Request $request, Organization $organization)
     {
@@ -241,8 +239,8 @@ class Organizations extends Controller
 
     private function selectablePlans(Organization $organization): array
     {
-        return Plan::where('org_type', $organization->type)
-            ->orderBy('archive')
+        return Plan::orderBy('archive')
+            ->orderBy('org_type')
             ->orderBy('display_order')
             ->get()
             ->map(function (Plan $plan) use ($organization) {
@@ -253,6 +251,7 @@ class Organizations extends Controller
                     'id' => $plan->id,
                     'name' => $plan->name,
                     'description' => $plan->description,
+                    'org_type' => $plan->org_type,
                     'visibility' => match (true) {
                         (bool) $plan->archive => 'archived',
                         $plan->status === 'available' => 'public',
@@ -272,22 +271,10 @@ class Organizations extends Controller
             return __('organization.plan.denied.unavailable');
         }
 
-        if ($plan->org_type !== $organization->type) {
-            return __('organization.plan.denied.unavailable');
-        }
-
         if ($organization->plan_id === $plan->id) {
             return __('organization.plan.denied.subscribed');
         }
 
-        // BasePlanService::isAnyMaxBroken() is memoized per account, not per
-        // plan, so check the limits directly rather than reuse a stale answer
-        $base_plan = new BasePlanService($organization, $plan);
-        $broken = $base_plan->isMaxAppsBroken();
-        foreach ($base_plan->pricing_options as $entity) {
-            $broken = $broken || $base_plan->isMaxBroken($entity);
-        }
-
-        return $broken ? __('organization.plan.denied.limit') : null;
+        return null;
     }
 }
