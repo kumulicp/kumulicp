@@ -13,8 +13,8 @@ import { useToast } from 'vuestic-ui'
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.tasks.tasks') }}</va-card-title>
     <va-card-content>
-      <div class="row no-wrap">
-        <div class="flex flex-col md3">
+      <div class="row">
+        <div class="flex flex-col md2">
           <div class="item">
             <VaSelect
               v-model="filterApp"
@@ -29,7 +29,7 @@ import { useToast } from 'vuestic-ui'
             />
           </div>
         </div>
-        <div class="flex flex-col md3">
+        <div class="flex flex-col md2">
           <div class="item">
             <VaSelect
               v-model="filterStatus"
@@ -64,8 +64,8 @@ import { useToast } from 'vuestic-ui'
             />
           </div>
         </div>
-        <div class="flex flex-col" style="flex-grow:1">
-          <div class="item va-text-right">
+        <div class="flex flex-col" style="flex-grow:1; flex-shrink:0">
+          <div class="item va-text-right whitespace-nowrap">
             <VaSwitch v-model="liveMode"
               :label="$t('admin.tasks.liveUpdates')"
               @update:modelValue="changeLiveMode"
