@@ -23,6 +23,12 @@ class Prerequisites
 
     public function __construct(private ?Task $task = null) {}
 
+    // Every unmet prerequisite says so, in one message: "A needs to be installed first. Waiting for..."
+    private function addMessage(string $message): void
+    {
+        $this->message = $this->message === '' ? $message : rtrim($this->message, '. ').'. '.$message;
+    }
+
     public function get($return = 'json')
     {
 
@@ -56,10 +62,10 @@ class Prerequisites
         if ($state['failed']->isNotEmpty()) {
             $this->passed = false;
             $this->blocked = true;
-            $this->message .= __('messages.action.dependency_failed');
+            $this->addMessage(__('messages.action.dependency_failed'));
         } elseif ($state['waiting']->isNotEmpty()) {
             $this->passed = false;
-            $this->message .= __('messages.action.waiting_for');
+            $this->addMessage(__('messages.action.waiting_for'));
         }
 
         return $this;
@@ -124,7 +130,7 @@ class Prerequisites
     {
         if (! $this->task->organization->plan) {
             $this->passed = false;
-            $this->message .= __('messages.action.need_subscription');
+            $this->addMessage(__('messages.action.need_subscription'));
         }
 
         return $this;
@@ -158,7 +164,7 @@ class Prerequisites
 
         if ($app && $app->status !== 'active') {
             $this->passed = false;
-            $this->message .= __('messages.action.parent_app', ['app' => $app->label]);
+            $this->addMessage(__('messages.action.parent_app', ['app' => $app->label]));
         }
 
         return $this;
@@ -189,7 +195,7 @@ class Prerequisites
 
             } else {
                 $this->passed = false;
-                $this->message .= __('messages.action.time_range', ['start' => $prereq['start'], 'end' => $prereq['end']]);
+                $this->addMessage(__('messages.action.time_range', ['start' => $prereq['start'], 'end' => $prereq['end']]));
             }
         }
     }
