@@ -6,13 +6,11 @@ use App\Jobs\Applications\AddLdapGroups;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Application;
 use App\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
-use Tests\TestCase;
 
-uses(TestCase::class, RefreshDatabase::class);
-
+// App permissions are kept in LDAP groups, so these only mean something on the LDAP driver
 beforeEach(function () {
+    setupAccountManagerDriver('ldap');
     $this->support = new TestSupports;
     $this->support->seed();
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
