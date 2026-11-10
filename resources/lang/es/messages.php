@@ -30,7 +30,7 @@ return [
         'cancelled_delete_started' => 'La eliminación ya había empezado: la aplicación está eliminada a medias y se ha dejado como estaba.',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
-        'parent_app' => ':app está :status',
+        'parent_app' => ':app: :status',
         'time_range' => 'Esto se ejecutará entre :start y :end',
     ],
     'database_migration' => [
