@@ -15,6 +15,8 @@ use App\Updates\Aspects\ReleaseAspect;
 use App\Updates\Aspects\RolesAspect;
 use App\Updates\Aspects\SettingsAspect;
 use App\Updates\Aspects\SsoAspect;
+use App\Updates\Detection\DefinitionObserver;
+use App\Updates\Detection\ImpactResolver;
 use App\Updates\Steps\LdapGroupsStep;
 use App\Updates\Steps\ReleaseStep;
 use App\Updates\Steps\SettingsJobStep;
@@ -83,6 +85,11 @@ class AppServiceProvider extends ServiceProvider
         // by config (the tests') is left alone.
         if (config('uptime-monitor.uptime_check.guzzle_options.handler') === null && $handler = DevIngress::guzzleHandler()) {
             config(['uptime-monitor.uptime_check.guzzle_options.handler' => $handler]);
+        }
+
+        // Edits to what app instances depend on are looked at for what they put out of date
+        foreach (app(ImpactResolver::class)->watched() as $definition) {
+            $definition::observe(DefinitionObserver::class);
         }
 
         Paginator::useBootstrap();

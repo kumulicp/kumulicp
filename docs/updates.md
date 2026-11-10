@@ -36,6 +36,35 @@ writes back itself (ids, quotas, `override.pvc`, `sso`), timestamps or counters:
 the instance would be out of date again as soon as it was updated. Cosmetic
 fields (a plan's name, description or order) belong outside every fingerprint.
 
+## Noticing changes
+
+Edits to the definitions instances depend on are noticed as they are made, and
+only the instances they can affect are looked at.
+
+1. `DefinitionObserver` watches `AppPlan`, `AppVersion` and `AppRole` (the list is
+   `ImpactResolver::watched()`).
+2. `DefinitionChanges::record()` drops edits that only touched cosmetic
+   attributes (a plan's name or order, a version's update check, a role's label)
+   and edits nothing uses. What is left is stored in `definition_changes`, with
+   who made it and what it was called then.
+3. `ScanDriftForChange` finds the instances that use the definition (an
+   `AppPlan`'s instances, an `AppVersion`'s, every install of an `AppRole`'s app;
+   never test organizations) and `ScanInstancesForDrift` looks at them in batches.
+4. `UpdateDrift::refresh()` notes on `update_states` what each aspect works out
+   now (`current_fingerprint`), when it was first seen to be out of date
+   (`drift_detected_at`) and the edit that did it (`definition_change_id`).
+   `UpdateState::drifted()` lists what is out of date without working anything
+   out; `php artisan updates:scan` lists it.
+
+The cosmetic list in `ImpactResolver` only narrows what is looked at. What is
+out of date is always decided by the fingerprints, so a missed edit (a change
+made without the models, a pivot like a role's implied roles that has to be
+recorded by hand, as `Roles::update` does) is found by the nightly scan
+(`ScanUpdateDrift`, 03:30), which looks at every instance.
+
+Not watched yet: servers, applications and the organization plans (`Plan`). None of
+the aspects depend on them.
+
 ## Adding one
 
 A step names the aspects it brings up to date:

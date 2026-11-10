@@ -6,6 +6,7 @@ use App\Application;
 use App\AppRole;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as AppFacade;
+use App\Updates\Detection\DefinitionChanges;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -159,6 +160,8 @@ class Roles extends Controller
             $role->required_features = $request->required_features;
             $role->implied_roles()->sync($validatedData['implied_roles']);
             $role->save();
+            // Syncing the implied roles isn't a change to the role itself
+            app(DefinitionChanges::class)->record($role, 'updated', ['implied_roles']);
 
             return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.updated', ['role' => $role->name]));
         }
