@@ -105,8 +105,13 @@ class Permissions extends PermissionsManager implements PermissionsContract
             $this->addAppRole($app_instance, $role);
         }
 
+        // By id: comparing the models themselves also compares whatever relations each has loaded, so
+        // a role that was given with its implied roles loaded (or as one of them) never matched the
+        // fresh copy here, and was removed again straight after being added
+        $role_ids = array_map(fn ($role) => $role->id, $roles);
+
         foreach ($app_roles as $role) {
-            if (! in_array($role, $roles)) {
+            if (! in_array($role->id, $role_ids, true)) {
                 $this->removeAppRole($app_instance, $role);
             }
         }

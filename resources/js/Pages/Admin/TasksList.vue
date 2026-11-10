@@ -96,7 +96,7 @@ import { useToast } from 'vuestic-ui'
           <div class="item">
             <VaButton
               preset="secondary"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
               @click="bulk('retry')"
             >
@@ -174,7 +174,7 @@ import { useToast } from 'vuestic-ui'
             </Link>
             <VaButton
               preset="plain"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
               class="ml-3"
               :disabled="liveMode || !task_list[rowIndex].can_retry"

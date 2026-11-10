@@ -4,6 +4,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 
 use App\AppInstance;
 use App\Ldap\Actions\Dn;
+use App\Ldap\LdapSupport;
 use App\Ldap\Models\Group;
 use App\Ldap\Models\OrganizationalUnit;
 use App\Ldap\Models\User as LdapUser;
@@ -185,9 +186,7 @@ class Users
 
         $group_members = collect();
         $roles = (new AppInstanceService($app_instance))->standardRoles();
-        if ($parent_app = $app_instance->parent) {
-            $app_instance = $parent_app;
-        }
+        $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
@@ -217,9 +216,7 @@ class Users
         $group_members = [];
 
         $roles = (new AppInstanceService($app_instance))->basicRoles();
-        if ($parent_app = $app_instance->parent) {
-            $app_instance = $parent_app;
-        }
+        $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);

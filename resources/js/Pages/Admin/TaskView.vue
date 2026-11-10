@@ -23,7 +23,7 @@ import { useToast } from 'vuestic-ui'
           <div class="item">
             <VaButton
               preset="secondary"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
               :disabled="!task.can_retry"
               @click="retry"

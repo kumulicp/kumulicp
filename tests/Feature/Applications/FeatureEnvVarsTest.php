@@ -114,6 +114,14 @@ it('gives an enabled feature with an env var the value 1', function () {
         ->toBe(['name' => 'WITH_VAR', 'value' => '1']);
 });
 
+it('takes a feature the admin page sent with its settings as null', function () {
+    // A feature with no settings of its own comes back from the page as `settings: null`
+    $stored = ApplicationFacade::plan($this->plan)->updateFeatures(['novar' => ['status' => 'enabled', 'settings' => null]]);
+
+    expect($stored['novar']['status'])->toBe('enabled')
+        ->and($stored['novar']['settings'])->toBe([]);
+});
+
 it('gives a disabled feature with an env var the value 0', function () {
     ApplicationFacade::plan($this->plan)->updateFeatures(['withvar' => ['status' => 'disabled']]);
 

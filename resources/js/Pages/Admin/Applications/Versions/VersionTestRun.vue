@@ -145,7 +145,7 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
         <va-card-title class="m-0">{{ $t('admin.versionTests.confirmFailTitle') }}</va-card-title>
         <va-card-content class="m-0">
           <p class="mb-3">{{ $t('admin.versionTests.confirmFailText') }}</p>
-          <va-textarea v-model="failForm.reason" id="failReason" :label="$t('admin.versionTests.failReason')" :min-rows="3" />
+          <va-textarea v-model="failForm.reason" id="failReason" :label="$t('admin.versionTests.failReason')" :min-rows="3" class="full-width" />
         </va-card-content>
         <va-card-actions align="right" class="">
           <va-button color="textInverted" :disabled="failForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>

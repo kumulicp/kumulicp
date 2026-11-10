@@ -132,6 +132,18 @@ class LdapSupport
         return $group;
     }
 
+    // The instance whose role groups an instance's permissions are kept in: a shared app's site uses the
+    // shared app's, unless the app is multisite (like ERPNext), where each site keeps its own. The same
+    // rule as getAppInstanceID() and AppRole::app_slug(), which decide where the groups are written.
+    public static function roleGroupApp(AppInstance $app_instance): AppInstance
+    {
+        if ($app_instance->parent && ! $app_instance->usesMultisitePermissions()) {
+            return $app_instance->parent;
+        }
+
+        return $app_instance;
+    }
+
     public static function getAppInstanceID(AppInstance $app_instance)
     {
         if (! $app_instance->parent || $app_instance->usesMultisitePermissions()) {

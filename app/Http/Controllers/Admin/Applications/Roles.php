@@ -123,6 +123,9 @@ class Roles extends Controller
         $role->category = $request->category;
         $role->access_type = $request->access_type;
         $role->status = 'enabled';
+        // No default in the table, and MariaDB checks the JSON column: left out, the insert is refused
+        $role->required_features = [];
+        $role->ignore_role = false;
 
         $role->save();
 

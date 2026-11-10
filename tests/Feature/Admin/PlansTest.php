@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Application;
 use App\AppPlan;
+use App\AppRole;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\AccountManager;
@@ -82,6 +83,45 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans', ['name' => 'Test', 'description' => 'Desc'])
             ->assertForbidden();
+    }
+
+    public function test_the_plan_editor_leaves_a_shared_apps_own_hidden_plan_out_of_the_app_plans_to_pick()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create();
+        $application = Application::factory()->create();
+        $offered = AppPlan::factory()->create(['application_id' => $application->id, 'name' => 'Member']);
+        $shared = AppPlan::factory()->create(['application_id' => $application->id, 'name' => 'Shared app', 'hidden' => true]);
+
+        $this->actingAs($user)
+            ->get("/admin/service/plans/{$plan->id}")
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Plans/PlanEdit')
+                ->where('apps', fn ($apps) => collect($apps)->firstWhere('id', $application->id)['plans'] === [['id' => $offered->id, 'name' => 'Member']])
+            );
+    }
+
+    public function test_an_admin_can_add_a_role_to_an_app()
+    {
+        $user = $this->adminUser();
+        $application = Application::factory()->create();
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$application->slug}/roles", [
+                'label' => 'System Manager',
+                'sub_name' => 'Manager',
+                'slug' => 'system_manager',
+                'description' => 'System Manager',
+                'category' => 'System',
+                'access_type' => 'standard',
+            ])
+            ->assertRedirect("admin/apps/{$application->slug}/roles");
+
+        $role = AppRole::where('application_id', $application->id)->where('slug', 'system_manager')->sole();
+
+        // The columns the form doesn't have, which the table has no defaults for
+        $this->assertSame([], $role->required_features);
+        $this->assertFalse($role->ignore_role);
     }
 
     public function test_unauthenticated_user_cannot_update_a_plan()

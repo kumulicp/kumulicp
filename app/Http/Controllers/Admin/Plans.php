@@ -162,7 +162,8 @@ class Plans extends Controller
             ],
             'apps' => $apps->map(function (Application $app) {
                 $plans = [];
-                foreach ($app->plans as $plan) {
+                // Not a shared app's own hidden plan: that is what is shared, not a plan to give out
+                foreach ($app->plans()->visible()->get() as $plan) {
                     $plans[] = [
                         'id' => $plan->id,
                         'name' => $plan->name,

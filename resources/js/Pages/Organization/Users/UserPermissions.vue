@@ -111,7 +111,8 @@ import { useForm, Link } from '@inertiajs/vue3'
           >
             {{ $t('organization.users.adminWarning') }}
           </va-alert>
-          <va-scroll-container horizontal>
+          <!-- Its own height is 100% of the form, which leaves the buttons below it outside the card -->
+          <va-scroll-container horizontal style="height: auto">
             <table class="va-table va-table--striped mb-2">
               <thead>
                 <tr>
@@ -132,7 +133,7 @@ import { useForm, Link } from '@inertiajs/vue3'
                   <td v-if="appAccessTypeFiltered[app.id] !== 'none'">
                     <template v-for="(category, index) in app.categories" :key="index">
                       <template v-if="form['permission'][app.id][category.id] !== 'none'">
-                        <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[form['permission'][app.id][category.id]] }}</va-chip>
+                        <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[app.id][form['permission'][app.id][category.id]] }}</va-chip>
                       </template>
                     </template>
                   </td>
@@ -242,6 +243,8 @@ export default {
       allAppDescriptions[permission.id] = {}
       errors[permission.id] = {}
       roleAccessTypes[permission.id] = {}
+      // Per app: two apps can have a role with the same slug, like both having an Administrator
+      roleNames[permission.id] = {}
       appAccessType[permission.id] = permission.access_type
       appAccessTypeFiltered[permission.id] = permission.access_type
 
@@ -249,7 +252,7 @@ export default {
         roleAccessTypes[permission.id][category.id] = {}
         Object.values(category.roles).forEach((role) => {
           roleAccessTypes[permission.id][role.value] = role.access_type
-          roleNames[role.value] = category.name + ' ' + role.text
+          roleNames[permission.id][role.value] = category.name + ' ' + role.text
           if (category.active_role === role.text) {
             allAppDescriptions[permission.id][category.id] = role.description
             permissions[permission.id][category.id] = role.value

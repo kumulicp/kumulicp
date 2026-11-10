@@ -46,7 +46,7 @@ import { Link } from '@inertiajs/vue3'
             </Link>
             <VaButton
               preset="plain"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
               class="ml-2"
               :disabled="liveMode || !node.can_retry"

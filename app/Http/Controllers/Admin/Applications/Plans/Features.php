@@ -56,7 +56,7 @@ class Features extends Controller
             'features' => 'array|nullable',
         ]);
 
-        ApplicationFacade::plan($plan)->updateFeatures($request->features);
+        ApplicationFacade::plan($plan)->updateFeatures($request->features ?? []);
 
         return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/features")->with('success', __('admin.applications.plans.features_updated', ['plan' => $plan->name]));
     }

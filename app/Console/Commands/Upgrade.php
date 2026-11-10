@@ -48,6 +48,7 @@ class Upgrade extends Command
     public function handle()
     {
         $current_version = Settings::get('installed_version');
+        $new_install = ! $current_version;
 
         ksort($this->versions);
         foreach ($this->versions as $version => $function) {
@@ -60,7 +61,22 @@ class Upgrade extends Command
 
         $this->syncWorldData();
 
+        if ($new_install) {
+            $this->addDefaultImageRegistry();
+        }
+
         return 0;
+    }
+
+    // Docker Hub is where most app images come from, so a new install has it to pick from. Only a
+    // new install: an upgrade leaves the registries as the admin has them, and one that already
+    // exists (made by hand, or from a version's old registry setting) is kept.
+    private function addDefaultImageRegistry()
+    {
+        RepoSecret::firstOrCreate(
+            ['registry' => 'docker.io'],
+            ['name' => 'Docker Hub', 'type' => RepoSecret::TYPE_IMAGE]
+        );
     }
 
     // The country/state data ships inside the nnjeim/world package, so it only
