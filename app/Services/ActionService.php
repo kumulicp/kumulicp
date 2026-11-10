@@ -32,6 +32,7 @@ use App\Actions\Prerequisites;
 use App\Actions\Security\RunSecurityScan;
 use App\Actions\Servers\ServerActivate;
 use App\Actions\Tests\ClearVersionTestStep;
+use App\Actions\Tests\ProvisionVersionTestSite;
 use App\Actions\Tests\ProvisionVersionTestStep;
 use App\AppInstance;
 use App\Contracts\Actions\TaskAction;
@@ -72,6 +73,7 @@ class ActionService
             'application_deactivate' => ApplicationDeactivate::class,
             'mass_application_upgrade' => MassApplicationUpgrade::class,
             'provision_version_test_step' => ProvisionVersionTestStep::class,
+            'provision_version_test_site' => ProvisionVersionTestSite::class,
             'clear_version_test_step' => ClearVersionTestStep::class,
             'process_customizations' => ProcessCustomizations::class,
             'retrieve_dkim_key' => RetrieveDkimKey::class,

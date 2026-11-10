@@ -12,6 +12,7 @@ return [
     'updating_app' => 'Actualizando :app',
     'upgrading_app' => 'Mejorando :app',
     'provision_version_test_step' => 'Preparando una prueba de :app :version, :plan',
+    'provision_version_test_site' => 'Añadiendo un sitio a la prueba de :app :version, :plan',
     'clear_version_test_step' => 'Limpiando la organización de prueba de :plan',
     'upgrading_all_apps' => 'Actualizando todas las :app a :version',
     'updating_app_customizations' => 'Actualizando personalizaciones de :app',

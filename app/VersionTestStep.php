@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\VersionTestStepStage;
 use App\Enums\VersionTestStepStatus;
 use App\Enums\VersionTestStepType;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,9 @@ use Illuminate\Support\Carbon;
  * @property int|null $account_test_id
  * @property int|null $task_id
  * @property int|null $app_instance_id
+ * @property VersionTestStepStage|null $stage
+ * @property int|null $site_app_instance_id
+ * @property int|null $site_plan_id
  * @property string|null $app_url
  * @property string|null $test_username
  * @property string|null $test_password
@@ -41,6 +45,7 @@ class VersionTestStep extends Model
     protected $casts = [
         'type' => VersionTestStepType::class,
         'status' => VersionTestStepStatus::class,
+        'stage' => VersionTestStepStage::class,
         'test_password' => 'encrypted',
         'started_at' => 'datetime',
         'ready_at' => 'datetime',

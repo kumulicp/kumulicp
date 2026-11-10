@@ -11,6 +11,7 @@ const props = defineProps({
   run: Object,
   steps: Array,
   current_step: Object,
+  failing_step: Object,
   can: Object,
   polling: Boolean,
   events: Array
@@ -18,7 +19,7 @@ const props = defineProps({
 
 // While a test org is being built or deleted there is nothing to do but wait,
 // so the page keeps itself up to date until it is the admin's turn again.
-const { start, stop } = usePoll(4000, { only: ['run', 'steps', 'current_step', 'can', 'polling', 'events'] }, { autoStart: false })
+const { start, stop } = usePoll(4000, { only: ['run', 'steps', 'current_step', 'failing_step', 'can', 'polling', 'events'] }, { autoStart: false })
 
 watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate: true })
 </script>
@@ -50,9 +51,11 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
   <va-card v-if="current_step" id="currentStep" class="mb-4" outlined>
     <va-card-title>{{ $t('admin.versionTests.readyTitle', { plan: current_step.plan }) }}</va-card-title>
     <va-card-content>
-      <p>{{ current_step.type === 'upgrade' ? $t('admin.versionTests.readyUpgrade', { plan: current_step.plan }) : $t('admin.versionTests.readyFreshInstall', { plan: current_step.plan }) }}</p>
-      <p class="va-text-secondary">{{ $t('admin.versionTests.readyInstructions') }}</p>
-      <table class="va-table mt-2">
+      <p v-if="current_step.stage === 'core'" id="coreStage">{{ $t('admin.versionTests.readyCore') }}</p>
+      <p v-else-if="current_step.stage === 'site'" id="siteStage">{{ $t('admin.versionTests.readySite') }}</p>
+      <p v-else>{{ current_step.type === 'upgrade' ? $t('admin.versionTests.readyUpgrade', { plan: current_step.plan }) : $t('admin.versionTests.readyFreshInstall', { plan: current_step.plan }) }}</p>
+      <p class="va-text-secondary">{{ current_step.stage === 'core' ? $t('admin.versionTests.readyCoreInstructions') : $t('admin.versionTests.readyInstructions') }}</p>
+      <table v-if="current_step.stage !== 'core'" class="va-table mt-2">
         <tbody>
           <tr>
             <td class="font-bold">{{ $t('admin.versionTests.appUrl') }}</td>
@@ -85,14 +88,27 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
         </tbody>
       </table>
       <div class="row mt-4">
-        <va-button id="itWorked" color="success" :loading="confirmForm.processing" :disabled="confirmForm.processing" @click="confirmForm.post(stepUrl(current_step.id, 'confirm'), { preserveScroll: true })">{{ $t('admin.versionTests.itWorked') }}</va-button>
+        <va-button id="itWorked" color="success" :loading="confirmForm.processing" :disabled="confirmForm.processing" @click="confirmForm.post(stepUrl(current_step.id, 'confirm'), { preserveScroll: true })">{{ current_step.stage === 'core' ? $t('admin.versionTests.coreWorked') : $t('admin.versionTests.itWorked') }}</va-button>
         <va-button id="itDidNotWork" class="ml-2" color="danger" preset="secondary" @click="showFail = true">{{ $t('admin.versionTests.itDidNotWork') }}</va-button>
       </div>
     </va-card-content>
   </va-card>
 
-  <va-alert v-if="polling && !current_step" id="waitingHint" color="info" outline class="mb-3">
-    {{ steps.some((step) => step.status === 'clearing') ? $t('admin.versionTests.clearingHint') : $t('admin.versionTests.provisioningHint') }}
+  <va-card v-if="failing_step" id="failingStep" class="mb-4" outlined>
+    <va-card-title>{{ $t('admin.versionTests.failingTitle', { plan: failing_step.plan }) }}</va-card-title>
+    <va-card-content>
+      <va-alert color="danger" outline class="mb-3" id="failingReason">{{ failing_step.reason }}</va-alert>
+      <p class="va-text-secondary">{{ $t('admin.versionTests.failingText') }}</p>
+      <div class="row mt-4">
+        <Link v-if="failing_step.task_id" id="viewFailedTask" href="/admin/tasks" class="mr-4">{{ $t('admin.versionTests.viewTask') }} #{{ failing_step.task_id }}</Link>
+        <va-button id="ignoreFailure" color="warning" :loading="ignoreForm.processing" :disabled="ignoreForm.processing" @click="ignoreForm.post(stepUrl(failing_step.id, 'ignore'), { preserveScroll: true })">{{ $t('admin.versionTests.ignoreFailure') }}</va-button>
+        <va-button id="abandonStep" class="ml-2" color="danger" preset="secondary" :disabled="abandonForm.processing" @click="abandonForm.post(stepUrl(failing_step.id, 'abandon'), { preserveScroll: true })">{{ $t('admin.versionTests.abandon') }}</va-button>
+      </div>
+    </va-card-content>
+  </va-card>
+
+  <va-alert v-if="polling && !current_step && !failing_step" id="waitingHint" color="info" outline class="mb-3">
+    {{ steps.some((step) => step.status === 'clearing') ? $t('admin.versionTests.clearingHint') : (steps.some((step) => step.stage === 'site' && step.status === 'provisioning') ? $t('admin.versionTests.siteHint') : $t('admin.versionTests.provisioningHint')) }}
   </va-alert>
 
   <div class="row mb-3">
@@ -115,13 +131,13 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
         </tr>
       </thead>
       <tbody>
-        <tr v-for="step in steps" :key="step.id" :id="'step' + step.id">
-          <td>{{ step.position }}</td>
-          <td>{{ step.plan }}</td>
-          <td>{{ $t('admin.versionTests.types.' + step.type, { from: step.from_version }) }}</td>
+        <tr v-for="row in rows" :key="row.key" :id="row.id">
+          <td>{{ row.position }}</td>
+          <td>{{ row.plan }}</td>
+          <td>{{ row.label }}</td>
           <td>
-            <va-badge :color="stepColor(step.status)" :text="$t('admin.versionTests.stepStatus.' + step.status)" />
-            <div v-if="step.failure_reason" class="va-text-secondary" style="font-size: 0.85rem">{{ step.failure_reason }}</div>
+            <va-badge :color="stepColor(row.status)" :text="$t('admin.versionTests.stepStatus.' + row.status)" />
+            <div v-if="row.failure_reason" class="va-text-secondary" style="font-size: 0.85rem">{{ row.failure_reason }}</div>
           </td>
         </tr>
       </tbody>
@@ -169,11 +185,33 @@ export default {
       confirmForm: useForm({}),
       nextForm: useForm({}),
       retryForm: useForm({}),
+      ignoreForm: useForm({}),
+      abandonForm: useForm({}),
       cancelForm: useForm({}),
       failForm: useForm({ reason: '' })
     }
   },
   computed: {
+    // A shared app's plan is two tests, one after the other: the shared app itself,
+    // and then a site added to it. They are one step as far as the org goes.
+    rows () {
+      return this.steps.flatMap((step) => {
+        const label = this.$t('admin.versionTests.types.' + step.type, { from: step.from_version })
+
+        if (!this.run.staged) {
+          return [{ key: step.id, id: 'step' + step.id, position: step.position, plan: step.plan, label, status: step.status, failure_reason: step.failure_reason }]
+        }
+
+        const inSite = step.stage === 'site'
+        const sharedStatus = inSite ? 'passed' : step.status
+        const siteStatus = inSite ? step.status : 'pending'
+
+        return [
+          { key: step.id + '-core', id: 'step' + step.id, position: step.position, plan: step.plan, label: label + ' · ' + this.$t('admin.versionTests.stages.core'), status: sharedStatus, failure_reason: inSite ? null : step.failure_reason },
+          { key: step.id + '-site', id: 'step' + step.id + 'Site', position: '', plan: step.plan, label: this.$t('admin.versionTests.stages.site'), status: siteStatus, failure_reason: inSite ? step.failure_reason : null }
+        ]
+      })
+    },
     runUrl () {
       return '/admin/apps/' + this.app.slug + '/versions/' + this.version.version + '/tests/' + this.run.id
     }
@@ -186,7 +224,7 @@ export default {
       return { running: 'info', passed: 'success', bypassed: 'warning', failed: 'danger', cancelled: 'secondary' }[status] || 'secondary'
     },
     stepColor (status) {
-      return { pending: 'secondary', provisioning: 'info', awaiting_confirmation: 'warning', clearing: 'info', passed: 'success', failed: 'danger' }[status] || 'secondary'
+      return { pending: 'secondary', provisioning: 'info', needs_attention: 'danger', awaiting_confirmation: 'warning', clearing: 'info', passed: 'success', failed: 'danger' }[status] || 'secondary'
     },
     eventText (event) {
       return this.$t('admin.versionTests.events.' + event.type, {

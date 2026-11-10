@@ -95,6 +95,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                                 Route::post('steps/{step}/confirm', 'Admin\Applications\Versions\Tests@confirm')->name('app.versions.tests.confirm');
                                 Route::post('steps/{step}/fail', 'Admin\Applications\Versions\Tests@fail')->name('app.versions.tests.fail');
                                 Route::post('steps/{step}/retry', 'Admin\Applications\Versions\Tests@retry')->name('app.versions.tests.retry');
+                                Route::post('steps/{step}/ignore', 'Admin\Applications\Versions\Tests@ignore')->name('app.versions.tests.ignore');
+                                Route::post('steps/{step}/abandon', 'Admin\Applications\Versions\Tests@abandon')->name('app.versions.tests.abandon');
                             });
                         });
                         Route::get('roles', 'Admin\Applications\Versions@roles')->name('discover.apps.versions.roles');

@@ -10,6 +10,7 @@ use App\AppPlan;
 use App\AppVersion;
 use App\Enums\TaskStatus;
 use App\Enums\VersionTestRunStatus;
+use App\Enums\VersionTestStepStage;
 use App\Enums\VersionTestStepStatus;
 use App\Enums\VersionTestStepType;
 use App\Exceptions\VersionTestException;
@@ -306,25 +307,151 @@ class VersionTestingTest extends TestCase
         $this->assertSame('failed', $this->candidate->refresh()->testGate());
     }
 
-    public function test_a_provisioning_failure_clears_the_org_and_fails_the_run()
+    public function test_a_provisioning_failure_keeps_the_org_so_it_can_be_fixed()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $executed = $this->executed_actions;
+
+        $this->runner()->provisioningFailed($step->id, 'Helm release timed out');
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStatus::NEEDS_ATTENTION, $step->status);
+        $this->assertSame('Helm release timed out', $step->failure_reason);
+        // Nothing was queued to clear it, and the run carries on
+        $this->assertSame($executed, $this->executed_actions);
+        $this->assertSame(VersionTestRunStatus::RUNNING, $run->refresh()->status);
+        $this->assertContains('provisioning_failed', $run->events()->pluck('type')->all());
+
+        // It still holds the slot
+        $this->expectException(VersionTestException::class);
+        $this->runner()->startNext($run, $this->admin);
+    }
+
+    public function test_a_failure_with_no_task_to_fix_clears_the_org_and_fails_the_run()
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
 
-        $this->runner()->provisioningFailed($step->id, 'Helm release timed out');
+        $this->runner()->provisioningFailed($step->id, 'Could not start', fixable: false);
         $this->assertSame(VersionTestStepStatus::CLEARING, $step->refresh()->status);
 
         $this->runner()->cleared($step->id, 'failed');
 
         $this->assertSame(VersionTestRunStatus::FAILED, $run->refresh()->status);
-        $this->assertContains('provisioning_failed', $run->events()->pluck('type')->all());
+    }
+
+    public function test_a_failure_can_be_ignored_and_the_test_carries_on()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $step->app_instance_id = $this->installOn(Organization::first(), $this->candidate)->id;
+        $step->save();
+        $this->runner()->provisioningFailed($step->id, 'Timed out waiting, but it came up');
+
+        $this->runner()->ignoreFailure($step->refresh(), $this->admin);
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStatus::AWAITING_CONFIRMATION, $step->status);
+        $this->assertNull($step->failure_reason);
+        $this->assertContains('failure_ignored', $run->events()->pluck('type')->all());
+    }
+
+    public function test_a_failure_cannot_be_ignored_when_nothing_was_set_up()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $this->runner()->provisioningFailed($step->id, 'Boom');
+
+        $this->expectException(VersionTestException::class);
+        $this->runner()->ignoreFailure($step->refresh(), $this->admin);
+    }
+
+    public function test_only_a_failed_setup_can_be_ignored_or_given_up()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+
+        $this->expectException(VersionTestException::class);
+        $this->runner()->abandon($step, $this->admin);
+    }
+
+    public function test_giving_up_on_a_failed_setup_clears_the_org_and_fails_the_run()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $this->runner()->provisioningFailed($step->id, 'Boom');
+
+        $this->runner()->abandon($step->refresh(), $this->admin);
+        $this->assertSame(VersionTestStepStatus::CLEARING, $step->refresh()->status);
+
+        $this->runner()->cleared($step->id, 'failed');
+
+        $this->assertSame(VersionTestRunStatus::FAILED, $run->refresh()->status);
+        $this->assertContains('step_abandoned', $run->events()->pluck('type')->all());
+    }
+
+    public function test_a_failed_setup_carries_on_once_its_task_is_fixed_and_retried()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $task = Task::findOrFail($step->refresh()->task_id);
+        Task::whereKey($task->id)->update(['status' => TaskStatus::FAILED->value]);
+        $this->runner()->syncProvisioning();
+        $this->assertSame(VersionTestStepStatus::NEEDS_ATTENTION, $step->refresh()->status);
+
+        // Still failing: it stays put
+        $this->runner()->syncProvisioning();
+        $this->assertSame(VersionTestStepStatus::NEEDS_ATTENTION, $step->refresh()->status);
+
+        // Retried by the admin
+        Task::whereKey($task->id)->update(['status' => TaskStatus::PENDING->value]);
+        $this->runner()->syncProvisioning();
+        $this->assertSame(VersionTestStepStatus::PROVISIONING, $step->refresh()->status);
+        $this->assertNull($step->failure_reason);
+
+        // And it works this time
+        Task::whereKey($task->id)->update(['status' => TaskStatus::COMPLETE->value]);
+        $this->runner()->syncProvisioning();
+        $this->assertSame(VersionTestStepStatus::AWAITING_CONFIRMATION, $step->refresh()->status);
+    }
+
+    public function test_a_run_with_a_failed_setup_can_be_cancelled()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $this->runner()->provisioningFailed($step->id, 'Boom');
+
+        $this->runner()->cancel($run->refresh(), $this->admin);
+
+        $this->assertSame(VersionTestRunStatus::CANCELLED, $run->refresh()->status);
+        $this->assertSame(VersionTestStepStatus::CLEARING, $step->refresh()->status);
+    }
+
+    public function test_the_run_page_offers_to_ignore_or_give_up_on_a_failed_setup()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $this->runner()->provisioningFailed($step->id, 'Boom');
+        Task::whereKey($step->refresh()->task_id)->update(['status' => TaskStatus::FAILED->value]);
+        $base = "/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}";
+
+        $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page
+            ->where('failing_step.id', $step->id)
+            ->where('failing_step.reason', 'Boom')
+            ->where('current_step', null)
+            ->where('can.cancel', true)
+        );
+
+        $this->actingAs($this->admin)->post("$base/steps/{$step->id}/abandon")->assertRedirect($base);
+        $this->assertSame(VersionTestStepStatus::CLEARING, $step->refresh()->status);
     }
 
     public function test_a_failed_step_can_be_tried_again()
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
-        $this->runner()->provisioningFailed($step->id, 'Helm release timed out');
+        $this->runner()->provisioningFailed($step->id, 'Helm release timed out', fixable: false);
         $this->runner()->cleared($step->id, 'failed');
 
         $this->runner()->retryStep($step->refresh(), $this->admin);
@@ -644,6 +771,156 @@ class VersionTestingTest extends TestCase
             ->where('stats.untested', 0)
             ->where('untested_versions', [])
         );
+    }
+
+    // ─── A shared app that is only a container for sites ─────────────────────
+
+    /**
+     * A shared app with no site of its own, installed for a plan run.
+     */
+    private function containerStep(): VersionTestStep
+    {
+        $this->application->slug = 'demo_app';
+        $this->application->save();
+        \App\Support\Facades\Application::register(new class extends DemoAppProfile
+        {
+            public function hasOwnSite(?AppInstance $app_instance = null): bool
+            {
+                return false;
+            }
+        });
+
+        $run = $this->runner()->start($this->candidate, $this->admin, $this->sharedPlan());
+        $step = $run->steps->first();
+        $step->app_instance_id = $this->installOn(Organization::first(), $this->candidate)->id;
+        $step->save();
+
+        return $step;
+    }
+
+    public function test_a_container_has_nothing_to_log_in_to_until_a_site_is_added()
+    {
+        $step = $this->containerStep();
+
+        $this->runner()->provisioned($step->id);
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStatus::AWAITING_CONFIRMATION, $step->status);
+        $this->assertSame(VersionTestStepStage::CORE, $step->stage);
+        $this->assertNull($step->app_url);
+
+        $this->actingAs($this->admin)
+            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$step->version_test_run_id}")
+            ->assertInertia(fn ($page) => $page
+                ->where('current_step.stage', 'core')
+                ->where('current_step.app_url', null)
+                ->where('current_step.username', null)
+                ->where('current_step.password', null)
+                ->where('current_step.admin_account', null)
+            );
+    }
+
+    public function test_confirming_the_container_adds_a_site_instead_of_clearing_the_org()
+    {
+        $step = $this->containerStep();
+        $this->runner()->provisioned($step->id);
+        $executed = $this->executed_actions;
+
+        $this->runner()->confirmWorking($step->refresh(), $this->admin);
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStatus::PROVISIONING, $step->status);
+        $this->assertSame(VersionTestStepStage::SITE, $step->stage);
+        // The site's task, and no clearing task
+        $this->assertSame($executed + 1, $this->executed_actions);
+        $this->assertSame('core_confirmed', $step->run->events()->latest('id')->first()->type);
+    }
+
+    public function test_the_site_is_what_gets_tried_out_and_confirming_it_clears_the_org()
+    {
+        $step = $this->containerStep();
+        $this->runner()->provisioned($step->id);
+        $this->runner()->confirmWorking($step->refresh(), $this->admin);
+
+        $site = $this->installOn(Organization::first(), $this->candidate);
+        $site->api_password = Crypt::encrypt('site-admin-pw');
+        $site->save();
+        $step->site_app_instance_id = $site->id;
+        $step->save();
+
+        $this->runner()->siteProvisioned($step->id);
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStatus::AWAITING_CONFIRMATION, $step->status);
+        $this->assertSame(VersionTestStepStage::SITE, $step->stage);
+
+        $this->actingAs($this->admin)
+            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$step->version_test_run_id}")
+            ->assertInertia(fn ($page) => $page
+                ->where('current_step.stage', 'site')
+                ->where('current_step.admin_account.password', 'site-admin-pw')
+                ->where('current_step.password', $step->test_password)
+            );
+
+        $executed = $this->executed_actions;
+        $this->runner()->confirmWorking($step, $this->admin);
+
+        $this->assertSame(VersionTestStepStatus::CLEARING, $step->refresh()->status);
+        $this->assertSame($executed + 1, $this->executed_actions);
+    }
+
+    public function test_the_throwaway_site_plan_is_deleted_once_the_org_is_cleared()
+    {
+        $step = $this->containerStep();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $step->site_plan_id = $plan->id;
+        $step->status = VersionTestStepStatus::CLEARING;
+        $step->save();
+
+        $this->runner()->cleared($step->id, 'passed');
+
+        $this->assertNull(AppPlan::find($plan->id));
+    }
+
+    public function test_a_shared_app_with_a_site_of_its_own_is_still_tested_in_two_stages()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin, $this->sharedPlan());
+        $step = $run->steps->first();
+        $step->app_instance_id = $this->installOn(Organization::first(), $this->candidate)->id;
+        $step->save();
+
+        $this->runner()->provisioned($step->id);
+
+        $step->refresh();
+        $this->assertSame(VersionTestStepStage::CORE, $step->stage);
+        $this->assertNotNull($step->app_url);
+
+        $this->actingAs($this->admin)
+            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->assertInertia(fn ($page) => $page->where('current_step.stage', 'core')->where('current_step.password', $step->test_password));
+    }
+
+    public function test_a_step_whose_finished_task_never_told_it_is_moved_on()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        Task::whereKey($step->refresh()->task_id)->update(['status' => TaskStatus::COMPLETE->value]);
+
+        $this->runner()->syncProvisioning();
+
+        $this->assertSame(VersionTestStepStatus::AWAITING_CONFIRMATION, $step->refresh()->status);
+        // Which also means it can be cancelled again
+        $this->runner()->cancel($run->refresh(), $this->admin);
+    }
+
+    public function test_a_version_run_is_tried_out_in_one_go()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+
+        $this->runner()->provisioned($step->id);
+
+        $this->assertNull($step->refresh()->stage);
     }
 
     // ─── Runs for one plan (a shared app's own plan) ─────────────────────────
