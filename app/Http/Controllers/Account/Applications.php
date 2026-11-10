@@ -82,6 +82,16 @@ class Applications extends Controller
 
         $parent_app_instance = $app->parent()->with(['application', 'primary_domain'])->first();
 
+        // Only an app installed inside another of the same organization's (a CiviCRM in a WordPress) is an
+        // addon to it. The shared app a child registers with (a Nextcloud, an ERPNext) is another
+        // organization's, and not the child's to link to.
+        $is_addon = $parent_app_instance && $parent_app_instance->organization_id === $app->organization_id;
+
+        // Whose address the app is reached at follows the application's domain option: 'parent' apps (the
+        // children of one Nextcloud, an addon in a WordPress) are reached at their parent's, while others
+        // (a multisite ERPNext) have a domain of their own, which the domain list below picks.
+        $inherits_domain = $parent_app_instance && $application->hasDomainOption('parent');
+
         $domains = [];
         $parent_domains = [];
         $can_add_custom_subdomains = $application->hasDomainOption('subdomains');
@@ -132,11 +142,14 @@ class Applications extends Controller
                 'name' => $app->application->name,
                 'id' => $app->id,
                 'domain' => $app->primary_domain ? $app->primary_domain->id : 0,
-                'parent_app' => $parent_app_instance ? [
+                'parent_app' => $is_addon ? [
                     'id' => $parent_app_instance->id,
                     'name' => $parent_app_instance->application->name,
-                    'domain' => $parent_app_instance->domain(),
-                    'address' => $parent_app_instance->address(),
+                ] : null,
+                // Shown when it can't be changed here: it is the parent's
+                'inherited_domain' => $inherits_domain ? [
+                    'domain' => $app->domain(),
+                    'address' => $app->address(),
                 ] : null,
                 'label' => $app->label,
                 'organization' => $organization->suborganizations()->count() > 0 ? [

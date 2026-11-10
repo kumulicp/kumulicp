@@ -55,21 +55,21 @@ import { useForm, Link } from '@inertiajs/vue3'
             </va-input>
           </div>
         </div>
-        <div v-if="app.parent_app" class="row">
-          <div class="flex flex-col xs12 lg6">
+        <div v-if="app.parent_app || app.inherited_domain" class="row">
+          <div v-if="app.parent_app" id="addonTo" class="flex flex-col xs12 lg6">
             <div class="va-title va-text-left text-color-primary">
               {{ $t('organization.apps.addonTo') }}
             </div>
             <Link :href="'/apps/'+app.parent_app.id+'/edit'" target="_blank">{{ app.parent_app.name }}</Link>
           </div>
-          <div class="flex flex-col xs12 lg6">
+          <div v-if="app.inherited_domain" id="inheritedDomain" class="flex flex-col xs12 lg6">
             <div class="va-title va-text-left text-color-primary">
               {{ $t('organization.apps.domainLabel') }}
             </div>
-            <a :href="app.parent_app.address" target="_blank">{{ app.parent_app.domain }}</a>
+            <a :href="app.inherited_domain.address" target="_blank">{{ app.inherited_domain.domain }}</a>
           </div>
         </div>
-        <va-divider v-if="app.parent_app || app.admin_access" class="my-2"/>
+        <va-divider v-if="app.parent_app || app.inherited_domain || app.admin_access" class="my-2"/>
         <div class="row">
           <div class="flex flex-col xs12 lg6">
             <va-input
