@@ -92,7 +92,7 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
                     />
                 </template>
               </va-input>
-              <div v-if="row.config.type == 'bool'" class="flex items-center">
+              <div v-if="row.config.type == 'bool'" class="bool-row">
                 <va-checkbox
                   v-model="form['configurations'][row.config.name]"
                   immediateValidation
@@ -103,7 +103,7 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
                   name="fa-rotate-left"
                   size="small"
                   color="primary"
-                  class="cursor-pointer ml-2"
+                  class="cursor-pointer"
                   role="button"
                   :title="$t('admin.plans.resetToDefault')"
                   @click="resetToDefault(row.config)"
@@ -437,6 +437,12 @@ export default {
 .array-item {
   border-left: 3px solid var(--va-primary);
   padding-left: 1rem;
+}
+
+.bool-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .array-item-start {
