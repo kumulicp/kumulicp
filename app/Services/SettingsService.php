@@ -55,6 +55,9 @@ class SettingsService
         if (array_key_exists($key, $this->settings)) {
             $setting = ServerSetting::where('key', $key)->first();
             $setting->delete();
+
+            // Or the next update() would look for the row that is gone
+            unset($this->settings[$key]);
         }
     }
 }
