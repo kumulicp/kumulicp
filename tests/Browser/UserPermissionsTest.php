@@ -24,7 +24,7 @@ describe('User Permissions Update', function () {
             ->assertPathIs('/users/testing1/permissions')
             ->assertSee('test user1')
             ->assertSee('Demo App')
-            ->assertSee('Update Permissions');
+            ->assertSee('Change Permissions');
 
         $page->click("#open-permissions-{$id}")
             ->click('#switch-0-demo_role')
