@@ -40,7 +40,7 @@ class RolesAspect extends Aspect
                 'id' => $role->id,
                 'slug' => $role->slug,
                 'name' => $role->name,
-                'access_type' => $role->access_type?->value,
+                'access_type' => $role->access_type->value,
                 'required_features' => $role->required_features,
                 'ignore_role' => $role->ignore_role,
                 'implied' => $role->implied_roles->pluck('id')->sort()->values()->all(),
