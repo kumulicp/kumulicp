@@ -188,29 +188,60 @@ class AvailabilityService
      */
     public function restore(AppInstance $app): bool
     {
+        return $this->recover($app, fn (AppInstance $locked) => $locked->isUnavailable());
+    }
+
+    /**
+     * The app is active again by a route of its own, not by answering a call
+     * or a monitor check: an upgrade or update went through while it was
+     * unavailable (unavailable, updating, active - it never passes through
+     * restore()). Its availability settings are still there, which is how we
+     * know it hasn't been active since it stopped answering: say it is back.
+     *
+     * Does nothing, and sends nothing, for an app that wasn't unavailable
+     * since it was last active.
+     */
+    public function settle(AppInstance $app): bool
+    {
+        return $this->recover(
+            $app,
+            fn (AppInstance $locked) => $locked->status === 'active' && $locked->setting('availability') !== null,
+        );
+    }
+
+    /**
+     * Ends an outage: forgets it, puts the app back to the status it had when
+     * it is still marked unavailable, and tells the admins once.
+     *
+     * @param  callable(AppInstance): bool  $applies  Whether the (locked, current) app is in a state this recovers
+     */
+    private function recover(AppInstance $app, callable $applies): bool
+    {
         $since = null;
 
-        $restored = $this->transition($app, function (AppInstance $locked) use (&$since) {
-            if (! $locked->isUnavailable()) {
+        $recovered = $this->transition($app, function (AppInstance $locked) use ($applies, &$since) {
+            if (! $applies($locked)) {
                 return false;
             }
 
             // Cleared by save(), and wanted by the notification
             $since = $locked->setting('availability.since');
-            $status = $locked->setting('availability.previous_status') ?: 'active';
+            $status = $locked->isUnavailable()
+                ? ($locked->setting('availability.previous_status') ?: 'active')
+                : $locked->status;
 
             $this->save($locked, $status, null);
 
             return true;
         });
 
-        if ($restored) {
+        if ($recovered) {
             Log::info("App instance {$app->name} is available again");
 
             $this->notify($app, AppInstanceAvailable::class, $since);
         }
 
-        return $restored;
+        return $recovered;
     }
 
     /**

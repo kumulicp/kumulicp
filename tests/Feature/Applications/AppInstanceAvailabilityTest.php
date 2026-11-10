@@ -59,7 +59,13 @@ function availabilityTestInstance(): AppInstance
     $support->seed();
     ['app' => $app, 'plan' => $plan] = $support->prepareDemoApp();
 
-    return test()->runActivate($plan, Organization::find(1), $app);
+    $instance = test()->runActivate($plan, Organization::find(1), $app);
+
+    // Activating tells the admins (ApplicationActivated); only what is sent
+    // from here on is what the tests look at
+    test()->fakeNotificationsAndMail();
+
+    return $instance;
 }
 
 // A customer organization of the control panel (org 1 is the super account),
@@ -359,6 +365,143 @@ it('lets a task go ahead once the app is active', function () {
 
     expect($prereqs->passed)->toBeTrue()
         ->and($prereqs->message)->toBe('');
+});
+
+// ---------------------------------------------------------------------------
+// Down is only for an active app, up only after an outage
+// ---------------------------------------------------------------------------
+
+it('sends no down notification for an app that is not active, however it is found down', function (string $status) {
+    $app = availabilityTestInstance();
+    $app->status = $status;
+    $app->save();
+    $admins = availabilityAdminsOf($app->organization);
+
+    // A failed API call
+    Http::fake(['*' => Http::response('', 503)]);
+    try {
+        failingCall($app);
+    } catch (Throwable) {
+        // reported to the caller as before
+    }
+
+    // And whatever the monitor says
+    app(AvailabilityService::class)->evaluate($app->fresh(), monitorFound($app->fresh(), UptimeStatus::DOWN, 10));
+    (new CheckUnavailableAppInstances)();
+
+    expect($app->fresh()->status)->toBe($status);
+    Notification::assertNotSentTo($admins, AppInstanceUnavailableWarning::class);
+    Notification::assertNotSentTo($admins, AppInstanceUnavailable::class);
+})->with(['activating', 'updating', 'deactivating', 'deactivated', 'deleting']);
+
+it('does not block or warn about an unavailable app once it is being updated', function () {
+    $app = availabilityTestInstance();
+    markUnavailable($app);
+    $admins = availabilityAdminsOf($app->organization);
+
+    $app->refresh();
+    $app->status = 'updating';
+    $app->save();
+
+    app(AvailabilityService::class)->evaluate($app->fresh(), monitorFound($app, UptimeStatus::DOWN, 10));
+    (new CheckUnavailableAppInstances)();
+
+    expect($app->fresh()->isApiBlocked())->toBeFalse();
+    Notification::assertNotSentTo($admins, AppInstanceUnavailable::class);
+    Notification::assertSentToTimes($admins->first(), AppInstanceUnavailableWarning::class, 1);
+});
+
+it('says the app is back when an update that fixed it makes it active again', function () {
+    $app = availabilityTestInstance();
+    markUnavailable($app);
+    $since = $app->fresh()->setting('availability.since');
+    $admins = availabilityAdminsOf($app->organization);
+
+    // What ApplicationUpdate / ApplicationUpgrade do: updating, then active
+    $app->refresh();
+    $app->status = 'updating';
+    $app->save();
+
+    // Not back yet: it is being updated, and nothing says it answers
+    Notification::assertNotSentTo($admins, AppInstanceAvailable::class);
+    expect($app->fresh()->setting('availability.since'))->toBe($since);
+
+    $app->status = 'active';
+    $app->save();
+
+    expect($app->fresh()->status)->toBe('active')
+        ->and($app->fresh()->setting('availability'))->toBeNull();
+    Notification::assertSentTo($admins->first(), AppInstanceAvailable::class, fn ($notification) => $notification->since === $since);
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
+
+    // The outage is over: nothing more to say when something else restores it
+    expect(app(AvailabilityService::class)->restore($app->fresh()))->toBeFalse()
+        ->and(app(AvailabilityService::class)->settle($app->fresh()))->toBeFalse();
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
+});
+
+it('says the app is back after it was unavailable, whatever it went through before it was active again', function (array $between) {
+    $app = availabilityTestInstance();
+    markUnavailable($app);
+    $admins = availabilityAdminsOf($app->organization);
+
+    foreach ($between as $status) {
+        $app->refresh();
+        $app->status = $status;
+        $app->save();
+    }
+    Notification::assertNotSentTo($admins, AppInstanceAvailable::class);
+
+    $app->refresh();
+    $app->status = 'active';
+    $app->save();
+
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
+})->with([
+    'updating' => [['updating']],
+    'deactivated' => [['deactivating', 'deactivated']],
+    'updating, then deactivated' => [['updating', 'deactivating', 'deactivated']],
+]);
+
+it('knows the app was unavailable even when the model that makes it active was loaded before', function () {
+    $app = availabilityTestInstance();
+    $stale = AppInstance::find($app->id);
+
+    markUnavailable($app);
+    $admins = availabilityAdminsOf($app->organization);
+    expect($stale->setting('availability'))->toBeNull();
+
+    $stale->status = 'updating';
+    $stale->save();
+    $stale->status = 'active';
+    $stale->save();
+
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
+    expect($app->fresh()->setting('availability'))->toBeNull();
+});
+
+it('sends no up notification for an app that was not unavailable since it was last active', function () {
+    $app = availabilityTestInstance();
+    $admins = availabilityAdminsOf($app->organization);
+
+    // Updated like any other app
+    $app->status = 'updating';
+    $app->save();
+    $app->status = 'active';
+    $app->save();
+
+    // Went down, came back, and was updated afterwards
+    markUnavailable($app->fresh());
+    app(AvailabilityService::class)->restore($app->fresh());
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
+
+    $app->refresh();
+    $app->status = 'updating';
+    $app->save();
+    $app->status = 'active';
+    $app->save();
+
+    Notification::assertSentToTimes($admins->first(), AppInstanceAvailable::class, 1);
 });
 
 it('says nothing about an app that was never unavailable, or that is restored twice', function () {

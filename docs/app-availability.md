@@ -42,6 +42,23 @@ uptime reports, a status page, ...).
 
 If the app comes back and goes down again, that is a new outage: a new warning.
 
+### When notifications are sent
+
+* **Down** (the warning, then "unavailable"): only for an app that was `active`
+  when the call failed. An app that is activating, updating, deactivating,
+  deactivated or being deleted isn't marked and nobody is told, and once an
+  unavailable app is being updated the monitor's results stop mattering (no
+  blocking, no "unavailable" notification).
+* **Back:** once per outage, and only for an app that was unavailable since it
+  was last active. That is either of the ways above (a call that goes through, a
+  monitor check that finds it up) or a fix: an upgrade or update takes the app
+  `unavailable` → `updating` → `active` without any call or check finding it
+  answering. `AppInstanceObserver` notices the app becoming `active` while its
+  `settings.availability` is still there and calls
+  `AvailabilityService::settle()`, which tells the admins and forgets the
+  outage. An app that was never unavailable, or whose outage was already
+  settled, gets nothing.
+
 ## Who is told
 
 The admins of the super account (the system admins) and of the organization that
