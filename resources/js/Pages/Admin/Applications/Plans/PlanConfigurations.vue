@@ -57,7 +57,20 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
                 v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="pb-1"
-                />
+                >
+                <template #appendInner>
+                  <va-icon
+                    v-if="canResetToDefault(row.config)"
+                    name="fa-rotate-left"
+                    size="small"
+                    color="primary"
+                    class="cursor-pointer"
+                    role="button"
+                    :title="$t('admin.plans.resetToDefault')"
+                    @click="resetToDefault(row.config)"
+                    />
+                </template>
+              </va-input>
               <va-input
                 v-if="row.config.type == 'int'"
                 v-model="form['configurations'][row.config.name]"
@@ -65,13 +78,37 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
                 type="number"
                 min="0"
                 class="pb-1"
-                />
-              <va-checkbox
-                v-if="row.config.type == 'bool'"
-                v-model="form['configurations'][row.config.name]"
-                immediateValidation
-                class="pb-1"
-                />
+                >
+                <template #appendInner>
+                  <va-icon
+                    v-if="canResetToDefault(row.config)"
+                    name="fa-rotate-left"
+                    size="small"
+                    color="primary"
+                    class="cursor-pointer"
+                    role="button"
+                    :title="$t('admin.plans.resetToDefault')"
+                    @click="resetToDefault(row.config)"
+                    />
+                </template>
+              </va-input>
+              <div v-if="row.config.type == 'bool'" class="bool-row">
+                <va-checkbox
+                  v-model="form['configurations'][row.config.name]"
+                  immediateValidation
+                  class="pb-1"
+                  />
+                <va-icon
+                  v-if="canResetToDefault(row.config)"
+                  name="fa-rotate-left"
+                  size="small"
+                  color="primary"
+                  class="cursor-pointer"
+                  role="button"
+                  :title="$t('admin.plans.resetToDefault')"
+                  @click="resetToDefault(row.config)"
+                  />
+              </div>
               <YamlEditor
                 v-if="row.config.type == 'yaml'"
                 :ref="el => setYamlEditorRef(row.config.name, el)"
@@ -101,14 +138,40 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
                 value-by="value"
                 text-by="text"
                 searchable
-                />
+                >
+                <template #appendInner>
+                  <va-icon
+                    v-if="canResetToDefault(row.config)"
+                    name="fa-rotate-left"
+                    size="small"
+                    color="primary"
+                    class="cursor-pointer"
+                    role="button"
+                    :title="$t('admin.plans.resetToDefault')"
+                    @click.stop="resetToDefault(row.config)"
+                    />
+                </template>
+              </va-select>
               <va-textarea
                 v-if="row.config.type == 'textarea'"
                 v-model="form['configurations'][row.config.name]"
                 immediateValidation
                 class="full-width"
                 max-rows="15"
-                />
+                >
+                <template #appendInner>
+                  <va-icon
+                    v-if="canResetToDefault(row.config)"
+                    name="fa-rotate-left"
+                    size="small"
+                    color="primary"
+                    class="cursor-pointer"
+                    role="button"
+                    :title="$t('admin.plans.resetToDefault')"
+                    @click="resetToDefault(row.config)"
+                    />
+                </template>
+              </va-textarea>
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section v-if="row.removable" icon>
@@ -233,6 +296,28 @@ export default {
 
       return row.kind === 'groupEnd' || (row.kind === 'config' && ! row.grouped)
     },
+    // Defaults are only applied when a config is first created, so a blank value is kept as
+    // blank. These let the admin put the default back on any config that differs from it.
+    hasDefault (config) {
+      return ['string', 'int', 'bool', 'enum', 'textarea'].includes(config.type)
+        && config.default !== undefined
+        && config.default !== null
+    },
+    normalizeConfigValue (config, value) {
+      if (config.type === 'bool') return !! value
+      if (value === null || value === undefined) return ''
+
+      return String(value)
+    },
+    canResetToDefault (config) {
+      if (! this.hasDefault(config)) return false
+
+      return this.normalizeConfigValue(config, this.form.configurations[config.name])
+        !== this.normalizeConfigValue(config, config.default)
+    },
+    resetToDefault (config) {
+      this.form.configurations[config.name] = config.default
+    },
     setYamlEditorRef (name, el) {
       if (el) {
         this.yamlEditorRefs[name] = el
@@ -352,6 +437,12 @@ export default {
 .array-item {
   border-left: 3px solid var(--va-primary);
   padding-left: 1rem;
+}
+
+.bool-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .array-item-start {
