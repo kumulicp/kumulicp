@@ -8,8 +8,8 @@ return new class extends Migration
 {
     /**
      * Ties a monitor to the app instance it watches (null for monitors added
-     * by hand). No foreign key: deleting an app instance removes its monitor
-     * through AppInstanceObserver, and AppMonitors::reconcile() clears strays.
+     * by hand). The foreign key that removes a monitor with its app instance is
+     * added by cascade_monitors_with_their_app_instance.
      */
     public function up(): void
     {

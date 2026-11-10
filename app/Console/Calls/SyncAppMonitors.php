@@ -6,8 +6,7 @@ use App\Monitoring\AppMonitors;
 
 /**
  * Safety net for AppInstanceObserver: makes sure every app has the monitor it
- * should (pointing at its current address) and that no monitor outlives its
- * app.
+ * should, pointing at its current address.
  */
 class SyncAppMonitors
 {

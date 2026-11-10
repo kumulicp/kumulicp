@@ -19,8 +19,10 @@ use Carbon\Carbon;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
@@ -511,17 +513,38 @@ it('leaves a monitor someone added by hand at the same address alone', function 
         ->and(AppMonitor::count())->toBe(1);
 });
 
-it('reconciles: makes the missing monitors, fixes addresses, and removes strays', function () {
+it('reconciles: makes the missing monitors and fixes addresses, leaving hand-made monitors alone', function () {
     $app = availabilityTestInstance();
     AppMonitor::where('app_instance_id', $app->id)->delete();
-    $stray = AppMonitor::create(['url' => 'http://gone.example', 'app_instance_id' => 99999]);
     $manual = AppMonitor::create(['url' => 'http://manual.example']);
 
     (new SyncAppMonitors)();
 
     expect(AppMonitor::where('app_instance_id', $app->id)->count())->toBe(1)
-        ->and(AppMonitor::find($stray->id))->toBeNull()
         ->and(AppMonitor::find($manual->id))->not->toBeNull();
+});
+
+// DeleteOrganization removes an organization's apps with one query, which
+// fires no model events: the database has to be what removes the monitor
+it('removes an app\'s monitor however the app is deleted', function (callable $delete) {
+    $app = availabilityTestInstance();
+    $manual = AppMonitor::create(['url' => 'http://manual.example']);
+    expect(availabilityMonitor($app)->exists)->toBeTrue();
+
+    $delete($app);
+
+    expect(AppInstance::find($app->id))->toBeNull()
+        ->and(AppMonitor::where('app_instance_id', $app->id)->count())->toBe(0)
+        ->and(AppMonitor::find($manual->id))->not->toBeNull();
+})->with([
+    'the model' => [fn (AppInstance $app) => $app->delete()],
+    'a query, like DeleteOrganization' => [fn (AppInstance $app) => $app->organization->app_instances()->delete()],
+    'a raw statement' => [fn (AppInstance $app) => DB::delete('delete from app_instances where id = ?', [$app->id])],
+]);
+
+it('does not allow a monitor for an app that does not exist', function () {
+    expect(fn () => AppMonitor::create(['url' => 'http://gone.example', 'app_instance_id' => 99999]))
+        ->toThrow(QueryException::class);
 });
 
 // ---------------------------------------------------------------------------

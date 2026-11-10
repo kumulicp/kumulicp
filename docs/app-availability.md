@@ -57,16 +57,19 @@ something to manage by hand.
   off for any other status (activating, updating, deactivating, ...) so those
   don't register as outages, and switched back on, with its old results
   forgotten, when the app is active again.
-* **Moved** when the app's address changes (a new primary domain, a rename), and
-  **removed** with the app.
+* **Moved** when the app's address changes (a new primary domain, a rename).
+* **Removed** with the app by the database: `monitors.app_instance_id` is a
+  foreign key to `app_instances` with `ON DELETE CASCADE`. That holds for every
+  way an app can be deleted, including the ones that skip model events, like
+  deleting an organization's apps in one query. Don't rely on code (an observer,
+  a cleanup job) for this; a monitor for an app that is gone can't exist.
 * An app that lives at its parent's address (`Application` domain option
   `parent`) has no monitor of its own: the monitor's URL is unique, and the
   parent's monitor is the one that checks that address.
-* All of that follows from changes to the app instance (`AppInstanceObserver`).
+* The rest follows from changes to the app instance (`AppInstanceObserver`).
   `SyncAppMonitors` (daily) and the `upgrade` command run
   `AppMonitors::reconcile()`, which also creates the monitors for apps that
-  existed before this, fixes any address that drifted and removes monitors
-  whose app is gone.
+  existed before this and fixes any address that drifted.
 * A monitor added by hand (`php artisan monitor:create`) is left alone and works
   as the package documents.
 

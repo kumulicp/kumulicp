@@ -15,7 +15,8 @@ use Spatie\UptimeMonitor\Models\Enums\UptimeStatus;
  *    https addresses;
  *  - checking only while the app is active or unavailable, so an app that is
  *    activating, updating or being removed doesn't register as down;
- *  - moved when the app's address changes, and removed with the app.
+ *  - moved when the app's address changes. It is removed with the app by a
+ *    cascading foreign key on monitors.app_instance_id, not by this class.
  *
  * The monitor does the HTTP checks; AvailabilityService decides what they mean
  * for the app. A monitor's URL is unique, so an app that lives at its parent's
@@ -114,14 +115,9 @@ class AppMonitors
         }
     }
 
-    public function remove(AppInstance $app): void
-    {
-        AppMonitor::where('app_instance_id', $app->id)->get()->each->delete();
-    }
-
     /**
-     * Syncs every app instance and removes monitors whose app is gone. Also
-     * how monitors are created for the apps that were there first.
+     * Syncs every app instance. Also how monitors are created for the apps that
+     * were there first.
      *
      * @return int How many app instances were synced
      */
@@ -136,11 +132,6 @@ class AppMonitors
                     $count++;
                 }
             });
-
-        AppMonitor::whereNotNull('app_instance_id')
-            ->whereNotIn('app_instance_id', AppInstance::select('id'))
-            ->get()
-            ->each->delete();
 
         return $count;
     }
