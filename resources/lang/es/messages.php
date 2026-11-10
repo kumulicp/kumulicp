@@ -30,8 +30,7 @@ return [
         'cancelled_delete_started' => 'La eliminación ya había empezado: la aplicación está eliminada a medias y se ha dejado como estaba.',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
-        'parent_app' => ':app necesita instalarse primero',
-        'parent_app_unavailable' => ':app no está disponible',
+        'parent_app' => ':app está :status',
         'time_range' => 'Esto se ejecutará entre :start y :end',
     ],
     'database_migration' => [
@@ -110,6 +109,15 @@ return [
     ],
     'email' => [
         'create_dkim_key' => 'Estamos creando tu clave DKIM mientras lees esto. Esto tomará unos momentos',
+    ],
+    'app_status' => [
+        'activating' => 'activándose',
+        'updating' => 'actualizándose',
+        'unavailable' => 'no disponible',
+        'deactivating' => 'desactivándose',
+        'deactivated' => 'desactivada',
+        'deleting' => 'eliminándose',
+        'failed' => 'con errores',
     ],
     'notification' => [
         'app_unavailable_warning' => [

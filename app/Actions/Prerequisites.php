@@ -7,6 +7,7 @@ use App\Application;
 use App\OrgDomain;
 use App\Services\Tasks\TaskDependencies;
 use App\Task;
+use Illuminate\Support\Facades\Lang;
 
 class Prerequisites
 {
@@ -164,10 +165,11 @@ class Prerequisites
 
         if ($app && $app->status !== 'active') {
             $this->passed = false;
-            // An app that was running and stopped answering isn't waiting to be
-            // installed
-            $key = $app->isUnavailable() ? 'parent_app_unavailable' : 'parent_app';
-            $this->addMessage(__("messages.action.{$key}", ['app' => $app->label]));
+            $status = Lang::has("messages.app_status.{$app->status}")
+                ? __("messages.app_status.{$app->status}")
+                : $app->status;
+
+            $this->addMessage(__('messages.action.parent_app', ['app' => $app->label, 'status' => $status]));
         }
 
         return $this;

@@ -333,7 +333,7 @@ it('lets API calls through again once the monitor finds a blocked app answering'
     Http::assertSentCount(1);
 });
 
-it('tells a task waiting for the app that it is unavailable, not that it needs installing', function (string $status, string $says) {
+it('tells a task waiting for the app what state the app is in', function (string $status, string $says) {
     $app = availabilityTestInstance();
     $app->status = $status;
     $app->save();
@@ -342,10 +342,13 @@ it('tells a task waiting for the app that it is unavailable, not that it needs i
     $prereqs->check('application_required', ['app_id' => $app->id]);
 
     expect($prereqs->passed)->toBeFalse()
-        ->and($prereqs->message)->toBe($says === 'unavailable' ? "{$app->label} is unavailable" : "{$app->label} needs to be installed first");
+        ->and($prereqs->message)->toBe("{$app->label} is {$says}");
 })->with([
     'unavailable' => ['unavailable', 'unavailable'],
-    'activating' => ['activating', 'install'],
+    'activating' => ['activating', 'activating'],
+    'updating' => ['updating', 'updating'],
+    'deleting' => ['deleting', 'being deleted'],
+    'a status without a translation' => ['something_new', 'something_new'],
 ]);
 
 it('lets a task go ahead once the app is active', function () {

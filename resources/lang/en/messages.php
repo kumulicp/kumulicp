@@ -30,8 +30,7 @@ return [
         'cancelled_delete_started' => 'The delete had already started: the app is partly deleted and has been left as it is.',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
-        'parent_app' => ':app needs to be installed first',
-        'parent_app_unavailable' => ':app is unavailable',
+        'parent_app' => ':app is :status',
         'time_range' => 'This will run between :start and :end',
     ],
     'exception' => [
@@ -114,6 +113,15 @@ return [
     ],
     'email' => [
         'create_dkim_key' => 'We are creating your DKIM key as you read this. This will take a few moments',
+    ],
+    'app_status' => [
+        'activating' => 'activating',
+        'updating' => 'updating',
+        'unavailable' => 'unavailable',
+        'deactivating' => 'deactivating',
+        'deactivated' => 'deactivated',
+        'deleting' => 'being deleted',
+        'failed' => 'failed',
     ],
     'notification' => [
         'app_unavailable_warning' => [
