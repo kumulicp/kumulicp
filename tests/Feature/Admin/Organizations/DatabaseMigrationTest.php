@@ -44,6 +44,9 @@ class DatabaseMigrationTest extends TestCase
     {
         parent::setUp();
 
+        // The backup/restore routes are gated behind the app-backups flag.
+        config(['toggle.flags.app-backups' => true]);
+
         $support = new TestSupports;
         $support->seed();
         $support->activateDemoApp();
