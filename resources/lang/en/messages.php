@@ -121,7 +121,11 @@ return [
         ],
         'app_unavailable' => [
             'title' => ':app is unavailable',
-            'message' => ':app is still not responding, so we have paused our connection to it. We keep checking every :minutes minutes and will resume as soon as it responds. You will not get more emails about this.',
+            'message' => ':app is still not responding, so we have paused our connection to it. We keep checking every :minutes minutes and will resume as soon as it responds. You will get one more email when it is back.',
+        ],
+        'app_available' => [
+            'title' => ':app is back',
+            'message' => ':app is responding again and our connection to it has resumed. No action is needed.',
         ],
         'app_unavailable_details' => [
             'app' => 'Application',

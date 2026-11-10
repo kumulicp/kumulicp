@@ -12,9 +12,11 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Shared by the two notifications about an app's API not answering. Both go
- * to the panel and by email; $details says whether the recipient also sees
- * the technical reason (system admins) or not (an organization's admins).
+ * Shared by the notifications about an app's API not answering, and about it
+ * answering again. All go to the panel and by email; $details says whether the
+ * recipient also sees the technical reason (system admins) or not (an
+ * organization's admins). $since is when the app stopped answering, for the
+ * ones sent after the availability settings that hold it are gone.
  */
 abstract class AppInstanceAvailabilityNotification extends Notification implements ShouldQueue
 {
@@ -23,6 +25,7 @@ abstract class AppInstanceAvailabilityNotification extends Notification implemen
     public function __construct(
         public AppInstance $app_instance,
         public bool $details = false,
+        public ?string $since = null,
     ) {}
 
     /** Language key under messages.notification for this notification */
@@ -81,7 +84,7 @@ abstract class AppInstanceAvailabilityNotification extends Notification implemen
             'message' => $this->message(),
             'app_instance' => $this->app_instance,
             'organization' => $this->app_instance->organization,
-            'since' => $availability['since'] ?? null,
+            'since' => $this->since ?? $availability['since'] ?? null,
             'reason' => $this->details ? ($availability['last_error'] ?? null) : null,
             'minutes' => AvailabilityService::RECHECK_MINUTES,
             'key' => $this->key(),

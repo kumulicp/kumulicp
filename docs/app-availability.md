@@ -28,15 +28,17 @@ uptime reports, a status page, ...).
    scheduled every minute; an app's monitor keeps to its 5 minute interval even
    while it is down). `CheckUnavailableAppInstances`, also every minute, reads the
    results for the unavailable apps. Only checks made *after* the failure count.
-   * **Up:** the app gets back the status it had, and its API calls work again.
-     A call that succeeds before that does the same.
+   * **Up:** the app gets back the status it had, its API calls work again, and
+     **one** "back" notification is sent. A call that succeeds before that does
+     the same.
    * **Down, 5 or more minutes after the failure** (the warning promised
      another look in 5 minutes, so a check made moments after the failure
      doesn't count): API calls to the app are **blocked** (they throw
      `AppUnavailableException`, a `ConnectionFailedException`, without sending
      anything) and **one** "unavailable" notification is sent.
 3. **After that nothing more is sent**, however long the app stays down. The
-   monitor keeps checking every 5 minutes until the app answers.
+   monitor keeps checking every 5 minutes until the app answers; then the one
+   "back" notification above.
 
 If the app comes back and goes down again, that is a new outage: a new warning.
 

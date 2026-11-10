@@ -4,6 +4,7 @@ namespace App\Services\AppInstance;
 
 use App\AppInstance;
 use App\Monitoring\AppMonitor;
+use App\Notifications\AppInstanceAvailable;
 use App\Notifications\AppInstanceUnavailable;
 use App\Notifications\AppInstanceUnavailableWarning;
 use App\Organization;
@@ -187,11 +188,15 @@ class AvailabilityService
      */
     public function restore(AppInstance $app): bool
     {
-        $restored = $this->transition($app, function (AppInstance $locked) {
+        $since = null;
+
+        $restored = $this->transition($app, function (AppInstance $locked) use (&$since) {
             if (! $locked->isUnavailable()) {
                 return false;
             }
 
+            // Cleared by save(), and wanted by the notification
+            $since = $locked->setting('availability.since');
             $status = $locked->setting('availability.previous_status') ?: 'active';
 
             $this->save($locked, $status, null);
@@ -201,6 +206,8 @@ class AvailabilityService
 
         if ($restored) {
             Log::info("App instance {$app->name} is available again");
+
+            $this->notify($app, AppInstanceAvailable::class, $since);
         }
 
         return $restored;
@@ -253,9 +260,10 @@ class AvailabilityService
      * organization's admins. Sending is best effort: a mail or directory
      * problem must not turn into a failure of whatever made the API call.
      *
-     * @param  class-string<AppInstanceUnavailable|AppInstanceUnavailableWarning>  $notification
+     * @param  class-string<AppInstanceUnavailable|AppInstanceUnavailableWarning|AppInstanceAvailable>  $notification
+     * @param  string|null  $since  When the app stopped answering, if the app's settings no longer say
      */
-    private function notify(AppInstance $app, string $notification): void
+    private function notify(AppInstance $app, string $notification, ?string $since = null): void
     {
         $organizations = collect([
             [Organization::where('type', 'superaccount')->first(), true],
@@ -278,7 +286,7 @@ class AvailabilityService
                 // people and get the details.
                 $details = $system || $organization->type === 'superaccount';
 
-                $organization->notifyAdmins(new $notification($app, $details));
+                $organization->notifyAdmins(new $notification($app, $details, $since));
             } catch (\Throwable $e) {
                 report($e);
             }

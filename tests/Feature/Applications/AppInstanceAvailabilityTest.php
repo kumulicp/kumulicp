@@ -10,6 +10,7 @@ use App\Monitoring\AppMonitor;
 use App\Monitoring\AppMonitors;
 use App\Monitoring\Notifications\UptimeCheckFailed as AppUptimeCheckFailed;
 use App\Monitoring\ResponseChecker;
+use App\Notifications\AppInstanceAvailable;
 use App\Notifications\AppInstanceUnavailable;
 use App\Notifications\AppInstanceUnavailableWarning;
 use App\Organization;
@@ -239,6 +240,7 @@ it('puts the app back when a call gets through before the monitor looks', functi
     $app->refresh();
     expect($app->status)->toBe('active')
         ->and($app->setting('availability'))->toBeNull();
+    Notification::assertSentToTimes(availabilityAdminsOf($app->organization)->first(), AppInstanceAvailable::class, 1);
 });
 
 // ---------------------------------------------------------------------------
@@ -268,6 +270,7 @@ it('puts the app back to the status it had when the monitor finds it answering',
     expect($app->status)->toBe('active')
         ->and($app->setting('availability'))->toBeNull();
     Notification::assertNotSentTo(availabilityAdminsOf($app->organization), AppInstanceUnavailable::class);
+    Notification::assertSentToTimes(availabilityAdminsOf($app->organization)->first(), AppInstanceAvailable::class, 1);
 });
 
 it('does not block on a failed check made moments after the failure', function () {
@@ -322,10 +325,47 @@ it('lets API calls through again once the monitor finds a blocked app answering'
     $app->refresh();
     expect($app->status)->toBe('active')
         ->and($app->setting('availability'))->toBeNull();
+    Notification::assertSentToTimes(availabilityAdminsOf($app->organization)->first(), AppInstanceAvailable::class, 1);
 
     Http::fake(['*' => Http::response('<ocs><meta><status>ok</status></meta><data/></ocs>', 200)]);
     failingCall($app);
     Http::assertSentCount(1);
+});
+
+it('says nothing about an app that was never unavailable, or that is restored twice', function () {
+    $app = availabilityTestInstance();
+    $service = app(AvailabilityService::class);
+
+    expect($service->restore($app))->toBeFalse();
+    Notification::assertNotSentTo(availabilityAdminsOf($app->organization), AppInstanceAvailable::class);
+
+    markUnavailable($app);
+    expect($service->restore($app->fresh()))->toBeTrue()
+        ->and($service->restore($app->fresh()))->toBeFalse();
+    Notification::assertSentToTimes(availabilityAdminsOf($app->organization)->first(), AppInstanceAvailable::class, 1);
+});
+
+it('tells when the app stopped answering in the "back" notification, although the settings that hold it are cleared', function () {
+    $app = availabilityTestInstance();
+    markUnavailable($app);
+    $since = $app->fresh()->setting('availability.since');
+
+    app(AvailabilityService::class)->restore($app->fresh());
+
+    expect($app->fresh()->setting('availability'))->toBeNull();
+    Notification::assertSentTo(
+        availabilityAdminsOf($app->organization)->first(),
+        AppInstanceAvailable::class,
+        function ($notification) use ($since) {
+            $mail = $notification->toMail(new stdClass)->viewData;
+
+            return $notification->since === $since
+                && $mail['since'] === $since
+                && $mail['key'] === 'app_available'
+                && $mail['reason'] === null
+                && str_contains($notification->toPanel()['title'], 'is back');
+        },
+    );
 });
 
 it('starts over with a new warning if an app that came back goes down again', function () {

@@ -117,7 +117,11 @@ return [
         ],
         'app_unavailable' => [
             'title' => ':app no está disponible',
-            'message' => ':app sigue sin responder, así que hemos pausado nuestra conexión con ella. Seguimos comprobándolo cada :minutes minutos y la reanudaremos en cuanto responda. No recibirás más correos sobre esto.',
+            'message' => ':app sigue sin responder, así que hemos pausado nuestra conexión con ella. Seguimos comprobándolo cada :minutes minutos y la reanudaremos en cuanto responda. Recibirás un correo más cuando vuelva a funcionar.',
+        ],
+        'app_available' => [
+            'title' => ':app vuelve a funcionar',
+            'message' => ':app vuelve a responder y hemos reanudado nuestra conexión con ella. No es necesario que hagas nada.',
         ],
         'app_unavailable_details' => [
             'app' => 'Aplicación',
