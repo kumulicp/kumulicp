@@ -158,10 +158,14 @@ describe('legacy endpoints', function () {
     });
 
     it('still serves authenticated requests on the original path', function () {
+        // Organization is not an Authenticatable, so actingAs() can't be used;
+        // authenticate with a real bearer token like the callers do. The token
+        // is written with a raw query because the model's 'hashed' cast would
+        // store a bcrypt hash, which the token guard (hash => false) can't match.
         $organization = Organization::factory()->create();
+        Organization::whereKey($organization->getKey())->update(['api_token' => 'legacy-token-123']);
 
-        $this->actingAs($organization, 'api')
-            ->getJson('/api/users')
+        $this->getJson('/api/users', ['Authorization' => 'Bearer legacy-token-123'])
             ->assertOk();
     });
 });
