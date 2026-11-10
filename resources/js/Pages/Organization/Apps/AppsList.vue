@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import AppStatusIcon from '@/components/App/AppStatusIcon.vue'
 import { Link, useForm, router } from '@inertiajs/vue3'
 
 </script>
@@ -32,22 +33,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
             <tbody>
               <tr v-for="(app, i) in apps" :key="i">
                 <td class="va-text-center" style="vertical-align: middle">
-                  <va-icon
-                      :name="'fa-' + status[app.status]"
-                      :color="
-                        app.status === 'active'
-                          ? 'success'
-                          : app.status === 'updating'
-                          ? 'warning'
-                          : app.status === 'deactivating' || app.status === 'deactivated'
-                          ? 'danger'
-                          : app.status === 'deleting'
-                          ? 'danger'
-                          : 'primary'
-                      "
-                      :spin="app.status == 'updating'"
-                      :title="app.status"
-                    />
+                  <app-status-icon :status="app.status" />
                 </td>
                 <td class="vertical-middle">
                   <Link :href="'/apps/'+app.id+'/edit'" v-if="$page.props.auth.status !== 'deactivated' && !deactivated_statuses.includes(app.status)">
@@ -139,14 +125,6 @@ export default {
         name: ''
       },
       deactivateName: '',
-      status: {
-        active: 'check-circle',
-        activating: 'rocket',
-        updating: 'spinner',
-        deactivating: 'explosion',
-        deactivated: 'ban',
-        deleting: 'explosion'
-      },
       deactivate: useForm({}),
       interval: ''
     }

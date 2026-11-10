@@ -152,6 +152,7 @@ class Applications extends Controller
                     'address' => $app->address(),
                 ] : null,
                 'label' => $app->label,
+                'status' => $app->status,
                 'organization' => $organization->suborganizations()->count() > 0 ? [
                     'name' => $app->organization->name,
                 ] : null,

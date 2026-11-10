@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppCustomizations from '@/components/App/AppCustomizations.vue'
 import AppSettings from '@/components/App/AppSettings.vue'
+import AppStatusIcon from '@/components/App/AppStatusIcon.vue'
 import { useForm, Link } from '@inertiajs/vue3'
 
 </script>
@@ -11,7 +12,10 @@ import { useForm, Link } from '@inertiajs/vue3'
     <title>{{ $t('organization.apps.settingsTitle') }} - Control Panel</title>
   </Head>
   <va-card class="mb-4">
-    <va-card-title>{{ $t('organization.apps.labelSettings', { label: app.label }) }}</va-card-title>
+    <va-card-title>
+      <app-status-icon :status="app.status" class="mr-2" />
+      {{ $t('organization.apps.labelSettings', { label: app.label }) }}
+    </va-card-title>
     <va-card-content>
       <va-alert
         color="primary"

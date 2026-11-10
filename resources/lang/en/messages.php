@@ -30,7 +30,7 @@ return [
         'cancelled_delete_started' => 'The delete had already started: the app is partly deleted and has been left as it is.',
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
-        'parent_app' => ':app needs to be installed first',
+        'parent_app' => ':app is :status',
         'time_range' => 'This will run between :start and :end',
     ],
     'exception' => [
@@ -114,7 +114,34 @@ return [
     'email' => [
         'create_dkim_key' => 'We are creating your DKIM key as you read this. This will take a few moments',
     ],
+    'app_status' => [
+        'activating' => 'activating',
+        'updating' => 'updating',
+        'unavailable' => 'unavailable',
+        'deactivating' => 'deactivating',
+        'deactivated' => 'deactivated',
+        'deleting' => 'being deleted',
+        'failed' => 'failed',
+    ],
     'notification' => [
+        'app_unavailable_warning' => [
+            'title' => ':app is not responding',
+            'message' => "We couldn't reach :app. We'll check again in :minutes minutes. If it still isn't responding, we'll pause our connection to it and let you know.",
+        ],
+        'app_unavailable' => [
+            'title' => ':app is unavailable',
+            'message' => ':app is still not responding, so we have paused our connection to it. We keep checking every :minutes minutes and will resume as soon as it responds. You will get one more email when it is back.',
+        ],
+        'app_available' => [
+            'title' => ':app is back',
+            'message' => ':app is responding again and our connection to it has resumed. No action is needed.',
+        ],
+        'app_unavailable_details' => [
+            'app' => 'Application',
+            'organization' => 'Organization',
+            'since' => 'Not responding since',
+            'reason' => 'Reason',
+        ],
         'subscription_cancelled' => 'Subscription Cancelled',
         'cancellation_notice' => "You're subscription has been cancelled. You're account will be deactivated on :date. If this was a mistake, you can resubscribe this anytime before this date.",
         'cancellation_notice_short' => "You're account will be deactivated on :date",

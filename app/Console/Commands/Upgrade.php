@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\AppVersion;
+use App\Monitoring\AppMonitors;
 use App\Organization;
 use App\Plan;
 use App\RepoSecret;
@@ -32,6 +33,7 @@ class Upgrade extends Command
     private $versions = [
         '0.158' => 'alpha_158',
         '0.159' => 'alpha_159',
+        '0.160' => 'alpha_160',
     ];
 
     public function __construct()
@@ -117,6 +119,15 @@ class Upgrade extends Command
             $plan->updateSettings(['suborganizations.enabled' => false]);
             $plan->save();
         }
+    }
+
+    // Uptime monitors for the app instances that were there before they were
+    // tracked (new ones get theirs from AppInstanceObserver)
+    private function alpha_160()
+    {
+        $this->info('Creating uptime monitors for app instances');
+
+        app(AppMonitors::class)->reconcile();
     }
 
     // Migrate the legacy "image_registry" version setting to the new

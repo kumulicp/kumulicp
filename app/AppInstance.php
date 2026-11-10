@@ -4,6 +4,7 @@ namespace App;
 
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
+use App\Monitoring\AppMonitor;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
@@ -51,10 +53,18 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, AdditionalStorage> $additional_storage
  * @property-read Collection<int, OrgSubdomain> $domains
  * @property-read OrgSubdomain|null $primary_domain
+ * @property-read AppMonitor|null $monitor
  */
 class AppInstance extends Model
 {
     use HasFactory;
+
+    /**
+     * The app's API stopped answering (see AvailabilityService). The previous
+     * status is kept in settings.availability.previous_status and put back
+     * when the app responds again.
+     */
+    public const STATUS_UNAVAILABLE = 'unavailable';
 
     protected $table = 'app_instances';
 
@@ -106,7 +116,10 @@ class AppInstance extends Model
         return $this->hasMany('App\AppInstance', 'parent_id');
     }
 
-    public function parent()
+    /**
+     * @return BelongsTo<AppInstance, $this>
+     */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'parent_id');
     }
@@ -167,9 +180,23 @@ class AppInstance extends Model
         return $this->hasMany('App\OrgSubdomain', 'app_instance_id');
     }
 
-    public function primary_domain()
+    /**
+     * @return BelongsTo<OrgSubdomain, $this>
+     */
+    public function primary_domain(): BelongsTo
     {
         return $this->belongsTo('App\OrgSubdomain', 'primary_domain_id');
+    }
+
+    /**
+     * The uptime monitor checking this app's address. An app that lives at
+     * its parent's address has none; see AppMonitors::monitorFor().
+     *
+     * @return HasOne<AppMonitor, $this>
+     */
+    public function monitor(): HasOne
+    {
+        return $this->hasOne(AppMonitor::class, 'app_instance_id');
     }
 
     public function base_domain()
@@ -424,6 +451,25 @@ class AppInstance extends Model
         $deactivate_at = $this->getRawOriginal('deactivate_at');
 
         return $deactivate_at !== null && Carbon::parse($deactivate_at)->lte(now());
+    }
+
+    public function scopeUnavailable(Builder $query)
+    {
+        return $query->where('status', self::STATUS_UNAVAILABLE);
+    }
+
+    public function isUnavailable(): bool
+    {
+        return $this->status === self::STATUS_UNAVAILABLE;
+    }
+
+    /**
+     * Unavailable and confirmed so by a recheck: API calls to the app are
+     * refused until it answers again.
+     */
+    public function isApiBlocked(): bool
+    {
+        return $this->isUnavailable() && $this->setting('availability.blocked_at') !== null;
     }
 
     public function standard_user_name()

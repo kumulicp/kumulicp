@@ -30,7 +30,7 @@ return [
         'cancelled_delete_started' => 'La eliminación ya había empezado: la aplicación está eliminada a medias y se ha dejado como estaba.',
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
-        'parent_app' => ':app necesita instalarse primero',
+        'parent_app' => ':app: :status',
         'time_range' => 'Esto se ejecutará entre :start y :end',
     ],
     'database_migration' => [
@@ -110,7 +110,34 @@ return [
     'email' => [
         'create_dkim_key' => 'Estamos creando tu clave DKIM mientras lees esto. Esto tomará unos momentos',
     ],
+    'app_status' => [
+        'activating' => 'activándose',
+        'updating' => 'actualizándose',
+        'unavailable' => 'no disponible',
+        'deactivating' => 'desactivándose',
+        'deactivated' => 'desactivada',
+        'deleting' => 'eliminándose',
+        'failed' => 'con errores',
+    ],
     'notification' => [
+        'app_unavailable_warning' => [
+            'title' => ':app no responde',
+            'message' => 'No pudimos conectarnos con :app. Volveremos a comprobarlo en :minutes minutos. Si sigue sin responder, pausaremos nuestra conexión con la aplicación y te avisaremos.',
+        ],
+        'app_unavailable' => [
+            'title' => ':app no está disponible',
+            'message' => ':app sigue sin responder, así que hemos pausado nuestra conexión con ella. Seguimos comprobándolo cada :minutes minutos y la reanudaremos en cuanto responda. Recibirás un correo más cuando vuelva a funcionar.',
+        ],
+        'app_available' => [
+            'title' => ':app vuelve a funcionar',
+            'message' => ':app vuelve a responder y hemos reanudado nuestra conexión con ella. No es necesario que hagas nada.',
+        ],
+        'app_unavailable_details' => [
+            'app' => 'Aplicación',
+            'organization' => 'Organización',
+            'since' => 'Sin responder desde',
+            'reason' => 'Motivo',
+        ],
         'subscription_cancelled' => 'Suscripción cancelada',
         'cancellation_notice' => 'Tu suscripción ha sido cancelada. Tu cuenta se desactivará el :date. Si esto fue un error, puedes volver a suscribirte en cualquier momento antes de esta fecha.',
         'cancellation_notice_short' => 'Tu cuenta se desactivará el :date',

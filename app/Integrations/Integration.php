@@ -4,6 +4,9 @@ namespace App\Integrations;
 
 use App\Exceptions\ConnectionFailedException;
 use App\Organization;
+use App\Services\AppInstance\AvailabilityService;
+use App\Support\DevIngress;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -291,11 +294,21 @@ class Integration
 
         $client = $this->client();
 
-        if ($this->useDevIngressResolve() && $resolve = $this->devIngressResolve($url)) {
+        if ($this->useDevIngressResolve() && $resolve = DevIngress::resolve($url)) {
             $client = $client->withOptions(['curl' => [CURLOPT_RESOLVE => [$resolve]]]);
         }
 
-        $response = $client->$request_type($url, $data);
+        $this->beforeRequest();
+
+        try {
+            $response = $client->$request_type($url, $data);
+        } catch (ConnectionException $e) {
+            // Nothing answered (refused, DNS, timeout)
+            $this->requestFailed($e->getMessage());
+
+            throw $this->connectionError($e, $url);
+        }
+
         $this->storeCookies($response->cookies());
 
         $this->status_code = $response->getStatusCode();
@@ -304,7 +317,21 @@ class Integration
         $body = $response->getBody();
         $contents = $body->getContents();
 
-        if (in_array($this->status_code, $this->statusErrorCodes())) {
+        $content_type = $response->header('Content-Type');
+
+        // A caller ignoring a status (say a 404 it expects for a missing user)
+        // is ignoring the app's answer; the ingress's own 404 is not one
+        $gateway_not_found = AvailabilityService::isGatewayNotFound($this->status_code, $content_type, $contents);
+        $is_ignored = in_array($this->status_code, $this->ignored_error_codes) && ! $gateway_not_found;
+
+        if ($this->isUnavailableResponse($this->status_code, $content_type, $contents) && ! $is_ignored) {
+            $this->requestFailed("{$url} [{$this->status_code}] {$this->status_message}");
+        } else {
+            $this->requestSucceeded();
+        }
+
+        // An outage must not read as "not found" to a caller that expects 404s
+        if ($gateway_not_found || in_array($this->status_code, $this->statusErrorCodes())) {
             $this->httpError(__('messages.exception.http_error'), $contents, $url);
         }
         $this->parseResponse($contents);
@@ -316,46 +343,47 @@ class Integration
         }
     }
 
-    // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite below.
+    /**
+     * Called before every request. An integration that can refuse to talk to
+     * its target (an app that is down) throws here.
+     */
+    protected function beforeRequest(): void {}
+
+    /**
+     * The request got no answer from the target, or an answer that means the
+     * target is down (see isUnavailableResponse()).
+     */
+    protected function requestFailed(string $reason): void {}
+
+    /**
+     * The target answered, with anything but a down answer.
+     */
+    protected function requestSucceeded(): void {}
+
+    /**
+     * What to throw when the target can't be reached at all.
+     */
+    protected function connectionError(ConnectionException $exception, string $url): \Throwable
+    {
+        return $exception;
+    }
+
+    // Gateway answers that mean nothing is serving behind the address: a 502,
+    // 503 or 504, or the ingress's own "404 page not found". 500 is deliberately
+    // not one: the app answered, one endpoint is just broken. The app monitors
+    // use the same rule (App\Monitoring\ResponseChecker).
+    protected function isUnavailableResponse(int $status, ?string $contentType, string $body): bool
+    {
+        return AvailabilityService::isDownResponse($status, $contentType, $body);
+    }
+
+    // Only app-instance integrations need the DEV_INGRESS_GATEWAY rewrite
+    // (see App\Support\DevIngress).
     // Server integrations (Authentik, Rancher, etc.) are plain docker-compose
     // siblings and shouldn't have it applied.
     protected function useDevIngressResolve(): bool
     {
         return false;
-    }
-
-    /**
-     * In local dev, deployed app domains (e.g. *.127.0.0.1.nip.io) resolve
-     * to an IP that's only reachable from the browser -- from inside this
-     * container that same IP is its own loopback, so a request silently
-     * hits this app instead of the actual deployed one. When
-     * DEV_INGRESS_GATEWAY is set (e.g. host.docker.internal, which reaches
-     * the host machine where the local cluster's ingress ports are
-     * published), this overrides just the connection target for the
-     * request's host, leaving the Host header/TLS SNI untouched.
-     */
-    private function devIngressResolve(string $url): ?string
-    {
-        $gateway = config('services.dev_ingress_gateway');
-
-        if (! $gateway) {
-            return null;
-        }
-
-        $host = parse_url($url, PHP_URL_HOST);
-
-        if (! $host) {
-            return null;
-        }
-
-        $port = parse_url($url, PHP_URL_PORT) ?? (parse_url($url, PHP_URL_SCHEME) === 'https' ? 443 : 80);
-        $ip = filter_var($gateway, FILTER_VALIDATE_IP) ? $gateway : gethostbyname($gateway);
-
-        if (! filter_var($ip, FILTER_VALIDATE_IP)) {
-            return null;
-        }
-
-        return "{$host}:{$port}:{$ip}";
     }
 
     private function testConnection(string $url): bool
