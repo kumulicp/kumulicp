@@ -165,9 +165,12 @@ class AppInstance extends Model
         return $this->belongsTo('App\AppPlan', 'plan_id');
     }
 
-    public function plan()
+    /**
+     * @return BelongsTo<AppPlan, $this>
+     */
+    public function plan(): BelongsTo
     {
-        return $this->belongsTo('App\AppPlan', 'plan_id');
+        return $this->belongsTo(AppPlan::class, 'plan_id');
     }
 
     public function additional_storage()

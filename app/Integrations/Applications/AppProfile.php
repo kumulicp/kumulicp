@@ -4,6 +4,7 @@ namespace App\Integrations\Applications;
 
 use App\AppInstance;
 use App\Support\Facades\Application;
+use App\Updates\Aspects\Aspect;
 use App\Updates\UpdateStep;
 use Illuminate\Support\Arr;
 
@@ -19,6 +20,9 @@ class AppProfile
 
     /** @var array<int, UpdateStep> */
     protected $update_steps = [];
+
+    /** @var array<int, Aspect> */
+    protected $aspects = [];
 
     protected $configurations = [];
 
@@ -243,6 +247,25 @@ class AppProfile
     public function updateSteps(): array
     {
         return $this->update_steps;
+    }
+
+    /**
+     * Adds an aspect of this app that can be out of date (see Aspect). Name it
+     * in the aspects() of the update step that brings it up to date.
+     *
+     * @return $this
+     */
+    public function addAspect(Aspect $aspect)
+    {
+        $this->aspects[] = $aspect;
+
+        return $this;
+    }
+
+    /** @return array<int, Aspect> */
+    public function aspects(): array
+    {
+        return $this->aspects;
     }
 
     public function addFeature(AppFeature $feature)

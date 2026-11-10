@@ -362,6 +362,12 @@ return [
             'nuclei' => 'Runs template-based vulnerability checks against exposed services in the cluster to catch known CVEs and misconfigurations.',
         ],
     ],
+    'update_aspects' => [
+        'release' => 'Release',
+        'settings' => 'Settings',
+        'roles' => 'Roles and groups',
+        'sso' => 'Single sign-on',
+    ],
     'update_steps' => [
         'release' => [
             'label' => 'Release',

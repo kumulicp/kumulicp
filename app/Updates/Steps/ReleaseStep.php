@@ -32,6 +32,11 @@ class ReleaseStep extends UpdateStep
         return $app_instance->usesOwnResources();
     }
 
+    public function aspects(): array
+    {
+        return ['release'];
+    }
+
     public function checkedByDefault(): bool
     {
         return true;

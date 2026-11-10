@@ -32,6 +32,11 @@ class SettingsJobStep extends UpdateStep
         return $app_instance->usesOwnResources();
     }
 
+    public function aspects(): array
+    {
+        return ['settings'];
+    }
+
     public function checkedByDefault(): bool
     {
         return true;

@@ -4,6 +4,7 @@ namespace App\Support\VersionTesting;
 
 use App\AppPlan;
 use App\AppVersion;
+use App\Updates\Fingerprint;
 use Illuminate\Support\Arr;
 
 /**
@@ -71,24 +72,6 @@ class VersionFingerprint
             'plans' => $plans,
         ];
 
-        return hash('sha256', json_encode($this->normalize($payload)));
-    }
-
-    /**
-     * Sort associative keys so the same data always encodes the same way.
-     */
-    private function normalize(mixed $value): mixed
-    {
-        if (! is_array($value)) {
-            return $value;
-        }
-
-        $value = array_map(fn ($item) => $this->normalize($item), $value);
-
-        if (! array_is_list($value)) {
-            ksort($value);
-        }
-
-        return $value;
+        return Fingerprint::of($payload);
     }
 }

@@ -32,6 +32,11 @@ class SsoStep extends UpdateStep
         return $app_instance->usesOwnResources() && (bool) $app_instance->plan?->sso_server;
     }
 
+    public function aspects(): array
+    {
+        return ['sso'];
+    }
+
     public function afterUpgrade(AppInstance $app_instance): bool
     {
         return true;

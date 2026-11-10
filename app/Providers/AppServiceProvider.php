@@ -10,10 +10,16 @@ use App\Services\BillingDriverRegistry;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
 use App\Support\DevIngress;
+use App\Updates\AspectRegistry;
+use App\Updates\Aspects\ReleaseAspect;
+use App\Updates\Aspects\RolesAspect;
+use App\Updates\Aspects\SettingsAspect;
+use App\Updates\Aspects\SsoAspect;
 use App\Updates\Steps\LdapGroupsStep;
 use App\Updates\Steps\ReleaseStep;
 use App\Updates\Steps\SettingsJobStep;
 use App\Updates\Steps\SsoStep;
+use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
@@ -43,6 +49,12 @@ class AppServiceProvider extends ServiceProvider
             ->register(new SettingsJobStep)
             ->register(new LdapGroupsStep)
             ->register(new SsoStep));
+        $this->app->singleton(AspectRegistry::class, fn () => (new AspectRegistry)
+            ->register(new ReleaseAspect)
+            ->register(new SettingsAspect)
+            ->register(new RolesAspect)
+            ->register(new SsoAspect));
+        $this->app->singleton(UpdateDrift::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
