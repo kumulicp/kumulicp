@@ -31,6 +31,7 @@ return [
         'domain_wrong_ip' => 'El dominio apunta a :domainip en lugar de :serverip',
         'need_subscription' => 'Se necesita una suscripción',
         'parent_app' => ':app necesita instalarse primero',
+        'parent_app_unavailable' => ':app no está disponible',
         'time_range' => 'Esto se ejecutará entre :start y :end',
     ],
     'database_migration' => [

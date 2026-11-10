@@ -31,6 +31,7 @@ return [
         'domain_wrong_ip' => 'Domain pointing to :domainip instead of :serverip',
         'need_subscription' => 'Need subscription',
         'parent_app' => ':app needs to be installed first',
+        'parent_app_unavailable' => ':app is unavailable',
         'time_range' => 'This will run between :start and :end',
     ],
     'exception' => [

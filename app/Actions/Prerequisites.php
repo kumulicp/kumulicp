@@ -164,7 +164,10 @@ class Prerequisites
 
         if ($app && $app->status !== 'active') {
             $this->passed = false;
-            $this->addMessage(__('messages.action.parent_app', ['app' => $app->label]));
+            // An app that was running and stopped answering isn't waiting to be
+            // installed
+            $key = $app->isUnavailable() ? 'parent_app_unavailable' : 'parent_app';
+            $this->addMessage(__("messages.action.{$key}", ['app' => $app->label]));
         }
 
         return $this;

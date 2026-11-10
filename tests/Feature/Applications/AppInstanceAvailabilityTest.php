@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Prerequisites;
 use App\AppInstance;
 use App\Console\Calls\CheckUnavailableAppInstances;
 use App\Console\Calls\SyncAppMonitors;
@@ -330,6 +331,31 @@ it('lets API calls through again once the monitor finds a blocked app answering'
     Http::fake(['*' => Http::response('<ocs><meta><status>ok</status></meta><data/></ocs>', 200)]);
     failingCall($app);
     Http::assertSentCount(1);
+});
+
+it('tells a task waiting for the app that it is unavailable, not that it needs installing', function (string $status, string $says) {
+    $app = availabilityTestInstance();
+    $app->status = $status;
+    $app->save();
+
+    $prereqs = new Prerequisites;
+    $prereqs->check('application_required', ['app_id' => $app->id]);
+
+    expect($prereqs->passed)->toBeFalse()
+        ->and($prereqs->message)->toBe($says === 'unavailable' ? "{$app->label} is unavailable" : "{$app->label} needs to be installed first");
+})->with([
+    'unavailable' => ['unavailable', 'unavailable'],
+    'activating' => ['activating', 'install'],
+]);
+
+it('lets a task go ahead once the app is active', function () {
+    $app = availabilityTestInstance();
+
+    $prereqs = new Prerequisites;
+    $prereqs->check('application_required', ['app_id' => $app->id]);
+
+    expect($prereqs->passed)->toBeTrue()
+        ->and($prereqs->message)->toBe('');
 });
 
 it('says nothing about an app that was never unavailable, or that is restored twice', function () {
