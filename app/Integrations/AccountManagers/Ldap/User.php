@@ -5,6 +5,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 use App\AppInstance;
 use App\AppRole;
 use App\Ldap\Actions\Dn;
+use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\User as LdapUser;
@@ -91,7 +92,7 @@ class User extends UserManager
     public function appUserAccessType(AppInstance $app_instance)
     {
         $type = 'none';
-        $app_name = $app_instance->parent_id ? $app_instance->parent->name : $app_instance->name;
+        $app_name = LdapSupport::roleGroupApp($app_instance)->name;
         $app_dn = Dn::create($this->organization, 'applications', $app_name);
 
         $groups = $this->user->groups()->in($app_dn)->get();
@@ -184,7 +185,7 @@ class User extends UserManager
 
     public function hasAppRole(AppInstance $app_instance, AppRole $role)
     {
-        $app_instance = $app_instance->parent ?? $app_instance;
+        $app_instance = LdapSupport::roleGroupApp($app_instance);
         $role_dn = Dn::create($app_instance->organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
 
         return $this->user->groups()->exists($role_dn);

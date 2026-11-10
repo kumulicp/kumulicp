@@ -7,6 +7,7 @@ use App\Support\VersionTesting\VersionFingerprint;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
 use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -160,9 +161,10 @@ class AppVersion extends Model
         return $this->helm_repo_secret_id !== null && $this->helmRepoSecret && $this->helmRepoSecret->requiresAuth();
     }
 
-    public function roles(string|array|null $type = null, $all = true)
+    public function roles(string|array|null $type = null, $all = true): Collection
     {
-        $list = [];
+        // A version with no roles set up is an empty collection, not an array: callers map() and merge() it
+        $list = new Collection;
         $role_ids = $this->roles;
 
         if (isset($role_ids['order'])) {
