@@ -14,8 +14,9 @@ use Spatie\UptimeMonitor\Models\Monitor;
  * checker never sees them.
  *
  *  - An app's monitor: the app answered unless a gateway says nothing is
- *    behind it (AvailabilityService::isDownStatus). A login page, a 401 or
- *    a 500 from one endpoint is an app that is up. This is the same rule the
+ *    behind it (AvailabilityService::isDownResponse: a 502/503/504, or the
+ *    ingress's own "404 page not found"). A login page, a 401 or a 500 from
+ *    one endpoint is an app that is up. This is the same rule the
  *    API calls use, so both agree on what "unavailable" means.
  *  - Any other monitor: what the package did before, any 4xx/5xx is down.
  *
@@ -45,8 +46,14 @@ class ResponseChecker implements UptimeResponseChecker
     {
         $status = $response->getStatusCode();
 
-        return $monitor->app_instance_id !== null
-            ? ! AvailabilityService::isDownStatus($status)
-            : $status < 400;
+        if ($monitor->app_instance_id === null) {
+            return $status < 400;
+        }
+
+        // The body only matters for a 404, so it is only read then. (string)
+        // rewinds the stream first, and the look_for_string check reads it after
+        $body = $status === 404 ? (string) $response->getBody() : '';
+
+        return ! AvailabilityService::isDownResponse($status, $response->getHeaderLine('Content-Type'), $body);
     }
 }

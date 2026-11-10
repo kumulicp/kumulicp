@@ -170,6 +170,50 @@ it('does not treat an app error as the app being down', function () {
     Notification::assertNothingSent();
 });
 
+// Traefik drops the route of an Ingress whose Service has no ready pods (an app
+// scaled to 0) and answers Go's http.NotFound for the host
+it('treats the ingress\'s own "404 page not found" as the app being down', function () {
+    $app = availabilityTestInstance();
+    Http::fake(['*' => Http::response("404 page not found\n", 404, ['Content-Type' => 'text/plain; charset=utf-8'])]);
+
+    expect(fn () => failingCall($app))->toThrow(ConnectionFailedException::class);
+
+    expect($app->fresh()->status)->toBe('unavailable');
+    Notification::assertSentTo(availabilityAdminsOf($app->organization), AppInstanceUnavailableWarning::class);
+});
+
+it('does not let a caller that ignores 404 hide the ingress\'s 404', function () {
+    $app = availabilityTestInstance();
+    Http::fake(['*' => Http::response("404 page not found\n", 404, ['Content-Type' => 'text/plain; charset=utf-8'])]);
+
+    $users = new Users($app);
+    $users->ignoreErrorCode(404);
+
+    // Not "no such user": the app isn't there, and the task should try again
+    expect(fn () => $users->find('someone'))->toThrow(ConnectionFailedException::class);
+
+    expect($app->fresh()->status)->toBe('unavailable');
+});
+
+it('does not take an app\'s own 404 for the app being down', function (string $body, string $content_type) {
+    $app = availabilityTestInstance();
+    Http::fake(['*' => Http::response($body, 404, ['Content-Type' => $content_type])]);
+
+    try {
+        failingCall($app);
+    } catch (Throwable) {
+        // the 404 is reported to the caller as before
+    }
+
+    expect($app->fresh()->status)->toBe('active');
+    Notification::assertNotSentTo(availabilityAdminsOf($app->organization), AppInstanceUnavailableWarning::class);
+})->with([
+    'json' => ['{"code":"rest_no_route","message":"No route was found"}', 'application/json'],
+    'html' => ['<html><body>Not found</body></html>', 'text/html'],
+    'same words as html' => ['404 page not found', 'text/html'],
+    'plain text, other words' => ['no such user', 'text/plain'],
+]);
+
 it('leaves an app that is not active alone, since its API is expected not to answer', function (string $status) {
     $app = availabilityTestInstance();
     $app->status = $status;
@@ -518,6 +562,23 @@ it('judges answers: for an app only a gateway error is down, for any other monit
     '502' => [502, false, false],
     '503' => [503, false, false],
     '504' => [504, false, false],
+]);
+
+it('judges the ingress\'s "404 page not found" as down for an app, and an app\'s own 404 as up', function (string $body, string $content_type, bool $app_is_up, bool $other_is_up) {
+    $checker = new ResponseChecker;
+    $response = new Response(404, ['Content-Type' => $content_type], $body);
+
+    $app_monitor = new AppMonitor(['url' => 'http://app.example', 'app_instance_id' => 1]);
+    $other = new AppMonitor(['url' => 'http://other.example']);
+
+    expect($checker->isValidResponse($response, $app_monitor))->toBe($app_is_up)
+        // and the body is still there for the next check
+        ->and((string) $response->getBody())->toBe($body)
+        ->and($checker->isValidResponse($response, $other))->toBe($other_is_up);
+})->with([
+    'ingress' => ["404 page not found\n", 'text/plain; charset=utf-8', false, false],
+    'json' => ['{"code":"rest_no_route"}', 'application/json', true, false],
+    'html' => ['<html>Not found</html>', 'text/html', true, false],
 ]);
 
 it('still looks for the monitor\'s string', function () {

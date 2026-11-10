@@ -13,9 +13,12 @@ uptime reports, a status page, ...).
 
 ## What happens
 
-1. **An API call fails.** The call can't connect (refused, DNS, timeout) or gets
-   a `502`, `503` or `504`. A `500` or `4xx` doesn't count: the app answered, one
-   endpoint is just unhappy.
+1. **An API call fails.** The call can't connect (refused, DNS, timeout), gets
+   a `502`, `503` or `504`, or gets the ingress's own `404 page not found` (a
+   `text/plain` 404 with exactly that body; Traefik answers it for an app scaled
+   to 0, because it drops the route of a Service with no ready pods). A `500` or
+   any other `4xx` doesn't count: the app answered, one endpoint is just
+   unhappy. An app's own 404 (JSON or HTML) is never mistaken for the ingress's.
    The app goes from `active` to `unavailable` and **one warning** is sent. The
    call itself fails as a `ConnectionFailedException`, so a task running it goes
    back to pending and tries again later.
@@ -77,8 +80,8 @@ All in `config/uptime-monitor.php`:
   down on every run.
 * `response_checker` is `App\Monitoring\ResponseChecker`, and `guzzle_options`
   has `http_errors` off so that checker sees every answer. For an app's monitor
-  only `502`/`503`/`504` (or no connection) is down, the same rule the API calls
-  use (`AvailabilityService::isDownStatus()`); for any other monitor any `4xx`/`5xx`
+  only `502`/`503`/`504`, the ingress's `404 page not found`, or no connection is down, the same rule the API calls
+  use (`AvailabilityService::isDownResponse()`); for any other monitor any `4xx`/`5xx`
   is, as before. A monitor's `look_for_string` still applies.
 * The package's "went down" and "recovered" emails to `ERRORS_EMAIL` are
   `App\Monitoring\Notifications\UptimeCheckFailed` / `UptimeCheckRecovered`, which

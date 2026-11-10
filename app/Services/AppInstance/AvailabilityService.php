@@ -45,9 +45,36 @@ class AvailabilityService
     // a login page is an app that is up. Used by API calls and by the monitors.
     public const DOWN_STATUS_CODES = [502, 503, 504];
 
+    // What an ingress controller answers when no route matches the host. Traefik
+    // drops the route of an Ingress whose Service has no ready pods (an app
+    // scaled to 0), so such an app gets this instead of a 503. It is Go's
+    // http.NotFound: plain text, this exact body. An app's own 404 (WordPress
+    // answers JSON or HTML) never looks like it.
+    public const GATEWAY_NOT_FOUND_BODY = '404 page not found';
+
     public static function isDownStatus(int $status): bool
     {
         return in_array($status, self::DOWN_STATUS_CODES, true);
+    }
+
+    /**
+     * An ingress answering for an app that isn't there, not the app itself.
+     */
+    public static function isGatewayNotFound(int $status, ?string $contentType, string $body): bool
+    {
+        return $status === 404
+            && str_starts_with(strtolower(trim((string) $contentType)), 'text/plain')
+            && trim($body) === self::GATEWAY_NOT_FOUND_BODY;
+    }
+
+    /**
+     * Whether an answer means nothing is serving the app: a gateway error, or
+     * the ingress having no route for it. The one rule API calls and monitors
+     * share.
+     */
+    public static function isDownResponse(int $status, ?string $contentType, string $body): bool
+    {
+        return self::isDownStatus($status) || self::isGatewayNotFound($status, $contentType, $body);
     }
 
     /**
