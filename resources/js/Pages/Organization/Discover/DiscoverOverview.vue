@@ -184,7 +184,7 @@ export default {
 
     const parentDomains = {}
 
-    for (const domain of Object.entries(this.parent_domains)) {
+    for (const domain of Object.values(this.parent_domains)) {
       parentDomains[domain.value] = domain.text
     }
 
@@ -196,7 +196,7 @@ export default {
     }
 
     const settings = {}
-    for (const setting of Object.entries(this.settings)) {
+    for (const setting of Object.values(this.settings)) {
       settings[setting.name] = setting.value
     }
 
