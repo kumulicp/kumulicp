@@ -26,7 +26,7 @@ class NextcloudChart extends HelmChart
 
         $namespace = $organization->slug;
 
-        return [
+        $chart = [
             'replicaCount' => $this->replicaCount(),
             'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-nextcloud-'.$app_instance->id),
             'image' => [
@@ -52,6 +52,11 @@ class NextcloudChart extends HelmChart
             'imaginary' => [
                 'enabled' => $app_instance->configuration('imaginary-enabled'),
                 'replicaCount' => $app_instance->configuration('imaginary-replicaCount'),
+                'image' => [
+                    'registry' => $app_instance->configuration('imaginary-image-registry'),
+                    'repository' => $app_instance->configuration('imaginary-image-repository'),
+                    'tag' => $app_instance->configuration('imaginary-image-tag'),
+                ],
             ],
             'ingress' => [
                 'annotations' => $app_instance->configuration('ingress-tls') ? [
@@ -157,6 +162,76 @@ class NextcloudChart extends HelmChart
                     ],
                 ],
             ],
+        ];
+
+        if ($app_instance->configuration('restricted-security-context')) {
+            $chart = array_replace_recursive($chart, $this->restrictedValues());
+            $chart['nextcloud']['extraEnv'][] = ['name' => 'APACHE_PORT', 'value' => (string) self::RESTRICTED_PORT];
+        }
+
+        return $chart;
+    }
+
+    // Apache cannot bind port 80 without root or NET_BIND_SERVICE, so a
+    // restricted pod listens here. The image reads it from APACHE_PORT.
+    private const RESTRICTED_PORT = 8080;
+
+    // The nextcloud image runs as www-data, uid/gid 33. The chart applies the
+    // pod context (and so fsGroup, which makes the data volume writable) to the
+    // cron pod too; the container context is set separately for it.
+    public static function restrictedPodSecurityContext(): array
+    {
+        return [
+            'runAsNonRoot' => true,
+            'runAsUser' => 33,
+            'runAsGroup' => 33,
+            'fsGroup' => 33,
+            'seccompProfile' => ['type' => 'RuntimeDefault'],
+        ];
+    }
+
+    public static function restrictedContainerSecurityContext(): array
+    {
+        return [
+            'allowPrivilegeEscalation' => false,
+            'privileged' => false,
+            'runAsNonRoot' => true,
+            'runAsUser' => 33,
+            'runAsGroup' => 33,
+            'capabilities' => ['drop' => ['ALL']],
+            'seccompProfile' => ['type' => 'RuntimeDefault'],
+        ];
+    }
+
+    private function restrictedValues(): array
+    {
+        $container = self::restrictedContainerSecurityContext();
+
+        // The helper pods have their own images and users (uid 1000), so only
+        // what they lack is added to the chart's own defaults.
+        $helper = [
+            'allowPrivilegeEscalation' => false,
+            'privileged' => false,
+            'runAsNonRoot' => true,
+            'runAsUser' => 1000,
+            'capabilities' => ['drop' => ['ALL']],
+            'seccompProfile' => ['type' => 'RuntimeDefault'],
+        ];
+
+        return [
+            'nextcloud' => [
+                'containerPort' => self::RESTRICTED_PORT,
+                'podSecurityContext' => self::restrictedPodSecurityContext(),
+                'securityContext' => $container,
+            ],
+            // The chart's default cron is a crond sidecar, which needs root. A
+            // Kubernetes CronJob runs the same cron.php as the unprivileged user.
+            'cronjob' => [
+                'type' => 'cronjob',
+                'cronjob' => ['securityContext' => $container],
+            ],
+            'imaginary' => ['securityContext' => $helper],
+            'metrics' => ['securityContext' => $helper],
         ];
     }
 

@@ -197,6 +197,21 @@ class NextcloudProfile extends AppProfile
             'persistent' => false,
             'validations' => 'nullable|integer',
         ],
+        // Off keeps the chart's own security contexts and Apache on port 80
+        // (what existing instances run). On runs the Nextcloud and cron pods as
+        // www-data (uid/gid 33) with no privilege escalation, all capabilities
+        // dropped and the RuntimeDefault seccomp profile. A non-root process
+        // cannot bind port 80, so Apache listens on 8080 (APACHE_PORT) -- this
+        // needs an image built from dockers/nextcloud with APACHE_PORT support;
+        // a stock nextcloud image ignores the variable and the pod would never
+        // become ready. The data volume is made writable through fsGroup 33.
+        'restricted-security-context' => [
+            'name' => 'restricted-security-context',
+            'type' => 'bool',
+            'default' => false,
+            'persistent' => false,
+            'validations' => 'nullable|boolean',
+        ],
         'cronjob' => [
             'name' => 'cronjob',
             'type' => 'bool',
@@ -525,6 +540,32 @@ class NextcloudProfile extends AppProfile
             'default' => 1,
             'persistent' => false,
             'validations' => 'nullable|integer',
+        ],
+        // The chart's own imaginary image (h2non/imaginary 1.2.4) is years old.
+        // Nextcloud's maintained build runs with the chart's template unchanged:
+        // it reads PORT (9000), serves /health, and works as uid 1000 with a
+        // read-only root filesystem and all capabilities dropped. The tag is
+        // exact (dated), never `latest`.
+        'imaginary-image-registry' => [
+            'name' => 'imaginary-image-registry',
+            'type' => 'string',
+            'default' => 'docker.io',
+            'persistent' => false,
+            'validations' => 'required|string',
+        ],
+        'imaginary-image-repository' => [
+            'name' => 'imaginary-image-repository',
+            'type' => 'string',
+            'default' => 'nextcloud/aio-imaginary',
+            'persistent' => false,
+            'validations' => 'required|string',
+        ],
+        'imaginary-image-tag' => [
+            'name' => 'imaginary-image-tag',
+            'type' => 'string',
+            'default' => '20261109_101109',
+            'persistent' => false,
+            'validations' => 'required|string',
         ],
         'nextcloud-php-memory-limit' => [
             'name' => 'nextcloud-php-memory-limit',
