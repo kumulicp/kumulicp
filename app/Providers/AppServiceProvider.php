@@ -21,8 +21,11 @@ use App\Updates\Steps\SettingsJobStep;
 use App\Updates\Steps\SsoStep;
 use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
@@ -87,6 +90,13 @@ class AppServiceProvider extends ServiceProvider
         // Cashier::calculateTaxes();
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('oidc', OidcProvider::class);
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            $user = $request->user();
+
+            return Limit::perMinute((int) config('api.rate_limit'))
+                ->by($user ? $user::class.':'.$user->getAuthIdentifier() : (string) $request->ip());
         });
     }
 
