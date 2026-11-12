@@ -23,6 +23,7 @@
         "spatie/laravel-backup": "^10.0",
         "spatie/laravel-permission": "^8.3",
         "spatie/laravel-uptime-monitor": "^4.5",
+        "symfony/yaml": "^8.1",
         "tightenco/ziggy": "^2.3",
         "unisharp/laravel-filemanager": "^2.12"
     },
