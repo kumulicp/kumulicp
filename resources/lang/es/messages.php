@@ -52,6 +52,7 @@ return [
         'no_default_plan' => '¡No hay un plan predeterminado!',
         'version_test_activate_failed' => 'No se pudo instalar la aplicación en la organización de prueba',
         'version_test_upgrade_failed' => 'No se pudo actualizar la aplicación en la organización de prueba',
+        'job_not_registered' => 'No hay ningún trabajo :job registrado para :app, por lo que no se ejecutó nada. Es posible que falte el plugin de la aplicación o que esté desactualizado.',
         'version_test_site_failed' => 'No se pudo añadir el sitio a la aplicación compartida en la organización de prueba',
         'version_test_provisioning_failed' => 'No se pudo preparar la organización de prueba',
         'database_failed' => 'No se pudo crear la base de datos',

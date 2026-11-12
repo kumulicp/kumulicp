@@ -9,6 +9,7 @@ use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 
 class ApplicationUpdateJob extends Action
 {
@@ -51,8 +52,28 @@ class ApplicationUpdateJob extends Action
     {
         $job = Application::runJob($task->app_instance, $task->getValue('job_name'));
 
-        // No job class registered for this app/action -- nothing to run.
+        // No job class registered for this app/action.
         if (! $job) {
+            $job_name = $task->getValue('job_name');
+
+            // An app that runs its lifecycle as jobs has to have the job, or the
+            // activation, upgrade or delete would report success without doing
+            // anything (e.g. a plugin that is not installed, or an old version
+            // of it). The other jobs (update_settings, update_domain, ...) are
+            // optional for an app, so nothing to run is fine for them.
+            if (self::lifecycleJobMissing($task->app_instance, $job_name)) {
+                $task->error_message = __('messages.exception.job_not_registered', [
+                    'job' => $job_name,
+                    'app' => $task->app_instance->application->name,
+                ]);
+                $task->status = TaskStatus::FAILED;
+                $task->save();
+
+                Log::warning('Job not registered for an app that runs it as a job', ['app_instance_id' => $task->app_instance_id, 'job' => $job_name]);
+
+                return;
+            }
+
             // Gone counts as done: whatever was waiting for it is told now
             $runner = app(TaskRunner::class);
             $waiting = $runner->dependentsOf([$task]);
@@ -82,6 +103,15 @@ class ApplicationUpdateJob extends Action
         $action->addCustomValue(['job_id' => Arr::get($job, 'response.metadata.name')]);
 
         return $action;
+    }
+
+    // The jobs an app with the 'job' activation type cannot do without
+    private const LIFECYCLE_JOBS = ['activate', 'upgrade', 'deactivate'];
+
+    private static function lifecycleJobMissing(AppInstance $app_instance, string $job_name): bool
+    {
+        return in_array($job_name, self::LIFECYCLE_JOBS, true)
+            && Application::profile($app_instance->application->slug)->activationType($app_instance) === 'job';
     }
 
     public static function retry(Task $task)

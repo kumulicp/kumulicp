@@ -38,6 +38,7 @@ return [
         'no_default_plan' => 'There is no default plan set!',
         'version_test_activate_failed' => 'The app could not be installed in the test org',
         'version_test_upgrade_failed' => 'The app could not be upgraded in the test org',
+        'job_not_registered' => 'No :job job is registered for :app, so nothing was run. The app\'s plugin may be missing or out of date.',
         'version_test_site_failed' => 'The site could not be added to the shared app in the test org',
         'version_test_provisioning_failed' => 'The test org could not be set up',
         'database_failed' => "Database couldn't be created",
