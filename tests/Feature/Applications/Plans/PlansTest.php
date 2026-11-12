@@ -145,6 +145,22 @@ it('saves distinct prices per enabled currency for the app plan', function () {
     expect($this->appPlan->setting('storage.prices.CAD.amount'))->toEqual(2);
 });
 
+it('always gives the edit page the pricing components, even for a plan that lacks them', function () {
+    $this->appPlan->settings = ['server_type' => 'separate'];
+    $this->appPlan->save();
+
+    $response = $this->actingAs($this->user)->get(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/edit"
+    );
+
+    $response->assertInertia(fn ($page) => $page
+        ->has('plan.settings.base')
+        ->has('plan.settings.standard')
+        ->has('plan.settings.basic')
+        ->has('plan.settings.storage')
+    );
+});
+
 it('passes all enabled currencies to the app plan edit page', function () {
     Settings::update('enabled_currencies', json_encode(['USD', 'CAD', 'EUR']));
 

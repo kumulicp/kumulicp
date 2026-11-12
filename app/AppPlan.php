@@ -263,9 +263,22 @@ class AppPlan extends Model
 
     // The settings that are safe to send to the browser: everything except the
     // plan's custom secrets (see PlanSecretsService), which only the server uses.
+    /**
+     * What the admin pages are shown. A plan not made through the admin form
+     * (or one that was reset) can lack the pricing components, which the pages
+     * read directly, so each one is always present.
+     *
+     * @return array<string, mixed>
+     */
     public function publicSettings(): array
     {
-        return Arr::except($this->settings ?? [], [PlanSecretsService::SETTING]);
+        $settings = Arr::except($this->settings ?? [], [PlanSecretsService::SETTING]);
+
+        foreach (['base', 'standard', 'basic', 'storage', 'application'] as $component) {
+            $settings[$component] ??= [];
+        }
+
+        return $settings;
     }
 
     public function updateSetting($setting, $value)
