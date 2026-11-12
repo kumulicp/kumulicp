@@ -97,7 +97,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
-                'features' => json_encode($plan->features),
+                'features' => json_encode($plan->features ?? []),
                 'description' => $plan->description,
                 'payment_enabled' => $plan->payment_enabled,
                 'admin_access' => $plan->setting('admin_access'),
@@ -226,7 +226,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
-                'features' => $plan->features,
+                'features' => $plan->features ?? [],
                 'description' => $plan->description,
                 'payment_enabled' => $plan->payment_enabled,
                 'admin_access' => $plan->setting('admin_access'),
@@ -332,7 +332,7 @@ class Plans extends Controller
 
         $plan->name = $request->name;
         $plan->description = $request->description;
-        $plan->features = $request->displayed_features;
+        $plan->features = $request->displayed_features ?? [];
         $plan->payment_enabled = $request->payment_enabled;
         $plan->web_server_id = $web_server;
         $plan->database_server_id = $database_server;

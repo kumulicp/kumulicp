@@ -145,8 +145,9 @@ it('saves distinct prices per enabled currency for the app plan', function () {
     expect($this->appPlan->setting('storage.prices.CAD.amount'))->toEqual(2);
 });
 
-it('always gives the edit page the pricing components, even for a plan that lacks them', function () {
+it('gives the edit page pricing components and a feature list, even for a plan that lacks them', function () {
     $this->appPlan->settings = ['server_type' => 'separate'];
+    $this->appPlan->features = null;
     $this->appPlan->save();
 
     $response = $this->actingAs($this->user)->get(
@@ -158,6 +159,7 @@ it('always gives the edit page the pricing components, even for a plan that lack
         ->has('plan.settings.standard')
         ->has('plan.settings.basic')
         ->has('plan.settings.storage')
+        ->where('plan.features', [])
     );
 });
 

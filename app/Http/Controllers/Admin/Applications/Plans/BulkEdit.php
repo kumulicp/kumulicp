@@ -75,7 +75,7 @@ class BulkEdit extends Controller
             'id' => $plan->id,
             'name' => $plan->name,
             'is_default' => $plan->is_default,
-            'features' => $plan->features,
+            'features' => $plan->features ?? [],
             'description' => $plan->description,
             'payment_enabled' => $plan->payment_enabled,
             'admin_access' => $plan->setting('admin_access'),
