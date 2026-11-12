@@ -214,8 +214,13 @@ class ApplicationActivate extends NativeAction
                 $organization_created = true;
             }
         } elseif ($app_profile->activationType($app_instance->get()) === 'job') {
-            $new_task = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'activate'), $task, background: true);
-            $parent_app_task = ActionFacade::execute(new ApplicationUpgrade($app_instance->parent, $app_instance->parent->version), $task, background: true);
+            // execute() returns nothing when an identical task is already open. That one
+            // still has to finish first: waiting for nothing would activate the instance
+            // without its site job (or the parent's upgrade) having run.
+            $new_task = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'activate'), $task, background: true)
+                ?? self::openTask('application_update_job', $app_instance->app_instance, 'activate');
+            $parent_app_task = ActionFacade::execute(new ApplicationUpgrade($app_instance->parent, $app_instance->parent->version), $task, background: true)
+                ?? self::openTask('application_upgrade', $app_instance->parent);
             $result = $result->waitingFor(...array_filter([$new_task, $parent_app_task]));
         }
 
@@ -231,6 +236,17 @@ class ApplicationActivate extends NativeAction
         }
 
         return $result;
+    }
+
+    // The open task already doing $slug for this instance (and job, if given)
+    private static function openTask(string $slug, AppInstance $app_instance, ?string $job_name = null): ?Task
+    {
+        return Task::where('action_slug', $slug)
+            ->where('app_instance_id', $app_instance->id)
+            ->whereIn('status', TaskStatus::openValues())
+            ->when($job_name, fn ($query) => $query->where('custom_values->job_name', $job_name))
+            ->latest('id')
+            ->first();
     }
 
     public static function retry(Task $task): ?Action
