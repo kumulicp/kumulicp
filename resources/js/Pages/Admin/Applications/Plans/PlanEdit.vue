@@ -10,7 +10,8 @@ import { currencyByCode } from '@/constants/currencies'
   <Head>
     <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
-  <div class="row justify-center">
+  <!-- A shared app's plan is its own, hidden from organizations: nothing about subscribing to it applies -->
+  <div v-if="!plan.hidden" class="row justify-center">
     <Link v-if="!plan.archived" :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/archive'"><va-button id="createUser">{{ $t('admin.plans.archivePlan') }}</va-button></Link>
     <Link v-else :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ $t('admin.plans.makePublic') }}</va-button></Link>
   </div>
@@ -27,7 +28,8 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.name"
           :error-messages="$page.props.errors.name"
           />
-        <va-checkbox v-model="form.default"
+        <va-checkbox v-if="!plan.hidden"
+          v-model="form.default"
           class="my-2"
           :label="$t('admin.plans.defaultPlan') "
           :messages="$t('admin.plans.defaultPlanCaption')"
@@ -43,6 +45,7 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.description"
           :error-messages="$page.props.errors.description"
           />
+        <template v-if="!plan.hidden">
         <va-checkbox v-model="form.payment_enabled"
           class="my-2"
           :label="$t('admin.plans.enablePayment')"
@@ -118,6 +121,7 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.domain_max"
           :error-messages="$page.props.errors.domain_max"
         />
+        </template>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
@@ -199,6 +203,8 @@ import { currencyByCode } from '@/constants/currencies'
         </template>
       </template>
     </AdminSettings>
+    <!-- What organizations see and pay for, and how many users and how much storage they get -->
+    <template v-if="!plan.hidden">
     <va-list-separator class="my-1" fit />
     <AdminSettings>
       <template #name>{{ $t('admin.plans.displayedFeatures') }}</template>
@@ -489,6 +495,7 @@ import { currencyByCode } from '@/constants/currencies'
         </va-input>
       </template>
     </AdminSettings>
+    </template>
     <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>

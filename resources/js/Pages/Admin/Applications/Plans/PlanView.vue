@@ -20,7 +20,7 @@ import PlanLayout from './PlanLayout.vue'
         <td><b>{{ $t('admin.plans.name') }}:</b></td>
         <td>{{ plan.name }}</td>
       </tr>
-      <tr>
+      <tr v-if="!plan.hidden">
         <td><b>{{ $t('admin.plans.defaultPlan') }}:</b></td>
         <td>{{ plan.is_default }}</td>
       </tr>
@@ -28,6 +28,7 @@ import PlanLayout from './PlanLayout.vue'
         <td><b>{{ $t('admin.plans.description') }}:</b></td>
         <td>{{ plan.description }}</td>
       </tr>
+      <template v-if="!plan.hidden">
       <tr>
         <td><b>{{ $t('admin.plans.features') }}:</b></td>
         <td>{{ plan.features }}</td>
@@ -56,6 +57,7 @@ import PlanLayout from './PlanLayout.vue'
         <td><b>{{ $t('admin.plans.maxDomains') }}:</b></td>
         <td>{{ plan.domain_max }}</td>
       </tr>
+      </template>
       <tr>
         <td><b>{{ $t('admin.plans.webServer') }}:</b></td>
         <td>{{ plan.web_server }}</td>
@@ -72,6 +74,7 @@ import PlanLayout from './PlanLayout.vue'
         <td><b>{{ $t('admin.plans.parentServer') }}:</b></td>
         <td>{{ plan.parent_server }}</td>
       </tr>
+      <template v-if="!plan.hidden">
       <tr>
         <td><h5 class="va-h5">{{ $t('admin.plans.baseOptions') }}</h5></td>
         <td></td>
@@ -156,6 +159,7 @@ import PlanLayout from './PlanLayout.vue'
         <td><b>{{ $t('admin.plans.quantity') }}:</b></td>
         <td>{{ plan.settings.storage.amount }}{{ $t('admin.plans.gb') }}</td>
       </tr>
+      </template>
       <tr>
         <td><h5 class="va-h5">{{ $t('admin.plans.features') }}</h5></td>
         <td></td>
@@ -185,6 +189,7 @@ import PlanLayout from './PlanLayout.vue'
             </tr>
           </template>
         </template>
+        <template v-if="!plan.hidden">
         <tr>
           <td>
             <b>{{ $t('admin.plans.price') }}:</b>
@@ -209,6 +214,7 @@ import PlanLayout from './PlanLayout.vue'
             {{ labels[plan.settings.features[feature.value].payment_type] }}
           </td>
         </tr>
+        </template>
       </template>
       <tr>
         <td><h5 class="va-h5">{{ $t('admin.plans.configurations') }}</h5></td>
