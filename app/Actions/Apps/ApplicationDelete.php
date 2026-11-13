@@ -130,7 +130,7 @@ class ApplicationDelete extends NativeAction
             return null;
         }
 
-        if ($task->attempts > 0) {
+        if ($task->hasStarted()) {
             return __('messages.action.cancelled_delete_started');
         }
 

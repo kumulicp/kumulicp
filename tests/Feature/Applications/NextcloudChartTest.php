@@ -51,6 +51,10 @@ it('gives the app its own database password rather than the organization secret'
     $org_server->backup_server_id = $org_server->id;
     $org_server->save();
 
+    // The chart's environment reads the web server's address
+    $web_server = OrgServer::create(['organization_id' => $organization->id, 'server_id' => Server::factory()->create()->id]);
+
+    $app_instance->web_server_id = $web_server->id;
     $app_instance->db_password = 'instance-database-secret';
     $app_instance->database_server_id = $org_server->id;
     $app_instance->databasename = 'demo_nextcloud';
