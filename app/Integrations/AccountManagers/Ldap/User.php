@@ -95,10 +95,14 @@ class User extends UserManager
         $app_name = LdapSupport::roleGroupApp($app_instance)->name;
         $app_dn = Dn::create($this->organization, 'applications', $app_name);
 
+        // A group's application is found by the name in its DN, which for a centralized shared app's
+        // instance (one with no site of its own) is the shared app's, not the instance's
+        $group_app = $app_instance->sharedPlanParent() && ! $app_instance->usesMultisitePermissions() ? $app_instance->parent : $app_instance;
+
         $groups = $this->user->groups()->in($app_dn)->get();
         foreach ($groups as $group) {
             $app_role = $group->appRole();
-            if ($app_role && $group->application()?->is($app_instance)) {
+            if ($app_role && $group->application()?->is($group_app)) {
                 if (! in_array($type, ['standard', 'basic']) && $app_role->accessType(app: $app_instance)->value === 'minimal') {
                     $type = 'minimal';
                 } elseif ($app_role->accessType(app: $app_instance)->value === 'basic') {

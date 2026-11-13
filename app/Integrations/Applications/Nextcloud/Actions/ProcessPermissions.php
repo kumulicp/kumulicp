@@ -34,7 +34,8 @@ class ProcessPermissions extends Action
 
     public static function run(Task $task)
     {
-        $user = new Users($task->app_instance);
+        // A shared instance has no Nextcloud of its own: the API (and its credentials) is the hub's
+        $user = new Users($task->app_instance->sharedPlanParent() ?? $task->app_instance);
         try {
             $user->find($task->getValue('user'));
         } catch (\Throwable $e) {

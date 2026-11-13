@@ -157,6 +157,7 @@ class Users
         $members = collect();
 
         $roles = (new AppInstanceService($app_instance))->standardRoles();
+        $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
             $group_dn = Dn::create($organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
