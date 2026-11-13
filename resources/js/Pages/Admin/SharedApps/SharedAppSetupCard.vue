@@ -73,12 +73,12 @@ const manageExternally = () => {
       <p class="mb-4">{{ $t('admin.sharedApps.activateDescription', { app: sharedApp.label }) }}</p>
       <va-stepper v-model="step" :steps="steps" controlsHidden>
         <template v-for="(item, index) in steps" #[`step-button-${index}`]="{ isActive }">
-          <Link v-if="item.url && !item.disabled" :key="index" :href="item.url" :id="'step' + index">
+          <Link v-if="item.url && !item.disabled" :key="'link' + index" :href="item.url" :id="'step' + index">
             <va-button preset="secondary" :icon="item.icon" :color="item.completed ? 'success' : 'primary'">{{ item.label }}</va-button>
           </Link>
           <va-button
             v-else
-            :key="index"
+            :key="'button' + index"
             :id="'step' + index"
             :preset="isActive ? 'primary' : 'secondary'"
             :icon="item.icon"
