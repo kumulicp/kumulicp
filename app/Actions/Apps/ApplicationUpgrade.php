@@ -108,7 +108,7 @@ class ApplicationUpgrade extends NativeAction
             return null;
         }
 
-        $started = $task->attempts > 0;
+        $started = $task->hasStarted();
 
         if (! $started && $previous = $task->getValue('previous_version_id')) {
             $app_instance->version_id = $previous;

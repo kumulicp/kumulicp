@@ -11,6 +11,7 @@ use App\Organization;
 use App\Server;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
+use App\Support\Facades\Application;
 use App\Task;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -208,23 +209,19 @@ it('has no customizations to process for a container that has no site, and compl
     expect($task->app_instance->fresh()->status)->toBe('active');
 });
 
-it('runs again when the organization had to be created on the server first', function () {
+// Connecting to the server makes the organization when it is not there (ServerInterfaceService::checkConnection(),
+// which waits for it), so by the time the activation looks, it exists and the activation goes on
+it('creates the organization on the server when connecting, and carries on', function () {
     $task = activationTask();
     FakeServerManager::missingOrganization();
 
     (new RunAction($task))->handle();
 
     $fresh = $task->fresh();
-    expect($fresh->status)->toBe(TaskStatus::PENDING);
-    expect($fresh->error_message)->toBe(__('messages.action.organization_created'));
-    expect($fresh->next_attempt_at)->not->toBeNull();
+    expect($fresh->status)->toBe(TaskStatus::IN_PROGRESS);
+    expect($fresh->error_message)->toBeNull();
+    expect(Application::instance($task->app_instance)->connect('web')->existsOrganization())->toBeTrue();
     expect(Task::where('action_slug', 'process_customizations')->count())->toBe(1);
-
-    // And the second time through it is there
-    $fresh->transition(TaskStatus::READY, TaskStatus::PENDING, ['next_attempt_at' => null]);
-    (new RunAction($fresh->fresh()))->handle();
-
-    expect($task->fresh()->status)->toBe(TaskStatus::IN_PROGRESS);
 });
 
 it('fails when the app is not on the server', function () {

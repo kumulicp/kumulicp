@@ -137,6 +137,21 @@ it('stops waiting for a task that is deleted', function () {
     expect(ActionFacade::checkPrerequisites($task)->passed)->toBeTrue();
 });
 
+it('does not wait for a task that is already gone', function () {
+    $gone = depTask();
+    $still_there = depTask();
+    $task = depTask();
+    $gone_id = $gone->id;
+    // A task with nothing to run deletes itself, and on a fast queue it can be before it is waited for
+    $gone->delete();
+
+    $task->dependOn([$gone_id, $still_there->id]);
+    $task->syncFinishDependencies([$gone_id]);
+
+    expect(depIds($task, 'start'))->toBe([$still_there->id]);
+    expect(depIds($task, 'finish'))->toBe([]);
+});
+
 it('holds a pending task until the task it waits for is complete', function () {
     $dependency = depTask(['status' => 'in_progress']);
     $task = depTask();

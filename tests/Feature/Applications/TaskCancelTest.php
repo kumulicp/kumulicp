@@ -6,6 +6,8 @@ use App\AppVersion;
 use App\Organization;
 use App\Services\Tasks\TaskOperator;
 use App\Support\Facades\Action;
+use App\Task;
+use App\TaskEvent;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -16,6 +18,14 @@ use Tests\Support\TestSupports;
  * actions mark the app updating/deleting the moment their task is made.
  */
 uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+
+// What a worker does when it takes the task up
+function markRun(Task $task): void
+{
+    $task->attempts = 1;
+    $task->save();
+    TaskEvent::record($task, 'started');
+}
 
 beforeEach(function () {
     $this->setupFakeServerInterfaces();
@@ -73,8 +83,7 @@ it('makes the app active but says it may be part way through when an upgrade tha
     $new_version = AppVersion::factory()->create(['application_id' => $instance->application_id]);
     Queue::fake();
     $task = Action::execute(new ApplicationUpgrade($instance, $new_version));
-    $task->attempts = 1;
-    $task->save();
+    markRun($task);
 
     app(TaskOperator::class)->cancel($task->fresh());
 
@@ -112,8 +121,7 @@ it('leaves an app deleting, and says why, when a delete that had started is canc
     $instance = cancellableInstance();
     Queue::fake();
     $task = Action::execute(new ApplicationDelete($instance));
-    $task->attempts = 1;
-    $task->save();
+    markRun($task);
 
     app(TaskOperator::class)->cancel($task->fresh());
 

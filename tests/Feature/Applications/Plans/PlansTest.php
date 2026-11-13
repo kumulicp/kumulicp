@@ -265,7 +265,7 @@ it('rejects a currency amount that is not numeric for the app plan', function ()
 });
 
 it('clones an app plan under a new name', function () {
-    $this->appPlan->update(['is_default' => true, 'archive' => true, 'display_order' => 1]);
+    $this->appPlan->forceFill(['is_default' => true, 'archive' => true, 'display_order' => 1])->save();
 
     $response = $this->actingAs($this->user)->post(
         "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/clone",
@@ -300,7 +300,7 @@ it('requires a name to clone an app plan', function () {
 });
 
 it('does not clone a hidden shared app plan', function () {
-    $this->appPlan->update(['hidden' => true]);
+    $this->appPlan->forceFill(['hidden' => true])->save();
     $count = AppPlan::count();
 
     $this->actingAs($this->user)->post(
