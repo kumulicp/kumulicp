@@ -468,8 +468,7 @@ class SharedAppsTest extends TestCase
 
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
             ->where('shared_app.urls.instance', null)
-            ->where('shared_app.urls.plan', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}")
-            ->where('shared_app.urls.settings', "{$show}/edit"));
+            ->where('shared_app.urls.plan', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}"));
         $this->actingAs($admin)->get("{$instance}/edit")->assertRedirect($show)->assertSessionHas('error');
         $this->actingAs($admin)->put($instance, ['settings' => '{}'])->assertRedirect($show)->assertSessionHas('error');
         $this->assertNull($shared->refresh()->settings);
@@ -563,7 +562,8 @@ class SharedAppsTest extends TestCase
             ->where('app.domain_chosen', true)
             ->where('shared_app.setup', null)
             ->where('shared_app.urls.plan', null)
-            ->where('shared_app.urls.instance', null));
+            // All it has to change is its domain
+            ->where('shared_app.urls.instance', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit"));
 
         // And it can't be activated, tested or chosen a version for after that
         $this->activationRequest($admin, $shared)->assertSessionHas('error');
@@ -572,25 +572,76 @@ class SharedAppsTest extends TestCase
         $this->assertSame(0, VersionTestRun::count());
     }
 
-    public function test_a_shared_apps_label_and_domain_are_changed_from_its_settings()
+    public function test_an_externally_managed_apps_domain_is_changed_from_its_edit_page()
     {
         [$admin, $shared] = $this->readyToTest();
-        $show = "/admin/service/shared-apps/{$shared->id}";
+        $owner = Organization::where('type', 'superaccount')->firstOrFail();
+        $subdomain = OrgSubdomain::factory()->create(['organization_id' => $owner->id]);
+        $this->actingAs($admin)->post("/admin/service/shared-apps/{$shared->id}/external", ['domain' => 0]);
+        $edit = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit";
+
+        $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia
+            ->component('Admin/Organizations/Apps/AppEdit')
+            ->where('app.managed_externally', true)
+            ->where('domain.deployed', false)
+            ->where('domain.id', 0)
+            ->where('domain.domains', fn ($domains) => collect($domains)->pluck('id')->contains($subdomain->id)));
+
+        $this->actingAs($admin)->put("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/domain", ['domain' => $subdomain->id])
+            ->assertSessionDoesntHaveErrors()
+            ->assertRedirect($edit)
+            ->assertSessionHas('success');
+
+        $shared->refresh();
+        $this->assertSame($subdomain->id, $shared->primary_domain_id);
+        $this->assertSame($shared->id, $subdomain->refresh()->app_instance_id);
+        // Nothing is deployed to restart
+        $this->assertSame(0, Task::where('action_slug', 'application_update_job')->count());
+
+        // Another organization's domain isn't one to pick
+        $other = OrgSubdomain::factory()->create(['organization_id' => Organization::where('type', 'shared')->firstOrFail()->id]);
+        $this->actingAs($admin)->put("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/domain", ['domain' => $other->id])
+            ->assertSessionHasErrors('domain');
+        $this->assertSame($subdomain->id, $shared->refresh()->primary_domain_id);
+    }
+
+    public function test_the_edit_page_says_whether_the_app_allows_its_domain_to_be_changed()
+    {
+        [$admin, $shared] = $this->readyToTest();
+        $shared->status = 'activating';
+        $shared->save();
+        $edit = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit";
+
+        $app = $shared->application;
+        $app->can_update_domain = false;
+        $app->save();
+        $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia
+            ->where('app.managed_externally', false)
+            ->where('domain.editable', false)
+            ->where('domain.deployed', true));
+
+        $app->can_update_domain = true;
+        $app->save();
+        $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia
+            ->where('domain.editable', true));
+    }
+
+    public function test_a_shared_app_waiting_to_be_set_up_has_no_domain_to_change()
+    {
+        [$admin, $shared] = $this->readyToTest();
         $subdomain = OrgSubdomain::factory()->create(['organization_id' => Organization::where('type', 'superaccount')->firstOrFail()->id]);
 
-        $this->actingAs($admin)->get("{$show}/edit")->assertInertia(fn ($inertia) => $inertia
-            ->component('Admin/SharedApps/SharedAppEdit')
-            ->where('app.label', 'My Shared App')
-            ->where('app.domain', 0));
+        $this->actingAs($admin)->put("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/domain", ['domain' => $subdomain->id])
+            ->assertRedirect("/admin/service/shared-apps/{$shared->id}")
+            ->assertSessionHas('error');
+        $this->assertNull($shared->refresh()->primary_domain_id);
+    }
 
-        $this->actingAs($admin)->put($show, ['label' => 'Renamed', 'domain' => $subdomain->id])
-            ->assertSessionDoesntHaveErrors()
-            ->assertRedirect($show);
+    public function test_the_shared_app_has_no_settings_page()
+    {
+        [$admin, $shared] = $this->readyToTest();
 
-        $this->assertSame('Renamed', $shared->refresh()->label);
-        $this->assertSame($subdomain->id, $shared->primary_domain_id);
-        // Still waiting to be activated
-        $this->assertSame('deactivated', $shared->status);
+        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/edit")->assertNotFound();
     }
 
     public function test_a_test_run_of_a_shared_apps_plan_leads_back_to_it()

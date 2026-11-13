@@ -13,6 +13,7 @@ use App\Organization;
 use App\Server;
 use App\Services\AppInstanceService;
 use App\Support\Facades\Action;
+use App\Support\AdminAppDomain;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
@@ -117,7 +118,10 @@ class Applications extends Controller
             return $redirect;
         }
 
-        $versions = AppVersion::where('application_id', $app->application_id)
+        // Nothing is deployed for it: the domain is all there is to change
+        $external = $app->isSharedApp() && SharedAppContext::state($app) === SharedAppContext::EXTERNAL;
+
+        $versions = $external ? collect() : AppVersion::where('application_id', $app->application_id)
             ->get()
             ->filter(fn ($version) => version_compare($version->name, $app->version->name, '>'))
             ->sort(fn ($a, $b) => version_compare($a->name, $b->name))
@@ -135,7 +139,7 @@ class Applications extends Controller
                     'id' => $app->version->id,
                     'name' => $app->version->name,
                 ],
-                'database_server' => $app->database_server?->server?->name,
+                'database_server' => $external ? null : $app->database_server?->server?->name,
                 'settings' => $app->settings,
                 'status' => $app->status,
                 'password' => $app->api_password(),
@@ -143,6 +147,16 @@ class Applications extends Controller
                     'id' => $app->plan->id,
                     'name' => $app->plan->name,
                 ],
+                'managed_externally' => $external,
+            ],
+            'domain' => [
+                'id' => $app->primary_domain_id ?? 0,
+                'name' => $app->domain(),
+                // Whether the app is built to have its domain changed
+                'editable' => (bool) $app->application->can_update_domain,
+                // Whether changing it changes a running app, which restarts it
+                'deployed' => AdminAppDomain::isDeployed($app),
+                ...AdminAppDomain::options($app),
             ],
             'versions' => $versions->map(function ($version) {
                 return [
@@ -150,13 +164,26 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
-            'update_steps' => app(UpdateSteps::class)->options($app),
-            'database_servers' => ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
+            'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
+            'database_servers' => $external ? [] : ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
                 'value' => $server->id,
                 'text' => $server->name,
             ])->values(),
             'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
+    }
+
+    public function updateDomain(Request $request, Organization $organization, AppInstance $app)
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        AdminAppDomain::apply($app, $request->validate(AdminAppDomain::rules($app)));
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}/edit")->with('success', __('admin.organizations.apps.domain_updated', ['app' => $app->label]));
     }
 
     public function helmValues(Organization $organization, AppInstance $app)

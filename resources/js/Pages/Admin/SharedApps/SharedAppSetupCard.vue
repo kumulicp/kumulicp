@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import BypassTestsModal from '@/components/BypassTestsModal.vue'
-import SharedAppDomainFields from './SharedAppDomainFields.vue'
+import AppDomainFields from '@/components/AppDomainFields.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -192,7 +192,7 @@ const manageExternally = () => {
             <va-card-title class="m-0">{{ $t('admin.sharedApps.manageExternallyTitle', { app: sharedApp.label }) }}</va-card-title>
             <va-card-content class="m-0">
               <p class="mb-3">{{ $t('admin.sharedApps.manageExternallyDescription') }}</p>
-              <SharedAppDomainFields
+              <AppDomainFields
                 v-model:domain="externalForm.domain"
                 v-model:subdomain="externalForm.subdomain"
                 v-model:parent-domain="externalForm.parent_domain"

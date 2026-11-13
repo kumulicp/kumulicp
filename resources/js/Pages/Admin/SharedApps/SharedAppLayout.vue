@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 // is left as it is.
 const props = defineProps<{
   // The tab the page belongs to
-  section: 'view' | 'settings' | 'instance' | 'plan'
+  section: 'view' | 'instance' | 'plan'
 }>()
 
 const { t } = useI18n()
@@ -25,7 +25,6 @@ const tabs = computed(() => {
 
   return [
     { key: 'view', title: t('common.view'), url: urls.view },
-    { key: 'settings', title: t('admin.sharedApps.settings'), url: urls.settings },
     { key: 'instance', title: t('common.edit'), url: urls.instance },
     { key: 'plan', title: t('admin.plans.plan'), url: urls.plan }
   ].filter(tab => tab.url)

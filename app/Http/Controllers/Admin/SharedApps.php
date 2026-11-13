@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Apps\ApplicationActivate;
-use App\Actions\Domains\UpdateDnsRecords;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -11,15 +10,12 @@ use App\Exceptions\VersionTestException;
 use App\Http\Controllers\Controller;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Organization;
-use App\OrgDomain;
-use App\OrgSubdomain;
-use App\Rules\OrgSubdomainAvailable;
 use App\Services\SubscriptionService;
 use App\Services\VersionTesting\VersionTestRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
-use App\Support\Facades\Domain;
+use App\Support\AdminAppDomain;
 use App\Support\SharedAppContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -199,7 +195,7 @@ class SharedApps extends Controller
             return $redirect;
         }
 
-        $this->applyDomain($shared_app, $request->validate($this->domainRules($shared_app)));
+        AdminAppDomain::apply($shared_app, $request->validate(AdminAppDomain::rules($shared_app)));
         $this->registerExternally($shared_app);
 
         return redirect($this->viewUrl($shared_app))->with('success', __('admin.shared_apps.managed_externally', ['app' => $shared_app->label]));
@@ -331,6 +327,7 @@ class SharedApps extends Controller
                 'status' => $shared_app->status,
                 // Only an app that is deployed has a version of its own running
                 'version' => $activated ? $shared_app->version->name : null,
+                'organization_id' => $shared_app->organization_id,
                 'domain' => $shared_app->domain(),
                 // Without one it is at an address nobody is sent to
                 'domain_chosen' => $shared_app->primary_domain_id !== null,
@@ -345,96 +342,6 @@ class SharedApps extends Controller
                 ],
             ],
         ]);
-    }
-
-    public function edit(AppInstance $shared_app)
-    {
-        return inertia()->render('Admin/SharedApps/SharedAppEdit', [
-            'app' => [
-                'id' => $shared_app->id,
-                'label' => $shared_app->label,
-                'domain' => $shared_app->primary_domain_id ?? 0,
-            ],
-            ...SharedAppContext::domainOptions($shared_app),
-            'breadcrumbs' => [
-                [
-                    'url' => '/admin/service/shared-apps',
-                    'label' => __('admin.shared_apps.shared_apps'),
-                ],
-                [
-                    'url' => $this->viewUrl($shared_app),
-                    'label' => $shared_app->label,
-                ],
-                [
-                    'label' => __('admin.shared_apps.settings'),
-                ],
-            ],
-        ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function domainRules(AppInstance $shared_app): array
-    {
-        return [
-            'domain' => [
-                'required',
-                function (string $attribute, mixed $value, \Closure $fail) {
-                    if ($value === 0 || $value === 'new') {
-                        return;
-                    }
-
-                    if (! OrgSubdomain::find($value)) {
-                        $fail(__('organization.domain.denied.exists'));
-                    }
-                },
-            ],
-            'parent_domain' => 'nullable|required_if:domain,new|numeric|exists:org_domains,id',
-            'subdomain' => ['nullable', 'required_if:domain,new', 'string', new OrgSubdomainAvailable($shared_app)],
-        ];
-    }
-
-    /**
-     * Points the shared app at the domain that was validated with domainRules().
-     *
-     * @param  array<string, mixed>  $validated
-     */
-    private function applyDomain(AppInstance $shared_app, array $validated): void
-    {
-        $current_subdomain = $shared_app->primary_domain;
-        $new_subdomain = null;
-
-        // Added to custom domains
-        if ($validated['domain'] === 'new') {
-            $parent_domain = OrgDomain::find($validated['parent_domain']);
-            $new_subdomain = Domain::addSubdomain($validated['subdomain'], $parent_domain, $shared_app);
-        } elseif ($validated['domain'] !== 0) {
-            // Can find directly since it should already be validated
-            $new_subdomain = OrgSubdomain::find($validated['domain']);
-        }
-
-        $shared_app->primary_domain_id = $new_subdomain?->id;
-        $shared_app->save();
-
-        // Nothing is deployed to point the domain at until the app is activated, which does it then
-        if ($new_subdomain && $new_subdomain->id !== $current_subdomain?->id && $new_subdomain->domain->type === 'managed' && SharedAppContext::state($shared_app) === SharedAppContext::ACTIVE) {
-            Action::execute(new UpdateDnsRecords($shared_app->organization, $new_subdomain->domain));
-        }
-    }
-
-    public function update(Request $request, AppInstance $shared_app)
-    {
-        /* Validate */
-        $validated = $request->validate([
-            'label' => 'required|string|max:100',
-            ...$this->domainRules($shared_app),
-        ]);
-
-        $shared_app->label = $validated['label'];
-        $this->applyDomain($shared_app, $validated);
-
-        return redirect($this->viewUrl($shared_app))->with('success', __('admin.shared_apps.updated', ['app' => $shared_app->name]));
     }
 
     public function activate()

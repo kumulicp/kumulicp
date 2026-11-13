@@ -209,6 +209,7 @@ return [
         'plan_changed' => 'Organization moved to the :plan plan',
         'apps' => [
             'updated' => ':app updated',
+            'domain_updated' => ':app domain updated',
             'updating' => ':app updating',
             'upgrading' => ':app upgrading',
             'deleting' => ':app deleting',
@@ -396,7 +397,6 @@ return [
         'updated' => ':app updated',
         'plan_description' => 'Auto-generated plan for the :app shared app',
         'plan_settings' => 'Plan Settings',
-        'settings' => 'Settings',
         'version_updated' => ':app will be activated with the version you chose.',
         'managed_externally' => ':app is managed externally. Nothing is deployed for it.',
         'tests_bypassed' => 'The tests for this shared app were bypassed. It can now be activated.',

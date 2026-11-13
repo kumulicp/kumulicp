@@ -7,6 +7,7 @@ import { computed } from 'vue'
 const props = defineProps<{
   app: {
     id: number
+    organization_id: number
     label: string
     name: string
     state: 'setup' | 'external' | 'active'
@@ -92,7 +93,7 @@ export default {
               {{ app.domain }}
               <p v-if="!app.domain_chosen" id="noDomain" class="text-color-danger">
                 {{ $t('admin.sharedApps.noDomainChosen') }}
-                <Link :href="'/admin/service/shared-apps/' + app.id + '/edit'">{{ $t('admin.sharedApps.settings') }}</Link>
+                <Link :href="'/admin/organizations/' + app.organization_id + '/apps/' + app.id + '/edit'">{{ $t('common.edit') }}</Link>
               </p>
             </va-list-item-label>
           </va-list-item-section>

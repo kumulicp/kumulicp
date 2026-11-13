@@ -34,25 +34,34 @@ export default {
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id + '/apps/' + app.id
 
-    const tabs = [
-      {
-        title: this.$t('common.view'),
-        url: basePath
-      }
-    ]
+    const tabs = []
+    const state = this.$page.props.shared_app?.state
 
-    // A shared app that is still to be set up isn't deployed: there is nothing to edit yet
-    if (this.$page.props.shared_app?.state !== 'setup') {
+    // A shared app that is managed externally has nothing deployed: its domain is all there is to change
+    if (state === 'external') {
       tabs.push({
         title: this.$t('common.edit'),
         url: basePath + '/edit'
       })
-    }
+    } else {
+      tabs.push({
+        title: this.$t('common.view'),
+        url: basePath
+      })
 
-    tabs.push({
-      title: this.$t('admin.apps.helmValues'),
-      url: basePath + '/helm-values'
-    })
+      // One that is still to be set up isn't deployed either: there is nothing to edit yet
+      if (state !== 'setup') {
+        tabs.push({
+          title: this.$t('common.edit'),
+          url: basePath + '/edit'
+        })
+      }
+
+      tabs.push({
+        title: this.$t('admin.apps.helmValues'),
+        url: basePath + '/helm-values'
+      })
+    }
 
     return {
       pathname,

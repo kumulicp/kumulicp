@@ -153,6 +153,7 @@ return [
         'plan_changed' => 'La organización se cambió al plan :plan',
         'apps' => [
             'updated' => ':app actualizada',
+            'domain_updated' => 'Dominio de :app actualizado',
             'updating' => ':app actualizándose',
             'upgrading' => ':app mejorándose',
             'deleting' => ':app eliminándose',
@@ -311,7 +312,6 @@ return [
         'updated' => ':app actualizada',
         'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
         'plan_settings' => 'Configuración del plan',
-        'settings' => 'Configuración',
         'version_updated' => ':app se activará con la versión que elegiste.',
         'managed_externally' => ':app se administra externamente. No se despliega nada para ella.',
         'tests_bypassed' => 'Se omitieron las pruebas de esta aplicación compartida. Ya se puede activar.',

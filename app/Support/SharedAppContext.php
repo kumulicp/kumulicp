@@ -7,7 +7,6 @@ use App\Application;
 use App\AppPlan;
 use App\AppVersion;
 use App\Enums\ApplicationSource;
-use App\Organization;
 use App\VersionTestRun;
 use Illuminate\Http\Request;
 
@@ -112,8 +111,12 @@ class SharedAppContext
             // it is deployed, and an externally managed app has no plan to set up.
             'urls' => [
                 'view' => $view,
-                'settings' => "{$view}/edit",
-                'instance' => $state === self::ACTIVE ? "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}" : null,
+                // Where its domain is changed is all an externally managed app has
+                'instance' => match ($state) {
+                    self::ACTIVE => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}",
+                    self::EXTERNAL => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/edit",
+                    default => null,
+                },
                 'plan' => $state === self::EXTERNAL ? null : self::planUrl($shared_app),
             ],
             'setup' => $state === self::SETUP ? self::setup($shared_app) : null,
@@ -176,34 +179,7 @@ class SharedAppContext
                 'helm_values' => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/helm-values",
             ],
             // For the option of not activating it, which only needs a domain
-            ...self::domainOptions($shared_app),
-        ];
-    }
-
-    /**
-     * The domains a shared app can be reached at.
-     *
-     * @return array{domains: array<int, array<string, mixed>>, parent_domains: array<int, array<string, mixed>>}
-     */
-    public static function domainOptions(AppInstance $shared_app): array
-    {
-        $organization = Organization::where('type', 'superaccount')->first();
-
-        return [
-            'domains' => $organization->subdomains->map(fn ($domain) => [
-                'id' => $domain->id,
-                'name' => $domain->name,
-            ])->push([
-                'name' => $shared_app->base_domain(),
-                'id' => 0,
-            ])->push([
-                'name' => 'Add New Subdomain',
-                'id' => 'new',
-            ])->all(),
-            'parent_domains' => $organization->domains->map(fn ($domain) => [
-                'id' => $domain->id,
-                'name' => $domain->name,
-            ])->all(),
+            ...AdminAppDomain::options($shared_app),
         ];
     }
 }
