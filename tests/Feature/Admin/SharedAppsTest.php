@@ -12,6 +12,7 @@ use App\Enums\TaskStatus;
 use App\Enums\VersionTestRunStatus;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Organization;
+use App\OrgSubdomain;
 use App\Server;
 use App\Support\Facades\Action;
 use App\Support\VersionTesting\VersionFingerprint;
@@ -136,6 +137,9 @@ class SharedAppsTest extends TestCase
 
         $this->assertSame(ApplicationSource::Profile, $app->refresh()->source);
         $this->assertSame('deactivated', $instance->status);
+        // Nothing is filled in until it is activated
+        $this->assertNull($instance->settings);
+        $this->assertFalse($instance->isManagedExternally());
         $this->assertTrue($plan->hidden);
         $this->assertNull($plan->web_server_id);
         $this->assertSame(0, Task::where('action_slug', 'application_activate')->count());
@@ -147,7 +151,7 @@ class SharedAppsTest extends TestCase
         $this->sharedOrganization();
         $shared = $this->addSharedApp($admin, Application::where('slug', 'demo_app')->first());
 
-        $page = "/admin/service/shared-apps/{$shared->id}/activation";
+        $page = "/admin/service/shared-apps/{$shared->id}";
         $this->actingAs($admin)->post("/admin/service/shared-apps/{$shared->id}/tests")->assertRedirect($page)->assertSessionHas('error');
         $this->actingAs($admin)->post("/admin/service/shared-apps/{$shared->id}/tests/bypass", ['reason' => 'Already trusted', 'acknowledge' => true])->assertRedirect($page)->assertSessionHas('error');
         $this->activationRequest($admin, $shared)->assertRedirect($page)->assertSessionHas('error');
@@ -273,12 +277,13 @@ class SharedAppsTest extends TestCase
         $this->assertActivatedInPlace(VersionTestRunStatus::PASSED);
     }
 
-    public function test_a_shared_app_takes_the_configurations_its_plan_has_when_it_is_activated()
+    public function test_a_shared_app_takes_fresh_settings_from_its_plan_when_it_is_activated()
     {
         [$admin, $shared, $version, $plan] = $this->readyToTest();
 
-        // Configured after the app was added: persistent configurations were copied to the instance then
-        $this->assertSame('default-persistent', $shared->refresh()->setting('configurations.persistent-value'));
+        // Nothing was copied to the instance when it was added
+        $this->assertNull($shared->refresh()->setting('configurations.persistent-value'));
+        $shared->updateSetting('left-over', 'from before it was activated');
         $plan->updateSettings(['configurations' => ['persistent-value' => 'set-on-the-plan']]);
         $plan->save();
         $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan->refresh());
@@ -286,17 +291,18 @@ class SharedAppsTest extends TestCase
         $this->activationRequest($admin, $shared)->assertSessionHas('success');
 
         $this->assertSame('set-on-the-plan', $shared->refresh()->setting('configurations.persistent-value'));
+        $this->assertNull($shared->setting('left-over'));
     }
 
-    public function test_the_activation_page_shows_the_configurations_the_plan_has_now()
+    public function test_the_chart_review_shows_the_configurations_the_plan_has_now_without_filling_in_the_instance()
     {
         [$admin, $shared, , $plan] = $this->readyToTest();
         $plan->updateSettings(['configurations' => ['persistent-value' => 'set-on-the-plan']]);
         $plan->save();
 
-        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")->assertOk();
+        $this->actingAs($admin)->get("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values")->assertOk();
 
-        $this->assertSame('set-on-the-plan', $shared->refresh()->setting('configurations.persistent-value'));
+        $this->assertNull($shared->refresh()->settings);
     }
 
     public function test_a_shared_app_is_activated_in_place_once_its_plan_tests_were_bypassed()
@@ -336,36 +342,37 @@ class SharedAppsTest extends TestCase
         $this->assertSame(1, Task::where('action_slug', 'application_activate')->count());
     }
 
-    public function test_the_activation_page_reports_where_the_shared_app_stands_on_its_plan()
+    public function test_every_page_reports_where_the_shared_app_stands_on_its_plan()
     {
         [$admin, $shared, $version, $plan] = $this->readyToTest();
-        $page = "/admin/service/shared-apps/{$shared->id}/activation";
+        $page = "/admin/service/shared-apps/{$shared->id}";
 
         $this->actingAs($admin)->get($page)->assertInertia(fn ($inertia) => $inertia
-            ->component('Admin/SharedApps/SharedAppActivation')
-            ->where('activation.servers_saved', true)
-            ->where('activation.gate', 'untested')
-            ->where('activation.can_activate', false)
-            ->where('activation.version', $version->name)
-            ->where('activation.run_url', null)
+            ->component('Admin/SharedApps/SharedAppView')
+            ->where('shared_app.state', 'setup')
+            ->where('shared_app.setup.servers_saved', true)
+            ->where('shared_app.setup.gate', 'untested')
+            ->where('shared_app.setup.can_activate', false)
+            ->where('shared_app.setup.version.name', $version->name)
+            ->where('shared_app.setup.run_url', null)
             // Servers are set, so the tests are next
-            ->where('activation.current_step', 3));
+            ->where('shared_app.setup.current_step', 4));
 
         // The version passing does not change what the page says about the plan
         $this->recordTestRun($version, VersionTestRunStatus::PASSED);
         $this->actingAs($admin)->get($page)->assertInertia(fn ($inertia) => $inertia
-            ->where('activation.gate', 'untested')
-            ->where('activation.can_activate', false));
+            ->where('shared_app.setup.gate', 'untested')
+            ->where('shared_app.setup.can_activate', false));
 
         $run = $this->recordTestRun($version, VersionTestRunStatus::BYPASSED, $plan);
         $this->actingAs($admin)->get($page)->assertInertia(fn ($inertia) => $inertia
-            ->where('activation.gate', 'bypassed')
-            ->where('activation.can_activate', true)
-            ->where('activation.current_step', 4)
-            ->where('activation.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}"));
+            ->where('shared_app.setup.gate', 'bypassed')
+            ->where('shared_app.setup.can_activate', true)
+            ->where('shared_app.setup.current_step', 5)
+            ->where('shared_app.setup.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}"));
     }
 
-    public function test_the_activation_page_starts_at_the_servers_and_points_to_each_step()
+    public function test_the_steps_start_at_the_servers_and_point_to_each_page()
     {
         $admin = $this->adminUser();
         $this->sharedOrganization();
@@ -374,19 +381,72 @@ class SharedAppsTest extends TestCase
         $plan = $shared->plan;
         $plan_url = "/admin/apps/{$app->slug}/plans/{$plan->id}";
 
-        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")->assertInertia(fn ($inertia) => $inertia
-            ->where('activation.servers_saved', false)
-            ->where('activation.current_step', 0)
-            ->where('servers', ['web' => null, 'database' => null, 'sso' => null])
-            ->where('links.plan', "{$plan_url}/edit")
-            ->where('links.configurations', "{$plan_url}/configurations")
-            ->where('links.helm_values', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values"));
+        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}")->assertInertia(fn ($inertia) => $inertia
+            ->where('shared_app.setup.servers_saved', false)
+            // The version is the first step, and has been chosen already
+            ->where('shared_app.setup.current_step', 1)
+            ->where('shared_app.setup.version.id', $shared->version_id)
+            ->where('shared_app.setup.servers', ['web' => null, 'database' => null, 'sso' => null])
+            ->where('shared_app.setup.links.plan', "{$plan_url}/edit")
+            ->where('shared_app.setup.links.configurations', "{$plan_url}/configurations")
+            ->where('shared_app.setup.links.helm_values', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values"));
 
         $web = Server::factory()->create(['type' => 'web', 'name' => 'web-one']);
         $this->giveServers($shared, $web);
 
-        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")->assertInertia(fn ($inertia) => $inertia
-            ->where('servers.web', 'web-one'));
+        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}")->assertInertia(fn ($inertia) => $inertia
+            ->where('shared_app.setup.servers.web', 'web-one'));
+    }
+
+    public function test_the_setup_steps_sit_on_every_page_of_a_shared_app_until_it_is_activated()
+    {
+        [$admin, $shared, $version, $plan] = $this->readyToTest();
+        $run = $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan);
+        $app = $shared->application;
+        $plan_url = "/admin/apps/{$app->slug}/plans/{$plan->id}";
+        $pages = [
+            "/admin/service/shared-apps/{$shared->id}",
+            "/admin/service/shared-apps/{$shared->id}/edit",
+            $plan_url,
+            "{$plan_url}/edit",
+            "{$plan_url}/features",
+            "{$plan_url}/configurations",
+            "{$plan_url}/secrets",
+            "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}",
+            "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values",
+            "/admin/apps/{$app->slug}/versions/{$version->name}/tests/{$run->id}",
+        ];
+
+        foreach ($pages as $page) {
+            $this->actingAs($admin)->get($page)->assertInertia(fn ($inertia) => $inertia
+                ->where('shared_app.id', $shared->id)
+                ->where('shared_app.state', 'setup')
+                ->where('shared_app.setup.version.id', $shared->version_id), $page);
+        }
+
+        // Once it is being activated, the steps are gone from all of them
+        $shared->status = 'activating';
+        $shared->save();
+
+        foreach ($pages as $page) {
+            $this->actingAs($admin)->get($page)->assertInertia(fn ($inertia) => $inertia
+                ->where('shared_app.id', $shared->id)
+                ->where('shared_app.state', 'active')
+                ->where('shared_app.setup', null), $page);
+        }
+    }
+
+    public function test_pages_that_are_not_a_shared_apps_have_no_shared_app()
+    {
+        $admin = $this->adminUser();
+        $organization = Organization::where('type', '!=', 'shared')->firstOrFail();
+        $app = Application::where('slug', 'demo_app')->first();
+        $plan = AppPlan::factory()->create(['application_id' => $app->id, 'hidden' => false]);
+
+        $this->actingAs($admin)->get("/admin/apps/{$app->slug}/plans/{$plan->id}")->assertInertia(fn ($inertia) => $inertia
+            ->where('shared_app', null));
+        $this->actingAs($admin)->get("/admin/organizations/{$organization->id}")->assertInertia(fn ($inertia) => $inertia
+            ->where('shared_app', null));
     }
 
     public function test_the_steps_the_activation_page_points_to_can_be_opened()
@@ -400,40 +460,140 @@ class SharedAppsTest extends TestCase
         $this->actingAs($admin)->get("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values")->assertOk();
     }
 
-    public function test_the_activation_page_is_only_for_a_shared_app_waiting_to_be_activated()
-    {
-        [$admin, $shared] = $this->readyToTest();
-        $page = "/admin/service/shared-apps/{$shared->id}/activation";
-
-        $shared->status = 'activating';
-        $shared->save();
-        $this->actingAs($admin)->get($page)->assertRedirect("/admin/service/shared-apps/{$shared->id}")->assertSessionHas('error');
-    }
-
-    public function test_a_shared_app_without_a_registered_profile_has_no_activation_page()
-    {
-        [$admin, $shared] = $this->genericSharedApp();
-
-        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")
-            ->assertRedirect("/admin/service/shared-apps/{$shared->id}")
-            ->assertSessionHas('error');
-    }
-
-    public function test_the_shared_app_page_points_to_the_activation_page_only_while_it_is_pending()
+    public function test_the_app_instance_has_nothing_to_edit_until_the_shared_app_is_activated()
     {
         [$admin, $shared] = $this->readyToTest();
         $show = "/admin/service/shared-apps/{$shared->id}";
+        $instance = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}";
 
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
-            ->where('activation_url', "{$show}/activation"));
+            ->where('shared_app.urls.instance', null)
+            ->where('shared_app.urls.plan', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}")
+            ->where('shared_app.urls.settings', "{$show}/edit"));
+        $this->actingAs($admin)->get("{$instance}/edit")->assertRedirect($show)->assertSessionHas('error');
+        $this->actingAs($admin)->put($instance, ['settings' => '{}'])->assertRedirect($show)->assertSessionHas('error');
+        $this->assertNull($shared->refresh()->settings);
 
         $shared->status = 'activating';
         $shared->save();
+
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
-            ->where('activation_url', null));
+            ->where('shared_app.urls.instance', $instance)
+            ->where('shared_app.setup', null));
+        $this->actingAs($admin)->get("{$instance}/edit")->assertOk();
     }
 
-    public function test_a_test_run_of_a_shared_apps_plan_leads_back_to_its_activation_page()
+    public function test_the_shared_app_page_is_only_information_about_it()
+    {
+        [$admin, $shared, $version] = $this->readyToTest();
+        $show = "/admin/service/shared-apps/{$shared->id}";
+
+        // Not activated yet: no version or address of its own to report
+        $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
+            ->component('Admin/SharedApps/SharedAppView')
+            ->where('app.state', 'setup')
+            ->where('app.version', null));
+
+        $shared->status = 'active';
+        $shared->save();
+
+        $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
+            ->where('app.state', 'active')
+            ->where('app.status', 'active')
+            ->where('app.version', $version->name)
+            ->where('app.domain', $shared->domain()));
+    }
+
+    public function test_the_version_is_chosen_while_the_shared_app_waits_to_be_set_up()
+    {
+        [$admin, $shared, $version, $plan] = $this->readyToTest();
+        $other = AppVersion::factory()->create(['application_id' => $shared->application_id]);
+        $url = "/admin/service/shared-apps/{$shared->id}/version";
+
+        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}")->assertInertia(fn ($inertia) => $inertia
+            ->where('shared_app.setup.versions', fn ($versions) => collect($versions)->pluck('id')->contains($other->id)
+                && collect($versions)->pluck('id')->contains($version->id)));
+
+        $this->actingAs($admin)->put($url, ['version' => $other->id])->assertSessionDoesntHaveErrors()->assertSessionHas('success');
+        $this->assertSame($other->id, $shared->refresh()->version_id);
+
+        // The tests are of the version that was chosen
+        $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan);
+        $this->assertSame('untested', $other->testGate($plan->refresh()));
+
+        // One of another app's is not an option
+        $foreign = AppVersion::factory()->create(['application_id' => Application::factory()->create()->id]);
+        $this->actingAs($admin)->put($url, ['version' => $foreign->id])->assertSessionHasErrors('version');
+        $this->assertSame($other->id, $shared->refresh()->version_id);
+
+        // And it is fixed once the app is on its way
+        $shared->status = 'activating';
+        $shared->save();
+        $this->actingAs($admin)->put($url, ['version' => $version->id])->assertSessionHas('error');
+        $this->assertSame($other->id, $shared->refresh()->version_id);
+    }
+
+    public function test_a_shared_app_can_be_left_to_be_managed_externally_with_only_a_domain()
+    {
+        [$admin, $shared] = $this->readyToTest();
+        $show = "/admin/service/shared-apps/{$shared->id}";
+        $subdomain = OrgSubdomain::factory()->create(['organization_id' => Organization::where('type', 'superaccount')->firstOrFail()->id]);
+
+        // A domain is the one thing it needs
+        $this->actingAs($admin)->post("{$show}/external", [])->assertSessionHasErrors('domain');
+        $this->assertSame('deactivated', $shared->refresh()->status);
+
+        // No servers, version tests or configuration come into it
+        $this->actingAs($admin)->post("{$show}/external", ['domain' => $subdomain->id])
+            ->assertSessionDoesntHaveErrors()
+            ->assertRedirect($show)
+            ->assertSessionHas('success');
+
+        $shared->refresh();
+        $this->assertTrue($shared->isManagedExternally());
+        $this->assertSame('active', $shared->status);
+        $this->assertSame($subdomain->id, $shared->primary_domain_id);
+        // Users come through the central LDAP groups
+        Bus::assertDispatched(AddLdapGroups::class, fn (AddLdapGroups $job) => $job->app_instance->is($shared));
+        $this->assertSame(0, Task::where('action_slug', 'application_activate')->count());
+
+        $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
+            ->where('app.state', 'external')
+            ->where('app.domain', $subdomain->name)
+            ->where('app.domain_chosen', true)
+            ->where('shared_app.setup', null)
+            ->where('shared_app.urls.plan', null)
+            ->where('shared_app.urls.instance', null));
+
+        // And it can't be activated, tested or chosen a version for after that
+        $this->activationRequest($admin, $shared)->assertSessionHas('error');
+        $this->actingAs($admin)->post("{$show}/tests")->assertSessionHas('error');
+        $this->actingAs($admin)->post("{$show}/external", ['domain' => $subdomain->id])->assertSessionHas('error');
+        $this->assertSame(0, VersionTestRun::count());
+    }
+
+    public function test_a_shared_apps_label_and_domain_are_changed_from_its_settings()
+    {
+        [$admin, $shared] = $this->readyToTest();
+        $show = "/admin/service/shared-apps/{$shared->id}";
+        $subdomain = OrgSubdomain::factory()->create(['organization_id' => Organization::where('type', 'superaccount')->firstOrFail()->id]);
+
+        $this->actingAs($admin)->get("{$show}/edit")->assertInertia(fn ($inertia) => $inertia
+            ->component('Admin/SharedApps/SharedAppEdit')
+            ->where('app.label', 'My Shared App')
+            ->where('app.domain', 0));
+
+        $this->actingAs($admin)->put($show, ['label' => 'Renamed', 'domain' => $subdomain->id])
+            ->assertSessionDoesntHaveErrors()
+            ->assertRedirect($show);
+
+        $this->assertSame('Renamed', $shared->refresh()->label);
+        $this->assertSame($subdomain->id, $shared->primary_domain_id);
+        // Still waiting to be activated
+        $this->assertSame('deactivated', $shared->status);
+    }
+
+    public function test_a_test_run_of_a_shared_apps_plan_leads_back_to_it()
     {
         [$admin, $shared, $version, $plan] = $this->readyToTest();
         $run = $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan);
@@ -441,7 +601,7 @@ class SharedAppsTest extends TestCase
         $this->actingAs($admin)->get("/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}")
             ->assertInertia(fn ($inertia) => $inertia
                 ->where('breadcrumbs.1.url', "/admin/service/shared-apps/{$shared->id}")
-                ->where('breadcrumbs.2.url', "/admin/service/shared-apps/{$shared->id}/activation"));
+                ->where('shared_app.id', $shared->id));
     }
 
     public function test_the_list_does_not_offer_activation_or_server_choices()
@@ -477,6 +637,7 @@ class SharedAppsTest extends TestCase
 
         // Nothing will activate it, and the apps shared from it need it active
         $this->assertSame('active', $shared->status);
+        $this->assertTrue($shared->isManagedExternally());
         $this->assertNull($shared->plan->web_server_id);
         $this->assertSame(0, Task::where('action_slug', 'application_activate')->count());
         Bus::assertDispatched(AddLdapGroups::class, fn (AddLdapGroups $job) => $job->app_instance->is($shared));
@@ -500,8 +661,8 @@ class SharedAppsTest extends TestCase
         $version = $shared->version;
 
         $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}")->assertInertia(fn ($page) => $page
-            ->where('activation_url', null));
-        $this->actingAs($admin)->get("/admin/service/shared-apps/{$shared->id}/activation")->assertRedirect("/admin/service/shared-apps/{$shared->id}");
+            ->where('app.state', 'external')
+            ->where('shared_app.setup', null));
 
         // Even with everything else in place: servers and a passed run on its plan
         $plan->web_server_id = Server::factory()->create(['type' => 'web'])->id;

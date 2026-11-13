@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import VersionLayout from './VersionLayout.vue'
+import SharedAppLayout from '../../SharedApps/SharedAppLayout.vue'
 import BypassTestsModal from '@/components/BypassTestsModal.vue'
 import { Link, useForm, usePoll } from '@inertiajs/vue3'
 import { watch } from 'vue'
@@ -176,7 +177,8 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
 <script>
 export default {
   layout: (h, page) => {
-    return h(AppLayout, () => h(VersionLayout, () => page))
+    // A run of a shared app's plan is one of its pages
+    return h(AppLayout, () => h(SharedAppLayout, { section: 'plan' }, () => h(VersionLayout, () => page)))
   },
   data () {
     return {

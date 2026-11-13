@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import SharedAppLayout from '../../SharedApps/SharedAppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 
 </script>
 <template>
+  <SharedAppLayout section="instance">
   <div class="user">
     <div class="row">
       <div class="flex xs12 lg12">
@@ -20,6 +22,7 @@ import { Link } from '@inertiajs/vue3'
       </div>
     </div>
   </div>
+  </SharedAppLayout>
 </template>
 
 <script lang="ts">
@@ -31,23 +34,30 @@ export default {
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id + '/apps/' + app.id
 
+    const tabs = [
+      {
+        title: this.$t('common.view'),
+        url: basePath
+      }
+    ]
+
+    // A shared app that is still to be set up isn't deployed: there is nothing to edit yet
+    if (this.$page.props.shared_app?.state !== 'setup') {
+      tabs.push({
+        title: this.$t('common.edit'),
+        url: basePath + '/edit'
+      })
+    }
+
+    tabs.push({
+      title: this.$t('admin.apps.helmValues'),
+      url: basePath + '/helm-values'
+    })
+
     return {
       pathname,
       value: pathname,
-      tabs: [
-        {
-          title: this.$t('common.view'),
-          url: basePath
-        },
-        {
-          title: this.$t('common.edit'),
-          url: basePath + '/edit'
-        },
-        {
-          title: this.$t('admin.apps.helmValues'),
-          url: basePath + '/helm-values'
-        }
-      ]
+      tabs
     }
   }
 }

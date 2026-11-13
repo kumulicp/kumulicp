@@ -160,6 +160,24 @@ class AppInstance extends Model
             && ! $this->tasks()->where('action_slug', 'application_activate')->exists();
     }
 
+    /**
+     * Whether this is one of the shared apps that organizations' apps are shared from.
+     */
+    public function isSharedApp(): bool
+    {
+        return $this->organization?->type === 'shared';
+    }
+
+    /**
+     * A shared app that is installed and run outside Kumuli CP. Nothing is deployed
+     * for it: its users come through the central LDAP groups, and the app only has
+     * the domain organizations click through to.
+     */
+    public function isManagedExternally(): bool
+    {
+        return (bool) $this->setting('managed_externally');
+    }
+
     public function subscription()
     {
         return $this->belongsTo('App\AppPlan', 'plan_id');

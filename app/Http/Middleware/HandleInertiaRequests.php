@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
 use App\Support\Facades\Settings;
+use App\Support\SharedAppContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -120,6 +121,8 @@ class HandleInertiaRequests extends Middleware
                 'status' => $request->user()?->organization?->status,
             ],
             'step' => $request->user()?->organization->setting('step') ?? 0,
+            // Set on every page of a shared app, whichever controller draws it, for the shared app layout
+            'shared_app' => fn () => $request->user() ? SharedAppContext::fromRequest($request) : null,
             /*'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),

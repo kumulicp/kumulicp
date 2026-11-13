@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import SharedAppLayout from '../../SharedApps/SharedAppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 
 </script>
 <template>
+  <SharedAppLayout section="plan">
   <div class="plan">
     <div class="row">
       <div class="flex xs12 lg12">
@@ -20,6 +22,7 @@ import { Link } from '@inertiajs/vue3'
       </div>
     </div>
   </div>
+  </SharedAppLayout>
 </template>
 
 <script lang="ts">
