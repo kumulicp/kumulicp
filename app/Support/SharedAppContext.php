@@ -7,7 +7,9 @@ use App\Application;
 use App\AppPlan;
 use App\AppVersion;
 use App\Enums\ApplicationSource;
+use App\Enums\TaskStatus;
 use App\VersionTestRun;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 /**
@@ -112,6 +114,7 @@ class SharedAppContext
             'urls' => [
                 'view' => $view,
                 // Where its domain is changed is all an externally managed app has
+                'edit' => $state === self::ACTIVE ? "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/edit" : null,
                 'instance' => match ($state) {
                     self::ACTIVE => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}",
                     self::EXTERNAL => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/edit",
@@ -120,7 +123,28 @@ class SharedAppContext
                 'plan' => $state === self::EXTERNAL ? null : self::planUrl($shared_app),
             ],
             'setup' => $state === self::SETUP ? self::setup($shared_app) : null,
+            'update_required' => $state === self::ACTIVE && self::updateRequired($shared_app),
         ];
+    }
+
+    /**
+     * Whether the plan's settings were changed after the app instance was last
+     * deployed or updated. Saving them only changes the plan: the running app
+     * takes them when its instance is updated.
+     */
+    public static function updateRequired(AppInstance $shared_app): bool
+    {
+        // While it is updating, the update is the one that takes them
+        if ($shared_app->status !== 'active' || ! $shared_app->plan) {
+            return false;
+        }
+
+        $applied = $shared_app->tasks()
+            ->whereIn('action_slug', ['application_activate', 'application_update'])
+            ->where('status', TaskStatus::COMPLETE->value)
+            ->max('updated_at');
+
+        return $applied !== null && $shared_app->plan->updated_at?->gt(Carbon::parse($applied)) === true;
     }
 
     public static function planUrl(AppInstance $shared_app): string

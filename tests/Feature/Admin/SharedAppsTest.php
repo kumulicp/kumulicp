@@ -637,6 +637,61 @@ class SharedAppsTest extends TestCase
         $this->assertNull($shared->refresh()->primary_domain_id);
     }
 
+    public function test_the_shared_app_says_when_its_plan_changed_after_the_instance_was_last_updated()
+    {
+        [$admin, $shared, , $plan] = $this->readyToTest();
+        $shared->status = 'active';
+        $shared->save();
+        $show = "/admin/service/shared-apps/{$shared->id}";
+        $required = fn () => $this->actingAs($admin)->get($show)->viewData('page')['props']['shared_app']['update_required'];
+
+        // Never deployed through a task: nothing to compare the plan with
+        $this->assertFalse($required());
+
+        $activation = Task::forceCreate([
+            'organization_id' => $shared->organization_id,
+            'application_id' => $shared->application_id,
+            'app_instance_id' => $shared->id,
+            'action_group' => 'system',
+            'action_slug' => 'application_activate',
+            'status' => TaskStatus::COMPLETE,
+        ]);
+        Task::whereKey($activation->id)->update(['updated_at' => now()->subHour()]);
+        AppPlan::whereKey($plan->id)->update(['updated_at' => now()->subMinutes(90)]);
+        $this->assertFalse($required());
+
+        // Its settings were saved after it was deployed
+        AppPlan::whereKey($plan->id)->update(['updated_at' => now()]);
+        $this->assertTrue($required());
+
+        // Not while the update that takes them is running
+        $shared->status = 'updating';
+        $shared->save();
+        $this->assertFalse($required());
+        $shared->status = 'active';
+        $shared->save();
+        $this->assertTrue($required());
+
+        // Updating the instance takes them
+        $update = Task::forceCreate([
+            'organization_id' => $shared->organization_id,
+            'application_id' => $shared->application_id,
+            'app_instance_id' => $shared->id,
+            'action_group' => 'system',
+            'action_slug' => 'application_update',
+            'status' => TaskStatus::COMPLETE,
+        ]);
+        Task::whereKey($update->id)->update(['updated_at' => now()->addMinute()]);
+        $this->assertFalse($required());
+
+        // And it only matters once it is deployed
+        AppPlan::whereKey($plan->id)->update(['updated_at' => now()->addHour()]);
+        $this->assertTrue($required());
+        $shared->status = 'deactivated';
+        $shared->save();
+        $this->assertFalse($required());
+    }
+
     public function test_the_shared_app_has_no_settings_page()
     {
         [$admin, $shared] = $this->readyToTest();

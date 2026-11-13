@@ -25,8 +25,9 @@ const tabs = computed(() => {
 
   return [
     { key: 'view', title: t('common.view'), url: urls.view },
-    { key: 'instance', title: t('common.edit'), url: urls.instance },
-    { key: 'plan', title: t('admin.plans.plan'), url: urls.plan }
+    // All an externally managed app has to change is its domain
+    { key: 'instance', title: t(sharedApp.value?.state === 'external' ? 'admin.sharedApps.tabDomain' : 'admin.sharedApps.tabInstance'), url: urls.instance },
+    { key: 'plan', title: t('admin.sharedApps.tabPlan'), url: urls.plan }
   ].filter(tab => tab.url)
 })
 </script>
@@ -34,6 +35,14 @@ const tabs = computed(() => {
 <template>
   <template v-if="sharedApp">
     <SharedAppSetupCard v-if="sharedApp.setup" :shared-app="sharedApp" />
+    <va-alert v-if="sharedApp.update_required" id="updateRequired" color="info" icon="info" class="mb-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <span>{{ $t('admin.sharedApps.updateRequired', { app: sharedApp.label }) }}</span>
+        <Link :href="sharedApp.urls.edit">
+          <va-button size="small" preset="secondary" border-color="info">{{ $t('admin.sharedApps.goToInstance') }}</va-button>
+        </Link>
+      </div>
+    </va-alert>
     <va-tabs :model-value="props.section" hide-slider class="shared-app-tabs mb-4">
       <template #tabs>
         <Link v-for="tab in tabs" :key="tab.key" :href="tab.url">

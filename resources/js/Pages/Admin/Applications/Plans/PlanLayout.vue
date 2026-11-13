@@ -16,6 +16,10 @@ import { Link } from '@inertiajs/vue3'
               </template>
             </va-tabs>
             <va-separator />
+            <!-- Saving here changes the plan, not the app that is running from it -->
+            <p v-if="$page.props.shared_app?.state === 'active'" id="planNote" class="va-text-secondary my-3">
+              {{ $t('admin.sharedApps.planNote') }}
+            </p>
             <slot></slot>
           </va-card-content>
         </va-card>
