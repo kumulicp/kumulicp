@@ -9,6 +9,18 @@ class NextcloudChart extends HelmChart
 {
     public $chart_name = 'nextcloud';
 
+    // The chart sets no resources for these helper pods; the cluster's
+    // require-resources policy wants a memory limit and cpu/memory requests.
+    private const IMAGINARY_RESOURCES = [
+        'requests' => ['cpu' => '100m', 'memory' => '256Mi'],
+        'limits' => ['memory' => '512Mi'],
+    ];
+
+    private const METRICS_RESOURCES = [
+        'requests' => ['cpu' => '50m', 'memory' => '128Mi'],
+        'limits' => ['memory' => '256Mi'],
+    ];
+
     public function values(): array
     {
         $organization = $this->organization;
@@ -25,6 +37,17 @@ class NextcloudChart extends HelmChart
         $app_settings = $version->settings;
 
         $namespace = $organization->slug;
+
+        $cronResources = [
+            'requests' => [
+                'cpu' => $app_instance->configuration('cronjob-resources-requests-cpu'),
+                'memory' => $app_instance->configuration('cronjob-resources-requests-memory'),
+            ],
+            'limits' => [
+                'cpu' => $app_instance->configuration('cronjob-resources-limits-cpu'),
+                'memory' => $app_instance->configuration('cronjob-resources-limits-memory'),
+            ],
+        ];
 
         $chart = [
             'replicaCount' => $this->replicaCount(),
@@ -52,6 +75,7 @@ class NextcloudChart extends HelmChart
             'imaginary' => [
                 'enabled' => $app_instance->configuration('imaginary-enabled'),
                 'replicaCount' => $app_instance->configuration('imaginary-replicaCount'),
+                'resources' => self::IMAGINARY_RESOURCES,
                 'image' => [
                     'registry' => $app_instance->configuration('imaginary-image-registry'),
                     'repository' => $app_instance->configuration('imaginary-image-repository'),
@@ -81,6 +105,7 @@ class NextcloudChart extends HelmChart
             'metrics' => [
                 'enabled' => $app_instance->configuration('metrics-enabled', true),
                 'https' => $app_instance->configuration('metrics-https', true),
+                'resources' => self::METRICS_RESOURCES,
             ],
             'nextcloud' => [
                 'configs' => [
@@ -149,18 +174,12 @@ class NextcloudChart extends HelmChart
                 'periodSeconds' => $app_instance->configuration('startupProbe-periodSeconds'),
                 'timeoutSeconds' => $app_instance->configuration('startupProbe-timeoutSeconds'),
             ],
+            // The chart reads cron resources from the key of whichever type runs
+            // (sidecar by default, cronjob when restricted), not from cronjob.resources.
             'cronjob' => [
                 'enabled' => $app_instance->configuration('cronjob'),
-                'resources' => [
-                    'requests' => [
-                        'cpu' => $app_instance->configuration('cronjob-resources-requests-cpu'),
-                        'memory' => $app_instance->configuration('cronjob-resources-requests-memory'),
-                    ],
-                    'limits' => [
-                        'cpu' => $app_instance->configuration('cronjob-resources-limits-cpu'),
-                        'memory' => $app_instance->configuration('cronjob-resources-limits-memory'),
-                    ],
-                ],
+                'sidecar' => ['resources' => $cronResources],
+                'cronjob' => ['resources' => $cronResources],
             ],
         ];
 

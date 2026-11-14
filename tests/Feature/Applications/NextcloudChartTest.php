@@ -135,3 +135,18 @@ it('runs imaginary from the maintained aio image with an exact tag', function ()
     expect($image)->toMatchArray(['registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary'])
         ->and($image['tag'])->not->toBeEmpty()->not->toBe('latest');
 });
+
+it('sets resources where the chart reads them, so every pod has requests and a memory limit', function () {
+    $values = nextcloudChartValues(['cronjob' => true, 'imaginary-enabled' => true, 'metrics-enabled' => true]);
+
+    foreach ([
+        $values['resources'],
+        $values['cronjob']['sidecar']['resources'],
+        $values['cronjob']['cronjob']['resources'],
+        $values['imaginary']['resources'],
+        $values['metrics']['resources'],
+    ] as $resources) {
+        expect($resources['requests'])->toHaveKeys(['cpu', 'memory'])
+            ->and($resources['limits'])->toHaveKey('memory');
+    }
+});
