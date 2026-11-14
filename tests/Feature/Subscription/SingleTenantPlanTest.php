@@ -50,8 +50,9 @@ it('keeps the ordinary base plan outside single mode', function () {
 it('keeps the ordinary base plan for any other organization in single mode', function () {
     useSingleTenancy();
     $organization = Organization::find(1);
+    $organization->type = 'business';
+    $organization->save();
 
-    expect($organization->type)->not->toBe('superaccount');
     expect((new SubscriptionService($organization))->base())->not->toBeInstanceOf(SingleTenantBasePlanService::class);
 });
 
