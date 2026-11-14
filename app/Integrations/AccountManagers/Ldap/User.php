@@ -189,8 +189,10 @@ class User extends UserManager
 
     public function hasAppRole(AppInstance $app_instance, AppRole $role)
     {
-        $app_instance = LdapSupport::roleGroupApp($app_instance);
-        $role_dn = Dn::create($app_instance->organization, 'applications', [$role->app_slug($app_instance), $app_instance->name]);
+        // The groups sit under the org of the instance asked about, but under the name of the shared
+        // app it belongs to: a shared app's hub is usually in another org, so its org can't be used
+        $role_app = LdapSupport::roleGroupApp($app_instance);
+        $role_dn = Dn::create($app_instance->organization, 'applications', [$role->app_slug($role_app), $role_app->name]);
 
         return $this->user->groups()->exists($role_dn);
     }

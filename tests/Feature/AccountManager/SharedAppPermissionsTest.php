@@ -6,6 +6,7 @@ use App\AppRole;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group;
+use App\Organization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Application;
 use App\User;
@@ -117,6 +118,40 @@ describe('a centralized shared app (Nextcloud)', function () {
         $user->post('/users/testing1/permissions', ['permission' => [$this->child->id => ['none']]]);
 
         expect(AccountManager::users()->find('testing1')->hasAppRole($this->child, $this->role))->toBeFalse();
+    });
+});
+
+describe('a centralized shared app in another org than its hub', function () {
+    beforeEach(function () {
+        setMultisite(false);
+
+        // The usual case: the hub is the server's, and the child belongs to a customer's own org, with
+        // its own users and groups
+        $this->other_org = Organization::factory()->create(['slug' => 'testing', 'name' => 'Testing', 'plan_id' => 1]);
+        AccountManager::accounts()->create($this->other_org);
+        AccountManager::users($this->other_org)->add([
+            'username' => 'customer1',
+            'first_name' => 'customer',
+            'last_name' => 'user1',
+            'name' => 'customer user1',
+            'email' => 'customer1@example.com',
+            'password' => 'password',
+            'phone_number' => '1234567890',
+        ]);
+        $this->child->organization()->associate($this->other_org)->save();
+        $this->child->refresh();
+
+        (new AddLdapGroups($this->child))->handle();
+    });
+
+    it('sees the role it saved in the child\'s org, and the access it gives', function () {
+        AccountManager::users($this->other_org)->find('customer1')->permissions()->updateAppRoles($this->child, [$this->role]);
+
+        $user = AccountManager::users($this->other_org)->find('customer1');
+
+        expect(roleGroupExists($this->child, $this->hub->name, $this->role, $this->hub))->toBeTrue()
+            ->and($user->hasAppRole($this->child, $this->role))->toBeTrue()
+            ->and($user->appUserAccessType($this->child))->toBe('standard');
     });
 });
 
