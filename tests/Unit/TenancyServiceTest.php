@@ -62,3 +62,21 @@ it('gives each mode a translated label and description', function (TenancyMode $
     expect($mode->label())->not->toContain('setup.tenancy');
     expect($mode->description())->not->toContain('setup.tenancy');
 })->with(TenancyMode::cases());
+
+it('recognises the single organization only in single mode', function () {
+    (new TestSupports)->seed();
+    $organization = Organization::where('slug', 'demo')->firstOrFail();
+
+    expect(Tenancy::isSingleOrganization($organization))->toBeFalse();
+
+    $organization->type = 'superaccount';
+    $organization->save();
+    expect(Tenancy::isSingleOrganization($organization))->toBeFalse();
+
+    useSingleTenancy();
+    expect(Tenancy::isSingleOrganization($organization))->toBeTrue();
+
+    $organization->type = 'business';
+    $organization->save();
+    expect(Tenancy::isSingleOrganization($organization))->toBeFalse();
+});

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static TenancyMode mode()
  * @method static bool isSingle()
  * @method static bool isMulti()
+ * @method static bool isSingleOrganization(Organization $organization)
  * @method static void set(TenancyMode $mode)
  * @method static TenancyMode installerDefault()
  * @method static TenancyMode|null installerMode()

@@ -14,6 +14,7 @@ use App\Support\Facades\Application;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -490,6 +491,13 @@ class AppInstancePlanService
         return ! is_null($this->plan->setting('basic.name'));
     }
 
+    // The one organization of a single-organization install has no limits, even
+    // the ones an app plan sets
+    private function isUnlimited(): bool
+    {
+        return $this->organization && Tenancy::isSingleOrganization($this->organization);
+    }
+
     public function isAnyMaxBroken()
     {
         foreach ($this->pricing_options as $option) {
@@ -521,11 +529,19 @@ class AppInstancePlanService
 
     public function isMaxBroken(PlanEntity $entity): bool
     {
+        if ($this->isUnlimited()) {
+            return false;
+        }
+
         return $this->plan->setting("{$entity->value}.max") && $this->countEntity($entity->value) > (int) $this->plan->setting("{$entity->value}.max");
     }
 
     public function isMax($entity): bool
     {
+        if ($this->isUnlimited()) {
+            return false;
+        }
+
         $max_amount = $this->plan->setting("$entity.max");
 
         return ($max_amount && $this->countEntity($entity) >= (int) $max_amount) || (! $max_amount && Subscription::base()->isMax($entity));

@@ -9,9 +9,11 @@ use App\Organization;
 use App\Plan;
 use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\Organization\BasePlanService;
+use App\Services\Organization\SingleTenantBasePlanService;
 use App\Support\Facades\Application;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
+use App\Support\Facades\Tenancy;
 use Illuminate\Support\Arr;
 
 class SubscriptionService
@@ -39,6 +41,17 @@ class SubscriptionService
         return $this;
     }
 
+    /**
+     * The one organization of a single-organization install has no plan limits,
+     * so it gets the unlimited base plan; everyone else gets the plan they pay for.
+     */
+    private function basePlan(Organization $organization, ?Plan $plan = null): BasePlanService
+    {
+        return Tenancy::isSingleOrganization($organization)
+            ? new SingleTenantBasePlanService($organization, $plan)
+            : new BasePlanService($organization, $plan);
+    }
+
     public function access()
     {
         return $this;
@@ -47,7 +60,7 @@ class SubscriptionService
     public function base()
     {
         if (! array_key_exists('base', $this->plans)) {
-            $this->plans['base'] = new BasePlanService($this->organization);
+            $this->plans['base'] = $this->basePlan($this->organization);
         }
 
         return $this->plans['base'];
@@ -91,7 +104,7 @@ class SubscriptionService
     public function add($name, $plan, $item)
     {
         if ($name == 'base') {
-            $this->plans[$name] = new BasePlanService($item, $plan);
+            $this->plans[$name] = $this->basePlan($item, $plan);
         } else {
             $app_instance_plan = new AppInstancePlanService($plan, $item);
             $this->plans[$name] = $app_instance_plan;
@@ -100,7 +113,7 @@ class SubscriptionService
 
     public function dryBaseChange(Plan $plan)
     {
-        $this->plans['base'] = new BasePlanService($this->organization, $plan);
+        $this->plans['base'] = $this->basePlan($this->organization, $plan);
 
         return $this;
     }
@@ -120,7 +133,7 @@ class SubscriptionService
         $this->organization->plan_id = $plan->id;
         $this->organization->save();
 
-        $this->plans['base'] = new BasePlanService($this->organization, $plan);
+        $this->plans['base'] = $this->basePlan($this->organization, $plan);
         $this->updateAppInstancesFromBase($plan);
 
         $this->clearCachedPlanData();

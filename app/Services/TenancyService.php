@@ -29,6 +29,15 @@ class TenancyService
         return $this->mode() === TenancyMode::Multi;
     }
 
+    /**
+     * Whether this is the one organization of a single-organization install.
+     * Test organizations made by version tests are not.
+     */
+    public function isSingleOrganization(Organization $organization): bool
+    {
+        return $this->isSingle() && $organization->type === 'superaccount';
+    }
+
     public function set(TenancyMode $mode): void
     {
         Settings::update(self::SETTING, $mode->value);
