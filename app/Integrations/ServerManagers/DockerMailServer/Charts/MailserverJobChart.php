@@ -3,14 +3,28 @@
 namespace App\Integrations\ServerManagers\DockerMailServer\Charts;
 
 use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\RebuildableJobChart;
 use App\OrgDomain;
 use Illuminate\Support\Str;
 
-class MailserverJobChart extends JobChart
+/**
+ * @phpstan-consistent-constructor
+ */
+class MailserverJobChart extends JobChart implements RebuildableJobChart
 {
     public $chart = [];
 
     public function __construct(public OrgDomain $domain) {}
+
+    public function taskValues(): array
+    {
+        return ['org_domain_id' => $this->domain->id];
+    }
+
+    public static function fromTaskValues(array $values): static
+    {
+        return new static(OrgDomain::findOrFail($values['org_domain_id'] ?? null));
+    }
 
     public function run(array $command, array $env, array $args, ?string $job_name = null)
     {

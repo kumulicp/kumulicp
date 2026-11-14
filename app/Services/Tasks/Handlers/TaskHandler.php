@@ -2,7 +2,6 @@
 
 namespace App\Services\Tasks\Handlers;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Task;
 
@@ -26,5 +25,9 @@ interface TaskHandler
      */
     public function cancelled(Task $task): ?string;
 
-    public function retry(Task $task): ?Action;
+    /**
+     * Gets the task ready to run again, after ActionService::retry() has put it
+     * back to pending.
+     */
+    public function reset(Task $task): void;
 }

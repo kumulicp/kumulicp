@@ -5,6 +5,7 @@ namespace App\Integrations\Applications\Wordpress\Actions;
 use App\Actions\Action;
 use App\Actions\Prerequisites;
 use App\AppInstance;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\Wordpress\API\User;
@@ -62,7 +63,7 @@ class ProcessPermissions extends Action
                 $response = $user->updateUserRoles($username, $roles);
             } catch (ConnectionFailedException $e) {
                 $task->error_message = $e->getMessage();
-                $task->error_code = 'connection_failed';
+                $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
                 $task->restart();
 
                 return;
@@ -71,7 +72,7 @@ class ProcessPermissions extends Action
             if ($user->hasError()) {
                 $task->error_message = $user->error();
                 $task->status = TaskStatus::PENDING;
-                $task->error_code = 'update_user_role_failed';
+                $task->error_code = TaskErrorCode::UPDATE_USER_ROLE_FAILED->value;
                 $task->save();
             }
         }

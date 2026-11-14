@@ -60,8 +60,33 @@ class ResizeDisk extends NativeAction
     {
         // undo what handle() did; called when the task fails
     }
+
+    public static function reset(Task $task): void
+    {
+        // called when the task is retried (see below)
+    }
 }
 ```
+
+### Retrying
+
+`ActionService::retry()` puts the task back to `pending` and clears its claims,
+steps and the tasks it waited on; then it calls your `reset(Task $task)`, which is
+for what the action itself keeps. There is no fresh action to build: work from the
+task.
+
+- Drop what the last run left in `$task->custom_values` (a job id, the id of a task
+  it spawned) and keep what the task was made with:
+  `$task->custom_values = Arr::only($task->customValues(), ['target_server_id']);`
+- Do again what creating the task did to the world and a cancellation or rollback
+  undid (`ApplicationUpgrade` marks the app `updating` again). Share the code with
+  `onCreate()` through a private static method that takes the task.
+- Check anything the constructor validated that can have changed since
+  (`ApplicationDelete` refuses an app that has gained children).
+- Throw to fail the task; the exception message becomes its error message.
+
+The runner counts the retry as an attempt, clears the error message and code, and
+saves the task afterwards. The default does nothing: the task keeps its values.
 
 Register it in `ActionService::$actions` under a group and slug.
 
@@ -76,6 +101,11 @@ Register it in `ActionService::$actions` under a group and slug.
 
 `$values` are merged into `$task->custom_values`. `->then(fn (Task $task) => ...)`
 runs once the new state is saved.
+
+`$code` is a `App\Enums\TaskErrorCode` (a plain string still works for a code
+only your action uses). Add a case to the enum for each code you introduce;
+`Task::errorCode()` reads it back (null for a string the enum doesn't know), and a
+test fails if an `error_code` literal appears in `app/`.
 
 ### Exceptions
 
@@ -137,8 +167,8 @@ an event: the constructor also runs when something builds the action without
 meaning to do the work, and the work would then be done twice.
 
 Work that has to happen once the task exists goes in `onCreate(Task $task)`. It runs
-when the task is created - not for a duplicate that `Action::execute()` turns away -
-and again when the task is retried, so it must be safe to repeat.
+when the task is created - not for a duplicate that `Action::execute()` turns away.
+What it did to the world and a retry has to do again goes in `reset()` too (below).
 
 ```php
 public function __construct(AppInstance $app_instance)
@@ -278,5 +308,6 @@ reason. The limits are in `config/tasks.php`:
 
 Actions written before `TaskAction` have static `run()`, `complete()`, `retry()`
 and `revert()` methods that change the task themselves. They keep working
-unchanged (see `LegacyHandler`); port one by extending `NativeAction` and
-returning `ActionResult`s.
+unchanged (see `LegacyHandler`; their `retry()` still returns a fresh action to
+take the task's values from); port one by extending `NativeAction`, returning
+`ActionResult`s and replacing `retry()` with `reset()`.

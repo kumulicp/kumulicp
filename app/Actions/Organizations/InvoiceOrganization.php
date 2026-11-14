@@ -3,6 +3,7 @@
 namespace App\Actions\Organizations;
 
 use App\Actions\Action;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Organization;
 use App\Support\Facades\Billing;
@@ -39,7 +40,7 @@ class InvoiceOrganization extends Action
             $task->groupNotified();
         } catch (\Exception $e) {
             $task->status = TaskStatus::FAILED;
-            $task->error_code = 'stripe_invoice_organization_failed';
+            $task->error_code = TaskErrorCode::STRIPE_INVOICE_ORGANIZATION_FAILED->value;
             $task->error_message = __('organization.billing_manager.denied.invoice');
             $task->save();
 
