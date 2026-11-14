@@ -30,6 +30,7 @@ class Configurations extends Controller
                 'name' => $plan->name,
                 'hidden' => $plan->hidden,
                 'full_settings' => $plan->hasFullSettings(),
+                'tabs' => $plan->tabs(),
             ],
             'configs' => array_merge($configs, $additionalConfigs),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),

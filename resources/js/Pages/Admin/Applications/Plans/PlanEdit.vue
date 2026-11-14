@@ -128,19 +128,14 @@ import { currencyByCode } from '@/constants/currencies'
           {{ $t('admin.plans.independentlyInstalled') }}
         </p>
         <template v-else>
-          <va-select
-            v-if="!plan.hidden"
-            v-model="form.server_type"
+          <va-input
+            v-if="!plan.hidden && app.can.shareable"
+            :model-value="serverTypeLabel"
+            id="serverType"
             class="my-2"
+            readonly
             :label="$t('admin.plans.serverType')"
-            :messages="$t('admin.plans.serverTypeCaption')"
-            immediateValidation
-            clearable
-            value-by="value"
-            text-by="text"
-            :options="serverTypes"
-            :error="$page.props.errors.server_type"
-            :error-messages="$page.props.errors.server_type"
+            :messages="$t('admin.plans.serverTypeFixedCaption')"
           />
           <template v-if="form.server_type == 'shared'">
             <va-select
@@ -509,6 +504,12 @@ export default {
     enabled_currencies: {
       type: Array,
       default: () => ['USD']
+    }
+  },
+  computed: {
+    // Chosen when the plan is created, so it's only shown here
+    serverTypeLabel () {
+      return this.serverTypes.find(type => type.value === this.form.server_type)?.text ?? this.serverTypes[0].text
     }
   },
   data () {

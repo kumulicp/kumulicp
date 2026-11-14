@@ -33,6 +33,7 @@ class Features extends Controller
                 'settings' => $settings,
                 'hidden' => $plan->hidden,
                 'full_settings' => $plan->hasFullSettings(),
+                'tabs' => $plan->tabs(),
             ],
             'features' => $features->map(function ($feature) {
                 return [

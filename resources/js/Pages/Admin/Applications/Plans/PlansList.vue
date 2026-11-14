@@ -44,6 +44,31 @@ import draggable from 'vuedraggable'
                 :error="$page.props.errors.description"
                 :error-messages="$page.props.errors.description"
                 />
+              <template v-if="canChooseServerType">
+                <va-select v-model="form.server_type"
+                  id="serverType"
+                  :label="$t('admin.plans.serverType')"
+                  :messages="$t('admin.plans.serverTypeCaption')"
+                  class="mb-3"
+                  value-by="value"
+                  text-by="text"
+                  :options="serverTypes"
+                  :error="!!$page.props.errors.server_type"
+                  :error-messages="$page.props.errors.server_type"
+                />
+                <va-select v-if="form.server_type === 'shared'"
+                  v-model="form.shared_app"
+                  id="sharedApp"
+                  :label="$t('admin.plans.sharedApp')"
+                  class="mb-3"
+                  required-mark
+                  value-by="id"
+                  text-by="name"
+                  :options="shared_apps || []"
+                  :error="!!$page.props.errors.shared_app"
+                  :error-messages="$page.props.errors.shared_app"
+                />
+              </template>
             </va-card-content>
             <va-card-actions align="right" class="">
               <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
@@ -167,10 +192,15 @@ export default {
     app: Object,
     plans: Object,
     archived: Object,
+    shared_apps: Array,
     errors: Object
   },
   data() {
     return {
+      serverTypes: [
+        { text: this.$t('admin.plans.serverTypeSeparate'), value: 'separate' },
+        { text: this.$t('admin.plans.serverTypeShared'), value: 'shared' }
+      ],
       showAddPlan: false,
       showClonePlan: false,
       cloneTarget: null,
@@ -182,11 +212,19 @@ export default {
       selectedPlans: [],
       form: useForm({
         name: '',
-        description: ''
+        description: '',
+        server_type: 'separate',
+        shared_app: null
       }),
       order: useForm({
         plans: this.plans
       })
+    }
+  },
+  computed: {
+    // Only an app that can be shared has a choice of server type
+    canChooseServerType () {
+      return this.app.can?.shareable && this.$page.props.flags?.sharedApps
     }
   },
   methods: {

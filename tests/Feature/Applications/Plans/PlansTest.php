@@ -3,8 +3,10 @@
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\Organization;
 use App\Support\Facades\Settings;
 use App\User;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 
 beforeEach(function () {
@@ -241,11 +243,161 @@ it('does not require server_type when updating a hidden shared-app plan', functi
     ]);
 });
 
-it('still requires server_type when updating a normal, non-hidden plan', function () {
+it('keeps the plan\'s server type when an update does not send one', function () {
     $this->actingAs($this->user)->post(
         "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
         appPlanUpdatePayload(['server_type' => null])
-    )->assertSessionHasErrors('server_type');
+    )->assertSessionDoesntHaveErrors('server_type');
+
+    expect($this->appPlan->fresh()->setting('server_type'))->toBe('separate');
+});
+
+// ---------------------------------------------------------------------------
+// Creating a plan asks for its server type
+// ---------------------------------------------------------------------------
+
+function sharedDemoApp(Application $app): AppInstance
+{
+    $organization = Organization::factory()->create([
+        'name' => 'Shared Apps',
+        'slug' => 'shared',
+        'type' => 'shared',
+        'status' => 'active',
+    ]);
+
+    $plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'hidden' => true,
+        'web_server_id' => 11,
+        'database_server_id' => 12,
+        'sso_server_id' => 13,
+    ]);
+
+    $instance = new AppInstance;
+    $instance->application_id = $app->id;
+    $instance->organization_id = $organization->id;
+    $instance->version_id = 1;
+    $instance->plan_id = $plan->id;
+    $instance->name = 'shared-demo';
+    $instance->label = 'Shared Demo';
+    $instance->status = 'active';
+    $instance->save();
+
+    return $instance;
+}
+
+it('creates a plan that activates its own app by default', function () {
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'New plan',
+        'description' => 'New description',
+    ])->assertRedirect();
+
+    $plan = AppPlan::where('name', 'New plan')->firstOrFail();
+
+    expect($plan->setting('server_type'))->toBe('separate')
+        ->and($plan->shared_app_id)->toBeNull();
+});
+
+it('creates a plan connected to a shared app, using its servers', function () {
+    $shared = sharedDemoApp($this->demoApp);
+
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'Shared plan',
+        'description' => 'Shared description',
+        'server_type' => 'shared',
+        'shared_app' => $shared->id,
+    ])->assertRedirect();
+
+    $plan = AppPlan::where('name', 'Shared plan')->firstOrFail();
+
+    expect($plan->setting('server_type'))->toBe('shared')
+        ->and($plan->shared_app_id)->toBe($shared->id)
+        ->and($plan->web_server_id)->toBe(11)
+        ->and($plan->database_server_id)->toBe(12)
+        ->and($plan->sso_server_id)->toBe(13);
+});
+
+it('needs a shared app to create a shared plan', function () {
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'Shared plan',
+        'description' => 'Shared description',
+        'server_type' => 'shared',
+    ])->assertSessionHasErrors('shared_app');
+
+    expect(AppPlan::where('name', 'Shared plan')->exists())->toBeFalse();
+});
+
+it('rejects an unknown server type when creating a plan', function () {
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'Odd plan',
+        'description' => 'Odd description',
+        'server_type' => 'cluster',
+    ])->assertSessionHasErrors('server_type');
+});
+
+it('does not let an app that can\'t be shared create a shared plan', function () {
+    // WordPress's profile doesn't declare it as shareable
+    $app = Application::factory()->create(['slug' => 'wordpress', 'name' => 'WordPress']);
+    $shared = sharedDemoApp($this->demoApp);
+
+    $this->actingAs($this->user)->post("/admin/apps/{$app->slug}/plans", [
+        'name' => 'Shared plan',
+        'description' => 'Shared description',
+        'server_type' => 'shared',
+        'shared_app' => $shared->id,
+    ])->assertSessionHasErrors('server_type');
+});
+
+it('only offers the shared apps of the same application', function () {
+    $shared = sharedDemoApp($this->demoApp);
+
+    $this->actingAs($this->user)->get("/admin/apps/{$this->demoApp->slug}/plans")
+        ->assertInertia(fn ($page) => $page
+            ->where('app.can.shareable', true)
+            ->where('shared_apps.0.id', $shared->id)
+            ->where('shared_apps.0.name', 'Shared Demo')
+        );
+});
+
+// ---------------------------------------------------------------------------
+// Tabs of a plan connected to a shared app
+// ---------------------------------------------------------------------------
+
+it('shows every tab of a plan that activates its own app', function () {
+    $this->actingAs($this->user)
+        ->get("/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/edit")
+        ->assertInertia(fn ($page) => $page
+            ->where('plan.tabs', ['features' => true, 'configurations' => true, 'secrets' => true])
+        );
+});
+
+it('hides the features, configurations and secrets tabs of a plan connected to a shared app', function () {
+    $this->appPlan->updateSettings(['server_type' => 'shared']);
+    $this->appPlan->save();
+
+    foreach (['', '/edit', '/features', '/configurations', '/secrets'] as $page) {
+        $this->actingAs($this->user)
+            ->get("/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}{$page}")
+            ->assertInertia(fn ($inertia) => $inertia
+                ->where('plan.tabs', ['features' => false, 'configurations' => false, 'secrets' => false])
+            );
+    }
+});
+
+it('keeps the features tab of a shared plan for a multisite app', function () {
+    DemoAppProfile::$multisite = true;
+    $this->appPlan->updateSettings(['server_type' => 'shared']);
+    $this->appPlan->save();
+
+    try {
+        $this->actingAs($this->user)
+            ->get("/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/edit")
+            ->assertInertia(fn ($page) => $page
+                ->where('plan.tabs', ['features' => true, 'configurations' => false, 'secrets' => false])
+            );
+    } finally {
+        DemoAppProfile::$multisite = false;
+    }
 });
 
 it('rejects a currency amount that is not numeric for the app plan', function () {

@@ -360,6 +360,7 @@
       "independentlyInstalled": "Esta aplicación se instala de forma independiente y no está gestionada por Kumuli CP.",
       "serverType": "Tipo de Servidor",
       "serverTypeCaption": "Activación Separada: cada organización activará su propia aplicación. Aplicación Compartida: todos los usuarios se conectan a una sola aplicación",
+      "serverTypeFixedCaption": "Se elige al crear el plan y no se puede cambiar aquí",
       "serverTypeSeparate": "Activación Separada",
       "serverTypeShared": "Conectar Aplicación Compartida",
       "webServer": "Servidor Web",
