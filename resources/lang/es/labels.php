@@ -23,6 +23,7 @@ return [
     'server_settings' => 'Configuración del servidor',
     'control_panel_settings' => 'Configuración del panel de control',
     'tests' => 'Pruebas',
+    'updates' => 'Actualizaciones',
     'tasks' => 'Tareas',
     'settings' => 'Configuración',
     'backups' => 'Copias de seguridad',

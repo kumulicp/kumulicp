@@ -23,6 +23,7 @@ return [
     'server_settings' => 'Server Settings',
     'control_panel_settings' => 'Control Panel Settings',
     'tests' => 'Tests',
+    'updates' => 'Updates',
     'tasks' => 'Tasks',
     'settings' => 'Settings',
     'backups' => 'Backups',

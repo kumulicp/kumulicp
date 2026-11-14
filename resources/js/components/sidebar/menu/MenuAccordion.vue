@@ -40,6 +40,7 @@ import { Link } from '@inertiajs/vue3'
                 {{ route.name }}
               </va-sidebar-item-title>
 
+              <va-badge v-if="badgeTotal(route) > 0" class="menu-badge" color="warning" :text="String(badgeTotal(route))" />
               <va-icon v-if="route.submenu" :name="isCollapsed ? 'expand_less' : 'expand_more'" />
             </va-sidebar-item-content>
           </va-sidebar-item>
@@ -71,6 +72,7 @@ import { Link } from '@inertiajs/vue3'
                   <va-sidebar-item-title>
                     {{ child.name }}
                   </va-sidebar-item-title>
+                  <va-badge v-if="badge(child) > 0" class="menu-badge" color="warning" :text="String(badge(child))" />
                 </va-sidebar-item-content>
               </Link>
             </va-sidebar-item>
@@ -126,6 +128,13 @@ export default {
     }
   },
   methods: {
+    // How many are waiting, for an item that names a shared prop that says so
+    badge (item) {
+      return item.badge ? Number(this.$page.props[item.badge] || 0) : 0
+    },
+    badgeTotal (item) {
+      return this.badge(item) + (item.submenu || []).reduce((total, child) => total + this.badge(child), 0)
+    },
     isRouteActive (item) {
       return item.url === this.activeUrl
     },

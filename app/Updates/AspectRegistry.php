@@ -7,6 +7,7 @@ use App\Support\Facades\Application;
 use App\Updates\Aspects\Aspect;
 use App\Updates\Aspects\FeatureAspect;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * The aspects an app instance has: the ones every app has, the ones its
@@ -22,6 +23,19 @@ class AspectRegistry
         $this->aspects[$aspect->key()] = $aspect;
 
         return $this;
+    }
+
+    /**
+     * What to call an aspect where no instance is at hand (a list of what is
+     * out of date). An aspect that only one app has is named after its key.
+     */
+    public function label(string $key): string
+    {
+        if (isset($this->aspects[$key])) {
+            return $this->aspects[$key]->label();
+        }
+
+        return Str::headline(Str::after($key, 'feature.'));
     }
 
     /**

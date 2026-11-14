@@ -6,6 +6,7 @@ use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
 use App\Support\Facades\Settings;
 use App\Support\SharedAppContext;
+use App\Updates\PendingUpdates;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -134,7 +135,10 @@ class HandleInertiaRequests extends Middleware
             'notices' => Inertia::always(fn () => [
                 'success' => session('success'),
                 'error' => session('error'),
+                'warning' => session('warning'),
             ]),
+            // How many app instances are out of date, for the admin menu
+            'pending_updates_count' => fn () => $request->user() && Gate::allows('admin') ? app(PendingUpdates::class)->count() : 0,
             'reset' => [
                 'menu' => session('reset_menu') !== null,
                 'step' => session('reset_step') !== null,

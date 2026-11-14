@@ -15,6 +15,7 @@ use App\SecurityScan;
 use App\Server;
 use App\Support\SafeErrorMessage;
 use App\Task;
+use App\Updates\PendingUpdates;
 use Illuminate\Support\Carbon;
 
 class Dashboard extends Controller
@@ -105,6 +106,7 @@ class Dashboard extends Controller
             'plans' => $plans,
             'app_usage' => $app_usage,
             'app_updates' => $this->appUpdates(),
+            'pending_updates' => app(PendingUpdates::class)->summary(),
             'task_statuses' => $task_statuses,
             'recent_failed_tasks' => $recent_failed_tasks,
             'security_findings' => $security_findings,

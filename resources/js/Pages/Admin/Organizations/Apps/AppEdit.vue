@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
 import AppDomainFields from '@/components/AppDomainFields.vue'
+import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 
 </script>
 <template>
@@ -36,6 +37,13 @@ import AppDomainFields from '@/components/AppDomainFields.vue'
     <va-list-separator class="my-4" fit />
 
     <template v-if="!app.managed_externally">
+    <va-alert v-if="updates.length > 0" id="outOfDate" color="warning" icon="warning" class="mb-3">
+      <div>{{ $t('admin.updates.appOutOfDate', { aspects: updates.map(update => update.label).join(', ') }) }}</div>
+      <div v-for="change in changes" :key="change ? change.id : 'none'" class="secondary">
+        <ChangeSummary :change="change" />
+      </div>
+      <div>{{ $t('admin.updates.appOutOfDateHelp') }}</div>
+    </va-alert>
     <div class="row justify-center">
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
@@ -145,6 +153,7 @@ import AppDomainFields from '@/components/AppDomainFields.vue'
             <va-divider class="my-2" />
             <div v-for="step in update_steps" :key="step.key" class="mb-2">
               <va-checkbox v-model="updateForm.steps" :array-value="step.key" :label="step.label" />
+              <va-badge v-if="step.out_of_date" :id="'outOfDate-' + step.key" class="ml-2" color="warning" :text="$t('admin.apps.updateOutOfDate')" />
               <div v-if="step.description" class="va-text-secondary ml-8">{{ step.description }}</div>
             </div>
           </template>
@@ -274,9 +283,20 @@ export default {
       type: Array,
       default: () => []
     },
+    updates: {
+      type: Array,
+      default: () => []
+    },
     database_servers: Array
   },
   computed: {
+    // Each edit once, however many things it put out of date
+    changes () {
+      const seen = new Map()
+      this.updates.forEach(update => seen.set(update.change ? update.change.id : 'none', update.change))
+
+      return [...seen.values()]
+    },
     allStepsSelected: {
       get () {
         return this.update_steps.length > 0 && this.updateForm.steps.length === this.update_steps.length

@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon $applied_at
  * @property Carbon|null $drift_detected_at When it was first seen to be out of date
  * @property int|null $definition_change_id The edit that put it out of date, if one was seen
+ * @property Carbon|null $dismissed_at When an admin took it as up to date without running anything
+ * @property int|null $dismissed_by_id
  * @property int|null $task_id
  * @property-read AppInstance $app_instance
  * @property-read DefinitionChange|null $change
@@ -31,6 +33,7 @@ class UpdateState extends Model
     protected $casts = [
         'applied_at' => 'datetime',
         'drift_detected_at' => 'datetime',
+        'dismissed_at' => 'datetime',
     ];
 
     /**

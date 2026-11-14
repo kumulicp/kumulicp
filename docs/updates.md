@@ -99,6 +99,33 @@ recorded by hand, as `Roles::update` does) is found by the nightly scan
 Not watched yet: servers, applications and the organization plans (`Plan`). None of
 the aspects depend on them.
 
+## Seeing what is out of date
+
+`App\Updates\PendingUpdates` reads what the scans stored (it works nothing out)
+and is behind everything admins see:
+
+- **Server → Updates** (`/admin/server/updates`): how many app instances and
+  organizations are out of date and for what, grouped by the edit that did it
+  (what was found without an edit being seen is a group of its own), and the
+  instances with the reason for each. A group or an aspect narrows the list
+  (`?change=<id|none>&aspect=<key>`). *Check again* looks at every instance now.
+- **Nothing to do** takes what is listed as up to date without running anything,
+  for a change that needs nothing done to those instances. It only ever takes what
+  was picked, and the admin and the time are kept on `update_states`
+  (`dismissed_by_id`, `dismissed_at`) until a step brings it up to date or it goes
+  out of date again.
+- **Dashboard**, **organization list and page** and **the sidebar** (a count on
+  Server and Updates, from the `pending_updates_count` shared prop, which a menu
+  item asks for with its `badge` key) show it where admins already look.
+- **An app's page** says what it is out of date for and why. In its *Update*
+  list the steps for what changed are ticked and marked, so updating it does what
+  is needed and nothing else (`UpdateSteps::options()`).
+- An admin who edits a plan, version or role is told how many instances use it
+  and are being checked.
+
+Applying an update to many instances at once (with a canary, a time window and a
+stop on failures) is not here yet: each instance is updated from its own page.
+
 ## Adding one
 
 A step names the aspects it brings up to date:

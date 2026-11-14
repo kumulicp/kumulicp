@@ -102,6 +102,16 @@ class MenuService
                         'order' => 100,
                     ],
                     [
+                        'name' => __('labels.updates'),
+                        'url' => '/admin/server/updates',
+                        'icon' => 'fa-sync-alt',
+                        'perm' => $admin,
+                        'external' => false,
+                        'order' => 150,
+                        // The name of a shared prop with how many are waiting, shown next to the item
+                        'badge' => 'pending_updates_count',
+                    ],
+                    [
                         'name' => __('labels.tasks'),
                         'url' => '/admin/server/tasks',
                         'icon' => 'fa-tasks',
