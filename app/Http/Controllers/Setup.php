@@ -123,6 +123,11 @@ class Setup extends Controller
         $organization->slug = Str::snake($data['slug']);
         $organization->name = $mode === TenancyMode::Single ? $data['organization_name'] : __('setup.first_org');
         $organization->description = $organization->name;
+        $organization->email = $data['contact_email'];
+        // Required columns the installer doesn't ask for; the organization settings page fills them in
+        foreach (['phone_number', 'contact_phone_number', 'street', 'zipcode', 'city', 'state', 'country'] as $column) {
+            $organization->$column = '';
+        }
         $organization->api_token = Str::random(60);
         $organization->contact_first_name = $data['contact_first_name'];
         $organization->contact_last_name = $data['contact_last_name'];
