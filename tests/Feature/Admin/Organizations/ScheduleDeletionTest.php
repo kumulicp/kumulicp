@@ -10,6 +10,7 @@ use App\Plan;
 use App\Support\Facades\Action;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -53,6 +54,22 @@ class ScheduleDeletionTest extends TestCase
             ->assertRedirect("/admin/organizations/{$org->id}");
 
         $this->assertEquals($date->timestamp, $org->fresh()->deletion_scheduled_at->timestamp);
+    }
+
+    public function test_deleting_now_is_set_by_the_server_two_minutes_ahead()
+    {
+        $admin = $this->adminUser();
+        $org = $this->organization(['status' => 'deactivated']);
+        $this->travelTo(now()->setTime(11, 35, 0));
+
+        $this->actingAs($admin)
+            ->post("/admin/organizations/{$org->id}/schedule_deletion", ['now' => true, 'date' => now()->subHours(3)->toIso8601String()])
+            ->assertRedirect()
+            ->assertSessionHas('success', __('admin.organizations.deletion_scheduled_in_minutes', ['minutes' => 2]));
+
+        $this->assertEquals('11:37:00', $org->fresh()->deletion_scheduled_at->format('H:i:s'));
+        // The stored wall-clock time is the app timezone's, not UTC
+        $this->assertEquals('11:37:00', substr(DB::table('organizations')->where('id', $org->id)->value('deletion_scheduled_at'), 11));
     }
 
     public function test_an_already_deactivated_organization_is_not_deactivated_again()

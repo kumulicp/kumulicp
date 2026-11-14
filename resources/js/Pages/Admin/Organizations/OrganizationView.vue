@@ -268,7 +268,8 @@ export default {
       showDeactivate: false,
       deactivateDate: null,
       deactivateForm: useForm({
-        date: null
+        date: null,
+        now: false
       }),
       notifyForm: useForm({}),
       planForm: useForm({
@@ -288,7 +289,7 @@ export default {
       this.showChangePlan = true
     },
     formatDate (value) {
-      return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+      return new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     },
     defaultDeletionDate () {
       const date = new Date()
@@ -305,11 +306,15 @@ export default {
     setDeletionDate (date) {
       this.deactivateDate = date
       this.deactivateForm.date = date.toISOString()
+      this.deactivateForm.now = false
     },
     setDeletionNow () {
+      // The server works out the moment: it starts when this is confirmed, not now
       this.setDeletionDate(new Date())
+      this.deactivateForm.now = true
     },
     updateDeactivateDate (date) {
+      this.deactivateForm.now = false
       this.deactivateForm.date = date ? new Date(date).toISOString() : null
     },
     submitDeactivate () {

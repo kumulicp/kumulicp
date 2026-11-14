@@ -20,6 +20,11 @@ use Illuminate\Validation\ValidationException;
 
 class Organizations extends Controller
 {
+    /**
+     * How far ahead "delete now" is scheduled.
+     */
+    private const IMMEDIATE_DELETION_MINUTES = 2;
+
     public function index()
     {
         $organization = auth()->user()->organization;
@@ -243,24 +248,41 @@ class Organizations extends Controller
     /**
      * Deactivate the organization now and set the date it is permanently
      * deleted, with all of its apps, settings and data.
+     *
+     * "Now" is decided here rather than by the browser: an admin can set it
+     * and walk away from the open dialog, and the clock has to start when they
+     * confirm, with a few minutes of room to change their mind.
      */
     public function schedule_deletion(Request $request, Organization $organization)
     {
         // The browser sends an instant in UTC: "yesterday" leaves room for the
         // difference between the admin's day and the server's
         $validated = $request->validate([
-            'date' => ['required', 'date', 'after_or_equal:yesterday'],
+            'now' => ['boolean'],
+            'date' => ['required_without:now', 'nullable', 'date', 'after_or_equal:yesterday'],
         ]);
 
-        // The browser's timestamp is in UTC; store it in the app's timezone, which the sweep compares against
-        $organization->deletion_scheduled_at = Carbon::parse($validated['date'])->setTimezone(config('app.timezone'));
+        $timezone = config('app.timezone');
+        $immediate = (bool) ($validated['now'] ?? false);
+
+        $deletion_at = $immediate
+            ? now()->addMinutes(self::IMMEDIATE_DELETION_MINUTES)
+            : Carbon::parse($validated['date'])->setTimezone($timezone);
+
+        // Saved as a plain string in the app's timezone, which is what the
+        // sweep compares against, so no timezone conversion can shift it
+        $organization->deletion_scheduled_at = $deletion_at->format('Y-m-d H:i:s');
         $organization->save();
 
         if ($organization->status !== 'deactivated') {
             Action::execute(new DeactivateOrganization($organization));
         }
 
-        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_scheduled', ['date' => $organization->deletion_scheduled_at->format('M d, Y')]));
+        $message = $immediate
+            ? __('admin.organizations.deletion_scheduled_in_minutes', ['minutes' => self::IMMEDIATE_DELETION_MINUTES])
+            : __('admin.organizations.deletion_scheduled', ['date' => $deletion_at->format('M d, Y')]);
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', $message);
     }
 
     public function cancel_deletion(Organization $organization)
