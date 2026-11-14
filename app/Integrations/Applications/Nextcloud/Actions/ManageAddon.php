@@ -27,6 +27,15 @@ class ManageAddon extends Action
 
     public static function run(Task $task)
     {
+        // Addons are installed on the hub's Nextcloud, which every shared
+        // child runs on. They're managed from the hub, so a child has
+        // nothing to do (and no account on the hub to do it with).
+        if (! $task->app_instance->usesOwnResources()) {
+            $task->delete();
+
+            return;
+        }
+
         $app = new Apps($task->app_instance);
         $addon_name = $task->getValue('name');
         $enabled = $app->isEnabled($addon_name);
