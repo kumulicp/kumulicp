@@ -72,7 +72,7 @@ class SharedAppsTest extends TestCase
         return $version;
     }
 
-    private function addSharedApp(User $admin, Application $app, string $label = 'My Shared App'): AppInstance
+    private function addSharedApp(User $admin, Application $app, string $label = 'My Shared App', bool $externally = false): AppInstance
     {
         // Recorded, not run: the job writes to LDAP, which these tests don't need
         Bus::fake([AddLdapGroups::class]);
@@ -80,6 +80,7 @@ class SharedAppsTest extends TestCase
         $this->actingAs($admin)->post('/admin/service/shared-apps', [
             'app' => $app->id,
             'label' => $label,
+            'externally_managed' => $externally,
         ])->assertSessionDoesntHaveErrors();
 
         return AppInstance::where('label', $label)->firstOrFail();
@@ -532,52 +533,41 @@ class SharedAppsTest extends TestCase
         $this->assertSame($other->id, $shared->refresh()->version_id);
     }
 
-    public function test_a_shared_app_can_be_left_to_be_managed_externally_with_only_a_domain()
+    public function test_a_shared_app_can_be_added_as_managed_externally()
     {
-        [$admin, $shared] = $this->readyToTest();
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $shared = $this->addSharedApp($admin, Application::where('slug', 'demo_app')->first(), externally: true);
         $show = "/admin/service/shared-apps/{$shared->id}";
-        $subdomain = OrgSubdomain::factory()->create(['organization_id' => Organization::where('type', 'superaccount')->firstOrFail()->id]);
 
-        // A domain is the one thing it needs
-        $this->actingAs($admin)->post("{$show}/external", [])->assertSessionHasErrors('domain');
-        $this->assertSame('deactivated', $shared->refresh()->status);
-
-        // No servers, version tests or configuration come into it
-        $this->actingAs($admin)->post("{$show}/external", ['domain' => $subdomain->id])
-            ->assertSessionDoesntHaveErrors()
-            ->assertRedirect($show)
-            ->assertSessionHas('success');
-
-        $shared->refresh();
+        // No servers, version tests, configuration or domain come into it
         $this->assertTrue($shared->isManagedExternally());
         $this->assertSame('active', $shared->status);
-        $this->assertSame($subdomain->id, $shared->primary_domain_id);
         // Users come through the central LDAP groups
         Bus::assertDispatched(AddLdapGroups::class, fn (AddLdapGroups $job) => $job->app_instance->is($shared));
         $this->assertSame(0, Task::where('action_slug', 'application_activate')->count());
 
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
             ->where('app.state', 'external')
-            ->where('app.domain', $subdomain->name)
-            ->where('app.domain_chosen', true)
+            ->where('app.domain_chosen', false)
             ->where('shared_app.setup', null)
             ->where('shared_app.urls.plan', null)
             // All it has to change is its domain
             ->where('shared_app.urls.instance', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit"));
 
-        // And it can't be activated, tested or chosen a version for after that
+        // And it can't be activated or tested after that
         $this->activationRequest($admin, $shared)->assertSessionHas('error');
         $this->actingAs($admin)->post("{$show}/tests")->assertSessionHas('error');
-        $this->actingAs($admin)->post("{$show}/external", ['domain' => $subdomain->id])->assertSessionHas('error');
         $this->assertSame(0, VersionTestRun::count());
     }
 
     public function test_an_externally_managed_apps_domain_is_changed_from_its_edit_page()
     {
-        [$admin, $shared] = $this->readyToTest();
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $shared = $this->addSharedApp($admin, Application::where('slug', 'demo_app')->first(), externally: true);
         $owner = Organization::where('type', 'superaccount')->firstOrFail();
         $subdomain = OrgSubdomain::factory()->create(['organization_id' => $owner->id]);
-        $this->actingAs($admin)->post("/admin/service/shared-apps/{$shared->id}/external", ['domain' => 0]);
         $edit = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit";
 
         $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia

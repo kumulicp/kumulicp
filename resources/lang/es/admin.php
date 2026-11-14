@@ -313,7 +313,6 @@ return [
         'plan_description' => 'Plan generado automáticamente para la aplicación compartida :app',
         'plan_settings' => 'Configuración del plan',
         'version_updated' => ':app se activará con la versión que elegiste.',
-        'managed_externally' => ':app se administra externamente. No se despliega nada para ella.',
         'tests_bypassed' => 'Se omitieron las pruebas de esta aplicación compartida. Ya se puede activar.',
         'activation_started' => 'Ha comenzado la activación de :app. Esto tarda aproximadamente 10 minutos.',
         'errors' => [

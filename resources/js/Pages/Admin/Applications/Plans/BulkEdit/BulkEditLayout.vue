@@ -47,7 +47,7 @@ export default {
         url: basePath + '/features?' + queryString
       },
       {
-        title: this.$t('admin.plans.serverConfigurations'),
+        title: this.$t('admin.plans.helmChartValues'),
         url: basePath + '/configurations?' + queryString
       }
     ]

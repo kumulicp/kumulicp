@@ -16,6 +16,8 @@ import { currencyByCode } from '@/constants/currencies'
     <Link v-else :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ $t('admin.plans.makePublic') }}</va-button></Link>
   </div>
   <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/plans/'+plan.id)">
+    <!-- A shared app's plan only has its servers to edit -->
+    <template v-if="!plan.hidden">
     <AdminSettings>
       <template #name></template>
       <template #settings>
@@ -28,7 +30,7 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.name"
           :error-messages="$page.props.errors.name"
           />
-        <va-checkbox v-if="!plan.hidden"
+        <va-checkbox
           v-model="form.default"
           class="my-2"
           :label="$t('admin.plans.defaultPlan') "
@@ -45,7 +47,6 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.description"
           :error-messages="$page.props.errors.description"
           />
-        <template v-if="!plan.hidden">
         <va-checkbox v-model="form.payment_enabled"
           class="my-2"
           :label="$t('admin.plans.enablePayment')"
@@ -121,10 +122,10 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.domain_max"
           :error-messages="$page.props.errors.domain_max"
         />
-        </template>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
+    </template>
     <AdminSettings>
       <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>

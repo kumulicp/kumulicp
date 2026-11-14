@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import BypassTestsModal from '@/components/BypassTestsModal.vue'
-import AppDomainFields from '@/components/AppDomainFields.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-// Sits on top of every page of a shared app until it is activated (or marked
-// as managed externally). The steps that have a page of their own are links to
-// it; the others open here.
+// Sits on top of every page of a shared app until it is activated. The steps
+// that have a page of their own are links to it; the others open here.
 const props = defineProps<{
   sharedApp: Record<string, any>
 }>()
@@ -19,7 +17,6 @@ const base = computed(() => '/admin/service/shared-apps/' + props.sharedApp.id)
 
 const step = ref(setup.value.current_step)
 const showBypass = ref(false)
-const showExternal = ref(false)
 
 // Back from a test run or after bypassing: carry on from where things stand
 watch(() => setup.value.current_step, (current) => {
@@ -33,11 +30,6 @@ watch(() => setup.value.version.id, (id) => {
 
 const testsForm = useForm({})
 const activateForm = useForm({})
-const externalForm = useForm({
-  domain: 0 as number | string,
-  subdomain: '',
-  parent_domain: null as number | null
-})
 
 const steps = computed(() => [
   { label: t('admin.sharedApps.stepVersion'), icon: 'sell' },
@@ -56,14 +48,6 @@ const serverList = computed(() => [
 ])
 
 const gateColor = (gate: string) => ({ passed: 'success', bypassed: 'warning', running: 'info', failed: 'danger', stale: 'warning', untested: 'secondary' } as Record<string, string>)[gate] || 'secondary'
-
-const manageExternally = () => {
-  externalForm.post(base.value + '/external', {
-    onSuccess: () => {
-      showExternal.value = false
-    }
-  })
-}
 </script>
 
 <template>
@@ -177,36 +161,6 @@ const manageExternally = () => {
           </va-button>
         </template>
       </va-stepper>
-
-      <va-separator class="my-4" />
-
-      <h4 class="va-h6 mb-2">{{ $t('admin.sharedApps.dontActivateTitle') }}</h4>
-      <p class="mb-3">{{ $t('admin.sharedApps.dontActivateDescription', { app: sharedApp.label }) }}</p>
-      <va-button id="manageExternally" preset="secondary" @click="showExternal = true">
-        {{ $t('admin.sharedApps.manageExternally') }}
-      </va-button>
-
-      <va-modal v-model="showExternal" no-outside-dismiss no-padding size="small" class="p-0">
-        <template #content="{ ok }">
-          <form @submit.prevent="manageExternally">
-            <va-card-title class="m-0">{{ $t('admin.sharedApps.manageExternallyTitle', { app: sharedApp.label }) }}</va-card-title>
-            <va-card-content class="m-0">
-              <p class="mb-3">{{ $t('admin.sharedApps.manageExternallyDescription') }}</p>
-              <AppDomainFields
-                v-model:domain="externalForm.domain"
-                v-model:subdomain="externalForm.subdomain"
-                v-model:parent-domain="externalForm.parent_domain"
-                :domains="setup.domains"
-                :parent-domains="setup.parent_domains"
-              />
-            </va-card-content>
-            <va-card-actions align="right">
-              <va-button color="textInverted" :disabled="externalForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-              <va-button id="confirmExternal" type="submit" :disabled="externalForm.processing" class="mr-2 mb-2">{{ $t('common.confirm') }}</va-button>
-            </va-card-actions>
-          </form>
-        </template>
-      </va-modal>
     </va-card-content>
   </va-card>
 </template>

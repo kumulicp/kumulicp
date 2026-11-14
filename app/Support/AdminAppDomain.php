@@ -14,9 +14,8 @@ use App\Support\Facades\Domain;
 use Illuminate\Validation\Rule;
 
 /**
- * Changing the domain an app instance is reached at, as an admin: from its
- * admin edit page, or as the one setting of a shared app that is managed
- * externally. Unlike the organization's own page, nothing about the app limits
+ * Changing the domain an app instance is reached at, as an admin, from its
+ * admin edit page. Unlike the organization's own page, nothing about the app limits
  * which domains an admin can pick: an app that doesn't allow its domain to be
  * edited only gets a warning.
  */

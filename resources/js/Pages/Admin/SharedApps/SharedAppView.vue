@@ -89,7 +89,7 @@ export default {
             <va-list-item-label><h5>{{ $t('admin.sharedApps.domain') }}</h5></va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>
-            <va-list-item-label id="domain">
+            <va-list-item-label id="domain" lines="3" style="overflow-wrap: anywhere">
               {{ app.domain }}
               <p v-if="!app.domain_chosen" id="noDomain" class="text-color-danger">
                 {{ $t('admin.sharedApps.noDomainChosen') }}

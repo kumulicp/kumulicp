@@ -398,7 +398,6 @@ return [
         'plan_description' => 'Auto-generated plan for the :app shared app',
         'plan_settings' => 'Plan Settings',
         'version_updated' => ':app will be activated with the version you chose.',
-        'managed_externally' => ':app is managed externally. Nothing is deployed for it.',
         'tests_bypassed' => 'The tests for this shared app were bypassed. It can now be activated.',
         'activation_started' => 'Activation of :app has started. This takes roughly 10 minutes.',
         'errors' => [

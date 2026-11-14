@@ -22,8 +22,7 @@ use Illuminate\Http\Request;
 class SharedAppContext
 {
     /**
-     * Added, and waiting to be set up: either activated through Kumuli CP or
-     * marked as managed externally.
+     * Added, and waiting to be set up and activated through Kumuli CP.
      */
     public const SETUP = 'setup';
 
@@ -202,8 +201,6 @@ class SharedAppContext
                 'configurations' => "{$plan_url}/configurations",
                 'helm_values' => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/helm-values",
             ],
-            // For the option of not activating it, which only needs a domain
-            ...AdminAppDomain::options($shared_app),
         ];
     }
 }

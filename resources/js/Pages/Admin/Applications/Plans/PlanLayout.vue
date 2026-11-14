@@ -57,7 +57,7 @@ export default {
         url: basePath + '/features'
       })
       tabs.push({
-        title: this.$t('admin.plans.serverConfigurations'),
+        title: this.$t('admin.plans.helmChartValues'),
         url: basePath + '/configurations'
       })
       tabs.push({

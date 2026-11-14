@@ -36,6 +36,11 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   class="mb-3"
                   :error="$page.props.errors.label"
                   :error-messages="$page.props.errors.label" />
+                <va-checkbox v-model="form.externally_managed"
+                  id="externallyManaged"
+                  :label="$t('admin.sharedApps.externallyManaged')"
+                  class="mb-1" />
+                <p class="va-text-secondary text-sm">{{ $t('admin.sharedApps.externallyManagedHint') }}</p>
               </va-card-content>
               <va-card-actions align="right" class="">
                 <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
@@ -105,7 +110,8 @@ export default {
       showAddApp: false,
       form: useForm({
         app: null,
-        label: ''
+        label: '',
+        externally_managed: false
       })
     }
   },

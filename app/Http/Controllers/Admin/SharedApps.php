@@ -15,7 +15,6 @@ use App\Services\VersionTesting\VersionTestRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
-use App\Support\AdminAppDomain;
 use App\Support\SharedAppContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,10 +73,10 @@ class SharedApps extends Controller
      *
      * An app with a registered profile (source `profile`) waits there to be
      * activated (see deploy()) once its version has passed its tests on its
-     * plan or had them bypassed, or to be marked as managed externally (see
-     * manageExternally()). Any other app, like GitLab, is installed separately
-     * and can't be activated through kumulicp: it is only registered, so its
-     * users can be managed centrally through LDAP and SSO.
+     * plan or had them bypassed, unless it is added as managed externally. Any
+     * other app, like GitLab, is installed separately and can't be activated
+     * through kumulicp: it is only registered, so its users can be managed
+     * centrally through LDAP and SSO.
      */
     public function store(Request $request)
     {
@@ -101,6 +100,7 @@ class SharedApps extends Controller
                 },
             ],
             'label' => 'required|string',
+            'externally_managed' => 'boolean',
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
@@ -136,12 +136,12 @@ class SharedApps extends Controller
             with_configurations: false,
         )->get();
 
-        if (SharedAppContext::isDeployable($application)) {
-            // Added, not activated: it stays that way until it is activated or marked as managed externally
+        if (SharedAppContext::isDeployable($application) && ! $request->boolean('externally_managed')) {
+            // Added, not activated: it stays that way until it is activated
             $app_instance->status = 'deactivated';
             $app_instance->save();
         } else {
-            // Nothing will ever activate it, so it is only registered
+            // Run outside Kumuli CP, or nothing will ever activate it: it is only registered
             $this->registerExternally($app_instance);
         }
 
@@ -181,24 +181,6 @@ class SharedApps extends Controller
         $shared_app->save();
 
         return redirect($this->viewUrl($shared_app))->with('success', __('admin.shared_apps.version_updated', ['app' => $shared_app->label]));
-    }
-
-    /**
-     * Chooses not to activate the shared app: it is run outside Kumuli CP, and its
-     * users come through the central LDAP groups that are already in place. All
-     * it needs is the domain organizations click through to.
-     */
-    public function manageExternally(Request $request, AppInstance $shared_app)
-    {
-        $redirect = $this->pendingRedirect($shared_app);
-        if ($redirect) {
-            return $redirect;
-        }
-
-        AdminAppDomain::apply($shared_app, $request->validate(AdminAppDomain::rules($shared_app)));
-        $this->registerExternally($shared_app);
-
-        return redirect($this->viewUrl($shared_app))->with('success', __('admin.shared_apps.managed_externally', ['app' => $shared_app->label]));
     }
 
     /**
