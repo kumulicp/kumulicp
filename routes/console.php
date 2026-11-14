@@ -11,6 +11,7 @@ use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
 use App\Console\Calls\ScanUpdateDrift;
+use App\Console\Calls\ScheduledOrganizationDeletionCheck;
 use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use App\Services\VersionTesting\VersionTestRunner;
@@ -42,6 +43,7 @@ Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
 Schedule::call(new ExpiredSubscriptionsCheck)->everyMinute();
+Schedule::call(new ScheduledOrganizationDeletionCheck)->name('scheduled-organization-deletion-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
 // Each unavailable app is only probed once its last check is 5 minutes old; a probe can take
 // its full timeout, so a slow pass must not overlap the next

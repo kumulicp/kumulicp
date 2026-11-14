@@ -145,6 +145,8 @@ return [
         'review_plan' => 'Revisar plan',
         'account_deactivated' => 'Cuenta desactivada',
         'deactivation_notice' => 'La cuenta de tu organización ha sido desactivada. Aún puedes iniciar sesión para elegir un nuevo plan, pero la funcionalidad es limitada.',
+        'organization_deletion_scheduled' => 'Organización programada para eliminación',
+        'organization_deletion_notice' => ':organization ha sido desactivada y se eliminará permanentemente el :date, incluyendo todas sus aplicaciones, configuraciones y datos. Por favor respalde lo que necesite antes de esa fecha.',
         'app_deactivated' => ':app desactivada',
         'app_deactivation_notice' => ':app ha sido desactivada y ya no se puede usar.',
         'welcome' => '¡Bienvenido :name!',

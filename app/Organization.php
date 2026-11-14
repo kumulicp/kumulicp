@@ -36,6 +36,7 @@ use function Illuminate\Events\queueable;
  * @property array|null $settings
  * @property string|null $default_locale
  * @property Carbon|null $deactivate_at
+ * @property Carbon|null $deletion_scheduled_at
  * @property int|null $primary_domain_id
  * @property int|null $plan_id
  * @property int|null $primary_contact_id
@@ -78,6 +79,7 @@ class Organization extends Model
         'api_token' => 'hashed',
         'settings' => 'array',
         'deactivate_at' => 'date',
+        'deletion_scheduled_at' => 'datetime',
     ];
 
     public function billingCurrency(): string

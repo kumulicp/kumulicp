@@ -149,6 +149,10 @@ return [
         'domains' => 'Dominios',
         'reactivated' => 'Organización reactivada',
         'deactivated' => 'Organización desactivada',
+        'deletion_scheduled' => 'Organización desactivada y programada para eliminarse el :date',
+        'deletion_cancelled' => 'Eliminación programada cancelada',
+        'deletion_notified' => 'Administradores de la organización notificados',
+        'deletion_not_scheduled' => 'Programe una fecha de eliminación antes de notificar a los administradores de la organización',
         'subscription_updating' => 'Suscripción de la organización actualizándose',
         'plan_changed' => 'La organización se cambió al plan :plan',
         'apps' => [

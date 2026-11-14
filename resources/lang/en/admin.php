@@ -207,6 +207,10 @@ return [
         'deactivated' => 'Organization deactivated',
         'subscription_updating' => 'Organization subscription updating',
         'plan_changed' => 'Organization moved to the :plan plan',
+        'deletion_scheduled' => 'Organization deactivated and scheduled for deletion on :date',
+        'deletion_cancelled' => 'Scheduled deletion cancelled',
+        'deletion_notified' => 'Organization admins notified',
+        'deletion_not_scheduled' => 'Schedule a deletion date before notifying the organization admins',
         'apps' => [
             'updated' => ':app updated',
             'domain_updated' => ':app domain updated',

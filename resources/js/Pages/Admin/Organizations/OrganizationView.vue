@@ -119,6 +119,25 @@ import OrganizationLayout from './OrganizationLayout.vue'
             <va-button preset="secondary" id="changePlan" class="mb-3" @click="openChangePlan">{{ $t('admin.organizations.changePlan') }}</va-button>
           </div>
         </div>
+        <div class="row">
+          <div class="flex flex-col xs12">
+            <va-alert
+              v-if="organization.deletion_scheduled_at"
+              id="deletionScheduled"
+              color="danger"
+              border="left"
+              class="mb-3"
+            >
+              {{ $t('admin.organizations.deletionScheduledFor', { date: formatDate(organization.deletion_scheduled_at) }) }}
+            </va-alert>
+            <div v-if="organization.deletion_scheduled_at" class="flex flex-wrap gap-2 mb-3">
+              <va-button preset="secondary" color="danger" id="editDeletionDate" @click="openDeactivate">{{ $t('admin.organizations.editDeletionDate') }}</va-button>
+              <va-button preset="secondary" id="notifyAdmins" :loading="notifyForm.processing" @click="notifyAdmins">{{ $t('admin.organizations.notifyAdmins') }}</va-button>
+              <va-button preset="secondary" id="cancelDeletion" @click="cancelDeletion">{{ $t('admin.organizations.cancelDeletion') }}</va-button>
+            </div>
+            <va-button v-else preset="secondary" color="danger" id="deactivateOrganization" class="mb-3" @click="openDeactivate">{{ $t('admin.organizations.deactivateOrganization') }}</va-button>
+          </div>
+        </div>
         <div v-if="subscription_stats.length > 0" class="row">
           <div class="flex flex-col xs12">
             <form @submit.prevent="subscription.post('/admin/organizations/'+organization.id+'/update_subscription')">
@@ -198,6 +217,32 @@ import OrganizationLayout from './OrganizationLayout.vue'
         {{ $page.props.errors.plan_id }}
       </va-alert>
     </va-modal>
+
+    <va-modal
+      v-model="showDeactivate"
+      :title="$t('admin.organizations.deactivateOrganization')"
+      :ok-text="$t('admin.organizations.scheduleDeletion')"
+      :ok-disabled="!deactivateForm.date"
+      size="small"
+      @ok="submitDeactivate"
+    >
+      <p class="plan-modal__intro">{{ $t('admin.organizations.deactivateOrganizationDescription', { name: organization.name }) }}</p>
+      <va-alert color="danger" border="left" class="mb-4" id="deletionWarning">
+        <strong>{{ $t('admin.organizations.deletionWarningTitle') }}</strong><br />
+        {{ $t('admin.organizations.deletionWarning', { name: organization.name }) }}
+      </va-alert>
+      <div class="flex items-end gap-2 mb-2">
+        <va-date-input
+          v-model="deactivateDate"
+          id="deletionDate"
+          :label="$t('admin.organizations.deletionDate')"
+          :error="!!$page.props.errors.date"
+          :error-messages="$page.props.errors.date"
+          @update:modelValue="updateDeactivateDate"
+        />
+        <va-button preset="secondary" id="setDeletionNow" @click="setDeletionNow">{{ $t('admin.organizations.setToNow') }}</va-button>
+      </div>
+    </va-modal>
   </div>
 </template>
 
@@ -220,6 +265,12 @@ export default {
       }),
       destroy: useForm({}),
       showChangePlan: false,
+      showDeactivate: false,
+      deactivateDate: null,
+      deactivateForm: useForm({
+        date: null
+      }),
+      notifyForm: useForm({}),
       planForm: useForm({
         plan_id: null
       }),
@@ -235,6 +286,52 @@ export default {
       this.planForm.reset()
       this.planForm.clearErrors()
       this.showChangePlan = true
+    },
+    formatDate (value) {
+      return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+    },
+    defaultDeletionDate () {
+      const date = new Date()
+      date.setDate(date.getDate() + 30)
+      return date
+    },
+    openDeactivate () {
+      this.deactivateForm.clearErrors()
+      this.setDeletionDate(this.organization.deletion_scheduled_at
+        ? new Date(this.organization.deletion_scheduled_at)
+        : this.defaultDeletionDate())
+      this.showDeactivate = true
+    },
+    setDeletionDate (date) {
+      this.deactivateDate = date
+      this.deactivateForm.date = date.toISOString()
+    },
+    setDeletionNow () {
+      this.setDeletionDate(new Date())
+    },
+    updateDeactivateDate (date) {
+      this.deactivateForm.date = date ? new Date(date).toISOString() : null
+    },
+    submitDeactivate () {
+      this.deactivateForm.post('/admin/organizations/' + this.organization.id + '/schedule_deletion', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showDeactivate = false
+        },
+        onError: () => {
+          this.showDeactivate = true
+        }
+      })
+    },
+    notifyAdmins () {
+      this.notifyForm.post('/admin/organizations/' + this.organization.id + '/notify_deletion', {
+        preserveScroll: true
+      })
+    },
+    cancelDeletion () {
+      this.notifyForm.delete('/admin/organizations/' + this.organization.id + '/schedule_deletion', {
+        preserveScroll: true
+      })
     },
     submitChangePlan () {
       this.planForm.post('/admin/organizations/' + this.organization.id + '/change_plan', {

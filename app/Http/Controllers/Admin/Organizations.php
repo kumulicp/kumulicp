@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Http\Controllers\Controller;
 use App\Log;
+use App\Notifications\OrganizationDeletionScheduled;
 use App\Organization;
 use App\Plan;
 use App\Services\SubscriptionService;
@@ -64,6 +66,7 @@ class Organizations extends Controller
                 'contact_email' => $organization->contact_email,
                 'contact_phone_number' => $organization->contact_phone_number,
                 'status' => $organization->status,
+                'deletion_scheduled_at' => $organization->deletion_scheduled_at?->toIso8601String(),
             ],
             'apps' => $organization->app_instances->map(function ($app) {
                 return [
@@ -235,6 +238,47 @@ class Organizations extends Controller
         Action::execute(new SubscriptionUpdate($organization, $subscription));
 
         return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.plan_changed', ['plan' => $plan->name]));
+    }
+
+    /**
+     * Deactivate the organization now and set the date it is permanently
+     * deleted, with all of its apps, settings and data.
+     */
+    public function schedule_deletion(Request $request, Organization $organization)
+    {
+        // The browser sends an instant in UTC: "yesterday" leaves room for the
+        // difference between the admin's day and the server's
+        $validated = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:yesterday'],
+        ]);
+
+        $organization->deletion_scheduled_at = Carbon::parse($validated['date']);
+        $organization->save();
+
+        if ($organization->status !== 'deactivated') {
+            Action::execute(new DeactivateOrganization($organization));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_scheduled', ['date' => $organization->deletion_scheduled_at->format('M d, Y')]));
+    }
+
+    public function cancel_deletion(Organization $organization)
+    {
+        $organization->deletion_scheduled_at = null;
+        $organization->save();
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_cancelled'));
+    }
+
+    public function notify_deletion(Organization $organization)
+    {
+        if (! $organization->deletion_scheduled_at) {
+            throw ValidationException::withMessages(['date' => __('admin.organizations.deletion_not_scheduled')]);
+        }
+
+        $organization->notifyAdmins(new OrganizationDeletionScheduled($organization));
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_notified'));
     }
 
     private function selectablePlans(Organization $organization): array
