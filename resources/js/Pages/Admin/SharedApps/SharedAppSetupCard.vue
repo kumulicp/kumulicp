@@ -137,7 +137,7 @@ const gateColor = (gate: string) => ({ passed: 'success', bypassed: 'warning', r
             >
               {{ $t('admin.versions.runTests') }}
             </va-button>
-            <va-button id="bypassTests" class="mr-2" preset="secondary" color="danger" @click="showBypass = true">
+            <va-button v-if="setup.can_bypass" id="bypassTests" class="mr-2" preset="secondary" color="danger" @click="showBypass = true">
               {{ $t('admin.versions.bypassTests') }}
             </va-button>
             <Link v-if="setup.run_url" :href="setup.run_url">

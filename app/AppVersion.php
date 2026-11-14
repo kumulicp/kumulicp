@@ -80,6 +80,18 @@ class AppVersion extends Model
     }
 
     /**
+     * Whether its tests can be bypassed right now. A run in progress is cancelled
+     * to make way for the bypass, so one that can't be cancelled yet blocks it.
+     */
+    public function canBypassTests(?AppPlan $plan = null): bool
+    {
+        $runs = $plan ? $this->planTestRuns($plan) : $this->testRuns();
+        $running = $runs->where('status', VersionTestRunStatus::RUNNING->value)->first();
+
+        return ! $running || $running->canBeCancelled();
+    }
+
+    /**
      * Where this version stands before it can be enabled: running, passed,
      * bypassed, failed, stale (changed since it was approved) or untested.
      *

@@ -115,7 +115,7 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
   <div class="row mb-3">
     <va-button v-if="can.start_next" id="runNext" :loading="nextForm.processing" :disabled="nextForm.processing" @click="nextForm.post(runUrl + '/next', { preserveScroll: true })">{{ $t('admin.versionTests.runNext') }}</va-button>
     <va-button v-if="can.retry_step_id" id="retryStep" color="warning" @click="retryForm.post(stepUrl(can.retry_step_id, 'retry'), { preserveScroll: true })" :disabled="retryForm.processing">{{ $t('admin.versionTests.retryStep') }}</va-button>
-    <va-button v-if="run.status === 'running'" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
+    <va-button v-if="run.status === 'running' && run.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
     <va-button v-if="can.cancel" id="cancelRun" class="ml-2" preset="secondary" :disabled="cancelForm.processing" @click="cancelForm.post(runUrl + '/cancel', { preserveScroll: true })">{{ $t('admin.versionTests.cancel') }}</va-button>
   </div>
   <p v-if="can.start_next" class="va-text-secondary">{{ $t('admin.versionTests.runNextHint') }}</p>

@@ -17,7 +17,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       :disabled="startForm.processing"
       @click="startForm.post('/admin/apps/' + app.slug + '/versions/' + version.version + '/tests')"
     >{{ $t('admin.versions.runTests') }}</va-button>
-    <va-button id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
+    <va-button v-if="version.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
     <BypassTestsModal v-model="showBypass" :app="app" :version="version" />
   </div>
   <va-alert v-if="active_run" id="activeRun" color="info" border="top" border-color="info" class="my-3">

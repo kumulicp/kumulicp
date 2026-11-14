@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Enums\VersionTestRunStatus;
+use App\Enums\VersionTestStepStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -105,5 +106,16 @@ class VersionTestRun extends Model
     public function isRunning(): bool
     {
         return $this->status === VersionTestRunStatus::RUNNING;
+    }
+
+    /**
+     * Whether the run can be given up on right now. A test org that is still being
+     * built or deleted can't be pulled out from under its tasks.
+     */
+    public function canBeCancelled(): bool
+    {
+        return ! $this->steps()
+            ->whereIn('status', [VersionTestStepStatus::PROVISIONING->value, VersionTestStepStatus::CLEARING->value])
+            ->exists();
     }
 }
