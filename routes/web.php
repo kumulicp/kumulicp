@@ -128,6 +128,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
                 Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
+                Route::post('schedule_deletion', 'Admin\Organizations@schedule_deletion')->name('organizations.schedule_deletion');
+                Route::post('notify_deletion', 'Admin\Organizations@notify_deletion')->name('organizations.notify_deletion');
+                Route::delete('schedule_deletion', 'Admin\Organizations@cancel_deletion')->name('organizations.cancel_deletion');
                 Route::resource('backups', 'Admin\Organizations\BackupRestore')->middleware('toggle:app-backups');
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore')->middleware('toggle:app-backups');
                 Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->middleware('toggle:app-backups');

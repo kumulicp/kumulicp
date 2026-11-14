@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\DeactivationReason;
 use App\Jobs\Accounts\UpdateOrganization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Settings as SettingsFacade;
@@ -36,6 +37,9 @@ use function Illuminate\Events\queueable;
  * @property array|null $settings
  * @property string|null $default_locale
  * @property Carbon|null $deactivate_at
+ * @property Carbon|null $deletion_scheduled_at
+ * @property string|null $deactivation_reason
+ * @property string|null $deactivation_reason_note
  * @property int|null $primary_domain_id
  * @property int|null $plan_id
  * @property int|null $primary_contact_id
@@ -78,6 +82,7 @@ class Organization extends Model
         'api_token' => 'hashed',
         'settings' => 'array',
         'deactivate_at' => 'date',
+        'deletion_scheduled_at' => 'datetime',
     ];
 
     public function billingCurrency(): string
@@ -372,6 +377,8 @@ class Organization extends Model
     public function reactivate()
     {
         $this->status = 'active';
+        $this->deactivation_reason = null;
+        $this->deactivation_reason_note = null;
         $this->save();
 
         UpdateOrganization::dispatch($this);
@@ -383,6 +390,23 @@ class Organization extends Model
         $this->save();
 
         UpdateOrganization::dispatch($this);
+    }
+
+    /**
+     * Why the organization was deactivated, in words: the admin's own text for
+     * a custom reason, the reason's name otherwise.
+     */
+    public function deactivationReasonText(): ?string
+    {
+        $reason = DeactivationReason::tryFrom((string) $this->deactivation_reason);
+
+        if (! $reason) {
+            return null;
+        }
+
+        return $reason === DeactivationReason::CUSTOM
+            ? ($this->deactivation_reason_note ?: $reason->label())
+            : $reason->label();
     }
 
     public function scopeNotDeactivated(Builder $query)

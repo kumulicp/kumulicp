@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\SubscriptionUpdate;
+use App\Enums\DeactivationReason;
 use App\Http\Controllers\Controller;
 use App\Log;
+use App\Notifications\OrganizationDeletionScheduled;
 use App\Organization;
 use App\Plan;
 use App\Services\SubscriptionService;
@@ -14,10 +17,16 @@ use App\Support\Facades\FastCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class Organizations extends Controller
 {
+    /**
+     * How far ahead "delete now" is scheduled.
+     */
+    private const IMMEDIATE_DELETION_MINUTES = 2;
+
     public function index()
     {
         $organization = auth()->user()->organization;
@@ -64,6 +73,10 @@ class Organizations extends Controller
                 'contact_email' => $organization->contact_email,
                 'contact_phone_number' => $organization->contact_phone_number,
                 'status' => $organization->status,
+                'deletion_scheduled_at' => $organization->deletion_scheduled_at?->toIso8601String(),
+                'deactivation_reason' => $organization->deactivation_reason,
+                'deactivation_reason_note' => $organization->deactivation_reason_note,
+                'deactivation_reason_text' => $organization->deactivationReasonText(),
             ],
             'apps' => $organization->app_instances->map(function ($app) {
                 return [
@@ -84,6 +97,11 @@ class Organizations extends Controller
                 'discount_id' => $organization->discount_id,
             ],
             'available_plans' => $this->selectablePlans($organization),
+            'deactivation_reasons' => collect(DeactivationReason::selectable())->map(fn (DeactivationReason $reason) => [
+                'value' => $reason->value,
+                'text' => $reason->label(),
+            ])->all(),
+            'default_deactivation_reason' => DeactivationReason::default()->value,
             'subscription_stats' => $subscription->compileCostStats(),
             'breadcrumbs' => [
                 [
@@ -235,6 +253,73 @@ class Organizations extends Controller
         Action::execute(new SubscriptionUpdate($organization, $subscription));
 
         return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.plan_changed', ['plan' => $plan->name]));
+    }
+
+    /**
+     * Deactivate the organization now and set the date it is permanently
+     * deleted, with all of its apps, settings and data.
+     *
+     * "Now" is decided here rather than by the browser: an admin can set it
+     * and walk away from the open dialog, and the clock has to start when they
+     * confirm, with a few minutes of room to change their mind.
+     */
+    public function schedule_deletion(Request $request, Organization $organization)
+    {
+        // The browser sends an instant in UTC: "yesterday" leaves room for the
+        // difference between the admin's day and the server's
+        $validated = $request->validate([
+            'now' => ['boolean'],
+            'date' => ['required_without:now', 'nullable', 'date', 'after_or_equal:yesterday'],
+            'reason' => ['required', Rule::enum(DeactivationReason::class)->only(DeactivationReason::selectable())],
+            'reason_note' => ['required_if:reason,'.DeactivationReason::CUSTOM->value, 'nullable', 'string', 'max:500'],
+        ]);
+
+        $timezone = config('app.timezone');
+        $immediate = (bool) ($validated['now'] ?? false);
+
+        $deletion_at = $immediate
+            ? now()->addMinutes(self::IMMEDIATE_DELETION_MINUTES)
+            : Carbon::parse($validated['date'])->setTimezone($timezone);
+
+        // $deletion_at is in the app's timezone, which is what the sweep
+        // compares against, and the datetime cast stores it as it is, so no
+        // timezone conversion can shift it
+        $organization->deletion_scheduled_at = $deletion_at;
+        $organization->deactivation_reason = $validated['reason'];
+        // The note only goes with a custom reason
+        $organization->deactivation_reason_note = $validated['reason'] === DeactivationReason::CUSTOM->value
+            ? trim($validated['reason_note'])
+            : null;
+        $organization->save();
+
+        if ($organization->status !== 'deactivated') {
+            Action::execute(new DeactivateOrganization($organization));
+        }
+
+        $message = $immediate
+            ? __('admin.organizations.deletion_scheduled_in_minutes', ['minutes' => self::IMMEDIATE_DELETION_MINUTES])
+            : __('admin.organizations.deletion_scheduled', ['date' => $deletion_at->format('M d, Y')]);
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', $message);
+    }
+
+    public function cancel_deletion(Organization $organization)
+    {
+        $organization->deletion_scheduled_at = null;
+        $organization->save();
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_cancelled'));
+    }
+
+    public function notify_deletion(Organization $organization)
+    {
+        if (! $organization->deletion_scheduled_at) {
+            throw ValidationException::withMessages(['date' => __('admin.organizations.deletion_not_scheduled')]);
+        }
+
+        $organization->notifyAdmins(new OrganizationDeletionScheduled($organization));
+
+        return redirect("/admin/organizations/{$organization->id}")->with('success', __('admin.organizations.deletion_notified'));
     }
 
     private function selectablePlans(Organization $organization): array
