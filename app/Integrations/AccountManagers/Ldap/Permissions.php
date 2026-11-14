@@ -67,7 +67,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function appPermissions(AppInstance $app_instance)
     {
-        $app_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
+        // A shared app's centralized instance keeps its groups under the shared app's name
+        $app_dn = Dn::create($app_instance->organization, 'applications', LdapSupport::getAppInstanceID($app_instance));
         $permissions = LdapGroup::find($app_dn);
 
         if ($permissions) {
