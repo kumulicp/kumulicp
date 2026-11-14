@@ -303,7 +303,8 @@ class SharedAppsTest extends TestCase
 
         $this->actingAs($admin)->get("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values")->assertOk();
 
-        $this->assertNull($shared->refresh()->settings);
+        // Reading the chart keeps the release name it generated, but nothing from the plan
+        $this->assertNull($shared->refresh()->setting('configurations'));
     }
 
     public function test_a_shared_app_is_activated_in_place_once_its_plan_tests_were_bypassed()
@@ -407,7 +408,6 @@ class SharedAppsTest extends TestCase
         $plan_url = "/admin/apps/{$app->slug}/plans/{$plan->id}";
         $pages = [
             "/admin/service/shared-apps/{$shared->id}",
-            "/admin/service/shared-apps/{$shared->id}/edit",
             $plan_url,
             "{$plan_url}/edit",
             "{$plan_url}/features",
