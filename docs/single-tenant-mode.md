@@ -27,7 +27,7 @@ Multi-tenant installs keep working exactly as today.
 | The superaccount is already the system org | `Organization::where('type','superaccount')` is used about 20 times | Background actions, version tests, notifications and Stripe all resolve to it. Single mode can reuse it as *the* org. |
 | Feature flags | `config/toggle.php`, `EnsureFeatureEnabled` (`toggle:` route middleware), `MenuService`, shared as `$page.props.flags` | A working pattern for "hide the menu item and 404 the routes". |
 | Billing can be off | `BillingService::__call` returns false for `isBillable` when no driver is set; `has-billing-account` gate exists | Payment screens already hide when `BILLING_DRIVER` is empty. |
-| Admin and org menus are separate | `HandleInertiaRequests::menu()` picks `admin` or `organization` by URL prefix | The seam to merge them. |
+| Admin and org menus are separate | `HandleInertiaRequests::menu()` picks `admin` or `organization` by URL prefix | The seam to merge them. Menu items already support a `badge` (a shared prop name, used by the Updates page for its pending count). |
 | Discover flow | `Account\Discover`, `Pages/Organization/Discover/*` | Already has a deny-message banner with a button (`missing_parent_app`, `plan_limit_reached`). We extend it. |
 | Admin app, version and plan pages | `Admin\Applications*`, `routes/web.php` `admin/apps/{app:slug}/...` | Deep-link targets for every "fix it" action. |
 
@@ -103,7 +103,7 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | Dashboard trial banner, plan limit alerts | Never shown |
 | Onboarding stepper in `AppLayout.vue` (choose plan → activate an app → add users; step 0 links to `/subscription/options`) | Hidden. The Getting started checklist replaces it (see 6). |
 | Notifications: new org, billing managers, invoices, trial expiry (`NotifyCpAdminOfNewOrganization`, `NotifyBillingManagers`, `InvoiceOrganization`) | Early return |
-| Delete or deactivate the only org | Blocked everywhere (`Admin\Organizations@remove/deactivate`, `DeleteOrganization`, `unsubscribe` gate) |
+| Delete, deactivate or schedule deletion of the only org | Blocked everywhere (`Admin\Organizations@remove/deactivate/schedule_deletion/notify_deletion`, `DeleteOrganization`, `unsubscribe` gate). The scheduled-deletion UI and the admin "Change plan" modal on the org page are hidden. |
 | Per-user "basic vs standard" user types and additional-storage upsells | Hidden. Everyone is `standard`. |
 
 App-level plans (`AppPlan`, "pick Small or Large when installing") are **kept**. Only the *organization* plan goes away.
@@ -120,7 +120,7 @@ New `ApplicationReadiness` service (`Application::readiness()`) returns an order
 | `version` | No `AppVersion` exists | `/admin/apps/{slug}/versions/create` |
 | `version_active` | Versions exist but none `active`. This usually means untested, see `AppVersion::canBeEnabled()` and the tests flow. | `/admin/apps/{slug}/versions/{name}` (tests, enable) |
 | `plan` | No non-archived `AppPlan` | `/admin/apps/{slug}/plans/create`, plus a **"Create default plan"** button that runs the same logic as `Admin\Applications::store()` |
-| `plan_configured` | The plan has never been edited: `updated_at` equals `created_at`. A plan almost always needs a change or two to work on a given server, and a freshly created one has identical timestamps (decided). This replaces separate features/servers checks. | `/admin/apps/{slug}/plans/{id}/edit` (also lists features and configurations) |
+| `plan_configured` | The plan has never been edited: `updated_at` equals `created_at`. A plan almost always needs a change or two to work on a given server, and a freshly created one has identical timestamps (decided). This replaces separate features/servers checks. | `/admin/apps/{slug}/plans/{id}/edit`. Shared-app plans (`AppPlan::usesSharedApp()`) are skipped: they are configured on the shared app, which single mode hides. |
 | `servers` | No usable servers at all | `/admin/server/servers` |
 | existing | `missing_parent_app`, primary domain | Existing behavior |
 
@@ -128,6 +128,9 @@ New `ApplicationReadiness` service (`Application::readiness()`) returns an order
 be right. Saving the plan from its edit page is enough to clear it.
 Caveat: any write to the plan row bumps `updated_at`, including programmatic ones (for example `AppPlanService` setting `is_default`).
 Phase 4 must check which of those can touch a brand-new plan, and compare against the timestamp of the first user save if they do.
+`AppPlan::publicSettings()` now pads missing components in memory without saving, so merely viewing a plan does not bump it.
+The update-drift `DefinitionObserver` (`definition_changes`) skips edits nothing uses, so it can't stand in for this check.
+The edit link can use `AppPlan::tabs()` to open the first tab that has something to configure.
 
 **Where it shows**
 
@@ -151,7 +154,7 @@ Users
 Groups
 Settings        (organization, domains, email)
 ── Administration ─────────────  (admins only; section header)
-Servers · Backups · Tasks · Logs · Security · Packages · System settings
+Servers · Updates (with its pending badge) · Backups (only when `app-backups` is on) · Tasks · Logs · Security · Packages · System settings
 ```
 
 - Non-admins never see the Administration section (gate stays `can:admin`).
@@ -178,7 +181,7 @@ Servers · Backups · Tasks · Logs · Security · Packages · System settings
 - **Branding**: show the org name and logo in the navbar instead of "Welcome to Control Panel". The theme colors already exist in `Settings`.
 - **Dashboard**: merge in the admin signals an operator wants every day (failed tasks, security findings, apps with
   updates available). Drop the multi-tenant admin widgets (org counts, plan subscribers, new orgs).
-- **Backups**: the per-org backup screens under Admin → Organizations become the main "Backups" page.
+- **Backups**: the per-org backup screens under Admin → Organizations become the main "Backups" page. They sit behind the `app-backups` toggle (off by default), so the item only shows when that is on.
 - **Support**: the help-desk modal currently files a ticket to the control-panel operator. In single mode the operator
   is the user, so make it a link to the docs URL or an internal contact. Confirm with `Account\Support` before changing.
 - **Version-test organizations** stay hidden (`Organization::notTest()`), so test runs never show up as tenants.
