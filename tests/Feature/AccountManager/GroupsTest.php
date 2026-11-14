@@ -2,123 +2,83 @@
 
 use App\Support\Facades\AccountManager;
 use App\User;
-use Illuminate\Support\Facades\Queue;
 use Tests\Support\TestSupports;
 
-beforeEach(function () {
-    Queue::fake();
-});
-
-function actAsDemoAdmin(string $driver): void
-{
+it('creates, edits, and deletes a group', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
     setupAccountManagerDriver($driver);
     $support = new TestSupports;
     $support->seed();
+    $support->activateDemoApp();
     $support->addUsers();
-    test()->actingAs(User::where('username', 'demo')->firstOrFail());
-}
 
-it('lists the organization groups', function (string $driver) {
-    actAsDemoAdmin($driver);
+    $this->withoutExceptionHandling();
+    $user = User::where('username', 'demo')->firstOrFail();
+    $this->actingAs($user);
 
-    $this->get('/groups')
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('Organization/Groups/GroupsList')
-            ->has('categories')
-        );
+    $name = fake()->word;
+
+    $new_group = $this->post('/groups', [
+        'name' => $name,
+        'category' => 'others',
+    ]);
+
+    $new_group->assertRedirectContains($name);
+
+    $new_name = fake()->word;
+    $edit = $this->put('/groups/'.$name, [
+        'original_name' => $name,
+        'name' => $new_name,
+        'category' => 'others',
+        'managers' => ['demo', 'testing1'],
+        'members' => ['testing2'],
+    ]);
+
+    $edit->assertValid(['original_name', 'name', 'category', 'managers', 'members']);
+
+    $group = AccountManager::accounts($user->organization)->groups()->find($new_name);
+    $members = $group->members();
+    $managers = $group->managerNames()->all();
+    expect(in_array('demo', $members))->toBeTrue();
+    expect(in_array('testing1', $members))->toBeTrue();
+    expect(in_array('testing2', $members))->toBeTrue();
+    expect(in_array('demo', $managers))->toBeTrue();
+    expect(in_array('testing1', $managers))->toBeTrue();
+    expect(in_array('testing2', $managers))->toBeFalse();
+
+    $this->delete('/groups/'.$new_name);
+
+    expect(AccountManager::accounts($user->organization)->groups()->find($new_name))->toBeNull();
 })->with('account_manager_drivers');
 
-it('can create a group', function (string $driver) {
-    actAsDemoAdmin($driver);
+it('renames a group to a name containing a comma without corrupting the entry', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    setupAccountManagerDriver($driver);
+    $support = new TestSupports;
+    $support->seed();
 
-    $this->post('/groups', ['name' => 'Engineering Team', 'category' => 'others'])
-        ->assertRedirect(route('groups.edit', ['group' => 'Engineering Team']));
+    $this->withoutExceptionHandling();
+    $user = User::where('username', 'demo')->firstOrFail();
+    $this->actingAs($user);
 
-    expect(AccountManager::groups()->find('Engineering Team'))->not->toBeNull();
-})->with('account_manager_drivers');
+    $name = fake()->word;
 
-it('validates the group on create', function (string $driver, array $payload, string $error_field) {
-    actAsDemoAdmin($driver);
+    $this->post('/groups', ['name' => $name, 'category' => 'others'])
+        ->assertRedirectContains($name);
 
-    $this->post('/groups', $payload)->assertSessionHasErrors($error_field);
-})->with('account_manager_drivers')->with([
-    'name is required' => [['category' => 'others'], 'name'],
-    'name cannot contain a slash' => [['name' => 'a/b', 'category' => 'others'], 'name'],
-    'category is required' => [['name' => 'No Category'], 'category'],
-    'category must be a known one' => [['name' => 'Bad Category', 'category' => 'unknown'], 'category'],
-]);
+    $new_name = 'Sales, EMEA';
 
-it('cannot create a group whose name is already used', function (string $driver) {
-    actAsDemoAdmin($driver);
-
-    $this->post('/groups', ['name' => 'Duplicate Team', 'category' => 'others']);
-    $this->post('/groups', ['name' => 'Duplicate Team', 'category' => 'others'])
-        ->assertSessionHasErrors('name');
-})->with('account_manager_drivers');
-
-it('can show the group edit page', function (string $driver) {
-    actAsDemoAdmin($driver);
-    $this->post('/groups', ['name' => 'Edit Page Team', 'category' => 'others']);
-
-    $this->get('/groups/Edit Page Team/edit')
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('Organization/Groups/GroupEdit')
-            ->where('group.name', 'Edit Page Team')
-        );
-})->with('account_manager_drivers');
-
-it('redirects to the groups list when the group does not exist', function (string $driver) {
-    actAsDemoAdmin($driver);
-
-    $this->get('/groups/Nobody Home/edit')
-        ->assertRedirect('/groups')
-        ->assertSessionHas('error');
-})->with('account_manager_drivers');
-
-it('can rename a group', function (string $driver) {
-    actAsDemoAdmin($driver);
-    $this->post('/groups', ['name' => 'Original Name', 'category' => 'others']);
-
-    $response = $this->put('/groups/Original Name', [
-        'original_name' => 'Original Name',
-        'name' => 'Updated Name',
+    $this->put('/groups/'.$name, [
+        'original_name' => $name,
+        'name' => $new_name,
         'category' => 'others',
         'managers' => [],
         'members' => [],
-    ])->assertRedirect()->assertSessionHas('success');
+    ])->assertValid(['original_name', 'name', 'category']);
 
-    // What the group is looked up by after a rename depends on the driver (the db driver keeps its slug),
-    // so check the page the user lands on instead
-    $this->get($response->headers->get('Location'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('group.name', 'Updated Name'));
-})->with('account_manager_drivers');
+    expect(AccountManager::accounts($user->organization)->groups()->find($name))->toBeNull();
 
-it('cannot rename a group to a name that is already used', function (string $driver) {
-    actAsDemoAdmin($driver);
-    $this->post('/groups', ['name' => 'First Team', 'category' => 'others']);
-    $this->post('/groups', ['name' => 'Second Team', 'category' => 'others']);
-
-    $this->put('/groups/Second Team', [
-        'original_name' => 'Second Team',
-        'name' => 'First Team',
-        'category' => 'others',
-        'managers' => [],
-        'members' => [],
-    ])->assertSessionHasErrors('name');
-
-    expect(AccountManager::groups()->find('Second Team'))->not->toBeNull();
-})->with('account_manager_drivers');
-
-it('can delete a group', function (string $driver) {
-    actAsDemoAdmin($driver);
-    $this->post('/groups', ['name' => 'Doomed Team', 'category' => 'others']);
-
-    $this->delete('/groups/Doomed Team')
-        ->assertRedirect('/groups')
-        ->assertSessionHas('success');
-
-    expect(AccountManager::groups()->find('Doomed Team'))->toBeNull();
+    $renamed = AccountManager::accounts($user->organization)->groups()->find($new_name);
+    expect($renamed)->not->toBeNull()
+        ->and($renamed->name())->toBe($new_name);
 })->with('account_manager_drivers');

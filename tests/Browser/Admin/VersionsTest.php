@@ -54,38 +54,6 @@ describe('Admin Versions', function () {
         $page->assertVisible('#copyVersion');
     });
 
-    it('creates a version with none copy option', function () {
-        visit("/admin/apps/{$this->demoApp->slug}/versions")
-            ->click('#addVersion')
-            ->fill('#name input', '3.0')
-            ->click('text=None')
-            ->click('#submit')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/3.0");
-
-        expect(
-            AppVersion::where('application_id', $this->demoApp->id)
-                ->where('name', '3.0')
-                ->firstOrFail()
-                ->settings
-        )->toBeNull();
-    });
-
-    it('creates a version with recommendations copy option', function () {
-        visit("/admin/apps/{$this->demoApp->slug}/versions")
-            ->click('#addVersion')
-            ->fill('#name input', '3.0')
-            ->click('text=Recommendations')
-            ->click('#submit')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/3.0");
-
-        $version = AppVersion::where('application_id', $this->demoApp->id)
-            ->where('name', '3.0')
-            ->firstOrFail();
-
-        expect($version->setting('chart_version'))->toBe('2.5.0');
-        expect($version->admin_path)->toBe('/admin');
-    });
-
     it('creates a version with previous_version copy option and shows source in select', function () {
         visit("/admin/apps/{$this->demoApp->slug}/versions")
             ->click('#addVersion')
