@@ -468,8 +468,14 @@ class SharedAppsTest extends TestCase
         $instance = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}";
 
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
-            ->where('shared_app.urls.instance', null)
-            ->where('shared_app.urls.plan', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}"));
+            ->where('shared_app.urls.edit', null)
+            // The chart is reviewed while setting it up
+            ->where('shared_app.urls.helm_values', "{$instance}/helm-values")
+            ->where('shared_app.urls.plan', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}")
+            ->where('shared_app.urls.plan_edit', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}/edit")
+            ->where('shared_app.urls.plan_features', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}/features")
+            ->where('shared_app.urls.plan_configurations', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}/configurations")
+            ->where('shared_app.urls.plan_secrets', "/admin/apps/{$shared->application->slug}/plans/{$shared->plan_id}/secrets"));
         $this->actingAs($admin)->get("{$instance}/edit")->assertRedirect($show)->assertSessionHas('error');
         $this->actingAs($admin)->put($instance, ['settings' => '{}'])->assertRedirect($show)->assertSessionHas('error');
         $this->assertNull($shared->refresh()->settings);
@@ -478,7 +484,8 @@ class SharedAppsTest extends TestCase
         $shared->save();
 
         $this->actingAs($admin)->get($show)->assertInertia(fn ($inertia) => $inertia
-            ->where('shared_app.urls.instance', $instance)
+            ->where('shared_app.urls.edit', "{$instance}/edit")
+            ->where('shared_app.urls.helm_values', "{$instance}/helm-values")
             ->where('shared_app.setup', null));
         $this->actingAs($admin)->get("{$instance}/edit")->assertOk();
     }
@@ -552,8 +559,11 @@ class SharedAppsTest extends TestCase
             ->where('app.domain_chosen', false)
             ->where('shared_app.setup', null)
             ->where('shared_app.urls.plan', null)
+            ->where('shared_app.urls.plan_edit', null)
+            ->where('shared_app.urls.plan_secrets', null)
+            ->where('shared_app.urls.helm_values', null)
             // All it has to change is its domain
-            ->where('shared_app.urls.instance', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit"));
+            ->where('shared_app.urls.edit', "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit"));
 
         // And it can't be activated or tested after that
         $this->activationRequest($admin, $shared)->assertSessionHas('error');

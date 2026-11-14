@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import SharedAppLayout from '../../SharedApps/SharedAppLayout.vue'
+import SharedAppTabs from '@/components/SharedAppTabs.vue'
 import { Link } from '@inertiajs/vue3'
 
 </script>
 <template>
-  <SharedAppLayout section="instance">
+  <SharedAppLayout>
   <div class="user">
     <div class="row">
       <div class="flex xs12 lg12">
         <va-card class="mb-4">
           <va-card-content>
-            <va-tabs v-model="value" hide-slider>
-              <template #tabs>
-                <Link v-for="(tab, index) in tabs" :key="index" :href="tab.url"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
-              </template>
-            </va-tabs>
-            <va-separator />
+            <SharedAppTabs v-if="$page.props.shared_app" />
+            <template v-else>
+              <va-tabs v-model="value" hide-slider>
+                <template #tabs>
+                  <Link v-for="(tab, index) in tabs" :key="index" :href="tab.url"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
+                </template>
+              </va-tabs>
+              <va-separator />
+            </template>
             <slot></slot>
           </va-card-content>
         </va-card>
@@ -34,34 +38,21 @@ export default {
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/organizations/' + organization.id + '/apps/' + app.id
 
-    const tabs = []
-    const state = this.$page.props.shared_app?.state
-
-    // A shared app that is managed externally has nothing deployed: its domain is all there is to change
-    if (state === 'external') {
-      tabs.push({
-        title: this.$t('common.edit'),
-        url: basePath + '/edit'
-      })
-    } else {
-      tabs.push({
+    // A shared app has its own tabs, between all its pages (see SharedAppTabs)
+    const tabs = [
+      {
         title: this.$t('common.view'),
         url: basePath
-      })
-
-      // One that is still to be set up isn't deployed either: there is nothing to edit yet
-      if (state !== 'setup') {
-        tabs.push({
-          title: this.$t('common.edit'),
-          url: basePath + '/edit'
-        })
-      }
-
-      tabs.push({
+      },
+      {
+        title: this.$t('common.edit'),
+        url: basePath + '/edit'
+      },
+      {
         title: this.$t('admin.apps.helmValues'),
         url: basePath + '/helm-values'
-      })
-    }
+      }
+    ]
 
     return {
       pathname,

@@ -178,7 +178,7 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
 export default {
   layout: (h, page) => {
     // A run of a shared app's plan is one of its pages
-    return h(AppLayout, () => h(SharedAppLayout, { section: 'plan' }, () => h(VersionLayout, () => page)))
+    return h(AppLayout, () => h(SharedAppLayout, () => h(VersionLayout, () => page)))
   },
   data () {
     return {

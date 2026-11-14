@@ -100,7 +100,11 @@ class SharedAppContext
     public static function payload(AppInstance $shared_app): array
     {
         $state = self::state($shared_app);
-        $view = "/admin/service/shared-apps/{$shared_app->id}";
+        $external = $state === self::EXTERNAL;
+        $instance = "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}";
+        $plan = self::planUrl($shared_app);
+        // Features, configurations and secrets are only there for an app with a registered profile
+        $plan_extras = ! $external && $shared_app->plan?->hasFullSettings();
 
         return [
             'id' => $shared_app->id,
@@ -108,18 +112,19 @@ class SharedAppContext
             'application' => $shared_app->application->name,
             'status' => $shared_app->status,
             'state' => $state,
-            // Where each tab leads. The app instance's pages only mean something once
-            // it is deployed, and an externally managed app has no plan to set up.
+            // Where each tab leads, or null while the page means nothing yet: the app
+            // instance's pages wait for it to be deployed, an externally managed app
+            // has only its domain to change, and has no plan to set up.
             'urls' => [
-                'view' => $view,
-                // Where its domain is changed is all an externally managed app has
-                'edit' => $state === self::ACTIVE ? "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/edit" : null,
-                'instance' => match ($state) {
-                    self::ACTIVE => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}",
-                    self::EXTERNAL => "/admin/organizations/{$shared_app->organization_id}/apps/{$shared_app->id}/edit",
-                    default => null,
-                },
-                'plan' => $state === self::EXTERNAL ? null : self::planUrl($shared_app),
+                'view' => "/admin/service/shared-apps/{$shared_app->id}",
+                'edit' => $state === self::ACTIVE || $external ? "{$instance}/edit" : null,
+                // The chart is reviewed while setting it up, too
+                'helm_values' => $state === self::ACTIVE || $state === self::SETUP ? "{$instance}/helm-values" : null,
+                'plan' => $external ? null : $plan,
+                'plan_edit' => $external ? null : "{$plan}/edit",
+                'plan_features' => $plan_extras ? "{$plan}/features" : null,
+                'plan_configurations' => $plan_extras ? "{$plan}/configurations" : null,
+                'plan_secrets' => $plan_extras ? "{$plan}/secrets" : null,
             ],
             'setup' => $state === self::SETUP ? self::setup($shared_app) : null,
             'update_required' => $state === self::ACTIVE && self::updateRequired($shared_app),

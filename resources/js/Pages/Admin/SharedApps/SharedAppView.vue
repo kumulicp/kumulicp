@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import SharedAppLayout from './SharedAppLayout.vue'
+import SharedAppTabs from '@/components/SharedAppTabs.vue'
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
@@ -23,7 +24,7 @@ const isActive = computed(() => props.app.state === 'active')
 
 <script lang="ts">
 export default {
-  layout: (h, page) => h(AppLayout, () => h(SharedAppLayout, { section: 'view' }, () => page))
+  layout: (h, page) => h(AppLayout, () => h(SharedAppLayout, () => page))
 }
 </script>
 
@@ -34,6 +35,7 @@ export default {
   <va-card class="mb-4">
     <va-card-title>{{ app.label }}</va-card-title>
     <va-card-content>
+      <SharedAppTabs />
       <va-alert v-if="app.state === 'setup'" id="setupInfo" color="warning" icon="warning" class="mb-4">
         {{ $t('admin.sharedApps.setupInfo', { app: app.name }) }}
       </va-alert>
