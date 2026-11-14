@@ -269,9 +269,10 @@ class Organizations extends Controller
             ? now()->addMinutes(self::IMMEDIATE_DELETION_MINUTES)
             : Carbon::parse($validated['date'])->setTimezone($timezone);
 
-        // Saved as a plain string in the app's timezone, which is what the
-        // sweep compares against, so no timezone conversion can shift it
-        $organization->deletion_scheduled_at = $deletion_at->format('Y-m-d H:i:s');
+        // $deletion_at is in the app's timezone, which is what the sweep
+        // compares against, and the datetime cast stores it as it is, so no
+        // timezone conversion can shift it
+        $organization->deletion_scheduled_at = $deletion_at;
         $organization->save();
 
         if ($organization->status !== 'deactivated') {
