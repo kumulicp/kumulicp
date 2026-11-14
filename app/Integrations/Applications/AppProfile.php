@@ -16,6 +16,9 @@ class AppProfile
 
     protected $envs = [];
 
+    /** @var array<int, class-string<ChartModifier>> */
+    protected $chart_modifiers = [];
+
     protected $features = [];
 
     /** @var array<int, UpdateStep> */
@@ -89,6 +92,26 @@ class AppProfile
     public function configurations()
     {
         return $this->configurations;
+    }
+
+    /**
+     * Adds a configuration (a plan setting), for an extension that brings a
+     * setting of its own. Same shape as the entries of the profile's $configurations.
+     *
+     * @param  array<string, mixed>  $definition
+     * @return $this
+     */
+    public function addConfiguration(string $name, array $definition)
+    {
+        $this->configurations[$name] = $definition;
+
+        return $this;
+    }
+
+    /** @return array<int, class-string<ChartModifier>> */
+    public function chartModifiers(): array
+    {
+        return $this->chart_modifiers;
     }
 
     public function chart()
@@ -217,6 +240,21 @@ class AppProfile
     {
         if (class_exists($env_vars)) {
             array_push($this->envs, $env_vars);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Adds a change to the chart this app deploys (see ChartModifier).
+     *
+     * @param  class-string<ChartModifier>  $modifier
+     * @return $this
+     */
+    public function addChartModifier(string $modifier)
+    {
+        if (class_exists($modifier) && ! in_array($modifier, $this->chart_modifiers, true)) {
+            $this->chart_modifiers[] = $modifier;
         }
 
         return $this;

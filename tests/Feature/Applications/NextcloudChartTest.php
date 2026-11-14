@@ -107,26 +107,21 @@ function nextcloudChartValues(array $configurations = []): array
     return (new NextcloudChart($organization, $app_instance->fresh()))->values();
 }
 
-it('leaves the chart security contexts and port 80 alone by default', function () {
+it('leaves the chart security contexts and port 80 alone, so it matches the official chart', function () {
     $values = nextcloudChartValues();
 
     expect($values['nextcloud'])->not->toHaveKeys(['containerPort', 'securityContext', 'podSecurityContext'])
-        ->and($values)->not->toHaveKey('cronjob.type')
+        ->and($values['nextcloud']['configs'])->not->toHaveKey('restricted.config.php')
+        ->and($values['cronjob'])->not->toHaveKey('type')
         ->and(collect($values['nextcloud']['extraEnv'])->pluck('name'))->not->toContain('APACHE_PORT');
 });
 
-it('runs the nextcloud pods unprivileged on port 8080 when restricted', function () {
+it('does not know about restricted security contexts; that is an extension', function () {
+    // Even with the setting on, only a module that registers it changes the chart
     $values = nextcloudChartValues(['restricted-security-context' => true, 'cronjob' => true]);
 
-    expect($values['nextcloud']['containerPort'])->toBe(8080)
-        ->and(collect($values['nextcloud']['extraEnv'])->firstWhere('name', 'APACHE_PORT')['value'])->toBe('8080')
-        ->and($values['nextcloud']['podSecurityContext'])->toMatchArray(['runAsNonRoot' => true, 'runAsUser' => 33, 'fsGroup' => 33])
-        ->and($values['nextcloud']['securityContext'])->toMatchArray(['allowPrivilegeEscalation' => false, 'runAsNonRoot' => true, 'capabilities' => ['drop' => ['ALL']]])
-        // crond (the sidecar) needs root, so cron has to be a Kubernetes CronJob
-        ->and($values['cronjob']['type'])->toBe('cronjob')
-        ->and($values['cronjob']['cronjob']['securityContext']['capabilities'])->toBe(['drop' => ['ALL']])
-        ->and($values['imaginary']['securityContext']['allowPrivilegeEscalation'])->toBeFalse()
-        ->and($values['metrics']['securityContext']['capabilities'])->toBe(['drop' => ['ALL']]);
+    expect($values['nextcloud'])->not->toHaveKeys(['containerPort', 'securityContext', 'podSecurityContext'])
+        ->and($values['cronjob'])->not->toHaveKey('type');
 });
 
 it('runs imaginary from the maintained aio image with an exact tag', function () {
