@@ -210,6 +210,10 @@ class Task extends Model
             }
         }
 
+        // A task that is gone is done (a task with nothing to run deletes itself, and on a fast queue
+        // may have by the time it is waited for), so there is nothing left to wait for
+        $ids = DB::table('tasks')->whereIn('id', $ids)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
         foreach ($ids as $id) {
             DB::table('task_dependencies')->insertOrIgnore([
                 'task_id' => $this->id,
@@ -295,6 +299,15 @@ class Task extends Model
     public function events(): HasMany
     {
         return $this->hasMany(TaskEvent::class)->orderBy('id');
+    }
+
+    /**
+     * Whether a worker has ever run the task. Not what `attempts` says: retrying
+     * a task that hasn't run yet counts as an attempt too.
+     */
+    public function hasStarted(): bool
+    {
+        return $this->events()->where('type', 'started')->exists();
     }
 
     /**

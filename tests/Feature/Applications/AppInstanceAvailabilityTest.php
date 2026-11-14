@@ -45,6 +45,9 @@ use Tests\Support\TestSupports;
 uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {
+    // An organization's admins are looked up through the account manager: the customer organization's
+    // are users of the database, and not in a directory, whatever driver the environment is set to
+    setupAccountManagerDriver('db');
     $this->setupFakeServerInterfaces();
     $this->fakeNotificationsAndMail();
 });
@@ -87,7 +90,8 @@ function availabilityCustomerApp(AppInstance $template): array
     $app->organization_id = $organization->id;
     $app->save();
 
-    return [$app, $organization, $admin];
+    // Reloaded: the organization it had when made is still loaded on it, and that is who would be told
+    return [$app->fresh(), $organization, $admin];
 }
 
 // The admins' own user records (what a notification is addressed to), not the
@@ -598,16 +602,21 @@ it('goes from a failed API call to blocked through the real monitor check', func
     $monitor = availabilityMonitor($app);
     expect($monitor->uptime_check_enabled)->toBeTrue();
 
-    // What the package's own client gets back (it doesn't use the Http facade)
-    config(['uptime-monitor.uptime_check.guzzle_options.handler' => HandlerStack::create(
-        new MockHandler([new Response(503), new Response(503), new Response(200)])
+    // What the package's own client gets back (it doesn't use the Http facade). Its client tries a 5xx
+    // answer again 3 times before it gives up on it, so a check that finds the app down uses 4 answers.
+    // Every check gets a client of its own, as every run of the command has: the package adds its retrying
+    // to the handler stack it is given, so one that is used again would retry through each run's as well
+    $answers = fn (Response ...$responses) => config(['uptime-monitor.uptime_check.guzzle_options.handler' => HandlerStack::create(
+        new MockHandler($responses)
     )]);
+    $down = array_map(fn () => new Response(503), range(1, 4));
 
     Http::fake(['*' => Http::response('', 503)]);
     expect(fn () => failingCall($app))->toThrow(ConnectionFailedException::class);
     $admins = availabilityAdminsOf($app->organization);
 
     // First check, made within 5 minutes of the failure: down, but not yet
+    $answers(...$down);
     Artisan::call('monitor:check-uptime');
     (new CheckUnavailableAppInstances)();
     expect($monitor->fresh()->uptime_status)->toBe(UptimeStatus::DOWN)
@@ -619,16 +628,18 @@ it('goes from a failed API call to blocked through the real monitor check', func
 
     // The recheck after 5 minutes: still down
     $this->travel(3)->minutes();
+    $answers(...$down);
     Artisan::call('monitor:check-uptime');
     (new CheckUnavailableAppInstances)();
     expect($app->fresh()->isApiBlocked())->toBeTrue();
     Notification::assertSentToTimes($admins->first(), AppInstanceUnavailable::class, 1);
 
     // The package's own "went down" email is not sent for an app
-    Notification::assertNotSent(AppUptimeCheckFailed::class);
+    Notification::assertSentTimes(AppUptimeCheckFailed::class, 0);
 
     // And back
     $this->travel(5)->minutes();
+    $answers(new Response(200));
     Artisan::call('monitor:check-uptime');
     (new CheckUnavailableAppInstances)();
     expect($app->fresh()->status)->toBe('active');

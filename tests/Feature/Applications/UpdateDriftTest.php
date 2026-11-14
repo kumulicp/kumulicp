@@ -9,10 +9,10 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Task;
-use App\UpdateState;
 use App\Updates\UpdateDrift;
 use App\Updates\UpdateStep;
 use App\Updates\UpdateSteps;
+use App\UpdateState;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -78,6 +78,12 @@ function driftInstance(): AppInstance
     ['app' => $app, 'plan' => $plan] = $support->prepareDemoApp();
 
     return test()->runActivate($plan, Organization::find(1), $app);
+}
+
+// The aspects a change to the plan makes out of date besides 'settings': the roles' groups are only in LDAP
+function driftOfOthers(): array
+{
+    return config('account_manager.driver') === 'ldap' ? ['release', 'roles'] : ['release'];
 }
 
 function driftNow(AppInstance $instance): array
@@ -187,8 +193,8 @@ it('stores what a step brought up to date when it has run, and leaves the other 
 
     runDriftSteps($instance, ['drift-recording']);
 
-    // 'settings' is up to date, 'release' still is not: no step for it has run
-    expect(driftNow($instance))->toBe(['release'])
+    // 'settings' is up to date, 'release' (and the roles) still are not: no step for them has run
+    expect(driftNow($instance))->toBe(driftOfOthers())
         ->and(UpdateState::where('app_instance_id', $instance->id)->where('aspect', 'settings')->first()->task_id)->not->toBeNull();
 });
 
@@ -222,7 +228,7 @@ it('takes an aspect as up to date, without running anything, when it is dismisse
 
     $drift->dismiss($instance->fresh(), ['settings']);
 
-    expect(driftNow($instance))->toBe(['release'])
+    expect(driftNow($instance))->toBe(driftOfOthers())
         ->and(Task::where('action_slug', 'application_update_step')->exists())->toBeFalse();
 });
 

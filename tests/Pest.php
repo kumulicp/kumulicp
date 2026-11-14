@@ -54,6 +54,14 @@ pest()->beforeEach(function () {
 })
     ->in('Browser');
 
+// These activate apps, whose groups are made in the directory, and look the organizations' admins up there:
+// the driver is theirs to choose, not whatever the environment they are run in is set to. A file that needs
+// another (setupAccountManagerDriver('db') in its own beforeEach) does that after this
+pest()->beforeEach(function () {
+    setupAccountManagerDriver('ldap');
+})
+    ->in('Feature/Applications');
+
 pest()->afterEach(function () {
     (new TestSupports)->cleanLdap();
 })

@@ -191,8 +191,12 @@ it('adds the plan secrets to the app env, through the Secret when the driver del
         ->and(json_encode($chart->extraEnv()))->not->toContain('abc123')
         ->and(base64_decode($chart->secrets()->manifest()['data']['api-key']))->toBe('abc123');
 
+    // Rancher creates it too, through its Kubernetes proxy
+    expect(collect(chartOn($this->instance, 'rancher')->extraEnv())->firstWhere('name', 'API_KEY')['valueFrom']['secretKeyRef']['key'])
+        ->toBe('api-key');
+
     // Drivers that do not create the Secret keep the plain value
-    expect(collect(chartOn($this->instance, 'something_else')->extraEnv())->firstWhere('name', 'API_KEY'))
+    expect(collect(chartOn($this->instance, 'other')->extraEnv())->firstWhere('name', 'API_KEY'))
         ->toBe(['name' => 'API_KEY', 'value' => 'abc123']);
 });
 
