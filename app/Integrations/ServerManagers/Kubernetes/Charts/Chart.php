@@ -4,6 +4,7 @@ namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\AppInstance;
 use App\Integrations\Applications\AppFeature;
+use App\Integrations\Applications\ChartModifier;
 use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application;
@@ -197,6 +198,36 @@ class Chart
         }
 
         return $sidecars;
+    }
+
+    // The changes extensions (modules) registered on the app's profile make to its chart
+    // (see ChartModifier), applied to the Helm release's values ...
+    public function modifyValues(array $values): array
+    {
+        foreach ($this->chartModifiers() as $modifier) {
+            $values = $modifier->values($values, $this->app_instance);
+        }
+
+        return $values;
+    }
+
+    // ... and to a Job the app runs against its release.
+    public function modifyJob(array $job): array
+    {
+        foreach ($this->chartModifiers() as $modifier) {
+            $job = $modifier->job($job, $this->app_instance);
+        }
+
+        return $job;
+    }
+
+    /** @return array<int, ChartModifier> */
+    private function chartModifiers(): array
+    {
+        return array_map(
+            fn (string $modifier) => new $modifier,
+            Application::profile($this->app_instance->application->slug)->chartModifiers()
+        );
     }
 
     // The names of any imagePullSecrets required to pull the application's container image

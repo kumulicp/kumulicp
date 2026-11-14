@@ -56,7 +56,7 @@ abstract class HelmChart extends Chart
     public function valuesWithAdditionalConfigs(): array
     {
         $app_instance = Application::instance($this->app_instance);
-        $values = array_replace_recursive($this->values(), $this->labelValues());
+        $values = array_replace_recursive($this->modifyValues($this->values()), $this->labelValues());
         $additionalConfigs = $this->app_instance->plan->additionalConfigs();
 
         foreach ($additionalConfigs as $config) {

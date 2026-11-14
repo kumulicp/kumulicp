@@ -2,8 +2,6 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
-use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
-use App\Support\Facades\Application;
 use Illuminate\Support\Str;
 
 class NextcloudJobChart extends JobChart
@@ -158,13 +156,6 @@ class NextcloudJobChart extends JobChart
             ],
         ];
 
-        // Same contexts as the release's pods (NextcloudChart). The pod-level
-        // `allowPrivilegeEscalation` above is a container field Kubernetes ignores,
-        // so it is only dropped here, where the real one is set on the container.
-        if (Application::instance($app_instance)->configuration('restricted-security-context')) {
-            $spec = &$this->chart['spec']['template']['spec'];
-            $spec['securityContext'] = NextcloudChart::restrictedPodSecurityContext();
-            $spec['containers'][0]['securityContext'] = NextcloudChart::restrictedContainerSecurityContext();
-        }
+        $this->chart = $this->modifyJob($this->chart);
     }
 }

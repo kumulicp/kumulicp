@@ -197,21 +197,6 @@ class NextcloudProfile extends AppProfile
             'persistent' => false,
             'validations' => 'nullable|integer',
         ],
-        // Off keeps the chart's own security contexts and Apache on port 80
-        // (what existing instances run). On runs the Nextcloud and cron pods as
-        // www-data (uid/gid 33) with no privilege escalation, all capabilities
-        // dropped and the RuntimeDefault seccomp profile. A non-root process
-        // cannot bind port 80, so Apache listens on 8080 (APACHE_PORT) -- this
-        // needs an image built from dockers/nextcloud with APACHE_PORT support;
-        // a stock nextcloud image ignores the variable and the pod would never
-        // become ready. The data volume is made writable through fsGroup 33.
-        'restricted-security-context' => [
-            'name' => 'restricted-security-context',
-            'type' => 'bool',
-            'default' => false,
-            'persistent' => false,
-            'validations' => 'nullable|boolean',
-        ],
         'cronjob' => [
             'name' => 'cronjob',
             'type' => 'bool',
