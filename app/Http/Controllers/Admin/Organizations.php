@@ -252,7 +252,8 @@ class Organizations extends Controller
             'date' => ['required', 'date', 'after_or_equal:yesterday'],
         ]);
 
-        $organization->deletion_scheduled_at = Carbon::parse($validated['date']);
+        // The browser's timestamp is in UTC; store it in the app's timezone, which the sweep compares against
+        $organization->deletion_scheduled_at = Carbon::parse($validated['date'])->setTimezone(config('app.timezone'));
         $organization->save();
 
         if ($organization->status !== 'deactivated') {
