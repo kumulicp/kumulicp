@@ -7,6 +7,9 @@ use App\Integrations\ServerManagers\Kubernetes\Charts\Job\RebuildableJobChart;
 use App\OrgDomain;
 use Illuminate\Support\Str;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 class MailserverJobChart extends JobChart implements RebuildableJobChart
 {
     public $chart = [];

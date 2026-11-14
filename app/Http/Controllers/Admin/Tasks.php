@@ -231,7 +231,7 @@ class Tasks extends Controller
     {
         $task->load(['organization', 'application', 'version', 'app_instance']);
 
-        $describe = fn (Task $other) => [
+        $describe = fn ($other) => [
             'id' => $other->id,
             'description' => $other->description,
             'status' => $other->status->value,
@@ -270,7 +270,7 @@ class Tasks extends Controller
                 'attempt' => $event->attempt,
                 'message' => SafeErrorMessage::scrub($event->message),
                 'context' => $event->context,
-                'created_at' => $event->created_at?->toIso8601String(),
+                'created_at' => $event->created_at->toIso8601String(),
             ]),
             'steps' => $task->steps()->get()->map(fn (TaskStep $step) => [
                 'name' => $step->name,
