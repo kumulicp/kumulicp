@@ -222,7 +222,7 @@ import { currencyByCode } from '@/constants/currencies'
                 :error-messages="$page.props.errors.displayed_features"
                 >
                 <template #append>
-                  <va-icon name="fa-x" color="danger" style="cursor:pointer" @click="removeFeature(index)" />
+                  <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeFeature(index)" />
                 </template>
               </va-input>
             </div>

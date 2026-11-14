@@ -430,7 +430,7 @@ import { useForm } from '@inertiajs/vue3'
                     immediateValidation
                   >
                     <template #append>
-                      <va-icon name="fa-x" color="danger" style="cursor:pointer" @click="removeFeature(plan.id, index)" />
+                      <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeFeature(plan.id, index)" />
                     </template>
                   </va-input>
                 </div>

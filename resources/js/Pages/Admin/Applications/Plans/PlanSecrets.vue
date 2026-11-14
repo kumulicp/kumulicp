@@ -57,7 +57,7 @@ import axios from 'axios'
           </template>
           <template #append>
             <va-button color="backgroundSecondary" @click="removeSecret(index)" :title="$t('admin.plans.removeSecret')">
-              <va-icon name="fa-x" color="danger" />
+              <va-icon name="entypo-cancel" color="danger" />
             </va-button>
           </template>
         </va-input>

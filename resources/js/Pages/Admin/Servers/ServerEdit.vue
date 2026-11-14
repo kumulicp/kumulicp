@@ -202,7 +202,7 @@ import { Link, useForm } from '@inertiajs/vue3'
               :error-messages="$page.props.errors.settings"
               >
               <template #append>
-                <va-icon name="fa-x" color="danger" style="cursor:pointer" @click="removeSetting(index)" />
+                <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeSetting(index)" />
               </template>
             </va-input>
           </div>
