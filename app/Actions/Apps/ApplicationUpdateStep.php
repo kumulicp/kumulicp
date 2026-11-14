@@ -70,7 +70,10 @@ class ApplicationUpdateStep extends NativeAction
             app(UpdateSteps::class)->forget($task->app_instance, (string) $task->getValue('step'));
 
             if (is_array($aspects = $task->getValue('aspects')) && $aspects !== []) {
-                app(UpdateDrift::class)->record($task->app_instance, $aspects, $task->id);
+                $drift = app(UpdateDrift::class);
+                $drift->record($task->app_instance, $aspects, $task->id);
+                // What was stored is what the step started with: if something changed while it ran, it is out of date again
+                $drift->refresh($task->app_instance);
             }
         }
 

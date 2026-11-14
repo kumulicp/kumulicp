@@ -2,6 +2,7 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -12,10 +13,14 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $app_instance_id
  * @property string $aspect
- * @property string $fingerprint
+ * @property string $fingerprint What was applied
+ * @property string|null $current_fingerprint What the aspect worked out the last time it was looked at
  * @property Carbon $applied_at
+ * @property Carbon|null $drift_detected_at When it was first seen to be out of date
+ * @property int|null $definition_change_id The edit that put it out of date, if one was seen
  * @property int|null $task_id
  * @property-read AppInstance $app_instance
+ * @property-read DefinitionChange|null $change
  */
 class UpdateState extends Model
 {
@@ -25,7 +30,27 @@ class UpdateState extends Model
 
     protected $casts = [
         'applied_at' => 'datetime',
+        'drift_detected_at' => 'datetime',
     ];
+
+    /**
+     * The aspects that were out of date the last time they were looked at.
+     *
+     * @param  Builder<UpdateState>  $query
+     * @return Builder<UpdateState>
+     */
+    public function scopeDrifted(Builder $query): Builder
+    {
+        return $query->whereNotNull('current_fingerprint')->whereColumn('current_fingerprint', '!=', 'fingerprint');
+    }
+
+    /**
+     * @return BelongsTo<DefinitionChange, $this>
+     */
+    public function change(): BelongsTo
+    {
+        return $this->belongsTo(DefinitionChange::class, 'definition_change_id');
+    }
 
     /**
      * @return BelongsTo<AppInstance, $this>

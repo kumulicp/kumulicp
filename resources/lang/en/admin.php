@@ -368,6 +368,7 @@ return [
         'settings' => 'Settings',
         'roles' => 'Roles and groups',
         'sso' => 'Single sign-on',
+        'subscription' => 'Subscription',
     ],
     'update_steps' => [
         'release' => [
@@ -385,6 +386,10 @@ return [
         'sso' => [
             'label' => 'Single sign-on',
             'description' => 'Sets the app up with the plan\'s single sign-on server.',
+        ],
+        'subscription' => [
+            'label' => 'Subscription',
+            'description' => 'Updates the organization\'s subscription and billing with what the plan charges now.',
         ],
         'feature' => [
             'description' => 'Runs the action this feature of the app brings.',

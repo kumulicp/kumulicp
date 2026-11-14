@@ -73,6 +73,45 @@ class UpdateDrift
     }
 
     /**
+     * Compares what the aspects work out now with what was applied and notes
+     * the result on what is stored, so which instances are out of date can be
+     * looked up without working anything out. Changes nothing on the instance.
+     *
+     * An aspect keeps the time it was first seen out of date, and the edit that
+     * did it, until it has been brought up to date.
+     *
+     * @param  int|null  $change_id  The edit that made this worth looking at, if one did
+     * @return array<int, string> the aspects that are out of date
+     */
+    public function refresh(AppInstance $app_instance, ?int $change_id = null): array
+    {
+        $states = UpdateState::where('app_instance_id', $app_instance->id)->get()->keyBy('aspect');
+
+        $drifted = [];
+        foreach ($this->current($app_instance) as $key => $fingerprint) {
+            // Unknown: nothing to compare with
+            if (! $state = $states->get($key)) {
+                continue;
+            }
+
+            $state->current_fingerprint = $fingerprint;
+
+            if ($state->fingerprint === $fingerprint) {
+                $state->drift_detected_at = null;
+                $state->definition_change_id = null;
+            } else {
+                $drifted[] = $key;
+                $state->drift_detected_at ??= now();
+                $state->definition_change_id ??= $change_id;
+            }
+
+            $state->save();
+        }
+
+        return $drifted;
+    }
+
+    /**
      * The steps to run to bring the instance up to date: the ones that go with
      * an aspect that changed, and nothing else.
      *
@@ -111,7 +150,14 @@ class UpdateDrift
         foreach ($fingerprints as $aspect => $fingerprint) {
             UpdateState::updateOrCreate(
                 ['app_instance_id' => $app_instance->id, 'aspect' => $aspect],
-                ['fingerprint' => $fingerprint, 'applied_at' => now(), 'task_id' => $task_id],
+                [
+                    'fingerprint' => $fingerprint,
+                    'current_fingerprint' => $fingerprint,
+                    'applied_at' => now(),
+                    'drift_detected_at' => null,
+                    'definition_change_id' => null,
+                    'task_id' => $task_id,
+                ],
             );
         }
     }

@@ -10,6 +10,7 @@ use App\Console\Calls\ExpiredSubscriptionsCheck;
 use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
+use App\Console\Calls\ScanUpdateDrift;
 use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use App\Services\VersionTesting\VersionTestRunner;
@@ -46,6 +47,7 @@ Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-
 // its full timeout, so a slow pass must not overlap the next
 Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
+Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();

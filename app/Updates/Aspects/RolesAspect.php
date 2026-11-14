@@ -4,12 +4,13 @@ namespace App\Updates\Aspects;
 
 use App\AppInstance;
 use App\AppRole;
+use App\Updates\AspectInputs;
 use App\Updates\Fingerprint;
 
 /**
  * The roles the app's groups in LDAP are created for: the roles of its version
- * and of the app, which of them its plan gives access to, and the features
- * they depend on.
+ * and of the app, and the features they depend on. Nothing of the plan: the
+ * groups are made from the roles alone.
  */
 class RolesAspect extends Aspect
 {
@@ -30,8 +31,6 @@ class RolesAspect extends Aspect
 
     public function fingerprint(AppInstance $app_instance): string
     {
-        $plan = $app_instance->plan;
-
         $roles = AppRole::where('application_id', $app_instance->application_id)
             ->with('implied_roles:id')
             ->orderBy('id')
@@ -50,9 +49,8 @@ class RolesAspect extends Aspect
         return Fingerprint::of([
             'version_roles' => $app_instance->version?->roles,
             'roles' => $roles,
-            // Which access types the plan offers decides what a role's group gives
-            'plan' => $plan ? ['id' => $plan->id, 'settings' => $plan->settings, 'features' => $plan->features] : null,
-            'features' => $app_instance->setting('features'),
+            // Whether a role's features are on decides if its group is made
+            'features' => AspectInputs::featureState($app_instance, collect($roles)->pluck('required_features')->flatten()->filter()->unique()->sort()->values()->all()),
         ]);
     }
 }

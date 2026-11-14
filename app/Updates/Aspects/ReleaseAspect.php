@@ -3,12 +3,15 @@
 namespace App\Updates\Aspects;
 
 use App\AppInstance;
+use App\Updates\AspectInputs;
 use App\Updates\Fingerprint;
 use Illuminate\Support\Arr;
 
 /**
  * What the app is deployed as on its web server: the version's chart and
  * image, the servers and plan it runs with, and the instance's own settings.
+ * Of the configurations, the ones that don't name another aspect (see
+ * AspectInputs).
  */
 class ReleaseAspect extends Aspect
 {
@@ -44,8 +47,7 @@ class ReleaseAspect extends Aspect
             ] : null,
             'plan' => $plan ? [
                 'id' => $plan->id,
-                'settings' => $plan->settings,
-                'features' => $plan->features,
+                'settings' => AspectInputs::planSettings($app_instance, $this->key()),
             ] : null,
             'servers' => [
                 'web' => $app_instance->web_server_id,
@@ -54,11 +56,11 @@ class ReleaseAspect extends Aspect
                 'plan_database' => $plan?->database_server_id,
             ],
             'instance' => [
-                'configurations' => $app_instance->setting('configurations'),
-                'features' => $app_instance->setting('features'),
+                'configurations' => AspectInputs::configurations($app_instance, (array) $app_instance->setting('configurations'), $this->key()),
                 // override.pvc is written back by the release itself
-                'override' => Arr::except((array) $app_instance->setting('override', []), ['pvc']),
+                'override' => AspectInputs::configurations($app_instance, Arr::except((array) $app_instance->setting('override', []), ['pvc']), $this->key()),
             ],
+            'features' => AspectInputs::features($app_instance, $this->key()),
         ]);
     }
 }

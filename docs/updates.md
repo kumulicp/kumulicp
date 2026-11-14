@@ -36,6 +36,69 @@ writes back itself (ids, quotas, `override.pvc`, `sso`), timestamps or counters:
 the instance would be out of date again as soon as it was updated. Cosmetic
 fields (a plan's name, description or order) belong outside every fingerprint.
 
+### Which aspect a configuration or feature belongs to
+
+The plan's and the instance's configurations and features are split between the
+aspects by `App\Updates\AspectInputs`, so changing one only puts out of date
+what it feeds:
+
+- **Configurations** go to `release` (they end up in the chart's values). A
+  configuration that is really applied by another step says so with an `aspect`
+  key, in the app profile or in the plan's `additionalConfigs`:
+  `'greeting' => ['name' => 'greeting', 'aspect' => 'settings', ...]`. Raising a
+  plan's `replicaCount` is a new release, not a new settings job.
+- **Features** (whether they are on, and their settings, on the plan and on
+  the instance) go to `settings` (the `update_settings` job). A feature that
+  ends up in the chart's values sets `public $aspect = 'release'` on its class.
+  A feature with an action (the Nextcloud addons, managed through the API) has
+  an aspect of its own and is in neither, unless it sets `$aspect`. Prices and
+  the order features are shown in are in no aspect.
+- The rest of the plan's settings are listed by the aspect they feed
+  (`AspectInputs::PLAN_SETTINGS`); **anything not listed is in no fingerprint**:
+
+| Plan setting | Feeds |
+|---|---|
+| `base.storage`, `standard.storage`, `basic.storage`, `storage.amount` | `release` (the size of the volume) |
+| `secrets`, `additionalConfigs` | `release` (`additionalConfigs` also `settings`) |
+| web and database server of the plan | `release` |
+| single sign-on server of the plan | `sso` |
+| prices (`*.prices`, `*.price`, `*.price_id`), `basic.amount`, `storage.amount`, `payment_enabled`, the prices of features | `subscription` |
+| `*.max`, `basic.name`, `admin_access`, `self_registration_enabled`, `expires_after`, `trial_for`, `server_type`, `parent_server_id`, domains, displayed features | nothing: they are checked by kumulicp or only matter when the plan is chosen |
+
+A new setting that an app is built from has to be added to the list, or
+changing it flags nothing. The `roles` aspect doesn't depend on the plan at all,
+only on the features the roles require. The `subscription` aspect is brought up
+to date by running the organization's `SubscriptionUpdate`.
+
+## Noticing changes
+
+Edits to the definitions instances depend on are noticed as they are made, and
+only the instances they can affect are looked at.
+
+1. `DefinitionObserver` watches `AppPlan`, `AppVersion` and `AppRole` (the list is
+   `ImpactResolver::watched()`).
+2. `DefinitionChanges::record()` drops edits that only touched cosmetic
+   attributes (a plan's name or order, a version's update check, a role's label)
+   and edits nothing uses. What is left is stored in `definition_changes`, with
+   who made it and what it was called then.
+3. `ScanDriftForChange` finds the instances that use the definition (an
+   `AppPlan`'s instances, an `AppVersion`'s, every install of an `AppRole`'s app;
+   never test organizations) and `ScanInstancesForDrift` looks at them in batches.
+4. `UpdateDrift::refresh()` notes on `update_states` what each aspect works out
+   now (`current_fingerprint`), when it was first seen to be out of date
+   (`drift_detected_at`) and the edit that did it (`definition_change_id`).
+   `UpdateState::drifted()` lists what is out of date without working anything
+   out; `php artisan updates:scan` lists it.
+
+The cosmetic list in `ImpactResolver` only narrows what is looked at. What is
+out of date is always decided by the fingerprints, so a missed edit (a change
+made without the models, a pivot like a role's implied roles that has to be
+recorded by hand, as `Roles::update` does) is found by the nightly scan
+(`ScanUpdateDrift`, 03:30), which looks at every instance.
+
+Not watched yet: servers, applications and the organization plans (`Plan`). None of
+the aspects depend on them.
+
 ## Adding one
 
 A step names the aspects it brings up to date:

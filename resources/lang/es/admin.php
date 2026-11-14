@@ -283,6 +283,7 @@ return [
         'settings' => 'Configuración',
         'roles' => 'Roles y grupos',
         'sso' => 'Inicio de sesión único',
+        'subscription' => 'Suscripción',
     ],
     'update_steps' => [
         'release' => [
@@ -300,6 +301,10 @@ return [
         'sso' => [
             'label' => 'Inicio de sesión único',
             'description' => 'Configura la aplicación con el servidor de inicio de sesión único del plan.',
+        ],
+        'subscription' => [
+            'label' => 'Suscripción',
+            'description' => 'Actualiza la suscripción y la facturación de la organización con lo que cobra ahora el plan.',
         ],
         'feature' => [
             'description' => 'Ejecuta la acción que aporta esta función de la aplicación.',
