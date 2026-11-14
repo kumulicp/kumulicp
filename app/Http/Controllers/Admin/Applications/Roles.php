@@ -157,7 +157,7 @@ class Roles extends Controller
             $role->category = $request->category;
             $role->access_type = $request->access_type;
             $role->ignore_role = $request->ignore_role;
-            $role->required_features = $request->required_features;
+            $role->required_features = $request->required_features ?? [];
             $role->implied_roles()->sync($validatedData['implied_roles']);
             $role->save();
             // Syncing the implied roles isn't a change to the role itself

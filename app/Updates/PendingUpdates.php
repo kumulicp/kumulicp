@@ -5,8 +5,8 @@ namespace App\Updates;
 use App\AppInstance;
 use App\Organization;
 use App\UpdateState;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 /**
@@ -15,6 +15,9 @@ use Illuminate\Support\Collection;
  *
  * Instances of test organizations are left out, as they are when looking for
  * what is out of date.
+ *
+ * @phpstan-type PendingAspect array{key: string, label: string, since: string|null, change: array<string, mixed>|null}
+ * @phpstan-type PendingInstance array{id: int, label: string, application: string|null, version: string|null, organization: array{id: int|null, name: string|null}, aspects: array<int, PendingAspect>}
  */
 class PendingUpdates
 {
@@ -146,14 +149,26 @@ class PendingUpdates
 
         $aspects = $this->byInstance($page->getCollection()->pluck('id')->all(), $filters);
 
-        return $page->through(fn (AppInstance $instance) => [
+        // through() changes what the page holds in place
+        $page->through(fn (AppInstance $instance) => $this->row($instance, $aspects[$instance->id] ?? []));
+
+        return $page;
+    }
+
+    /**
+     * @param  array<int, PendingAspect>  $aspects
+     * @return array<string, mixed> PendingInstance
+     */
+    private function row(AppInstance $instance, array $aspects): array
+    {
+        return [
             'id' => $instance->id,
             'label' => $instance->label,
             'application' => $instance->application?->name,
             'version' => $instance->version?->name,
             'organization' => ['id' => $instance->organization_id, 'name' => $instance->organization?->name],
-            'aspects' => $aspects[$instance->id] ?? [],
-        ]);
+            'aspects' => $aspects,
+        ];
     }
 
     /**
@@ -231,7 +246,7 @@ class PendingUpdates
             'action' => $change->action,
             'changed' => $change->changed,
             'by' => $change->user?->name,
-            'at' => $change->created_at?->toIso8601String(),
+            'at' => $change->created_at->toIso8601String(),
         ] : null;
     }
 }

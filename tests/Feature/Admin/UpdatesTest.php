@@ -4,22 +4,27 @@ use App\AppInstance;
 use App\AppRole;
 use App\DefinitionChange;
 use App\Organization;
-use App\UpdateState;
+use App\Updates\AspectRegistry;
 use App\Updates\PendingUpdates;
 use App\Updates\UpdateDrift;
+use App\UpdateState;
 use App\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
+use Tests\TestCase;
 
 /**
  * What is out of date, shown to admins: how much and why, with a way to take it
  * as up to date when there is nothing to do, and highlights where they will see it.
  */
-uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+uses(TestCase::class, RefreshDatabase::class, TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {
+    // Activating an app makes its groups in the directory, as the other app tests do
+    setupAccountManagerDriver('ldap');
     $this->setupFakeServerInterfaces();
     $this->fakeNotificationsAndMail();
 });
@@ -198,7 +203,7 @@ it('counts the instances that are out of date, by organization and for the menu'
 });
 
 it('names the aspects of apps whose own aspects are not registered everywhere', function () {
-    $registry = app(\App\Updates\AspectRegistry::class);
+    $registry = app(AspectRegistry::class);
 
     expect($registry->label('release'))->toBe(__('admin.update_aspects.release'))
         ->and($registry->label('feature.collabora_online'))->toBe('Collabora Online');
@@ -257,8 +262,8 @@ it('tells the admin who edits a role how many instances use it', function () {
             'label' => $role->label,
             'sub_name' => $role->name,
             'slug' => $role->slug,
-            'description' => $role->description ?? 'A role',
-            'category' => $role->category ?? 'general',
+            'description' => $role->description ?: 'A role',
+            'category' => $role->category ?: 'general',
             'access_type' => $role->access_type->value,
             'ignore_role' => true,
             'implied_roles' => [],
