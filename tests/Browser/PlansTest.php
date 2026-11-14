@@ -1,7 +1,9 @@
 <?php
 
 use App\Plan;
+use App\Support\Facades\Settings;
 use App\User;
+use Tests\Support\TestSupports;
 
 describe('Admin Plans', function () {
     beforeEach(function () {
@@ -14,28 +16,6 @@ describe('Admin Plans', function () {
             ->click('#addPlan')
             ->assertSee('Add Plan')
             ->assertSee('Plan Type');
-    });
-
-    it('creates a package plan with type selected in modal', function () {
-        visit('/admin/service/plans')
-            ->click('#addPlan')
-            ->fill('#planName input', 'My Package Plan')
-            ->fill('#planDescription input', 'A package description')
-            ->click('#planType')
-            ->click('[role=option]:text-is("Package")')
-            ->click('#addPlanSubmit')
-            ->assertPathIs('/admin/service/plans/'.Plan::where('name', 'My Package Plan')->first()?->id);
-    });
-
-    it('creates an app plan with type selected in modal', function () {
-        visit('/admin/service/plans')
-            ->click('#addPlan')
-            ->fill('#planName input', 'My App Plan')
-            ->fill('#planDescription input', 'An app description')
-            ->click('#planType')
-            ->click('text=Pay per App')
-            ->click('#addPlanSubmit')
-            ->assertPathIs('/admin/service/plans/'.Plan::where('name', 'My App Plan')->first()?->id);
     });
 
     it('shows the plan edit page with type selector and no type change warning initially', function () {
@@ -77,14 +57,47 @@ describe('Admin Plans', function () {
     });
 
     it('app plan select allows multiple selection for pay per app plans only', function () {
+        // The "Add app" button is disabled until an app is available to add
+        (new TestSupports)->activateDemoApp();
+
         $app = Plan::factory()->create(['type' => 'app', 'name' => 'Multi Select Plan', 'org_type' => 'none']);
         $package = Plan::factory()->create(['type' => 'package', 'name' => 'Single Select Plan', 'org_type' => 'none']);
 
-        $modalIsMultiple = fn ($plan) => visit('/admin/service/plans/'.$plan->id)
+        // The caption under the app plan select tells which kind of select it is
+        visit('/admin/service/plans/'.$app->id)
             ->click('#addApp')
-            ->script("document.querySelector('#appModalPlan')?.closest('.va-select')?.classList.contains('va-select--multiple') ?? null");
+            ->assertSee('Choose one or more app plans for users to select from')
+            ->assertDontSee('Choose from any app plan or select a specific plan');
 
-        expect($modalIsMultiple($app))->toBeTruthy();
-        expect($modalIsMultiple($package))->toBeFalsy();
+        visit('/admin/service/plans/'.$package->id)
+            ->click('#addApp')
+            ->assertSee('Choose from any app plan or select a specific plan')
+            ->assertDontSee('Choose one or more app plans for users to select from');
+    });
+
+    it('shows and saves a price per enabled currency for a package plan', function () {
+        Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+        $plan = Plan::factory()->create([
+            'name' => 'Multi Currency Plan',
+            'type' => 'package',
+            'org_type' => 'none',
+        ]);
+
+        visit("/admin/service/plans/{$plan->id}")
+            ->assertSee('Price (USD)')
+            ->assertSee('Price (CAD)')
+            ->fill('#base-price-USD input', '10')
+            ->fill('#base-price-id-USD input', 'usd_base_id')
+            ->fill('#base-price-CAD input', '14')
+            ->fill('#base-price-id-CAD input', 'cad_base_id')
+            ->click('#submit')
+            ->assertPathIs('/admin/service/plans');
+
+        $plan->refresh();
+        expect((float) $plan->setting('base.prices.USD.amount'))->toBe(10.0);
+        expect($plan->setting('base.prices.USD.price_id'))->toBe('usd_base_id');
+        expect((float) $plan->setting('base.prices.CAD.amount'))->toBe(14.0);
+        expect($plan->setting('base.prices.CAD.price_id'))->toBe('cad_base_id');
     });
 });

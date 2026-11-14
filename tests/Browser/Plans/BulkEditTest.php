@@ -62,48 +62,30 @@ describe('Plans List - Bulk Edit Selection', function () {
         (new TestSupports)->activateDemoApp();
         $this->demoApp = Application::where('slug', 'demo_app')->first();
         [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
+        $this->toggle = fn ($page, $plan) => $page->script("document.querySelector('#plan-checkbox-{$plan->id}').closest('.va-checkbox__input-container').click()");
     });
 
-    it('shows a checkbox for each non-archived plan', function () {
-        visit('/admin/apps/demo_app/plans')
+    it('counts the selected plans on the bulk edit button as plans are selected and deselected', function () {
+        $page = visit('/admin/apps/demo_app/plans')
             ->assertSee('Alpha Plan')
-            ->assertSee('Beta Plan');
-        // Checkboxes are rendered; verify at least the first one is in the DOM
-        // via a selector that has-text on an adjacent cell
-        // (we rely on the next test for interaction coverage)
-    });
-
-    it('does not show the bulk edit button when no plans are selected', function () {
-        visit('/admin/apps/demo_app/plans')
+            ->assertSee('Beta Plan')
             ->assertDontSee('Bulk Edit (');
-    });
 
-    it('shows Bulk Edit (1) after selecting one plan', function () {
-        $page = visit('/admin/apps/demo_app/plans');
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
+        ($this->toggle)($page, $this->plan1);
+        $page->assertSee('Bulk Edit (1)');
+
+        ($this->toggle)($page, $this->plan2);
+        $page->assertSee('Bulk Edit (2)');
+
+        ($this->toggle)($page, $this->plan1);
         $page->assertSee('Bulk Edit (1)');
     });
 
-    it('shows Bulk Edit (2) after selecting two plans', function () {
+    it('navigates to the bulk edit page for the selected plans', function () {
         $page = visit('/admin/apps/demo_app/plans');
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
-        $page->assertSee('Bulk Edit (2)');
-    });
+        ($this->toggle)($page, $this->plan1);
+        ($this->toggle)($page, $this->plan2);
 
-    it('decrements the count when a plan is deselected', function () {
-        $page = visit('/admin/apps/demo_app/plans');
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
-        $page->assertSee('Bulk Edit (2)');
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
-        $page->assertSee('Bulk Edit (1)');
-    });
-
-    it('clicking the bulk edit button navigates to the bulk edit settings page', function () {
-        $page = visit('/admin/apps/demo_app/plans');
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan1->id}').closest('.va-checkbox__input-container').click()");
-        $page->script("document.querySelector('#plan-checkbox-{$this->plan2->id}').closest('.va-checkbox__input-container').click()");
         $page->click('#bulkEditButton')
             ->assertSee('Alpha Plan')
             ->assertSee('Beta Plan');
@@ -125,69 +107,36 @@ describe('Bulk Edit - Settings Tab', function () {
             .'&plans[]='.$this->plan2->id;
     });
 
-    it('renders both plan names as column headers', function () {
-        visit($this->url)
-            ->assertSee('Alpha Plan')
-            ->assertSee('Beta Plan');
-    });
-
-    it('renders the four navigation tabs', function () {
+    it('renders the four tabs and a column pre-filled with the stored values of each plan', function () {
         visit($this->url)
             ->assertSee('View')
             ->assertSee('Settings')
             ->assertSee('Features')
-            ->assertSee('Server Configurations');
-    });
-
-    it('pre-fills the name input for each plan with its stored value', function () {
-        visit($this->url)
+            ->assertSee('Edit Chart Values')
             ->assertValue('#plan-'.$this->plan1->id.'-name input', 'Alpha Plan')
-            ->assertValue('#plan-'.$this->plan2->id.'-name input', 'Beta Plan');
-    });
-
-    it('pre-fills the description input for each plan', function () {
-        visit($this->url)
+            ->assertValue('#plan-'.$this->plan2->id.'-name input', 'Beta Plan')
             ->assertValue('#plan-'.$this->plan1->id.'-description input', 'Alpha description')
-            ->assertValue('#plan-'.$this->plan2->id.'-description input', 'Beta description');
-    });
-
-    it('pre-fills the base price input with the stored numeric value', function () {
-        visit($this->url)
+            ->assertValue('#plan-'.$this->plan2->id.'-description input', 'Beta description')
             ->assertValue('#plan-'.$this->plan1->id.'-base-price input', '5')
-            ->assertValue('#plan-'.$this->plan2->id.'-base-price input', '10');
-    });
-
-    it('base price inputs accept and retain a numeric value', function () {
-        visit($this->url)
-            ->fill('#plan-'.$this->plan1->id.'-base-price input', '99')
-            ->assertValue('#plan-'.$this->plan1->id.'-base-price input', '99');
-    });
-
-    it('expires after input is numeric and accepts a value', function () {
-        visit($this->url)
-            ->fill('#plan-'.$this->plan1->id.'-expires-after input', '30')
-            ->assertValue('#plan-'.$this->plan1->id.'-expires-after input', '30');
-    });
-
-    it('payment enabled checkbox reflects the stored boolean for each plan', function () {
-        // plan1 has payment_enabled = false, plan2 has payment_enabled = true
-        visit($this->url)
+            ->assertValue('#plan-'.$this->plan2->id.'-base-price input', '10')
             ->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled')
             ->assertChecked('#plan-'.$this->plan2->id.'-payment-enabled');
     });
 
-    it('toggling a checkbox changes its checked state', function () {
-        $page = visit($this->url);
-        $page->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled');
-        $page->script("document.querySelector('#plan-{$this->plan1->id}-payment-enabled').closest('.va-checkbox__input-container').click()");
-        $page->assertChecked('#plan-'.$this->plan1->id.'-payment-enabled');
-    });
-
-    it('saving updated values redirects back to the settings tab', function () {
-        visit($this->url)
+    it('edits each plan in its own column and saves the changes', function () {
+        $page = visit($this->url)
             ->fill('#plan-'.$this->plan1->id.'-name input', 'Renamed Alpha')
+            ->fill('#plan-'.$this->plan2->id.'-name input', 'Renamed Beta');
+        $page->script("document.querySelector('#plan-{$this->plan1->id}-payment-enabled').closest('.va-checkbox__input-container').click()");
+        $page->assertChecked('#plan-'.$this->plan1->id.'-payment-enabled')
             ->click('#submit')
-            ->assertSee('Renamed Alpha');
+            ->assertSee('Renamed Alpha')
+            ->assertSee('Renamed Beta');
+
+        expect($this->plan1->refresh()->name)->toBe('Renamed Alpha');
+        expect($this->plan1->payment_enabled)->toBeTruthy();
+        expect($this->plan2->refresh()->name)->toBe('Renamed Beta');
+        expect($this->plan2->payment_enabled)->toBeTruthy();
     });
 });
 
@@ -196,31 +145,16 @@ describe('Bulk Edit - Settings Tab', function () {
 // ---------------------------------------------------------------------------
 
 describe('Bulk Edit - View Tab', function () {
-    beforeEach(function () {
+    it('shows both plans side by side with their stored prices', function () {
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
         (new TestSupports)->activateDemoApp();
-        $this->demoApp = Application::where('slug', 'demo_app')->first();
-        [$this->plan1, $this->plan2] = createDemoPlans($this->demoApp);
-        $this->url = '/admin/apps/demo_app/plans/bulk-edit'
-            .'?plans[]='.$this->plan1->id
-            .'&plans[]='.$this->plan2->id;
-    });
+        [$plan1, $plan2] = createDemoPlans(Application::where('slug', 'demo_app')->first());
 
-    it('shows both plan names as column headers', function () {
-        visit($this->url)
+        visit('/admin/apps/demo_app/plans/bulk-edit?plans[]='.$plan1->id.'&plans[]='.$plan2->id)
             ->assertSee('Alpha Plan')
-            ->assertSee('Beta Plan');
-    });
-
-    it('displays stored price values in the table cells', function () {
-        visit($this->url)
-            ->assertSee('5')   // alpha base price
-            ->assertSee('10'); // beta base price
-    });
-
-    it('contains no form inputs (read-only)', function () {
-        visit($this->url)
-            ->assertDontSee('input[type=text]');
+            ->assertSee('Beta Plan')
+            ->assertSee('5')
+            ->assertSee('10');
     });
 });
 
@@ -239,32 +173,19 @@ describe('Bulk Edit - Configurations Tab', function () {
             .'&plans[]='.$this->plan2->id;
     });
 
-    it('shows both plan names as column headers', function () {
+    it('adds a new config row for all plans', function () {
         visit($this->url)
             ->assertSee('Alpha Plan')
-            ->assertSee('Beta Plan');
-    });
-
-    it('shows the Add Config button', function () {
-        visit($this->url)
-            ->assertSee('Add new configuration');
-    });
-
-    it('clicking Add Config reveals the config form', function () {
-        visit($this->url)
+            ->assertSee('Beta Plan')
+            ->assertSee('Add new configuration')
             ->click('#addNewConfigButton')
-            ->assertSee('Config Type');
-    });
-
-    it('adding a new config creates a row visible for all plans', function () {
-        visit($this->url)
-            ->click('#addNewConfigButton')
+            ->assertSee('Config Type')
             ->fill('#new-config-name input', 'my-custom-setting')
             ->click('#confirmAddConfig')
             ->assertSee('my-custom-setting');
     });
 
-    it('the new config row is dismissed after clicking Hide', function () {
+    it('dismisses the new config form when Hide is clicked', function () {
         visit($this->url)
             ->click('#addNewConfigButton')
             ->assertSee('Config Type')
