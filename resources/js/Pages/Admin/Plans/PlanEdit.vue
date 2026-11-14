@@ -112,18 +112,17 @@ import { currencyByCode } from '@/constants/currencies'
                   :error-messages="$page.props.errors.displayed_features"
                   />
               </div>
-              <div class="flex flex-col lg7">
+              <div class="flex flex-col lg8">
                 <va-input v-model="form.displayed_features[index]['description']"
                   :label="$t('admin.plans.description')"
                   immediateValidation
                   :error="$page.props.errors.displayed_features"
                   :error-messages="$page.props.errors.displayed_features"
-                  />
-              </div>
-              <div class="flex lg1">
-                <div class="content-center align-center">
-                  <va-icon name="fa-x" color="danger" @click="removeFeature(index)" />
-                </div>
+                  >
+                  <template #append>
+                    <va-icon name="fa-x" color="danger" style="cursor:pointer" @click="removeFeature(index)" />
+                  </template>
+                </va-input>
               </div>
             </div>
           </template>
