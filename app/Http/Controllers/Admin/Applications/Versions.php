@@ -392,6 +392,7 @@ class Versions extends Controller
 
         return [
             'gate' => $version->testGate(),
+            'can_bypass' => $version->canBypassTests(),
             'run_id' => $run?->id,
             'can_enable' => $version->canBeEnabled(),
             'bypassed_by' => $run?->bypassed_by?->name,

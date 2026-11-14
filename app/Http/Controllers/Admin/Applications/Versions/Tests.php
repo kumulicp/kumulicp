@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Applications\Versions;
 use App\AppInstance;
 use App\Application;
 use App\AppVersion;
+use App\Enums\VersionTestRunStatus;
 use App\Enums\VersionTestStepStage;
 use App\Enums\VersionTestStepStatus;
 use App\Exceptions\VersionTestException;
@@ -75,6 +76,7 @@ class Tests extends Controller
                 'created_at' => $run->created_at->format('Y-m-d H:i:s'),
                 'finished_at' => $run->finished_at?->format('Y-m-d H:i:s'),
                 'gate' => $version->testGate($run->plan),
+                'can_bypass' => $version->canBypassTests($run->plan),
             ],
             'steps' => $steps->map(fn (VersionTestStep $step) => [
                 'id' => $step->id,
@@ -110,8 +112,9 @@ class Tests extends Controller
             ] : null,
             'can' => [
                 'start_next' => $run->isRunning() && ! $has_active_step && $steps->contains(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::PENDING),
-                'cancel' => $run->isRunning() && ! $steps->contains(fn (VersionTestStep $step) => in_array($step->status, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::CLEARING], true)),
-                'retry_step_id' => ! $has_active_step ? $steps->first(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::FAILED)?->id : null,
+                'cancel' => $run->isRunning() && $run->canBeCancelled(),
+                // Only a failed run can be retried; a cancelled run is final even though its step shows as failed
+                'retry_step_id' => $run->status === VersionTestRunStatus::FAILED && ! $has_active_step ? $steps->first(fn (VersionTestStep $step) => $step->status === VersionTestStepStatus::FAILED)?->id : null,
             ],
             // The page refreshes itself while a test org is being built or deleted
             'polling' => $steps->contains(fn (VersionTestStep $step) => in_array($step->status, [VersionTestStepStatus::PROVISIONING, VersionTestStepStatus::NEEDS_ATTENTION, VersionTestStepStatus::CLEARING], true)),
@@ -299,6 +302,7 @@ class Tests extends Controller
             'id' => $version->id,
             'version' => $version->name,
             'gate' => $version->testGate(),
+            'can_bypass' => $version->canBypassTests(),
         ];
     }
 

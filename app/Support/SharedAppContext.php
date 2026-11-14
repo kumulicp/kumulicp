@@ -191,6 +191,7 @@ class SharedAppContext
             ],
             'servers_saved' => $servers_saved,
             'gate' => $version->testGate($plan),
+            'can_bypass' => $version->canBypassTests($plan),
             'can_activate' => $can_activate,
             'run_url' => $run ? self::runUrl($shared_app, $run) : null,
             'bypassed_by' => $run?->bypassed_by?->name,

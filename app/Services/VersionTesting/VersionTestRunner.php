@@ -634,13 +634,12 @@ class VersionTestRunner
 
     private function cancelRun(VersionTestRun $run, User $user, string $event): void
     {
-        $active = $run->steps()->whereIn('status', VersionTestStepStatus::activeValues())->first();
-
-        // A test org that is still being built can't be pulled out from under its tasks
-        $cancellable = [VersionTestStepStatus::AWAITING_CONFIRMATION, VersionTestStepStatus::NEEDS_ATTENTION];
-        if ($active && ! in_array($active->status, $cancellable, true)) {
+        if (! $run->canBeCancelled()) {
             throw new VersionTestException(__('admin.version_tests.errors.cannot_cancel_now'));
         }
+
+        $active = $run->steps()->whereIn('status', VersionTestStepStatus::activeValues())->first();
+        $cancellable = [VersionTestStepStatus::AWAITING_CONFIRMATION, VersionTestStepStatus::NEEDS_ATTENTION];
 
         $run->status = VersionTestRunStatus::CANCELLED;
         $run->finished_at = now();

@@ -461,6 +461,42 @@ class VersionTestingTest extends TestCase
         $this->assertNull($step->failure_reason);
     }
 
+    public function test_the_run_page_only_offers_to_try_again_on_a_failed_run()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $this->runner()->provisioningFailed($step->id, 'Helm release timed out', fixable: false);
+        $this->runner()->cleared($step->id, 'failed');
+        $base = "/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}";
+
+        $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page->where('can.retry_step_id', $step->id));
+
+        // A cancelled run is final: its step shows as failed, but retrying it is refused
+        $run->refresh()->forceFill(['status' => VersionTestRunStatus::CANCELLED])->save();
+
+        $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page->where('can.retry_step_id', null));
+    }
+
+    public function test_bypass_is_only_offered_when_it_would_be_accepted()
+    {
+        $run = $this->runner()->start($this->candidate, $this->admin);
+        $step = $run->steps->first();
+        $base = "/admin/apps/{$this->application->slug}/versions/2.0";
+
+        // The test org is still being built, so the run can't be cancelled to make way
+        $this->assertFalse($this->candidate->canBypassTests());
+        $this->actingAs($this->admin)->get("$base/tests/{$run->id}")->assertInertia(fn ($page) => $page->where('run.can_bypass', false));
+        $this->actingAs($this->admin)->get("$base/tests")->assertInertia(fn ($page) => $page->where('version.can_bypass', false));
+        $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page->where('version.test.can_bypass', false));
+
+        // Once the org is waiting for the admin, bypass can cancel the run
+        $this->runner()->provisioned($step->id);
+
+        $this->assertTrue($this->candidate->refresh()->canBypassTests());
+        $this->actingAs($this->admin)->get("$base/tests/{$run->id}")->assertInertia(fn ($page) => $page->where('run.can_bypass', true));
+        $this->actingAs($this->admin)->get("$base/tests")->assertInertia(fn ($page) => $page->where('version.can_bypass', true));
+    }
+
     public function test_every_stage_is_logged()
     {
         $run = $this->runner()->start($this->candidate, $this->admin);

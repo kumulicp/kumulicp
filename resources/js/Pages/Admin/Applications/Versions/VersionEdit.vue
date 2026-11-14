@@ -16,7 +16,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       <template v-else>
         <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
         <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
-        <va-button id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
+        <va-button v-if="version.test.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
       </template>
       <va-button v-if="version.is_active && mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: version.version }) }}</va-button>
       <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
