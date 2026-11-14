@@ -10,6 +10,28 @@ class NextcloudJobChart extends JobChart
 {
     public $chart = [];
 
+    /**
+     * The Kubernetes driver's release lookup returns chart values, not the
+     * release's resources, so the claim is not found by the generic lookup.
+     * The Nextcloud chart names its claim <fullname>-nextcloud unless an
+     * existing claim is given, and the fullname is set by NextcloudChart.
+     */
+    public function persistentVolumeClaim()
+    {
+        // The job runs against the hub's release on a shared plan
+        $release_instance = $this->app_instance->sharedPlanParent() ?? $this->app_instance;
+
+        if ($claim = $release_instance->setting('existing_claim')) {
+            return $claim;
+        }
+
+        if ($fullname = $release_instance->setting('override.chart.values.fullNameOverride')) {
+            return "{$fullname}-nextcloud";
+        }
+
+        return parent::persistentVolumeClaim();
+    }
+
     public function run(array $command, array $env, ?array $args = null, ?string $job_name = null)
     {
         $app_instance = $this->app_instance;
