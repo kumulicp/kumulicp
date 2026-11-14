@@ -71,6 +71,13 @@ import OrganizationLayout from './OrganizationLayout.vue'
           <va-list-item-section >
             <va-list-item-label>
               <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link>
+              <va-badge
+                v-for="update in app.updates"
+                :key="update.key"
+                class="ml-2 out-of-date"
+                color="warning"
+                :text="update.label"
+              />
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>

@@ -11,6 +11,7 @@ use App\Plan;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
 use App\Support\Facades\FastCache;
+use App\Updates\PendingUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -26,10 +27,12 @@ class Organizations extends Controller
         // page instead of showing up here. Test organizations aren't customers
         // either, and their pages are closed to admins.
         $organizations = Organization::where('type', '!=', 'shared')->notTest()->paginate(20);
+        $out_of_date = app(PendingUpdates::class)->byOrganization($organizations->pluck('id')->all());
 
         return inertia()->render('Admin/Organizations/OrganizationsList', [
-            'organizations' => $organizations->map(function ($organization) {
+            'organizations' => $organizations->map(function ($organization) use ($out_of_date) {
                 return [
+                    'out_of_date' => $out_of_date[$organization->id] ?? 0,
                     'id' => $organization->id,
                     'name' => $organization->name,
                     'is_suborg' => is_int($organization->parent_organization_id),
@@ -49,6 +52,7 @@ class Organizations extends Controller
     public function show(Organization $organization)
     {
         $subscription = (new SubscriptionService($organization))->all();
+        $out_of_date = app(PendingUpdates::class)->byInstance($organization->app_instances->pluck('id')->all());
 
         return inertia()->render('Admin/Organizations/OrganizationView', [
             'organization' => [
@@ -65,9 +69,10 @@ class Organizations extends Controller
                 'contact_phone_number' => $organization->contact_phone_number,
                 'status' => $organization->status,
             ],
-            'apps' => $organization->app_instances->map(function ($app) {
+            'apps' => $organization->app_instances->map(function ($app) use ($out_of_date) {
                 return [
                     'id' => $app->id,
+                    'updates' => $out_of_date[$app->id] ?? [],
                     'name' => $app->application->name,
                     'version' => $app->version->name,
                     'status' => $app->status,

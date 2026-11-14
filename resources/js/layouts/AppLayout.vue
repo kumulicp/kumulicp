@@ -38,6 +38,14 @@ const onResize = () => {
 }
 
 router.on('success', () => {
+  if (page.props.notices.warning) {
+    toast.init({
+      message: page.props.notices.warning,
+      customClass: 'success-toast',
+      color: 'warning',
+      duration: 15000
+    })
+  }
   if (page.props.notices.success) {
     toast.init({
       message: page.props.notices.success,

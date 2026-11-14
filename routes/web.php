@@ -152,6 +152,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         });
 
         Route::prefix('server')->group(function () {
+            Route::prefix('updates')->group(function () {
+                Route::get('', 'Admin\Updates@index')->name('admin.updates');
+                Route::post('dismiss', 'Admin\Updates@dismiss')->name('admin.updates.dismiss');
+                Route::post('scan', 'Admin\Updates@scan')->name('admin.updates.scan');
+            });
             Route::prefix('tasks')->group(function () {
                 Route::get('', 'Admin\Tasks@index')->name('tasks');
                 Route::post('api', 'Admin\Tasks@api')->name('tasks.api');

@@ -2,12 +2,19 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
+import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 
 </script>
 <template>
   <Head>
     <title>{{ $t('admin.apps.pageTitleShort') }} - Control Panel</title>
   </Head>
+  <va-alert v-if="updates.length > 0" id="outOfDate" color="warning" icon="warning" class="mb-3">
+    <div>{{ $t('admin.updates.appOutOfDate', { aspects: updates.map(update => update.label).join(', ') }) }}</div>
+    <div v-for="change in changes" :key="change ? change.id : 'none'" class="secondary">
+      <ChangeSummary :change="change" />
+    </div>
+  </va-alert>
   <va-list>
     <va-list-item class="py-3">
       <va-list-item-section label>
@@ -90,7 +97,20 @@ export default {
     app: Object,
     organization: Object,
     versions: Object,
-    servers: Array
+    servers: Array,
+    updates: {
+      type: Array,
+      default: () => []
+    }
+  },
+  computed: {
+    // Each edit once, however many things it put out of date
+    changes () {
+      const seen = new Map()
+      this.updates.forEach(update => seen.set(update.change ? update.change.id : 'none', update.change))
+
+      return [...seen.values()]
+    }
   },
   data () {
     const settings = this.app.settings ? JSON.stringify(this.app.settings, '', 2) : '{}'

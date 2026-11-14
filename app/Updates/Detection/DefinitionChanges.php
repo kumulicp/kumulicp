@@ -5,6 +5,7 @@ namespace App\Updates\Detection;
 use App\DefinitionChange;
 use App\Jobs\Updates\ScanDriftForChange;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Notes an edit to a definition that app instances depend on, and starts
@@ -47,7 +48,22 @@ class DefinitionChanges
 
         ScanDriftForChange::dispatch($change->id)->afterCommit();
 
+        $this->tellAdmin($change, $targets->count());
+
         return $change;
+    }
+
+    /**
+     * When an admin made the edit in the control panel, says how many instances
+     * use what was edited, so it isn't a surprise that they are being looked at.
+     */
+    private function tellAdmin(DefinitionChange $change, int $instances): void
+    {
+        if (! request()->hasSession() || ! Gate::allows('admin')) {
+            return;
+        }
+
+        session()->flash('warning', __('admin.updates.edit_impact', ['subject' => $change->subject_label, 'count' => $instances]));
     }
 
     private function label(Model $subject): string

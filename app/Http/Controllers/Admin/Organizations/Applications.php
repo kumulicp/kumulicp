@@ -18,6 +18,7 @@ use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\SharedAppContext;
+use App\Updates\PendingUpdates;
 use App\Updates\UpdateSteps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,6 +87,7 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
             ],
+            'updates' => app(PendingUpdates::class)->forInstance($app),
             'servers' => collect([
                 'web' => $app->web_server,
                 'database' => $app->database_server,
@@ -164,6 +166,7 @@ class Applications extends Controller
                     'version' => $version->name,
                 ];
             }),
+            'updates' => $external ? [] : app(PendingUpdates::class)->forInstance($app),
             'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
             'database_servers' => $external ? [] : ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
                 'value' => $server->id,

@@ -101,6 +101,13 @@ class UpdateDrift
                 $state->definition_change_id = null;
             } else {
                 $drifted[] = $key;
+
+                // Out of date again after it was dismissed: the dismissal is about the earlier change
+                if ($state->drift_detected_at === null) {
+                    $state->dismissed_at = null;
+                    $state->dismissed_by_id = null;
+                }
+
                 $state->drift_detected_at ??= now();
                 $state->definition_change_id ??= $change_id;
             }
@@ -156,6 +163,8 @@ class UpdateDrift
                     'applied_at' => now(),
                     'drift_detected_at' => null,
                     'definition_change_id' => null,
+                    'dismissed_at' => null,
+                    'dismissed_by_id' => null,
                     'task_id' => $task_id,
                 ],
             );
@@ -182,10 +191,21 @@ class UpdateDrift
      * Takes the aspects as up to date without running anything, because an
      * admin decided the change needs nothing done.
      *
+     * Remembers when, and by whom, for the aspects that were out of date.
+     *
      * @param  array<int, string>|null  $only  Just these aspects
      */
-    public function dismiss(AppInstance $app_instance, ?array $only = null): void
+    public function dismiss(AppInstance $app_instance, ?array $only = null, ?int $user_id = null): void
     {
+        $drifted = array_intersect($this->drift($app_instance), $only ?? array_keys($this->current($app_instance)));
+
         $this->record($app_instance, $this->current($app_instance, $only));
+
+        if ($drifted !== []) {
+            UpdateState::where('app_instance_id', $app_instance->id)->whereIn('aspect', $drifted)->update([
+                'dismissed_at' => now(),
+                'dismissed_by_id' => $user_id,
+            ]);
+        }
     }
 }

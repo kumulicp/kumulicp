@@ -53,19 +53,22 @@ class UpdateSteps
 
     /**
      * What the update list offers: every step, ticked if it normally goes with
-     * an update or the app was upgraded since it last ran.
+     * an update, the app was upgraded since it last ran, or what it brings up to
+     * date has changed (out_of_date).
      *
-     * @return array<int, array{key: string, label: string, description: string, checked: bool}>
+     * @return array<int, array{key: string, label: string, description: string, checked: bool, out_of_date: bool}>
      */
     public function options(AppInstance $app_instance): array
     {
         $recommended = $this->recommended($app_instance);
+        $out_of_date = app(UpdateDrift::class)->stepsToRun($app_instance);
 
         return $this->for($app_instance)->map(fn (UpdateStep $step, string $key) => [
             'key' => $key,
             'label' => $step->label(),
             'description' => $step->description(),
-            'checked' => $step->checkedByDefault() || in_array($key, $recommended, true),
+            'checked' => $step->checkedByDefault() || in_array($key, $recommended, true) || in_array($key, $out_of_date, true),
+            'out_of_date' => in_array($key, $out_of_date, true),
         ])->values()->all();
     }
 

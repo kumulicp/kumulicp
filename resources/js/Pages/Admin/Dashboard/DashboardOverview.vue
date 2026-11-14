@@ -67,6 +67,35 @@ import { Link } from '@inertiajs/vue3'
 
     <div class="row">
       <div class="flex xs12">
+        <va-card class="mb-2" id="pendingUpdates">
+          <va-card-title>{{ $t('admin.dashboard.pending_updates') }}</va-card-title>
+          <va-card-content>
+            <p v-if="pending_updates.instances === 0" class="secondary">{{ $t('admin.dashboard.no_pending_updates') }}</p>
+            <template v-else>
+              <p>
+                <strong>{{ $t('admin.updates.appInstances', { count: pending_updates.instances }) }}</strong>
+                <span class="secondary"> · {{ $t('admin.updates.organizations', { count: pending_updates.organizations }) }}</span>
+              </p>
+              <div class="mt-2">
+                <va-badge
+                  v-for="aspect in pending_updates.aspects"
+                  :key="aspect.key"
+                  class="mr-2"
+                  color="warning"
+                  :text="aspect.label + ' · ' + aspect.instances"
+                />
+              </div>
+              <Link href="/admin/server/updates">
+                <va-button id="viewUpdates" class="mt-3" size="small">{{ $t('admin.dashboard.view_updates') }}</va-button>
+              </Link>
+            </template>
+          </va-card-content>
+        </va-card>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="flex xs12">
         <va-card class="mb-2" id="appUpdates">
           <va-card-title>{{ $t('admin.dashboard.app_updates') }}</va-card-title>
           <va-card-content>
@@ -267,6 +296,7 @@ export default {
     plans: Object,
     app_usage: Object,
     app_updates: Array,
+    pending_updates: Object,
     task_statuses: Object,
     recent_failed_tasks: Object,
     security_findings: Object,
