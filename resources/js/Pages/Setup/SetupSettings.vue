@@ -14,6 +14,27 @@ import { useForm } from '@inertiajs/vue3'
           <va-card-title>{{ $t('other.initialSetup') }}</va-card-title>
           <va-card-content>
             <form @submit.prevent="form.post('/install')">
+              <template v-if="!tenancy.locked">
+                <va-list-label>{{ $t('setup.installationType') }}</va-list-label>
+                <va-radio
+                  v-model="form.tenancy_mode"
+                  :options="tenancy.options"
+                  value-by="value"
+                  text-by="label"
+                  class="mb-1"
+                />
+                <p id="tenancy-description" class="va-text-secondary mb-3">{{ selectedTenancy?.description }}</p>
+              </template>
+              <va-input v-if="form.tenancy_mode === 'single'"
+                id="organization-name"
+                v-model="form.organization_name"
+                :label="$t('setup.organizationName')"
+                required-mark
+                immediateValidation
+                class="mb-3"
+                :error="$page.props.errors.organization_name"
+                :error-messages="$page.props.errors.organization_name"
+                />
               <va-list-label class="mt-3">{{ $t('user.login') }}</va-list-label>
               <va-input v-model="form.username"
                 :label="$t('user.username')"
@@ -89,11 +110,19 @@ import { useForm } from '@inertiajs/vue3'
 export default {
   layout: (h, page) => h(BlankLayout, [page]),
   props: {
-    errors: Object
+    errors: Object,
+    tenancy: Object
+  },
+  computed: {
+    selectedTenancy () {
+      return this.tenancy.options.find(option => option.value === this.form.tenancy_mode)
+    }
   },
   data () {
     return {
       form: useForm({
+        tenancy_mode: this.tenancy.mode,
+        organization_name: '',
         username: '',
         password: '',
         password_confirmation: '',

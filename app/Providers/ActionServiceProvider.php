@@ -12,6 +12,7 @@ use App\Services\SecurityToolService;
 use App\Services\ServerInterfaceService;
 use App\Services\SettingsService;
 use App\Services\SubscriptionService;
+use App\Services\TenancyService;
 use App\Support\Facades\Application;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
@@ -73,6 +74,10 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
             return new SettingsService;
         });
 
+        $this->app->singleton('tenancy', function ($app) {
+            return new TenancyService;
+        });
+
         $this->app->singleton('fastcache', function ($app) {
             return new FastCacheService;
         });
@@ -92,6 +97,6 @@ class ActionServiceProvider extends ServiceProvider implements DeferrableProvide
      */
     public function provides()
     {
-        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings'];
+        return ['actions', 'applications', 'server_interfaces', 'security_tools', 'backups', 'subscription', 'users', 'organizations', 'account_manager', 'fastcache', 'settings', 'tenancy'];
     }
 }
