@@ -138,6 +138,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
+                        Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
                         Route::post('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
                         Route::post('migrate-database', 'Admin\Organizations\Applications@migrate_database')->name('organizations.app.migrate_database');
@@ -253,12 +254,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
             });
             Route::middleware('toggle:shared-apps')->prefix('shared-apps/{shared_app}')->group(function () {
-                Route::get('activation', 'Admin\SharedApps@activation')->name('service.shared-apps.activation');
+                Route::put('version', 'Admin\SharedApps@setVersion')->name('service.shared-apps.version');
                 Route::post('tests', 'Admin\SharedApps@startTests')->name('service.shared-apps.tests');
                 Route::post('tests/bypass', 'Admin\SharedApps@bypassTests')->name('service.shared-apps.tests.bypass');
                 Route::post('activate', 'Admin\SharedApps@deploy')->name('service.shared-apps.deploy');
             });
-            Route::resource('shared-apps', 'Admin\SharedApps')->middleware('toggle:shared-apps');
+            Route::resource('shared-apps', 'Admin\SharedApps')->only(['index', 'store', 'show'])->middleware('toggle:shared-apps');
             Route::prefix('domains')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');
                 Route::get('tlds/refresh', 'Admin\Tlds@refresh')->name('service.domains.tlds.refresh');

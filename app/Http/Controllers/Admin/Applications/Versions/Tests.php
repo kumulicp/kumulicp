@@ -333,7 +333,6 @@ class Tests extends Controller
             return [
                 ['url' => '/admin/service/shared-apps', 'label' => __('admin.shared_apps.shared_apps')],
                 ['url' => '/admin/service/shared-apps/'.$shared_app->id, 'label' => $shared_app->label],
-                ['url' => '/admin/service/shared-apps/'.$shared_app->id.'/activation', 'label' => __('admin.shared_apps.activation')],
                 ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
             ];
         }

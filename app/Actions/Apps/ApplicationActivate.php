@@ -140,8 +140,8 @@ class ApplicationActivate extends NativeAction
         $instance->status = 'activating';
         $instance->save();
 
-        // Its plan has been configured since it was added
-        Application::refreshPersistentConfigurations($instance);
+        // Nothing was set on it when it was added, and its plan has been configured since: it starts fresh
+        Application::resetSettings($instance);
 
         return Application::instance($instance);
     }

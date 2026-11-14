@@ -1,25 +1,36 @@
 <script setup lang="ts">
+import SharedAppLayout from '../../SharedApps/SharedAppLayout.vue'
+import SharedAppTabs from '@/components/SharedAppTabs.vue'
 import { Link } from '@inertiajs/vue3'
 
 </script>
 <template>
+  <SharedAppLayout>
   <div class="plan">
     <div class="row">
       <div class="flex xs12 lg12">
         <va-card class="mb-4">
           <va-card-content>
-            <va-tabs v-model="value" hide-slider>
-              <template #tabs>
-                <Link v-for="(tab, index) in tabs" :href="tab.url" :key="index"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
-              </template>
-            </va-tabs>
-            <va-separator />
+            <SharedAppTabs v-if="$page.props.shared_app" />
+            <template v-else>
+              <va-tabs v-model="value" hide-slider>
+                <template #tabs>
+                  <Link v-for="(tab, index) in tabs" :href="tab.url" :key="index"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
+                </template>
+              </va-tabs>
+              <va-separator />
+            </template>
+            <!-- Saving here changes the plan, not the app that is running from it -->
+            <p v-if="$page.props.shared_app?.state === 'active'" id="planNote" class="va-text-secondary my-3">
+              {{ $t('admin.sharedApps.planNote') }}
+            </p>
             <slot></slot>
           </va-card-content>
         </va-card>
       </div>
     </div>
   </div>
+  </SharedAppLayout>
 </template>
 
 <script lang="ts">
@@ -50,7 +61,7 @@ export default {
         url: basePath + '/features'
       })
       tabs.push({
-        title: this.$t('admin.plans.serverConfigurations'),
+        title: this.$t('admin.plans.helmChartValues'),
         url: basePath + '/configurations'
       })
       tabs.push({

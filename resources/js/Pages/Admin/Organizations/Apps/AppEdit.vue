@@ -2,12 +2,40 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
+import AppDomainFields from '@/components/AppDomainFields.vue'
 
 </script>
 <template>
   <Head>
     <title>{{ $t('admin.apps.pageTitle') }}</title>
   </Head>
+    <va-list>
+      <va-list-item class="py-3">
+        <va-list-item-section label>
+          <va-list-item-label>
+            <h5>{{ $t('admin.apps.domain') }}</h5>
+          </va-list-item-label>
+        </va-list-item-section>
+        <va-list-item-section>
+          <va-list-item-label id="domain">
+            {{ domain.name }}
+            <va-icon
+              id="editDomain"
+              name="edit"
+              size="small"
+              color="primary"
+              class="clickable-icon ml-2"
+              role="button"
+              :aria-label="$t('admin.apps.editDomain')"
+              @click="showDomainModal = true"
+            />
+          </va-list-item-label>
+        </va-list-item-section>
+      </va-list-item>
+    </va-list>
+    <va-list-separator class="my-4" fit />
+
+    <template v-if="!app.managed_externally">
     <div class="row justify-center">
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
@@ -66,6 +94,37 @@ import AppsLayout from './AppsLayout.vue'
         </div>
         <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
     </form>
+    </template>
+    <va-modal v-model="showDomainModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="domainForm.put('/admin/organizations/'+organization.id+'/apps/'+app.id+'/domain', { onSuccess: () => { showDomainModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.editDomain') }}</va-card-title>
+          <va-card-content class="m-0">
+            <va-alert v-if="domain.deployed" id="domainRestartWarning" color="warning" icon="warning" class="mb-3">
+              {{ $t('admin.apps.domainRestartWarning') }}
+            </va-alert>
+            <va-alert v-if="!domain.editable" id="domainNotEditableWarning" color="danger" icon="error" class="mb-3">
+              {{ $t('admin.apps.domainNotEditableWarning') }}
+            </va-alert>
+            <AppDomainFields
+              v-model:domain="domainForm.domain"
+              v-model:subdomain="domainForm.subdomain"
+              v-model:parent-domain="domainForm.parent_domain"
+              :domains="domain.domains"
+              :parent-domains="domain.parent_domains"
+            />
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="domainForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" id="saveDomain" class="mr-2" :disabled="domainForm.processing">{{ $t('common.update') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showUpdateAppModal"
     hide-default-actions
     no-padding
@@ -209,6 +268,7 @@ export default {
   props: {
     app: Object,
     organization: Object,
+    domain: Object,
     versions: Object,
     update_steps: {
       type: Array,
@@ -259,6 +319,12 @@ export default {
       isPasswordVisible: false,
       updateForm: useForm({
         steps: this.update_steps.filter(step => step.checked).map(step => step.key)
+      }),
+      showDomainModal: false,
+      domainForm: useForm({
+        domain: this.domain.id,
+        subdomain: '',
+        parent_domain: null
       }),
       showUpdateAppModal: false,
       showUpgradeAppModal: false,
