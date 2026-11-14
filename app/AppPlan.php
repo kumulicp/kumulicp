@@ -4,6 +4,7 @@ namespace App;
 
 use App\Enums\ApplicationSource;
 use App\Services\Application\PlanSecretsService;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -105,6 +106,35 @@ class AppPlan extends Model
     public function hasFullSettings(): bool
     {
         return ! $this->getAttribute('hidden') || $this->application->source === ApplicationSource::Profile;
+    }
+
+    // Whether this plan connects to an app that is already running (shared),
+    // instead of each organization activating one of its own.
+    public function usesSharedApp(): bool
+    {
+        return $this->setting('server_type') === 'shared';
+    }
+
+    /**
+     * Which of the plan's admin tabs have anything to configure. Features,
+     * configurations (the helm chart) and secrets of a plan that connects to a
+     * shared app are set on the shared app itself, so they only matter here for
+     * a plan that gets its own app. Features are the exception for a multisite
+     * app (like ERPNext), where each organization's site keeps its own.
+     *
+     * @return array{features: bool, configurations: bool, secrets: bool}
+     */
+    public function tabs(): array
+    {
+        $full = $this->hasFullSettings();
+        $shared = $this->usesSharedApp();
+        $multisite = $shared && ApplicationFacade::profile($this->application)->isCompatible('multisite');
+
+        return [
+            'features' => $full && (! $shared || $multisite),
+            'configurations' => $full && ! $shared,
+            'secrets' => $full && ! $shared,
+        ];
     }
 
     public function displayFeatures()

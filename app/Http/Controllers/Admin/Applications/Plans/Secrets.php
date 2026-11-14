@@ -31,6 +31,7 @@ class Secrets extends Controller
                 'name' => $plan->name,
                 'hidden' => $plan->hidden,
                 'full_settings' => $plan->hasFullSettings(),
+                'tabs' => $plan->tabs(),
             ],
             'secrets' => ApplicationFacade::plan($plan)->secrets()->names(),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),

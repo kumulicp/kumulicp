@@ -373,6 +373,7 @@
       "independentlyInstalled": "This app is independently installed and isn't managed by Kumuli CP.",
       "serverType": "Server Type",
       "serverTypeCaption": "Separate Activation: each organization will activate their own app. Shared App: all users connect to a single app",
+      "serverTypeFixedCaption": "Chosen when the plan was created and can't be changed here",
       "serverTypeSeparate": "Separate Activation",
       "serverTypeShared": "Connect Shared App",
       "webServer": "Web Server",

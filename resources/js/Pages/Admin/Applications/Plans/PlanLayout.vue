@@ -52,18 +52,23 @@ export default {
       }
     ]
 
-    // A plan auto-created for a shared app is hidden from the normal plans
-    // list, and only has features, configurations and secrets to configure when
-    // the app has a registered profile (source `profile`).
-    if (plan.full_settings) {
+    // Which of these a plan has is decided by the server: a shared app's hidden
+    // plan only has them for an app with a registered profile, and a plan that
+    // connects to a shared app has its features (unless the app is multisite),
+    // configurations and secrets set on that shared app instead.
+    if (plan.tabs?.features) {
       tabs.push({
         title: this.$t('admin.plans.features'),
         url: basePath + '/features'
       })
+    }
+    if (plan.tabs?.configurations) {
       tabs.push({
         title: this.$t('admin.plans.helmChartValues'),
         url: basePath + '/configurations'
       })
+    }
+    if (plan.tabs?.secrets) {
       tabs.push({
         title: this.$t('admin.plans.secrets'),
         url: basePath + '/secrets'
