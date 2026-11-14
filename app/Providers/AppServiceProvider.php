@@ -15,12 +15,14 @@ use App\Updates\Aspects\ReleaseAspect;
 use App\Updates\Aspects\RolesAspect;
 use App\Updates\Aspects\SettingsAspect;
 use App\Updates\Aspects\SsoAspect;
+use App\Updates\Aspects\SubscriptionAspect;
 use App\Updates\Detection\DefinitionObserver;
 use App\Updates\Detection\ImpactResolver;
 use App\Updates\Steps\LdapGroupsStep;
 use App\Updates\Steps\ReleaseStep;
 use App\Updates\Steps\SettingsJobStep;
 use App\Updates\Steps\SsoStep;
+use App\Updates\Steps\SubscriptionStep;
 use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -53,12 +55,14 @@ class AppServiceProvider extends ServiceProvider
             ->register(new ReleaseStep)
             ->register(new SettingsJobStep)
             ->register(new LdapGroupsStep)
-            ->register(new SsoStep));
+            ->register(new SsoStep)
+            ->register(new SubscriptionStep));
         $this->app->singleton(AspectRegistry::class, fn () => (new AspectRegistry)
             ->register(new ReleaseAspect)
             ->register(new SettingsAspect)
             ->register(new RolesAspect)
-            ->register(new SsoAspect));
+            ->register(new SsoAspect)
+            ->register(new SubscriptionAspect));
         $this->app->singleton(UpdateDrift::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {

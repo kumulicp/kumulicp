@@ -17,6 +17,13 @@ class AppFeature
     // apps get installed on a site.
     public $var_name = '';
 
+    // The aspect of the instance a change to this feature (in the plan or on the
+    // instance) puts out of date, when it isn't the default: 'settings', or none
+    // for a feature with an action, which has an aspect of its own (see
+    // FeatureAspect). A feature that ends up in the chart's values and has no
+    // action says 'release'.
+    public $aspect = null;
+
     public ?AppInstance $app_instance = null;
 
     public function admin_settings()

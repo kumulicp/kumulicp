@@ -4,9 +4,9 @@ namespace App\Updates\Aspects;
 
 use App\AppInstance;
 use App\Integrations\Applications\AppFeature;
+use App\Updates\AspectInputs;
 use App\Updates\Fingerprint;
 use App\Updates\Steps\FeatureActionStep;
-use Illuminate\Support\Arr;
 
 /**
  * One feature of the app that brings an action: whether the plan and the
@@ -40,12 +40,10 @@ class FeatureAspect extends Aspect
 
     public function fingerprint(AppInstance $app_instance): string
     {
-        $plan = $app_instance->plan;
-
         return Fingerprint::of([
             // A new version may have customizations the action applies
             'version_id' => $app_instance->version_id,
-            'plan' => Arr::get((array) $plan?->features, $this->feature),
+            'plan' => AspectInputs::planFeature($app_instance->plan, $this->feature),
             'instance' => $app_instance->setting('features.'.$this->feature),
         ]);
     }

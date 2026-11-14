@@ -376,3 +376,18 @@ function bulkEditSettingsPayload(array $overrides = []): array
         'storage' => ['price' => 0, 'price_id' => '', 'amount' => 0, 'max' => 0],
     ], $overrides);
 }
+
+/**
+ * Edits a plan in what the release and the settings job depend on (its storage
+ * and a configuration the settings job applies), so that an instance of it is
+ * out of date for both. $n is what they are changed to.
+ */
+function editPlan(AppPlan $plan, int $n): void
+{
+    $plan->updateSettings([
+        'base.storage' => $n,
+        'additionalConfigs.greeting' => ['aspect' => 'settings'],
+        'configurations.greeting' => $n,
+    ]);
+    $plan->save();
+}

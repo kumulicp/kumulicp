@@ -5,9 +5,11 @@ use App\Actions\Apps\ApplicationUpdate;
 use App\AppInstance;
 use App\AppRole;
 use App\Enums\TaskStatus;
+use App\Integrations\Applications\AppFeature;
 use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
+use App\Support\Facades\Application;
 use App\Task;
 use App\Updates\UpdateDrift;
 use App\Updates\UpdateStep;
@@ -80,12 +82,6 @@ function driftInstance(): AppInstance
     return test()->runActivate($plan, Organization::find(1), $app);
 }
 
-// The aspects a change to the plan makes out of date besides 'settings': the roles' groups are only in LDAP
-function driftOfOthers(): array
-{
-    return config('account_manager.driver') === 'ldap' ? ['release', 'roles'] : ['release'];
-}
-
 function driftNow(AppInstance $instance): array
 {
     return app(UpdateDrift::class)->drift($instance->fresh());
@@ -118,7 +114,7 @@ it('does not flag an aspect nothing has been stored for, and does once it is tak
     $instance = driftInstance();
     $drift = app(UpdateDrift::class);
 
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
 
     expect($drift->drift($instance->fresh()))->toBe([])
         ->and($drift->unknown($instance->fresh()))->toContain('release', 'settings');
@@ -153,14 +149,144 @@ it('does not flag a change to what no aspect depends on', function () {
     expect(driftNow($instance))->toBe([]);
 });
 
+it('does not flag the plan settings that only matter to kumulicp', function () {
+    $instance = driftInstance();
+    app(UpdateDrift::class)->baseline($instance->fresh());
+
+    $plan = $instance->plan;
+    $plan->updateSettings([
+        // validations of what the organization may add
+        'base.max' => 3, 'standard.max' => 3, 'basic.max' => 3, 'storage.max' => 3,
+        // what is shown, and decided when the plan is chosen
+        'basic.name' => 'Guests', 'admin_access' => true, 'self_registration_enabled' => true,
+        'expires_after' => 30, 'trial_for' => 14, 'server_type' => 'separate', 'parent_server_id' => 4,
+    ]);
+    $plan->domain_enabled = ! $plan->domain_enabled;
+    $plan->domain_max = 5;
+    $plan->features = ['shown' => true];
+    $plan->save();
+
+    expect(driftNow($instance))->toBe([]);
+});
+
+it('flags the storage a plan gives for the release only', function () {
+    $instance = driftInstance();
+    app(UpdateDrift::class)->baseline($instance->fresh());
+
+    foreach (['base.storage', 'standard.storage', 'basic.storage'] as $n => $setting) {
+        $instance->plan->updateSettings([$setting => 10 + $n]);
+        $instance->plan->save();
+
+        expect(driftNow($instance))->toBe(['release'], $setting);
+
+        app(UpdateDrift::class)->dismiss($instance->fresh(), ['release']);
+    }
+});
+
+it('flags the prices of a plan, and what they are charged for, for the subscription only', function () {
+    $instance = driftInstance();
+    app(UpdateDrift::class)->baseline($instance->fresh());
+    $plan = $instance->plan;
+
+    foreach ([
+        ['base.prices.USD.amount' => 12],
+        ['standard.prices.USD.price_id' => 'price_123'],
+        ['basic.amount' => 5],
+        ['features.extra.prices.USD.amount' => 3],
+    ] as $change) {
+        $plan->updateSettings($change);
+        $plan->save();
+
+        expect(driftNow($instance))->toBe(['subscription'], json_encode($change));
+
+        app(UpdateDrift::class)->dismiss($instance->fresh(), ['subscription']);
+    }
+
+    $plan->payment_enabled = ! $plan->payment_enabled;
+    $plan->save();
+
+    expect(driftNow($instance))->toBe(['subscription'])
+        ->and(app(UpdateDrift::class)->stepsToRun($instance->fresh()))->toBe(['subscription']);
+});
+
 it('flags a change to the plan for the aspects that depend on it, and only the steps that go with them', function () {
     $instance = driftInstance();
     app(UpdateDrift::class)->baseline($instance->fresh());
 
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
 
     expect(driftNow($instance))->toContain('release', 'settings')
         ->and(app(UpdateDrift::class)->stepsToRun($instance->fresh()))->toContain('release', 'settings-job', 'drift-recording');
+});
+
+it('flags a configuration for the release, unless it names another aspect', function () {
+    $instance = driftInstance();
+    $drift = app(UpdateDrift::class);
+    $drift->baseline($instance->fresh());
+
+    $plan = $instance->plan;
+    $plan->updateSettings(['configurations.replicaCount' => 3]);
+    $plan->save();
+
+    expect(driftNow($instance))->toBe(['release']);
+
+    // A configuration says which aspect it belongs to in the plan's additional configurations too
+    $drift->dismiss($instance->fresh(), ['release']);
+    $plan->updateSettings(['additionalConfigs.greeting' => ['aspect' => 'settings']]);
+    $plan->save();
+    $drift->dismiss($instance->fresh(), ['release', 'settings']);
+
+    $plan->updateSettings(['configurations.greeting' => 'hello']);
+    $plan->save();
+
+    expect(driftNow($instance))->toBe(['settings']);
+});
+
+it('flags a feature for the settings, and one with an action only for the aspect of its own', function () {
+    $instance = driftInstance();
+    $profile = Application::profile($instance->application);
+    // A feature with an action (the Nextcloud addons are managed through the API) has an aspect of its own
+    $profile->addFeature(new class extends AppFeature
+    {
+        public $name = 'plain';
+    });
+    $profile->addFeature(new class extends AppFeature
+    {
+        public $name = 'managed';
+
+        public $action = stdClass::class;
+    });
+    $drift = app(UpdateDrift::class);
+    $drift->baseline($instance->fresh());
+
+    $plan = $instance->plan;
+    $plan->updateSettings(['features.plain.status' => 'enabled']);
+    $plan->save();
+
+    expect(driftNow($instance))->toBe(['settings']);
+
+    $drift->dismiss($instance->fresh(), ['settings']);
+    $plan->updateSettings(['features.managed.status' => 'enabled', 'features.managed.price' => 5]);
+    $plan->save();
+
+    expect(driftNow($instance))->toContain('feature.managed')->not->toContain('settings');
+
+    // What the feature costs says nothing about the app, only about the subscription
+    $drift->dismiss($instance->fresh(), ['feature.managed', 'subscription']);
+    $plan->updateSettings(['features.managed.price' => 6, 'features.plain.price' => 6]);
+    $plan->save();
+
+    expect(driftNow($instance))->toBe(['subscription']);
+});
+
+it('does not flag a change to the plan for the roles', function () {
+    config(['account_manager.driver' => 'ldap']);
+    $instance = driftInstance();
+    app(UpdateDrift::class)->baseline($instance->fresh());
+
+    editPlan($instance->plan, 5);
+
+    expect(driftNow($instance))->not->toContain('roles');
 });
 
 it('flags a change to a role for the roles, and not for the release', function () {
@@ -189,19 +315,19 @@ it('stores what a step brought up to date when it has run, and leaves the other 
     $instance = driftInstance();
     $drift = app(UpdateDrift::class);
     $drift->baseline($instance->fresh());
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
 
     runDriftSteps($instance, ['drift-recording']);
 
-    // 'settings' is up to date, 'release' (and the roles) still are not: no step for them has run
-    expect(driftNow($instance))->toBe(driftOfOthers())
+    // 'settings' is up to date, 'release' still is not: no step for it has run
+    expect(driftNow($instance))->toBe(['release'])
         ->and(UpdateState::where('app_instance_id', $instance->id)->where('aspect', 'settings')->first()->task_id)->not->toBeNull();
 });
 
 it('does not store anything for a step that failed', function () {
     $instance = driftInstance();
     app(UpdateDrift::class)->baseline($instance->fresh());
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
     DriftRecordingStep::$fail = true;
 
     runDriftSteps($instance, ['drift-recording']);
@@ -212,8 +338,8 @@ it('does not store anything for a step that failed', function () {
 it('is still out of date when the definitions changed while the step was running', function () {
     $instance = driftInstance();
     app(UpdateDrift::class)->baseline($instance->fresh());
-    $instance->plan->updateSetting('base.max', 5);
-    DriftRecordingStep::$while_running = fn (AppInstance $app) => $app->plan->updateSetting('base.max', 6);
+    editPlan($instance->plan, 5);
+    DriftRecordingStep::$while_running = fn (AppInstance $app) => editPlan($app->plan, 6);
 
     runDriftSteps($instance, ['drift-recording']);
 
@@ -224,11 +350,11 @@ it('takes an aspect as up to date, without running anything, when it is dismisse
     $instance = driftInstance();
     $drift = app(UpdateDrift::class);
     $drift->baseline($instance->fresh());
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
 
     $drift->dismiss($instance->fresh(), ['settings']);
 
-    expect(driftNow($instance))->toBe(driftOfOthers())
+    expect(driftNow($instance))->toBe(['release'])
         ->and(Task::where('action_slug', 'application_update_step')->exists())->toBeFalse();
 });
 
@@ -236,7 +362,7 @@ it('runs no steps for an aspect no step names', function () {
     $instance = driftInstance();
     $drift = app(UpdateDrift::class);
     $drift->baseline($instance->fresh());
-    $instance->plan->updateSetting('base.max', 5);
+    editPlan($instance->plan, 5);
 
     // A step that names no aspects is only ever run when an admin asks for it
     app(UpdateSteps::class)->register(new class extends UpdateStep

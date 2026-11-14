@@ -28,7 +28,8 @@ class ImpactResolver
      * @var array<class-string, array<int, string>>
      */
     private const COSMETIC = [
-        AppPlan::class => ['name', 'description', 'display_order', 'archive', 'hidden', 'is_default', 'created_at', 'updated_at'],
+        // features is the list of the ones customers are shown; the domains are for the organization to register, not for the app
+        AppPlan::class => ['name', 'description', 'display_order', 'archive', 'hidden', 'is_default', 'features', 'domain_enabled', 'domain_max', 'created_at', 'updated_at'],
         // status is whether customers can pick it, and the update checks and announcements are about the version, not the installs
         AppVersion::class => ['status', 'update_check', 'announcement_location', 'announcement_id', 'announcement_url', 'created_at', 'updated_at'],
         AppRole::class => ['label', 'description', 'category', 'created_at', 'updated_at'],
