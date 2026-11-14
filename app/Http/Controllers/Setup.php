@@ -122,6 +122,7 @@ class Setup extends Controller
         $organization = new \App\Organization;
         $organization->slug = Str::snake($data['slug']);
         $organization->name = $mode === TenancyMode::Single ? $data['organization_name'] : __('setup.first_org');
+        $organization->description = $organization->name;
         $organization->api_token = Str::random(60);
         $organization->contact_first_name = $data['contact_first_name'];
         $organization->contact_last_name = $data['contact_last_name'];

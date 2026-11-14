@@ -33,7 +33,7 @@ it('installs a single organization with the name it was given', function () {
     ]))->assertSessionHasNoErrors();
 
     expect(Tenancy::isSingle())->toBeTrue();
-    expect(Settings::get('installed'))->toBe('1');
+    expect((int) Settings::get('installed'))->toBe(1);
 
     $organization = Organization::where('type', 'superaccount')->sole();
     expect($organization->name)->toBe('Acme Church');
