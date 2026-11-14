@@ -2,6 +2,7 @@
 
 use App\Plan;
 use App\User;
+use Tests\Support\TestSupports;
 
 describe('Admin Plans', function () {
     beforeEach(function () {
@@ -77,14 +78,21 @@ describe('Admin Plans', function () {
     });
 
     it('app plan select allows multiple selection for pay per app plans only', function () {
+        // The "Add app" button is disabled until an app is available to add
+        (new TestSupports)->activateDemoApp();
+
         $app = Plan::factory()->create(['type' => 'app', 'name' => 'Multi Select Plan', 'org_type' => 'none']);
         $package = Plan::factory()->create(['type' => 'package', 'name' => 'Single Select Plan', 'org_type' => 'none']);
 
-        $modalIsMultiple = fn ($plan) => visit('/admin/service/plans/'.$plan->id)
+        // The caption under the app plan select tells which kind of select it is
+        visit('/admin/service/plans/'.$app->id)
             ->click('#addApp')
-            ->script("document.querySelector('#appModalPlan')?.closest('.va-select')?.classList.contains('va-select--multiple') ?? null");
+            ->assertSee('Choose one or more app plans for users to select from')
+            ->assertDontSee('Choose from any app plan or select a specific plan');
 
-        expect($modalIsMultiple($app))->toBeTruthy();
-        expect($modalIsMultiple($package))->toBeFalsy();
+        visit('/admin/service/plans/'.$package->id)
+            ->click('#addApp')
+            ->assertSee('Choose from any app plan or select a specific plan')
+            ->assertDontSee('Choose one or more app plans for users to select from');
     });
 });

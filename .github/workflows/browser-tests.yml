@@ -1,0 +1,80 @@
+name: Browser tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TELESCOPE_ENABLED: false
+    steps:
+    - uses: shivammathur/setup-php@9a96576163ad88ed6f6f2cbf381c5229baf95677
+      with:
+        php-version: '8.4'
+        ini-values: memory_limit=1G
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+      with:
+        node-version: '24'
+        cache: 'npm'
+    - name: Start LDAP
+      run: |
+        docker run -d --name ldap \
+          -p 389:389 \
+          -e LDAP_ORGANISATION="Demo" \
+          -e LDAP_DOMAIN="example.com" \
+          -e LDAP_ADMIN_PASSWORD="admin" \
+          -v "${GITHUB_WORKSPACE}/.github/ldap/memberof.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/memberof.ldif" \
+          -v "${GITHUB_WORKSPACE}/.github/ldap/acl.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/acl.ldif" \
+          osixia/openldap:1.5.0 --copy-service
+        until docker exec ldap ldapsearch -x -H ldap://localhost -b dc=example,dc=com -D 'cn=admin,dc=example,dc=com' -w admin > /dev/null 2>&1; do
+          sleep 2
+        done
+    - name: Copy .env
+      run: php -r "file_exists('.env') || copy('.env.sample', '.env');"
+    - name: Install Dependencies
+      run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Install Node Dependencies
+      run: npm ci
+    - name: Build Assets
+      run: npm run build
+    - name: Install Playwright browser
+      run: npx playwright install --with-deps chromium
+    - name: Directory Permissions
+      run: |
+        mkdir -p storage/framework/views storage/framework/sessions storage/framework/cache storage/app/purifier
+        chmod -R 777 storage bootstrap/cache
+    - name: Generate key
+      run: php -r "file_put_contents('.env', preg_replace('/^APP_KEY=.*/m', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
+    - name: Create Database
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+    # Not run in parallel: the tests share the one LDAP directory, and parallel workers collide on its groups and users
+    - name: Execute Browser tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+        ACCOUNTMANAGER_DRIVER: ldap
+        PROVIDER: ldap
+        LDAP_HOST: localhost
+        LDAP_PORT: 389
+        LDAP_USERNAME: "cn=admin,dc=example,dc=com"
+        LDAP_PASSWORD: admin
+        LDAP_BASE_DN: "dc=example,dc=com"
+        LDAP_DIRECTORY_READER_USERNAME: "cn=directory-reader,o=server,dc=example,dc=com"
+        LDAP_DIRECTORY_READER_PASSWORD: readeradmin
+        LDAP_TLS: false
+      run: php artisan test --testsuite=Browser
+    - name: Upload failure screenshots
+      if: failure()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      with:
+        name: browser-test-screenshots
+        path: tests/Browser/Screenshots
+        if-no-files-found: ignore

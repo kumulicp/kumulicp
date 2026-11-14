@@ -11,11 +11,11 @@ describe('Forgot Password', function () {
             ->assertPathIs('/login');
     });
 
-    it('shows an error when the email address is not registered', function () {
+    it('shows the same confirmation when the email address is not registered, so registered addresses are not revealed', function () {
         visit('/password/reset')
             ->fill('input[type=email]', 'nobody@example.com')
             ->click('button[type=submit]')
-            ->assertSee('find');
+            ->assertSee('Check your email');
     });
 
     it('shows a success message after submitting a registered email', function () {

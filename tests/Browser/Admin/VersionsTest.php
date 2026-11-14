@@ -1,6 +1,7 @@
 <?php
 
 use App\AppVersion;
+use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
 use Tests\Support\Applications\DemoAppProfile;
@@ -233,6 +234,8 @@ describe('Admin Versions', function () {
         $version = AppVersion::factory()->create([
             'application_id' => $this->demoApp->id,
             'name' => '2.0',
+            // A container image registry is required to save a version
+            'image_registry_id' => RepoSecret::factory()->create()->id,
             'announcement_location' => 'none',
             'roles' => ['order' => $appRoles->pluck('id')->toArray()],
         ]);
@@ -247,6 +250,8 @@ describe('Admin Versions', function () {
             ->click("[role=option]:text-is(\"{$userRole->label}\")")
             ->keys('#defaultUserRoles', 'Escape')
             ->click('#submit')
+            // The form posts back to the page it is on, so wait for the flash message rather than the path
+            ->assertSee("Version {$version->name} was updated")
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
 
         $version->refresh();

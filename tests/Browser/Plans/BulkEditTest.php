@@ -136,7 +136,7 @@ describe('Bulk Edit - Settings Tab', function () {
             ->assertSee('View')
             ->assertSee('Settings')
             ->assertSee('Features')
-            ->assertSee('Server Configurations');
+            ->assertSee('Edit Chart Values');
     });
 
     it('pre-fills the name input for each plan with its stored value', function () {
