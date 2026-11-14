@@ -25,7 +25,7 @@ import axios from 'axios'
           placeholder="MY_SECRET"
           />
       </div>
-      <div class="flex xs12 md6">
+      <div class="flex xs12 md8">
         <va-input
           v-model="secret.value"
           :type="secret.revealed ? 'text' : 'password'"
@@ -55,12 +55,12 @@ import axios from 'axios'
               <va-icon :name="secret.copied ? 'fa-check' : 'fa-copy'" :color="secret.copied ? 'success' : undefined" />
             </va-button>
           </template>
+          <template #append>
+            <va-button color="backgroundSecondary" @click="removeSecret(index)" :title="$t('admin.plans.removeSecret')">
+              <va-icon name="entypo-cancel" color="danger" />
+            </va-button>
+          </template>
         </va-input>
-      </div>
-      <div class="flex xs12 md2">
-        <va-button color="backgroundSecondary" @click="removeSecret(index)" :title="$t('admin.plans.removeSecret')">
-          <va-icon name="fa-x" color="danger" />
-        </va-button>
       </div>
     </div>
     <va-button class="mr-2 mb-2" @click="addSecret">{{ $t('admin.plans.addSecret') }}</va-button>

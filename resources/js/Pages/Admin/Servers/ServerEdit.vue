@@ -193,19 +193,18 @@ import { Link, useForm } from '@inertiajs/vue3'
               :error-messages="$page.props.errors.settings"
               />
           </div>
-          <div class="flex flex-col lg7">
+          <div class="flex flex-col lg8">
             <va-input v-model="settings[index]['value']"
               :label="$t('admin.plans.value')"
               immediateValidation
               @change="updateSettings()"
               :error="$page.props.errors.settings"
               :error-messages="$page.props.errors.settings"
-              />
-          </div>
-          <div class="flex lg1">
-            <div class="content-center align-center" @click="removeSetting(index)">
-              <va-icon name="fa-x" color="danger" />
-            </div>
+              >
+              <template #append>
+                <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeSetting(index)" />
+              </template>
+            </va-input>
           </div>
         </div>
       </template>

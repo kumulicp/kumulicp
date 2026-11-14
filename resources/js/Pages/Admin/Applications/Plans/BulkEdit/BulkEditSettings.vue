@@ -423,15 +423,16 @@ import { useForm } from '@inertiajs/vue3'
                     immediateValidation
                   />
                 </div>
-                <div class="flex flex-col xs6">
+                <div class="flex flex-col xs7">
                   <va-input
                     v-model="form.plans[plan.id].displayed_features[index].description"
                     :label="$t('admin.plans.description')"
                     immediateValidation
-                  />
-                </div>
-                <div class="flex xs1 content-center"  @click="removeFeature(plan.id, index)">
-                  <va-icon name="fa-x" color="danger" style="cursor:pointer" />
+                  >
+                    <template #append>
+                      <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeFeature(plan.id, index)" />
+                    </template>
+                  </va-input>
                 </div>
               </div>
             </template>

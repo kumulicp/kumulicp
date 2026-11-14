@@ -34,7 +34,7 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
               @click="removeArrayItem(row.prefix, row.index)"
               :title="$t('admin.plans.removeArrayItem', { name: row.title })"
               >
-              <va-icon name="fa-x" color="danger" />
+              <va-icon name="entypo-cancel" color="danger" />
             </va-button>
           </va-list-item-section>
         </va-list-item>
@@ -175,7 +175,7 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section v-if="row.removable" icon>
-                <va-button color="backgroundSecondary" @click="removeConfig(row.config.name)" :title="$t('admin.plans.removeConfig')"><va-icon name="fa-x" color="danger" /></va-button>
+                <va-button color="backgroundSecondary" @click="removeConfig(row.config.name)" :title="$t('admin.plans.removeConfig')"><va-icon name="entypo-cancel" color="danger" /></va-button>
           </va-list-item-section>
         </va-list-item>
         <va-list-separator class="my-1" fit v-if="hasSeparatorAfter(rowIndex)" />
