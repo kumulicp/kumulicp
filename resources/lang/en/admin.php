@@ -212,6 +212,14 @@ return [
         'deletion_cancelled' => 'Scheduled deletion cancelled',
         'deletion_notified' => 'Organization admins notified',
         'deletion_not_scheduled' => 'Schedule a deletion date before notifying the organization admins',
+        'deactivation_reasons' => [
+            'requested_by_organization' => 'Requested by the organization',
+            'non_payment' => 'Non-payment',
+            'policy_violation' => 'Policy violation',
+            'inactivity' => 'Inactivity',
+            'subscription_ended' => 'Subscription ended',
+            'custom' => 'Custom reason',
+        ],
         'apps' => [
             'updated' => ':app updated',
             'domain_updated' => ':app domain updated',

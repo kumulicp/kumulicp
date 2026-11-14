@@ -129,6 +129,10 @@ import OrganizationLayout from './OrganizationLayout.vue'
               class="mb-3"
             >
               {{ $t('admin.organizations.deletionScheduledFor', { date: formatDate(organization.deletion_scheduled_at) }) }}
+              <template v-if="organization.deactivation_reason_text">
+                <br />
+                {{ $t('admin.organizations.deactivatedReason', { reason: organization.deactivation_reason_text }) }}
+              </template>
             </va-alert>
             <div v-if="organization.deletion_scheduled_at" class="flex flex-wrap gap-2 mb-3">
               <va-button preset="secondary" color="danger" id="editDeletionDate" @click="openDeactivate">{{ $t('admin.organizations.editDeletionDate') }}</va-button>
@@ -222,7 +226,7 @@ import OrganizationLayout from './OrganizationLayout.vue'
       v-model="showDeactivate"
       :title="$t('admin.organizations.deactivateOrganization')"
       :ok-text="$t('admin.organizations.scheduleDeletion')"
-      :ok-disabled="!deactivateForm.date"
+      :ok-disabled="!deactivateForm.date || !deactivateForm.reason"
       size="small"
       @ok="submitDeactivate"
     >
@@ -231,6 +235,28 @@ import OrganizationLayout from './OrganizationLayout.vue'
         <strong>{{ $t('admin.organizations.deletionWarningTitle') }}</strong><br />
         {{ $t('admin.organizations.deletionWarning', { name: organization.name }) }}
       </va-alert>
+      <va-select
+        v-model="deactivateForm.reason"
+        id="deactivationReason"
+        class="mb-4"
+        :label="$t('admin.organizations.deactivationReason')"
+        :options="deactivation_reasons"
+        value-by="value"
+        text-by="text"
+        :clearable="false"
+        :error="!!$page.props.errors.reason"
+        :error-messages="$page.props.errors.reason"
+      />
+      <va-textarea
+        v-if="deactivateForm.reason === 'custom'"
+        v-model="deactivateForm.reason_note"
+        id="deactivationReasonNote"
+        class="mb-4 w-full"
+        :label="$t('admin.organizations.customReason')"
+        :max-length="500"
+        :error="!!$page.props.errors.reason_note"
+        :error-messages="$page.props.errors.reason_note"
+      />
       <div class="flex items-end gap-2 mb-2">
         <va-date-input
           v-model="deactivateDate"
@@ -256,6 +282,8 @@ export default {
     apps: Object,
     base_plan: Object,
     available_plans: Array,
+    deactivation_reasons: Array,
+    default_deactivation_reason: String,
     subscription_stats: Object
   },
   data () {
@@ -269,7 +297,9 @@ export default {
       deactivateDate: null,
       deactivateForm: useForm({
         date: null,
-        now: false
+        now: false,
+        reason: this.default_deactivation_reason,
+        reason_note: ''
       }),
       notifyForm: useForm({}),
       planForm: useForm({
@@ -298,6 +328,8 @@ export default {
     },
     openDeactivate () {
       this.deactivateForm.clearErrors()
+      this.deactivateForm.reason = this.organization.deactivation_reason || this.default_deactivation_reason
+      this.deactivateForm.reason_note = this.organization.deactivation_reason_note || ''
       this.setDeletionDate(this.organization.deletion_scheduled_at
         ? new Date(this.organization.deletion_scheduled_at)
         : this.defaultDeletionDate())

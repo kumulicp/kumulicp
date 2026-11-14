@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
 use App\Actions\Organizations\SubscriptionUpdate;
+use App\Enums\DeactivationReason;
 use App\Http\Controllers\Controller;
 use App\Log;
 use App\Notifications\OrganizationDeletionScheduled;
@@ -16,6 +17,7 @@ use App\Support\Facades\FastCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class Organizations extends Controller
@@ -72,6 +74,9 @@ class Organizations extends Controller
                 'contact_phone_number' => $organization->contact_phone_number,
                 'status' => $organization->status,
                 'deletion_scheduled_at' => $organization->deletion_scheduled_at?->toIso8601String(),
+                'deactivation_reason' => $organization->deactivation_reason,
+                'deactivation_reason_note' => $organization->deactivation_reason_note,
+                'deactivation_reason_text' => $organization->deactivationReasonText(),
             ],
             'apps' => $organization->app_instances->map(function ($app) {
                 return [
@@ -92,6 +97,11 @@ class Organizations extends Controller
                 'discount_id' => $organization->discount_id,
             ],
             'available_plans' => $this->selectablePlans($organization),
+            'deactivation_reasons' => collect(DeactivationReason::selectable())->map(fn (DeactivationReason $reason) => [
+                'value' => $reason->value,
+                'text' => $reason->label(),
+            ])->all(),
+            'default_deactivation_reason' => DeactivationReason::default()->value,
             'subscription_stats' => $subscription->compileCostStats(),
             'breadcrumbs' => [
                 [
@@ -260,6 +270,8 @@ class Organizations extends Controller
         $validated = $request->validate([
             'now' => ['boolean'],
             'date' => ['required_without:now', 'nullable', 'date', 'after_or_equal:yesterday'],
+            'reason' => ['required', Rule::enum(DeactivationReason::class)->only(DeactivationReason::selectable())],
+            'reason_note' => ['required_if:reason,'.DeactivationReason::CUSTOM->value, 'nullable', 'string', 'max:500'],
         ]);
 
         $timezone = config('app.timezone');
@@ -273,6 +285,11 @@ class Organizations extends Controller
         // compares against, and the datetime cast stores it as it is, so no
         // timezone conversion can shift it
         $organization->deletion_scheduled_at = $deletion_at;
+        $organization->deactivation_reason = $validated['reason'];
+        // The note only goes with a custom reason
+        $organization->deactivation_reason_note = $validated['reason'] === DeactivationReason::CUSTOM->value
+            ? trim($validated['reason_note'])
+            : null;
         $organization->save();
 
         if ($organization->status !== 'deactivated') {

@@ -154,6 +154,14 @@ return [
         'deletion_cancelled' => 'Eliminación programada cancelada',
         'deletion_notified' => 'Administradores de la organización notificados',
         'deletion_not_scheduled' => 'Programe una fecha de eliminación antes de notificar a los administradores de la organización',
+        'deactivation_reasons' => [
+            'requested_by_organization' => 'Solicitado por la organización',
+            'non_payment' => 'Falta de pago',
+            'policy_violation' => 'Violación de políticas',
+            'inactivity' => 'Inactividad',
+            'subscription_ended' => 'Suscripción finalizada',
+            'custom' => 'Motivo personalizado',
+        ],
         'subscription_updating' => 'Suscripción de la organización actualizándose',
         'plan_changed' => 'La organización se cambió al plan :plan',
         'apps' => [

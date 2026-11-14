@@ -22,12 +22,18 @@ class OrganizationDeletionScheduled extends Notification implements ShouldQueue
 
     public function toMail($notifiable)
     {
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject(__('messages.notification.organization_deletion_scheduled'))
             ->line(__('messages.notification.organization_deletion_notice', [
                 'organization' => $this->organization->name,
                 'date' => $this->organization->deletion_scheduled_at?->format('M d, Y'),
             ]));
+
+        if ($reason = $this->organization->deactivationReasonText()) {
+            $message->line(__('messages.notification.organization_deletion_reason', ['reason' => $reason]));
+        }
+
+        return $message;
     }
 
     public function toArray($notifiable)

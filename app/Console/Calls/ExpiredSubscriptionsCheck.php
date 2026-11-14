@@ -4,6 +4,7 @@ namespace App\Console\Calls;
 
 use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\SubscriptionUpdate;
+use App\Enums\DeactivationReason;
 use App\Organization;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
@@ -20,6 +21,8 @@ class ExpiredSubscriptionsCheck
             OrganizationFacade::setOrganization($organization);
             // Checks if subscription has finished grace period
             if (is_null($organization->plan) || ($organization->plan->payment_enabled && Billing::status('key') === 'ended')) {
+                $organization->deactivation_reason = DeactivationReason::SUBSCRIPTION_ENDED->value;
+                $organization->save();
                 $task = Action::execute(new DeactivateOrganization($organization));
             } elseif ($organization->app_instances()->where('trial_ends_at', '<', now())->count() > 0) {
                 $organization->app_instances()->where('trial_ends_at', '<', now())->update(['trial_ends_at' => null]);
