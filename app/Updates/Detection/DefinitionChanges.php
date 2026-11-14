@@ -53,7 +53,7 @@ class DefinitionChanges
     private function label(Model $subject): string
     {
         $name = (string) ($subject->getAttribute('name') ?: $subject->getAttribute('slug'));
-        $application = $subject->application?->name;
+        $application = $subject->getRelationValue('application')?->name;
 
         return $application ? "{$application}: {$name}" : $name;
     }
