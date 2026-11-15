@@ -350,6 +350,8 @@
       "basicUserOptions": "Basic User Options",
       "additionalStorageOptions": "Additional Storage Options",
       "emailOptions": "Email Options",
+      "noEmailServers": "No email servers have been added yet.",
+      "addEmailServer": "Add an email server",
       "domains": "Domains",
       "appSettings": "App Settings",
       "appPlanCaption": "Choose from any app plan or select a specific plan",
