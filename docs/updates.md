@@ -123,8 +123,43 @@ and is behind everything admins see:
 - An admin who edits a plan, version or role is told how many instances use it
   and are being checked.
 
-Applying an update to many instances at once (with a canary, a time window and a
-stop on failures) is not here yet: each instance is updated from its own page.
+## Bringing things up to date
+
+An instance is updated for what is out of date for it, and nothing else: the
+steps that go with the aspects that changed (`UpdateDrift::stepsToRun()`), run
+as an `ApplicationUpdate`. `Reconcile` plans and starts that for one instance
+(never one that isn't `active`: it is being updated, upgraded or removed) and
+previews it for many.
+
+**Many at once.** *Update these* and *Update the selected* on the Updates page
+(and `php artisan updates:apply`, which can `--dry-run`) start a `MassReconcile`
+task. It updates a few instances first, picked from as many different apps as
+there are (`--canary`, one by default), then the rest in batches (`--batch`, ten).
+It starts a wave, waits for its `ApplicationUpdate` tasks, then starts the next. If
+one of them fails the rollout is blocked, so nothing more is started until an
+admin has retried or removed it. What is updated is worked out when its wave
+comes, so what an earlier wave or an admin did in the meantime isn't done twice.
+Only what was picked is updated, not everything else an instance is out of
+date for. An optional window (`start_time` to `end_time`, which may cross midnight)
+is when a wave may start; one that is under way isn't stopped at its end.
+
+Before it starts, the page says what would run and for how many, and warns when a
+step is *disruptive* (`UpdateStep::disruptive()`): rolling out a release, which
+restarts the app, or setting up single sign-on.
+
+**On their own.** Off to begin with. When an admin turns on *Update automatically*
+(Updates page), what the scans find out of date is updated without anyone starting
+it, for the aspects set to automatic:
+
+- An aspect is automatic unless a step that brings it up to date is disruptive, or
+  no step is known for it (an app's own aspects, features). An admin can change any
+  of them (`UpdatePolicy`).
+- Only the steps for the automatic aspects run, and never a disruptive one. A step
+  that brings up to date more than one aspect only runs if all of those that are
+  out of date are automatic.
+- An update that doesn't get an aspect up to date is tried again after six hours,
+  up to three times in all, then left for an admin (`update_states.apply_attempts`).
+  It starts over once the aspect has been brought up to date.
 
 ## Adding one
 

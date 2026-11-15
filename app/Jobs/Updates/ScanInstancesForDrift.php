@@ -3,6 +3,7 @@
 namespace App\Jobs\Updates;
 
 use App\AppInstance;
+use App\Updates\AutoUpdates;
 use App\Updates\UpdateDrift;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,14 +27,19 @@ class ScanInstancesForDrift implements ShouldQueue
      */
     public function __construct(public array $instance_ids, public ?int $change_id = null) {}
 
-    public function handle(UpdateDrift $drift): void
+    public function handle(UpdateDrift $drift, AutoUpdates $auto_updates): void
     {
         $instances = AppInstance::whereIn('id', $this->instance_ids)->with(['application', 'version', 'plan'])->get();
 
         foreach ($instances as $instance) {
             // One instance that can't be worked out mustn't stop the others being looked at
             try {
-                $drift->refresh($instance, $this->change_id);
+                $drifted = $drift->refresh($instance, $this->change_id);
+
+                // What an admin has said is updated on its own, if anything (see UpdatePolicy)
+                if ($drifted !== []) {
+                    $auto_updates->run($instance, $drifted);
+                }
             } catch (Throwable $e) {
                 report($e);
             }

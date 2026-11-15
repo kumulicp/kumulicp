@@ -24,6 +24,16 @@ class UpdateSteps
     }
 
     /**
+     * The steps every app has, whether this app has them or not.
+     *
+     * @return array<string, UpdateStep>
+     */
+    public function registered(): array
+    {
+        return $this->steps;
+    }
+
+    /**
      * The steps this app has, in the order they can run: each after the ones it
      * says it follows.
      *

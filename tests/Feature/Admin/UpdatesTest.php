@@ -57,7 +57,7 @@ function outOfDate(AppInstance $instance): array
     return UpdateState::drifted()->where('app_instance_id', $instance->id)->orderBy('aspect')->pluck('aspect')->all();
 }
 
-it('lists what is out of date by the edit that did it and by instance', function () {
+it('lists what is out of date by the edit that did it, and the instances only when one is reviewed', function () {
     $instance = updatesInstance();
     editPlan($instance->plan, 5);
     $change = DefinitionChange::sole();
@@ -73,6 +73,13 @@ it('lists what is out of date by the edit that did it and by instance', function
             ->where('groups.0.change.subject', $change->subject_label)
             ->where('groups.0.change.changed', $change->changed)
             ->where('groups.0.instances', 1)
+            ->where('instances', [])
+            ->where('pagination', null));
+
+    $this->get('/admin/server/updates?change='.$change->id)
+        ->assertInertia(fn ($page) => $page
+            ->where('summary.instances', 1)
+            ->where('groups', [])
             ->where('instances.0.id', $instance->id)
             ->where('instances.0.organization.id', $instance->organization_id)
             ->where('instances.0.aspects', fn ($aspects) => collect($aspects)->pluck('key')->contains('settings')

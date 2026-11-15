@@ -26,6 +26,16 @@ class AspectRegistry
     }
 
     /**
+     * The aspects every app has, whether this app has them or not.
+     *
+     * @return array<string, Aspect>
+     */
+    public function registered(): array
+    {
+        return $this->aspects;
+    }
+
+    /**
      * What to call an aspect where no instance is at hand (a list of what is
      * out of date). An aspect that only one app has is named after its key.
      */

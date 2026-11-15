@@ -15,6 +15,7 @@ use App\Actions\Apps\ApplicationUpdateJob;
 use App\Actions\Apps\ApplicationUpdateStep;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Actions\Apps\MassApplicationUpgrade;
+use App\Actions\Apps\MassReconcile;
 use App\Actions\Apps\ProcessCustomizations;
 use App\Actions\Domains\DomainDelete;
 use App\Actions\Domains\RegisterDomainName;
@@ -73,6 +74,7 @@ class ActionService
             'application_domain_checks' => ApplicationDomainChecks::class,
             'application_deactivate' => ApplicationDeactivate::class,
             'mass_application_upgrade' => MassApplicationUpgrade::class,
+            'mass_reconcile' => MassReconcile::class,
             'provision_version_test_step' => ProvisionVersionTestStep::class,
             'provision_version_test_site' => ProvisionVersionTestSite::class,
             'clear_version_test_step' => ClearVersionTestStep::class,

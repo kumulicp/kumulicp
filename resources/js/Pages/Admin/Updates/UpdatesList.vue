@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 import { Link, router } from '@inertiajs/vue3'
+import axios from 'axios'
 
 </script>
 <template>
@@ -37,10 +38,28 @@ import { Link, router } from '@inertiajs/vue3'
           @click="filter({ aspect: filters.aspect === aspect.key ? null : aspect.key })"
         />
       </div>
+
+      <va-divider class="mt-4 mb-4" />
+
+      <div id="policy">
+        <h3 class="va-h6 mb-2">{{ $t('admin.updates.autoTitle') }}</h3>
+        <p class="secondary mb-3">{{ $t('admin.updates.autoHelp') }}</p>
+        <div class="d-flex align-center">
+          <va-switch
+            id="autoEnabled"
+            :model-value="policy.enabled"
+            :label="$t('admin.updates.autoSwitch')"
+            @update:model-value="setAutoEnabled"
+          />
+          <va-button v-if="policy.enabled" id="autoChoose" class="ml-4" preset="secondary" size="small" @click="showPolicyModal = true">
+            {{ $t('admin.updates.autoChoose') }}
+          </va-button>
+        </div>
+      </div>
     </va-card-content>
   </va-card>
 
-  <template v-if="summary.instances > 0">
+  <template v-if="!reviewing && summary.instances > 0">
     <va-card id="groups" class="mb-4">
       <va-card-title>{{ $t('admin.updates.byChange') }}</va-card-title>
       <va-card-content>
@@ -55,11 +74,7 @@ import { Link, router } from '@inertiajs/vue3'
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="group in groups"
-                :key="group.change ? group.change.id : 'none'"
-                :class="{ 'row-active': isSelectedGroup(group) }"
-              >
+              <tr v-for="group in groups" :key="group.change ? group.change.id : 'none'">
                 <td>
                   <ChangeSummary :change="group.change" />
                   <div v-if="group.since" class="secondary">{{ $t('admin.updates.since', { date: formatDate(group.since) }) }}</div>
@@ -83,8 +98,14 @@ import { Link, router } from '@inertiajs/vue3'
                     size="small"
                     class="mr-1"
                     :class="'review-' + groupKey(group)"
-                    @click="filter({ change: isSelectedGroup(group) ? null : groupKey(group) })"
-                  >{{ isSelectedGroup(group) ? $t('admin.updates.showEverything') : $t('admin.updates.review') }}</va-button>
+                    @click="filter({ change: groupKey(group) })"
+                  >{{ $t('admin.updates.review') }}</va-button>
+                  <va-button
+                    size="small"
+                    class="mr-1"
+                    :class="'apply-' + groupKey(group)"
+                    @click="askToApply({ change: groupKey(group) })"
+                  >{{ $t('admin.updates.updateThese') }}</va-button>
                   <va-button
                     preset="secondary"
                     size="small"
@@ -99,11 +120,16 @@ import { Link, router } from '@inertiajs/vue3'
         </VaScrollContainer>
       </va-card-content>
     </va-card>
+  </template>
 
+  <template v-if="reviewing">
     <va-card id="instances" class="mb-4">
       <va-card-title>{{ $t('admin.updates.instances') }}</va-card-title>
       <va-card-content>
-        <div class="row align-center mb-2">
+        <va-button id="backToChanges" preset="secondary" icon="arrow_back" size="small" class="mb-3" @click="filter({ change: null, aspect: null })">
+          {{ $t('admin.updates.backToChanges') }}
+        </va-button>
+        <div class="d-flex align-center mb-2">
           <va-checkbox
             id="selectAll"
             :model-value="allSelected"
@@ -112,8 +138,15 @@ import { Link, router } from '@inertiajs/vue3'
             @update:model-value="selectAll"
           />
           <va-button
-            id="dismissSelected"
+            id="applySelected"
             class="ml-4"
+            size="small"
+            :disabled="selected.length === 0"
+            @click="askToApply({ instance_ids: selected })"
+          >{{ $t('admin.updates.updateSelected') }}</va-button>
+          <va-button
+            id="dismissSelected"
+            class="ml-2"
             preset="secondary"
             size="small"
             color="warning"
@@ -156,7 +189,7 @@ import { Link, router } from '@inertiajs/vue3'
           </table>
         </VaScrollContainer>
         <va-pagination
-          v-if="pagination.last_page > 1"
+          v-if="pagination && pagination.last_page > 1"
           class="mt-3 mb-3 justify-center"
           :model-value="pagination.current_page"
           :total="pagination.total"
@@ -167,6 +200,85 @@ import { Link, router } from '@inertiajs/vue3'
       </va-card-content>
     </va-card>
   </template>
+
+  <va-modal v-model="showPolicyModal" hide-default-actions no-padding class="p-0">
+    <template #content="{ ok }">
+      <va-card-title class="m-0">{{ $t('admin.updates.autoChoose') }}</va-card-title>
+      <va-card-content class="m-0">
+        <table id="policyAspects" class="va-table">
+          <tbody v-for="group in policyGroups" :key="group.id" :class="'policy-group-' + group.id">
+            <tr>
+              <th colspan="2">{{ group.name ?? $t('admin.updates.autoCore') }}</th>
+            </tr>
+            <tr v-for="aspect in group.aspects" :key="aspect.key">
+              <td>
+                {{ aspect.label }}
+                <va-badge v-if="aspect.disruptive" class="ml-2" color="warning" :text="$t('admin.updates.disruptiveTag')" />
+              </td>
+              <td class="text-right">
+                <va-switch
+                  :id="'auto-' + group.id + '-' + aspect.key"
+                  :model-value="aspect.mode === 'auto'"
+                  :label="$t('admin.updates.autoAspect')"
+                  @update:model-value="setAspectMode(aspect, $event)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button class="mr-2" @click="ok">{{ $t('admin.updates.autoClose') }}</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
+
+  <va-modal v-model="showApplyModal" hide-default-actions no-padding class="p-0">
+    <template #content="{ ok }">
+      <va-card-title class="m-0">{{ $t('admin.updates.applyTitle') }}</va-card-title>
+      <va-card-content class="m-0">
+        <p v-if="!preview" class="secondary">{{ $t('admin.updates.applyLoading') }}</p>
+        <p v-else-if="preview.instances === 0" id="applyNothing">{{ $t('admin.updates.applyNothing') }}</p>
+        <template v-else>
+          <p id="applySummary">{{ $t('admin.updates.applySummary', { count: preview.instances }) }}</p>
+          <table class="va-table mt-2 mb-2">
+            <tbody>
+              <tr v-for="step in preview.steps" :key="step.key">
+                <td>
+                  {{ step.label }}
+                  <va-badge v-if="step.disruptive" class="ml-2" color="warning" :text="$t('admin.updates.disruptiveTag')" />
+                </td>
+                <td class="text-right">{{ $t('admin.updates.appInstances', { count: step.instances }) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <va-alert v-if="preview.disruptive" id="applyDisruptive" color="warning" icon="warning" class="mb-2">
+            {{ $t('admin.updates.applyDisruptive') }}
+          </va-alert>
+          <p v-if="preview.skipped.not_active" class="secondary">{{ $t('admin.updates.applySkippedNotActive', { count: preview.skipped.not_active }) }}</p>
+          <p v-if="preview.skipped.nothing_to_do" class="secondary">{{ $t('admin.updates.applySkippedNothing', { count: preview.skipped.nothing_to_do }) }}</p>
+          <p id="applyWaves" class="secondary">{{ $t('admin.updates.applyWaves', { waves: preview.waves.join(', ') }) }}</p>
+          <div class="row mt-3">
+            <va-input id="canary" v-model.number="rollout.canary" class="flex xs6 pr-2" type="number" min="0" max="20" :label="$t('admin.updates.canary')" />
+            <va-input id="batch" v-model.number="rollout.batch" class="flex xs6 pl-2" type="number" min="1" max="100" :label="$t('admin.updates.batch')" />
+          </div>
+          <div class="row mt-3">
+            <va-input id="windowStart" v-model="rollout.start_time" class="flex xs6 pr-2" type="time" :label="$t('admin.updates.windowStart')" />
+            <va-input id="windowEnd" v-model="rollout.end_time" class="flex xs6 pl-2" type="time" :label="$t('admin.updates.windowEnd')" />
+          </div>
+        </template>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button color="textInverted" :disabled="applying" @click="ok">{{ $t('common.cancel') }}</va-button>
+        <va-button
+          id="confirmApply"
+          class="mr-2"
+          :disabled="applying || !preview || preview.instances === 0"
+          @click="apply(ok)"
+        >{{ $t('admin.updates.applyConfirm') }}</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
 
   <va-modal v-model="showDismissModal" hide-default-actions no-padding class="p-0">
     <template #content="{ ok }">
@@ -192,18 +304,41 @@ export default {
     groups: Array,
     filters: Object,
     instances: Array,
-    pagination: Object
+    pagination: Object,
+    policy: Object
   },
   data () {
     return {
       selected: [],
       scanning: false,
+      showPolicyModal: false,
       showDismissModal: false,
       dismissing: false,
-      dismissTarget: null
+      dismissTarget: null,
+      showApplyModal: false,
+      applying: false,
+      applyTarget: null,
+      preview: null,
+      rollout: { canary: 1, batch: 10, start_time: '', end_time: '' }
     }
   },
   computed: {
+    // Looking at the instances of one change or aspect, which is a page load of its own
+    reviewing () {
+      return this.filters.change !== null || this.filters.aspect !== null
+    },
+    // Core settings (what every app has) first, then each app with what is its own
+    policyGroups () {
+      const core = this.policy.aspects.filter(aspect => aspect.apps.length === 0)
+      const apps = {}
+      this.policy.aspects.forEach(aspect => {
+        aspect.apps.forEach(app => { (apps[app] = apps[app] || []).push(aspect) })
+      })
+
+      const groups = Object.keys(apps).sort((a, b) => a.localeCompare(b)).map(name => ({ id: name, name, aspects: apps[name] }))
+
+      return core.length > 0 ? [{ id: 'core', name: null, aspects: core }, ...groups] : groups
+    },
     allSelected () {
       return this.instances.length > 0 && this.selected.length === this.instances.length
     }
@@ -212,6 +347,13 @@ export default {
     // A new page, or another filter, is a new list
     instances () {
       this.selected = []
+    },
+    // How many are updated first or at a time changes the waves
+    'rollout.canary' () {
+      this.loadPreview()
+    },
+    'rollout.batch' () {
+      this.loadPreview()
     }
   },
   methods: {
@@ -220,9 +362,6 @@ export default {
     },
     groupKey (group) {
       return group.change ? String(group.change.id) : 'none'
-    },
-    isSelectedGroup (group) {
-      return this.filters.change === this.groupKey(group)
     },
     selectAll (selected) {
       this.selected = selected ? this.instances.map(instance => instance.id) : []
@@ -246,6 +385,51 @@ export default {
         onFinish: () => { this.scanning = false }
       })
     },
+    askToApply (target) {
+      this.applyTarget = target
+      this.preview = null
+      this.showApplyModal = true
+      this.loadPreview()
+    },
+    rolloutOptions () {
+      const options = { canary: this.rollout.canary, batch: this.rollout.batch }
+      if (this.rollout.start_time && this.rollout.end_time) {
+        options.start_time = this.rollout.start_time
+        options.end_time = this.rollout.end_time
+      }
+
+      return options
+    },
+    loadPreview () {
+      if (!this.showApplyModal || !this.applyTarget) {
+        return
+      }
+
+      const target = this.applyTarget
+      axios.post('/admin/server/updates/preview', { ...target, ...this.rolloutOptions() }).then(response => {
+        // Not the answer to a question that was asked before another
+        if (target === this.applyTarget) {
+          this.preview = response.data
+        }
+      })
+    },
+    apply (close) {
+      this.applying = true
+      router.post('/admin/server/updates/apply', { ...this.applyTarget, ...this.rolloutOptions() }, {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.selected = []
+          close()
+        },
+        onFinish: () => { this.applying = false }
+      })
+    },
+    setAutoEnabled (enabled) {
+      router.post('/admin/server/updates/policy', { enabled }, { preserveScroll: true, preserveState: true })
+    },
+    setAspectMode (aspect, auto) {
+      router.post('/admin/server/updates/policy', { aspect: aspect.key, mode: auto ? 'auto' : 'manual' }, { preserveScroll: true, preserveState: true })
+    },
     askToDismiss (target) {
       this.dismissTarget = target
       this.showDismissModal = true
@@ -264,9 +448,3 @@ export default {
   }
 }
 </script>
-
-<style lang="scss">
-.row-active {
-  background: rgba(0, 0, 0, 0.04);
-}
-</style>
