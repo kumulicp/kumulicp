@@ -79,7 +79,7 @@ class SubscriptionRequestBuilder
      */
     private function addLine(array &$lines, string $component, mixed $info): void
     {
-        $externalId = Arr::get($info, 'price_id');
+        $externalId = (string) Arr::get($info, 'price_id');
         $quantity = (int) Arr::get($info, 'quantity', 0);
 
         if (! $externalId || $quantity <= 0) {

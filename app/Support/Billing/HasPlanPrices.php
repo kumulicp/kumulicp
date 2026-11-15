@@ -97,7 +97,7 @@ trait HasPlanPrices
 
         $row = $this->prices()->where('component', $component)->where('currency', $currency)->first();
 
-        $externalIds = $row?->external_ids ?? [];
+        $externalIds = $row->external_ids ?? [];
         if ($externalId === null) {
             unset($externalIds[$driver]);
         } else {
