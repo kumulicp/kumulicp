@@ -4,7 +4,11 @@ use App\Application;
 use App\AppRole;
 use App\Enums\AccessType;
 use App\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     (new TestSupports)->seed();
@@ -12,6 +16,11 @@ beforeEach(function () {
 
     $this->user = User::where('username', 'demo')->firstOrFail();
     $this->demoApp = Application::where('slug', 'demo_app')->firstOrFail();
+});
+
+// Activating the demo app makes its groups in the real directory, which the database rollback doesn't remove
+afterEach(function () {
+    (new TestSupports)->cleanLdap();
 });
 
 function roleUpdatePayload(AppRole $role, array $overrides = []): array
