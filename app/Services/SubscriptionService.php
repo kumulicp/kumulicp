@@ -20,8 +20,6 @@ class SubscriptionService
 
     public $plans = [];
 
-    public $app_instance_plans = [];
-
     public function __construct(?Organization $organization = null)
     {
         $this->organization = $organization ?? OrganizationFacade::account();
@@ -79,7 +77,10 @@ class SubscriptionService
             }
         }
 
-        return collect($this->app_instance_plans);
+        // Derived from $this->plans, the only state that survives a FastCache hit in all()
+        return collect($this->plans)
+            ->filter(fn ($plan) => $plan instanceof AppInstancePlanService)
+            ->values();
     }
 
     public function appInstanceSubscription(AppInstance $app_instance, AppPlan $plan)
@@ -94,7 +95,6 @@ class SubscriptionService
         } else {
             $app_instance_plan = new AppInstancePlanService($plan, $item);
             $this->plans[$name] = $app_instance_plan;
-            $this->app_instance_plans[] = $app_instance_plan;
         }
     }
 
@@ -123,12 +123,28 @@ class SubscriptionService
         $this->plans['base'] = new BasePlanService($this->organization, $plan);
         $this->updateAppInstancesFromBase($plan);
 
+        $this->clearCachedPlanData();
+
         // Under a Packaged plan the package decides per-user storage, so a new package can change it for every app
         if ($plan->type === 'package' && $this->userStorageDiffers($previous_plan, $plan)) {
             UserStorageUpdated::dispatch($this->organization);
         }
 
         return $this;
+    }
+
+    /**
+     * The menu, the cached subscription and the plan stats all depend on the plan, and the
+     * menu hides or shows items by what the plan allows, so none of them may outlive a plan change.
+     * Entries are tagged by the organization being viewed, which for a suborganization is its parent.
+     */
+    private function clearCachedPlanData(): void
+    {
+        FastCache::clear(organization: $this->organization);
+
+        if ($this->organization->parent_organization) {
+            FastCache::clear(organization: $this->organization->parent_organization);
+        }
     }
 
     private function userStorageDiffers(?Plan $previous_plan, Plan $plan): bool
@@ -150,6 +166,9 @@ class SubscriptionService
         $app_instance->save();
 
         $this->plans[$app_instance->id] = new AppInstancePlanService($plan, $app_instance);
+
+        // App plans can enable domains and email too, which shows or hides menu items
+        $this->clearCachedPlanData();
 
         // A Packaged plan decides per-user storage itself, so swapping the app plan changes nothing
         if ($this->base()->get()?->type !== 'package'
@@ -185,7 +204,6 @@ class SubscriptionService
     {
         $this->organization->refresh();
         $this->plans = [];
-        $this->app_instance_plans = [];
 
         // Scoped to this organization only: a global Cache::flush() here
         // would wipe every other tenant's cached plans/menus on what is
@@ -310,7 +328,6 @@ class SubscriptionService
     public function clear()
     {
         $this->plans = [];
-        $this->app_instance_plans = [];
 
         return $this;
     }

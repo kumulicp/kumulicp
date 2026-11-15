@@ -72,7 +72,8 @@ class Subscription extends Controller
             return redirect('/discover');
         }
 
-        $plans = (new SubscriptionService($organization))->base()->allAvailable();
+        // Plans the organization's usage would exceed stay listed, but can't be selected
+        $plans = (new SubscriptionService($organization))->base()->allListed();
 
         return inertia('Organization/Subscription/SubscriptionOptions', [
             'organization' => [
@@ -127,6 +128,8 @@ class Subscription extends Controller
                         'features' => $plan->features ?? [],
                     ],
                     'current' => $plan->id === $organization->plan_id,
+                    'unavailable' => $unavailable = $plan->id !== $organization->plan_id && $plan->isAnyMaxBroken(),
+                    'unavailable_reason' => $unavailable ? $plan->limitsMessage() : null,
                     'url' => "/subscription/{$organization->id}/plans/{$plan->id}",
                 ];
             })->sortBy('order')->values()->all(),

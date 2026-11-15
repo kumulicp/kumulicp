@@ -13,7 +13,7 @@ import PlanCard from '@/components/cards/PlanCard.vue'
     </div>
     <div class="row justify-center">
       <div v-for="(plan, index) in plans" class="flex xs12 md6 lg4 xl3" :key="index">
-        <plan-card :plan="plan" :select="!plan.current" :current="plan.current" fullHeight />
+        <plan-card :plan="plan" :select="!plan.current" :current="plan.current" :unavailable="plan.unavailable" :unavailable-reason="plan.unavailable_reason" fullHeight />
       </div>
     </div>
   </div>

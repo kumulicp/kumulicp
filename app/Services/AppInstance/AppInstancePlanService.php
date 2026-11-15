@@ -52,9 +52,14 @@ class AppInstancePlanService
         return Application::instance($this->app_instance);
     }
 
+    /**
+     * The price of an entity in the organization's billing currency, falling back like billing does
+     * (default currency, then the legacy flat price). Plans save per-currency prices, so reading the
+     * flat setting directly gives nothing and the summaries come up empty.
+     */
     public function price($entity)
     {
-        return $this->plan->setting("$entity.price");
+        return $this->plan->priceFor($entity, $this->organization->billingCurrency())['amount'];
     }
 
     private function baseSubscription(): BasePlanService
@@ -193,7 +198,7 @@ class AppInstancePlanService
 
         $app_plan = $this;
 
-        return FastCache::retrieve('app_plan_stats_'.$this->plan->id, function () use ($app_plan) {
+        return FastCache::retrieve('app_plan_stats_'.$this->app_instance->id.'_'.$this->plan->id, function () use ($app_plan) {
             $stats = [];
             foreach ($app_plan->pricing_options as $option) {
                 $option_stats = $app_plan->optionStats($option);
@@ -236,10 +241,10 @@ class AppInstancePlanService
                 break;
             case 'storage':
                 $count['label'] = __('labels.additional_storage');
-                $count['calculation'] = '$'.$this->plan->setting('storage.price').' for every '.$this->plan->setting('storage.amount').'GB';
+                $count['calculation'] = '$'.$this->price('storage').' for every '.$this->plan->setting('storage.amount').'GB';
                 $count['storage'] = $this->additionalStorageTotal();
                 $count['quantity'] = $this->countEntity('storage');
-                $count['price'] = $this->plan->setting('storage.price');
+                $count['price'] = $this->price('storage');
                 $count['amount'] = $this->plan->setting('storage.amount');
                 $count['total_price'] = number_format($this->additionalStoragePriceTotal(), 2, '.', ', ');
                 $count['unit'] = $this->plan->setting('storage.amount').'GB';
@@ -471,7 +476,7 @@ class AppInstancePlanService
             return 0.0;
         }
 
-        return $this->plan->setting('base.price')
+        return $this->price('base')
             + $this->standardPriceTotal()
             + $this->basicPriceTotal()
             + $this->additionalStoragePriceTotal()
@@ -497,7 +502,7 @@ class AppInstancePlanService
 
     public function standardPriceTotal(): float
     {
-        return $this->plan->setting('standard.price') ? $this->countEntity('standard') * $this->plan->setting('standard.price') : 0;
+        return $this->price('standard') ? $this->countEntity('standard') * $this->price('standard') : 0;
     }
 
     public function standardStorageTotal(): float
@@ -507,7 +512,7 @@ class AppInstancePlanService
 
     public function basicPriceTotal(): float
     {
-        return ($this->countEntity('basic') && $this->plan->setting('basic.price')) ? ceil($this->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->plan->setting('basic.price') : 0;
+        return ($this->countEntity('basic') && $this->price('basic')) ? ceil($this->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->price('basic') : 0;
     }
 
     public function basicAmountTotal(): float
@@ -517,7 +522,7 @@ class AppInstancePlanService
 
     public function additionalStoragePriceTotal()
     {
-        return $this->plan->setting('storage.price') ? $this->countEntity('storage') * $this->plan->setting('storage.price') : 0;
+        return $this->price('storage') ? $this->countEntity('storage') * $this->price('storage') : 0;
     }
 
     public function additionalStorageTotal()

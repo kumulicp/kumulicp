@@ -92,7 +92,7 @@ class AuthServiceProvider extends ServiceProvider
             } elseif ($plan->org_type != $organization->type || $plan->archive) {
                 return Response::deny(__('organization.plan.denied.unavailable'));
             } elseif ($base_plan && $base_plan->isAnyMaxBroken()) {
-                return Response::deny(__('organization.plan.denied.limit'));
+                return Response::deny($base_plan->limitsMessage());
             } elseif ($organization->plan_id == $plan->id) {
                 return Response::deny(__('organization.plan.denied.subscribed'));
             } else {

@@ -32,7 +32,16 @@ return [
         'denied' => [
             'change' => 'El plan no se puede cambiar',
             'unavailable' => 'Este plan no está disponible. Por favor, selecciona otro plan',
-            'limit' => 'No puedes seleccionar este plan. Reduce la cantidad de usuarios, correos, aplicaciones y/o almacenamiento que estás usando para cumplir con los límites',
+            'limit' => 'No puedes seleccionar este plan porque superas sus límites (:limits). Reduce tu uso para cumplirlos',
+            'limit_item' => ':name: :used en uso, este plan permite :max',
+            'limits' => [
+                'base' => 'Base',
+                'standard' => 'Usuarios',
+                'basic' => 'Voluntarios',
+                'storage' => 'Almacenamiento adicional',
+                'email' => 'Correos',
+                'application' => 'Aplicaciones en total',
+            ],
             'subscribed' => 'Ya estás suscrito a este plan',
             'billing' => 'No tienes una cuenta facturable',
         ],

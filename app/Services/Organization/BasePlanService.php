@@ -60,23 +60,21 @@ class BasePlanService
         return $this->plan;
     }
 
+    /**
+     * Every plan this organization could be offered, including the ones whose limits its
+     * current usage would break (see isAnyMaxBroken()) so they can be shown as unavailable.
+     */
+    public function allListed()
+    {
+        return collect(Plan::where('archive', 0)->where('org_type', $this->organization->type)->orderBy('display_order')->get()->all())
+            ->map(fn (Plan $plan) => new self($this->organization, $plan));
+    }
+
     public function allAvailable()
     {
-        $base = $this;
-
-        return FastCache::retrieve('available_app_plans', function () use ($base) {
-            $availabe_plans = Plan::where('archive', 0)->where('org_type', $base->organization->type)->orderBy('display_order')->get()->all();
-            $plans = [];
-
-            foreach ($availabe_plans as $plan) {
-                $subscription = new self($this->organization, $plan);
-                if (! $subscription->isAnyMaxBroken() || $plan->id == $base->id) {
-                    $plans[] = $subscription;
-                }
-            }
-
-            return collect($plans);
-        });
+        return $this->allListed()
+            ->filter(fn (self $plan) => ! $plan->isAnyMaxBroken() || $plan->id == $this->id)
+            ->values();
     }
 
     public function enabledApps()
@@ -170,7 +168,7 @@ class BasePlanService
     {
         $base = $this;
 
-        return FastCache::retrieve('base_plan_stats_'.$this->plan->id, function () use ($base) {
+        return FastCache::retrieve('base_plan_stats_'.$this->organization->id.'_'.$this->plan->id, function () use ($base) {
             $stats = [];
             foreach ($base->billableEntities() as $option) {
                 $option_stats = $base->optionStats($option->value);
@@ -230,7 +228,7 @@ class BasePlanService
     {
         return [
             'label' => __('labels.additional_storage'),
-            'calculation' => '$'.$this->plan->setting('storage.price').' for every '.$this->plan->setting('storage.amount').'GB',
+            'calculation' => '$'.$this->price('storage').' for every '.$this->plan->setting('storage.amount').'GB',
             'storage' => $this->additionalStorageTotal(),
             'quantity' => $this->org_service->countEntity('storage'),
             'price' => $this->price('storage'),
@@ -264,9 +262,14 @@ class BasePlanService
         ];
     }
 
+    /**
+     * The price of an entity in the organization's billing currency, falling back like billing does
+     * (default currency, then the legacy flat price). Plans save per-currency prices, so reading the
+     * flat setting directly gives nothing and the summaries come up empty.
+     */
     public function price($entity)
     {
-        return $this->plan->setting("$entity.price");
+        return $this->plan->priceFor($entity, $this->organization->billingCurrency())['amount'];
     }
 
     public function refresh()
@@ -349,19 +352,84 @@ class BasePlanService
         return $this->plan->email_enabled == 1;
     }
 
+    /**
+     * Whether the organization's current usage is above any limit of this plan. Deliberately
+     * not cached: it depends on live counts, and every plan has its own answer.
+     */
     public function isAnyMaxBroken()
     {
-        $plan = $this;
+        return $this->brokenLimits() !== [];
+    }
 
-        return FastCache::retrieve('base_plan_maxed', function () use ($plan) {
-            foreach ($plan->pricing_options as $entity) {
-                if ($plan->isMaxBroken($entity) || $plan->isMaxAppsBroken()) {
-                    return true;
-                }
+    /**
+     * The limits of this plan the organization's current usage is above.
+     *
+     * Pay per App plans null the org-wide limits, so for them only the per-app instance
+     * caps and email can show up here.
+     *
+     * @return array<int, array{name: string, used: int, max: int}>
+     */
+    public function brokenLimits(): array
+    {
+        return array_merge($this->brokenAppLimits(), $this->brokenEntityLimits());
+    }
+
+    /**
+     * Apps the organization has more instances of than this plan allows.
+     *
+     * @return array<int, array{name: string, used: int, max: int}>
+     */
+    private function brokenAppLimits(): array
+    {
+        $broken = [];
+
+        // Only apps with instances can be over their cap, and one query beats one per app
+        $instances = $this->organization->app_instances()
+            ->selectRaw('application_id, count(*) as total')
+            ->groupBy('application_id')
+            ->pluck('total', 'application_id');
+
+        foreach (Application::whereIn('id', $instances->keys())->get() as $app) {
+            $max = Arr::get($this->plan->app_plans, "{$app->slug}.max");
+
+            if ($max < $instances[$app->id]) {
+                $broken[] = ['name' => $app->name, 'used' => (int) $instances[$app->id], 'max' => (int) $max];
             }
+        }
 
-            return false;
-        });
+        return $broken;
+    }
+
+    /**
+     * @return array<int, array{name: string, used: int, max: int}>
+     */
+    private function brokenEntityLimits(): array
+    {
+        $broken = [];
+
+        foreach ($this->pricing_options as $entity) {
+            if ($this->isMaxBroken($entity)) {
+                $broken[] = [
+                    'name' => __("organization.plan.denied.limits.{$entity->value}"),
+                    'used' => (int) $this->org_service->countEntity($entity->value),
+                    'max' => (int) $this->plan->setting("{$entity->value}.max"),
+                ];
+            }
+        }
+
+        return $broken;
+    }
+
+    /**
+     * Why the organization can't select this plan, naming each limit it is over.
+     */
+    public function limitsMessage(): string
+    {
+        $limits = collect($this->brokenLimits())
+            ->map(fn (array $limit) => __('organization.plan.denied.limit_item', $limit))
+            ->implode('; ');
+
+        return __('organization.plan.denied.limit', ['limits' => $limits]);
     }
 
     public function isMaxApps(Application $app)
@@ -381,8 +449,8 @@ class BasePlanService
 
         $base = $this;
 
-        return FastCache::retrieve('base_plan_total_price', function () use ($base) {
-            return $base->plan->setting('base.price')
+        return FastCache::retrieve('base_plan_total_price_'.$this->organization->id.'_'.$this->plan->id, function () use ($base) {
+            return $base->price('base')
             + $base->standardPriceTotal()
             + $base->basicPriceTotal()
             + $base->additionalStoragePriceTotal()
@@ -393,13 +461,7 @@ class BasePlanService
 
     public function isMaxAppsBroken()
     {
-        foreach (Application::all() as $app) {
-            if (Arr::get($this->plan->app_plans, "{$app->slug}.max", null) < $this->org_service->countAppInstances($app)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->brokenAppLimits() !== [];
     }
 
     public function isDomainMax()
@@ -419,18 +481,18 @@ class BasePlanService
 
     public function standardPriceTotal()
     {
-        return $this->plan->setting('standard.price') ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.price') : 0;
+        return $this->price('standard') ? $this->org_service->countEntity('standard') * $this->price('standard') : 0;
     }
 
     public function standardStorageTotal()
     {
-        return ($this->plan->setting('standard.price')) ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
+        return ($this->price('standard')) ? $this->org_service->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
     }
 
     public function basicPriceTotal()
     {
-        return $this->plan->setting('basic.price')
-                ? ceil($this->org_service->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->plan->setting('basic.price')
+        return $this->price('basic')
+                ? ceil($this->org_service->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->price('basic')
                 : 0;
     }
 
@@ -441,7 +503,7 @@ class BasePlanService
 
     public function additionalStoragePriceTotal()
     {
-        return $this->plan->setting('storage.price') ? $this->org_service->countEntity('storage') * $this->plan->setting('storage.price') : 0;
+        return $this->price('storage') ? $this->org_service->countEntity('storage') * $this->price('storage') : 0;
     }
 
     public function additionalStorageTotal()
@@ -451,12 +513,12 @@ class BasePlanService
 
     public function applicationPriceTotal()
     {
-        return $this->plan->setting('application.price') ? $this->org_service->countEntity('application') * $this->plan->setting('application.price') : 0;
+        return $this->price('application') ? $this->org_service->countEntity('application') * $this->price('application') : 0;
     }
 
     public function emailPriceTotal()
     {
-        return $this->plan->setting('email.price') ? $this->org_service->countEntity('email') * $this->plan->setting('email.price') : 0;
+        return $this->price('email') ? $this->org_service->countEntity('email') * $this->price('email') : 0;
     }
 
     public function accessTypeName(?AccessType $access_type = null): ?string
