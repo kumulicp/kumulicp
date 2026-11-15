@@ -209,6 +209,27 @@ return [
         'updated' => 'Configuración actualizada',
         'ldap_settings' => 'Configuración de LDAP',
         'invoice_settings' => 'Configuración de facturación',
+        'features' => [
+            'features' => 'Funciones',
+            'flags' => [
+                'sub_organizations' => [
+                    'label' => 'Suborganizaciones',
+                    'description' => 'Permite que una organización cree y gestione organizaciones dentro de ella, cada una con sus propios usuarios y aplicaciones. Agrega el menú Suborganizaciones y la opción de plan que controla qué planes pueden tenerlas.',
+                ],
+                'app_backups' => [
+                    'label' => 'Copias de seguridad de aplicaciones',
+                    'description' => 'Respalda los datos de las aplicaciones de forma programada o bajo demanda y los restaura, incluso en otro servidor de base de datos. Agrega el menú Copias de seguridad, el programador de copias y la pestaña de copias de cada organización.',
+                ],
+                'shared_apps' => [
+                    'label' => 'Aplicaciones compartidas',
+                    'description' => 'Permite ejecutar una sola instancia de una aplicación que usan muchas organizaciones, en lugar de una instancia para cada una. Agrega el menú Aplicaciones compartidas y la opción de hacer compartible el plan de una aplicación.',
+                ],
+                'emails' => [
+                    'label' => 'Correo electrónico',
+                    'description' => 'Permite que las organizaciones creen y gestionen cuentas de correo para sus dominios. Agrega el menú Correo electrónico y la opción de servidor de correo en los planes.',
+                ],
+            ],
+        ],
     ],
     'repoSecrets' => [
         'repoSecrets' => 'Registros',

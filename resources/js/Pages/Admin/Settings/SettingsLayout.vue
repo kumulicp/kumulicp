@@ -54,6 +54,10 @@ export default {
         url: basePath + '/registration'
       },
       {
+        title: this.$t('settings.features'),
+        url: basePath + '/features'
+      },
+      {
         title: this.$t('settings.securityTools'),
         url: basePath + '/security-tools'
       },

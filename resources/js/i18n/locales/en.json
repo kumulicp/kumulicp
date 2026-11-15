@@ -1681,7 +1681,12 @@
     "securityToolsDescription": "Each security scan tool runs from a pinned, known-good image version by default. You can override the image tag used for a tool below.",
     "securityToolsWarning": "Overriding the default version is usually safe, but you are responsible for verifying the image you specify. Untrusted or unverified tags (including \"latest\") can introduce supply-chain risk. Use a custom version at your own risk.",
     "securityToolDefaultImage": "Default",
-    "securityToolImageOverride": "Image Override"
+    "securityToolImageOverride": "Image Override",
+    "features": "Features",
+    "featuresDescription": "Turn major parts of the control panel on or off. A feature that is off is hidden from the menus and its pages cannot be reached.",
+    "featuresEnvNote": "Starting values come from the TOGGLE_* environment variables. Once saved here, the value in the control panel is used instead of the environment variable.",
+    "betaBadge": "Beta",
+    "betaWarning": "Features marked Beta are still being finished. They may change, have rough edges, and are not recommended for production data yet."
   },
   "systemChecks": {
     "ldapModelValidation": "LDAP Model Validation",

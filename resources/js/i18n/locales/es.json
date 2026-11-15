@@ -1672,7 +1672,12 @@
     "securityToolsDescription": "Cada herramienta de escaneo de seguridad se ejecuta de forma predeterminada desde una versión de imagen fijada y verificada. Puede anular la etiqueta de imagen utilizada para una herramienta a continuación.",
     "securityToolsWarning": "Anular la versión predeterminada suele ser seguro, pero usted es responsable de verificar la imagen que especifique. Las etiquetas no confiables o no verificadas (incluida \"latest\") pueden introducir riesgos en la cadena de suministro. Use una versión personalizada bajo su propio riesgo.",
     "securityToolDefaultImage": "Predeterminado",
-    "securityToolImageOverride": "Anulación de Imagen"
+    "securityToolImageOverride": "Anulación de Imagen",
+    "features": "Funciones",
+    "featuresDescription": "Activa o desactiva partes importantes del panel de control. Una función desactivada se oculta de los menús y sus páginas no son accesibles.",
+    "featuresEnvNote": "Los valores iniciales provienen de las variables de entorno TOGGLE_*. Una vez guardado aquí, se usa el valor del panel de control en lugar de la variable de entorno.",
+    "betaBadge": "Beta",
+    "betaWarning": "Las funciones marcadas como Beta aún se están terminando. Pueden cambiar, tener detalles sin pulir y todavía no se recomiendan para datos de producción."
   },
   "other": {
     "initialSetup": "Configuración Inicial",

@@ -11,9 +11,13 @@ return [
     |
     | Supported: "config", "database"
     |
+    | "database" keeps the state of each flag in the toggles table, which is
+    | what Settings → Features changes. A flag with no row there falls back
+    | to the value in "flags" below.
+    |
     */
 
-    'driver' => env('TOGGLE_DRIVER', 'config'),
+    'driver' => env('TOGGLE_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,9 +56,14 @@ return [
     | Feature Flags
     |--------------------------------------------------------------------------
     |
-    | Controls which major features are available in this installation.
-    | Set the corresponding env var to false to disable a feature entirely,
-    | which will hide its menu items and block its routes.
+    | Which major features are available in this installation. A disabled
+    | feature has its menu items hidden and its routes blocked.
+    |
+    | These are only the starting values. Admins change them under
+    | Settings → Features, and a value saved there wins over the env var.
+    | The migration that creates the toggles table copies the flags enabled
+    | here into it, so the env vars can be removed afterwards. Keep the list
+    | in step with App\Support\FeatureFlags.
     |
     */
 
