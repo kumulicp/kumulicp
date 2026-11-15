@@ -97,7 +97,7 @@ class User extends UserManager
 
         // A group's application is found by the name in its DN, which for a centralized shared app's
         // instance (one with no site of its own) is the shared app's, not the instance's
-        $group_app = $app_instance->sharedPlanParent() && ! $app_instance->usesMultisitePermissions() ? $app_instance->parent : $app_instance;
+        $group_app = LdapSupport::roleGroupApp($app_instance);
 
         $groups = $this->user->groups()->in($app_dn)->get();
         foreach ($groups as $group) {

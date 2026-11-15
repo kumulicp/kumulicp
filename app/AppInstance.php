@@ -351,6 +351,21 @@ class AppInstance extends Model
         return ApplicationFacade::profile($this->application)->isCompatible('multisite');
     }
 
+    // The instance whose role groups hold this instance's permissions. Every instance keeps its own,
+    // so that two instances (e.g. two Nextcloud sites on the same shared Nextcloud) never read or
+    // write each other's roles. The exception is a child of a different application (e.g. CiviCRM
+    // on WordPress), which has no groups of its own and keeps its roles in its parent's. This is
+    // decided by the instances themselves, not by the plan's current server type, because the
+    // groups were created under it and changing a plan later must not move them.
+    public function permissionsApp(): self
+    {
+        if ($this->parent_id && $this->parent && $this->parent->application_id !== $this->application_id && ! $this->usesMultisitePermissions()) {
+            return $this->parent;
+        }
+
+        return $this;
+    }
+
     // False for a shared-plan child without multisite (e.g. Nextcloud) --
     // it has no release/site/permissions of its own and defers entirely to
     // its parent. True for a standalone/hub instance, or a shared-plan

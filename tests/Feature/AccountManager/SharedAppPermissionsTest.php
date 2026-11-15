@@ -15,8 +15,7 @@ use Tests\Support\TestSupports;
 /**
  * A shared app has two shapes. A multisite app (ERPNext) gives each org a site of its own, with
  * its own role groups. A centralized app (Nextcloud) is one app for every org: an org's users get
- * their roles in groups under the shared app's name, scoped to the org, and the org's instance
- * has no groups of its own. Either way, what is saved has to be what is read back.
+ * their roles in groups scoped to the org, kept separately for each of the org's instances on it. Either way, what is saved has to be what is read back.
  */
 beforeEach(function () {
     setupAccountManagerDriver('ldap');
@@ -73,9 +72,66 @@ describe('a centralized shared app (Nextcloud)', function () {
         (new AddLdapGroups($this->child))->handle();
     });
 
-    it('keeps the org\'s role groups under the shared app\'s name, and none under its own', function () {
-        expect(roleGroupExists($this->child, $this->hub->name, $this->role, $this->hub))->toBeTrue()
-            ->and(Group::find(Dn::create($this->child->organization, 'applications', $this->child->name)))->toBeNull();
+    it('keeps the instance\'s role groups under its own name, not the shared app\'s', function () {
+        expect(roleGroupExists($this->child, $this->child->name, $this->role))->toBeTrue()
+            ->and(roleGroupExists($this->child, $this->hub->name, $this->role))->toBeFalse();
+    });
+
+    it('keeps the permissions of two instances on the same shared app, in the same org, apart', function () {
+        $second = AppInstance::factory()->create([
+            'application_id' => $this->child->application_id,
+            'organization_id' => $this->child->organization_id,
+            'version_id' => $this->child->version_id,
+            'plan_id' => $this->child->plan_id,
+            'parent_id' => $this->hub->id,
+            'status' => 'active',
+        ]);
+        (new AddLdapGroups($second))->handle();
+
+        AccountManager::users()->find('testing1')->permissions()->updateAppRoles($second, [$this->role]);
+
+        $user = AccountManager::users()->find('testing1');
+        expect($user->hasAppRole($second, $this->role))->toBeTrue()
+            ->and($user->appUserAccessType($second))->toBe('standard')
+            ->and($user->hasAppRole($this->child, $this->role))->toBeFalse()
+            ->and($user->appUserAccessType($this->child))->toBe('none');
+
+        AccountManager::users()->find('testing1')->permissions()->updateAppRoles($this->child, [$this->role]);
+        AccountManager::users()->find('testing1')->permissions()->updateAppRoles($second, []);
+
+        $user = AccountManager::users()->find('testing1');
+        expect($user->hasAppRole($this->child, $this->role))->toBeTrue()
+            ->and($user->hasAppRole($second, $this->role))->toBeFalse();
+    });
+
+    it('keeps the permissions of an instance that was shared but whose plan no longer is apart from one that never was', function () {
+        $separate = AppInstance::factory()->create([
+            'application_id' => $this->hub->application_id,
+            'organization_id' => $this->hub->organization_id,
+            'version_id' => $this->hub->version_id,
+            'plan_id' => $this->hub->plan_id,
+            'status' => 'active',
+        ]);
+        (new AddLdapGroups($separate))->handle();
+
+        // The plan is changed from shared to separate after the child was created: its parent link remains
+        $plan = $this->child->plan;
+        $plan->settings = array_merge($plan->settings, ['server_type' => 'separate']);
+        $plan->save();
+        $this->child->refresh();
+
+        AccountManager::users()->find('testing1')->permissions()->updateAppRoles($separate, [$this->role]);
+
+        $user = AccountManager::users()->find('testing1');
+        expect($user->hasAppRole($separate, $this->role))->toBeTrue()
+            ->and($user->hasAppRole($this->child, $this->role))->toBeFalse()
+            ->and($user->appUserAccessType($this->child))->toBe('none');
+
+        AccountManager::users()->find('testing1')->permissions()->updateAppRoles($this->child, [$this->role]);
+
+        $user = AccountManager::users()->find('testing1');
+        expect($user->hasAppRole($this->child, $this->role))->toBeTrue()
+            ->and($user->appUserAccessType($this->child))->toBe('standard');
     });
 
     it('sees the role it saved, and the access it gives', function () {
@@ -149,7 +205,7 @@ describe('a centralized shared app in another org than its hub', function () {
 
         $user = AccountManager::users($this->other_org)->find('customer1');
 
-        expect(roleGroupExists($this->child, $this->hub->name, $this->role, $this->hub))->toBeTrue()
+        expect(roleGroupExists($this->child, $this->child->name, $this->role))->toBeTrue()
             ->and($user->hasAppRole($this->child, $this->role))->toBeTrue()
             ->and($user->appUserAccessType($this->child))->toBe('standard');
     });
