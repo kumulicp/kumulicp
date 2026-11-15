@@ -69,4 +69,16 @@ class FastCacheService
             Cache::tags([$organization])->flush();
         }
     }
+
+    /**
+     * Clear the cache of every organization. For changes that apply to the
+     * whole install (feature flags), which the per-organization cache would
+     * otherwise keep showing until it is rebuilt.
+     */
+    public function clearAll(): void
+    {
+        \App\Organization::query()->select(['id', 'slug'])->each(function (\App\Organization $organization) {
+            $this->clear(organization: $organization);
+        });
+    }
 }

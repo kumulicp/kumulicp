@@ -396,10 +396,19 @@ import { currencyByCode } from '@/constants/currencies'
           </template>
         </AdminSettings>
       </template>
-      <va-list-separator v-if="$page.props.flags.emails && email_servers.length > 0" class="my-1" fit />
-      <AdminSettings v-if="$page.props.flags.emails && email_servers.length > 0">
+      <va-list-separator v-if="$page.props.flags.emails" class="my-1" fit />
+      <AdminSettings v-if="$page.props.flags.emails">
         <template #name>{{ $t('admin.plans.emailOptions') }}</template>
         <template #settings>
+          <va-alert v-if="email_servers.length === 0" id="no-email-servers" color="info" outline class="my-2">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <span>{{ $t('admin.plans.noEmailServers') }}</span>
+              <Link href="/admin/server/servers">
+                <va-button id="add-email-server" size="small">{{ $t('admin.plans.addEmailServer') }}</va-button>
+              </Link>
+            </div>
+          </va-alert>
+          <template v-else>
           <va-checkbox v-model="form.email_enabled"
             :label="$t('admin.plans.enableEmail')"
             class="my-2"
@@ -469,6 +478,7 @@ import { currencyByCode } from '@/constants/currencies'
               GB
             </template>
           </va-input>
+          </template>
         </template>
       </AdminSettings>
       <va-list-separator class="my-1" fit />

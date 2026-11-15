@@ -266,6 +266,27 @@ return [
         'ldap_settings' => 'LDAP Settings',
         'invoice_settings' => 'Invoice Settings',
         'system_checks_settings' => 'System Checks',
+        'features' => [
+            'features' => 'Features',
+            'flags' => [
+                'sub_organizations' => [
+                    'label' => 'Sub-organizations',
+                    'description' => 'Lets an organization create and manage organizations underneath it, each with its own users and apps. Adds the Sub-organizations menu and the plan option that controls which plans may have them.',
+                ],
+                'app_backups' => [
+                    'label' => 'App backups',
+                    'description' => 'Backs up app data on a schedule or on demand and restores it, including to another database server. Adds the Backups menu, the backup scheduler and the backups tab of each organization.',
+                ],
+                'shared_apps' => [
+                    'label' => 'Shared apps',
+                    'description' => 'Lets you run a single instance of an app that many organizations use, instead of one instance for each. Adds the Shared apps menu and the option to make an app plan shareable.',
+                ],
+                'emails' => [
+                    'label' => 'Email',
+                    'description' => 'Lets organizations create and manage email accounts for their domains. Adds the Email menu and the email server option on plans.',
+                ],
+            ],
+        ],
     ],
     'repoSecrets' => [
         'repoSecrets' => 'Registries',

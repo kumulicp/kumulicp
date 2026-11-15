@@ -25,7 +25,7 @@ Multi-tenant installs keep working exactly as today.
 |---|---|---|
 | Installer creates one org | `app/Http/Controllers/Setup.php` | A `superaccount` org with an "unlimited" `Plan` (`max: null` everywhere) and an admin user. Single mode extends this. |
 | The superaccount is already the system org | `Organization::where('type','superaccount')` is used about 20 times | Background actions, version tests, notifications and Stripe all resolve to it. Single mode can reuse it as *the* org. |
-| Feature flags | `config/toggle.php`, `EnsureFeatureEnabled` (`toggle:` route middleware), `MenuService`, shared as `$page.props.flags` | A working pattern for "hide the menu item and 404 the routes". |
+| Feature flags | `config/toggle.php` (env defaults), `toggles` table (saved state, edited under Settings → Features), `EnsureFeatureEnabled` (`toggle:` route middleware), `MenuService`, shared as `$page.props.flags` | A working pattern for "hide the menu item and 404 the routes". |
 | Billing can be off | `BillingService::__call` returns false for `isBillable` when no driver is set; `has-billing-account` gate exists | Payment screens already hide when `BILLING_DRIVER` is empty. |
 | Admin and org menus are separate | `HandleInertiaRequests::menu()` picks `admin` or `organization` by URL prefix | The seam to merge them. Menu items already support a `badge` (a shared prop name, used by the Updates page for its pending count). |
 | Discover flow | `Account\Discover`, `Pages/Organization/Discover/*` | Already has a deny-message banner with a button (`missing_parent_app`, `plan_limit_reached`). We extend it. |
