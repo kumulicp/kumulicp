@@ -141,6 +141,7 @@ it('only lets an admin deactivate or bring back an app', function () {
     $instance = AppInstance::factory()->create([
         'organization_id' => 1,
         'application_id' => $this->ready_app->id,
+        'version_id' => $this->ready_app->active_version()->id,
         'plan_id' => $this->ready_app->plans()->first()->id,
         'label' => 'Ready app',
     ]);
