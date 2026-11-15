@@ -132,7 +132,8 @@ import { currencyByCode } from '@/constants/currencies'
       <template v-if="form.type === 'package'">
         <va-list-separator class="my-1" fit />
         <AdminSettings>
-          <template #name>{{ $t('admin.plans.baseOptions') }}</template>
+          <template #name>{{ $t('admin.plans.basePricing') }}</template>
+          <template #description>{{ $t('admin.plans.basePricingDescription') }}</template>
           <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
@@ -203,6 +204,7 @@ import { currencyByCode } from '@/constants/currencies'
         <va-list-separator class="my-1" fit />
         <AdminSettings>
           <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
+          <template #description>{{ $t('admin.plans.standardUserOptionsDescription') }}</template>
           <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
@@ -260,6 +262,7 @@ import { currencyByCode } from '@/constants/currencies'
         <va-list-separator class="my-1" fit />
         <AdminSettings>
           <template #name>{{ $t('admin.plans.basicUserOptions') }}</template>
+          <template #description>{{ $t('admin.plans.basicUserOptionsDescription') }}</template>
           <template #settings>
             <va-checkbox
               id="basic-enabled"
