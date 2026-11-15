@@ -30,25 +30,28 @@ class Updates extends Controller
             'aspect' => 'nullable|string|max:100',
         ]);
 
-        $instances = $this->pending->instances($filters);
+        // The list of instances is looked up only to review something: it is a page load of its own
+        $reviewing = isset($filters['change']) || isset($filters['aspect']);
+        $instances = $reviewing ? $this->pending->instances($filters) : null;
 
         return inertia()->render('Admin/Updates/UpdatesList', [
             'summary' => $this->pending->summary(),
-            'groups' => $this->pending->groups(),
+            'groups' => $reviewing ? [] : $this->pending->groups(),
             'filters' => [
                 'change' => $filters['change'] ?? null,
                 'aspect' => $filters['aspect'] ?? null,
             ],
-            'instances' => $instances->items(),
-            'pagination' => [
+            'instances' => $instances?->items() ?? [],
+            'pagination' => $instances ? [
                 'current_page' => $instances->currentPage(),
                 'last_page' => $instances->lastPage(),
                 'total' => $instances->total(),
                 'per_page' => $instances->perPage(),
-            ],
+            ] : null,
             'policy' => [
                 'enabled' => $policy->enabled(),
-                'aspects' => $policy->all(),
+                // Chosen in a window that is only there once they are on
+                'aspects' => $policy->enabled() ? $policy->all() : [],
             ],
             'breadcrumbs' => [
                 [

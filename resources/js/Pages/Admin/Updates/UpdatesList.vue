@@ -38,44 +38,28 @@ import axios from 'axios'
           @click="filter({ aspect: filters.aspect === aspect.key ? null : aspect.key })"
         />
       </div>
+
+      <va-divider class="mt-4 mb-4" />
+
+      <div id="policy">
+        <h3 class="va-h6 mb-2">{{ $t('admin.updates.autoTitle') }}</h3>
+        <p class="secondary mb-3">{{ $t('admin.updates.autoHelp') }}</p>
+        <div class="d-flex align-center">
+          <va-switch
+            id="autoEnabled"
+            :model-value="policy.enabled"
+            :label="$t('admin.updates.autoSwitch')"
+            @update:model-value="setAutoEnabled"
+          />
+          <va-button v-if="policy.enabled" id="autoChoose" class="ml-4" preset="secondary" size="small" @click="showPolicyModal = true">
+            {{ $t('admin.updates.autoChoose') }}
+          </va-button>
+        </div>
+      </div>
     </va-card-content>
   </va-card>
 
-  <va-card id="policy" class="mb-4">
-    <va-card-title>{{ $t('admin.updates.autoTitle') }}</va-card-title>
-    <va-card-content>
-      <p class="secondary mb-3">{{ $t('admin.updates.autoHelp') }}</p>
-      <va-switch
-        id="autoEnabled"
-        :model-value="policy.enabled"
-        :label="$t('admin.updates.autoSwitch')"
-        @update:model-value="setAutoEnabled"
-      />
-      <table v-if="policy.enabled" class="va-table mt-3">
-        <tbody v-for="group in policyGroups" :key="group.name ?? 'core'" :class="'policy-group-' + (group.name ?? 'core')">
-          <tr>
-            <th colspan="2">{{ group.name ?? $t('admin.updates.autoCore') }}</th>
-          </tr>
-          <tr v-for="aspect in group.aspects" :key="aspect.key">
-            <td>
-              {{ aspect.label }}
-              <va-badge v-if="aspect.disruptive" class="ml-2" color="warning" :text="$t('admin.updates.disruptiveTag')" />
-            </td>
-            <td class="text-right">
-              <va-switch
-                :id="'auto-' + group.id + '-' + aspect.key"
-                :model-value="aspect.mode === 'auto'"
-                :label="$t('admin.updates.autoAspect')"
-                @update:model-value="setAspectMode(aspect, $event)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </va-card-content>
-  </va-card>
-
-  <template v-if="summary.instances > 0">
+  <template v-if="!reviewing && summary.instances > 0">
     <va-card id="groups" class="mb-4">
       <va-card-title>{{ $t('admin.updates.byChange') }}</va-card-title>
       <va-card-content>
@@ -90,11 +74,7 @@ import axios from 'axios'
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="group in groups"
-                :key="group.change ? group.change.id : 'none'"
-                :class="{ 'row-active': isSelectedGroup(group) }"
-              >
+              <tr v-for="group in groups" :key="group.change ? group.change.id : 'none'">
                 <td>
                   <ChangeSummary :change="group.change" />
                   <div v-if="group.since" class="secondary">{{ $t('admin.updates.since', { date: formatDate(group.since) }) }}</div>
@@ -118,8 +98,8 @@ import axios from 'axios'
                     size="small"
                     class="mr-1"
                     :class="'review-' + groupKey(group)"
-                    @click="filter({ change: isSelectedGroup(group) ? null : groupKey(group) })"
-                  >{{ isSelectedGroup(group) ? $t('admin.updates.showEverything') : $t('admin.updates.review') }}</va-button>
+                    @click="filter({ change: groupKey(group) })"
+                  >{{ $t('admin.updates.review') }}</va-button>
                   <va-button
                     size="small"
                     class="mr-1"
@@ -140,11 +120,16 @@ import axios from 'axios'
         </VaScrollContainer>
       </va-card-content>
     </va-card>
+  </template>
 
+  <template v-if="reviewing">
     <va-card id="instances" class="mb-4">
       <va-card-title>{{ $t('admin.updates.instances') }}</va-card-title>
       <va-card-content>
-        <div class="row align-center mb-2">
+        <va-button id="backToChanges" preset="secondary" icon="arrow_back" size="small" class="mb-3" @click="filter({ change: null, aspect: null })">
+          {{ $t('admin.updates.backToChanges') }}
+        </va-button>
+        <div class="d-flex align-center mb-2">
           <va-checkbox
             id="selectAll"
             :model-value="allSelected"
@@ -204,7 +189,7 @@ import axios from 'axios'
           </table>
         </VaScrollContainer>
         <va-pagination
-          v-if="pagination.last_page > 1"
+          v-if="pagination && pagination.last_page > 1"
           class="mt-3 mb-3 justify-center"
           :model-value="pagination.current_page"
           :total="pagination.total"
@@ -215,6 +200,38 @@ import axios from 'axios'
       </va-card-content>
     </va-card>
   </template>
+
+  <va-modal v-model="showPolicyModal" hide-default-actions no-padding class="p-0">
+    <template #content="{ ok }">
+      <va-card-title class="m-0">{{ $t('admin.updates.autoChoose') }}</va-card-title>
+      <va-card-content class="m-0">
+        <table id="policyAspects" class="va-table">
+          <tbody v-for="group in policyGroups" :key="group.id" :class="'policy-group-' + group.id">
+            <tr>
+              <th colspan="2">{{ group.name ?? $t('admin.updates.autoCore') }}</th>
+            </tr>
+            <tr v-for="aspect in group.aspects" :key="aspect.key">
+              <td>
+                {{ aspect.label }}
+                <va-badge v-if="aspect.disruptive" class="ml-2" color="warning" :text="$t('admin.updates.disruptiveTag')" />
+              </td>
+              <td class="text-right">
+                <va-switch
+                  :id="'auto-' + group.id + '-' + aspect.key"
+                  :model-value="aspect.mode === 'auto'"
+                  :label="$t('admin.updates.autoAspect')"
+                  @update:model-value="setAspectMode(aspect, $event)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </va-card-content>
+      <va-card-actions align="right">
+        <va-button class="mr-2" @click="ok">{{ $t('admin.updates.autoClose') }}</va-button>
+      </va-card-actions>
+    </template>
+  </va-modal>
 
   <va-modal v-model="showApplyModal" hide-default-actions no-padding class="p-0">
     <template #content="{ ok }">
@@ -294,6 +311,7 @@ export default {
     return {
       selected: [],
       scanning: false,
+      showPolicyModal: false,
       showDismissModal: false,
       dismissing: false,
       dismissTarget: null,
@@ -305,6 +323,10 @@ export default {
     }
   },
   computed: {
+    // Looking at the instances of one change or aspect, which is a page load of its own
+    reviewing () {
+      return this.filters.change !== null || this.filters.aspect !== null
+    },
     // Core settings (what every app has) first, then each app with what is its own
     policyGroups () {
       const core = this.policy.aspects.filter(aspect => aspect.apps.length === 0)
@@ -340,9 +362,6 @@ export default {
     },
     groupKey (group) {
       return group.change ? String(group.change.id) : 'none'
-    },
-    isSelectedGroup (group) {
-      return this.filters.change === this.groupKey(group)
     },
     selectAll (selected) {
       this.selected = selected ? this.instances.map(instance => instance.id) : []
@@ -406,10 +425,10 @@ export default {
       })
     },
     setAutoEnabled (enabled) {
-      router.post('/admin/server/updates/policy', { enabled }, { preserveScroll: true })
+      router.post('/admin/server/updates/policy', { enabled }, { preserveScroll: true, preserveState: true })
     },
     setAspectMode (aspect, auto) {
-      router.post('/admin/server/updates/policy', { aspect: aspect.key, mode: auto ? 'auto' : 'manual' }, { preserveScroll: true })
+      router.post('/admin/server/updates/policy', { aspect: aspect.key, mode: auto ? 'auto' : 'manual' }, { preserveScroll: true, preserveState: true })
     },
     askToDismiss (target) {
       this.dismissTarget = target
@@ -429,9 +448,3 @@ export default {
   }
 }
 </script>
-
-<style lang="scss">
-.row-active {
-  background: rgba(0, 0, 0, 0.04);
-}
-</style>
