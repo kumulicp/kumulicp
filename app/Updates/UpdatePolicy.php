@@ -69,13 +69,27 @@ class UpdatePolicy
      * Every aspect an admin can set: the ones every app has, and any that an
      * instance has been found out of date for.
      *
-     * @return array<int, array{key: string, label: string, mode: string, default: string, disruptive: bool}>
+     * `apps` is the apps an aspect was found on, and is empty for the ones every
+     * app has (core settings).
+     *
+     * @return array<int, array{key: string, label: string, apps: array<int, string>, mode: string, default: string, disruptive: bool}>
      */
     public function all(): array
     {
+        $registered = array_keys($this->aspects->registered());
+
+        /** @var Collection<string, Collection<int, string>> $apps */
+        $apps = UpdateState::query()
+            ->join('app_instances', 'app_instances.id', '=', 'update_states.app_instance_id')
+            ->join('applications', 'applications.id', '=', 'app_instances.application_id')
+            ->distinct()
+            ->get(['update_states.aspect', 'applications.name'])
+            ->groupBy('aspect')
+            ->map(fn (Collection $rows) => $rows->pluck('name')->sort()->values());
+
         /** @var Collection<int, string> $keys */
-        $keys = collect(array_keys($this->aspects->registered()))
-            ->merge(UpdateState::query()->distinct()->pluck('aspect'))
+        $keys = collect($registered)
+            ->merge($apps->keys())
             ->unique()
             ->sort()
             ->values();
@@ -83,6 +97,7 @@ class UpdatePolicy
         return $keys->map(fn (string $key) => [
             'key' => $key,
             'label' => $this->aspects->label($key),
+            'apps' => in_array($key, $registered, true) ? [] : ($apps[$key] ?? collect())->all(),
             'mode' => $this->mode($key),
             'default' => $this->defaultMode($key),
             'disruptive' => $this->disruptive($key),

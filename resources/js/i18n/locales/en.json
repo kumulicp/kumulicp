@@ -145,6 +145,7 @@
       "autoHelp": "Bring what is out of date up to date without anyone starting it, for what is set to automatic below. Something that keeps failing is tried a few times, then left for you.",
       "autoSwitch": "Update automatically",
       "autoAspect": "Automatic",
+      "autoCore": "Core",
       "changed": "Change",
       "noInstances": "Nothing to show.",
       "appOutOfDate": "Out of date: {aspects}",

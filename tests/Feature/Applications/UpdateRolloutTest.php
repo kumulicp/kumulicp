@@ -276,6 +276,22 @@ it('keeps what an admin says about an aspect, and forgets it when it is what it 
         ->and(collect($policy->all())->firstWhere('key', 'release'))->toMatchArray(['mode' => 'manual', 'default' => 'manual', 'disruptive' => true]);
 });
 
+it('lists the aspects every app has as core, and the others under the app they were found on', function () {
+    $instance = rolloutInstances()->first();
+    UpdateState::create([
+        'app_instance_id' => $instance->id,
+        'aspect' => 'feature.addons',
+        'fingerprint' => 'a',
+        'applied_at' => now(),
+    ]);
+
+    $aspects = collect(app(UpdatePolicy::class)->all())->keyBy('key');
+
+    expect($aspects['release']['apps'])->toBe([])
+        ->and($aspects['settings']['apps'])->toBe([])
+        ->and($aspects['feature.addons']['apps'])->toBe([$instance->application->name]);
+});
+
 it('does nothing on its own while automatic updates are off', function () {
     $instance = rolloutInstances()->first();
     // So that what the scan starts isn't run, and the scan is run here

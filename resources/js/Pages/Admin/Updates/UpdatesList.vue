@@ -52,15 +52,18 @@ import axios from 'axios'
         @update:model-value="setAutoEnabled"
       />
       <table v-if="policy.enabled" class="va-table mt-3">
-        <tbody>
-          <tr v-for="aspect in policy.aspects" :key="aspect.key">
+        <tbody v-for="group in policyGroups" :key="group.name ?? 'core'" :class="'policy-group-' + (group.name ?? 'core')">
+          <tr>
+            <th colspan="2">{{ group.name ?? $t('admin.updates.autoCore') }}</th>
+          </tr>
+          <tr v-for="aspect in group.aspects" :key="aspect.key">
             <td>
               {{ aspect.label }}
               <va-badge v-if="aspect.disruptive" class="ml-2" color="warning" :text="$t('admin.updates.disruptiveTag')" />
             </td>
             <td class="text-right">
               <va-switch
-                :id="'auto-' + aspect.key"
+                :id="'auto-' + group.id + '-' + aspect.key"
                 :model-value="aspect.mode === 'auto'"
                 :label="$t('admin.updates.autoAspect')"
                 @update:model-value="setAspectMode(aspect, $event)"
@@ -302,6 +305,18 @@ export default {
     }
   },
   computed: {
+    // Core settings (what every app has) first, then each app with what is its own
+    policyGroups () {
+      const core = this.policy.aspects.filter(aspect => aspect.apps.length === 0)
+      const apps = {}
+      this.policy.aspects.forEach(aspect => {
+        aspect.apps.forEach(app => { (apps[app] = apps[app] || []).push(aspect) })
+      })
+
+      const groups = Object.keys(apps).sort((a, b) => a.localeCompare(b)).map(name => ({ id: name, name, aspects: apps[name] }))
+
+      return core.length > 0 ? [{ id: 'core', name: null, aspects: core }, ...groups] : groups
+    },
     allSelected () {
       return this.instances.length > 0 && this.selected.length === this.instances.length
     }

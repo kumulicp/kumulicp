@@ -145,6 +145,7 @@
       "autoHelp": "Actualiza lo que está desactualizado sin que nadie lo inicie, para lo que esté en automático abajo. Lo que sigue fallando se intenta unas veces y luego se deja para usted.",
       "autoSwitch": "Actualizar automáticamente",
       "autoAspect": "Automático",
+      "autoCore": "Núcleo",
       "changed": "Cambio",
       "noInstances": "No hay nada que mostrar.",
       "appOutOfDate": "Desactualizado: {aspects}",
