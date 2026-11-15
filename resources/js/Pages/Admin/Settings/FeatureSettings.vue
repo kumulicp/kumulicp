@@ -24,14 +24,14 @@ import { useForm } from '@inertiajs/vue3'
         v-for="feature in features"
         :key="feature.key"
         :id="`feature-row-${feature.key}`"
-        class="feature-row flex items-start justify-between gap-6 py-4"
+        class="feature-row"
       >
-        <div class="flex flex-col">
-          <div class="flex items-center gap-2 mb-1">
-            <label :for="`feature-${feature.key}`" class="va-h6 m-0">{{ feature.label }}</label>
+        <div class="feature-info">
+          <div class="feature-title">
+            <label :for="`feature-${feature.key}`" class="va-h6">{{ feature.label }}</label>
             <va-badge v-if="feature.beta" color="warning" :text="$t('settings.betaBadge')" />
           </div>
-          <p class="va-text-secondary m-0">{{ feature.description }}</p>
+          <p class="va-text-secondary feature-description">{{ feature.description }}</p>
           <p
             v-if="$page.props.errors[`features.${feature.key}`]"
             class="va-text-danger text-sm mt-1"
@@ -42,7 +42,7 @@ import { useForm } from '@inertiajs/vue3'
         <va-switch
           v-model="form.features[feature.key]"
           :id="`feature-${feature.key}`"
-          class="shrink-0"
+          class="feature-switch"
         />
       </div>
     </div>
@@ -81,6 +81,39 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.feature-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.feature-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.feature-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+
+  label {
+    margin: 0;
+  }
+}
+
+.feature-description {
+  margin: 0;
+}
+
+.feature-switch {
+  flex: 0 0 auto;
+  width: auto;
+}
+
 .feature-row + .feature-row {
   border-top: 1px solid var(--va-background-border);
 }
