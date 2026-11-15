@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
 
 </script>
 
@@ -7,6 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
   <Head>
     <title>{{ $t('organization.subscription.planOverview') }} - Control Panel</title>
   </Head>
+  <BillingSyncNotice />
   <va-card>
     <va-card-title>{{ $t('organization.subscription.upcomingInvoice') }}</va-card-title>
     <va-card-content>

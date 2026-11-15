@@ -65,6 +65,17 @@ class BillingService
         return new self($organization);
     }
 
+    /**
+     * Whether the organization has ever had a billing subscription, active or not. History
+     * stays worth showing after payments stop. Drivers without any history report false.
+     */
+    public function hasBillingHistory(): bool
+    {
+        $driver = $this->driver();
+
+        return $driver && method_exists($driver, 'hasBillingHistory') && $driver->hasBillingHistory();
+    }
+
     public function __call($method, $args = null)
     {
         if ($method === 'isBillable' && ! $this->driver()) {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
 import PricingCard from '@/components/cards/PricingCard.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 
@@ -9,6 +10,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('organization.subscription.plansTitle') }} - Control Panel</title>
   </Head>
+  <BillingSyncNotice />
   <div class="row">
     <div class="flex flex-col xs12 lg8">
       <va-card class="mb-4 pb-2">

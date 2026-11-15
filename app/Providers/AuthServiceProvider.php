@@ -112,10 +112,12 @@ class AuthServiceProvider extends ServiceProvider
                 && $organization->status === 'deactivating';
         });
 
+        // The billing pages come from local state, not from the billing provider: its subscription is
+        // only created by a queued task, and its history is worth keeping after payments stop
         Gate::define('has-billing-account', function (User $user) {
-            $organization = $user->organization;
-
-            return (Billing::isBillable())
+            return (Billing::isBillable()
+                || count(Subscription::all()->paidSubscriptions()) > 0
+                || Billing::hasBillingHistory())
                 ? Response::allow()
                 : Response::deny(__('organization.plan.denied.billing'));
         });

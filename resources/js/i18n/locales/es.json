@@ -1490,7 +1490,11 @@
       "cancelSubscriptionTitle": "Cancelar Suscripción",
       "cancelUnsubscribeTitle": "Cancelar Cancelación de Suscripción",
       "deactivateAppTitle": "Desactivar Aplicación",
-      "cancelDeactivatingTitle": "Cancelar Desactivación"
+      "cancelDeactivatingTitle": "Cancelar Desactivación",
+      "billingSync": {
+        "updating": "Tu plan se ha actualizado. Aún estamos actualizando tu facturación, por lo que las facturas y los precios aquí pueden tardar un momento en actualizarse.",
+        "failed": "No pudimos terminar de actualizar tu facturación. El cambio de plan está aplicado, pero la información de facturación aquí puede estar desactualizada. Si esto no se resuelve pronto, por favor contacta a soporte."
+      }
     },
     "users": {
       "usersTitle": "Usuarios",

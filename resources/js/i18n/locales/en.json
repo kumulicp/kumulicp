@@ -1493,7 +1493,11 @@
       "cancelSubscriptionTitle": "Cancel Subscription",
       "cancelUnsubscribeTitle": "Cancel Unsubscribe",
       "deactivateAppTitle": "Deactivate App",
-      "cancelDeactivatingTitle": "Cancel Deactivation"
+      "cancelDeactivatingTitle": "Cancel Deactivation",
+      "billingSync": {
+        "updating": "Your plan has been updated. We're still updating your billing, so invoices and prices here may take a moment to catch up.",
+        "failed": "We couldn't finish updating your billing. Your plan change is in place, but the billing information here may be out of date. If this doesn't sort itself out soon, please contact support."
+      }
     },
     "users": {
       "usersTitle": "Users",

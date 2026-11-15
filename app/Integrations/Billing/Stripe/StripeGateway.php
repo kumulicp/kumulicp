@@ -46,6 +46,14 @@ class StripeGateway implements BillingContract
         return true;
     }
 
+    /**
+     * Ended or cancelled subscriptions count: their invoices are still part of the account's history.
+     */
+    public function hasBillingHistory(): bool
+    {
+        return $this->organization->subscriptions()->exists();
+    }
+
     public function setup(): void
     {
         $this->organization->createOrGetStripeCustomer();
