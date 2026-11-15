@@ -1552,7 +1552,7 @@
       "maxUsersForApp": "Max users reached for {app}",
       "accessDowngradedError": "Error downgrading access",
       "accessChangedError": "Error changing access",
-      "accessForApp": "Access for {app}",
+      "accessForApp": "{type} access for {name}",
       "userDowngradedTo": "User downgraded to {type}",
       "userUpgradedTo": "User upgraded to {type}",
       "userDowngradedToMinimal": "User downgraded to minimal access",

@@ -1549,7 +1549,7 @@
       "maxUsersForApp": "Se alcanzó el máximo de usuarios para {app}",
       "accessDowngradedError": "Error al degradar el acceso",
       "accessChangedError": "Error al cambiar el acceso",
-      "accessForApp": "Acceso para {app}",
+      "accessForApp": "Acceso {type} para {name}",
       "userDowngradedTo": "Usuario degradado a {type}",
       "userUpgradedTo": "Usuario mejorado a {type}",
       "userDowngradedToMinimal": "Usuario degradado a acceso mínimo",
