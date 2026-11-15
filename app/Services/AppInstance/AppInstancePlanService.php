@@ -111,7 +111,7 @@ class AppInstancePlanService
 
     public function pricing(): array
     {
-        if ($this->isPackaged()) {
+        if ($this->isPackaged() || $this->inTrial()) {
             return [];
         }
 
@@ -142,7 +142,9 @@ class AppInstancePlanService
 
     public function pricingOptions()
     {
-        if ($this->isPackaged()) {
+        // Nothing is billed during a free trial. The billing update that follows the end of the trial
+        // (see ExpiredSubscriptionsCheck) sees the pricing change and adds the app from then on.
+        if ($this->isPackaged() || $this->inTrial()) {
             return [];
         }
 
@@ -173,6 +175,23 @@ class AppInstancePlanService
         }
 
         return $options;
+    }
+
+    public function inTrial(): bool
+    {
+        return $this->app_instance->inTrial();
+    }
+
+    /**
+     * What to tell the customer while the app is in its free trial, otherwise nothing.
+     */
+    public function trialNotice(): ?string
+    {
+        if (! $this->inTrial()) {
+            return null;
+        }
+
+        return __('organization.subscription.trial_notice', ['date' => $this->app_instance->trial_ends_at->format('M d, Y')]);
     }
 
     public function status(): string
@@ -475,7 +494,7 @@ class AppInstancePlanService
 
     public function totalPrice(): float
     {
-        if ($this->isPackaged()) {
+        if ($this->isPackaged() || $this->inTrial()) {
             return 0.0;
         }
 

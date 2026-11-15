@@ -151,6 +151,7 @@ return [
         ],
     ],
     'subscription' => [
+        'trial_notice' => 'Prueba gratuita hasta el :date. No se te cobrará esta aplicación hasta tu primera fecha de pago después de que termine la prueba.',
         'base_plan' => 'Plan Base',
         'updated' => 'Tu suscripción se está actualizando',
         'cancelled' => 'Tu suscripción ha sido cancelada. Tienes hasta el final de tu periodo de suscripción para seguir usando los servicios de '.env('APP_NAME').' con normalidad.',

@@ -253,6 +253,7 @@ class SubscriptionService
                 $stats[] = [
                     'name' => $plan->itemLabel(),
                     'stats' => $plan->stats(),
+                    'notice' => $this->trialNotice($plan),
                 ];
             }
         }
@@ -269,11 +270,17 @@ class SubscriptionService
                 $stats[] = [
                     'stats' => $plan->stats(),
                     'name' => $plan->itemLabel(),
+                    'notice' => $this->trialNotice($plan),
                 ];
             }
         }
 
         return $stats;
+    }
+
+    private function trialNotice($plan): ?string
+    {
+        return $plan instanceof AppInstancePlanService ? $plan->trialNotice() : null;
     }
 
     public function anyPending()

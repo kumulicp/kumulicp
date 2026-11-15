@@ -39,6 +39,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   </td>
                   <td class="vertical-middle">
                     {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
+                    <div v-if="plan.notice" class="trial-notice">{{ plan.notice }}</div>
                   </td>
                   <td class="vertical-middle">
                     {{ plan.status }}
@@ -78,6 +79,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                     </td>
                     <td class="vertical-middle">
                       {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
+                      <div v-if="plan.notice" class="trial-notice">{{ plan.notice }}</div>
                     </td>
                     <td class="vertical-middle">
                       {{ plan.status }}
@@ -191,6 +193,11 @@ export default {
 </script>
 
 <style lang="scss">
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+  }
+
   .text-color-primary {
     color: var(--va-primary);
     text-align: center;

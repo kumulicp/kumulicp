@@ -62,6 +62,7 @@ import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
             <div class="va-title text-align-center">
               {{ item.name }}
             </div>
+            <div v-if="item.notice" class="trial-notice text-align-center mb-2">{{ item.notice }}</div>
             <va-scroll-container horizontal>
               <table class="va-table va-table--striped mb-2">
                 <thead>
@@ -140,6 +141,10 @@ export default {
 </script>
 
 <style>
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+  }
   .payment_note {
     font-size: 12px
   }

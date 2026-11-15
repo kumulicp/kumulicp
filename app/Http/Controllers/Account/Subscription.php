@@ -197,6 +197,7 @@ class Subscription extends Controller
                         'name' => $plan->app_instance->label,
                         'id' => $plan->app_instance->id,
                     ],
+                    'notice' => $plan->trialNotice(),
                     'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                     'can' => [
                         'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),
@@ -236,6 +237,7 @@ class Subscription extends Controller
                                 'name' => $plan->app_instance->label,
                                 'id' => $plan->app_instance->id,
                             ],
+                            'notice' => $plan->trialNotice(),
                             'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                             'can' => [
                                 'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),

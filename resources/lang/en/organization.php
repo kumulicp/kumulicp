@@ -154,6 +154,7 @@ return [
         ],
     ],
     'subscription' => [
+        'trial_notice' => "Free trial until :date. You won't be charged for this app until your first payment date after the trial ends.",
         'base_plan' => 'Base Plan',
         'updated' => 'Your subscription is being updated',
         'cancelled' => 'Your subscription has been cancelled. You have until the end of your subscription period to continue to use the '.env('APP_NAME').' services as normal.',
