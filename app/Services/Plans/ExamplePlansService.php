@@ -77,6 +77,9 @@ class ExamplePlansService
             $plan->type = 'package';
             $plan->org_type = 'business';
             $plan->status = 'hidden';
+            // Set rather than left to the column defaults: the plans are handed back as they are, not reloaded
+            $plan->archive = false;
+            $plan->is_default = false;
             $plan->display_order = ++$display_order;
             $plan->payment_enabled = false;
             $plan->domain_enabled = true;
