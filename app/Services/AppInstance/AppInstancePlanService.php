@@ -508,13 +508,6 @@ class AppInstancePlanService
         return $this->organization && Tenancy::isSingleOrganization($this->organization);
     }
 
-    // The one organization of a single-organization install has no limits, even
-    // the ones an app plan sets
-    private function isUnlimited(): bool
-    {
-        return $this->organization && Tenancy::isSingleOrganization($this->organization);
-    }
-
     public function isAnyMaxBroken()
     {
         foreach ($this->pricing_options as $option) {
