@@ -206,6 +206,14 @@ class AppInstancePlanService
         return __('organization.subscription.expiry_notice', ['date' => $this->app_instance->deactivate_at->format('M d, Y')]);
     }
 
+    /**
+     * Said while a plan change is waiting for the app to be active, otherwise nothing.
+     */
+    public function pendingNotice(): ?string
+    {
+        return PendingAppChanges::hasPending($this->app_instance) ? __('organization.subscription.pending_notice') : null;
+    }
+
     public function status(): string
     {
         $plan_id = $this->plan->id;

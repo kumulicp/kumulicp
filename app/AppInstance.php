@@ -5,6 +5,7 @@ namespace App;
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
 use App\Monitoring\AppMonitor;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -65,6 +67,25 @@ class AppInstance extends Model
      * when the app responds again.
      */
     public const STATUS_UNAVAILABLE = 'unavailable';
+
+    /**
+     * What waited for the app to be active is done as soon as it is (see PendingAppChanges). After the commit,
+     * so it works with the app as it was saved, not as a transaction around the save left it.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (AppInstance $app) {
+            if ($app->status === 'active' && $app->wasChanged('status') && PendingAppChanges::hasPending($app)) {
+                $id = $app->getKey();
+
+                DB::afterCommit(function () use ($id) {
+                    if ($app = AppInstance::find($id)) {
+                        app(PendingAppChanges::class)->applyIfDue($app);
+                    }
+                });
+            }
+        });
+    }
 
     protected $table = 'app_instances';
 

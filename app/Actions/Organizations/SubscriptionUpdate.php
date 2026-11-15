@@ -7,12 +7,13 @@ use App\Enums\TaskStatus;
 use App\Jobs\Applications\UpdateLDAPGroups;
 use App\Notifications\SubscriptionUpdatedNotification;
 use App\Organization;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Services\SubscriptionService;
-use App\Support\SubscriptionSnapshot;
 use App\Support\Facades\Billing;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
+use App\Support\SubscriptionSnapshot;
 use App\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
@@ -95,7 +96,10 @@ class SubscriptionUpdate extends Action
 
         if ($access_changed) {
             foreach ($task->organization->app_instances as $app) {
-                UpdateLDAPGroups::dispatch($app);
+                // An app that can't answer now gets its groups updated once it is active again
+                if (! app(PendingAppChanges::class)->defer($app, ['ldap' => true])) {
+                    UpdateLDAPGroups::dispatch($app);
+                }
             }
         }
 

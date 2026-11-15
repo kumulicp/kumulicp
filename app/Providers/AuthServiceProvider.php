@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Plan;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Organization\JointSubscriptionService;
 use App\Services\SubscriptionService;
 use App\Support\AccountManager\UserManager;
@@ -216,12 +217,14 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('change-app-plan', function (User $user, AppInstance $app_instance) {
             $plan = Subscription::app_instance($app_instance);
 
+            // The plan can be changed whatever state the app is in (as long as it isn't going away): what the
+            // change does to the app itself waits until the app is active (see PendingAppChanges)
             return $user->organization->status === 'active'
-                && $app_instance->status === 'active'
+                && in_array($app_instance->status, ['active', ...PendingAppChanges::DEFERRING_STATUSES], true)
                 && count($plan->allAvailable()) > 1
                 && $app_instance->belongsToOrganization($user->organization)
                 ? Response::allow()
-                : Response::deny(__('organization.app.denied.deactivation', ['app' => $app_instance->label]));
+                : Response::deny(__('organization.plan.denied.change'));
         });
 
         Gate::define('deactivate-app', function (User $user, AppInstance $app_instance) {
