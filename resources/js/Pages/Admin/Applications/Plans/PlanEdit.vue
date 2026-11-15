@@ -346,13 +346,13 @@ import { currencyByCode } from '@/constants/currencies'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.basicUsers') }}</template>
       <template #settings>
-        <va-input
-          v-model="form.basic.name"
+        <va-checkbox
+          id="basicEnabled"
+          v-model="form.basic.enabled"
           class="my-2"
-          :label="$t('admin.plans.name')"
-          :messages="$t('admin.plans.basicUserNameCaption')"
-          immediateValidation
-          id="basicName" />
+          :label="$t('admin.plans.enableBasicUsers')"
+          :messages="$t('admin.plans.enableBasicUsersCaption')"
+        />
         <template v-for="currency in enabled_currencies" :key="currency">
           <div class="row">
             <div class="flex lg6 xs12">
@@ -568,7 +568,8 @@ export default {
         basic: {
           storage: this.plan.settings.basic.storage,
           max: this.plan.settings.basic.max,
-          name: this.plan.settings.basic.name,
+          // Plans saved before this was set apart from a name are on when they have one
+          enabled: this.plan.settings.basic.enabled ?? !!this.plan.settings.basic.name,
           amount: this.plan.settings.basic.amount
         },
         storage: {

@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\AccessType;
 use App\Enums\VersionTestRunStatus;
 use App\Support\VersionTesting\VersionFingerprint;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
@@ -180,7 +181,7 @@ class AppVersion extends Model
         $role_ids = $this->roles;
 
         if (isset($role_ids['order'])) {
-            $roles = AppRole::where('access_type', '!=', 'disabled');
+            $roles = AppRole::where('access_type', '!=', AccessType::NONE->value);
             $roles->where(function (Builder $query) use ($role_ids) {
 
                 $n = 0;

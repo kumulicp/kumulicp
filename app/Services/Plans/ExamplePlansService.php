@@ -106,6 +106,7 @@ class ExamplePlansService
                 'storage' => self::STANDARD_STORAGE,
             ],
             'basic' => [
+                'enabled' => true,
                 'name' => __('setup.example_plans.basic_name'),
                 'amount' => self::BASIC_BUNDLE_SIZE,
                 'max' => $limits['basic_max'],

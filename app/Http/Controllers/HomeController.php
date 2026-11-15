@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Announcement;
+use App\Enums\AccessType;
 use App\Integrations\Applications\Nextcloud\API\GroupFolders;
 use App\Support\ByteConversion;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
+use App\Support\Facades\Subscription;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
@@ -55,10 +57,10 @@ class HomeController extends Controller
             'label' => Str::plural('User', $count_users),
             'value' => $count_users,
         ];
-        if ($basic_name = Organization::plan()->setting('basic.name')) {
+        if (Subscription::base()->isBasicUsersEnabled()) {
             $count_basic = Organization::countBasic();
             $info_blocks[] = [
-                'label' => Str::plural($basic_name, $count_basic),
+                'label' => Str::plural(Subscription::base()->accessTypeLabel(AccessType::BASIC), $count_basic),
                 'value' => $count_basic,
             ];
         }

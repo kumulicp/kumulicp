@@ -41,7 +41,8 @@ describe('Admin Plans', function () {
         $plan = Plan::factory()->create(['type' => 'app', 'name' => 'App Type Visibility Plan', 'org_type' => 'none']);
 
         visit('/admin/service/plans/'.$plan->id)
-            ->assertSee('Base Options')
+            ->assertSee('Access Type Names')
+            ->assertDontSee('Base Pricing')
             ->assertDontSee('Standard User Options')
             ->assertDontSee('Basic User Options')
             ->assertDontSee('Additional Storage Options');
@@ -51,6 +52,7 @@ describe('Admin Plans', function () {
         $plan = Plan::factory()->create(['type' => 'package', 'name' => 'Package Visibility Plan', 'org_type' => 'none']);
 
         visit('/admin/service/plans/'.$plan->id)
+            ->assertSee('Base Pricing')
             ->assertSee('Standard User Options')
             ->assertSee('Basic User Options')
             ->assertSee('Additional Storage Options');

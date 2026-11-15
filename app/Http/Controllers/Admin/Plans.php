@@ -231,7 +231,10 @@ class Plans extends Controller
             'org_type' => 'required|string|in:nonprofit,business,none,superaccount',
             'displayed_features' => 'nullable',
             'payment_enabled' => 'nullable',
+            'base.standard_label' => 'nullable|string|max:100',
             'base.minimal_label' => 'nullable|string|max:100',
+            'base.minimal_enabled' => 'nullable|boolean',
+            'basic.enabled' => 'nullable|boolean',
             'standard.max' => 'numeric|nullable',
             'standard.storage' => 'numeric|nullable',
             'basic.name' => 'nullable|string',
@@ -290,10 +293,15 @@ class Plans extends Controller
 
         $settingsToUpdate = [
             'suborganizations.enabled' => $request->input('suborganizations.enabled'),
+            // Access types are named by the organization's plan, whichever kind of plan it is
+            'base.standard_label' => $request->input('base.standard_label'),
             'base.minimal_label' => $request->input('base.minimal_label'),
+            'base.minimal_enabled' => $request->has('base.minimal_enabled') ? $request->boolean('base.minimal_enabled') : $request->filled('base.minimal_label'),
+            'basic.name' => $request->input('basic.name'),
+            // Pay per app plans have basic users on their app plans, which each say whether they do
+            'basic.enabled' => ! $isAppType && ($request->has('basic.enabled') ? $request->boolean('basic.enabled') : $request->filled('basic.name')),
             'standard.max' => (int) $isAppType ? null : $request->input('standard.max'),
             'standard.storage' => (int) $isAppType ? null : $request->input('standard.storage'),
-            'basic.name' => $isAppType ? null : $request->input('basic.name'),
             'basic.amount' => (int) $isAppType ? null : $request->input('basic.amount'),
             'basic.max' => (int) $isAppType ? null : $request->input('basic.max'),
             'basic.storage' => (int) $isAppType ? null : $request->input('basic.storage'),

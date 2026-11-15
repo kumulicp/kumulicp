@@ -434,11 +434,34 @@ class PlansTest extends TestCase
         $this->assertNull($plan->setting('base.prices.USD.price_id'));
         $this->assertNull($plan->setting('standard.prices.USD.amount'));
         $this->assertNull($plan->setting('standard.max'));
-        $this->assertNull($plan->setting('basic.name'));
         $this->assertNull($plan->setting('storage.prices.USD.amount'));
         $this->assertNull($plan->setting('application.prices.USD.amount'));
         // Non-pricing fields are preserved
         $this->assertEquals('Constituent', $plan->setting('base.minimal_label'));
+        // Access types are named by the organization's plan whatever its type; its basic users live on its app plans
+        $this->assertEquals('Volunteer', $plan->setting('basic.name'));
+        $this->assertFalse($plan->setting('basic.enabled'));
+    }
+
+    public function test_update_saves_access_type_names_and_which_are_offered()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'package']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'package',
+                'base' => ['standard_label' => 'Staff', 'minimal_label' => 'Member', 'minimal_enabled' => true],
+                'basic' => ['name' => 'Helper', 'enabled' => true, 'amount' => 5, 'max' => 20, 'storage' => 0.5],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $plan->refresh();
+        $this->assertEquals('Staff', $plan->setting('base.standard_label'));
+        $this->assertEquals('Member', $plan->setting('base.minimal_label'));
+        $this->assertTrue($plan->setting('base.minimal_enabled'));
+        $this->assertEquals('Helper', $plan->setting('basic.name'));
+        $this->assertTrue($plan->setting('basic.enabled'));
     }
 
     // ---------------------------------------------------------------------------

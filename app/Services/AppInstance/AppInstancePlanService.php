@@ -264,12 +264,13 @@ class AppInstancePlanService
                 $count['unit'] = 'user';
                 break;
             case 'basic':
-                $count['label'] = Str::plural($this->plan->setting('basic.name'));
-                $count['calculation'] = '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->plan->setting('basic.name')));
+                $basic_label = $this->baseSubscription()->accessTypeLabel(AccessType::BASIC);
+                $count['label'] = Str::plural($basic_label);
+                $count['calculation'] = '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($basic_label));
                 $count['quantity'] = $this->countEntity('basic');
                 $count['price'] = (float) $this->price('basic');
                 $count['total_price'] = (float) number_format($this->basicPriceTotal(), 2, '.', ', ');
-                $count['unit'] = $this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->plan->setting('basic.name')));
+                $count['unit'] = $this->plan->setting('basic.amount').' '.Str::plural(strtolower($basic_label));
                 break;
             case 'storage':
                 $count['label'] = __('labels.additional_storage');
@@ -303,11 +304,9 @@ class AppInstancePlanService
     {
         switch ($access_type) {
             case AccessType::STANDARD:
-                return __('labels.standard_user');
             case AccessType::BASIC:
-                return $this->setting('basic.name');
             case AccessType::MINIMAL:
-                return $this->setting('base.minimal_label');
+                return $this->baseSubscription()->accessTypeLabel($access_type);
             case AccessType::NONE:
                 return __('labels.none_user');
             default:
@@ -360,36 +359,38 @@ class AppInstancePlanService
     public function availableAccessTypes(): array
     {
         $app_roles = $this->app_instance->application->roles;
+        // Named by the organization's plan, like everywhere else
+        $labels = $this->baseSubscription();
         $access_types = [
             [
                 'value' => 'standard',
-                'text' => 'Active User',
+                'text' => $labels->accessTypeLabel(AccessType::STANDARD),
                 'description' => $app_roles->filter(function ($role) {
                     return $role->slug === 'standard';
                 })->first()?->description,
             ],
         ];
 
-        if ($this->setting('basic.name')) {
+        if ($this->isBasicUsersEnabled()) {
             $access_types[] = [
                 'value' => 'basic',
-                'text' => $this->setting('basic.name'),
+                'text' => $labels->accessTypeLabel(AccessType::BASIC),
                 'description' => $app_roles->filter(function ($role) {
                     return $role->slug === 'basic';
                 })->first()?->description,
             ];
         }
 
-        if (Subscription::base()->setting('base.minimal_label')) {
+        if ($labels->isMinimalUsersEnabled()) {
             $access_types[] = [
                 'value' => 'minimal',
-                'text' => Subscription::base()->setting('base.minimal_label'),
+                'text' => $labels->accessTypeLabel(AccessType::MINIMAL),
             ];
         }
 
         $access_types[] = [
             'value' => 'none',
-            'text' => 'Disabled',
+            'text' => $labels->accessTypeLabel(AccessType::NONE),
         ];
 
         return $access_types;
@@ -488,7 +489,8 @@ class AppInstancePlanService
 
     public function isBasicUsersEnabled()
     {
-        return ! is_null($this->plan->setting('basic.name'));
+        // Plans saved before it could be set apart from a name are on when they have one
+        return (bool) ($this->plan->setting('basic.enabled') ?? filled($this->plan->setting('basic.name')));
     }
 
     // The one organization of a single-organization install has no limits, even
@@ -559,7 +561,18 @@ class AppInstancePlanService
 
     public function basicPriceTotal(): float
     {
-        return ($this->countEntity('basic') && $this->price('basic')) ? ceil($this->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->price('basic') : 0;
+        return ($this->countEntity('basic') && $this->price('basic')) ? $this->basicBlocks() * $this->price('basic') : 0;
+    }
+
+    /**
+     * Number of billable blocks of basic users. Users are billed in blocks of
+     * `basic.amount`; a missing or zero block size means one user per block.
+     */
+    public function basicBlocks(): int
+    {
+        $block_size = max(1, (int) $this->plan->setting('basic.amount'));
+
+        return (int) ceil($this->countEntity('basic') / $block_size);
     }
 
     public function basicAmountTotal(): float

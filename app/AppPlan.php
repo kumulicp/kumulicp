@@ -2,10 +2,12 @@
 
 namespace App;
 
+use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Services\Application\PlanSecretsService;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\Support\Facades\Subscription;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -139,6 +141,8 @@ class AppPlan extends Model
 
     public function displayFeatures()
     {
+        $basic_label = Subscription::base()->accessTypeLabel(AccessType::BASIC);
+
         return [
             'prices' => collect([
                 [
@@ -152,8 +156,8 @@ class AppPlan extends Model
                     'price' => $this->setting('standard.price'),
                 ],
                 [
-                    'name' => Str::plural(strtolower($this->setting('basic.name'))),
-                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($this->setting('basic.name'))),
+                    'name' => Str::plural(strtolower($basic_label)),
+                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
                     'price' => $this->setting('basic.price'),
                 ],
                 [

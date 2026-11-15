@@ -50,6 +50,7 @@ class BulkEdit extends Controller
         $sso_servers = Server::where('type', 'sso')->get();
 
         return [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'web_servers' => $web_servers->map(function ($s) {
                 return ['value' => $s->id, 'text' => $s->name.' ('.$s->status.')'];
             }),
@@ -180,7 +181,7 @@ class BulkEdit extends Controller
             'plans.*.base.max' => 'numeric|nullable',
             'plans.*.standard.max' => 'numeric|nullable',
             'plans.*.standard.storage' => 'numeric|nullable',
-            'plans.*.basic.name' => 'string|nullable',
+            'plans.*.basic.enabled' => 'nullable|boolean',
             'plans.*.basic.amount' => 'numeric|nullable',
             'plans.*.basic.max' => 'numeric|nullable',
             'plans.*.basic.storage' => 'numeric|nullable',
@@ -219,7 +220,7 @@ class BulkEdit extends Controller
                 'base.max' => (int) Arr::get($d, 'base.max'),
                 'standard.max' => (int) Arr::get($d, 'standard.max'),
                 'standard.storage' => (int) Arr::get($d, 'standard.storage'),
-                'basic.name' => Arr::get($d, 'basic.name'),
+                'basic.enabled' => (bool) Arr::get($d, 'basic.enabled'),
                 'basic.amount' => (int) Arr::get($d, 'basic.amount'),
                 'basic.max' => (int) Arr::get($d, 'basic.max'),
                 'basic.storage' => (int) Arr::get($d, 'basic.storage'),
