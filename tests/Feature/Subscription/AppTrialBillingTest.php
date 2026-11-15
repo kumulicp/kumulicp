@@ -17,11 +17,9 @@ beforeEach(function () {
 
     // A priced, payment enabled app plan on a Pay per App base plan, so the app plan is what gets billed
     $this->app_plan = $this->support->demo_app_2;
-    $this->app_plan->settings = array_merge($this->app_plan->settings ?? [], [
-        'base' => ['prices' => [$currency => ['amount' => 7, 'price_id' => 'price_app_base']]],
-    ]);
     $this->app_plan->payment_enabled = true;
     $this->app_plan->save();
+    $this->app_plan->setPrice('base', $currency, 7, 'price_app_base');
 
     $this->support->base_1->app_plans = ['demo_app' => ['max' => 5, 'plans' => [$this->app_plan->id]]];
     $this->support->base_1->save();

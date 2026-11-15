@@ -112,7 +112,8 @@ it('lays prices over settings in the shape the admin forms read', function (stri
     $settings = $plan->fresh()->overlayPrices(['base' => ['max' => 4], 'features' => ['deck' => ['status' => 'optional']]]);
 
     expect($settings['base']['max'])->toBe(4);
-    expect($settings['base']['prices'])->toBe([
+    // The database does not promise an order for the currencies, so compare without one
+    expect($settings['base']['prices'])->toEqual([
         'USD' => ['amount' => 10.0, 'price_id' => 'usd_base'],
         'CAD' => ['amount' => 14.0, 'price_id' => 'cad_base'],
     ]);
