@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Organization;
 use App\Support\FeatureFlags;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use OffloadProject\Toggle\Facades\Toggle;
@@ -136,5 +138,30 @@ class FeatureSettingsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('flags.subOrganizations', true)
                 ->where('flags.emails', false));
+    }
+
+    public function test_changing_a_flag_clears_the_cached_menu_of_every_organization()
+    {
+        $slugs = Organization::pluck('slug');
+        foreach ($slugs as $slug) {
+            Cache::tags($slug)->put('menu_probe', ['stale'], null);
+        }
+
+        $this->put('/admin/settings/features', $this->payload(['emails' => true]))->assertRedirect();
+
+        foreach ($slugs as $slug) {
+            $this->assertFalse(Cache::tags($slug)->has('menu_probe'));
+        }
+    }
+
+    public function test_saving_without_changing_a_flag_keeps_the_cached_menu()
+    {
+        $slug = Organization::firstOrFail()->slug;
+        Cache::tags($slug)->put('menu_probe', ['cached'], null);
+
+        $current = collect(FeatureFlags::all())->pluck('enabled', 'key')->all();
+        $this->put('/admin/settings/features', ['features' => $current])->assertRedirect();
+
+        $this->assertTrue(Cache::tags($slug)->has('menu_probe'));
     }
 }
