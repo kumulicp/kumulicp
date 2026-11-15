@@ -94,30 +94,34 @@ import OrganizationLayout from './OrganizationLayout.vue'
       <div class="flex flex-col lg5 xs12">
         <div class="row">
           <div class="flex flex-col xs12">
-            <template v-for="(item, key) in subscription_stats" :key="key">
-              <va-list>
-                <va-list-label>{{ item.name }}</va-list-label>
-                <va-list-item
-                  v-for="(stat, key) in item.stats"
-                  class="list__item"
-                  :key="key"
-                  >
-                  <va-list-item-section>
-                    <va-list-item-label>
-                    {{ stat.label }}
-                    </va-list-item-label>
-                  </va-list-item-section>
-                  <va-list-item-section>
-                    <va-list-item-label>
-                      <span v-if="stat.calculation">{{ stat.calculation }}</span>
-                    </va-list-item-label>
-                  </va-list-item-section>
-                  <va-list-item-section icon>
-                    ${{ stat.total_price }}
-                  </va-list-item-section>
-                </va-list-item>
-              </va-list>
-              <va-divider v-if="(key+1) != item.stats.length"/>
+            <template v-for="(item, index) in subscription_stats" :key="index">
+              <div class="va-title text-align-center">
+                {{ item.name }}
+              </div>
+              <div v-if="item.notice" class="trial-notice text-align-center mb-2">{{ item.notice }}</div>
+              <va-scroll-container horizontal>
+                <table class="va-table va-table--striped mb-2">
+                  <thead>
+                    <tr>
+                      <th>{{ $t('organization.subscription.description') }}</th>
+                      <th>{{ $t('organization.subscription.quantity') }}</th>
+                      <th>{{ $t('admin.plans.price') }}</th>
+                      <th>{{ $t('organization.subscription.forEvery') }}</th>
+                      <th>{{ $t('organization.subscription.total') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(stat, index) in item.stats"
+                      :key="index">
+                      <td style="width: 20rem">{{ stat.label }}</td>
+                      <td>{{ stat.quantity }}</td>
+                      <td><span v-if="stat.price">$</span>{{ stat.price }}</td>
+                      <td>{{ stat.unit }}</td>
+                      <td>${{ stat.total_price }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </va-scroll-container>
             </template>
           </div>
         </div>
@@ -394,6 +398,12 @@ export default {
 </script>
 
 <style>
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+    white-space: pre-line;
+  }
+
   .organization {
     width: 100%;
   }
