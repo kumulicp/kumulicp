@@ -32,6 +32,12 @@ class SsoStep extends UpdateStep
         return $app_instance->usesOwnResources() && (bool) $app_instance->plan?->sso_server;
     }
 
+    // How people sign in to the app
+    public function disruptive(): bool
+    {
+        return true;
+    }
+
     public function aspects(): array
     {
         return ['sso'];

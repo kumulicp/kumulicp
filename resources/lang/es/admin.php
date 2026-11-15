@@ -313,6 +313,9 @@ return [
         'update_app' => 'Actualizar',
         'out_of_date_for' => 'Desactualizado',
         'count_out_of_date' => ':count desactualizadas',
+        'nothing_to_update' => 'No hay nada que actualizar para lo elegido: las instancias de aplicaciones ya se están actualizando o no están activas.',
+        'updating' => 'Actualizando :count instancias de aplicaciones, unas pocas primero. Sígalo en Servidor > Tareas.',
+        'policy_saved' => 'Guardado.',
     ],
     'update_aspects' => [
         'release' => 'Release',

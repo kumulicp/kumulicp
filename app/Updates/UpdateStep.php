@@ -59,6 +59,17 @@ abstract class UpdateStep
     }
 
     /**
+     * Whether running it can interrupt the app or change what its users see, like
+     * rolling out a release that restarts it. A disruptive step isn't started on its
+     * own for what is out of date (see UpdatePolicy), and an update that has
+     * some says so before it is started.
+     */
+    public function disruptive(): bool
+    {
+        return false;
+    }
+
+    /**
      * The keys of the steps that have to finish before this one starts, when
      * they are part of the same update.
      *

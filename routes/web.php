@@ -158,6 +158,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('updates')->group(function () {
                 Route::get('', 'Admin\Updates@index')->name('admin.updates');
                 Route::post('dismiss', 'Admin\Updates@dismiss')->name('admin.updates.dismiss');
+                Route::post('preview', 'Admin\Updates@preview')->name('admin.updates.preview');
+                Route::post('apply', 'Admin\Updates@apply')->name('admin.updates.apply');
+                Route::post('policy', 'Admin\Updates@policy')->name('admin.updates.policy');
                 Route::post('scan', 'Admin\Updates@scan')->name('admin.updates.scan');
             });
             Route::prefix('tasks')->group(function () {

@@ -5,6 +5,7 @@ namespace App\Updates;
 use App\AppInstance;
 use App\UpdateState;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Tells what an app instance is out of date for, by comparing what its aspects
@@ -122,11 +123,16 @@ class UpdateDrift
      * The steps to run to bring the instance up to date: the ones that go with
      * an aspect that changed, and nothing else.
      *
+     * @param  array<int, string>|null  $only  Just for these aspects, however many others changed
      * @return array<int, string> step keys, in the order they run
      */
-    public function stepsToRun(AppInstance $app_instance): array
+    public function stepsToRun(AppInstance $app_instance, ?array $only = null): array
     {
         $drifted = $this->drift($app_instance);
+
+        if ($only !== null) {
+            $drifted = array_values(array_intersect($drifted, $only));
+        }
 
         return $this->steps->for($app_instance)
             ->filter(fn (UpdateStep $step) => array_intersect($step->aspects(), $drifted) !== [])
@@ -165,10 +171,24 @@ class UpdateDrift
                     'definition_change_id' => null,
                     'dismissed_at' => null,
                     'dismissed_by_id' => null,
+                    'apply_attempts' => 0,
+                    'apply_attempted_at' => null,
                     'task_id' => $task_id,
                 ],
             );
         }
+    }
+
+    /**
+     * Notes that an update was started on its own for what is out of date.
+     *
+     * @param  array<int, string>  $aspects
+     */
+    public function markAttempt(AppInstance $app_instance, array $aspects): void
+    {
+        UpdateState::where('app_instance_id', $app_instance->id)
+            ->whereIn('aspect', $aspects)
+            ->update(['apply_attempts' => DB::raw('apply_attempts + 1'), 'apply_attempted_at' => now()]);
     }
 
     /**

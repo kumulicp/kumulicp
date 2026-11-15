@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Updates;
+
+use App\Support\Facades\Settings;
+use App\UpdateState;
+use Illuminate\Support\Collection;
+
+/**
+ * Which of what is out of date is brought up to date on its own, once an admin has
+ * turned that on, and which is left for an admin to start.
+ *
+ * Automatic updates are off to begin with. Once on, an aspect is automatic unless
+ * a step that brings it up to date is disruptive (see UpdateStep::disruptive()),
+ * or no step is known for it: an app's own aspects stay manual until an admin says
+ * otherwise. Either can be changed per aspect.
+ */
+class UpdatePolicy
+{
+    public const AUTO = 'auto';
+
+    public const MANUAL = 'manual';
+
+    private const ENABLED_SETTING = 'update_auto_apply';
+
+    public function __construct(private readonly UpdateSteps $steps, private readonly AspectRegistry $aspects) {}
+
+    /** Whether anything is brought up to date on its own */
+    public function enabled(): bool
+    {
+        return Settings::get(self::ENABLED_SETTING, '') === '1';
+    }
+
+    public function enable(bool $enabled): void
+    {
+        Settings::update(self::ENABLED_SETTING, $enabled ? '1' : null);
+    }
+
+    /** What an aspect is without an admin having said */
+    public function defaultMode(string $aspect): string
+    {
+        $steps = collect($this->steps->registered())->filter(fn (UpdateStep $step) => in_array($aspect, $step->aspects(), true));
+
+        return $steps->isNotEmpty() && $steps->doesntContain(fn (UpdateStep $step) => $step->disruptive())
+            ? self::AUTO
+            : self::MANUAL;
+    }
+
+    public function mode(string $aspect): string
+    {
+        $mode = Settings::get($this->setting($aspect), '');
+
+        return in_array($mode, [self::AUTO, self::MANUAL], true) ? $mode : $this->defaultMode($aspect);
+    }
+
+    /** Whether it is brought up to date on its own: automatic updates are on and it is automatic */
+    public function isAuto(string $aspect): bool
+    {
+        return $this->enabled() && $this->mode($aspect) === self::AUTO;
+    }
+
+    public function set(string $aspect, string $mode): void
+    {
+        // What it would be anyway isn't kept, so a change to the default reaches it
+        Settings::update($this->setting($aspect), $mode === $this->defaultMode($aspect) ? null : $mode);
+    }
+
+    /**
+     * Every aspect an admin can set: the ones every app has, and any that an
+     * instance has been found out of date for.
+     *
+     * @return array<int, array{key: string, label: string, mode: string, default: string, disruptive: bool}>
+     */
+    public function all(): array
+    {
+        /** @var Collection<int, string> $keys */
+        $keys = collect(array_keys($this->aspects->registered()))
+            ->merge(UpdateState::query()->distinct()->pluck('aspect'))
+            ->unique()
+            ->sort()
+            ->values();
+
+        return $keys->map(fn (string $key) => [
+            'key' => $key,
+            'label' => $this->aspects->label($key),
+            'mode' => $this->mode($key),
+            'default' => $this->defaultMode($key),
+            'disruptive' => $this->disruptive($key),
+        ])->all();
+    }
+
+    /** Whether a step that brings the aspect up to date is disruptive */
+    public function disruptive(string $aspect): bool
+    {
+        return collect($this->steps->registered())->contains(
+            fn (UpdateStep $step) => $step->disruptive() && in_array($aspect, $step->aspects(), true)
+        );
+    }
+
+    // A setting's name can't have dots in it: an aspect's key may
+    private function setting(string $aspect): string
+    {
+        return 'update_policy_'.str_replace('.', '_', $aspect);
+    }
+}

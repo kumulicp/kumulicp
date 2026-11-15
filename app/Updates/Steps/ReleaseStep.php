@@ -32,6 +32,12 @@ class ReleaseStep extends UpdateStep
         return $app_instance->usesOwnResources();
     }
 
+    // Rolls the app out again, which restarts it
+    public function disruptive(): bool
+    {
+        return true;
+    }
+
     public function aspects(): array
     {
         return ['release'];

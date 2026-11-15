@@ -14,6 +14,7 @@ return [
     'provision_version_test_step' => 'Preparando una prueba de :app :version, :plan',
     'provision_version_test_site' => 'Añadiendo un sitio a la prueba de :app :version, :plan',
     'clear_version_test_step' => 'Limpiando la organización de prueba de :plan',
+    'reconciling' => 'Actualizando :count instancias de aplicaciones por lo que cambió',
     'upgrading_all_apps' => 'Actualizando todas las :app a :version',
     'updating_app_customizations' => 'Actualizando personalizaciones de :app',
     'waiting_for_domain_ip' => 'Esperando a que :domain apunte a :ip',

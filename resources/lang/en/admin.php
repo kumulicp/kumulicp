@@ -398,6 +398,9 @@ return [
         'update_app' => 'Update',
         'out_of_date_for' => 'Out of date',
         'count_out_of_date' => ':count out of date',
+        'nothing_to_update' => 'There is nothing to update for what was picked: the app instances are being updated already, or aren\'t active.',
+        'updating' => 'Updating :count app instances, a few first. Follow it under Server > Tasks.',
+        'policy_saved' => 'Saved.',
     ],
     'update_aspects' => [
         'release' => 'Release',
