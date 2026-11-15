@@ -4,6 +4,8 @@ namespace App;
 
 use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
+use App\Monitoring\AppMonitor;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
@@ -13,8 +15,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -51,10 +55,37 @@ use Illuminate\Support\Str;
  * @property-read Collection<int, AdditionalStorage> $additional_storage
  * @property-read Collection<int, OrgSubdomain> $domains
  * @property-read OrgSubdomain|null $primary_domain
+ * @property-read AppMonitor|null $monitor
  */
 class AppInstance extends Model
 {
     use HasFactory;
+
+    /**
+     * The app's API stopped answering (see AvailabilityService). The previous
+     * status is kept in settings.availability.previous_status and put back
+     * when the app responds again.
+     */
+    public const STATUS_UNAVAILABLE = 'unavailable';
+
+    /**
+     * What waited for the app to be active is done as soon as it is (see PendingAppChanges). After the commit,
+     * so it works with the app as it was saved, not as a transaction around the save left it.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (AppInstance $app) {
+            if ($app->status === 'active' && $app->wasChanged('status') && PendingAppChanges::hasPending($app)) {
+                $id = $app->getKey();
+
+                DB::afterCommit(function () use ($id) {
+                    if ($app = AppInstance::find($id)) {
+                        app(PendingAppChanges::class)->applyIfDue($app);
+                    }
+                });
+            }
+        });
+    }
 
     protected $table = 'app_instances';
 
@@ -106,7 +137,10 @@ class AppInstance extends Model
         return $this->hasMany('App\AppInstance', 'parent_id');
     }
 
-    public function parent()
+    /**
+     * @return BelongsTo<AppInstance, $this>
+     */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'parent_id');
     }
@@ -139,14 +173,43 @@ class AppInstance extends Model
         return $this->hasMany('App\Task', 'app_instance_id');
     }
 
+    // Added (e.g. a shared app) but never activated: it is 'deactivated' only
+    // because nothing has deployed it yet, not because it was turned off
+    public function isAwaitingActivation(): bool
+    {
+        return $this->status === 'deactivated'
+            && ! $this->tasks()->where('action_slug', 'application_activate')->exists();
+    }
+
+    /**
+     * Whether this is one of the shared apps that organizations' apps are shared from.
+     */
+    public function isSharedApp(): bool
+    {
+        return $this->organization?->type === 'shared';
+    }
+
+    /**
+     * A shared app that is installed and run outside Kumuli CP. Nothing is deployed
+     * for it: its users come through the central LDAP groups, and the app only has
+     * the domain organizations click through to.
+     */
+    public function isManagedExternally(): bool
+    {
+        return (bool) $this->setting('managed_externally');
+    }
+
     public function subscription()
     {
         return $this->belongsTo('App\AppPlan', 'plan_id');
     }
 
-    public function plan()
+    /**
+     * @return BelongsTo<AppPlan, $this>
+     */
+    public function plan(): BelongsTo
     {
-        return $this->belongsTo('App\AppPlan', 'plan_id');
+        return $this->belongsTo(AppPlan::class, 'plan_id');
     }
 
     public function additional_storage()
@@ -159,9 +222,23 @@ class AppInstance extends Model
         return $this->hasMany('App\OrgSubdomain', 'app_instance_id');
     }
 
-    public function primary_domain()
+    /**
+     * @return BelongsTo<OrgSubdomain, $this>
+     */
+    public function primary_domain(): BelongsTo
     {
         return $this->belongsTo('App\OrgSubdomain', 'primary_domain_id');
+    }
+
+    /**
+     * The uptime monitor checking this app's address. An app that lives at
+     * its parent's address has none; see AppMonitors::monitorFor().
+     *
+     * @return HasOne<AppMonitor, $this>
+     */
+    public function monitor(): HasOne
+    {
+        return $this->hasOne(AppMonitor::class, 'app_instance_id');
     }
 
     public function base_domain()
@@ -295,6 +372,21 @@ class AppInstance extends Model
         return ApplicationFacade::profile($this->application)->isCompatible('multisite');
     }
 
+    // The instance whose role groups hold this instance's permissions. Every instance keeps its own,
+    // so that two instances (e.g. two Nextcloud sites on the same shared Nextcloud) never read or
+    // write each other's roles. The exception is a child of a different application (e.g. CiviCRM
+    // on WordPress), which has no groups of its own and keeps its roles in its parent's. This is
+    // decided by the instances themselves, not by the plan's current server type, because the
+    // groups were created under it and changing a plan later must not move them.
+    public function permissionsApp(): self
+    {
+        if ($this->parent_id && $this->parent && $this->parent->application_id !== $this->application_id && ! $this->usesMultisitePermissions()) {
+            return $this->parent;
+        }
+
+        return $this;
+    }
+
     // False for a shared-plan child without multisite (e.g. Nextcloud) --
     // it has no release/site/permissions of its own and defers entirely to
     // its parent. True for a standalone/hub instance, or a shared-plan
@@ -400,6 +492,52 @@ class AppInstance extends Model
     public function scopeNotDeactivated(Builder $query)
     {
         return $query->where('status', '!=', 'deactivated')->where('status', '!=', 'deactivating');
+    }
+
+    /**
+     * Whether the app is being (or is about to be) removed rather than just
+     * scheduled for a later date. Uses the raw column because the 'date' cast
+     * truncates the time, which DeactivatedAppInstanceCheck does not.
+     */
+    public function isBeingRemoved(): bool
+    {
+        if ($this->status === 'deleting') {
+            return true;
+        }
+
+        $deactivate_at = $this->getRawOriginal('deactivate_at');
+
+        return $deactivate_at !== null && Carbon::parse($deactivate_at)->lte(now());
+    }
+
+    /**
+     * Whether the app is still in its free trial. Uses the raw column because the 'date' cast
+     * truncates the time, so a trial ending later today would already look over.
+     */
+    public function inTrial(): bool
+    {
+        $trial_ends_at = $this->attributes['trial_ends_at'] ?? null;
+
+        return $trial_ends_at !== null && Carbon::parse($trial_ends_at)->gt(now());
+    }
+
+    public function scopeUnavailable(Builder $query)
+    {
+        return $query->where('status', self::STATUS_UNAVAILABLE);
+    }
+
+    public function isUnavailable(): bool
+    {
+        return $this->status === self::STATUS_UNAVAILABLE;
+    }
+
+    /**
+     * Unavailable and confirmed so by a recheck: API calls to the app are
+     * refused until it answers again.
+     */
+    public function isApiBlocked(): bool
+    {
+        return $this->isUnavailable() && $this->setting('availability.blocked_at') !== null;
     }
 
     public function standard_user_name()

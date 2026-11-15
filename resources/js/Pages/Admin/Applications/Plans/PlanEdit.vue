@@ -10,11 +10,14 @@ import { currencyByCode } from '@/constants/currencies'
   <Head>
     <title>{{ $t('admin.plans.editPlan') }} - Control Panel</title>
   </Head>
-  <div class="row justify-center">
+  <!-- A shared app's plan is its own, hidden from organizations: nothing about subscribing to it applies -->
+  <div v-if="!plan.hidden" class="row justify-center">
     <Link v-if="!plan.archived" :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/archive'"><va-button id="createUser">{{ $t('admin.plans.archivePlan') }}</va-button></Link>
     <Link v-else :href="'/admin/apps/'+app.slug+'/plans/'+plan.id+'/unarchive'"><va-button id="createUser">{{ $t('admin.plans.makePublic') }}</va-button></Link>
   </div>
   <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/plans/'+plan.id)">
+    <!-- A shared app's plan only has its servers to edit -->
+    <template v-if="!plan.hidden">
     <AdminSettings>
       <template #name></template>
       <template #settings>
@@ -27,7 +30,8 @@ import { currencyByCode } from '@/constants/currencies'
           :error="$page.props.errors.name"
           :error-messages="$page.props.errors.name"
           />
-        <va-checkbox v-model="form.default"
+        <va-checkbox
+          v-model="form.default"
           class="my-2"
           :label="$t('admin.plans.defaultPlan') "
           :messages="$t('admin.plans.defaultPlanCaption')"
@@ -121,26 +125,22 @@ import { currencyByCode } from '@/constants/currencies'
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
+    </template>
     <AdminSettings>
       <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>
-        <p v-if="plan.hidden && !plan.web_server" class="my-2">
+        <p v-if="!plan.full_settings" class="my-2">
           {{ $t('admin.plans.independentlyInstalled') }}
         </p>
         <template v-else>
-          <va-select
-            v-if="!plan.hidden"
-            v-model="form.server_type"
+          <va-input
+            v-if="!plan.hidden && app.can.shareable"
+            :model-value="serverTypeLabel"
+            id="serverType"
             class="my-2"
+            readonly
             :label="$t('admin.plans.serverType')"
-            :messages="$t('admin.plans.serverTypeCaption')"
-            immediateValidation
-            clearable
-            value-by="value"
-            text-by="text"
-            :options="serverTypes"
-            :error="$page.props.errors.server_type"
-            :error-messages="$page.props.errors.server_type"
+            :messages="$t('admin.plans.serverTypeFixedCaption')"
           />
           <template v-if="form.server_type == 'shared'">
             <va-select
@@ -199,6 +199,8 @@ import { currencyByCode } from '@/constants/currencies'
         </template>
       </template>
     </AdminSettings>
+    <!-- What organizations see and pay for, and how many users and how much storage they get -->
+    <template v-if="!plan.hidden">
     <va-list-separator class="my-1" fit />
     <AdminSettings>
       <template #name>{{ $t('admin.plans.displayedFeatures') }}</template>
@@ -214,18 +216,17 @@ import { currencyByCode } from '@/constants/currencies'
                 :error-messages="$page.props.errors.displayed_features"
                 />
             </div>
-            <div class="flex flex-col lg7">
+            <div class="flex flex-col lg8">
               <va-input v-model="form.displayed_features[index]['description']"
                 :label="$t('admin.plans.description')"
                 immediateValidation
                 :error="$page.props.errors.displayed_features"
                 :error-messages="$page.props.errors.displayed_features"
-                />
-            </div>
-            <div class="flex lg1">
-              <div class="content-center align-center">
-                <va-icon name="fa-x" color="danger" @click="removeFeature(index)" />
-              </div>
+                >
+                <template #append>
+                  <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeFeature(index)" />
+                </template>
+              </va-input>
             </div>
           </div>
         </template>
@@ -345,13 +346,13 @@ import { currencyByCode } from '@/constants/currencies'
     <AdminSettings>
       <template #name>{{ $t('admin.plans.basicUsers') }}</template>
       <template #settings>
-        <va-input
-          v-model="form.basic.name"
+        <va-checkbox
+          id="basicEnabled"
+          v-model="form.basic.enabled"
           class="my-2"
-          :label="$t('admin.plans.name')"
-          :messages="$t('admin.plans.basicUserNameCaption')"
-          immediateValidation
-          id="basicName" />
+          :label="$t('admin.plans.enableBasicUsers')"
+          :messages="$t('admin.plans.enableBasicUsersCaption')"
+        />
         <template v-for="currency in enabled_currencies" :key="currency">
           <div class="row">
             <div class="flex lg6 xs12">
@@ -489,6 +490,7 @@ import { currencyByCode } from '@/constants/currencies'
         </va-input>
       </template>
     </AdminSettings>
+    </template>
     <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
   </form>
 </template>
@@ -509,6 +511,12 @@ export default {
     enabled_currencies: {
       type: Array,
       default: () => ['USD']
+    }
+  },
+  computed: {
+    // Chosen when the plan is created, so it's only shown here
+    serverTypeLabel () {
+      return this.serverTypes.find(type => type.value === this.form.server_type)?.text ?? this.serverTypes[0].text
     }
   },
   data () {
@@ -560,7 +568,8 @@ export default {
         basic: {
           storage: this.plan.settings.basic.storage,
           max: this.plan.settings.basic.max,
-          name: this.plan.settings.basic.name,
+          // Plans saved before this was set apart from a name are on when they have one
+          enabled: this.plan.settings.basic.enabled ?? !!this.plan.settings.basic.name,
           amount: this.plan.settings.basic.amount
         },
         storage: {

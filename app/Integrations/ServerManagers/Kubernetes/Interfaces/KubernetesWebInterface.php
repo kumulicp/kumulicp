@@ -5,16 +5,15 @@ namespace App\Integrations\ServerManagers\Kubernetes\Interfaces;
 use App\AppInstance;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\AppInterface;
+use App\Contracts\ServerManager\JobInterface;
 use App\Integrations\ServerManagers\Kubernetes\API\Application;
 use App\Integrations\ServerManagers\Kubernetes\API\Job;
 use App\Integrations\ServerManagers\Kubernetes\API\KubernetesNamespace;
+use App\Integrations\ServerManagers\Kubernetes\API\Pod;
 use App\Integrations\ServerManagers\Kubernetes\API\Secret;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 use App\Integrations\ServerManagers\Kubernetes\Services\DomainMiddlewareService;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
-// Driver-agnostic: existsOrganization()/addOrganization()/deleteOrganization()
-// only depend on $this->namespace having isActive()/create()/remove(), which
-// both drivers' KubernetesNamespace classes implement identically.
-use App\Integrations\ServerManagers\Rancher\Services\OrganizationServices;
+use App\Integrations\ServerManagers\Kubernetes\Services\OrganizationServices;
 use App\Organization;
 use App\OrgServer;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -24,7 +23,7 @@ use App\Support\Facades\Application as ApplicationFacade;
  * overrides the make*() factories to swap in its own API classes, and any
  * of the public methods where its behaviour differs.
  */
-class KubernetesWebInterface implements AppInterface, OrganizationInterface
+class KubernetesWebInterface implements AppInterface, JobInterface, OrganizationInterface
 {
     use OrganizationServices;
 
@@ -67,6 +66,11 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         return new Job($this->organization, $this->server);
     }
 
+    protected function makePod(): Pod
+    {
+        return new Pod($this->organization, $this->server);
+    }
+
     protected function makeDomainMiddleware(): DomainMiddlewareService
     {
         return new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
@@ -102,7 +106,8 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function notFoundMessage(): string
     {
-        return __('messages.exception.app_not_found_rancher');
+        // What the status check actually saw, so "not found" can be told apart from "failed".
+        return trim(__('messages.exception.app_not_found_rancher').' ('.$this->checkStatus()['message'].')');
     }
 
     public function get()
@@ -137,6 +142,17 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         }
 
         return ['active' => $active, 'pending' => $pending, 'message' => implode(', ', $labels)];
+    }
+
+    /**
+     * Whether this driver can clear a release left pending by a killed
+     * process. Checked by ApplicationUpgrade before it calls
+     * recoverStuckRelease(); a driver whose releases are managed elsewhere
+     * returns false.
+     */
+    public function canRecoverStuckRelease(): bool
+    {
+        return true;
     }
 
     /**
@@ -183,6 +199,10 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function add()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return $this->updateSharedParent($parent);
+        }
+
         if ($this->existsOrganization()) {
             $this->ensureImageRegistryAuth();
 
@@ -206,6 +226,10 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function update()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            return $this->updateSharedParent($parent);
+        }
+
         $this->ensureImageRegistryAuth();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
@@ -226,6 +250,13 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         return true;
     }
 
+    // A shared-plan child has no release of its own (see AppInstance::sharedPlanParent()),
+    // so whatever happens to it is applied by rebuilding its parent's release.
+    protected function updateSharedParent(AppInstance $parent)
+    {
+        return ApplicationFacade::instance($parent)->connect('web')->update();
+    }
+
     // create()/update() return ['status' => 'failed', 'response' => <helm
     // error text>] rather than throwing (they're also used for polling via
     // isActive()), so callers that need the queue/task error-reporting
@@ -243,6 +274,17 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
 
     public function delete()
     {
+        if ($parent = $this->app_instance->sharedPlanParent()) {
+            // Mark deactivated first so the parent's chart-building excludes this
+            // child (e.g. B1ChurchChart filters children via notDeactivated())
+            // before it rebuilds its ingress host list -- there is no release of
+            // its own to remove, since this child never had one.
+            $this->app_instance->status = 'deactivated';
+            $this->app_instance->save();
+
+            return $this->updateSharedParent($parent);
+        }
+
         $this->updateRedirectDomains();
 
         $this->app_instance->refresh();
@@ -265,13 +307,27 @@ class KubernetesWebInterface implements AppInterface, OrganizationInterface
         $this->makeDomainMiddleware()->update();
     }
 
-    public function runJob(JobChart $job_chart)
+    public function runJob(JobChart $job_chart, ?string $namespace = null)
     {
-        return $this->makeJob()->create($job_chart);
+        $job = $this->makeJob();
+        $job->setNamespace($namespace);
+
+        return $job->create($job_chart);
     }
 
-    public function jobStatus(string $job_id)
+    public function jobStatus(string $job_id, ?string $namespace = null)
     {
-        return $this->makeJob()->status($job_id);
+        $job = $this->makeJob();
+        $job->setNamespace($namespace);
+
+        return $job->status($job_id);
+    }
+
+    public function jobLogs(string $job_id, ?string $namespace = null): ?string
+    {
+        $pod = $this->makePod();
+        $pod->setNamespace($namespace);
+
+        return $pod->logsForJob($job_id);
     }
 }

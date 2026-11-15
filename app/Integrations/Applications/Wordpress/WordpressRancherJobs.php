@@ -4,7 +4,7 @@ namespace App\Integrations\Applications\Wordpress;
 
 use App\Actions\Apps\ApplicationUpdateJob;
 use App\Actions\Apps\ApplicationUpgrade;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\WordpressJobChart;
 use App\Ldap\Actions\Dn;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;

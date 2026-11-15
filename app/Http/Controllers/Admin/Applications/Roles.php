@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin\Applications;
 
 use App\Application;
 use App\AppRole;
+use App\Enums\AccessType;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as AppFacade;
+use App\Updates\Detection\DefinitionChanges;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class Roles extends Controller
 {
@@ -112,7 +115,7 @@ class Roles extends Controller
             'slug' => 'required|string|max:100',
             'description' => 'required|string|max:500',
             'category' => 'required|string|max:100',
-            'access_type' => 'required|string|max:100',
+            'access_type' => ['required', 'string', 'max:100', Rule::enum(AccessType::class)],
         ]);
         $role = new AppRole;
         $role->application_id = $app->id;
@@ -123,6 +126,9 @@ class Roles extends Controller
         $role->category = $request->category;
         $role->access_type = $request->access_type;
         $role->status = 'enabled';
+        // No default in the table, and MariaDB checks the JSON column: left out, the insert is refused
+        $role->required_features = [];
+        $role->ignore_role = false;
 
         $role->save();
 
@@ -138,7 +144,7 @@ class Roles extends Controller
             'slug' => 'string|max:100|required',
             'description' => 'string|max:255|required',
             'category' => 'string|max:100|required',
-            'access_type' => 'string|max:100|required|in:disabled,minimal,basic,standard',
+            'access_type' => ['required', 'string', 'max:100', Rule::enum(AccessType::class)],
             'required_features' => 'nullable|array',
             'ignore_role' => 'boolean',
             'implied_roles' => 'nullable|array',
@@ -153,9 +159,11 @@ class Roles extends Controller
             $role->category = $request->category;
             $role->access_type = $request->access_type;
             $role->ignore_role = $request->ignore_role;
-            $role->required_features = $request->required_features;
+            $role->required_features = $request->required_features ?? [];
             $role->implied_roles()->sync($validatedData['implied_roles']);
             $role->save();
+            // Syncing the implied roles isn't a change to the role itself
+            app(DefinitionChanges::class)->record($role, 'updated', ['implied_roles']);
 
             return redirect('admin/apps/'.$app->slug.'/roles')->with('success', __('admin.applications.roles.updated', ['role' => $role->name]));
         }

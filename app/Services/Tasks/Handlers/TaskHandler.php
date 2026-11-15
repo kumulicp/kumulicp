@@ -2,7 +2,6 @@
 
 namespace App\Services\Tasks\Handlers;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Task;
 
@@ -20,5 +19,15 @@ interface TaskHandler
 
     public function compensate(Task $task): void;
 
-    public function retry(Task $task): ?Action;
+    /**
+     * Undoes what creating the task changed, when it is cancelled. A note for
+     * the task's history if something couldn't be undone.
+     */
+    public function cancelled(Task $task): ?string;
+
+    /**
+     * Gets the task ready to run again, after ActionService::retry() has put it
+     * back to pending.
+     */
+    public function reset(Task $task): void;
 }

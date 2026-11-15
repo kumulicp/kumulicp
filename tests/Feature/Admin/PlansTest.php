@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\AppRole;
+use App\AppVersion;
 use App\Organization;
 use App\Plan;
 use App\Support\Facades\AccountManager;
@@ -82,6 +85,45 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans', ['name' => 'Test', 'description' => 'Desc'])
             ->assertForbidden();
+    }
+
+    public function test_the_plan_editor_leaves_a_shared_apps_own_hidden_plan_out_of_the_app_plans_to_pick()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create();
+        $application = Application::factory()->create();
+        $offered = AppPlan::factory()->create(['application_id' => $application->id, 'name' => 'Member']);
+        $shared = AppPlan::factory()->create(['application_id' => $application->id, 'name' => 'Shared app', 'hidden' => true]);
+
+        $this->actingAs($user)
+            ->get("/admin/service/plans/{$plan->id}")
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Plans/PlanEdit')
+                ->where('apps', fn ($apps) => collect($apps)->firstWhere('id', $application->id)['plans'] === [['id' => $offered->id, 'name' => 'Member']])
+            );
+    }
+
+    public function test_an_admin_can_add_a_role_to_an_app()
+    {
+        $user = $this->adminUser();
+        $application = Application::factory()->create();
+
+        $this->actingAs($user)
+            ->post("/admin/apps/{$application->slug}/roles", [
+                'label' => 'System Manager',
+                'sub_name' => 'Manager',
+                'slug' => 'system_manager',
+                'description' => 'System Manager',
+                'category' => 'System',
+                'access_type' => 'standard',
+            ])
+            ->assertRedirect("admin/apps/{$application->slug}/roles");
+
+        $role = AppRole::where('application_id', $application->id)->where('slug', 'system_manager')->sole();
+
+        // The columns the form doesn't have, which the table has no defaults for
+        $this->assertSame([], $role->required_features);
+        $this->assertFalse($role->ignore_role);
     }
 
     public function test_unauthenticated_user_cannot_update_a_plan()
@@ -392,11 +434,34 @@ class PlansTest extends TestCase
         $this->assertNull($plan->setting('base.prices.USD.price_id'));
         $this->assertNull($plan->setting('standard.prices.USD.amount'));
         $this->assertNull($plan->setting('standard.max'));
-        $this->assertNull($plan->setting('basic.name'));
         $this->assertNull($plan->setting('storage.prices.USD.amount'));
         $this->assertNull($plan->setting('application.prices.USD.amount'));
         // Non-pricing fields are preserved
         $this->assertEquals('Constituent', $plan->setting('base.minimal_label'));
+        // Access types are named by the organization's plan whatever its type; its basic users live on its app plans
+        $this->assertEquals('Volunteer', $plan->setting('basic.name'));
+        $this->assertFalse($plan->setting('basic.enabled'));
+    }
+
+    public function test_update_saves_access_type_names_and_which_are_offered()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['type' => 'package']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}", $this->validUpdatePayload([
+                'type' => 'package',
+                'base' => ['standard_label' => 'Staff', 'minimal_label' => 'Member', 'minimal_enabled' => true],
+                'basic' => ['name' => 'Helper', 'enabled' => true, 'amount' => 5, 'max' => 20, 'storage' => 0.5],
+            ]))
+            ->assertRedirect('/admin/service/plans');
+
+        $plan->refresh();
+        $this->assertEquals('Staff', $plan->setting('base.standard_label'));
+        $this->assertEquals('Member', $plan->setting('base.minimal_label'));
+        $this->assertTrue($plan->setting('base.minimal_enabled'));
+        $this->assertEquals('Helper', $plan->setting('basic.name'));
+        $this->assertTrue($plan->setting('basic.enabled'));
     }
 
     // ---------------------------------------------------------------------------
@@ -600,6 +665,93 @@ class PlansTest extends TestCase
     }
 
     // ---------------------------------------------------------------------------
+    // Removing app plans that subscribers still use
+    // ---------------------------------------------------------------------------
+
+    /**
+     * A Pay per App plan offering two plans of one app, with the seeded organization
+     * subscribed to it and running an instance on $instance_on ('kept' or 'removed').
+     *
+     * @return array{plan: Plan, app: Application, kept: AppPlan, removed: AppPlan}
+     */
+    private function payPerAppPlanWithInstance(string $instance_on): array
+    {
+        $app = Application::factory()->create(['slug' => 'in_use_app', 'name' => 'In Use App', 'enabled' => true]);
+        [$kept, $removed] = AppPlan::factory()->count(2)->create(['application_id' => $app->id])->all();
+        $plan = Plan::factory()->create([
+            'type' => 'app',
+            'app_plans' => [$app->slug => ['max' => 1, 'plans' => [$kept->id, $removed->id]]],
+        ]);
+
+        $organization = Organization::find(1);
+        $organization->plan_id = $plan->id;
+        $organization->save();
+
+        AppInstance::factory()->create([
+            'organization_id' => $organization->id,
+            'application_id' => $app->id,
+            'version_id' => AppVersion::factory()->create(['application_id' => $app->id])->id,
+            'plan_id' => $instance_on === 'kept' ? $kept->id : $removed->id,
+        ]);
+
+        return ['plan' => $plan, 'app' => $app, 'kept' => $kept, 'removed' => $removed];
+    }
+
+    public function test_pay_per_app_plan_cannot_drop_an_app_plan_that_an_instance_still_uses()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('removed');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [$setup['app']->slug => ['max' => 1, 'plans' => [$setup['kept']->id]]],
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(
+            [$setup['kept']->id, $setup['removed']->id],
+            $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']
+        );
+    }
+
+    public function test_pay_per_app_plan_cannot_drop_an_app_whose_plans_are_in_use()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('removed');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [],
+            ]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertEquals(
+            [$setup['kept']->id, $setup['removed']->id],
+            $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']
+        );
+    }
+
+    public function test_pay_per_app_plan_can_drop_an_app_plan_that_no_instance_uses()
+    {
+        $user = $this->adminUser();
+        $setup = $this->payPerAppPlanWithInstance('kept');
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$setup['plan']->id}", $this->validUpdatePayload([
+                'type' => 'app',
+                'app_plans' => [$setup['app']->slug => ['max' => 1, 'plans' => [$setup['kept']->id]]],
+            ]))
+            ->assertRedirect('/admin/service/plans')
+            ->assertSessionMissing('error');
+
+        $this->assertEquals([$setup['kept']->id], $setup['plan']->refresh()->app_plans[$setup['app']->slug]['plans']);
+    }
+
+    // ---------------------------------------------------------------------------
     // Update order tests
     // ---------------------------------------------------------------------------
 
@@ -634,5 +786,81 @@ class PlansTest extends TestCase
         $this->actingAs($user)
             ->post('/admin/service/plans/update_order', ['plans' => []])
             ->assertRedirect('/admin/service/plans');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Clone tests
+    // ---------------------------------------------------------------------------
+
+    public function test_clone_copies_a_plan_under_a_new_name()
+    {
+        $user = $this->adminUser();
+
+        $plan = Plan::factory()->create([
+            'name' => 'Original Plan',
+            'description' => 'Original description',
+            'type' => 'package',
+            'org_type' => 'nonprofit',
+            'is_default' => true,
+            'archive' => true,
+            'status' => 'available',
+            'display_order' => 1,
+            'payment_enabled' => true,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan']);
+
+        $clone = Plan::where('name', 'Cloned Plan')->firstOrFail();
+        $response->assertRedirect("/admin/service/plans/{$clone->id}");
+
+        $this->assertNotEquals($plan->id, $clone->id);
+        $this->assertSame('Original description', $clone->description);
+        $this->assertSame('package', $clone->type);
+        $this->assertSame('nonprofit', $clone->org_type);
+        $this->assertTrue($clone->payment_enabled);
+        $this->assertEquals($plan->settings, $clone->settings);
+        $this->assertEquals($plan->app_plans, $clone->app_plans);
+
+        // The clone is a fresh draft that doesn't take over from the original
+        $this->assertFalse($clone->is_default);
+        $this->assertFalse($clone->archive);
+        $this->assertSame('hidden', $clone->status);
+        $this->assertGreaterThan($plan->display_order, $clone->display_order);
+
+        // The original is untouched
+        $plan->refresh();
+        $this->assertSame('Original Plan', $plan->name);
+        $this->assertTrue($plan->is_default);
+    }
+
+    public function test_clone_requires_a_name()
+    {
+        $user = $this->adminUser();
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+        $count = Plan::count();
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", [])
+            ->assertSessionHasErrors('name');
+
+        $this->assertSame($count, Plan::count());
+    }
+
+    public function test_non_admin_user_cannot_clone_a_plan()
+    {
+        $support = new TestSupports;
+        $support->seed();
+
+        $user = User::find(1);
+        AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
+
+        $plan = Plan::factory()->create(['name' => 'Original Plan']);
+
+        $this->actingAs($user)
+            ->post("/admin/service/plans/{$plan->id}/clone", ['name' => 'Cloned Plan'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('plans', ['name' => 'Cloned Plan']);
     }
 }

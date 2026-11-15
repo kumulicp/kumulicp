@@ -2,8 +2,8 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\API;
 
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\MiddlewareChart;
 use App\Integrations\ServerManagers\Kubernetes\Kubernetes;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\MiddlewareChart;
 use Illuminate\Support\Facades\Log;
 
 /**

@@ -6,7 +6,7 @@ use App\Contracts\AccountManager\UserInterface;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\EmailContract;
 use App\Integrations\ServerManagers\DockerMailServer\MailserverJobs;
-use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
+use App\Integrations\ServerManagers\Kubernetes\Actions\RunJob;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Domain;
 use App\Ldap\Models\Email;

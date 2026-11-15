@@ -3,6 +3,7 @@
 namespace App\Services\Tasks;
 
 use App\Actions\ActionResult;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\Tasks\PermanentFailure;
 use App\Exceptions\Tasks\RetryableException;
@@ -11,6 +12,7 @@ use App\Services\Tasks\Handlers\TaskHandler;
 use App\Support\Facades\Organization;
 use App\Task;
 use App\TaskEvent;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -55,19 +57,19 @@ class TaskRunner
             Organization::setOrganization($task->organization);
             $this->execute($task);
         } catch (WaitingException $e) {
-            $this->retryLater($task, $e->getMessage(), $e->retry_after ?? self::WAIT_SECONDS, 'waiting', 'waiting');
+            $this->retryLater($task, $e->getMessage(), $e->retry_after ?? self::WAIT_SECONDS, TaskErrorCode::WAITING, 'waiting');
         } catch (RetryableException $e) {
-            $this->retryLater($task, $e->getMessage(), $this->backoff($task), 'connection_failed', 'retry_scheduled');
+            $this->retryLater($task, $e->getMessage(), $this->backoff($task), TaskErrorCode::CONNECTION_FAILED, 'retry_scheduled');
 
             report($e);
         } catch (PermanentFailure $e) {
-            $this->failTask($task, $e->getMessage(), 'permanent', $e);
+            $this->failTask($task, $e->getMessage(), TaskErrorCode::PERMANENT, $e);
         } catch (Throwable $e) {
             if ($task->attempts >= $this->maxAttempts($task)) {
                 throw $e;
             }
 
-            $this->retryLater($task, $e->getMessage(), $this->backoff($task), 'error', 'retry_scheduled');
+            $this->retryLater($task, $e->getMessage(), $this->backoff($task), TaskErrorCode::ERROR, 'retry_scheduled');
 
             report($e);
         } finally {
@@ -129,7 +131,7 @@ class TaskRunner
 
         $blocked = $task->transition(TaskStatus::BLOCKED, $from, [
             'blocked_from' => $from->value,
-            'error_code' => 'dependency_failed',
+            'error_code' => TaskErrorCode::DEPENDENCY_FAILED->value,
             'error_message' => $message,
         ]);
 
@@ -164,6 +166,61 @@ class TaskRunner
     }
 
     /**
+     * The ids of the tasks waiting for any of $tasks, to hand to wake() once
+     * those are deleted. Taken beforehand because deleting a task takes its
+     * dependency rows with it: some actions delete their task (and their
+     * siblings) to say they have finished, which is as good as completing.
+     *
+     * @param  iterable<int, Task|int>  $tasks
+     * @return array<int, int>
+     */
+    public function dependentsOf(iterable $tasks): array
+    {
+        $ids = [];
+        foreach ($tasks as $task) {
+            $ids[] = (int) ($task instanceof Task ? $task->id : $task);
+        }
+
+        return DB::table('task_dependencies')
+            ->whereIn('depends_on_task_id', $ids)
+            ->pluck('task_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->diff($ids)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The tasks that were waiting for some that have since been deleted needn't
+     * wait for the next scheduled pass to find out: wakeDependents() for tasks
+     * that no longer exist. Each one is polled, or started, only if what it
+     * still waits for allows it.
+     *
+     * @param  array<int, int>  $task_ids  See dependentsOf()
+     */
+    public function wake(array $task_ids): void
+    {
+        $dispatcher = app(TaskDispatcher::class);
+
+        foreach (Task::whereIn('id', $task_ids)->get() as $task) {
+            try {
+                if (in_array($task->status, [TaskStatus::PENDING, TaskStatus::READY], true)) {
+                    if (app('actions')->checkPrerequisites($task)->passed) {
+                        $dispatcher->queue($task);
+                    }
+                } elseif ($task->status === TaskStatus::IN_PROGRESS && Task::whereKey($task->id)->notClaimed()->exists()) {
+                    // Not one that is still being run: complete() would race run()
+                    $this->tryPoll($task);
+                }
+            } catch (Throwable $e) {
+                // What was deleted is gone either way: the scheduled pass will pick this one up
+                report($e);
+            }
+        }
+    }
+
+    /**
      * poll() for the scheduled pass: a task that can't be polled right now stays
      * in progress, with the reason, to be polled again next time.
      */
@@ -172,7 +229,7 @@ class TaskRunner
         try {
             $this->poll($task);
         } catch (PermanentFailure $e) {
-            $this->failTask($task, $e->getMessage(), 'permanent', $e);
+            $this->failTask($task, $e->getMessage(), TaskErrorCode::PERMANENT, $e);
         } catch (Throwable $e) {
             if (! $e instanceof WaitingException) {
                 report($e);
@@ -182,9 +239,9 @@ class TaskRunner
             $changed = $task->error_message !== $message;
 
             $task->error_code = match (true) {
-                $e instanceof WaitingException => 'waiting',
-                $e instanceof RetryableException => 'connection_failed',
-                default => 'failed_complete',
+                $e instanceof WaitingException => TaskErrorCode::WAITING->value,
+                $e instanceof RetryableException => TaskErrorCode::CONNECTION_FAILED->value,
+                default => TaskErrorCode::FAILED_COMPLETE->value,
             };
             $task->error_message = $message;
             $task->save();
@@ -210,7 +267,7 @@ class TaskRunner
      */
     public function fail(Task $task, Throwable $e): void
     {
-        $this->failTask($task, $e->getMessage(), 'throwable', $e);
+        $this->failTask($task, $e->getMessage(), TaskErrorCode::THROWABLE, $e);
         $task->release();
     }
 
@@ -256,11 +313,11 @@ class TaskRunner
                 break;
 
             case ActionResult::RETRY_LATER:
-                $this->retryLater($task, $result->reason, $result->seconds ?? $this->backoff($task), 'waiting', 'retry_scheduled');
+                $this->retryLater($task, $result->reason, $result->seconds ?? $this->backoff($task), TaskErrorCode::WAITING, 'retry_scheduled');
                 break;
 
             case ActionResult::FAIL:
-                $this->failTask($task, $result->reason ?? '', $result->code ?? 'failed');
+                $this->failTask($task, $result->reason ?? '', $result->code ?? TaskErrorCode::FAILED);
                 break;
         }
 
@@ -273,7 +330,7 @@ class TaskRunner
      * Back to pending, not to run again before $seconds have passed. Only moves
      * a task that is still open: one the action has already failed stays failed.
      */
-    private function retryLater(Task $task, ?string $reason, int $seconds, string $code, string $event): void
+    private function retryLater(Task $task, ?string $reason, int $seconds, TaskErrorCode|string $code, string $event): void
     {
         $from = $task->status;
 
@@ -282,7 +339,7 @@ class TaskRunner
             [TaskStatus::PENDING, TaskStatus::READY, TaskStatus::QUEUED, TaskStatus::IN_PROGRESS],
             [
                 'job_id' => 0,
-                'error_code' => $code,
+                'error_code' => TaskErrorCode::valueOf($code),
                 'error_message' => $reason,
                 'next_attempt_at' => now()->addSeconds($seconds),
             ],
@@ -296,8 +353,12 @@ class TaskRunner
     /**
      * Rolls the task back and marks it failed.
      */
-    public function failTask(Task $task, string $reason, string $code, ?Throwable $e = null): void
+    public function failTask(Task $task, string $reason, TaskErrorCode|string $code, ?Throwable $e = null): void
     {
+        // Set before rolling back: compensate() handlers read the reason from the task
+        $task->error_message = $reason;
+        $code = TaskErrorCode::valueOf($code);
+
         try {
             $this->compensate($task);
         } catch (Throwable $compensating) {

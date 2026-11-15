@@ -97,6 +97,16 @@ import { CURRENCIES } from '@/constants/currencies'
             :error-messages="$page.props.errors.secondary_color"
           />
         </div>
+        <div id="textSecondaryColor">
+          <va-color-input v-model="form.text_secondary_color"
+            :label="$t('settings.textSecondaryColor')"
+            class="mb-3"
+            immediateValidation
+            @update:modelValue="changeColors"
+            :error="$page.props.errors.text_secondary_color"
+            :error-messages="$page.props.errors.text_secondary_color"
+          />
+        </div>
       </template>
     </AdminSettings>
     <va-list-separator class="my-1" fit />
@@ -159,10 +169,12 @@ export default {
     const { getColors } = useColors()
     const primary = getColors().primary
     const secondary = getColors().secondary
+    const textSecondary = getColors().textSecondary ?? '#64748b'
 
     return {
       defaultPrimaryColor: primary,
       defaultSecondaryColor: secondary,
+      defaultTextSecondaryColor: textSecondary,
       currencyOptions: CURRENCIES.map(c => ({ value: c.code, text: `${c.code} — ${c.label}` })),
       localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       form: useForm({
@@ -172,6 +184,7 @@ export default {
         welcome_page: this.settings.welcome_page,
         primary_color: this.settings.primary_color,
         secondary_color: this.settings.secondary_color,
+        text_secondary_color: this.settings.text_secondary_color,
         support_email: this.settings.support_email,
         error_email: this.settings.error_email,
         default_currency: this.settings.default_currency ?? 'USD',
@@ -186,7 +199,8 @@ export default {
 
       setColors({
         primary: this.form.primary_color && this.form.primary_color != '' ? this.form.primary_color : this.defaultPrimaryColor,
-        secondary: this.form.secondary_color && this.form.secondary_color != '' ? this.form.secondary_color : this.defaultSecondaryColor
+        secondary: this.form.secondary_color && this.form.secondary_color != '' ? this.form.secondary_color : this.defaultSecondaryColor,
+        textSecondary: this.form.text_secondary_color && this.form.text_secondary_color != '' ? this.form.text_secondary_color : this.defaultTextSecondaryColor
       })
     }
   }

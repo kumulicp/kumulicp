@@ -23,7 +23,10 @@ class AppRoleFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::lower($name),
+            'label' => $name,
             'description' => $name,
+            'ignore_role' => false,
+            'required_features' => [],
             'category' => 'Default',
             'access_type' => 'minimal',
             'status' => 'enabled',

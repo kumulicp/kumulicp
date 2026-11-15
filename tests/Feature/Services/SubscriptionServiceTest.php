@@ -114,3 +114,20 @@ it('cascades a scoped storage update to affected apps when the base plan changes
             && $event->user_id === null;
     });
 });
+
+it('lists the app instance plans when the subscription is served from the cache', function () {
+    $support = new TestSupports;
+    $support->seed();
+    $support->activateDemoApp();
+
+    $organization = Organization::find(1);
+    OrganizationFacade::setOrganization($organization);
+
+    // The first load fills the cache, the second is a cache hit that skips building the plans
+    $first = (new SubscriptionService($organization))->all();
+    $cached = (new SubscriptionService($organization))->all();
+
+    expect($first->appInstancePlans())->not->toBeEmpty();
+    expect($cached->appInstancePlans())->toHaveCount($first->appInstancePlans()->count());
+    expect($cached->appInstancePlans()->first())->toBeInstanceOf(AppInstancePlanService::class);
+});

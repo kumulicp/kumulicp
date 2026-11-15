@@ -4,7 +4,7 @@ namespace App\Support\VersionUpdates;
 
 use App\AppInstance;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Support\Facades\Application;
 use Illuminate\Support\Facades\DB;
 use Throwable;

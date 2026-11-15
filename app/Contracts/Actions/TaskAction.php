@@ -2,7 +2,6 @@
 
 namespace App\Contracts\Actions;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Task;
 
@@ -31,7 +30,20 @@ interface TaskAction
     public static function compensate(Task $task): void;
 
     /**
-     * A fresh action for retrying the task, or null to retry it as it is.
+     * Called when an admin cancels the task, after compensate(): undo what
+     * creating the task changed (an app marked "updating", say). Returns a note
+     * for the task's history when something couldn't be undone, or null.
      */
-    public static function retry(Task $task): ?Action;
+    public static function cancelled(Task $task): ?string;
+
+    /**
+     * Gets the task ready to run again when it is retried. By then the runner has
+     * put it back to pending and cleared its claims, steps and the tasks it waited
+     * on: this is for what the action itself keeps. Drop the values a run left
+     * behind (a job id, say) from $task->custom_values, and repeat what creating
+     * the task did to the world (an app marked "updating") that cancelling or a
+     * rollback undid. The runner saves the task afterwards. An exception fails
+     * the task.
+     */
+    public static function reset(Task $task): void;
 }

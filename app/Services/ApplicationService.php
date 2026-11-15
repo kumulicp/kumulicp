@@ -7,6 +7,7 @@ use App\Application;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\Enums\ApplicationSource;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneProfile;
 use App\Integrations\Applications\GenericAppProfile;
@@ -133,14 +134,18 @@ class ApplicationService
         if (count($options) > 0) {
             foreach ($options as $name => $option) {
                 if ($plan) {
+                    // The default only applies until the plan has saved a value. A saved blank is
+                    // intentional, so it must not be replaced by the default again.
+                    $hasSavedValue = Arr::has($plan->settings ?? [], "configurations.$name");
+
                     if ($raw && $option['type'] == 'json') {
                         $options[$name]['value'] = json_encode($plan->setting("configurations.$name") ?? $option['default'] ?? []);
                     } elseif ($raw && $option['type'] == 'password') {
                         $options[$name]['value'] = '';
-                    } elseif ($raw && $option['type'] === 'enum') {
-                        $options[$name]['value'] = $plan->setting("configurations.$name") ?? $option['default'] ?? null;
+                    } elseif ($hasSavedValue) {
+                        $options[$name]['value'] = $plan->setting("configurations.$name");
                     } else {
-                        $options[$name]['value'] = $plan->setting("configurations.$name") ?? $option['default'] ?? null;
+                        $options[$name]['value'] = $option['default'] ?? null;
                     }
                 }
             }
@@ -241,6 +246,19 @@ class ApplicationService
         return $configs;
     }
 
+    /**
+     * Gives an instance that was made before its plan was configured (a shared
+     * app, which is added first and activated once its plan is set up) fresh
+     * settings: whatever it held is dropped, and it takes the plan's persistent
+     * configurations as they are now. Not for one that is already deployed:
+     * persistent means they stay as they were when it was activated.
+     */
+    public function resetSettings(AppInstance $app_instance): void
+    {
+        $app_instance->settings = null;
+        $app_instance->updateSetting('configurations', $this->persistentConfigurations($app_instance->application, $app_instance->plan));
+    }
+
     public function all()
     {
         $db_applications = Application::with('roles')->get();
@@ -309,6 +327,7 @@ class ApplicationService
         if (Arr::has($this->applications, $app_name)) {
             $application = new Application;
             $application->slug = $app_name;
+            $application->source = ApplicationSource::Profile;
             $application->name = Str::headline($app_name);
             $application->short_description = '';
             $application->description = '';
@@ -319,7 +338,7 @@ class ApplicationService
         }
     }
 
-    public function activate(Organization $organization, Application $application, AppVersion $version, AppPlan $plan, ?AppInstance $parent_app = null, ?string $label = null, ?OrgSubdomain $domain = null)
+    public function activate(Organization $organization, Application $application, AppVersion $version, AppPlan $plan, ?AppInstance $parent_app = null, ?string $label = null, ?OrgSubdomain $domain = null, bool $with_configurations = true)
     {
         $app_instance = new AppInstance;
         $app_instance->name = $application->slug.'-'.Str::lower(Str::random(5));
@@ -343,7 +362,10 @@ class ApplicationService
         if ($parent_app) {
             $app_instance->parent()->associate($parent_app);
         }
-        $app_instance->updateSetting('configurations', $this->persistentConfigurations($application, $plan));
+        // A shared app that is only being registered takes them when it is activated
+        if ($with_configurations) {
+            $app_instance->updateSetting('configurations', $this->persistentConfigurations($application, $plan));
+        }
 
         if ($domain) {
             $app_instance->primary_domain()->associate($domain);

@@ -2,19 +2,20 @@
 
 namespace App\Actions\Apps;
 
-use App\Actions\Action;
+use App\Actions\ActionResult;
+use App\Actions\NativeAction;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\Actions\Prerequisites;
 use App\AppInstance;
-use App\Enums\TaskStatus;
 use App\Jobs\Applications\RemoveLDAPGroups;
 use App\Services\SubscriptionService;
+use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
 
-class ApplicationDelete extends Action
+class ApplicationDelete extends NativeAction
 {
     public $slug = 'application_delete';
 
@@ -22,19 +23,10 @@ class ApplicationDelete extends Action
 
     public function __construct(AppInstance $app_instance, ?string $start_time = null, ?string $end_time = null)
     {
-        // Other instances' parent_id points here (shared-app children, or a
-        // type-level "same org" parent) -- deleting it out from under them
-        // orphans the FK and breaks anything that assumes a shared child's
-        // ->parent still resolves (e.g. LdapSupport::getAppRoleGroup()).
-        if ($app_instance->children()->notDeactivated()->exists()) {
-            throw new \Exception(__('messages.exception.shared_app_has_children', ['app' => $app_instance->label]));
-        }
+        self::guardNoChildren($app_instance);
 
         $this->organization = $app_instance->organization;
         $this->app_instance = Application::instance($app_instance);
-
-        $this->app_instance->status = 'deleting';
-        $this->app_instance->save();
 
         if ($start_time) {
             $prereq = new Prerequisites;
@@ -47,13 +39,39 @@ class ApplicationDelete extends Action
         $this->background = 1;
     }
 
-    public static function run(Task $task)
+    /**
+     * Other instances' parent_id points here (shared-app children, or a
+     * type-level "same org" parent) -- deleting it out from under them
+     * orphans the FK and breaks anything that assumes a shared child's
+     * ->parent still resolves (e.g. LdapSupport::getAppRoleGroup()).
+     */
+    private static function guardNoChildren(AppInstance $app_instance): void
+    {
+        if ($app_instance->children()->notDeactivated()->exists()) {
+            throw new \Exception(__('messages.exception.shared_app_has_children', ['app' => $app_instance->label]));
+        }
+    }
+
+    // Once the task exists
+    public function onCreate(Task $task)
+    {
+        self::begin($task);
+    }
+
+    private static function begin(Task $task): void
+    {
+        $task->app_instance->status = 'deleting';
+        $task->app_instance->save();
+    }
+
+    public static function handle(Task $task): ActionResult
     {
         $app_instance = Application::instance($task->app_instance);
-        $parent_app = $app_instance->application->parent_app;
-        $app_delete = new self($task->app_instance);
+        $result = ActionResult::wait();
         $app_profile = Application::profile($app_instance->application->slug);
-        RemoveLDAPGroups::dispatch($task->app_instance);
+        // Not queued: the app is deleted as soon as it is gone from its server, and a
+        // queued job would find the instance already deleted and never remove the groups
+        RemoveLDAPGroups::dispatchSync($task->app_instance);
 
         // A shared child without multisite has no release/site of its own
         // to delete -- deleting the LDAP groups above is all it needs.
@@ -69,7 +87,7 @@ class ApplicationDelete extends Action
             } elseif ($app_profile->activationType($app_instance->get()) === 'job') {  // Delete via job
                 if ($job = ActionFacade::execute(new ApplicationUpdateJob($app_instance->app_instance, 'deactivate'), $task)) {
                     // Need to wait until this new job task is complete
-                    $app_delete->waitFor($job);
+                    $result = $result->waitingFor($job);
                 }
             }
         }
@@ -108,33 +126,60 @@ class ApplicationDelete extends Action
             }
         }
 
-        return $app_delete;
+        return $result;
     }
 
-    public static function retry(Task $task)
+    /**
+     * An app whose delete hadn't started goes back to active. One that had is
+     * partly deleted: it stays as it is.
+     */
+    public static function cancelled(Task $task): ?string
     {
-        $task->status = TaskStatus::READY;
-        $task->save();
+        $app_instance = $task->app_instance;
 
-        return new self($task->app_instance);
+        if (! $app_instance || $app_instance->status !== 'deleting') {
+            return null;
+        }
+
+        if ($task->hasStarted()) {
+            return __('messages.action.cancelled_delete_started');
+        }
+
+        $app_instance->status = 'active';
+        $app_instance->save();
+
+        return null;
     }
 
-    public static function complete(Task $task)
+    public static function reset(Task $task): void
+    {
+        // Apps may have been given children since it failed
+        self::guardNoChildren($task->app_instance);
+
+        $task->custom_values = [];
+
+        self::begin($task);
+    }
+
+    public static function poll(Task $task): ActionResult
     {
         $app_instance = Application::instance($task->app_instance);
         $complete = false;
 
         if (! $app_instance->usesOwnResources()) {
             // A shared child without multisite had nothing of its own
-            // deleted in run() above beyond its LDAP groups -- nothing left
+            // deleted in handle() above beyond its LDAP groups -- nothing left
             // to wait on.
+            $complete = true;
+        } elseif (Application::profile($app_instance->application->slug)->activationType($app_instance->get()) === 'job') {
+            // A site deleted by a job inside the hub's release (e.g. ERPNext):
+            // the job is what this waited for and it is complete or gone by
+            // the time this is polled. The release itself stays deployed, so it
+            // can't say whether the site is gone.
             $complete = true;
         } else {
             try {
-                // connect('web')->isActive() already resolves to the
-                // parent's chart/job status for a 'job' activation type
-                // (see RancherWebInterface), so a multisite child (e.g.
-                // ERPNext) polls its own deactivate job correctly here too.
+                // connect('web')->isActive() reports the app's own release
                 $complete = ! $app_instance->connect('web')->isActive();
             } catch (\Throwable $e) {
                 // No web server assigned -- nothing to wait on.
@@ -144,6 +189,11 @@ class ApplicationDelete extends Action
 
         if ($complete) {
             $organization = $task->organization;
+
+            // Deleting the app's tasks (this one included) is how it says it has
+            // finished: the tasks waiting for them are told once it is all gone
+            $runner = app(TaskRunner::class);
+            $waiting = $runner->dependentsOf($app_instance->tasks()->pluck('id')->push($task->id));
 
             AccountManager::users()->updateAllUsersAccessType();
 
@@ -163,6 +213,12 @@ class ApplicationDelete extends Action
 
             $subscription = (new SubscriptionService($organization))->all();
             ActionFacade::execute(new SubscriptionUpdate($organization, $subscription), background: true, delay: true);
+
+            $runner->wake($waiting);
         }
+
+        // Done: the app's tasks, this one included, are deleted with it, so
+        // there is no task left to mark complete
+        return ActionResult::wait();
     }
 }

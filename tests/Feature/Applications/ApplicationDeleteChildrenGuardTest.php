@@ -2,6 +2,8 @@
 
 use App\Actions\Apps\ApplicationDelete;
 use App\Organization;
+use App\Support\Facades\Action;
+use Illuminate\Support\Facades\Queue;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
@@ -56,6 +58,8 @@ it('allows deleting a hub whose only child is already deactivating', function ()
     $this->makeChildInstance($hub, 'deactivating-child', 'deactivating');
 
     expect(fn () => new ApplicationDelete($hub))->not->toThrow(Exception::class);
+    Queue::fake();
+    Action::execute(new ApplicationDelete($hub));
     $hub->refresh();
     expect($hub->status)->toBe('deleting');
 });
@@ -65,6 +69,8 @@ it('allows deleting a hub whose only child is already deactivated', function () 
     $this->makeChildInstance($hub, 'deactivated-child', 'deactivated');
 
     expect(fn () => new ApplicationDelete($hub))->not->toThrow(Exception::class);
+    Queue::fake();
+    Action::execute(new ApplicationDelete($hub));
     $hub->refresh();
     expect($hub->status)->toBe('deleting');
 });

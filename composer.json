@@ -1,7 +1,6 @@
 {
     "require": {
         "php": "^8.4",
-        "api-ecosystem-for-laravel/dingo-api": "^4.2.0",
         "asm89/stack-cors": "^2.0",
         "composer/installers": "^2.0",
         "directorytree/ldaprecord": "^3.3.0",
@@ -10,7 +9,7 @@
         "firebase/php-jwt": "^7.0",
         "guzzlehttp/guzzle": "^7.3",
         "inertiajs/inertia-laravel": "^3.0",
-        "laravel/cashier": "^15.4",
+        "laravel/cashier": "^16.9",
         "laravel/framework": "^13.0",
         "laravel/octane": "^2.19",
         "laravel/socialite": "^5.16",
@@ -22,8 +21,9 @@
         "offload-project/laravel-toggle": "*",
         "socialiteproviders/manager": "^4.9",
         "spatie/laravel-backup": "^10.0",
-        "spatie/laravel-permission": "^6.9",
+        "spatie/laravel-permission": "^8.3",
         "spatie/laravel-uptime-monitor": "^4.5",
+        "symfony/yaml": "^8.1",
         "tightenco/ziggy": "^2.3",
         "unisharp/laravel-filemanager": "^2.12"
     },

@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Account\Application;
 
-use App\Actions\Apps\ApplicationUpdate;
-use App\Actions\Apps\ApplicationUpgrade;
-use App\Actions\Apps\ProcessCustomizations;
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppInstance;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
 use App\Support\Facades\Billing;
@@ -141,19 +139,24 @@ class Plans extends Controller
 
         $application = Application::instance($app);
         $application->features()->update($customizations);
-        $application->updateCustomizations($customizations);
 
-        $subscription_update = Action::execute(new SubscriptionUpdate($organization, $subscription));
+        // The plan is changed whatever state the app is in, but putting the change into the app (upgrade, update,
+        // customizations) needs an app that answers: for one that doesn't it is written down and done once it is active
+        $pending = app(PendingAppChanges::class);
+        $deferred = $pending->defer($app, ['plan_change' => ['customizations' => $customizations]]);
 
-        $app_profile = Application::get($app->application->slug);
-
-        if (Arr::get($app_profile, 'activation_type', 'chart') === 'chart') {
-            Action::execute(new ApplicationUpgrade($application->get(), $application->get()->version), $subscription_update);
+        if (! $deferred) {
+            $application->updateCustomizations($customizations);
         }
 
-        Action::execute(new ApplicationUpdate($application->get()), $subscription_update);
+        // Billing and the rest of the subscription don't wait for the app
+        $subscription_update = Action::execute(new SubscriptionUpdate($organization, $subscription));
 
-        Action::execute(new ProcessCustomizations($application->get(), $customizations), $subscription_update, delay: true);
+        if ($deferred) {
+            return redirect('/subscription/plans')->with('success', __('organization.plan.updated_waiting', ['app' => $app->label]));
+        }
+
+        $pending->queuePlanChange($application->get(), $customizations, $subscription_update);
 
         return redirect('/subscription/plans')->with('success', __('organization.plan.updated'));
     }

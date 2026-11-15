@@ -2,7 +2,6 @@
 
 namespace App\Services\Tasks\Handlers;
 
-use App\Actions\Action;
 use App\Actions\ActionResult;
 use App\Contracts\Actions\TaskAction;
 use App\Task;
@@ -38,9 +37,20 @@ class NativeHandler implements TaskHandler
         ($this->class)::compensate($task);
     }
 
-    public function retry(Task $task): ?Action
+    public function cancelled(Task $task): ?string
     {
-        return ($this->class)::retry($task);
+        return ($this->class)::cancelled($task);
+    }
+
+    public function reset(Task $task): void
+    {
+        $task->attempts++;
+        $task->error_message = '';
+        $task->error_code = null;
+
+        ($this->class)::reset($task);
+
+        $task->save();
     }
 
     private function result(string $method, mixed $result): ActionResult

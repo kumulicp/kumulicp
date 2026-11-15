@@ -30,7 +30,7 @@ import { router } from '@inertiajs/vue3'
     </table>
   </va-scroll-container>
 
-  <va-pagination v-if="meta.total > pageSize" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="pages" input @update:modelValue="changePage" />
+  <va-pagination v-if="meta.pages > 1" class="mt-3 mb-3 justify-center" v-model="curPageValue" :pages="meta.pages" input @update:modelValue="changePage" />
 </template>
 
 <script lang="ts">
@@ -45,15 +45,21 @@ export default {
   },
   data () {
     return {
-      curPageValue: this.meta.page,
-      pages: this.meta.pages,
-      pageSize: 30
+      curPageValue: this.meta.page
+    }
+  },
+  watch: {
+    // Inertia reuses this component between visits (e.g. the Logs tab), so keep in sync with the server.
+    'meta.page' (page) {
+      this.curPageValue = page
     }
   },
   methods: {
-    changePage () {
-      const url = location.protocol + '//' + location.host + location.pathname
-      router.visit(url + '?page=' + this.curPageValue, { method: 'get', preserveScroll: true })
+    changePage (page) {
+      if (page === this.meta.page) {
+        return
+      }
+      router.get(location.pathname, { page }, { preserveScroll: true, preserveState: true })
     }
   }
 }

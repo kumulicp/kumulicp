@@ -17,14 +17,17 @@ describe('User Permissions Update', function () {
         (new TestSupports)->cleanLdap();
     });
 
-    it('assigns a standard role, shows the access-type chip, and presents the confirm modal', function () {
+    it('assigns a standard role on a paid app, and the confirm modal says what access changes', function () {
+        $plan = $this->demoInstance->plan;
+        $plan->payment_enabled = true;
+        $plan->save();
         $id = $this->demoInstance->id;
 
         $page = visit('/users/testing1/permissions')
             ->assertPathIs('/users/testing1/permissions')
             ->assertSee('test user1')
             ->assertSee('Demo App')
-            ->assertSee('Update Permissions');
+            ->assertSee('Change Permissions');
 
         $page->click("#open-permissions-{$id}")
             ->click('#switch-0-demo_role')
@@ -33,7 +36,8 @@ describe('User Permissions Update', function () {
 
         $page->click('#submit')
             ->assertSee('Confirm Permission Changes')
-            ->assertSee('Access changed');
+            ->assertSee('Access changed')
+            ->assertSee('access for Demo App');
 
         $page->click('#modal-confirm')
             ->assertPathIs('/users/testing1');
@@ -42,6 +46,7 @@ describe('User Permissions Update', function () {
     it('assigns a basic role and the confirm modal lists the correct access change', function () {
         $plan = AppPlan::factory()->create([
             'application_id' => $this->demoInstance->application_id,
+            'payment_enabled' => true,
             'settings' => [
                 'basic' => ['max' => 2, 'name' => 'Basic Member', 'price' => 0, 'amount' => 0, 'storage' => 0, 'price_id' => null],
                 'standard' => ['max' => 2, 'price' => 0, 'storage' => 0, 'price_id' => null],
@@ -49,6 +54,11 @@ describe('User Permissions Update', function () {
         ]);
         $this->demoInstance->plan_id = $plan->id;
         $this->demoInstance->save();
+
+        // Access types are named by the organization's plan, not the app plan
+        $orgPlan = $this->demoInstance->organization->plan;
+        $orgPlan->updateSettings(['basic.name' => 'Basic Member']);
+        $orgPlan->save();
 
         $id = $this->demoInstance->id;
 
@@ -80,8 +90,6 @@ describe('User Permissions Update', function () {
             ->click('#modal-ok')
             ->assertSee('Organization Demo')
             ->click('#submit')
-            ->assertSee('Confirm Permission Changes')
-            ->click('#modal-confirm')
             ->assertPathIs('/users/testing1');
     });
 
@@ -96,8 +104,19 @@ describe('User Permissions Update', function () {
         $page->click('#modal-ok')
             ->assertSee('Control Panel Allowed')
             ->click('#submit')
-            ->assertSee('Confirm Permission Changes')
-            ->click('#modal-confirm')
+            ->assertPathIs('/users/testing1');
+    });
+
+    it('saves straight away when only apps without a paid subscription change', function () {
+        $id = $this->demoInstance->id;
+
+        $page = visit('/users/testing1/permissions');
+
+        $page->click("#open-permissions-{$id}")
+            ->click('#switch-0-demo_role')
+            ->click('#modal-ok')
+            ->click('#submit')
+            ->assertDontSee('Confirm Permission Changes')
             ->assertPathIs('/users/testing1');
     });
 
@@ -116,9 +135,7 @@ describe('User Permissions Update', function () {
         $page->click('#modal-ok');
 
         $page->assertSee('No Access')
-            ->click('#submit');
-        $page->assertSee('Confirm Permission Changes')
-            ->click('#modal-confirm')
+            ->click('#submit')
             ->assertPathIs('/users/testing1');
     });
 });

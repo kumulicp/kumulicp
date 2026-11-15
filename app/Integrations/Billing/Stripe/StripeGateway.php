@@ -3,6 +3,7 @@
 namespace App\Integrations\Billing\Stripe;
 
 use App\Contracts\BillingContract;
+use App\Contracts\PlanContract;
 use App\Notifications\NewOrganizationSubscription;
 use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
@@ -43,6 +44,14 @@ class StripeGateway implements BillingContract
         }
 
         return true;
+    }
+
+    /**
+     * Ended or cancelled subscriptions count: their invoices are still part of the account's history.
+     */
+    public function hasBillingHistory(): bool
+    {
+        return $this->organization->subscriptions()->exists();
     }
 
     public function setup(): void
@@ -172,13 +181,32 @@ class StripeGateway implements BillingContract
 
     public function periodEnds(): ?Carbon
     {
-        $period_end = Organization::account()->subscription('default')?->upcomingInvoice()?->period_end;
+        return $this->subscriptionPeriodEnd(Organization::account()->subscription('default'));
+    }
+
+    /**
+     * When the subscription's current billing period ends.
+     *
+     * Cashier 16 builds the upcoming invoice from Stripe's preview-invoice
+     * API, so its period_end is no longer guaranteed to be present. Fall back
+     * to the subscription's own period end (read from its items) rather than
+     * reporting no date at all.
+     */
+    public function subscriptionPeriodEnd($subscription): ?Carbon
+    {
+        if (! $subscription) {
+            return null;
+        }
+
+        $period_end = $subscription->upcomingInvoice()?->period_end;
 
         if ($period_end) {
             return Carbon::createFromTimestamp($period_end);
         }
 
-        return null;
+        $current_period_end = $subscription->currentPeriodEnd();
+
+        return $current_period_end ? Carbon::instance($current_period_end) : null;
     }
 
     public function upcomingInvoice(): array
@@ -186,10 +214,31 @@ class StripeGateway implements BillingContract
         $upcoming_invoice = $this->organization->upcomingInvoice();
 
         return [
-            'due_date' => $upcoming_invoice ? date('M d, Y', $upcoming_invoice->next_payment_attempt) : 'Never',
+            'due_date' => $this->upcomingInvoiceDueDate($upcoming_invoice),
             'amount_due' => $upcoming_invoice ? '$'.($upcoming_invoice->amount_due / 100) : '$0.00',
             'status' => $this->status(),
         ];
+    }
+
+    /**
+     * Format when the upcoming invoice is due.
+     *
+     * next_payment_attempt is not guaranteed on a preview invoice, and
+     * date() silently turns a null timestamp into "now", which would show
+     * today's date as the due date. Fall back to the invoice's period_end,
+     * and only then report 'Never'.
+     */
+    public function upcomingInvoiceDueDate($upcoming_invoice): string
+    {
+        if (! $upcoming_invoice) {
+            return 'Never';
+        }
+
+        // ?: rather than ??: Cashier's Invoice proxies properties through
+        // __get() without an __isset(), so ?? would always see them as unset.
+        $timestamp = $upcoming_invoice->next_payment_attempt ?: $upcoming_invoice->period_end;
+
+        return $timestamp ? date('M d, Y', $timestamp) : 'Never';
     }
 
     public function invoices(): Collection
@@ -208,21 +257,41 @@ class StripeGateway implements BillingContract
 
     public function status(string $type = 'label'): string
     {
-        $status = $type === 'label' ? __('labels.active') : 'active';
+        $key = $this->statusKey();
 
-        if ($this->organization->subscribed('default')) {
-            if ($this->organization->subscription('default')->onGracePeriod()) {
-                $status = $type === 'label' ? __('labels.grace_period') : 'grace_period';
-            } elseif ($this->organization->subscription('default')->ended()) {
-                $status = $type === 'label' ? __('labels.cancelled') : 'ended';
-            } elseif ($this->organization->subscription('default')->onTrial()) {
-                $status = $type === 'label' ? __('labels.trial_period') : 'trial_period';
-            } elseif ($this->organization->subscription('default')->active()) {
-                $status = $type === 'label' ? __('labels.active') : 'active';
-            }
+        if ($type !== 'label') {
+            return $key;
         }
 
-        return $status;
+        return __('labels.'.($key === 'ended' ? 'cancelled' : $key));
+    }
+
+    private function statusKey(): string
+    {
+        // Read the subscription itself rather than gating on subscribed():
+        // Cashier's subscribed() is only true while the subscription is valid
+        // (active, on trial or in its grace period), so it is false once a
+        // subscription has ended -- which made the 'ended' result unreachable
+        // and left lapsed organizations reporting 'active' forever.
+        $subscription = $this->organization->subscription('default');
+
+        if (! $subscription) {
+            return 'active';
+        }
+
+        if ($subscription->onGracePeriod()) {
+            return 'grace_period';
+        }
+
+        if ($subscription->ended()) {
+            return 'ended';
+        }
+
+        if ($subscription->onTrial()) {
+            return 'trial_period';
+        }
+
+        return 'active';
     }
 
     public function stripePricing()
@@ -238,16 +307,34 @@ class StripeGateway implements BillingContract
             }
         }
 
+        return $this->pricingFromPlans($subscription->paidSubscriptions());
+    }
+
+    /**
+     * Collapse the billable lines of the given plans into
+     * [price_id => ['quantity' => n]], summing lines that share a price.
+     *
+     * @param  iterable<PlanContract>  $plans
+     * @return array<string, array{quantity: int}>
+     */
+    public function pricingFromPlans(iterable $plans): array
+    {
         $pricing = [];
 
-        foreach ($subscription->paidSubscriptions() as $subscription) {
-            foreach ($subscription->pricingOptions() as $entity => $info) {
-                $price_id = Arr::get($info, 'price_id');
-                if ($price_id && $info['quantity'] > 0) {
-                    if (Arr::has($pricing, "$price_id.quantity")) {
-                        $pricing[$price_id]['quantity'] += $info['quantity'];
-                    } else {
-                        $pricing[$price_id]['quantity'] = $info['quantity'];
+        foreach ($plans as $plan) {
+            foreach ($plan->pricingOptions() as $entity => $info) {
+                // An app instance's optional features arrive as one nested
+                // 'features' entry (feature name => line) instead of a single
+                // line. Reading that entry as a line itself found no price_id,
+                // so active priced features were never added to the invoice.
+                $lines = $entity === 'features' ? $info : [$info];
+
+                foreach ($lines as $line) {
+                    $price_id = Arr::get($line, 'price_id');
+                    $quantity = Arr::get($line, 'quantity', 0);
+
+                    if ($price_id && $quantity > 0) {
+                        $pricing[$price_id]['quantity'] = ($pricing[$price_id]['quantity'] ?? 0) + $quantity;
                     }
                 }
             }

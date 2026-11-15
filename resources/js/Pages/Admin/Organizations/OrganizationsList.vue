@@ -21,6 +21,7 @@ import { Link } from '@inertiajs/vue3'
               <th>{{ $t('admin.organizations.contactName') }}</th>
               <th>{{ $t('admin.organizations.contactEmail') }}</th>
               <th>{{ $t('admin.organizations.status') }}</th>
+              <th>{{ $t('admin.organizations.outOfDate') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -29,6 +30,11 @@ import { Link } from '@inertiajs/vue3'
               <td>{{ organization.contact_name}}</td>
               <td><Link :href="'mailto:'+organization.contact_email">{{ organization.contact_email}}</Link></td>
               <td>{{ organization.status }}</td>
+              <td>
+                <Link v-if="organization.out_of_date > 0" :href="'/admin/organizations/'+organization.id" :id="'outOfDate-'+organization.id">
+                  <va-badge color="warning" :text="$t('admin.updates.appInstances', { count: organization.out_of_date })" />
+                </Link>
+              </td>
             </tr>
           </tbody>
         </table>

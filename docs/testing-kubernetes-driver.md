@@ -1,7 +1,8 @@
 # Testing the direct Kubernetes server manager driver
 
 This driver (`interface = kubernetes`) talks to the Kubernetes API directly
-against any standard Kubernetes cluster, with no Rancher dependency. No
+against any standard Kubernetes cluster, with no Rancher dependency. (The
+Rancher driver is built on top of it; see [server-drivers.md](server-drivers.md).) No
 cluster tooling needs to be installed where kumulicp runs: resources are
 managed over the REST API, release state is read from Helm's own release
 Secrets, and installs/upgrades/uninstalls run inside the cluster as a Job

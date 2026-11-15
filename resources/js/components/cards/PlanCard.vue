@@ -37,7 +37,11 @@ import { Link } from '@inertiajs/vue3'
           <va-spacer class="spacer" />
           <div style="align-content: flex-end">
             <div v-if="select" class="va-text-center">
-              <Link :id="'select'+plan.id" :href="plan.url"><va-button>{{ $t('plans.select') }}</va-button></Link>
+              <template v-if="unavailable">
+                <va-button :id="'select'+plan.id" disabled>{{ $t('plans.select') }}</va-button>
+                <div v-if="unavailableReason" :id="'unavailable'+plan.id" class="mt-2 va-text-secondary">{{ unavailableReason }}</div>
+              </template>
+              <Link v-else :id="'select'+plan.id" :href="plan.url"><va-button>{{ $t('plans.select') }}</va-button></Link>
             </div>
           </div>
         </template>
@@ -69,6 +73,14 @@ export default {
     fullHeight: {
       type: Boolean,
       default: false
+    },
+    unavailable: {
+      type: Boolean,
+      default: false
+    },
+    unavailableReason: {
+      type: String,
+      default: ''
     }
   },
   data () {
@@ -78,13 +90,17 @@ export default {
       cardClass = 'mb-2 full-height'
     }
 
+    if (this.unavailable) {
+      cardClass += ' plan-unavailable'
+    }
+
     return {
       cardClass
     }
   },
   methods: {
     chooseColor () {
-      if (this.select) {
+      if (this.select && !this.unavailable) {
         return 'background-secondary'
       } else {
         return 'backgroundElement'
@@ -94,6 +110,9 @@ export default {
 }
 </script>
 <style>
+.plan-unavailable {
+  opacity: 0.6
+}
 .full-height {
   height: 100%
 }

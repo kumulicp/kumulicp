@@ -67,7 +67,8 @@ class Permissions extends PermissionsManager implements PermissionsContract
 
     public function appPermissions(AppInstance $app_instance)
     {
-        $app_dn = Dn::create($app_instance->organization, 'applications', $app_instance->name);
+        // A shared app's centralized instance keeps its groups under the shared app's name
+        $app_dn = Dn::create($app_instance->organization, 'applications', LdapSupport::getAppInstanceID($app_instance));
         $permissions = LdapGroup::find($app_dn);
 
         if ($permissions) {
@@ -105,8 +106,13 @@ class Permissions extends PermissionsManager implements PermissionsContract
             $this->addAppRole($app_instance, $role);
         }
 
+        // By id: comparing the models themselves also compares whatever relations each has loaded, so
+        // a role that was given with its implied roles loaded (or as one of them) never matched the
+        // fresh copy here, and was removed again straight after being added
+        $role_ids = array_map(fn ($role) => $role->id, $roles);
+
         foreach ($app_roles as $role) {
-            if (! in_array($role, $roles)) {
+            if (! in_array($role->id, $role_ids, true)) {
                 $this->removeAppRole($app_instance, $role);
             }
         }
@@ -165,10 +171,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
             return;
         }
 
-        $app_name = LdapSupport::getAppInstanceID($app_instance);
-        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
-
-        if ($remaining === 0 && $this->ldapUser->groups()->exists($central_group)) {
+        if (! $this->hasRolesOnSharedApp($app_instance, $hub) && $this->ldapUser->groups()->exists($central_group)) {
             $this->ldapUser->groups()->detach($central_group);
         }
     }
@@ -228,12 +231,31 @@ class Permissions extends PermissionsManager implements PermissionsContract
             return;
         }
 
-        $app_name = LdapSupport::getAppInstanceID($app_instance);
-        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
-
-        if ($remaining === 0) {
+        if (! $this->hasRolesOnSharedApp($app_instance, $hub)) {
             $nextcloud_user->removeFromGroup($group_id);
         }
+    }
+
+    // Each instance keeps its own role groups, but the central access group and the org's group folder
+    // are one per org on the shared app: they are only given up once none of the org's instances on
+    // that shared app has a role for the user any more.
+    private function hasRolesOnSharedApp(AppInstance $app_instance, AppInstance $hub): bool
+    {
+        $siblings = AppInstance::where('parent_id', $hub->id)
+            ->where('organization_id', $app_instance->organization_id)
+            ->get()
+            ->push($app_instance)
+            ->unique('id');
+
+        foreach ($siblings as $sibling) {
+            $app_name = LdapSupport::getAppInstanceID($sibling);
+
+            if ($this->ldapUser->groups()->in(Dn::create($sibling->organization, 'applications', $app_name))->count() > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function hasAppStandardAccess(AppInstance $app_instance)
@@ -392,7 +414,14 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function addControlPanelAdminAccess(?User &$user = null)
     {
         $admin_group = Dn::create('server', 'controlPanelAccess', 'admin');
-        $this->addControlPanelAccess($user);
+
+        // Only provision baseline control panel access if it isn't already
+        // granted — re-running addControlPanelAccess() here without an
+        // organization would reset a previously-scoped suborganization back
+        // to the top-level org.
+        if (! $this->hasControlPanelAccess()) {
+            $this->addControlPanelAccess($user);
+        }
 
         // Add user to admin group
         $admin_group = LdapGroup::find($admin_group);

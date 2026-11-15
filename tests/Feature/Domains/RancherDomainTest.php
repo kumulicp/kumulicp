@@ -1,7 +1,7 @@
 <?php
 
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
 use App\OrgDomain;
 use App\OrgSubdomain;
 use App\User;

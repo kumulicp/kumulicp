@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
 import PricingCard from '@/components/cards/PricingCard.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 
@@ -9,6 +10,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('organization.subscription.plansTitle') }} - Control Panel</title>
   </Head>
+  <BillingSyncNotice />
   <div class="row">
     <div class="flex flex-col xs12 lg8">
       <va-card class="mb-4 pb-2">
@@ -37,6 +39,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   </td>
                   <td class="vertical-middle">
                     {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
+                    <div v-if="plan.notice" class="trial-notice">{{ plan.notice }}</div>
                   </td>
                   <td class="vertical-middle">
                     {{ plan.status }}
@@ -76,6 +79,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                     </td>
                     <td class="vertical-middle">
                       {{ plan.name }} <span v-if="plan.status === 'retired'">({{ $t('organization.subscription.retired') }})</span>
+                      <div v-if="plan.notice" class="trial-notice">{{ plan.notice }}</div>
                     </td>
                     <td class="vertical-middle">
                       {{ plan.status }}
@@ -189,6 +193,12 @@ export default {
 </script>
 
 <style lang="scss">
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+    white-space: pre-line;
+  }
+
   .text-color-primary {
     color: var(--va-primary);
     text-align: center;

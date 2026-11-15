@@ -3,7 +3,7 @@
 namespace App\Integrations\Applications\Wordpress;
 
 use App\Integrations\Applications\AppProfile;
-use App\Integrations\ServerManagers\Rancher\Charts\WordpressChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\WordpressChart;
 
 class WordpressProfile extends AppProfile
 {

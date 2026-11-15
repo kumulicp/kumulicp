@@ -33,7 +33,7 @@ class Applications extends Controller
         if (! $apps->isEmpty()) {
             return inertia('Organization/Apps/AppsList', [
                 'apps' => $apps->map(function ($app) {
-                    $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
+                    $tasks = $app->tasks()->where('background', 0)->whereIn('status', TaskStatus::openValues())->get();
 
                     return [
                         'id' => $app->id,
@@ -48,10 +48,12 @@ class Applications extends Controller
                                 'name' => $task->action_slug,
                                 'description' => $task->description,
                             ];
-                        })->push($app->deactivate_at ? [
+                        })->push($app->deactivate_at || $app->status === 'deleting' ? [
                             'id' => 0,
                             'name' => '',
-                            'description' => __('labels.deactivates', ['date' => $app->deactivate_at->format('M d Y')]),
+                            'description' => $app->isBeingRemoved()
+                                ? __('labels.deleting')
+                                : __('labels.deactivates', ['date' => $app->deactivate_at->format('M d Y')]),
                         ] : []),
                         'organization' => [
                             'name' => $app->organization->name,
@@ -79,6 +81,16 @@ class Applications extends Controller
         $application = $app->application;
 
         $parent_app_instance = $app->parent()->with(['application', 'primary_domain'])->first();
+
+        // Only an app installed inside another of the same organization's (a CiviCRM in a WordPress) is an
+        // addon to it. The shared app a child registers with (a Nextcloud, an ERPNext) is another
+        // organization's, and not the child's to link to.
+        $is_addon = $parent_app_instance && $parent_app_instance->organization_id === $app->organization_id;
+
+        // Whose address the app is reached at follows the application's domain option: 'parent' apps (the
+        // children of one Nextcloud, an addon in a WordPress) are reached at their parent's, while others
+        // (a multisite ERPNext) have a domain of their own, which the domain list below picks.
+        $inherits_domain = $parent_app_instance && $application->hasDomainOption('parent');
 
         $domains = [];
         $parent_domains = [];
@@ -111,7 +123,7 @@ class Applications extends Controller
             $domains = $domains->all();
         }
 
-        $tasks = $app->tasks()->where('background', 0)->where('status', '!=', TaskStatus::COMPLETE->value)->get();
+        $tasks = $app->tasks()->where('background', 0)->whereIn('status', TaskStatus::openValues())->get();
 
         $features = collect(Application::instance($app)->features()->optional($app))->map(function ($customization) {
             return [
@@ -130,13 +142,17 @@ class Applications extends Controller
                 'name' => $app->application->name,
                 'id' => $app->id,
                 'domain' => $app->primary_domain ? $app->primary_domain->id : 0,
-                'parent_app' => $parent_app_instance ? [
+                'parent_app' => $is_addon ? [
                     'id' => $parent_app_instance->id,
                     'name' => $parent_app_instance->application->name,
-                    'domain' => $parent_app_instance->domain(),
-                    'address' => $parent_app_instance->address(),
+                ] : null,
+                // Shown when it can't be changed here: it is the parent's
+                'inherited_domain' => $inherits_domain ? [
+                    'domain' => $app->domain(),
+                    'address' => $app->address(),
                 ] : null,
                 'label' => $app->label,
+                'status' => $app->status,
                 'organization' => $organization->suborganizations()->count() > 0 ? [
                     'name' => $app->organization->name,
                 ] : null,

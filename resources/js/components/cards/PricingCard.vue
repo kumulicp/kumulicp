@@ -15,6 +15,7 @@ const formatter = new Intl.NumberFormat('en-US', {
     <va-card-content>
       <va-list v-for="(price, index) in prices" :key="index">
         <va-list-label>{{ price.name }}</va-list-label>
+        <div v-if="price.notice" class="trial-notice px-2 pb-2">{{ price.notice }}</div>
         <va-list-item
           v-for="(stat, index) in price.stats"
           class="list__item"
@@ -68,3 +69,9 @@ export default {
   }
 }
 </script>
+<style>
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+  }
+</style>

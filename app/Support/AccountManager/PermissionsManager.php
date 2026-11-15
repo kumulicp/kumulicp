@@ -61,7 +61,7 @@ abstract class PermissionsManager
             'categories' => $this->$get_categories(),
             'edit' => true,
             'access_type' => $has_access ? 'standard' : 'none',
-            'pricing' => Subscription::base()->payment_enabled,
+            'pricing' => (bool) Subscription::base()->payment_enabled,
             'access_types' => [
                 [
                     'text' => 'No access',
@@ -154,7 +154,7 @@ abstract class PermissionsManager
             'access_type' => $this->user->appUserAccessType($app_instance),
             'edit' => $can_edit,
             'access_types' => $this->getAppAccessTypes($app_instance),
-            'pricing' => Subscription::app_instance($app_instance)->payment_enabled,
+            'pricing' => (bool) Subscription::app_instance($app_instance)->payment_enabled,
         ];
     }
 
@@ -178,6 +178,7 @@ abstract class PermissionsManager
                     'disabled' => false,
                 ];
                 $active_role = 'None';
+                $active_is_ignored = false;
                 foreach ($app_instance->version->groupsFromCategory($category->category) as $role) {
                     $can_select_role = true;
                     if ($role->required_features && count($role->required_features) > 0) {
@@ -190,8 +191,11 @@ abstract class PermissionsManager
                     }
 
                     if ($can_select_role) {
-                        if ($this->user->hasAppRole($app_instance, $role)) {
+                        // A role that is set to be ignored is the one that was picked: the user is also in the
+                        // roles it implies, which are in the same category and would otherwise show instead
+                        if ($this->user->hasAppRole($app_instance, $role) && (! $active_is_ignored || $role->ignore_role)) {
                             $active_role = $role->name;
+                            $active_is_ignored = (bool) $role->ignore_role;
                         }
                         $disabled = false;
                         if ((Subscription::base()->type === 'package' && (($role->accessType() == 'standard' && ! $can_update_app_standard_user) || ($role->accessType() == 'basic' && ! $can_update_app_basic_user)) && $role->accessType() != 'minimal')

@@ -2,15 +2,20 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Billing\BillingSyncState;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
 use App\Support\Facades\Settings;
+use App\Support\Facades\Tenancy;
+use App\Support\SharedAppContext;
+use App\Updates\PendingUpdates;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Inertia\Middleware;
 use OffloadProject\Toggle\Facades\Toggle;
 use Tightenco\Ziggy\Ziggy;
@@ -119,16 +124,25 @@ class HandleInertiaRequests extends Middleware
                 'status' => $request->user()?->organization?->status,
             ],
             'step' => $request->user()?->organization->setting('step') ?? 0,
+            // Set on every page of a shared app, whichever controller draws it, for the shared app layout
+            'shared_app' => fn () => $request->user() ? SharedAppContext::fromRequest($request) : null,
             /*'ziggy' => function () use ($request) {
                 return array_merge((new Ziggy)->toArray(), [
                     'location' => $request->url(),
                 ]);
             },*/
             'menu' => $request->user() ? $this->menu() : null,
-            'notices' => [
+            // Always included so partial reloads (e.g. polling) pick up the now-empty flash
+            // instead of keeping the previous notice and re-showing its toast every time.
+            'notices' => Inertia::always(fn () => [
                 'success' => session('success'),
                 'error' => session('error'),
-            ],
+                'warning' => session('warning'),
+            ]),
+            // How many app instances are out of date, for the admin menu
+            'pending_updates_count' => fn () => $request->user() && Gate::allows('admin') ? app(PendingUpdates::class)->count() : 0,
+            // Whether the queued billing update of the organization is still running or failed
+            'billing_sync' => fn () => $request->user()?->organization ? BillingSyncState::for($request->user()->organization) : null,
             'reset' => [
                 'menu' => session('reset_menu') !== null,
                 'step' => session('reset_step') !== null,
@@ -137,6 +151,10 @@ class HandleInertiaRequests extends Middleware
             'theme' => [
                 'primary_color' => Settings::get('primary_color', '#6042B3'),
                 'secondary_color' => Settings::get('secondary_color', '#d91698'),
+                'text_secondary_color' => Settings::get('text_secondary_color', '#64748b'),
+            ],
+            'tenancy' => [
+                'single' => Tenancy::isSingle(),
             ],
             'language' => app()->getLocale(),
             'locales' => config('locales.available'),

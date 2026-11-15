@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\AppInstance;
 use App\Application;
 use App\Http\Controllers\Controller;
 use App\Plan;
@@ -93,6 +94,28 @@ class Plans extends Controller
         return redirect('/admin/service/plans/'.$plan->id)->with('success', __('admin.plans.added', ['plan' => $plan->name]));
     }
 
+    public function clone(Request $request, Plan $plan)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
+
+        // Copies every attribute (settings, app plans, pricing, ...) apart from
+        // the id and timestamps; the copy starts as a hidden, non-default,
+        // unarchived draft with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->status = 'hidden';
+        $clone->save();
+
+        return redirect('/admin/service/plans/'.$clone->id)->with('success', __('admin.plans.cloned', ['plan' => $clone->name]));
+    }
+
     public function edit(Plan $plan)
     {
         $apps = Application::all();
@@ -119,6 +142,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
+                'status' => $plan->status,
                 'features' => $plan->features ?? [],
                 'type' => $plan->type,
                 'description' => $plan->description,
@@ -139,7 +163,8 @@ class Plans extends Controller
             ],
             'apps' => $apps->map(function (Application $app) {
                 $plans = [];
-                foreach ($app->plans as $plan) {
+                // Not a shared app's own hidden plan: that is what is shared, not a plan to give out
+                foreach ($app->plans()->visible()->get() as $plan) {
                     $plans[] = [
                         'id' => $plan->id,
                         'name' => $plan->name,
@@ -199,14 +224,17 @@ class Plans extends Controller
         /* Validate */
         $validated = $request->validate(array_merge([
             'name' => 'required',
-            'status' => 'nullable',
+            'status' => 'nullable|boolean',
             'default' => 'nullable',
             'type' => 'required|in:package,app',
             'description' => 'required',
             'org_type' => 'required|string|in:nonprofit,business,none,superaccount',
             'displayed_features' => 'nullable',
             'payment_enabled' => 'nullable',
+            'base.standard_label' => 'nullable|string|max:100',
             'base.minimal_label' => 'nullable|string|max:100',
+            'base.minimal_enabled' => 'nullable|boolean',
+            'basic.enabled' => 'nullable|boolean',
             'standard.max' => 'numeric|nullable',
             'standard.storage' => 'numeric|nullable',
             'basic.name' => 'nullable|string',
@@ -232,6 +260,13 @@ class Plans extends Controller
         $order_num = Plan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
         $plan = Plan::where('id', $plan_id)->first();
+
+        // Pay per App instances pick their own app plan, so one still in use must not silently disappear from the plan
+        $in_use = $this->removedAppPlansInUse($plan, $request->type, $request->app_plans ?? []);
+        if ($in_use !== []) {
+            return redirect()->back()->withInput()->with('error', __('admin.plans.app_plans_in_use', ['apps' => implode(', ', $in_use)]));
+        }
+
         $plan->name = $request->name;
         $plan->description = $request->description;
         $plan->org_type = $request->org_type;
@@ -258,10 +293,15 @@ class Plans extends Controller
 
         $settingsToUpdate = [
             'suborganizations.enabled' => $request->input('suborganizations.enabled'),
+            // Access types are named by the organization's plan, whichever kind of plan it is
+            'base.standard_label' => $request->input('base.standard_label'),
             'base.minimal_label' => $request->input('base.minimal_label'),
+            'base.minimal_enabled' => $request->has('base.minimal_enabled') ? $request->boolean('base.minimal_enabled') : $request->filled('base.minimal_label'),
+            'basic.name' => $request->input('basic.name'),
+            // Pay per app plans have basic users on their app plans, which each say whether they do
+            'basic.enabled' => ! $isAppType && ($request->has('basic.enabled') ? $request->boolean('basic.enabled') : $request->filled('basic.name')),
             'standard.max' => (int) $isAppType ? null : $request->input('standard.max'),
             'standard.storage' => (int) $isAppType ? null : $request->input('standard.storage'),
-            'basic.name' => $isAppType ? null : $request->input('basic.name'),
             'basic.amount' => (int) $isAppType ? null : $request->input('basic.amount'),
             'basic.max' => (int) $isAppType ? null : $request->input('basic.max'),
             'basic.storage' => (int) $isAppType ? null : $request->input('basic.storage'),
@@ -288,7 +328,7 @@ class Plans extends Controller
         }
 
         $plan->updateSettings($settingsToUpdate);
-        $plan->status = $request->status ? 'available' : 'hidden';
+        $plan->status = $request->boolean('status') ? 'available' : 'hidden';
         if (Arr::get($validated, 'default') && (! $plan->is_default || $plan->isDirty('org_type'))) {
             // Replace old default with new one
             $current_default_plan = Plan::where('is_default', true)->where('org_type', $plan->org_type)->first();
@@ -307,6 +347,42 @@ class Plans extends Controller
         Cache::flush();
 
         return redirect('/admin/service/plans')->with('success', __('admin.plans.updated', ['plan' => $plan->name]));
+    }
+
+    /**
+     * Names of the apps whose app plans would be removed from a Pay per App plan while
+     * active instances of its subscribers still use them.
+     *
+     * @return array<int, string>
+     */
+    private function removedAppPlansInUse(Plan $plan, string $new_type, array $new_app_plans): array
+    {
+        if ($plan->type !== 'app' || $new_type !== 'app') {
+            return [];
+        }
+
+        $in_use = [];
+        foreach (Application::all() as $app) {
+            $current_ids = collect(Arr::wrap(Arr::get($plan->app_plans, "{$app->slug}.plans")))->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id);
+            $kept_ids = collect(Arr::wrap(Arr::get($new_app_plans, "{$app->slug}.plans")))->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id);
+            $removed_ids = $current_ids->diff($kept_ids)->values()->all();
+
+            if ($removed_ids === []) {
+                continue;
+            }
+
+            $used = AppInstance::notDeactivated()
+                ->where('application_id', $app->id)
+                ->whereIn('plan_id', $removed_ids)
+                ->whereHas('organization', fn ($query) => $query->where('plan_id', $plan->id))
+                ->exists();
+
+            if ($used) {
+                $in_use[] = $app->name;
+            }
+        }
+
+        return $in_use;
     }
 
     public function remove($plan_id)

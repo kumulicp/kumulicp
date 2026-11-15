@@ -22,6 +22,7 @@ export default {
       primary: '#6042B3',
       custom: '#A35600',
       secondary: '#d91698',
+      textSecondary: '#64748b',
       black: '#000',
       white: '#fff',
       'slate-50': '#f8fafc',

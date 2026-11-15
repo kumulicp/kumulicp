@@ -235,9 +235,3 @@ export default {
   }
 }
 </script>
-
-<style>
-.full-width {
-  width: 100%
-}
-</style>

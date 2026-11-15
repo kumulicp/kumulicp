@@ -17,7 +17,7 @@ class RecurringBackups extends Controller
         $backups = RecurringBackup::all();
         $servers = Server::all();
         $applications = Application::all();
-        $organizations = Organization::all();
+        $organizations = Organization::notTest()->get();
 
         return inertia()->render('Admin/Backups/RecurrentsList', [
             'backups' => $backups->map(function ($backup) {

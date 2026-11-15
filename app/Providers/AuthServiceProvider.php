@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\Plan;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Organization\JointSubscriptionService;
 use App\Services\SubscriptionService;
 use App\Support\AccountManager\UserManager;
@@ -16,7 +17,6 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\User;
 use Illuminate\Auth\Access\Response;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -92,7 +92,7 @@ class AuthServiceProvider extends ServiceProvider
             } elseif ($plan->org_type != $organization->type || $plan->archive) {
                 return Response::deny(__('organization.plan.denied.unavailable'));
             } elseif ($base_plan && $base_plan->isAnyMaxBroken()) {
-                return Response::deny(__('organization.plan.denied.limit'));
+                return Response::deny($base_plan->limitsMessage());
             } elseif ($organization->plan_id == $plan->id) {
                 return Response::deny(__('organization.plan.denied.subscribed'));
             } else {
@@ -112,23 +112,19 @@ class AuthServiceProvider extends ServiceProvider
                 && $organization->status === 'deactivating';
         });
 
+        // The billing pages come from local state, not from the billing provider: its subscription is
+        // only created by a queued task, and its history is worth keeping after payments stop
         Gate::define('has-billing-account', function (User $user) {
-            $organization = $user->organization;
-
-            return (Billing::isBillable())
+            return (Billing::isBillable()
+                || count(Subscription::all()->paidSubscriptions()) > 0
+                || Billing::hasBillingHistory())
                 ? Response::allow()
                 : Response::deny(__('organization.plan.denied.billing'));
         });
 
         /* APPS */
         Gate::define('select-app-plan', function (User $user, AppPlan $plan) {
-            $base_plan = Subscription::base();
-            $app_plans = Arr::get($base_plan->app_plans, $plan->application->slug.'.plans');
-
-            return is_array($app_plans)
-                && in_array($plan->id, $app_plans)
-                && ! $plan->archive
-                && $base_plan->appEnabled($plan->application)
+            return Subscription::base()->appPlanSelectable($plan)
                 ? Response::allow()
                 : Response::deny(__('organization.plan.unavailable'));
         });
@@ -214,12 +210,14 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('change-app-plan', function (User $user, AppInstance $app_instance) {
             $plan = Subscription::app_instance($app_instance);
 
+            // The plan can be changed whatever state the app is in (as long as it isn't going away): what the
+            // change does to the app itself waits until the app is active (see PendingAppChanges)
             return $user->organization->status === 'active'
-                && $app_instance->status === 'active'
+                && in_array($app_instance->status, ['active', ...PendingAppChanges::DEFERRING_STATUSES], true)
                 && count($plan->allAvailable()) > 1
                 && $app_instance->belongsToOrganization($user->organization)
                 ? Response::allow()
-                : Response::deny(__('organization.app.denied.deactivation', ['app' => $app_instance->label]));
+                : Response::deny(__('organization.plan.denied.change'));
         });
 
         Gate::define('deactivate-app', function (User $user, AppInstance $app_instance) {

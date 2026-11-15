@@ -7,7 +7,7 @@ use App\Integrations\Applications\Nextcloud\Features\CalendarAddon;
 use App\Integrations\Applications\Nextcloud\Features\ContactsAddon;
 use App\Integrations\Applications\Nextcloud\Features\DeckAddon;
 use App\Integrations\Applications\Nextcloud\Features\TalkAddon;
-use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 
 class NextcloudProfile extends AppProfile
 {
@@ -525,6 +525,32 @@ class NextcloudProfile extends AppProfile
             'default' => 1,
             'persistent' => false,
             'validations' => 'nullable|integer',
+        ],
+        // The chart's own imaginary image (h2non/imaginary 1.2.4) is years old.
+        // Nextcloud's maintained build runs with the chart's template unchanged:
+        // it reads PORT (9000), serves /health, and works as uid 1000 with a
+        // read-only root filesystem and all capabilities dropped. The tag is
+        // exact (dated), never `latest`.
+        'imaginary-image-registry' => [
+            'name' => 'imaginary-image-registry',
+            'type' => 'string',
+            'default' => 'docker.io',
+            'persistent' => false,
+            'validations' => 'required|string',
+        ],
+        'imaginary-image-repository' => [
+            'name' => 'imaginary-image-repository',
+            'type' => 'string',
+            'default' => 'nextcloud/aio-imaginary',
+            'persistent' => false,
+            'validations' => 'required|string',
+        ],
+        'imaginary-image-tag' => [
+            'name' => 'imaginary-image-tag',
+            'type' => 'string',
+            'default' => '20261109_101109',
+            'persistent' => false,
+            'validations' => 'required|string',
         ],
         'nextcloud-php-memory-limit' => [
             'name' => 'nextcloud-php-memory-limit',

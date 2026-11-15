@@ -37,7 +37,7 @@
 @endif
 
 @if (array_key_exists('removed', $permissions) && count($permissions['removed']) > 0)
-### {{ __('messages.notification.permissions_updated.permissions_removed_title', ['app' => $permission['application']]) }}
+### {{ __('messages.notification.permissions_updated.permissions_removed_title') }}
 
 @foreach ($permissions['removed'] as $permission)
 {{ __('messages.notification.permissions_updated.permissions_removed', ['app' => $permission['application'], 'role' => $permission['role']]) }}

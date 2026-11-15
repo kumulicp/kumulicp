@@ -2,7 +2,7 @@
 
 use App\AppPlan;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
@@ -51,6 +51,10 @@ it('gives the app its own database password rather than the organization secret'
     $org_server->backup_server_id = $org_server->id;
     $org_server->save();
 
+    // The chart's environment reads the web server's address
+    $web_server = OrgServer::create(['organization_id' => $organization->id, 'server_id' => Server::factory()->create()->id]);
+
+    $app_instance->web_server_id = $web_server->id;
     $app_instance->db_password = 'instance-database-secret';
     $app_instance->database_server_id = $org_server->id;
     $app_instance->databasename = 'demo_nextcloud';
@@ -62,4 +66,82 @@ it('gives the app its own database password rather than the organization secret'
     expect($values['externalDatabase']['host'])->toBe('shared-db.db.svc');
     expect($values['externalDatabase']['user'])->toBe('demo_nextcloud');
     expect($values['externalDatabase']['password'])->toBe('instance-database-secret');
+});
+
+function nextcloudChartValues(array $configurations = []): array
+{
+    $organization = Organization::factory()->create();
+
+    $app = Application::initialize('nextcloud');
+    Application::roles($app);
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'chart_name' => 'nextcloud',
+            'chart_version' => '1.0.0',
+            'helm_repo_name' => 'https://nextcloud.github.io/helm',
+            'image_repo_name' => 'library/nextcloud',
+            'image_registry' => 'docker.io',
+        ],
+    ]);
+
+    $app_plan = AppPlan::factory()->create([
+        'application_id' => $app->id,
+        'settings' => [
+            'base' => ['price' => 0, 'storage' => 2, 'price_id' => null],
+            'basic' => ['max' => 1, 'name' => 'Basic', 'price' => 0, 'amount' => 1, 'storage' => 1, 'price_id' => null],
+            'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
+            'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
+            'configurations' => $configurations,
+        ],
+    ]);
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan)->get();
+
+    // The chart's environment reads the web server's address
+    $web_server = OrgServer::create(['organization_id' => $organization->id, 'server_id' => Server::factory()->create()->id]);
+    $app_instance->web_server_id = $web_server->id;
+    $app_instance->save();
+
+    return (new NextcloudChart($organization, $app_instance->fresh()))->values();
+}
+
+it('leaves the chart security contexts and port 80 alone, so it matches the official chart', function () {
+    $values = nextcloudChartValues();
+
+    expect($values['nextcloud'])->not->toHaveKeys(['containerPort', 'securityContext', 'podSecurityContext'])
+        ->and($values['nextcloud']['configs'])->not->toHaveKey('restricted.config.php')
+        ->and($values['cronjob'])->not->toHaveKey('type')
+        ->and(collect($values['nextcloud']['extraEnv'])->pluck('name'))->not->toContain('APACHE_PORT');
+});
+
+it('does not know about restricted security contexts; that is an extension', function () {
+    // Even with the setting on, only a module that registers it changes the chart
+    $values = nextcloudChartValues(['restricted-security-context' => true, 'cronjob' => true]);
+
+    expect($values['nextcloud'])->not->toHaveKeys(['containerPort', 'securityContext', 'podSecurityContext'])
+        ->and($values['cronjob'])->not->toHaveKey('type');
+});
+
+it('runs imaginary from the maintained aio image with an exact tag', function () {
+    $image = nextcloudChartValues(['imaginary-enabled' => true])['imaginary']['image'];
+
+    expect($image)->toMatchArray(['registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary'])
+        ->and($image['tag'])->not->toBeEmpty()->not->toBe('latest');
+});
+
+it('sets resources where the chart reads them, so every pod has requests and a memory limit', function () {
+    $values = nextcloudChartValues(['cronjob' => true, 'imaginary-enabled' => true, 'metrics-enabled' => true]);
+
+    foreach ([
+        $values['resources'],
+        $values['cronjob']['sidecar']['resources'],
+        $values['cronjob']['cronjob']['resources'],
+        $values['imaginary']['resources'],
+        $values['metrics']['resources'],
+    ] as $resources) {
+        expect($resources['requests'])->toHaveKeys(['cpu', 'memory'])
+            ->and($resources['limits'])->toHaveKey('memory');
+    }
 });

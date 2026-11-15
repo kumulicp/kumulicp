@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import TaskTree from '@/components/TaskTree.vue'
 import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
+import { useToast } from 'vuestic-ui'
 
 </script>
 <template>
@@ -11,8 +13,8 @@ import axios from 'axios'
   <va-card class="mb-4">
     <va-card-title>{{ $t('admin.tasks.tasks') }}</va-card-title>
     <va-card-content>
-      <div class="row no-wrap">
-        <div class="flex flex-col md3">
+      <div class="row">
+        <div class="flex flex-col md2">
           <div class="item">
             <VaSelect
               v-model="filterApp"
@@ -27,7 +29,7 @@ import axios from 'axios'
             />
           </div>
         </div>
-        <div class="flex flex-col md3">
+        <div class="flex flex-col md2">
           <div class="item">
             <VaSelect
               v-model="filterStatus"
@@ -50,8 +52,20 @@ import axios from 'axios'
             />
           </div>
         </div>
-        <div class="flex flex-col" style="flex-grow:1">
-          <div class="item va-text-right">
+        <div class="flex flex-col md3">
+          <div class="item">
+            <VaButtonToggle
+              v-model="view"
+              :options="viewOptions"
+              preset="secondary"
+              border-color="primary"
+              class="mt-3"
+              @update:modelValue="changeView"
+            />
+          </div>
+        </div>
+        <div class="flex flex-col" style="flex-grow:1; flex-shrink:0">
+          <div class="item va-text-right whitespace-nowrap">
             <VaSwitch v-model="liveMode"
               :label="$t('admin.tasks.liveUpdates')"
               @update:modelValue="changeLiveMode"
@@ -65,42 +79,72 @@ import axios from 'axios'
               :label="$t('admin.tasks.actions')"
               class="mt-3"
             >
-              <Link href="/admin/server/tasks/run_schedule"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
-              <Link href="/admin/server/tasks/restart_queue"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
-              <Link href="/admin/server/tasks/dummy"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
+              <Link href="/admin/server/tasks/run_schedule" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.runScheduledTasks') }}</div></Link>
+              <Link href="/admin/server/tasks/restart_queue" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.restartQueue') }}</div></Link>
+              <Link href="/admin/server/tasks/dummy" method="post" as="button" class="block w-full cursor-pointer text-left text-(--va-primary) hover:underline"><div class="py-2">{{ $t('admin.tasks.addDummyTask') }}</div></Link>
             </VaButtonDropdown>
           </div>
         </div>
       </div>
-      <div class="row" v-if="!liveMode && selectedItems.length > 0">
+      <div class="row" v-if="!liveMode && selectedIds.length > 0">
         <div class="flex flex-col" style="flex-grow:1">
           <div class="item">
-            {{ $t('admin.tasks.selectedCount', { count: selectedItems.length }) }}
+            {{ $t('admin.tasks.selectedCount', { count: selectedIds.length }) }}
           </div>
         </div>
         <div class="flex flex-col">
           <div class="item">
             <VaButton
               preset="secondary"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
-              @click="bulkRestart"
+              @click="bulk('retry')"
             >
-              {{ $t('admin.tasks.restartSelected') }}
+              {{ $t('admin.tasks.retrySelected') }}
+            </VaButton>
+            <VaButton
+              preset="secondary"
+              icon="cancel"
+              color="warning"
+              class="ml-2"
+              @click="bulk('cancel')"
+            >
+              {{ $t('admin.tasks.cancelSelected') }}
             </VaButton>
             <VaButton
               preset="secondary"
               icon="delete"
               color="danger"
               class="ml-2"
-              @click="bulkDelete"
+              @click="bulk('delete')"
             >
               {{ $t('admin.tasks.deleteSelected') }}
             </VaButton>
           </div>
         </div>
       </div>
+      <div v-if="view === 'tree'">
+        <TaskTree
+          v-model:checked="checkedIds"
+          v-model:expanded="expandedIds"
+          :nodes="task_list"
+          :live-mode="liveMode"
+          @retry="retryTask"
+          @cancel="cancelTask"
+          @delete="deleteTask"
+        />
+        <div class="row justify-center mt-4" v-if="meta.pages > 1">
+          <div class="flex">
+            <VaPagination
+              :model-value="meta.page"
+              :pages="meta.pages"
+              @update:modelValue="changePage"
+            />
+          </div>
+        </div>
+      </div>
       <va-scroll-container
+        v-else
         color="primary"
         horizontal
       >
@@ -119,22 +163,40 @@ import axios from 'axios'
             <va-badge :color="statusColor(value)" :text="statusLabel(value)" />
           </template>
           <template #cell(actions)="{ row, rowIndex, isExpanded }">
+            <Link :href="'/admin/server/tasks/' + task_list[rowIndex].id">
+              <VaButton
+                preset="plain"
+                icon="visibility"
+                color="primary"
+                class="ml-3"
+                :title="$t('admin.tasks.details')"
+              />
+            </Link>
             <VaButton
               preset="plain"
-              icon="fa-trash-restore"
+              icon="restart_alt"
               color="primary"
               class="ml-3"
-              :disabled="liveMode"
-              :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
-              @click="restartTaskById(rowIndex)"
+              :disabled="liveMode || !task_list[rowIndex].can_retry"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.retry')"
+              @click="retryTaskById(rowIndex)"
+            />
+            <VaButton
+              preset="plain"
+              icon="cancel"
+              color="warning"
+              class="ml-3"
+              :disabled="liveMode || !task_list[rowIndex].can_cancel"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.cancel')"
+              @click="cancelTaskById(rowIndex)"
             />
             <VaButton
               preset="plain"
               icon="delete"
               color="danger"
               class="ml-3"
-              :disabled="liveMode"
-              :title="liveMode ? $t('admin.tasks.disableLiveMode') : ''"
+              :disabled="liveMode || !task_list[rowIndex].can_delete"
+              :title="liveMode ? $t('admin.tasks.disableLiveMode') : $t('admin.tasks.delete')"
               @click="deleteTaskById(rowIndex)"
             />
             <VaButton
@@ -188,11 +250,19 @@ export default {
       meta: {},
       task_list: [],
       selectedItems: [],
+      checkedIds: [],
+      expandedIds: [],
+      view: this.savedView(),
+      viewOptions: [
+        { label: this.$t('admin.tasks.tableView'), value: 'table', icon: 'table_rows' },
+        { label: this.$t('admin.tasks.treeView'), value: 'tree', icon: 'account_tree' }
+      ],
       filterApp: '',
       filterStatus: '',
       perPage: 20,
       perPageOptions: [10, 20, 50, 100],
       liveMode: true,
+      toast: useToast(),
       columns: [
         { key: 'id', sortable: true },
         { key: 'organization', sortable: true },
@@ -210,9 +280,16 @@ export default {
         { text: this.$t('admin.tasks.queued'), value: 'queued' },
         { text: this.$t('admin.tasks.ready'), value: 'ready' },
         { text: this.$t('admin.tasks.inProgress'), value: 'in_progress' },
-        { text: this.$t('admin.tasks.completed'), value: 'complete' }
+        { text: this.$t('admin.tasks.completed'), value: 'complete' },
+        { text: this.$t('admin.tasks.cancelled'), value: 'cancelled' }
       ],
       interval: ''
+    }
+  },
+  computed: {
+    // Ids of the checked tasks, whichever view they were checked in
+    selectedIds () {
+      return this.view === 'tree' ? this.checkedIds : this.selectedItems.map(task => task.id)
     }
   },
   mounted () {
@@ -226,68 +303,78 @@ export default {
   methods: {
     updateTaskList () {
       const vueState = this
+      const view = vueState.view
 
       axios.post('/admin/server/tasks/api?page=' + vueState.meta.page, {
         app: vueState.filterApp,
         status: vueState.filterStatus.value,
-        per_page: vueState.perPage
+        per_page: vueState.perPage,
+        view
       })
         .then(function (response) {
+          // The view changed while this was on its way: it is the wrong shape now
+          if (view !== vueState.view) {
+            return
+          }
           vueState.task_list = response.data.tasks
           vueState.meta = response.data.meta
           vueState.$emit('expand')
         })
     },
-    retryTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.delete('/admin/server/tasks/' + task.id)
-        .then(function () {
-          vueState.updateTaskList()
-        })
+    operate (method, url) {
+      return axios({ method, url })
+        .then(() => this.updateTaskList())
+        .catch((error) => this.showError(error))
     },
-    restartTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.get('/admin/server/tasks/' + task.id + '/restart')
-        .then(function () {
-          vueState.updateTaskList()
-        })
+    retryTaskById (index) {
+      this.retryTask(this.task_list[index].id)
     },
-    deleteTaskById (id) {
-      const vueState = this
-      const task = this.task_list[id]
-      axios.delete('/admin/server/tasks/' + task.id)
-        .then(function () {
-          vueState.updateTaskList()
-        })
+    cancelTaskById (index) {
+      this.cancelTask(this.task_list[index].id)
     },
-    bulkRestart () {
-      const vueState = this
-      const ids = this.selectedItems.map(task => task.id)
+    deleteTaskById (index) {
+      this.deleteTask(this.task_list[index].id)
+    },
+    retryTask (id) {
+      this.operate('post', '/admin/server/tasks/' + id + '/retry')
+    },
+    cancelTask (id) {
+      if (!window.confirm(this.$t('admin.tasks.confirmCancel'))) {
+        return
+      }
+      this.operate('post', '/admin/server/tasks/' + id + '/cancel')
+    },
+    deleteTask (id) {
+      if (!window.confirm(this.$t('admin.tasks.confirmDelete'))) {
+        return
+      }
+      this.operate('delete', '/admin/server/tasks/' + id)
+    },
+    bulk (operation) {
+      const ids = this.selectedIds
       if (ids.length === 0) {
         return
       }
-      axios.post('/admin/server/tasks/bulk/restart', { tasks: ids })
-        .then(function () {
-          vueState.selectedItems = []
-          vueState.updateTaskList()
+      if (operation !== 'retry' && !window.confirm(this.$t(operation === 'cancel' ? 'admin.tasks.confirmBulkCancel' : 'admin.tasks.confirmBulkDelete', { count: ids.length }))) {
+        return
+      }
+      axios.post('/admin/server/tasks/bulk/' + operation, { tasks: ids })
+        .then((response) => {
+          this.clearSelection()
+          // Some may not have been allowed: say so
+          if (response.data.message) {
+            this.toast.init({ message: response.data.message, color: 'warning', duration: 10000 })
+          }
+          this.updateTaskList()
         })
+        .catch((error) => this.showError(error))
     },
-    bulkDelete () {
-      const vueState = this
-      const ids = this.selectedItems.map(task => task.id)
-      if (ids.length === 0) {
-        return
-      }
-      if (!window.confirm(this.$t('admin.tasks.confirmBulkDelete', { count: ids.length }))) {
-        return
-      }
-      axios.post('/admin/server/tasks/bulk/delete', { tasks: ids })
-        .then(function () {
-          vueState.selectedItems = []
-          vueState.updateTaskList()
-        })
+    showError (error) {
+      this.toast.init({
+        message: error.response?.data?.message || error.message,
+        color: 'danger',
+        duration: 10000
+      })
     },
     hasError (id) {
       const task = this.task_list[id]
@@ -315,13 +402,39 @@ export default {
         }
       }
     },
+    clearSelection () {
+      this.selectedItems = []
+      this.checkedIds = []
+    },
+    savedView () {
+      try {
+        return window.localStorage.getItem('admin.tasks.view') === 'tree' ? 'tree' : 'table'
+      } catch {
+        return 'table'
+      }
+    },
+    changeView () {
+      try {
+        window.localStorage.setItem('admin.tasks.view', this.view)
+      } catch {
+        // Remembering the choice is a convenience only
+      }
+      this.clearSelection()
+      this.task_list = []
+      this.meta.page = 1
+      this.updateTaskList()
+    },
+    changePage (page) {
+      this.meta.page = page
+      this.updateTaskList()
+    },
     changePerPage () {
       this.meta.page = 1
       this.updateTaskList()
     },
     changeLiveMode () {
       if (this.liveMode) {
-        this.selectedItems = []
+        this.clearSelection()
         this.interval = setInterval(this.updateTaskList, 3000)
       } else {
         clearInterval(this.interval)

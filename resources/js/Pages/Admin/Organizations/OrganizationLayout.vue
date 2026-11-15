@@ -40,10 +40,12 @@ export default {
         title: this.$t('admin.tasks.tasks'),
         url: basePath + '/tasks'
       },
-      {
-        title: this.$t('admin.backups.backups'),
-        url: basePath + '/backups'
-      },
+      ...(this.$page.props.flags.appBackups
+        ? [{
+            title: this.$t('admin.backups.backups'),
+            url: basePath + '/backups'
+          }]
+        : []),
       {
         title: this.$t('admin.domains.domains'),
         url: basePath + '/domains'

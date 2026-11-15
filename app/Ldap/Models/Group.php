@@ -74,7 +74,7 @@ class Group extends Model
         $app = AppInstance::where('name', $dn['cn'][0])->first();
 
         if ($app && $app->belongsToOrganization($this->account())) {
-            if ($count > 1 && $app_role = AppRole::where('slug', $dn['cn'][1])->first()) {
+            if ($count > 1 && $app_role = $this->roleOf($dn['cn'][1])) {
                 return [
                     'access_type' => $app_role->accessType(app: $app),
                 ];
@@ -86,9 +86,26 @@ class Group extends Model
         return null;
     }
 
+    // Apps can have roles with the same slug (an Administrator in each), so it is the one of the app
+    // the group is for when there is more than one
     public function appRole()
     {
-        return AppRole::where('slug', $this->roleName())->first();
+        return $this->roleOf($this->roleName());
+    }
+
+    private function roleOf(?string $slug): ?AppRole
+    {
+        $roles = AppRole::where('slug', $slug)->get();
+
+        if ($roles->count() <= 1) {
+            return $roles->first();
+        }
+
+        $dn = Dn::split($this->getDn());
+        $app = isset($dn['cn'][0]) ? AppInstance::where('name', $dn['cn'][0])->first() : null;
+        $application_ids = $app ? $app->children->pluck('application_id')->push($app->application_id) : collect();
+
+        return $roles->first(fn (AppRole $role) => $application_ids->contains($role->application_id)) ?? $roles->first();
     }
 
     public function appRoleAccessType(): ?AccessType
@@ -135,9 +152,7 @@ class Group extends Model
         $dn = Dn::split($this->getDn());
 
         if (count($dn['cn']) > 1) {
-            $app_role = AppRole::where('slug', $dn['cn'][1])->first();
-
-            return $app_role;
+            return $this->roleOf($dn['cn'][1]);
         }
 
         return null;

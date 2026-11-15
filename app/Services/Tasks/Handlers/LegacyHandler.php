@@ -59,14 +59,40 @@ class LegacyHandler implements TaskHandler
         }
     }
 
-    public function retry(Task $task): ?Action
+    public function cancelled(Task $task): ?string
+    {
+        // Nothing older actions know to undo beyond compensate()
+        return null;
+    }
+
+    /**
+     * The action's retry() gives a fresh action to take the task's values, status
+     * and creation hooks from; without one the task is retried as it is.
+     */
+    public function reset(Task $task): void
     {
         if (! method_exists($this->class, 'retry')) {
-            return null;
+            return;
         }
 
         $retry = ($this->class)::retry($task);
 
-        return $retry instanceof Action ? $retry : null;
+        if (! $retry instanceof Action) {
+            return;
+        }
+
+        $task->attempts++;
+        $task->error_message = '';
+        $task->custom_values = $retry->custom_values;
+        $task->save();
+
+        if (method_exists($retry, 'postGenerate')) {
+            $task->status = $retry->status;
+            $retry->postGenerate($task);
+        }
+
+        if (method_exists($retry, 'onCreate')) {
+            $retry->onCreate($task);
+        }
     }
 }

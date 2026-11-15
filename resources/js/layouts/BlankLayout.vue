@@ -1,50 +1,16 @@
 <script setup>
 import { router, usePage } from '@inertiajs/vue3'
 import { useToast } from 'vuestic-ui'
+import { errorToasts, noticeToasts, showToasts } from '@/services/toasts'
 
 const page = usePage()
 const toast = useToast()
 
 router.on('success', () => {
-  if (page.props.notices.success) {
-    toast.init({
-      message: page.props.notices.success,
-      customClass: 'success-toast',
-      color: 'success',
-      duration: 10000
-    })
-  }
-  if (page.props.notices.error) {
-    toast.init({
-      message: page.props.notices.error,
-      customClass: 'success-toast',
-      color: 'danger',
-      duration: 10000
-    })
-  }
+  showToasts(toast, noticeToasts({ success: page.props.notices?.success, error: page.props.notices?.error }))
 })
 router.on('error', () => {
-  if (page.props.notices.error) {
-    toast.init({
-      message: page.props.notices.error,
-      customClass: 'success-toast',
-      color: 'danger',
-      duration: 10000
-    })
-  }
-})
-router.on('error', () => {
-  if (page.props.errors) {
-    const errors = page.props.errors
-    for (const message of Object.entries(errors)) {
-      toast.init({
-        message,
-        customClass: 'success-toast',
-        color: 'danger',
-        duration: 10000
-      })
-    }
-  }
+  showToasts(toast, [...noticeToasts({ error: page.props.notices?.error }), ...errorToasts(page.props.errors)])
 })
 </script>
 <template>

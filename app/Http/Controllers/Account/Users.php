@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Account;
 
 use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppInstance;
+use App\Enums\AccessType;
 use App\Events\Users\DeletingUser;
 use App\Events\Users\UserCreated;
 use App\Events\Users\UserDeleted;
@@ -37,12 +38,11 @@ class Users extends Controller
     public function index()
     {
         $organization = auth()->user()->organization;
-        $minimal_label = Subscription::base()->setting('base.minimal_label');
-        $basic_label = Subscription::base()->setting('basic.name');
+        $plan = Subscription::base();
         $access_types = [
-            'standard' => __('labels.user'),
-            'basic' => $basic_label,
-            'minimal' => $minimal_label,
+            'standard' => $plan->accessTypeLabel(AccessType::STANDARD),
+            'basic' => $plan->accessTypeLabel(AccessType::BASIC),
+            'minimal' => $plan->accessTypeLabel(AccessType::MINIMAL),
             'none' => __('labels.deactivated'),
         ];
 

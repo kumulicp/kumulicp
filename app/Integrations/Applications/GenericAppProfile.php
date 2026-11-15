@@ -2,7 +2,7 @@
 
 namespace App\Integrations\Applications;
 
-use App\Integrations\ServerManagers\Rancher\Charts\GenericChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\GenericChart;
 
 class GenericAppProfile extends AppProfile
 {

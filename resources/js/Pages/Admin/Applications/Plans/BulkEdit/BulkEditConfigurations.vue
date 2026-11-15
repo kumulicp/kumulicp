@@ -88,7 +88,7 @@ import { useForm } from '@inertiajs/vue3'
                   @click="removeConfig(key)"
                   :title="$t('admin.plans.removeConfig')"
                 >
-                  <va-icon name="fa-x" color="danger" />
+                  <va-icon name="entypo-cancel" color="danger" />
                 </va-button>
               </td>
             </tr>

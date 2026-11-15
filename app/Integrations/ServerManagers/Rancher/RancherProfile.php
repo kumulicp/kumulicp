@@ -28,4 +28,9 @@ class RancherProfile
     {
         return Arr::get($this->interfaces, $interface, null);
     }
+
+    public function configTest(): ?string
+    {
+        return RancherConfigTest::class;
+    }
 }

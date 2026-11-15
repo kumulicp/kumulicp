@@ -23,8 +23,10 @@ abstract class NativeAction extends Action implements TaskAction
 
     public static function compensate(Task $task): void {}
 
-    public static function retry(Task $task): ?Action
+    public static function cancelled(Task $task): ?string
     {
         return null;
     }
+
+    public static function reset(Task $task): void {}
 }

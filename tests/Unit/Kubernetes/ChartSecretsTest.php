@@ -1,7 +1,7 @@
 <?php
 
 use App\Integrations\ServerManagers\Kubernetes\API\Secret;
-use App\Integrations\ServerManagers\Rancher\Charts\ChartSecrets;
+use App\Integrations\ServerManagers\Kubernetes\Charts\ChartSecrets;
 use App\Organization;
 use App\OrgServer;
 use App\Server;

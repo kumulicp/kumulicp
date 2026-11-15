@@ -87,7 +87,7 @@ class AppPlanService
                 'price' => Arr::get($feature, 'price'),
                 'price_id' => Arr::get($feature, 'price_id'),
                 'payment_type' => Arr::get($feature, 'payment_type'),
-                'settings' => $this->featureSettingsToStore($name, Arr::get($feature, 'settings', []), $app_features[$name] ?? null),
+                'settings' => $this->featureSettingsToStore($name, Arr::get($feature, 'settings') ?? [], $app_features[$name] ?? null),
             ];
 
             if ($plan_settings[$name] != $this->featureSettings($name)) {

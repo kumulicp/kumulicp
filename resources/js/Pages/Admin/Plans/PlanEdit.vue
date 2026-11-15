@@ -36,6 +36,13 @@ import { currencyByCode } from '@/constants/currencies'
             :error="$page.props.errors.default"
             :error-messages="$page.props.errors.default"
             />
+          <va-checkbox v-model="form.status"
+            :label="$t('admin.plans.available')"
+            :messages="$t('admin.plans.availableCaption')"
+            class="my-2"
+            :error="$page.props.errors.status"
+            :error-messages="$page.props.errors.status"
+            />
           <va-select
             id="planType"
             v-model="form.type"
@@ -105,29 +112,29 @@ import { currencyByCode } from '@/constants/currencies'
                   :error-messages="$page.props.errors.displayed_features"
                   />
               </div>
-              <div class="flex flex-col lg7">
+              <div class="flex flex-col lg8">
                 <va-input v-model="form.displayed_features[index]['description']"
                   :label="$t('admin.plans.description')"
                   immediateValidation
                   :error="$page.props.errors.displayed_features"
                   :error-messages="$page.props.errors.displayed_features"
-                  />
-              </div>
-              <div class="flex lg1">
-                <div class="content-center align-center">
-                  <va-icon name="fa-x" color="danger" @click="removeFeature(index)" />
-                </div>
+                  >
+                  <template #append>
+                    <va-icon name="entypo-cancel" color="danger" style="cursor:pointer" @click="removeFeature(index)" />
+                  </template>
+                </va-input>
               </div>
             </div>
           </template>
           <va-button @click="addNewFeature()">{{ $t('admin.plans.addFeature') }}</va-button>
         </template>
       </AdminSettings>
-      <va-list-separator class="my-1" fit />
-      <AdminSettings>
-        <template #name>{{ $t('admin.plans.baseOptions') }}</template>
-        <template #settings>
-          <template v-if="form.type === 'package'">
+      <template v-if="form.type === 'package'">
+        <va-list-separator class="my-1" fit />
+        <AdminSettings>
+          <template #name>{{ $t('admin.plans.basePricing') }}</template>
+          <template #description>{{ $t('admin.plans.basePricingDescription') }}</template>
+          <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
                 <div class="flex lg6 xs12">
@@ -154,11 +161,42 @@ import { currencyByCode } from '@/constants/currencies'
               </div>
             </template>
           </template>
+        </AdminSettings>
+      </template>
+      <va-list-separator class="my-1" fit />
+      <AdminSettings>
+        <template #name>{{ $t('admin.plans.accessTypeLabels') }}</template>
+        <template #description>{{ $t('admin.plans.accessTypeLabelsDescription') }}</template>
+        <template #settings>
           <va-input
+            id="standard-label"
+            v-model="form.base.standard_label"
+            :label="$t('admin.plans.standardUserLabel')"
+            :messages="$t('admin.plans.standardUserLabelCaption')"
+            :error="!!$page.props.errors['base.standard_label']"
+            :error-messages="$page.props.errors['base.standard_label']"
+            class="my-2"
+          />
+          <va-input
+            id="basic-label"
+            v-model="form.basic.name"
+            :label="$t('admin.plans.basicUserLabel')"
+            :messages="$t('admin.plans.basicUserLabelCaption')"
+            class="my-2"
+          />
+          <va-input
+            id="minimal-label"
             v-model="form.base.minimal_label"
             :label="$t('admin.plans.minimalUserLabel')"
+            :messages="$t('admin.plans.minimalUserLabelCaption') + ' ' + $t('admin.plans.minimalUserLabelDefault')"
             class="my-2"
-            :messages="$t('admin.plans.minimalUserLabelCaption')"
+          />
+          <va-checkbox
+            id="minimal-enabled"
+            v-model="form.base.minimal_enabled"
+            :label="$t('admin.plans.enableMinimalUsers')"
+            :messages="$t('admin.plans.enableMinimalUsersCaption')"
+            class="my-2"
           />
         </template>
       </AdminSettings>
@@ -166,6 +204,7 @@ import { currencyByCode } from '@/constants/currencies'
         <va-list-separator class="my-1" fit />
         <AdminSettings>
           <template #name>{{ $t('admin.plans.standardUserOptions') }}</template>
+          <template #description>{{ $t('admin.plans.standardUserOptionsDescription') }}</template>
           <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
@@ -223,12 +262,15 @@ import { currencyByCode } from '@/constants/currencies'
         <va-list-separator class="my-1" fit />
         <AdminSettings>
           <template #name>{{ $t('admin.plans.basicUserOptions') }}</template>
+          <template #description>{{ $t('admin.plans.basicUserOptionsDescription') }}</template>
           <template #settings>
-            <va-input v-model="form.basic.name"
-              :label="$t('admin.plans.name')"
-              :messages="$t('admin.plans.basicUserNameCaption')"
+            <va-checkbox
+              id="basic-enabled"
+              v-model="form.basic.enabled"
+              :label="$t('admin.plans.enableBasicUsers')"
+              :messages="$t('admin.plans.enableBasicUsersCaption')"
               class="my-2"
-              immediateValidation />
+            />
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
                 <div class="flex lg6 xs12">
@@ -618,6 +660,7 @@ export default {
         type: this.plan.type,
         displayed_features: this.plan.features,
         default: this.plan.is_default,
+        status: this.plan.status === 'available',
         domain_enabled: this.plan.domain_enabled,
         domain_max: this.plan.domain_max,
         email_enabled: this.plan.email_enabled,
@@ -632,7 +675,10 @@ export default {
           enabled: this.plan.settings.suborganizations?.enabled || false
         },
         base: {
-          minimal_label: this.plan.settings.base?.minimal_label
+          standard_label: this.plan.settings.base?.standard_label,
+          minimal_label: this.plan.settings.base?.minimal_label,
+          // Plans saved before these were set apart from the names are on when they have one
+          minimal_enabled: this.plan.settings.base?.minimal_enabled ?? !!this.plan.settings.base?.minimal_label
         },
         standard: {
           storage: this.plan.settings.standard?.storage,
@@ -642,6 +688,7 @@ export default {
           storage: this.plan.settings.basic?.storage,
           max: this.plan.settings.basic?.max,
           name: this.plan.settings.basic?.name,
+          enabled: this.plan.settings.basic?.enabled ?? !!this.plan.settings.basic?.name,
           amount: this.plan.settings.basic?.amount
         },
         storage: {

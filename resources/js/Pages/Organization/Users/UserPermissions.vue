@@ -111,7 +111,8 @@ import { useForm, Link } from '@inertiajs/vue3'
           >
             {{ $t('organization.users.adminWarning') }}
           </va-alert>
-          <va-scroll-container horizontal>
+          <!-- Its own height is 100% of the form, which leaves the buttons below it outside the card -->
+          <va-scroll-container horizontal style="height: auto">
             <table class="va-table va-table--striped mb-2">
               <thead>
                 <tr>
@@ -132,7 +133,7 @@ import { useForm, Link } from '@inertiajs/vue3'
                   <td v-if="appAccessTypeFiltered[app.id] !== 'none'">
                     <template v-for="(category, index) in app.categories" :key="index">
                       <template v-if="form['permission'][app.id][category.id] !== 'none'">
-                        <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[form['permission'][app.id][category.id]] }}</va-chip>
+                        <va-chip outline class="mr-1" :title="allAppDescriptions[app.id][category.id]">{{ roleNames[app.id][form['permission'][app.id][category.id]] }}</va-chip>
                       </template>
                     </template>
                   </td>
@@ -158,7 +159,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           <template v-if="accessTypeChanges.length > 0">
             <b>{{ $t('organization.users.accessChanged') }}</b>
             <div class="mt-2 mb-3">
-              <ul class="va-unordered">
+              <ul class="va-unordered permission-changes">
                 <li v-for="(change, index) in accessTypeChanges" :key="index">
                   {{ change }}
                 </li>
@@ -242,6 +243,8 @@ export default {
       allAppDescriptions[permission.id] = {}
       errors[permission.id] = {}
       roleAccessTypes[permission.id] = {}
+      // Per app: two apps can have a role with the same slug, like both having an Administrator
+      roleNames[permission.id] = {}
       appAccessType[permission.id] = permission.access_type
       appAccessTypeFiltered[permission.id] = permission.access_type
 
@@ -249,7 +252,7 @@ export default {
         roleAccessTypes[permission.id][category.id] = {}
         Object.values(category.roles).forEach((role) => {
           roleAccessTypes[permission.id][role.value] = role.access_type
-          roleNames[role.value] = category.name + ' ' + role.text
+          roleNames[permission.id][role.value] = category.name + ' ' + role.text
           if (category.active_role === role.text) {
             allAppDescriptions[permission.id][category.id] = role.description
             permissions[permission.id][category.id] = role.value
@@ -313,7 +316,8 @@ export default {
     },
     updatePermissions () {
       this.checkAccessType()
-      if (this.currentAccessType !== this.form.access_type) {
+      // Only a change that can affect what is paid for needs confirming
+      if (this.accessTypeChanges.length > 0) {
         this.showConfirmAccessTypeChange = true
       } else {
         this.form.post('/users/' + this.user.id + '/permissions')
@@ -355,15 +359,16 @@ export default {
             accessType = 'minimal'
           }
 
-          if (this.permissions[id].access_type !== appAccessType) {
-            this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType], name: this.permissions[id].name }))
+          // Only apps with a paid subscription can change the price (the admin toggle never does)
+          if (app.pricing && app.id !== 'control_panel_admin' && this.permissions[id].access_type !== appAccessType) {
+            this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType] ?? appAccessType, name: this.permissions[id].name }))
           }
           this.appAccessType[app.id] = appAccessType
           this.appAccessTypeFiltered[app.id] = appAccessType
         }
       } else if (this.plan.type === 'package') {
         const confirmedAccessType = this.confirmAccessType()
-        if (this.user.access_type !== confirmedAccessType) {
+        if (this.plan.payment_enabled && this.user.access_type !== confirmedAccessType) {
           if (this.user.access_type === 'standard' && confirmedAccessType === 'basic') {
             this.accessTypeChanges.push(this.$t('organization.users.userDowngradedTo', { type: this.accessTypes[confirmedAccessType] }))
           } else if ((this.user.access_type === 'basic' || confirmedAccessType === 'none' || confirmedAccessType === 'minimal') && confirmedAccessType === 'standard') {
@@ -468,4 +473,11 @@ export default {
 }
 </script>
 
-<style></style>
+<style>
+/* Vuestic puts the bullet at a fixed offset, which sits below the text's middle at this font size:
+   centre it on the first line of the item instead */
+ul.va-unordered.permission-changes > li:before {
+  margin-top: 0;
+  top: calc(0.5lh - 0.25rem);
+}
+</style>

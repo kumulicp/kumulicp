@@ -7,11 +7,14 @@ use App\AppInstance;
 use App\AppPlan;
 use App\Enums\AccessType;
 use App\Enums\PlanEntity;
+use App\Services\Organization\BasePlanService;
 use App\Support\AccountManager\UserManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
 use App\Support\Facades\FastCache;
+use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -50,9 +53,51 @@ class AppInstancePlanService
         return Application::instance($this->app_instance);
     }
 
+    /**
+     * The price of an entity in the organization's billing currency, falling back like billing does
+     * (default currency, then the legacy flat price). Plans save per-currency prices, so reading the
+     * flat setting directly gives nothing and the summaries come up empty.
+     */
     public function price($entity)
     {
-        return $this->plan->setting("$entity.price");
+        return $this->plan->priceFor($entity, $this->organization->billingCurrency())['amount'];
+    }
+
+    private function baseSubscription(): BasePlanService
+    {
+        // The current account's base subscription may be a dry run of a plan change, so prefer it
+        if (OrganizationFacade::account()?->is($this->organization)) {
+            return Subscription::base();
+        }
+
+        return new BasePlanService($this->organization);
+    }
+
+    /**
+     * A Packaged base plan carries all prices and per-user storage itself. The app plan
+     * is then only a technical description of the app, so it must never be billed.
+     */
+    public function isPackaged(): bool
+    {
+        return $this->baseSubscription()->get()?->type === 'package';
+    }
+
+    /**
+     * Storage in GB for one user with the given access type ('standard' or 'basic').
+     * Under a Packaged base plan the package's value wins; the app plan's value is only
+     * used when the package leaves it blank.
+     */
+    public function userStorage(string $access_type): mixed
+    {
+        if ($this->isPackaged()) {
+            $package_storage = $this->baseSubscription()->setting("{$access_type}.storage");
+
+            if (! is_null($package_storage)) {
+                return $package_storage;
+            }
+        }
+
+        return $this->plan->setting("{$access_type}.storage");
     }
 
     public function itemName(): string
@@ -67,6 +112,10 @@ class AppInstancePlanService
 
     public function pricing(): array
     {
+        if ($this->isPackaged() || $this->inTrial()) {
+            return [];
+        }
+
         $pricing = [];
         $currency = $this->organization->billingCurrency();
 
@@ -94,6 +143,12 @@ class AppInstancePlanService
 
     public function pricingOptions()
     {
+        // Nothing is billed during a free trial. The billing update that follows the end of the trial
+        // (see ExpiredSubscriptionsCheck) sees the pricing change and adds the app from then on.
+        if ($this->isPackaged() || $this->inTrial()) {
+            return [];
+        }
+
         $pricing = [];
         $options = [];
 
@@ -123,6 +178,43 @@ class AppInstancePlanService
         return $options;
     }
 
+    public function inTrial(): bool
+    {
+        return $this->app_instance->inTrial();
+    }
+
+    /**
+     * What to tell the customer while the app is in its free trial, otherwise nothing.
+     */
+    public function trialNotice(): ?string
+    {
+        if (! $this->inTrial()) {
+            return null;
+        }
+
+        return __('organization.subscription.trial_notice', ['date' => $this->app_instance->trial_ends_at->format('M d, Y')]);
+    }
+
+    /**
+     * When the app ends although it isn't being deactivated (an expiring plan), otherwise nothing.
+     */
+    public function expiryNotice(): ?string
+    {
+        if (in_array($this->app_instance->status, ['deactivating', 'deactivated']) || ! $this->app_instance->deactivate_at) {
+            return null;
+        }
+
+        return __('organization.subscription.expiry_notice', ['date' => $this->app_instance->deactivate_at->format('M d, Y')]);
+    }
+
+    /**
+     * Said while a plan change is waiting for the app to be active, otherwise nothing.
+     */
+    public function pendingNotice(): ?string
+    {
+        return PendingAppChanges::hasPending($this->app_instance) ? __('organization.subscription.pending_notice') : null;
+    }
+
     public function status(): string
     {
         $plan_id = $this->plan->id;
@@ -140,9 +232,13 @@ class AppInstancePlanService
 
     public function stats(): array
     {
+        if ($this->isPackaged()) {
+            return [];
+        }
+
         $app_plan = $this;
 
-        return FastCache::retrieve('app_plan_stats_'.$this->plan->id, function () use ($app_plan) {
+        return FastCache::retrieve('app_plan_stats_'.$this->app_instance->id.'_'.$this->plan->id, function () use ($app_plan) {
             $stats = [];
             foreach ($app_plan->pricing_options as $option) {
                 $option_stats = $app_plan->optionStats($option);
@@ -176,19 +272,20 @@ class AppInstancePlanService
                 $count['unit'] = 'user';
                 break;
             case 'basic':
-                $count['label'] = Str::plural($this->plan->setting('basic.name'));
-                $count['calculation'] = '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->plan->setting('basic.name')));
+                $basic_label = $this->baseSubscription()->accessTypeLabel(AccessType::BASIC);
+                $count['label'] = Str::plural($basic_label);
+                $count['calculation'] = '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($basic_label));
                 $count['quantity'] = $this->countEntity('basic');
                 $count['price'] = (float) $this->price('basic');
                 $count['total_price'] = (float) number_format($this->basicPriceTotal(), 2, '.', ', ');
-                $count['unit'] = $this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->plan->setting('basic.name')));
+                $count['unit'] = $this->plan->setting('basic.amount').' '.Str::plural(strtolower($basic_label));
                 break;
             case 'storage':
                 $count['label'] = __('labels.additional_storage');
-                $count['calculation'] = '$'.$this->plan->setting('storage.price').' for every '.$this->plan->setting('storage.amount').'GB';
+                $count['calculation'] = '$'.$this->price('storage').' for every '.$this->plan->setting('storage.amount').'GB';
                 $count['storage'] = $this->additionalStorageTotal();
                 $count['quantity'] = $this->countEntity('storage');
-                $count['price'] = $this->plan->setting('storage.price');
+                $count['price'] = $this->price('storage');
                 $count['amount'] = $this->plan->setting('storage.amount');
                 $count['total_price'] = number_format($this->additionalStoragePriceTotal(), 2, '.', ', ');
                 $count['unit'] = $this->plan->setting('storage.amount').'GB';
@@ -215,11 +312,9 @@ class AppInstancePlanService
     {
         switch ($access_type) {
             case AccessType::STANDARD:
-                return __('labels.standard_user');
             case AccessType::BASIC:
-                return $this->setting('basic.name');
             case AccessType::MINIMAL:
-                return $this->setting('base.minimal_label');
+                return $this->baseSubscription()->accessTypeLabel($access_type);
             case AccessType::NONE:
                 return __('labels.none_user');
             default:
@@ -272,36 +367,38 @@ class AppInstancePlanService
     public function availableAccessTypes(): array
     {
         $app_roles = $this->app_instance->application->roles;
+        // Named by the organization's plan, like everywhere else
+        $labels = $this->baseSubscription();
         $access_types = [
             [
                 'value' => 'standard',
-                'text' => 'Active User',
+                'text' => $labels->accessTypeLabel(AccessType::STANDARD),
                 'description' => $app_roles->filter(function ($role) {
                     return $role->slug === 'standard';
                 })->first()?->description,
             ],
         ];
 
-        if ($this->setting('basic.name')) {
+        if ($this->isBasicUsersEnabled()) {
             $access_types[] = [
                 'value' => 'basic',
-                'text' => $this->setting('basic.name'),
+                'text' => $labels->accessTypeLabel(AccessType::BASIC),
                 'description' => $app_roles->filter(function ($role) {
                     return $role->slug === 'basic';
                 })->first()?->description,
             ];
         }
 
-        if (Subscription::base()->setting('base.minimal_label')) {
+        if ($labels->isMinimalUsersEnabled()) {
             $access_types[] = [
                 'value' => 'minimal',
-                'text' => Subscription::base()->setting('base.minimal_label'),
+                'text' => $labels->accessTypeLabel(AccessType::MINIMAL),
             ];
         }
 
         $access_types[] = [
             'value' => 'none',
-            'text' => 'Disabled',
+            'text' => $labels->accessTypeLabel(AccessType::NONE),
         ];
 
         return $access_types;
@@ -400,7 +497,15 @@ class AppInstancePlanService
 
     public function isBasicUsersEnabled()
     {
-        return ! is_null($this->plan->setting('basic.name'));
+        // Plans saved before it could be set apart from a name are on when they have one
+        return (bool) ($this->plan->setting('basic.enabled') ?? filled($this->plan->setting('basic.name')));
+    }
+
+    // The one organization of a single-organization install has no limits, even
+    // the ones an app plan sets
+    private function isUnlimited(): bool
+    {
+        return $this->organization && Tenancy::isSingleOrganization($this->organization);
     }
 
     public function isAnyMaxBroken()
@@ -416,7 +521,11 @@ class AppInstancePlanService
 
     public function totalPrice(): float
     {
-        return $this->plan->setting('base.price')
+        if ($this->isPackaged() || $this->inTrial()) {
+            return 0.0;
+        }
+
+        return $this->price('base')
             + $this->standardPriceTotal()
             + $this->basicPriceTotal()
             + $this->additionalStoragePriceTotal()
@@ -430,11 +539,19 @@ class AppInstancePlanService
 
     public function isMaxBroken(PlanEntity $entity): bool
     {
+        if ($this->isUnlimited()) {
+            return false;
+        }
+
         return $this->plan->setting("{$entity->value}.max") && $this->countEntity($entity->value) > (int) $this->plan->setting("{$entity->value}.max");
     }
 
     public function isMax($entity): bool
     {
+        if ($this->isUnlimited()) {
+            return false;
+        }
+
         $max_amount = $this->plan->setting("$entity.max");
 
         return ($max_amount && $this->countEntity($entity) >= (int) $max_amount) || (! $max_amount && Subscription::base()->isMax($entity));
@@ -442,17 +559,28 @@ class AppInstancePlanService
 
     public function standardPriceTotal(): float
     {
-        return $this->plan->setting('standard.price') ? $this->countEntity('standard') * $this->plan->setting('standard.price') : 0;
+        return $this->price('standard') ? $this->countEntity('standard') * $this->price('standard') : 0;
     }
 
     public function standardStorageTotal(): float
     {
-        return ($this->plan->setting('standard.storage')) ? $this->countEntity('standard') * $this->plan->setting('standard.storage') : 0;
+        return ($this->userStorage('standard')) ? $this->countEntity('standard') * $this->userStorage('standard') : 0;
     }
 
     public function basicPriceTotal(): float
     {
-        return ($this->countEntity('basic') && $this->plan->setting('basic.price')) ? ceil($this->countEntity('basic') / $this->plan->setting('basic.amount')) * $this->plan->setting('basic.price') : 0;
+        return ($this->countEntity('basic') && $this->price('basic')) ? $this->basicBlocks() * $this->price('basic') : 0;
+    }
+
+    /**
+     * Number of billable blocks of basic users. Users are billed in blocks of
+     * `basic.amount`; a missing or zero block size means one user per block.
+     */
+    public function basicBlocks(): int
+    {
+        $block_size = max(1, (int) $this->plan->setting('basic.amount'));
+
+        return (int) ceil($this->countEntity('basic') / $block_size);
     }
 
     public function basicAmountTotal(): float
@@ -462,7 +590,7 @@ class AppInstancePlanService
 
     public function additionalStoragePriceTotal()
     {
-        return $this->plan->setting('storage.price') ? $this->countEntity('storage') * $this->plan->setting('storage.price') : 0;
+        return $this->price('storage') ? $this->countEntity('storage') * $this->price('storage') : 0;
     }
 
     public function additionalStorageTotal()

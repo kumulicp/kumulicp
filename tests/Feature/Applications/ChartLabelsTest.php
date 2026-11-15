@@ -2,12 +2,12 @@
 
 use App\AppPlan;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\Ingress\RedirectChart as IngressRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\MySQLJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
-use App\Integrations\ServerManagers\Rancher\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
-use App\Integrations\ServerManagers\Rancher\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Ingress\RedirectChart as IngressRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\MySQLJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\NextcloudJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\WordpressJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Middleware\RedirectChart as MiddlewareRedirectChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 use App\Organization;
 use App\Support\Facades\Application;
 use Tests\Support\Applications\DemoAppProfile;
@@ -72,4 +72,18 @@ it('sanitizes label values to be valid kubernetes labels', function () {
 
     expect($label)->toMatch('/^[A-Za-z0-9]([A-Za-z0-9_.-]*[A-Za-z0-9])?$/');
     expect(strlen($label))->toBeLessThanOrEqual(63);
+});
+
+it('points the nextcloud job at the release claim without asking the cluster', function () {
+    $organization = Organization::factory()->create();
+    $app_instance = chartLabelsAppInstance($organization);
+    $app_instance->updateSetting('override.chart.values.fullNameOverride', "{$organization->slug}-nextcloud-{$app_instance->id}");
+
+    $job = new NextcloudJobChart($organization, $app_instance);
+
+    expect($job->persistentVolumeClaim())->toBe("{$organization->slug}-nextcloud-{$app_instance->id}-nextcloud");
+
+    $app_instance->updateSetting('existing_claim', 'my-claim');
+
+    expect((new NextcloudJobChart($organization, $app_instance))->persistentVolumeClaim())->toBe('my-claim');
 });

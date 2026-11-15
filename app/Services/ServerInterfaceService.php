@@ -10,6 +10,7 @@ use App\Integrations\SSO\Authentik\AuthentikProfile;
 use App\OrgServer;
 use App\Server;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 
 class ServerInterfaceService
 {
@@ -97,6 +98,10 @@ class ServerInterfaceService
                 // If first try, add organization, otherwise sleep 5 seconds and try again. Some servers take a few seconds to setup
                 if ($n == 0) {
                     $response = $connection->addOrganization();
+
+                    if (is_array($response) && ($response['status'] ?? null) === 'failed') {
+                        Log::warning('Could not add the organization', ['connection' => $connection::class, 'response' => $response['response'] ?? null]);
+                    }
                 }
                 sleep(5);
             }

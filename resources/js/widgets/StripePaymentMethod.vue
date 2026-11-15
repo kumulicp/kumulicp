@@ -20,7 +20,7 @@ import axios from 'axios'
             <va-list-item-label v-if="paymentMethod.brand" lines="2">
               {{ paymentMethod.brand }} ****{{ paymentMethod.last4 }}
               <br />
-              {{ $t('payment.expires') }} {{ payment_method.exp_month }}/{{ payment_method.exp_year }}
+              {{ $t('payment.expires') }} {{ paymentMethod.exp_month }}/{{ paymentMethod.exp_year }}
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section icon>

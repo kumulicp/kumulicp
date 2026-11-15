@@ -14,6 +14,7 @@ use App\Support\PlanBreadcrumbs;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 class Plans extends Controller
 {
@@ -36,7 +37,11 @@ class Plans extends Controller
                 'id' => $app->id,
                 'name' => $app->name,
                 'slug' => $app->slug,
+                'can' => [
+                    'shareable' => ApplicationFacade::profile($app)->isCompatible(['shareable']),
+                ],
             ],
+            'shared_apps' => $this->sharedApps($app),
             'plans' => $plans->map(function ($plan) {
                 return [
                     'id' => $plan->id,
@@ -88,6 +93,7 @@ class Plans extends Controller
         $settings['features'] = $plan_features;
 
         return inertia()->render('Admin/Applications/Plans/PlanView', [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
@@ -97,7 +103,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
-                'features' => json_encode($plan->features),
+                'features' => json_encode($plan->features ?? []),
                 'description' => $plan->description,
                 'payment_enabled' => $plan->payment_enabled,
                 'admin_access' => $plan->setting('admin_access'),
@@ -110,7 +116,8 @@ class Plans extends Controller
                 'settings' => $settings,
                 'archived' => $plan->archive,
                 'hidden' => $plan->hidden,
-                'shared_app_active' => $plan->isSharedAppActive(),
+                'full_settings' => $plan->hasFullSettings(),
+                'tabs' => $plan->tabs(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -132,11 +139,24 @@ class Plans extends Controller
 
     public function store(Request $request, Application $app)
     {
+        // Only an app that can be shared asks which server type the plan uses;
+        // every other app's plans activate their own app.
+        $shareable = ApplicationFacade::profile($app)->isCompatible(['shareable']);
+
         /* Validate */
         $validated = $request->validate([
             'name' => 'required',
             'description' => 'required',
+            'server_type' => ['nullable', Rule::in($shareable ? ['separate', 'shared'] : ['separate'])],
+            'shared_app' => [
+                Rule::requiredIf($request->input('server_type') === 'shared'),
+                'nullable',
+                'numeric',
+                Rule::exists('app_instances', 'id')->where('application_id', $app->id),
+            ],
         ]);
+
+        $server_type = $validated['server_type'] ?? 'separate';
 
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
@@ -149,15 +169,48 @@ class Plans extends Controller
         $plan->features = [];
         $plan->display_order = $display_order + 1;
         $plan->settings = [
+            'server_type' => $server_type,
             'base' => [],
             'standard' => [],
             'basic' => [],
             'storage' => [],
             'application' => [],
         ];
+
+        if ($server_type === 'shared') {
+            $this->connectToSharedApp($plan, AppInstance::findOrFail($validated['shared_app']));
+        }
+
         $plan->save();
 
         return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
+    }
+
+    public function clone(Request $request, Application $app, AppPlan $plan)
+    {
+        // Hidden plans belong to a shared app and can't be duplicated
+        abort_if($plan->application_id !== $app->id || $plan->hidden, 404);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $order_num = AppPlan::where('application_id', $app->id)
+            ->where('display_order', '>', 0)
+            ->orderBy('display_order', 'desc')
+            ->first();
+
+        // Copies every attribute (settings, servers, pricing, secrets, ...)
+        // apart from the id and timestamps; the copy starts as a non-default,
+        // unarchived plan with no subscribers.
+        $clone = $plan->replicate();
+        $clone->name = $validated['name'];
+        $clone->display_order = ($order_num ? $order_num->display_order : 0) + 1;
+        $clone->is_default = false;
+        $clone->archive = false;
+        $clone->save();
+
+        return redirect("/admin/apps/{$app->slug}/plans/{$clone->id}")->with('success', __('admin.applications.plans.cloned', ['plan' => $clone->name]));
     }
 
     public function edit(Application $app, AppPlan $plan)
@@ -199,7 +252,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'is_default' => $plan->is_default,
-                'features' => $plan->features,
+                'features' => $plan->features ?? [],
                 'description' => $plan->description,
                 'payment_enabled' => $plan->payment_enabled,
                 'admin_access' => $plan->setting('admin_access'),
@@ -212,7 +265,8 @@ class Plans extends Controller
                 'settings' => $settings,
                 'archived' => $plan->archive,
                 'hidden' => $plan->hidden,
-                'shared_app_active' => $plan->isSharedAppActive(),
+                'full_settings' => $plan->hasFullSettings(),
+                'tabs' => $plan->tabs(),
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
@@ -235,12 +289,7 @@ class Plans extends Controller
                     'text' => $server->name.' ('.$server->status.')',
                 ];
             }),
-            'shared_apps' => Organization::where('type', 'shared')->first()?->app_instances->map(function ($app) {
-                return [
-                    'id' => $app->id,
-                    'name' => $app->label,
-                ];
-            }),
+            'shared_apps' => $this->sharedApps($app),
             'breadcrumbs' => PlanBreadcrumbs::for($app, $plan),
         ]);
     }
@@ -271,7 +320,7 @@ class Plans extends Controller
             'base.max' => 'numeric|nullable',
             'standard.max' => 'numeric|nullable',
             'standard.storage' => 'numeric|nullable',
-            'basic.name' => 'string|nullable',
+            'basic.enabled' => 'nullable|boolean',
             'basic.amount' => 'numeric|nullable',
             'basic.max' => 'numeric|nullable',
             'basic.storage' => 'numeric|nullable',
@@ -285,9 +334,8 @@ class Plans extends Controller
             'expires_after' => 'nullable|numeric',
             'trial_for' => 'nullable|numeric',
             'shared_app' => 'numeric|nullable|exists:app_instances,id',
-            // A shared app's own hidden plan isn't itself a "separate" or
-            // "shared" subscription option -- it's the thing being shared.
-            'server_type' => $plan->hidden ? 'nullable|in:separate,shared' : 'required|in:separate,shared',
+            // Chosen when the plan is created; the settings only carry it along.
+            'server_type' => 'nullable|in:separate,shared',
             'self_registration_enabled' => 'nullable|bool',
         ], $currencyRules));
         // Get bottom display order number
@@ -297,7 +345,11 @@ class Plans extends Controller
         $database_server = $request->database_server;
         $sso_server = $request->sso_server;
 
-        if ($request->server_type === 'shared' && ($shared_app = AppInstance::find($request->shared_app)) && $shared_app->plan) {
+        // A plan's server type is fixed when it's created, so an update that
+        // doesn't send one keeps the plan's own.
+        $server_type = $request->input('server_type') ?: $plan->setting('server_type');
+
+        if ($server_type === 'shared' && ($shared_app = AppInstance::find($request->shared_app)) && $shared_app->plan) {
             $web_server = $shared_app->plan->web_server_id;
             $database_server = $shared_app->plan->database_server_id;
             $sso_server = $shared_app->plan->sso_server_id;
@@ -305,7 +357,7 @@ class Plans extends Controller
 
         $plan->name = $request->name;
         $plan->description = $request->description;
-        $plan->features = $request->displayed_features;
+        $plan->features = $request->displayed_features ?? [];
         $plan->payment_enabled = $request->payment_enabled;
         $plan->web_server_id = $web_server;
         $plan->database_server_id = $database_server;
@@ -319,7 +371,7 @@ class Plans extends Controller
             'base.max' => (int) $request->input('base.max'),
             'standard.max' => (int) $request->input('standard.max'),
             'standard.storage' => (int) $request->input('standard.storage'),
-            'basic.name' => $request->input('basic.name'),
+            'basic.enabled' => $request->boolean('basic.enabled'),
             'basic.amount' => (int) $request->input('basic.amount'),
             'basic.max' => (int) $request->input('basic.max'),
             'basic.storage' => (int) $request->input('basic.storage'),
@@ -337,8 +389,8 @@ class Plans extends Controller
             }
         }
 
-        if (! $plan->hidden) {
-            $settingsToUpdate['server_type'] = $request->input('server_type');
+        if (! $plan->hidden && $server_type) {
+            $settingsToUpdate['server_type'] = $server_type;
         }
 
         $plan->updateSettings($settingsToUpdate);
@@ -403,6 +455,35 @@ class Plans extends Controller
         $plan->save();
 
         return redirect("/admin/apps/{$app->slug}/plans")->with('success', __('admin.applications.plans.unarchived'));
+    }
+
+    /**
+     * The running shared apps of this application a plan can connect to.
+     */
+    private function sharedApps(Application $app)
+    {
+        return Organization::where('type', 'shared')->first()
+            ?->app_instances
+            ->where('application_id', $app->id)
+            ->map(fn ($instance) => [
+                'id' => $instance->id,
+                'name' => $instance->label,
+            ])
+            ->values();
+    }
+
+    /**
+     * A plan connected to a shared app uses the servers that app runs on.
+     */
+    private function connectToSharedApp(AppPlan $plan, AppInstance $shared_app): void
+    {
+        $plan->shared_app_id = $shared_app->id;
+
+        if ($shared_app->plan) {
+            $plan->web_server_id = $shared_app->plan->web_server_id;
+            $plan->database_server_id = $shared_app->plan->database_server_id;
+            $plan->sso_server_id = $shared_app->plan->sso_server_id;
+        }
     }
 
     public function retrieve(Application $app)

@@ -2,12 +2,48 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AppsLayout from './AppsLayout.vue'
+import AppDomainFields from '@/components/AppDomainFields.vue'
+import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 
 </script>
 <template>
   <Head>
     <title>{{ $t('admin.apps.pageTitle') }}</title>
   </Head>
+    <va-list>
+      <va-list-item class="py-3">
+        <va-list-item-section label>
+          <va-list-item-label>
+            <h5>{{ $t('admin.apps.domain') }}</h5>
+          </va-list-item-label>
+        </va-list-item-section>
+        <va-list-item-section>
+          <va-list-item-label id="domain">
+            {{ domain.name }}
+            <va-icon
+              id="editDomain"
+              name="edit"
+              size="small"
+              color="primary"
+              class="clickable-icon ml-2"
+              role="button"
+              :aria-label="$t('admin.apps.editDomain')"
+              @click="showDomainModal = true"
+            />
+          </va-list-item-label>
+        </va-list-item-section>
+      </va-list-item>
+    </va-list>
+    <va-list-separator class="my-4" fit />
+
+    <template v-if="!app.managed_externally">
+    <va-alert v-if="updates.length > 0" id="outOfDate" color="warning" icon="warning" class="mb-3">
+      <div>{{ $t('admin.updates.appOutOfDate', { aspects: updates.map(update => update.label).join(', ') }) }}</div>
+      <div v-for="change in changes" :key="change ? change.id : 'none'" class="secondary">
+        <ChangeSummary :change="change" />
+      </div>
+      <div>{{ $t('admin.updates.appOutOfDateHelp') }}</div>
+    </va-alert>
     <div class="row justify-center">
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
@@ -66,6 +102,37 @@ import AppsLayout from './AppsLayout.vue'
         </div>
         <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.update') }}</va-button>
     </form>
+    </template>
+    <va-modal v-model="showDomainModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="domainForm.put('/admin/organizations/'+organization.id+'/apps/'+app.id+'/domain', { onSuccess: () => { showDomainModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.editDomain') }}</va-card-title>
+          <va-card-content class="m-0">
+            <va-alert v-if="domain.deployed" id="domainRestartWarning" color="warning" icon="warning" class="mb-3">
+              {{ $t('admin.apps.domainRestartWarning') }}
+            </va-alert>
+            <va-alert v-if="!domain.editable" id="domainNotEditableWarning" color="danger" icon="error" class="mb-3">
+              {{ $t('admin.apps.domainNotEditableWarning') }}
+            </va-alert>
+            <AppDomainFields
+              v-model:domain="domainForm.domain"
+              v-model:subdomain="domainForm.subdomain"
+              v-model:parent-domain="domainForm.parent_domain"
+              :domains="domain.domains"
+              :parent-domains="domain.parent_domains"
+            />
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="domainForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" id="saveDomain" class="mr-2" :disabled="domainForm.processing">{{ $t('common.update') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showUpdateAppModal"
     hide-default-actions
     no-padding
@@ -73,12 +140,31 @@ import AppsLayout from './AppsLayout.vue'
     >
       <template #content="{ ok }">
         <va-card-title class="m-0">{{ $t('admin.apps.update') }}</va-card-title>
-        <va-card-content class="m-0 p-0">
-          {{ $t('admin.apps.updateModal') }}
+        <va-card-content class="m-0">
+          <p class="mb-3">{{ $t('admin.apps.updateModal') }}</p>
+          <p v-if="update_steps.length === 0">{{ $t('admin.apps.updateNoSteps') }}</p>
+          <template v-else>
+            <va-checkbox
+              v-model="allStepsSelected"
+              :indeterminate="someStepsSelected && !allStepsSelected"
+              :label="$t('admin.apps.updateSelectAll')"
+              class="mb-2"
+            />
+            <va-divider class="my-2" />
+            <div v-for="step in update_steps" :key="step.key" class="mb-2">
+              <va-checkbox v-model="updateForm.steps" :array-value="step.key" :label="step.label" />
+              <va-badge v-if="step.out_of_date" :id="'outOfDate-' + step.key" class="ml-2" color="warning" :text="$t('admin.apps.updateOutOfDate')" />
+              <div v-if="step.description" class="va-text-secondary ml-8">{{ step.description }}</div>
+            </div>
+          </template>
         </va-card-content>
         <va-card-actions align="right" class="">
-          <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-          <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id+'/update'"><va-button type="submit" id="submit" class="mr-2" :disabled="form.processing">{{ $t('common.yes') }}</va-button></Link>
+          <va-button color="textInverted" :disabled="updateForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button
+            class="mr-2"
+            :disabled="updateForm.processing || updateForm.steps.length === 0"
+            @click="runUpdate(ok)"
+          >{{ $t('common.yes') }}</va-button>
         </va-card-actions>
       </template>
     </va-modal>
@@ -191,10 +277,37 @@ export default {
   props: {
     app: Object,
     organization: Object,
+    domain: Object,
     versions: Object,
+    update_steps: {
+      type: Array,
+      default: () => []
+    },
+    updates: {
+      type: Array,
+      default: () => []
+    },
     database_servers: Array
   },
   computed: {
+    // Each edit once, however many things it put out of date
+    changes () {
+      const seen = new Map()
+      this.updates.forEach(update => seen.set(update.change ? update.change.id : 'none', update.change))
+
+      return [...seen.values()]
+    },
+    allStepsSelected: {
+      get () {
+        return this.update_steps.length > 0 && this.updateForm.steps.length === this.update_steps.length
+      },
+      set (selected) {
+        this.updateForm.steps = selected ? this.update_steps.map(step => step.key) : []
+      }
+    },
+    someStepsSelected () {
+      return this.updateForm.steps.length > 0
+    },
     versionOptions () {
       return this.versions.map(version => ({ text: version.version, value: version.id }))
     },
@@ -224,6 +337,15 @@ export default {
         settings
       }),
       isPasswordVisible: false,
+      updateForm: useForm({
+        steps: this.update_steps.filter(step => step.checked).map(step => step.key)
+      }),
+      showDomainModal: false,
+      domainForm: useForm({
+        domain: this.domain.id,
+        subdomain: '',
+        parent_domain: null
+      }),
       showUpdateAppModal: false,
       showUpgradeAppModal: false,
       showDeleteAppModal: false,
@@ -246,6 +368,13 @@ export default {
           value: 'later'
         }
       ]
+    }
+  },
+  methods: {
+    runUpdate (close) {
+      this.updateForm.post('/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/update', {
+        onSuccess: () => close()
+      })
     }
   }
 }

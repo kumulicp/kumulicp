@@ -50,6 +50,21 @@ import { Link, useForm } from '@inertiajs/vue3'
   </div>
   <div class="row justify-center">
     <va-button id="addVersion" @click="showAddVersion = !showAddVersion">{{ $t('admin.versions.addVersion') }}</va-button>
+    <va-button v-if="mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: mass_upgrade.version }) }}</va-button>
+    <va-modal v-model="showMassUpgrade" no-outside-dismiss no-padding size="small" class="p-0">
+      <template #content="{ ok }">
+        <form @submit.prevent="massUpgradeForm.post('/admin/apps/' + app.slug + '/versions/' + mass_upgrade.version + '/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
+          <va-card-title class="m-0">{{ $t('admin.versions.massUpgradeTitle') }}</va-card-title>
+          <va-card-content class="m-0">
+            {{ $t('admin.versions.massUpgradeWarning', { count: mass_upgrade.count, version: mass_upgrade.version }) }}
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="massUpgradeForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" id="confirmMassUpgrade" :disabled="massUpgradeForm.processing" class="mr-2 mb-2">{{ $t('admin.versions.massUpgradeConfirm') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-button id="checkUpdates" class="ml-2" preset="secondary" :loading="checkForm.processing" :disabled="checkForm.processing" @click="checkForm.post('/admin/apps/' + app.slug + '/versions/check-updates')">{{ $t('admin.versions.checkNow') }}</va-button>
     <va-modal v-model="showAddVersion" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
@@ -108,7 +123,8 @@ import { Link, useForm } from '@inertiajs/vue3'
             <thead>
               <tr>
                 <th style="width: 50px">{{ $t('status.enabled') }}</th>
-                <th width="70%">{{ $t('admin.versions.name') }}</th>
+                <th width="55%">{{ $t('admin.versions.name') }}</th>
+                <th>{{ $t('admin.versions.testsColumn') }}</th>
                 <th>{{ $t('status.updatedAt') }}</th>
                 <th>{{ $t('status.createdAt') }}</th>
               </tr>
@@ -117,6 +133,11 @@ import { Link, useForm } from '@inertiajs/vue3'
               <tr v-for="version in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="version.name">
                 <td style="text-align: center"><va-icon name="fa-circle" :color="version.status == 'active' ? 'success' : 'backgroundElement'" /></td>
                 <td><Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version">{{ version.version }}</Link></td>
+                <td>
+                  <Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests' + (version.test.run_id ? '/' + version.test.run_id : '')">
+                    <va-badge :color="gateColor(version.test.gate)" :text="$t('admin.versions.testGate.' + version.test.gate)" />
+                  </Link>
+                </td>
                 <td>{{ version.updated_at }}</td>
                 <td>{{ version.created_at }}</td>
               </tr>
@@ -138,6 +159,7 @@ export default {
   props: {
     app: Object,
     versions: Object,
+    mass_upgrade: Object,
     errors: Object
   },
   computed: {
@@ -165,6 +187,9 @@ export default {
     }
   },
   methods: {
+    gateColor (gate) {
+      return { passed: 'success', bypassed: 'warning', running: 'info', failed: 'danger', stale: 'warning', untested: 'secondary' }[gate] || 'secondary'
+    },
     // Choosing an update fills in the new version's name
     copyChanged (value) {
       const update = this.updateOptions.find((option) => option.value === value)
@@ -198,6 +223,8 @@ export default {
         }
       ],
       showAddVersion: false,
+      showMassUpgrade: false,
+      massUpgradeForm: useForm({}),
       checkForm: useForm({}),
       curPageValue: 1,
       pageSize: 10,

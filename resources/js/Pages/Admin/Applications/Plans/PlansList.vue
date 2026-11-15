@@ -44,10 +44,57 @@ import draggable from 'vuedraggable'
                 :error="$page.props.errors.description"
                 :error-messages="$page.props.errors.description"
                 />
+              <template v-if="canChooseServerType">
+                <va-select v-model="form.server_type"
+                  id="serverType"
+                  :label="$t('admin.plans.serverType')"
+                  :messages="$t('admin.plans.serverTypeCaption')"
+                  class="mb-3"
+                  value-by="value"
+                  text-by="text"
+                  :options="serverTypes"
+                  :error="!!$page.props.errors.server_type"
+                  :error-messages="$page.props.errors.server_type"
+                />
+                <va-select v-if="form.server_type === 'shared'"
+                  v-model="form.shared_app"
+                  id="sharedApp"
+                  :label="$t('admin.plans.sharedApp')"
+                  class="mb-3"
+                  required-mark
+                  value-by="id"
+                  text-by="name"
+                  :options="shared_apps || []"
+                  :error="!!$page.props.errors.shared_app"
+                  :error-messages="$page.props.errors.shared_app"
+                />
+              </template>
             </va-card-content>
             <va-card-actions align="right" class="">
               <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
               <va-button type="submit" id="submit" :disabled="form.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+            </va-card-actions>
+          </form>
+        </template>
+      </va-modal>
+      <va-modal v-model="showClonePlan" no-outside-dismiss no-padding size="small" class="p-0">
+        <template #content="{ ok }">
+          <form v-if="cloneTarget" @submit.prevent="submitClone">
+            <va-card-title class="m-0">{{ $t('admin.plans.clonePlanTitle', { name: cloneTarget.name }) }}</va-card-title>
+            <va-card-content class="m-0">
+              <p class="va-text-secondary mb-3">{{ $t('admin.plans.cloneHelp', { name: cloneTarget.name }) }}</p>
+              <va-input v-model="cloneForm.name"
+                id="cloneName"
+                :label="$t('common.name')"
+                class="mb-3"
+                required-mark
+                :error="!!cloneForm.errors.name"
+                :error-messages="cloneForm.errors.name"
+                />
+            </va-card-content>
+            <va-card-actions align="right" class="">
+              <va-button color="textInverted" :disabled="cloneForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+              <va-button type="submit" id="cloneSubmit" :disabled="cloneForm.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
             </va-card-actions>
           </form>
         </template>
@@ -66,6 +113,7 @@ import draggable from 'vuedraggable'
             <th>{{ $t('admin.plans.name') }}</th>
             <th>{{ $t('admin.plans.description')}}</th>
             <th>{{ $t('admin.plans.activeSubscribers') }}</th>
+            <th style="width: 100px"></th>
           </tr>
         </thead>
         <draggable v-model="order.plans" tag="tbody" item-key="id">
@@ -82,22 +130,25 @@ import draggable from 'vuedraggable'
               <td><Link :href="'/admin/apps/'+app.slug+'/plans/'+element.id">{{ element.name }}</Link></td>
               <td>{{ element.description }}</td>
               <td>{{ element.active_subscribers }}</td>
+              <td>
+                <va-button
+                  :id="'clone-plan-'+element.id"
+                  type="button"
+                  size="small"
+                  preset="secondary"
+                  @click="openClone(element)"
+                >{{ $t('admin.plans.clone') }}</va-button>
+              </td>
             </tr>
           </template>
         </draggable>
       </table>
     </va-scroll-container>
-    <div class="row">
-      <div class="flex flex-col xs12">
-        <p class="va-text-secondary">
-          {{ $t('admin.plans.changeOrder') }}
-        </p>
-      </div>
-      <div class="flex flex-col xs12">
-        <div>
-          <va-button type="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
-        </div>
-      </div>
+    <div class="block mb-6">
+      <p class="va-text-secondary mb-3">
+        {{ $t('admin.plans.changeOrder') }}
+      </p>
+      <va-button type="submit" :disabled="order.processing">{{ $t('admin.plans.updateOrder') }}</va-button>
     </div>
   </form>
   <va-scroll-container
@@ -109,6 +160,7 @@ import draggable from 'vuedraggable'
           <th>{{ $t('admin.plans.archivedPlan') }}</th>
           <th>{{ $t('admin.plans.description') }}</th>
           <th>{{ $t('admin.plans.activeSubscribers') }}</th>
+          <th style="width: 100px"></th>
         </tr>
       </thead>
       <tbody>
@@ -116,6 +168,15 @@ import draggable from 'vuedraggable'
           <td><Link :href="'/admin/apps/'+app.slug+'/plans/'+plan.id">{{ plan.name }}</Link></td>
           <td>{{ plan.description }}</td>
           <td>{{ plan.active_subscribers }}</td>
+          <td>
+            <va-button
+              :id="'clone-plan-'+plan.id"
+              type="button"
+              size="small"
+              preset="secondary"
+              @click="openClone(plan)"
+            >{{ $t('admin.plans.clone') }}</va-button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -131,21 +192,39 @@ export default {
     app: Object,
     plans: Object,
     archived: Object,
+    shared_apps: Array,
     errors: Object
   },
   data() {
     return {
+      serverTypes: [
+        { text: this.$t('admin.plans.serverTypeSeparate'), value: 'separate' },
+        { text: this.$t('admin.plans.serverTypeShared'), value: 'shared' }
+      ],
       showAddPlan: false,
+      showClonePlan: false,
+      cloneTarget: null,
+      cloneForm: useForm({
+        name: ''
+      }),
       curPageValue: 1,
       pageSize: 10,
       selectedPlans: [],
       form: useForm({
         name: '',
-        description: ''
+        description: '',
+        server_type: 'separate',
+        shared_app: null
       }),
       order: useForm({
         plans: this.plans
       })
+    }
+  },
+  computed: {
+    // Only an app that can be shared has a choice of server type
+    canChooseServerType () {
+      return this.app.can?.shareable && this.$page.props.flags?.sharedApps
     }
   },
   methods: {
@@ -156,6 +235,20 @@ export default {
       } else {
         this.selectedPlans.splice(idx, 1)
       }
+    },
+    openClone (plan) {
+      this.cloneTarget = plan
+      this.cloneForm.reset()
+      this.cloneForm.clearErrors()
+      this.cloneForm.name = this.$t('admin.plans.cloneNameDefault', { name: plan.name })
+      this.showClonePlan = true
+    },
+    submitClone () {
+      this.cloneForm.post(`/admin/apps/${this.app.slug}/plans/${this.cloneTarget.id}/clone`, {
+        onSuccess: () => {
+          this.showClonePlan = false
+        }
+      })
     },
     bulkEdit () {
       if (this.selectedPlans.length === 0) return

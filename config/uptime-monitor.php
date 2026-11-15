@@ -1,13 +1,13 @@
 <?php
 
-use Spatie\UptimeMonitor\Helpers\UptimeResponseCheckers\LookForStringChecker;
-use Spatie\UptimeMonitor\Models\Monitor;
+use App\Monitoring\AppMonitor;
+use App\Monitoring\Notifications\UptimeCheckFailed;
+use App\Monitoring\Notifications\UptimeCheckRecovered;
+use App\Monitoring\ResponseChecker;
 use Spatie\UptimeMonitor\Notifications\Notifiable;
 use Spatie\UptimeMonitor\Notifications\Notifications\CertificateCheckFailed;
 use Spatie\UptimeMonitor\Notifications\Notifications\CertificateCheckSucceeded;
 use Spatie\UptimeMonitor\Notifications\Notifications\CertificateExpiresSoon;
-use Spatie\UptimeMonitor\Notifications\Notifications\UptimeCheckFailed;
-use Spatie\UptimeMonitor\Notifications\Notifications\UptimeCheckRecovered;
 use Spatie\UptimeMonitor\Notifications\Notifications\UptimeCheckSucceeded;
 
 return [
@@ -18,6 +18,9 @@ return [
      */
     'notifications' => [
 
+        // The two uptime ones are App\Monitoring's: same emails as the package's for a monitor
+        // added by hand, and none for an app's monitor (AvailabilityService notifies instead).
+        // They are matched to their event by class name, so keep the names.
         'notifications' => [
             UptimeCheckFailed::class => ['mail'],
             UptimeCheckRecovered::class => ['mail'],
@@ -68,7 +71,9 @@ return [
          *
          * You can use any implementation of Spatie\UptimeMonitor\Helpers\UptimeResponseCheckers\UptimeResponseChecker here.
          */
-        'response_checker' => LookForStringChecker::class,
+        // App\Monitoring\ResponseChecker: for an app's monitor only a gateway error (502/503/504)
+        // is down, for any other monitor any 4xx/5xx. Needs `http_errors` off below.
+        'response_checker' => ResponseChecker::class,
 
         /*
          * An uptime check will be performed if the last check was performed more than the
@@ -106,6 +111,9 @@ return [
          */
         'guzzle_options' => [
             // 'allow_redirects' => false,
+
+            // Hand 4xx/5xx answers to the response checker instead of throwing on them
+            'http_errors' => false,
         ],
 
         /*
@@ -145,5 +153,5 @@ return [
      * own model here. The only requirement is that it should extend
      * `Spatie\UptimeMonitor\Models\Monitor`.
      */
-    'monitor_model' => Monitor::class,
+    'monitor_model' => AppMonitor::class,
 ];

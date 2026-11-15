@@ -60,6 +60,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('', 'Admin\Applications\Plans@show')->name('app.plans.show');
                         Route::get('edit', 'Admin\Applications\Plans@edit')->name('app.plans.edit');
                         Route::post('', 'Admin\Applications\Plans@update')->name('app.plans.update');
+                        Route::post('clone', 'Admin\Applications\Plans@clone')->name('app.plans.clone');
                         Route::get('remove', 'Admin\Applications\Plans@remove')->name('app.plans.remove');
                         Route::get('archive', 'Admin\Applications\Plans@archive')->name('app.plans.archive');
                         Route::get('unarchive', 'Admin\Applications\Plans@unarchive')->name('app.plans.unarchive');
@@ -82,6 +83,22 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::post('', 'Admin\Applications\Versions@update');
                         Route::get('enable', 'Admin\Applications\Versions@enable');
                         Route::get('disable', 'Admin\Applications\Versions@disable');
+                        Route::post('mass-upgrade', 'Admin\Applications\Versions@massUpgrade');
+                        Route::prefix('tests')->group(function () {
+                            Route::get('', 'Admin\Applications\Versions\Tests@index')->name('app.versions.tests');
+                            Route::post('', 'Admin\Applications\Versions\Tests@store')->name('app.versions.tests.store');
+                            Route::post('bypass', 'Admin\Applications\Versions\Tests@bypass')->name('app.versions.tests.bypass');
+                            Route::prefix('{run}')->group(function () {
+                                Route::get('', 'Admin\Applications\Versions\Tests@show')->name('app.versions.tests.show');
+                                Route::post('next', 'Admin\Applications\Versions\Tests@next')->name('app.versions.tests.next');
+                                Route::post('cancel', 'Admin\Applications\Versions\Tests@cancel')->name('app.versions.tests.cancel');
+                                Route::post('steps/{step}/confirm', 'Admin\Applications\Versions\Tests@confirm')->name('app.versions.tests.confirm');
+                                Route::post('steps/{step}/fail', 'Admin\Applications\Versions\Tests@fail')->name('app.versions.tests.fail');
+                                Route::post('steps/{step}/retry', 'Admin\Applications\Versions\Tests@retry')->name('app.versions.tests.retry');
+                                Route::post('steps/{step}/ignore', 'Admin\Applications\Versions\Tests@ignore')->name('app.versions.tests.ignore');
+                                Route::post('steps/{step}/abandon', 'Admin\Applications\Versions\Tests@abandon')->name('app.versions.tests.abandon');
+                            });
+                        });
                         Route::get('roles', 'Admin\Applications\Versions@roles')->name('discover.apps.versions.roles');
                         Route::post('roles', 'Admin\Applications\Versions@updateRoles')->name('discover.apps.versions.roles.update');
                     });
@@ -101,8 +118,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             });
         });
 
-        Route::resource('organizations', 'Admin\Organizations');
-        Route::prefix('organizations')->group(function () {
+        Route::resource('organizations', 'Admin\Organizations')->middleware('block-test-orgs');
+        Route::prefix('organizations')->middleware('block-test-orgs')->group(function () {
             Route::prefix('{organization}')->group(function () {
                 Route::get('logs', 'Admin\Organizations@logs')->name('organizations.logs');
                 Route::get('tasks', 'Admin\Organizations@tasks')->name('organizations.tasks');
@@ -110,9 +127,13 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('reactivate', 'Admin\Organizations@reactivate')->name('organizations.reactivate');
                 Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
                 Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
-                Route::resource('backups', 'Admin\Organizations\BackupRestore');
-                Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore');
-                Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore');
+                Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
+                Route::post('schedule_deletion', 'Admin\Organizations@schedule_deletion')->name('organizations.schedule_deletion');
+                Route::post('notify_deletion', 'Admin\Organizations@notify_deletion')->name('organizations.notify_deletion');
+                Route::delete('schedule_deletion', 'Admin\Organizations@cancel_deletion')->name('organizations.cancel_deletion');
+                Route::resource('backups', 'Admin\Organizations\BackupRestore')->middleware('toggle:app-backups');
+                Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore')->middleware('toggle:app-backups');
+                Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->middleware('toggle:app-backups');
                 Route::prefix('apps')->group(function () {
                     Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
                     Route::prefix('{app}')->group(function () {
@@ -120,8 +141,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
+                        Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');
-                        Route::get('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
+                        Route::post('update', 'Admin\Organizations\Applications@update_settings')->name('organizations.app.update_settings');
                         Route::post('migrate-database', 'Admin\Organizations\Applications@migrate_database')->name('organizations.app.migrate_database');
                         Route::delete('', 'Admin\Organizations\Applications@delete')->name('organizations.app.delete');
                         Route::get('activate/{version}', 'Admin\Organizations\Applications@activate')->name('organizations.app.activate');
@@ -133,20 +155,26 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         });
 
         Route::prefix('server')->group(function () {
+            Route::prefix('updates')->group(function () {
+                Route::get('', 'Admin\Updates@index')->name('admin.updates');
+                Route::post('dismiss', 'Admin\Updates@dismiss')->name('admin.updates.dismiss');
+                Route::post('scan', 'Admin\Updates@scan')->name('admin.updates.scan');
+            });
             Route::prefix('tasks')->group(function () {
                 Route::get('', 'Admin\Tasks@index')->name('tasks');
                 Route::post('api', 'Admin\Tasks@api')->name('tasks.api');
-                Route::delete('{task}', 'Admin\Tasks@delete_api')->name('tasks.delete.api');
-                Route::post('bulk/restart', 'Admin\Tasks@bulk_restart')->name('tasks.bulk.restart');
+                Route::post('bulk/retry', 'Admin\Tasks@bulk_retry')->name('tasks.bulk.retry');
+                Route::post('bulk/cancel', 'Admin\Tasks@bulk_cancel')->name('tasks.bulk.cancel');
                 Route::post('bulk/delete', 'Admin\Tasks@bulk_delete')->name('tasks.bulk.delete');
-                Route::get('pending', 'Admin\Tasks@pending')->name('tasks.pending');
-                Route::get('{task}/restart', 'Admin\Tasks@restart')->name('tasks.restart');
-                Route::get('{task}/delete', 'Admin\Tasks@delete')->name('tasks.delete');
-                Route::post('{task}/delete_completed', 'API\Account\Tasks@delete')->name('tasks.delete_completed');
+                Route::post('dummy', 'Admin\Tasks@dummy')->name('tasks.dummy');
+                Route::post('run_schedule', 'Admin\Tasks@run_schedule')->name('tasks.run_schedule');
+                Route::post('restart_queue', 'Admin\Tasks@restart_queue')->name('tasks.restart_queue');
                 Route::get('retrieve/notifications', 'API\Account\Tasks@index')->name('tasks.index');
-                Route::get('dummy', 'Admin\Tasks@dummy')->name('tasks.dummy');
-                Route::get('run_schedule', 'Admin\Tasks@run_schedule')->name('tasks.run_schedule');
-                Route::get('restart_queue', 'Admin\Tasks@restart_queue')->name('tasks.restart_queue');
+                Route::get('{task}', 'Admin\Tasks@show')->whereNumber('task')->name('tasks.show');
+                Route::post('{task}/retry', 'Admin\Tasks@retry')->whereNumber('task')->name('tasks.retry');
+                Route::post('{task}/cancel', 'Admin\Tasks@cancel')->whereNumber('task')->name('tasks.cancel');
+                Route::post('{task}/delete_completed', 'API\Account\Tasks@delete')->name('tasks.delete_completed');
+                Route::delete('{task}', 'Admin\Tasks@destroy')->whereNumber('task')->name('tasks.destroy');
             });
             Route::prefix('logs')->group(function () {
                 Route::get('', 'Admin\Logs@index')->name('admin.logs.index');
@@ -164,8 +192,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::delete('{scan}', 'Admin\SecurityScans@destroy')->name('security.scans.destroy');
                 Route::patch('{scan}/findings/{finding}', 'Admin\SecurityScans@updateFinding')->name('security.scans.findings.update');
             });
-            Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups');
-            Route::prefix('backup_scheduler/recurring')->group(function () {
+            Route::resource('backup_scheduler/recurring', 'Admin\RecurringBackups')->middleware('toggle:app-backups');
+            Route::prefix('backup_scheduler/recurring')->middleware('toggle:app-backups')->group(function () {
                 Route::get('{recurrence}/activate', 'Admin\RecurringBackups@activate')->name('server.backup.recurring.activate');
                 Route::get('{recurrence}/deactivate', 'Admin\RecurringBackups@deactivate')->name('server.backup.recurring.deactivate');
             });
@@ -176,7 +204,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{server}/chart', 'Admin\Servers@chart')->name('server.servers.chart');
                 Route::post('{server}/test-settings', 'Admin\Servers@testSettings')->name('server.servers.test_settings');
             });
-            Route::resource('backup_scheduler', 'Admin\BackupScheduler');
+            Route::resource('backup_scheduler', 'Admin\BackupScheduler')->middleware('toggle:app-backups');
         });
 
         Route::prefix('settings')->group(function () {
@@ -220,6 +248,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('update_order', 'Admin\Plans@updateOrder')->name('service.plans.update_order');
                 Route::get('{plan}', 'Admin\Plans@edit')->name('service.plans.edit');
                 Route::post('{plan}', 'Admin\Plans@update')->name('service.plans.update');
+                Route::post('{plan}/clone', 'Admin\Plans@clone')->name('service.plans.clone');
                 Route::get('{plan}/remove', 'Admin\Plans@remove')->name('service.plans.remove');
                 Route::get('{plan}/archive', 'Admin\Plans@archive')->name('service.plans.archive');
                 Route::get('{plan}/unarchive', 'Admin\Plans@unarchive')->name('service.plans.unarchive');
@@ -232,7 +261,13 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('shared-apps')->middleware('toggle:shared-apps')->group(function () {
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
             });
-            Route::resource('shared-apps', 'Admin\SharedApps')->middleware('toggle:shared-apps');
+            Route::middleware('toggle:shared-apps')->prefix('shared-apps/{shared_app}')->group(function () {
+                Route::put('version', 'Admin\SharedApps@setVersion')->name('service.shared-apps.version');
+                Route::post('tests', 'Admin\SharedApps@startTests')->name('service.shared-apps.tests');
+                Route::post('tests/bypass', 'Admin\SharedApps@bypassTests')->name('service.shared-apps.tests.bypass');
+                Route::post('activate', 'Admin\SharedApps@deploy')->name('service.shared-apps.deploy');
+            });
+            Route::resource('shared-apps', 'Admin\SharedApps')->only(['index', 'store', 'show'])->middleware('toggle:shared-apps');
             Route::prefix('domains')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');
                 Route::get('tlds/refresh', 'Admin\Tlds@refresh')->name('service.domains.tlds.refresh');
@@ -240,9 +275,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{domain}', 'Admin\Domains@update')->name('service.domains.update');
             });
         });
-        Route::resource('server/tests', 'Admin\AccountTests');
-        Route::get('server/tests/{test}/clear', 'Admin\AccountTests@clear');
-        Route::get('server/tests/{test}/run', 'Admin\AccountTests@run');
+        Route::get('server/tests', 'Admin\TestsOverview@index')->name('server.tests');
 
         Route::prefix('packages')->group(function () {
             Route::get('', 'Admin\Packages@index')->name('admin.packages.index');

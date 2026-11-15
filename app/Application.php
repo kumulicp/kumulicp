@@ -3,6 +3,8 @@
 namespace App;
 
 use App\Enums\AccessType;
+use App\Enums\ApplicationSource;
+use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property array $domain_option
  * @property AccessType $access_type
  * @property bool $can_update_domain
+ * @property ApplicationSource $source
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
  * @property-read int|null $total_instances
@@ -41,6 +44,7 @@ class Application extends Model
      */
     protected $attributes = [
         'domain_option' => '[]',
+        'source' => 'generic',
     ];
 
     /**
@@ -52,6 +56,7 @@ class Application extends Model
         'access_type' => AccessType::class,
         'can_update_domain' => 'boolean',
         'domain_option' => 'array',
+        'source' => ApplicationSource::class,
     ];
 
     /**
@@ -83,6 +88,24 @@ class Application extends Model
     public function instances(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'application_id');
+    }
+
+    /**
+     * The installs of real customers running an older version than the given
+     * one. Test orgs are left out: they are deleted, not upgraded.
+     *
+     * @return Collection<int, AppInstance>
+     */
+    public function instancesBehind(AppVersion $version): Collection
+    {
+        $comparator = new VersionComparator;
+
+        return $this->instances()
+            ->whereIn('organization_id', Organization::notTest()->select('organizations.id'))
+            ->with('version')
+            ->get()
+            ->filter(fn (AppInstance $instance) => $instance->version && $comparator->compare($version->name, $instance->version->name) > 0)
+            ->values();
     }
 
     public function children()

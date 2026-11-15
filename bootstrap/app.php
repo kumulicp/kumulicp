@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Api\ApiExceptionRenderer;
+use App\Http\Middleware\Api\AddRequestId;
+use App\Http\Middleware\Api\ForceJsonResponse;
+use App\Http\Middleware\BlockTestOrganizations;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetupAwareAuthenticate;
+use App\Support\SafeErrorMessage;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -44,7 +49,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => SetupAwareAuthenticate::class,
             'guest' => RedirectIfAuthenticated::class,
             'toggle' => EnsureFeatureEnabled::class,
+            'block-test-orgs' => BlockTestOrganizations::class,
         ]);
+        // The block reads the organization route binding has resolved
+        $middleware->appendToPriorityList(SubstituteBindings::class, BlockTestOrganizations::class);
         $middleware->trustProxies(at: [
             '10.0.0.0/8',
         ],
@@ -54,6 +62,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 Request::HEADER_X_FORWARDED_PROTO |
                 Request::HEADER_X_FORWARDED_AWS_ELB
         );
+
+        $middleware->group('api.v1', [
+            AddRequestId::class,
+            ForceJsonResponse::class,
+            'throttle:api',
+            SubstituteBindings::class,
+        ]);
 
         $middleware->group('web', [
             EncryptCookies::class,
@@ -67,7 +82,18 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request, Throwable $exception) => ApiExceptionRenderer::appliesTo($request) || $request->expectsJson()
+        );
+        $exceptions->render(new ApiExceptionRenderer);
+
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            // API errors are already rendered as JSON by ApiExceptionRenderer;
+            // the Inertia error pages and web CSP below must not touch them.
+            if (ApiExceptionRenderer::appliesTo($request)) {
+                return $response;
+            }
+
             // SecurityHeaders (the 'web'-group middleware) never gets to run its
             // post-$next() code for exception-driven responses - Laravel's
             // pipeline unwinds straight past it. Reuse the nonce it already
@@ -84,7 +110,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // Inertia shows non-Inertia responses like this one in a modal.
             // Debug pages are dev-only by definition, so skip the app's CSP
             // for them entirely rather than try to patch Ignition's markup.
-            if (config('app.debug') && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
+            // APP_DEBUG alone isn't trusted: it also exposes SQL, bound values
+            // and stack traces, so a deployed environment that carries it over
+            // from a dev config must still get the plain error page.
+            if (config('app.debug') && app()->environment(['local', 'development']) && in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 return $response;
             }
 
@@ -94,7 +123,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         return SecurityHeaders::apply(
                             inertia('ErrorPage', [
                                 'status' => $response->getStatusCode(),
-                                'message' => $exception->getMessage(),
+                                'message' => SafeErrorMessage::forErrorPage($exception, $response->getStatusCode()),
                             ])
                                 ->toResponse($request)
                                 ->setStatusCode($response->getStatusCode()),
@@ -108,7 +137,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         return SecurityHeaders::apply(
                             inertia('UnauthenticatedErrorPage', [
                                 'status' => $response->getStatusCode(),
-                                'message' => $exception->getMessage(),
+                                'message' => SafeErrorMessage::forErrorPage($exception, $response->getStatusCode()),
                             ])
                                 ->toResponse($request)
                                 ->setStatusCode($response->getStatusCode()),

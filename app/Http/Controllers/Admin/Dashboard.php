@@ -13,7 +13,9 @@ use App\Plan;
 use App\SecurityFinding;
 use App\SecurityScan;
 use App\Server;
+use App\Support\SafeErrorMessage;
 use App\Task;
+use App\Updates\PendingUpdates;
 use Illuminate\Support\Carbon;
 
 class Dashboard extends Controller
@@ -23,13 +25,13 @@ class Dashboard extends Controller
         $now = Carbon::now();
 
         $organizations = [
-            'total' => Organization::count(),
-            'active' => Organization::where('status', 'active')->count(),
-            'new' => Organization::where('status', 'new')->count(),
-            'deactivated' => Organization::where('status', 'deactivated')->count(),
-            'trialing' => Organization::whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now)->count(),
-            'new_last_30_days' => Organization::where('created_at', '>=', $now->copy()->subDays(30))->count(),
-            'suborganizations' => Organization::whereNotNull('parent_organization_id')->count(),
+            'total' => Organization::notTest()->count(),
+            'active' => Organization::notTest()->where('status', 'active')->count(),
+            'new' => Organization::notTest()->where('status', 'new')->count(),
+            'deactivated' => Organization::notTest()->where('status', 'deactivated')->count(),
+            'trialing' => Organization::notTest()->whereNotNull('trial_ends_at')->where('trial_ends_at', '>=', $now)->count(),
+            'new_last_30_days' => Organization::notTest()->where('created_at', '>=', $now->copy()->subDays(30))->count(),
+            'suborganizations' => Organization::notTest()->whereNotNull('parent_organization_id')->count(),
         ];
 
         $plans = Plan::withCount('subscribers')
@@ -62,7 +64,7 @@ class Dashboard extends Controller
                 'organization' => $task->organization->name ?? '',
                 'application' => $task->application->name ?? '',
                 'description' => $task->description,
-                'error_message' => $task->error_message,
+                'error_message' => SafeErrorMessage::scrub($task->error_message),
                 'time' => optional($task->updated_at)->diffForHumans(),
             ]);
 
@@ -82,7 +84,7 @@ class Dashboard extends Controller
                 'id' => $scan->id,
                 'server' => $scan->org_server->name ?? '',
                 'tool' => $scan->tool,
-                'error_message' => $scan->error_message,
+                'error_message' => SafeErrorMessage::scrub($scan->error_message),
                 'time' => optional($scan->finished_at)->diffForHumans(),
             ]);
 
@@ -104,6 +106,7 @@ class Dashboard extends Controller
             'plans' => $plans,
             'app_usage' => $app_usage,
             'app_updates' => $this->appUpdates(),
+            'pending_updates' => app(PendingUpdates::class)->summary(),
             'task_statuses' => $task_statuses,
             'recent_failed_tasks' => $recent_failed_tasks,
             'security_findings' => $security_findings,
@@ -111,6 +114,7 @@ class Dashboard extends Controller
             'warnings' => $this->buildWarnings(
                 $failed_jobs_count,
                 (int) ($task_statuses['failed'] ?? 0),
+                (int) ($task_statuses['blocked'] ?? 0),
                 $security_findings,
                 $servers_pending,
                 $error_logs_last_day
@@ -170,6 +174,7 @@ class Dashboard extends Controller
     private function buildWarnings(
         int $failed_jobs_count,
         int $failed_tasks_count,
+        int $blocked_tasks_count,
         $security_findings,
         int $servers_pending,
         int $error_logs_last_day
@@ -188,6 +193,14 @@ class Dashboard extends Controller
             $warnings[] = [
                 'level' => 'warning',
                 'message' => __('admin.dashboard.warning_messages.failed_tasks', ['count' => $failed_tasks_count]),
+                'url' => '/admin/server/tasks',
+            ];
+        }
+
+        if ($blocked_tasks_count > 0) {
+            $warnings[] = [
+                'level' => 'warning',
+                'message' => __('admin.dashboard.warning_messages.blocked_tasks', ['count' => $blocked_tasks_count]),
                 'url' => '/admin/server/tasks',
             ];
         }

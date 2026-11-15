@@ -7,6 +7,7 @@ use App\AppPlan;
 use App\AppScreenshot;
 use App\AppVersion;
 use App\Enums\AccessType;
+use App\Enums\ApplicationSource;
 use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -31,6 +32,7 @@ class Applications extends Controller
                     'slug' => $app->slug,
                     'name' => $app->name,
                     'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
+                    'source' => $app->source->label(),
                     'versions' => $app->versions->map(fn (AppVersion $version) => [
                         'id' => $version->id,
                         'version' => $version->name,
@@ -69,6 +71,7 @@ class Applications extends Controller
         $app = new Application;
         $app->name = $name;
         $app->slug = $slug;
+        $app->source = ApplicationSource::Generic;
         $app->category = $request->category;
         $app->short_description = strip_tags($request->description);
         $app->description = clean($request->description, 'rich_text');
@@ -284,6 +287,11 @@ class Applications extends Controller
 
         if (! $version) {
             $version = $app->versions()->where('status', 'active')->first();
+        }
+
+        // Turning the app back on with the version it already runs needs no testing; a different one does
+        if ($version && $version->status !== 'active' && ! $version->canBeEnabled()) {
+            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
         }
 
         if ($version) {

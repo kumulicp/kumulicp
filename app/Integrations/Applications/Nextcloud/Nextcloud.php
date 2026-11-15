@@ -3,6 +3,7 @@
 namespace App\Integrations\Applications\Nextcloud;
 
 use App\Integrations\Applications\Application;
+use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Support\Facades\Http;
 
 class Nextcloud extends Application
@@ -68,13 +69,19 @@ class Nextcloud extends Application
         }
     }
 
+    // A shared child has no Nextcloud of its own: its address is the hub's
+    // (see AppInstance::domain()), and the support account it was given at
+    // activation only exists as a stored value, never in the hub's Nextcloud.
+    // So requests have to authenticate as the hub's support account.
     public function auth()
     {
-        $support_user = $this->support_user();
+        $instance = $this->app_instance->usesOwnResources()
+            ? $this->app_instance
+            : $this->app_instance->sharedPlanParent();
 
         return [
-            $support_user,
-            $this->app_instance->api_password(),
+            ApplicationFacade::instance($instance)->configuration('username') ?? 'support',
+            $instance->api_password(),
         ];
     }
 

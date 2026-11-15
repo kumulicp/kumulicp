@@ -3,7 +3,7 @@
 namespace App\Integrations\Applications\Nextcloud;
 
 use App\Actions\Apps\ApplicationUpdate;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\NextcloudJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\NextcloudJobChart;
 use App\Ldap\Actions\Dn;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;

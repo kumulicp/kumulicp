@@ -14,6 +14,7 @@ use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Support\Facades\Backup;
 use App\Task;
+use App\TaskStep;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
@@ -194,8 +195,9 @@ it('backs up, restores to the new server, switches the app and runs a standard u
     expect($update->task_group)->toBe($task->task_group);
     expect($task->status)->toBe(TaskStatus::IN_PROGRESS);
 
-    // Completes once the update does
+    // Completes, at the next poll, once the update does
     app(TaskRunner::class)->poll($update);
+    app(TaskRunner::class)->poll($task);
 
     expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
     expect($instance->fresh()->status)->toBe('active');
@@ -251,10 +253,9 @@ it('rolls back when the app does not come back up in time', function () {
     fakeBackupDriver();
 
     $task = startMigration($instance, $target);
-    $task->custom_values = array_merge($task->customValues(), [
-        'cutover_at' => now()->subMinutes(ApplicationDatabaseMigrate::UPDATE_TIMEOUT_MINUTES + 1)->toIso8601String(),
+    TaskStep::where('task_id', $task->id)->where('name', 'cut_over')->update([
+        'started_at' => now()->subMinutes(ApplicationDatabaseMigrate::UPDATE_TIMEOUT_MINUTES + 1),
     ]);
-    $task->save();
 
     app(TaskRunner::class)->poll($task);
 
@@ -314,6 +315,7 @@ it('waits for a remote backup and restore to finish before each next step', func
     expect($update->action_slug)->toBe('application_update');
 
     app(TaskRunner::class)->poll($update);
+    app(TaskRunner::class)->poll($task);
     expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
     expect($instance->fresh()->status)->toBe('active');
 });
@@ -371,10 +373,9 @@ it('gives up when the remote service never reports back', function () {
     fakeRemoteBackupDriver();
 
     $task = startMigration($instance, databaseServer('new-db'));
-    $task->custom_values = array_merge($task->customValues(), [
-        'stage_started_at' => now()->subMinutes(ApplicationDatabaseMigrate::COPY_TIMEOUT_MINUTES + 1)->toIso8601String(),
+    TaskStep::where('task_id', $task->id)->where('name', 'backup_database')->update([
+        'started_at' => now()->subMinutes(ApplicationDatabaseMigrate::COPY_TIMEOUT_MINUTES + 1),
     ]);
-    $task->save();
 
     app(TaskRunner::class)->poll($task);
 

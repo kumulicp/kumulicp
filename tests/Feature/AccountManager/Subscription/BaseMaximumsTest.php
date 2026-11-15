@@ -51,16 +51,19 @@ it('enforces max additional storage limit', function (string $driver, string $pl
 
     $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
 
+    // Per-user storage is 2 GB from demo_app_2 under Pay per App but 1 GB from the package under Packaged
+    $user_storage = $plan_type === 'package' ? 3 : 4;
+
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     setAdditionalStorage('testing1', $demoApp->id, 1);
-    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(4);
+    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe($user_storage);
 
     grantPermission('testing2', $demoApp->id, ['demo_role']);
     setAdditionalStorage('testing2', $demoApp->id, 1);
-    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toBe(4);
+    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toBe($user_storage);
 
     setAdditionalStorage('testing2', $demoApp->id, 100);
-    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toBe(4);
+    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toBe($user_storage);
 })->with('account_manager_drivers')->with('plan_types');
 
 it('enforces max basic user limit', function (string $driver, string $plan_type) {

@@ -50,6 +50,8 @@ import { useForm } from '@inertiajs/vue3'
               />
             </template>
           </template>
+          <!-- Billing is for the plans organizations subscribe to -->
+          <template v-if="!plan.hidden">
           <va-input
             v-model="form['features'][feature.value]['price']"
             type="number"
@@ -80,6 +82,7 @@ import { useForm } from '@inertiajs/vue3'
             :error="$page.props.errors.payment_type"
             :error-messages="$page.props.errors.payment_type"
           />
+          </template>
         </template>
       </AdminSettings>
       <va-list-separator class="my-2" fit />

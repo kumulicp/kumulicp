@@ -12,6 +12,7 @@ use App\Actions\Apps\ApplicationDomainChecks;
 use App\Actions\Apps\ApplicationSSOSetup;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpdateJob;
+use App\Actions\Apps\ApplicationUpdateStep;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Actions\Apps\MassApplicationUpgrade;
 use App\Actions\Apps\ProcessCustomizations;
@@ -30,10 +31,12 @@ use App\Actions\Organizations\UpdateSubscriptionSettings;
 use App\Actions\Prerequisites;
 use App\Actions\Security\RunSecurityScan;
 use App\Actions\Servers\ServerActivate;
-use App\Actions\Tests\ClearTestAccounts;
-use App\Actions\Tests\CreateTests;
+use App\Actions\Tests\ClearVersionTestStep;
+use App\Actions\Tests\ProvisionVersionTestSite;
+use App\Actions\Tests\ProvisionVersionTestStep;
 use App\AppInstance;
 use App\Contracts\Actions\TaskAction;
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Applications\CiviCRMStandalone\Actions\ProcessPermissions as ActionsProcessPermissions;
@@ -42,7 +45,7 @@ use App\Integrations\Applications\Nextcloud\Actions\ManageAddon;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessGroupOptions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessPermissions;
 use App\Integrations\Applications\Nextcloud\Actions\ProcessUserOptions;
-use App\Integrations\ServerManagers\Rancher\Actions\RunJob;
+use App\Integrations\ServerManagers\Kubernetes\Actions\RunJob;
 use App\Organization;
 use App\Services\Tasks\Handlers\LegacyHandler;
 use App\Services\Tasks\Handlers\NativeHandler;
@@ -63,14 +66,16 @@ class ActionService
             'subscription_update' => SubscriptionUpdate::class,
             'application_activate' => ApplicationActivate::class,
             'application_update' => ApplicationUpdate::class,
+            'application_update_step' => ApplicationUpdateStep::class,
             'application_database_migrate' => ApplicationDatabaseMigrate::class,
             'application_upgrade' => ApplicationUpgrade::class,
             'application_delete' => ApplicationDelete::class,
             'application_domain_checks' => ApplicationDomainChecks::class,
             'application_deactivate' => ApplicationDeactivate::class,
             'mass_application_upgrade' => MassApplicationUpgrade::class,
-            'create_tests' => CreateTests::class,
-            'clear_tests' => ClearTestAccounts::class,
+            'provision_version_test_step' => ProvisionVersionTestStep::class,
+            'provision_version_test_site' => ProvisionVersionTestSite::class,
+            'clear_version_test_step' => ClearVersionTestStep::class,
             'process_customizations' => ProcessCustomizations::class,
             'retrieve_dkim_key' => RetrieveDkimKey::class,
             'register_domain_name' => RegisterDomainName::class,
@@ -156,25 +161,17 @@ class ActionService
         $task->blocked_from = null;
         $task->save();
         $task->syncFinishDependencies([]);
+        // A stepped action starts over from its first step
+        $task->steps()->delete();
 
         if ($handler = $this->handlerFor($task)) {
             try {
-                if ($retry = $handler->retry($task)) {
-                    $task->attempts++;
-                    $task->error_message = '';
-                    $task->custom_values = $retry->custom_values;
-                    $task->save();
-
-                    if (method_exists($retry, 'postGenerate')) {
-                        $task->status = $retry->status;
-                        $retry->postGenerate($task);
-                    }
-                }
+                $handler->reset($task);
             } catch (ConnectionFailedException $e) {
                 $task->job_id = 0;
                 $task->status = TaskStatus::PENDING;
                 $task->error_message = $e->getMessage();
-                $task->error_code = 'connection_failed';
+                $task->error_code = TaskErrorCode::CONNECTION_FAILED->value;
                 $task->save();
             } catch (Throwable $e) {
                 $task->error_message = $e->getMessage();
@@ -248,6 +245,18 @@ class ActionService
 
             try {
                 $action->postGenerate($task);
+            } catch (Throwable $e) {
+                report($e);
+                $task->error_message = $e->getMessage();
+                $task->status = TaskStatus::FAILED;
+                $task->save();
+            }
+        }
+
+        // A task onCreate() just failed must stay failed too
+        if (method_exists($action, 'onCreate')) {
+            try {
+                $action->onCreate($task);
             } catch (Throwable $e) {
                 report($e);
                 $task->error_message = $e->getMessage();

@@ -2,7 +2,7 @@
 
 namespace Tests\Support\Applications;
 
-use App\Integrations\ServerManagers\Rancher\Charts\Job\JobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\JobChart;
 
 /**
  * No-op jobs class for DemoApp. DemoApp doesn't perform any real K8s jobs,

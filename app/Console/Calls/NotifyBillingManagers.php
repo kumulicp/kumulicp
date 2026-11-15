@@ -17,11 +17,11 @@ class NotifyBillingManagers
 
         foreach ($organizations as $organization) {
             Organization::setOrganization($organization);
-            $billing_managers_notified = false;
-            $invoice_num = 0;
 
+            // Skip this organization only; `return` here used to abort the
+            // whole run, so one non-billable org starved every org after it.
             if (! Billing::isBillable()) {
-                return;
+                continue;
             }
 
             Billing::sendInvoices();

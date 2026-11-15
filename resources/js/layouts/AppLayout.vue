@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar/NavBar.vue'
 import Sidebar from '@/components/sidebar/SideBar.vue'
 import { useBreakpoint, useToast, useColors } from 'vuestic-ui'
 import { router, usePage } from '@inertiajs/vue3'
+import { errorToasts, noticeToasts, showToasts } from '@/services/toasts'
 
 
 const breakpoints = useBreakpoint()
@@ -38,45 +39,11 @@ const onResize = () => {
 }
 
 router.on('success', () => {
-  if (page.props.notices.success) {
-    toast.init({
-      message: page.props.notices.success,
-      customClass: 'success-toast',
-      color: 'success',
-      duration: 10000
-    })
-  }
-  if (page.props.notices.error) {
-    toast.init({
-      message: page.props.notices.error,
-      customClass: 'success-toast',
-      color: 'danger',
-      duration: 10000
-    })
-  }
+  showToasts(toast, noticeToasts(page.props.notices))
 })
 router.on('error', () => {
-  if (page.props.notices.error) {
-    toast.init({
-      message: page.props.notices.error,
-      customClass: 'success-toast',
-      color: 'danger',
-      duration: 10000
-    })
-  }
-})
-router.on('error', () => {
-  if (page.props.errors) {
-    const errors = page.props.errors
-    for (const message of Object.entries(errors)) {
-      toast.init({
-        message: message[1],
-        customClass: 'success-toast',
-        color: 'danger',
-        duration: 10000
-      })
-    }
-  }
+  // Only the error notice: warnings and successes belong to a visit that went through
+  showToasts(toast, [...noticeToasts({ error: page.props.notices?.error }), ...errorToasts(page.props.errors)])
 })
 
 onMounted(() => {
@@ -178,7 +145,8 @@ export default {
 
     setColors({
       primary: this.$page.props.theme.primary_color,
-      secondary: this.$page.props.theme.secondary_color
+      secondary: this.$page.props.theme.secondary_color,
+      textSecondary: this.$page.props.theme.text_secondary_color
     })
   },
   computed: {

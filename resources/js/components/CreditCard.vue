@@ -30,6 +30,7 @@ export default {
     this.loadPaymentMethodComponent(this.driver, el, {
       hasDefaultPaymentMethod: this.hasDefaultPaymentMethod,
       csrf_token: this.$page.props.csrf_token,
+      locale: this.$i18n.locale,
       onUpdateDefaultPaymentMethod: (value) => {
         this.default_payment_method = value
       }

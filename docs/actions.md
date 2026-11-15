@@ -60,8 +60,33 @@ class ResizeDisk extends NativeAction
     {
         // undo what handle() did; called when the task fails
     }
+
+    public static function reset(Task $task): void
+    {
+        // called when the task is retried (see below)
+    }
 }
 ```
+
+### Retrying
+
+`ActionService::retry()` puts the task back to `pending` and clears its claims,
+steps and the tasks it waited on; then it calls your `reset(Task $task)`, which is
+for what the action itself keeps. There is no fresh action to build: work from the
+task.
+
+- Drop what the last run left in `$task->custom_values` (a job id, the id of a task
+  it spawned) and keep what the task was made with:
+  `$task->custom_values = Arr::only($task->customValues(), ['target_server_id']);`
+- Do again what creating the task did to the world and a cancellation or rollback
+  undid (`ApplicationUpgrade` marks the app `updating` again). Share the code with
+  `onCreate()` through a private static method that takes the task.
+- Check anything the constructor validated that can have changed since
+  (`ApplicationDelete` refuses an app that has gained children).
+- Throw to fail the task; the exception message becomes its error message.
+
+The runner counts the retry as an attempt, clears the error message and code, and
+saves the task afterwards. The default does nothing: the task keeps its values.
 
 Register it in `ActionService::$actions` under a group and slug.
 
@@ -76,6 +101,11 @@ Register it in `ActionService::$actions` under a group and slug.
 
 `$values` are merged into `$task->custom_values`. `->then(fn (Task $task) => ...)`
 runs once the new state is saved.
+
+`$code` is a `App\Enums\TaskErrorCode` (a plain string still works for a code
+only your action uses). Add a case to the enum for each code you introduce;
+`Task::errorCode()` reads it back (null for a string the enum doesn't know), and a
+test fails if an `error_code` literal appears in `app/`.
 
 ### Exceptions
 
@@ -128,9 +158,156 @@ the tasks waiting for it straight away rather than on the next scheduled pass.
 `task_group` still groups related tasks for the UI and notifications, but no longer
 makes them start each other.
 
+## Constructors
+
+A constructor stores what the action was asked to do (ids, flags) and may check
+it is sensible - throwing from it is how a controller finds out the request is
+invalid. It must not save anything, dispatch a job, execute another action or fire
+an event: the constructor also runs when something builds the action without
+meaning to do the work, and the work would then be done twice.
+
+Work that has to happen once the task exists goes in `onCreate(Task $task)`. It runs
+when the task is created - not for a duplicate that `Action::execute()` turns away.
+What it did to the world and a retry has to do again goes in `reset()` too (below).
+
+```php
+public function __construct(AppInstance $app_instance)
+{
+    $this->app_instance = $app_instance;          // just remember it
+}
+
+public function onCreate(Task $task)
+{
+    $this->app_instance->status = 'deleting';     // now the task exists
+    $this->app_instance->save();
+}
+```
+
+`handle()` and `poll()` get everything from the `Task` (its custom values and
+relations); don't rebuild the action with `new self(...)` in them.
+
+`onCreate` is also where an action makes what its task is about: `ApplicationActivate`
+creates its app instance there (saving the id on the task straight away, so a retry
+carries on with that instance instead of making another).
+
+(Older actions use `postGenerate()` for this. It does the same, but also counts
+the creation as a first attempt on the task, which is why new code uses `onCreate`.)
+
+## Steps
+
+An action that is a fixed sequence of stages, each of which may take a while, is a
+`StepAction`: list the steps and write each as a `Step`.
+
+```php
+class MoveDisk extends StepAction
+{
+    public static function steps(): array
+    {
+        return [Snapshot::class, Copy::class, Switch::class];
+    }
+}
+
+class Copy extends Step
+{
+    public function run(Task $task): ActionResult        // start it
+    {
+        $copy = Disks::copy($task->getValue('snapshot_id'));
+
+        return ActionResult::wait(['copy_id' => $copy->id]);
+    }
+
+    public function check(Task $task): ActionResult      // each poll while it runs
+    {
+        return Disks::copied($task->getValue('copy_id')) ? ActionResult::done() : ActionResult::wait();
+    }
+
+    public function rollback(Task $task): ?string        // undo it; returns a note for the error message
+    {
+        Disks::remove($task->getValue('copy_id'));
+
+        return null;
+    }
+
+    public function timeoutMinutes(): ?int
+    {
+        return 120;
+    }
+}
+```
+
+* A step that returns `done()` goes straight on to the next in the same pass; one
+  that returns `wait()` is `check()`ed on each poll until it is done.
+* If a step fails, times out, or throws something unexpected, the steps that were
+  started are rolled back, last first, and the task fails. A step that is merely
+  waiting on something (`WaitingException`, `RetryableException`) starts again
+  later instead.
+* Only one pass runs over a task's steps at a time, and progress is kept in
+  `task_steps` (`$task->steps`), so the task resumes where it was after a restart.
+  Anything a step needs to remember goes in the task's custom values (return it
+  in the result).
+* Override `failureMessage()` on the action to say what the failure reads like once
+  the rollback is done.
+
+Most actions don't need steps: one that starts something and polls for it is just
+`handle()` and `poll()`.
+
+## Cancelling
+
+An admin can cancel a task that hasn't finished (not one a worker is running at that
+moment). The task stops and is marked `cancelled`; its action's `compensate()` runs
+(for a `StepAction`, the started steps are rolled back, last first), and then
+`cancelled(Task $task): ?string`, for undoing what *creating* the task changed - an
+app marked "updating" or "deleting", say. Return a note if something couldn't be
+undone; it goes in the task's history.
+
+```php
+public static function cancelled(Task $task): ?string
+{
+    if ($task->attempts > 0) {
+        return 'Already started: the app was left as it is.';
+    }
+
+    $task->app_instance->update(['status' => 'active']);
+
+    return null;
+}
+```
+
+Whatever waited for a cancelled task becomes `blocked`, as it does for a failed one,
+until the task is retried or deleted.
+
+## Operating tasks
+
+The admin Tasks page lists tasks; a task's own page (`/admin/server/tasks/{id}`) shows its
+history (`task_events`), steps, what it waits for and what waits for it, and its values
+(secrets masked).
+
+| Status | Retry | Cancel | Delete |
+| --- | --- | --- | --- |
+| pending, ready, queued, in progress | | yes | |
+| blocked | yes | yes | |
+| failed | yes | | yes |
+| cancelled | yes | | yes |
+| complete | | | yes |
+
+A task can't be cancelled while a worker is running it (try again in a moment). Deleting
+a task releases whatever waited for it, so cancel one that is still going first.
+Retry, cancel and delete are POST/DELETE requests and are recorded with who made them.
+
+A task that has stopped getting anywhere logs one error for each reason - which reaches
+the Logs page, the dashboard, email and Matrix - and is not reported again for the same
+reason. The limits are in `config/tasks.php`:
+
+* **blocked** - blocked for an hour;
+* **stalled** - in progress, not being run, with no change for six hours (and no deadline
+  of its own);
+* **waiting** - never started after a day;
+* **requeued** - queued but never started three times: the queue workers are probably down.
+
 ## Older actions
 
 Actions written before `TaskAction` have static `run()`, `complete()`, `retry()`
 and `revert()` methods that change the task themselves. They keep working
-unchanged (see `LegacyHandler`); port one by extending `NativeAction` and
-returning `ActionResult`s.
+unchanged (see `LegacyHandler`; their `retry()` still returns a fresh action to
+take the task's values from); port one by extending `NativeAction`, returning
+`ActionResult`s and replacing `retry()` with `reset()`.

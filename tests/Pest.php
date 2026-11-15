@@ -3,12 +3,14 @@
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\Enums\TenancyMode;
 use App\Services\AccountManagerService;
 use App\Services\AdditionalStorageService;
 use App\Services\UserPermissionsService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Billing;
 use App\Support\Facades\Domain;
+use App\Support\Facades\Tenancy;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -37,6 +39,7 @@ uses(TestCase::class, RefreshDatabase::class)->in('Feature/Billing');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Applications');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Auth');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Organization');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Profile');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Registrars');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/ServerManagers');
@@ -52,6 +55,14 @@ pest()->beforeEach(function () {
     setupFakeServerInterfaces();
 })
     ->in('Browser');
+
+// These activate apps, whose groups are made in the directory, and look the organizations' admins up there:
+// the driver is theirs to choose, not whatever the environment they are run in is set to. A file that needs
+// another (setupAccountManagerDriver('db') in its own beforeEach) does that after this
+pest()->beforeEach(function () {
+    setupAccountManagerDriver('ldap');
+})
+    ->in('Feature/Applications');
 
 pest()->afterEach(function () {
     (new TestSupports)->cleanLdap();
@@ -165,6 +176,27 @@ function skipUnlessDriver(string $required, ?string $driver = null): void
     if ($driver !== $required) {
         test()->markTestSkipped("Requires '{$required}' account manager driver");
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Tenancy Mode Helpers
+|--------------------------------------------------------------------------
+|
+| Installs are multi-tenant unless the `tenancy_mode` setting says otherwise,
+| so tests run as multi-tenant by default. Call useSingleTenancy() after
+| seed() to run a test as a single-organization install.
+|
+*/
+
+function useSingleTenancy(): void
+{
+    Tenancy::set(TenancyMode::Single);
+}
+
+function useMultiTenancy(): void
+{
+    Tenancy::set(TenancyMode::Multi);
 }
 
 /*
@@ -361,9 +393,25 @@ function bulkEditSettingsPayload(array $overrides = []): array
         'sso_server' => null,
         'shared_app' => null,
         'displayed_features' => [],
-        'base' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
-        'standard' => ['price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0],
-        'basic' => ['name' => '', 'price' => 0, 'price_id' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
-        'storage' => ['price' => 0, 'price_id' => '', 'amount' => 0, 'max' => 0],
+        // Prices are sent per currency under `prices.{component}.{currency}`.
+        'base' => ['storage' => 0, 'max' => 0],
+        'standard' => ['storage' => 0, 'max' => 0],
+        'basic' => ['name' => '', 'storage' => 0, 'max' => 0, 'amount' => 0],
+        'storage' => ['amount' => 0, 'max' => 0],
     ], $overrides);
+}
+
+/**
+ * Edits a plan in what the release and the settings job depend on (its storage
+ * and a configuration the settings job applies), so that an instance of it is
+ * out of date for both. $n is what they are changed to.
+ */
+function editPlan(AppPlan $plan, int $n): void
+{
+    $plan->updateSettings([
+        'base.storage' => $n,
+        'additionalConfigs.greeting' => ['aspect' => 'settings'],
+        'configurations.greeting' => $n,
+    ]);
+    $plan->save();
 }

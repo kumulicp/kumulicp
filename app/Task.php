@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Enums\TaskErrorCode;
 use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -176,21 +177,21 @@ class Task extends Model
     /**
      * The tasks this one waits for, whichever gate (see the pivot's gate).
      *
-     * @return BelongsToMany<Task, $this>
+     * @return BelongsToMany<Task, $this, TaskDependency>
      */
     public function dependencies(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'task_dependencies', 'task_id', 'depends_on_task_id')->withPivot('gate');
+        return $this->belongsToMany(self::class, 'task_dependencies', 'task_id', 'depends_on_task_id')->using(TaskDependency::class)->withPivot('gate');
     }
 
     /**
      * The tasks waiting for this one.
      *
-     * @return BelongsToMany<Task, $this>
+     * @return BelongsToMany<Task, $this, TaskDependency>
      */
     public function dependents(): BelongsToMany
     {
-        return $this->belongsToMany(self::class, 'task_dependencies', 'depends_on_task_id', 'task_id')->withPivot('gate');
+        return $this->belongsToMany(self::class, 'task_dependencies', 'depends_on_task_id', 'task_id')->using(TaskDependency::class)->withPivot('gate');
     }
 
     /**
@@ -209,6 +210,10 @@ class Task extends Model
                 throw new \LogicException("Task {$this->id} can't wait for task {$id}: that would make it wait for itself");
             }
         }
+
+        // A task that is gone is done (a task with nothing to run deletes itself, and on a fast queue
+        // may have by the time it is waited for), so there is nothing left to wait for
+        $ids = DB::table('tasks')->whereIn('id', $ids)->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         foreach ($ids as $id) {
             DB::table('task_dependencies')->insertOrIgnore([
@@ -282,11 +287,28 @@ class Task extends Model
     }
 
     /**
+     * @return HasMany<TaskStep, $this>
+     */
+    public function steps(): HasMany
+    {
+        return $this->hasMany(TaskStep::class)->orderBy('position');
+    }
+
+    /**
      * @return HasMany<TaskEvent, $this>
      */
     public function events(): HasMany
     {
         return $this->hasMany(TaskEvent::class)->orderBy('id');
+    }
+
+    /**
+     * Whether a worker has ever run the task. Not what `attempts` says: retrying
+     * a task that hasn't run yet counts as an attempt too.
+     */
+    public function hasStarted(): bool
+    {
+        return $this->events()->where('type', 'started')->exists();
     }
 
     /**
@@ -319,6 +341,15 @@ class Task extends Model
     public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
+    }
+
+    /**
+     * The code as one this system knows. Null for none, and for an older or
+     * stray string that isn't in the enum.
+     */
+    public function errorCode(): ?TaskErrorCode
+    {
+        return TaskErrorCode::tryFrom((string) $this->error_code);
     }
 
     public function action()

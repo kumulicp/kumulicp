@@ -2,12 +2,17 @@
 
 namespace App;
 
+use App\Enums\AccessType;
+use App\Enums\VersionTestRunStatus;
+use App\Support\VersionTesting\VersionFingerprint;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
 use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
@@ -54,6 +59,101 @@ class AppVersion extends Model
         return $this->belongsTo('App\Application', 'application_id');
     }
 
+    /**
+     * The runs that test the version itself with the plans customers can pick.
+     * Runs for a shared app's own plan are kept apart: see planTestRuns().
+     *
+     * @return HasMany<VersionTestRun, $this>
+     */
+    public function testRuns(): HasMany
+    {
+        return $this->hasMany(VersionTestRun::class, 'app_version_id')->whereNull('app_plan_id')->orderByDesc('id');
+    }
+
+    /**
+     * The runs that tested this version on one specific plan.
+     *
+     * @return HasMany<VersionTestRun, $this>
+     */
+    public function planTestRuns(AppPlan $plan): HasMany
+    {
+        return $this->hasMany(VersionTestRun::class, 'app_version_id')->where('app_plan_id', $plan->id)->orderByDesc('id');
+    }
+
+    /**
+     * Whether its tests can be bypassed right now. A run in progress is cancelled
+     * to make way for the bypass, so one that can't be cancelled yet blocks it.
+     */
+    public function canBypassTests(?AppPlan $plan = null): bool
+    {
+        $runs = $plan ? $this->planTestRuns($plan) : $this->testRuns();
+        $running = $runs->where('status', VersionTestRunStatus::RUNNING->value)->first();
+
+        return ! $running || $running->canBeCancelled();
+    }
+
+    /**
+     * Where this version stands before it can be enabled: running, passed,
+     * bypassed, failed, stale (changed since it was approved) or untested.
+     *
+     * With a plan, where it stands on that plan alone. A shared app is judged
+     * by its own plan's runs, never by how the version did on the others.
+     */
+    public function testGate(?AppPlan $plan = null): string
+    {
+        $runs = $plan ? $this->planTestRuns($plan) : $this->testRuns();
+
+        if ($runs->where('status', VersionTestRunStatus::RUNNING->value)->exists()) {
+            return 'running';
+        }
+
+        $run = $this->latestFinishedTestRun($plan);
+
+        if (! $run) {
+            return 'untested';
+        }
+
+        if ($run->status === VersionTestRunStatus::FAILED) {
+            return 'failed';
+        }
+
+        $fingerprint = $plan ? (new VersionFingerprint)->forPlan($this, $plan) : (new VersionFingerprint)->for($this);
+
+        if ($run->fingerprint !== $fingerprint) {
+            return 'stale';
+        }
+
+        return $run->status->value;
+    }
+
+    /**
+     * Whether the tests were passed or bypassed and nothing has changed since.
+     */
+    public function canBeEnabled(): bool
+    {
+        return in_array($this->testGate(), ['passed', 'bypassed'], true);
+    }
+
+    /**
+     * Whether this version has passed, or had bypassed, its tests on this plan.
+     */
+    public function canBeActivatedOn(AppPlan $plan): bool
+    {
+        return in_array($this->testGate($plan), ['passed', 'bypassed'], true);
+    }
+
+    // The most recent run that reached a verdict; cancelled and running runs say nothing
+    public function latestFinishedTestRun(?AppPlan $plan = null): ?VersionTestRun
+    {
+        return ($plan ? $this->planTestRuns($plan) : $this->testRuns())
+            ->whereIn('status', [
+                VersionTestRunStatus::PASSED->value,
+                VersionTestRunStatus::BYPASSED->value,
+                VersionTestRunStatus::FAILED->value,
+            ])
+            ->first();
+    }
+
     public function imageRegistry()
     {
         return $this->belongsTo('App\RepoSecret', 'image_registry_id');
@@ -74,13 +174,14 @@ class AppVersion extends Model
         return $this->helm_repo_secret_id !== null && $this->helmRepoSecret && $this->helmRepoSecret->requiresAuth();
     }
 
-    public function roles(string|array|null $type = null, $all = true)
+    public function roles(string|array|null $type = null, $all = true): Collection
     {
-        $list = [];
+        // A version with no roles set up is an empty collection, not an array: callers map() and merge() it
+        $list = new Collection;
         $role_ids = $this->roles;
 
         if (isset($role_ids['order'])) {
-            $roles = AppRole::where('access_type', '!=', 'disabled');
+            $roles = AppRole::where('access_type', '!=', AccessType::NONE->value);
             $roles->where(function (Builder $query) use ($role_ids) {
 
                 $n = 0;
@@ -203,26 +304,7 @@ class AppVersion extends Model
 
     public function defaultAdminRoleSlugs()
     {
-        $roles = [];
-        $role_ids = $this->roles;
-
-        if (isset($role_ids['default_admin_roles'])) {
-
-            foreach ($role_ids['default_admin_roles'] as $id) {
-
-                $role = AppRole::where('id', $id)
-                    ->where('access_type', '!=', 'disabled')
-                    ->first();
-
-                if ($role) {
-
-                    $roles[] = $role->slug;
-
-                }
-            }
-        }
-
-        return $roles;
+        return array_map(fn (AppRole $role) => $role->slug, $this->defaultAdminRoles());
     }
 
     public function defaultUserRoles()

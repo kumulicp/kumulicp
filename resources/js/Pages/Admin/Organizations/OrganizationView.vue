@@ -71,6 +71,13 @@ import OrganizationLayout from './OrganizationLayout.vue'
           <va-list-item-section >
             <va-list-item-label>
               <Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link>
+              <va-badge
+                v-for="update in app.updates"
+                :key="update.key"
+                class="ml-2 out-of-date"
+                color="warning"
+                :text="update.label"
+              />
             </va-list-item-label>
           </va-list-item-section>
           <va-list-item-section>
@@ -87,53 +94,200 @@ import OrganizationLayout from './OrganizationLayout.vue'
       <div class="flex flex-col lg5 xs12">
         <div class="row">
           <div class="flex flex-col xs12">
-            <template v-for="(item, key) in subscription_stats" :key="key">
-              <va-list>
-                <va-list-label>{{ item.name }}</va-list-label>
-                <va-list-item
-                  v-for="(stat, key) in item.stats"
-                  class="list__item"
-                  :key="key"
-                  >
-                  <va-list-item-section>
-                    <va-list-item-label>
-                    {{ stat.label }}
-                    </va-list-item-label>
-                  </va-list-item-section>
-                  <va-list-item-section>
-                    <va-list-item-label>
-                      <span v-if="stat.calculation">{{ stat.calculation }}</span>
-                    </va-list-item-label>
-                  </va-list-item-section>
-                  <va-list-item-section icon>
-                    ${{ stat.total_price }}
-                  </va-list-item-section>
-                </va-list-item>
-              </va-list>
-              <va-divider v-if="(key+1) != item.stats.length"/>
+            <template v-for="(item, index) in subscription_stats" :key="index">
+              <div class="va-title text-align-center">
+                {{ item.name }}
+              </div>
+              <div v-if="item.notice" class="trial-notice text-align-center mb-2">{{ item.notice }}</div>
+              <va-scroll-container horizontal>
+                <table class="va-table va-table--striped mb-2">
+                  <thead>
+                    <tr>
+                      <th>{{ $t('organization.subscription.description') }}</th>
+                      <th>{{ $t('organization.subscription.quantity') }}</th>
+                      <th>{{ $t('admin.plans.price') }}</th>
+                      <th>{{ $t('organization.subscription.forEvery') }}</th>
+                      <th>{{ $t('organization.subscription.total') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(stat, index) in item.stats"
+                      :key="index">
+                      <td style="width: 20rem">{{ stat.label }}</td>
+                      <td>{{ stat.quantity }}</td>
+                      <td><span v-if="stat.price">$</span>{{ stat.price }}</td>
+                      <td>{{ stat.unit }}</td>
+                      <td>${{ stat.total_price }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </va-scroll-container>
             </template>
           </div>
         </div>
-        <div v-if="subscription_stats.length > 0" class="row">
+        <div class="row">
           <div class="flex flex-col xs12">
-            <form @submit.prevent="subscription.post('/admin/organizations/'+organization.id+'/update_subscription')">
-              <va-input v-model="subscription.discount_code"
-                :label="$t('admin.organizations.discountCode')"
-                class="mb-3"
-                id="discount_code"
-                immediateValidation
-                :error="$page.props.errors.discount_code"
-                :error-messages="$page.props.errors.discount_code"
-              />
-              <va-button type="submit" id="updateSubscription" class="mb-2">{{ $t('admin.organizations.updateSubscription') }}</va-button>
-            </form>
-            <form v-if="organization.status === 'deactivated'" @submit.prevent="destroy.delete('/admin/organizations/'+organization.id)">
-              <va-button type="submit" color="danger" id="updateSubscription">{{ $t('admin.organizations.permanentlyDelete') }}</va-button>
-            </form>
+            <va-alert
+              v-if="organization.deletion_scheduled_at"
+              id="deletionScheduled"
+              color="danger"
+              border="left"
+              class="mb-3"
+            >
+              {{ $t('admin.organizations.deletionScheduledFor', { date: formatDate(organization.deletion_scheduled_at) }) }}
+              <template v-if="organization.deactivation_reason_text">
+                <br />
+                {{ $t('admin.organizations.deactivatedReason', { reason: organization.deactivation_reason_text }) }}
+              </template>
+            </va-alert>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <va-button preset="secondary" id="changePlan" @click="openChangePlan">{{ $t('admin.organizations.changePlan') }}</va-button>
+              <va-button v-if="subscription_stats.length > 0" preset="secondary" id="discountCodeButton" @click="openDiscountCode">
+                {{ base_plan.discount_id ? $t('admin.organizations.editDiscountCode') : $t('admin.organizations.addDiscountCode') }}
+              </va-button>
+              <template v-if="organization.deletion_scheduled_at">
+                <va-button preset="secondary" color="danger" id="editDeletionDate" @click="openDeactivate">{{ $t('admin.organizations.editDeletionDate') }}</va-button>
+                <va-button preset="secondary" id="notifyAdmins" :loading="notifyForm.processing" @click="notifyAdmins">{{ $t('admin.organizations.notifyAdmins') }}</va-button>
+                <va-button preset="secondary" id="cancelDeletion" @click="cancelDeletion">{{ $t('admin.organizations.cancelDeletion') }}</va-button>
+              </template>
+              <va-button v-else preset="secondary" color="danger" id="deactivateOrganization" @click="openDeactivate">{{ $t('admin.organizations.deactivateOrganization') }}</va-button>
+              <va-button
+                v-if="subscription_stats.length > 0 && organization.status === 'deactivated'"
+                color="danger"
+                id="permanentlyDelete"
+                :loading="destroy.processing"
+                @click="destroy.delete('/admin/organizations/'+organization.id)"
+              >{{ $t('admin.organizations.permanentlyDelete') }}</va-button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <va-modal
+      v-model="showDiscountCode"
+      :title="base_plan.discount_id ? $t('admin.organizations.editDiscountCode') : $t('admin.organizations.addDiscountCode')"
+      :ok-text="$t('admin.organizations.updateSubscription')"
+      size="small"
+      @ok="submitDiscountCode"
+    >
+      <p class="plan-modal__intro">{{ $t('admin.organizations.discountCodeDescription', { name: organization.name }) }}</p>
+      <va-input
+        v-model="subscription.discount_code"
+        id="discount_code"
+        :label="$t('admin.organizations.discountCode')"
+        immediateValidation
+        :error="!!$page.props.errors.discount_code"
+        :error-messages="$page.props.errors.discount_code"
+      />
+    </va-modal>
+
+    <va-modal
+      v-model="showChangePlan"
+      :title="$t('admin.organizations.changePlan')"
+      :ok-text="$t('admin.organizations.changePlan')"
+      :ok-disabled="!planForm.plan_id"
+      size="small"
+      @ok="submitChangePlan"
+    >
+      <p class="plan-modal__intro">{{ $t('admin.organizations.changePlanDescription', { name: organization.name }) }}</p>
+      <div class="plan-list" id="availablePlans" role="radiogroup">
+        <label
+          v-for="plan in available_plans"
+          :key="plan.id"
+          class="plan-option"
+          :class="{
+            'plan-option--selected': planForm.plan_id === plan.id,
+            'plan-option--disabled': plan.current || plan.disabled_reason
+          }"
+          :title="plan.disabled_reason || undefined"
+        >
+          <input
+            type="radio"
+            name="plan_id"
+            class="plan-option__radio"
+            :value="plan.id"
+            :disabled="plan.current || !!plan.disabled_reason"
+            v-model="planForm.plan_id"
+          />
+          <span class="plan-option__body">
+            <span class="plan-option__header">
+              <span class="plan-option__name">{{ plan.name }}</span>
+              <va-badge
+                v-if="plan.current"
+                color="primary"
+                :text="$t('admin.organizations.currentPlan')"
+              />
+              <va-badge
+                v-if="plan.org_type !== organization.type"
+                color="info"
+                :text="plan.org_type"
+              />
+              <va-badge
+                :color="visibilityColors[plan.visibility]"
+                :text="$t('admin.organizations.planVisibility.' + plan.visibility)"
+              />
+            </span>
+            <span v-if="plan.description" class="plan-option__description">{{ plan.description }}</span>
+            <span v-if="plan.disabled_reason && !plan.current" class="plan-option__reason">
+              <va-icon name="info" size="small" />
+              {{ plan.disabled_reason }}
+            </span>
+          </span>
+        </label>
+      </div>
+      <va-alert v-if="$page.props.errors.plan_id" color="danger" class="mt-4" border="left">
+        {{ $page.props.errors.plan_id }}
+      </va-alert>
+    </va-modal>
+
+    <va-modal
+      v-model="showDeactivate"
+      :title="$t('admin.organizations.deactivateOrganization')"
+      :ok-text="$t('admin.organizations.scheduleDeletion')"
+      :ok-disabled="!deactivateForm.date || !deactivateForm.reason"
+      size="small"
+      @ok="submitDeactivate"
+    >
+      <p class="plan-modal__intro">{{ $t('admin.organizations.deactivateOrganizationDescription', { name: organization.name }) }}</p>
+      <va-alert color="danger" border="left" class="mb-4" id="deletionWarning">
+        <strong>{{ $t('admin.organizations.deletionWarningTitle') }}</strong><br />
+        {{ $t('admin.organizations.deletionWarning', { name: organization.name }) }}
+      </va-alert>
+      <va-select
+        v-model="deactivateForm.reason"
+        id="deactivationReason"
+        class="mb-4"
+        :label="$t('admin.organizations.deactivationReason')"
+        :options="deactivation_reasons"
+        value-by="value"
+        text-by="text"
+        :clearable="false"
+        :error="!!$page.props.errors.reason"
+        :error-messages="$page.props.errors.reason"
+      />
+      <va-textarea
+        v-if="deactivateForm.reason === 'custom'"
+        v-model="deactivateForm.reason_note"
+        id="deactivationReasonNote"
+        class="mb-4 w-full"
+        :label="$t('admin.organizations.customReason')"
+        :max-length="500"
+        :error="!!$page.props.errors.reason_note"
+        :error-messages="$page.props.errors.reason_note"
+      />
+      <div class="flex items-end gap-2 mb-2">
+        <va-date-input
+          v-model="deactivateDate"
+          id="deletionDate"
+          :label="$t('admin.organizations.deletionDate')"
+          :error="!!$page.props.errors.date"
+          :error-messages="$page.props.errors.date"
+          @update:modelValue="updateDeactivateDate"
+        />
+        <va-button preset="secondary" id="setDeletionNow" @click="setDeletionNow">{{ $t('admin.organizations.setToNow') }}</va-button>
+      </div>
+    </va-modal>
   </div>
 </template>
 
@@ -146,6 +300,9 @@ export default {
     organization: Object,
     apps: Object,
     base_plan: Object,
+    available_plans: Array,
+    deactivation_reasons: Array,
+    default_deactivation_reason: String,
     subscription_stats: Object
   },
   data () {
@@ -153,14 +310,205 @@ export default {
       subscription: useForm({
         discount_code: this.base_plan.discount_id
       }),
-      destroy: useForm({})
+      destroy: useForm({}),
+      showChangePlan: false,
+      showDiscountCode: false,
+      showDeactivate: false,
+      deactivateDate: null,
+      deactivateForm: useForm({
+        date: null,
+        now: false,
+        reason: this.default_deactivation_reason,
+        reason_note: ''
+      }),
+      notifyForm: useForm({}),
+      planForm: useForm({
+        plan_id: null
+      }),
+      visibilityColors: {
+        public: 'success',
+        hidden: 'warning',
+        archived: 'secondary'
+      }
+    }
+  },
+  methods: {
+    openDiscountCode () {
+      this.subscription.reset()
+      this.subscription.clearErrors()
+      this.showDiscountCode = true
+    },
+    submitDiscountCode () {
+      this.subscription.post('/admin/organizations/' + this.organization.id + '/update_subscription', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showDiscountCode = false
+        },
+        onError: () => {
+          // Keep the modal open so the reason is visible
+          this.showDiscountCode = true
+        }
+      })
+    },
+    openChangePlan () {
+      this.planForm.reset()
+      this.planForm.clearErrors()
+      this.showChangePlan = true
+    },
+    formatDate (value) {
+      return new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    },
+    defaultDeletionDate () {
+      const date = new Date()
+      date.setDate(date.getDate() + 30)
+      return date
+    },
+    openDeactivate () {
+      this.deactivateForm.clearErrors()
+      this.deactivateForm.reason = this.organization.deactivation_reason || this.default_deactivation_reason
+      this.deactivateForm.reason_note = this.organization.deactivation_reason_note || ''
+      this.setDeletionDate(this.organization.deletion_scheduled_at
+        ? new Date(this.organization.deletion_scheduled_at)
+        : this.defaultDeletionDate())
+      this.showDeactivate = true
+    },
+    setDeletionDate (date) {
+      this.deactivateDate = date
+      this.deactivateForm.date = date.toISOString()
+      this.deactivateForm.now = false
+    },
+    setDeletionNow () {
+      // The server works out the moment: it starts when this is confirmed, not now
+      this.setDeletionDate(new Date())
+      this.deactivateForm.now = true
+    },
+    updateDeactivateDate (date) {
+      this.deactivateForm.now = false
+      this.deactivateForm.date = date ? new Date(date).toISOString() : null
+    },
+    submitDeactivate () {
+      this.deactivateForm.post('/admin/organizations/' + this.organization.id + '/schedule_deletion', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showDeactivate = false
+        },
+        onError: () => {
+          this.showDeactivate = true
+        }
+      })
+    },
+    notifyAdmins () {
+      this.notifyForm.post('/admin/organizations/' + this.organization.id + '/notify_deletion', {
+        preserveScroll: true
+      })
+    },
+    cancelDeletion () {
+      this.notifyForm.delete('/admin/organizations/' + this.organization.id + '/schedule_deletion', {
+        preserveScroll: true
+      })
+    },
+    submitChangePlan () {
+      this.planForm.post('/admin/organizations/' + this.organization.id + '/change_plan', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showChangePlan = false
+        },
+        onError: () => {
+          // Keep the modal open so the reason is visible
+          this.showChangePlan = true
+        }
+      })
     }
   }
 }
 </script>
 
 <style>
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+    white-space: pre-line;
+  }
+
   .organization {
     width: 100%;
+  }
+
+  .plan-modal__intro {
+    margin-bottom: 1rem;
+    color: var(--va-text-secondary);
+  }
+
+  .plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 2px;
+  }
+
+  .plan-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+
+  .plan-option:hover:not(.plan-option--disabled) {
+    border-color: var(--va-primary);
+  }
+
+  .plan-option--selected {
+    border-color: var(--va-primary);
+    background-color: color-mix(in srgb, var(--va-primary) 8%, transparent);
+    box-shadow: 0 0 0 1px var(--va-primary);
+  }
+
+  .plan-option--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background-color: var(--va-background-element);
+  }
+
+  .plan-option__radio {
+    margin-top: 0.3rem;
+    accent-color: var(--va-primary);
+  }
+
+  .plan-option__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .plan-option__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .plan-option__name {
+    font-weight: 600;
+  }
+
+  .plan-option__description {
+    font-size: 0.875rem;
+    color: var(--va-text-secondary);
+  }
+
+  .plan-option__reason {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--va-danger);
   }
 </style>

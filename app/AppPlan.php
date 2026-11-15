@@ -2,8 +2,12 @@
 
 namespace App;
 
+use App\Enums\AccessType;
+use App\Enums\ApplicationSource;
 use App\Services\Application\PlanSecretsService;
+use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\Support\Facades\Subscription;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -91,23 +95,54 @@ class AppPlan extends Model
         return $this->hasOne('App\AppInstance', 'plan_id');
     }
 
-    // A hidden plan only has anything meaningful to configure once it was
-    // actually deployed through kumulicp -- an admin can also create a
-    // shared app as just a pointer to an independently installed instance,
-    // which never gets a web_server_id assigned since kumulicp never
-    // deployed it.
+    // Whether the plan has settings, features, configurations and secrets worth
+    // showing. A plan a customer can pick always does. A shared app's hidden plan
+    // only does for an app with a registered profile (source `profile`): the
+    // profile is what defines those. A generic app, like GitLab, has none, and
+    // kumulicp only manages its users centrally.
     //
     // Uses getAttribute() rather than $this->hidden: the "hidden" column
     // collides with Eloquent Model's own protected $hidden property (used
     // for array/JSON serialization), so a direct property access here would
     // silently read that instead of the database column.
-    public function isSharedAppActive(): bool
+    public function hasFullSettings(): bool
     {
-        return $this->getAttribute('hidden') && $this->web_server_id !== null;
+        return ! $this->getAttribute('hidden') || $this->application->source === ApplicationSource::Profile;
+    }
+
+    // Whether this plan connects to an app that is already running (shared),
+    // instead of each organization activating one of its own.
+    public function usesSharedApp(): bool
+    {
+        return $this->setting('server_type') === 'shared';
+    }
+
+    /**
+     * Which of the plan's admin tabs have anything to configure. Features,
+     * configurations (the helm chart) and secrets of a plan that connects to a
+     * shared app are set on the shared app itself, so they only matter here for
+     * a plan that gets its own app. Features are the exception for a multisite
+     * app (like ERPNext), where each organization's site keeps its own.
+     *
+     * @return array{features: bool, configurations: bool, secrets: bool}
+     */
+    public function tabs(): array
+    {
+        $full = $this->hasFullSettings();
+        $shared = $this->usesSharedApp();
+        $multisite = $shared && ApplicationFacade::profile($this->application)->isCompatible('multisite');
+
+        return [
+            'features' => $full && (! $shared || $multisite),
+            'configurations' => $full && ! $shared,
+            'secrets' => $full && ! $shared,
+        ];
     }
 
     public function displayFeatures()
     {
+        $basic_label = Subscription::base()->accessTypeLabel(AccessType::BASIC);
+
         return [
             'prices' => collect([
                 [
@@ -121,8 +156,8 @@ class AppPlan extends Model
                     'price' => $this->setting('standard.price'),
                 ],
                 [
-                    'name' => Str::plural(strtolower($this->setting('basic.name'))),
-                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($this->setting('basic.name'))),
+                    'name' => Str::plural(strtolower($basic_label)),
+                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
                     'price' => $this->setting('basic.price'),
                 ],
                 [
@@ -262,9 +297,22 @@ class AppPlan extends Model
 
     // The settings that are safe to send to the browser: everything except the
     // plan's custom secrets (see PlanSecretsService), which only the server uses.
+    /**
+     * What the admin pages are shown. A plan not made through the admin form
+     * (or one that was reset) can lack the pricing components, which the pages
+     * read directly, so each one is always present.
+     *
+     * @return array<string, mixed>
+     */
     public function publicSettings(): array
     {
-        return Arr::except($this->settings ?? [], [PlanSecretsService::SETTING]);
+        $settings = Arr::except($this->settings ?? [], [PlanSecretsService::SETTING]);
+
+        foreach (['base', 'standard', 'basic', 'storage', 'application'] as $component) {
+            $settings[$component] ??= [];
+        }
+
+        return $settings;
     }
 
     public function updateSetting($setting, $value)

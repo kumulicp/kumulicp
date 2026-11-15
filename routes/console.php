@@ -1,6 +1,8 @@
 <?php
 
 use App\Console\Calls\ActivateBackup;
+use App\Console\Calls\ApplyPendingAppChanges;
+use App\Console\Calls\CheckUnavailableAppInstances;
 use App\Console\Calls\CheckVersionUpdates;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
 use App\Console\Calls\DeleteBackups;
@@ -9,7 +11,11 @@ use App\Console\Calls\ExpiredSubscriptionsCheck;
 use App\Console\Calls\NextcloudStorageChecks;
 use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
+use App\Console\Calls\ScanUpdateDrift;
+use App\Console\Calls\ScheduledOrganizationDeletionCheck;
+use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
+use App\Services\VersionTesting\VersionTestRunner;
 use Illuminate\Support\Facades\Schedule;
 use Spatie\UptimeMonitor\Commands\CheckCertificates;
 use Spatie\UptimeMonitor\Commands\CheckUptime;
@@ -30,6 +36,7 @@ use Spatie\UptimeMonitor\Commands\CheckUptime;
 // would claim the same tasks), and only one server runs it. The mutex expiry
 // keeps a crashed run from blocking tasks for the default 24 hours.
 Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(fn () => app(VersionTestRunner::class)->syncProvisioning())->name('version-test-sync')->everyMinute()->withoutOverlapping(5);
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute();
 Schedule::call(new NextcloudStorageChecks)->daily();
@@ -37,10 +44,20 @@ Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();
 Schedule::call(new ExpiredSubscriptionsCheck)->everyMinute();
-Schedule::call(new DeactivatedAppInstanceCheck)->everyMinute();
+Schedule::call(new ScheduledOrganizationDeletionCheck)->name('scheduled-organization-deletion-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
+// Each unavailable app is only probed once its last check is 5 minutes old; a probe can take
+// its full timeout, so a slow pass must not overlap the next
+Schedule::call(new ApplyPendingAppChanges)->name('apply-pending-app-changes')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
+Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
 Schedule::command('queue:prune-batches')->daily();
 Schedule::command(CheckUptime::class)->everyMinute();
+// Reads what CheckUptime found out about the apps marked unavailable (no HTTP of its own).
+// Registered after CheckUptime so a minute's results are acted on in the same minute.
+Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
+Schedule::call(new SyncAppMonitors)->name('sync-app-monitors')->daily()->at('02:30')->onOneServer();
 Schedule::command(CheckCertificates::class)->daily();

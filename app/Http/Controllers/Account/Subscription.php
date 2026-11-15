@@ -72,7 +72,8 @@ class Subscription extends Controller
             return redirect('/discover');
         }
 
-        $plans = (new SubscriptionService($organization))->base()->allAvailable();
+        // Plans the organization's usage would exceed stay listed, but can't be selected
+        $plans = (new SubscriptionService($organization))->base()->allListed();
 
         return inertia('Organization/Subscription/SubscriptionOptions', [
             'organization' => [
@@ -127,6 +128,8 @@ class Subscription extends Controller
                         'features' => $plan->features ?? [],
                     ],
                     'current' => $plan->id === $organization->plan_id,
+                    'unavailable' => $unavailable = $plan->id !== $organization->plan_id && $plan->isAnyMaxBroken(),
+                    'unavailable_reason' => $unavailable ? $plan->limitsMessage() : null,
                     'url' => "/subscription/{$organization->id}/plans/{$plan->id}",
                 ];
             })->sortBy('order')->values()->all(),
@@ -188,12 +191,13 @@ class Subscription extends Controller
                 return [
                     'id' => $plan->id,
                     'name' => $plan->name,
-                    'status' => implode(' ', [__('labels.'.$plan->status()), $plan->app_instance->deactivate_at?->format('M d, Y')]),
+                    'status' => $this->appStatus($plan),
                     'type' => 'app',
                     'entity' => [
                         'name' => $plan->app_instance->label,
                         'id' => $plan->app_instance->id,
                     ],
+                    'notice' => $this->planNotice($plan),
                     'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                     'can' => [
                         'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),
@@ -227,12 +231,13 @@ class Subscription extends Controller
                         return [
                             'id' => $plan->id,
                             'name' => $plan->name,
-                            'status' => implode(' ', [__('labels.'.$plan->status()), $plan->app_instance->deactivate_at?->format('M d, Y')]),
+                            'status' => $this->appStatus($plan),
                             'type' => 'app',
                             'entity' => [
                                 'name' => $plan->app_instance->label,
                                 'id' => $plan->app_instance->id,
                             ],
+                            'notice' => $this->planNotice($plan),
                             'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                             'can' => [
                                 'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),
@@ -245,6 +250,27 @@ class Subscription extends Controller
             }),
             'prices' => $prices,
         ]);
+    }
+
+    /**
+     * The status of an app's plan, with the date it ends only while it is being deactivated: for an app
+     * that merely has an end date ("Active Nov 15") the date belongs in a note instead.
+     */
+    private function appStatus($plan): string
+    {
+        $label = __('labels.'.$plan->status());
+
+        return $plan->status() === 'deactivating' && $plan->app_instance->deactivate_at
+            ? $label.' '.$plan->app_instance->deactivate_at->format('M d, Y')
+            : $label;
+    }
+
+    /**
+     * Notes shown under an app's plan name: its free trial, when it expires and changes waiting for the app.
+     */
+    private function planNotice($plan): ?string
+    {
+        return collect([$plan->trialNotice(), $plan->expiryNotice(), $plan->pendingNotice()])->filter()->implode("\n") ?: null;
     }
 
     public function review(\App\Organization $organization, Plan $plan)

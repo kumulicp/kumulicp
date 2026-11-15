@@ -1,6 +1,7 @@
 <?php
 
 use App\AppVersion;
+use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
 use Tests\Support\Applications\DemoAppProfile;
@@ -51,38 +52,6 @@ describe('Admin Versions', function () {
         // Switch back to Previous Version — version select should reappear
         $page->click('text=Previous Version');
         $page->assertVisible('#copyVersion');
-    });
-
-    it('creates a version with none copy option', function () {
-        visit("/admin/apps/{$this->demoApp->slug}/versions")
-            ->click('#addVersion')
-            ->fill('#name input', '3.0')
-            ->click('text=None')
-            ->click('#submit')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/3.0");
-
-        expect(
-            AppVersion::where('application_id', $this->demoApp->id)
-                ->where('name', '3.0')
-                ->firstOrFail()
-                ->settings
-        )->toBeNull();
-    });
-
-    it('creates a version with recommendations copy option', function () {
-        visit("/admin/apps/{$this->demoApp->slug}/versions")
-            ->click('#addVersion')
-            ->fill('#name input', '3.0')
-            ->click('text=Recommendations')
-            ->click('#submit')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/3.0");
-
-        $version = AppVersion::where('application_id', $this->demoApp->id)
-            ->where('name', '3.0')
-            ->firstOrFail();
-
-        expect($version->setting('chart_version'))->toBe('2.5.0');
-        expect($version->admin_path)->toBe('/admin');
     });
 
     it('creates a version with previous_version copy option and shows source in select', function () {
@@ -233,6 +202,8 @@ describe('Admin Versions', function () {
         $version = AppVersion::factory()->create([
             'application_id' => $this->demoApp->id,
             'name' => '2.0',
+            // A container image registry is required to save a version
+            'image_registry_id' => RepoSecret::factory()->create()->id,
             'announcement_location' => 'none',
             'roles' => ['order' => $appRoles->pluck('id')->toArray()],
         ]);
@@ -247,6 +218,8 @@ describe('Admin Versions', function () {
             ->click("[role=option]:text-is(\"{$userRole->label}\")")
             ->keys('#defaultUserRoles', 'Escape')
             ->click('#submit')
+            // The form posts back to the page it is on, so wait for the flash message rather than the path
+            ->assertSee("Version {$version->name} was updated")
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
 
         $version->refresh();

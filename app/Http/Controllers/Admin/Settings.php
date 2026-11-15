@@ -18,6 +18,7 @@ class Settings extends Controller
                 'docs_url' => SettingsFacade::get('docs_url'),
                 'primary_color' => SettingsFacade::get('primary_color'),
                 'secondary_color' => SettingsFacade::get('secondary_color'),
+                'text_secondary_color' => SettingsFacade::get('text_secondary_color'),
                 'welcome_page' => SettingsFacade::get('welcome_page'),
                 'support_email' => SettingsFacade::get('support_email'),
                 'error_email' => SettingsFacade::get('error_email'),
@@ -44,6 +45,7 @@ class Settings extends Controller
             'welcome_page' => 'string|nullable',
             'primary_color' => 'nullable|string|max:10',
             'secondary_color' => 'nullable|string|max:10',
+            'text_secondary_color' => 'nullable|string|max:10',
             'support_email' => 'nullable|email:rfc,filter|max:100',
             'error_email' => 'nullable|email:rfc,filter|max:100',
             'default_currency' => 'required|string|size:3',
@@ -63,6 +65,7 @@ class Settings extends Controller
         SettingsFacade::update('welcome_page', clean($validated['welcome_page'], 'rich_text'));
         SettingsFacade::update('primary_color', $validated['primary_color']);
         SettingsFacade::update('secondary_color', $validated['secondary_color']);
+        SettingsFacade::update('text_secondary_color', Arr::get($validated, 'text_secondary_color'));
         SettingsFacade::update('support_email', Arr::get($validated, 'support_email'));
         SettingsFacade::update('error_email', Arr::get($validated, 'error_email'));
         SettingsFacade::update('default_currency', $validated['default_currency']);

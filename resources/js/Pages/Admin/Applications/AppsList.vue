@@ -67,6 +67,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
         <thead>
           <tr>
             <th>{{ $t('common.name') }}</th>
+            <th>{{ $t('admin.apps.source') }}</th>
             <th>{{ $t('admin.apps.status') }}</th>
             <th>{{ $t('admin.apps.version') }}</th>
             <th>{{ $t('admin.apps.chartVersion') }}</th>
@@ -76,6 +77,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
         <tbody>
           <tr v-for="(app, index) in apps" :key="index">
             <td><Link :href="'/admin/apps/'+app.slug">{{ app.name }}</Link></td>
+            <td>{{ app.source }}</td>
             <td>{{ app.status }}</td>
             <td>
               <div v-for="version in app.versions" :key="'version-' + version.id">{{ version.version }}</div>

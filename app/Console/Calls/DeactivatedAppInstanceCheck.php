@@ -10,7 +10,15 @@ class DeactivatedAppInstanceCheck
 {
     public function __invoke()
     {
-        $apps = AppInstance::whereNot('status', 'deactivated')->whereDate('deactivate_at', '<', now())->get();
+        // Compare the full timestamp (not whereDate) so an app due "now" is
+        // picked up on the next pass rather than the next calendar day.
+        // 'deleting' already has an ApplicationDelete task in flight, and apps
+        // of a deactivated organization are handled by DeactivateOrganization's
+        // ApplicationDeactivate tasks -- sweeping either would collide.
+        $apps = AppInstance::whereNotIn('status', ['deactivated', 'deleting'])
+            ->where('deactivate_at', '<=', now())
+            ->whereDoesntHave('organization', fn ($query) => $query->where('status', 'deactivated'))
+            ->get();
 
         foreach ($apps as $app) {
             try {

@@ -9,6 +9,7 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\ServerManagers\FakeServerManager;
@@ -71,6 +72,24 @@ it('deactivates an active app instance and notifies admins', function () {
 
     $admin = $task->organization->admins()->first()->get();
     Notification::assertSentTo($admin, ApplicationDeactivated::class);
+});
+
+it('deactivates a site made inside a parent\'s release once the parent has taken the change, though the release stays deployed', function () {
+    $instance = deactivateTestInstance();
+    DemoAppProfile::$job_activation = true;
+
+    try {
+        $task = Action::execute(new ApplicationDeactivate($instance));
+        app(TaskRunner::class)->execute($task);
+
+        // Not marked inactive: the release the site lives in is still deployed
+        app(TaskRunner::class)->poll($task);
+    } finally {
+        DemoAppProfile::$job_activation = false;
+    }
+
+    expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE);
+    expect($instance->fresh()->status)->toBe('deactivated');
 });
 
 it('cascades deactivation to child app instances', function () {

@@ -43,7 +43,10 @@ class RemoveLDAPGroups implements ShouldQueue
         $app = $app_instance->application;
         $version = $app_instance->version;
 
-        if (! $app_instance->parent) {
+        // The same rule as AddLdapGroups: an app, or a shared child with a site of its
+        // own (e.g. ERPNext), has a container of its own; other children only have
+        // role groups in their parent's container
+        if (! $app_instance->parent || $app_instance->usesMultisitePermissions()) {
             $LdapApp = Group::find(Dn::create($organization, 'applications', $app_instance->name));
             $LdapApp?->delete($recursive = true);
         } else {
