@@ -752,7 +752,10 @@
       "logs": "Logs",
       "level": "Level",
       "message": "Message",
-      "time": "Time"
+      "time": "Time",
+      "addDiscountCode": "Add Discount Code",
+      "editDiscountCode": "Edit Discount Code",
+      "discountCodeDescription": "The discount code applies to the whole subscription of {name}. Leave it empty to remove the current discount."
     },
     "tasks": {
       "tasks": "Tasks",

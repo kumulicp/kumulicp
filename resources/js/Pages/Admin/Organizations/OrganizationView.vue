@@ -127,11 +127,6 @@ import OrganizationLayout from './OrganizationLayout.vue'
         </div>
         <div class="row">
           <div class="flex flex-col xs12">
-            <va-button preset="secondary" id="changePlan" class="mb-3" @click="openChangePlan">{{ $t('admin.organizations.changePlan') }}</va-button>
-          </div>
-        </div>
-        <div class="row">
-          <div class="flex flex-col xs12">
             <va-alert
               v-if="organization.deletion_scheduled_at"
               id="deletionScheduled"
@@ -145,34 +140,47 @@ import OrganizationLayout from './OrganizationLayout.vue'
                 {{ $t('admin.organizations.deactivatedReason', { reason: organization.deactivation_reason_text }) }}
               </template>
             </va-alert>
-            <div v-if="organization.deletion_scheduled_at" class="flex flex-wrap gap-2 mb-3">
-              <va-button preset="secondary" color="danger" id="editDeletionDate" @click="openDeactivate">{{ $t('admin.organizations.editDeletionDate') }}</va-button>
-              <va-button preset="secondary" id="notifyAdmins" :loading="notifyForm.processing" @click="notifyAdmins">{{ $t('admin.organizations.notifyAdmins') }}</va-button>
-              <va-button preset="secondary" id="cancelDeletion" @click="cancelDeletion">{{ $t('admin.organizations.cancelDeletion') }}</va-button>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <va-button preset="secondary" id="changePlan" @click="openChangePlan">{{ $t('admin.organizations.changePlan') }}</va-button>
+              <va-button v-if="subscription_stats.length > 0" preset="secondary" id="discountCodeButton" @click="openDiscountCode">
+                {{ base_plan.discount_id ? $t('admin.organizations.editDiscountCode') : $t('admin.organizations.addDiscountCode') }}
+              </va-button>
+              <template v-if="organization.deletion_scheduled_at">
+                <va-button preset="secondary" color="danger" id="editDeletionDate" @click="openDeactivate">{{ $t('admin.organizations.editDeletionDate') }}</va-button>
+                <va-button preset="secondary" id="notifyAdmins" :loading="notifyForm.processing" @click="notifyAdmins">{{ $t('admin.organizations.notifyAdmins') }}</va-button>
+                <va-button preset="secondary" id="cancelDeletion" @click="cancelDeletion">{{ $t('admin.organizations.cancelDeletion') }}</va-button>
+              </template>
+              <va-button v-else preset="secondary" color="danger" id="deactivateOrganization" @click="openDeactivate">{{ $t('admin.organizations.deactivateOrganization') }}</va-button>
+              <va-button
+                v-if="subscription_stats.length > 0 && organization.status === 'deactivated'"
+                color="danger"
+                id="permanentlyDelete"
+                :loading="destroy.processing"
+                @click="destroy.delete('/admin/organizations/'+organization.id)"
+              >{{ $t('admin.organizations.permanentlyDelete') }}</va-button>
             </div>
-            <va-button v-else preset="secondary" color="danger" id="deactivateOrganization" class="mb-3" @click="openDeactivate">{{ $t('admin.organizations.deactivateOrganization') }}</va-button>
-          </div>
-        </div>
-        <div v-if="subscription_stats.length > 0" class="row">
-          <div class="flex flex-col xs12">
-            <form @submit.prevent="subscription.post('/admin/organizations/'+organization.id+'/update_subscription')">
-              <va-input v-model="subscription.discount_code"
-                :label="$t('admin.organizations.discountCode')"
-                class="mb-3"
-                id="discount_code"
-                immediateValidation
-                :error="$page.props.errors.discount_code"
-                :error-messages="$page.props.errors.discount_code"
-              />
-              <va-button type="submit" id="updateSubscription" class="mb-2">{{ $t('admin.organizations.updateSubscription') }}</va-button>
-            </form>
-            <form v-if="organization.status === 'deactivated'" @submit.prevent="destroy.delete('/admin/organizations/'+organization.id)">
-              <va-button type="submit" color="danger" id="updateSubscription">{{ $t('admin.organizations.permanentlyDelete') }}</va-button>
-            </form>
           </div>
         </div>
       </div>
     </div>
+
+    <va-modal
+      v-model="showDiscountCode"
+      :title="base_plan.discount_id ? $t('admin.organizations.editDiscountCode') : $t('admin.organizations.addDiscountCode')"
+      :ok-text="$t('admin.organizations.updateSubscription')"
+      size="small"
+      @ok="submitDiscountCode"
+    >
+      <p class="plan-modal__intro">{{ $t('admin.organizations.discountCodeDescription', { name: organization.name }) }}</p>
+      <va-input
+        v-model="subscription.discount_code"
+        id="discount_code"
+        :label="$t('admin.organizations.discountCode')"
+        immediateValidation
+        :error="!!$page.props.errors.discount_code"
+        :error-messages="$page.props.errors.discount_code"
+      />
+    </va-modal>
 
     <va-modal
       v-model="showChangePlan"
@@ -304,6 +312,7 @@ export default {
       }),
       destroy: useForm({}),
       showChangePlan: false,
+      showDiscountCode: false,
       showDeactivate: false,
       deactivateDate: null,
       deactivateForm: useForm({
@@ -324,6 +333,23 @@ export default {
     }
   },
   methods: {
+    openDiscountCode () {
+      this.subscription.reset()
+      this.subscription.clearErrors()
+      this.showDiscountCode = true
+    },
+    submitDiscountCode () {
+      this.subscription.post('/admin/organizations/' + this.organization.id + '/update_subscription', {
+        preserveScroll: true,
+        onSuccess: () => {
+          this.showDiscountCode = false
+        },
+        onError: () => {
+          // Keep the modal open so the reason is visible
+          this.showDiscountCode = true
+        }
+      })
+    },
     openChangePlan () {
       this.planForm.reset()
       this.planForm.clearErrors()

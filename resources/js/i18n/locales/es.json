@@ -752,7 +752,10 @@
       "logs": "Registros",
       "level": "Nivel",
       "message": "Mensaje",
-      "time": "Hora"
+      "time": "Hora",
+      "addDiscountCode": "Agregar Código de Descuento",
+      "editDiscountCode": "Editar Código de Descuento",
+      "discountCodeDescription": "El código de descuento se aplica a toda la suscripción de {name}. Déjalo vacío para quitar el descuento actual."
     },
     "tasks": {
       "tasks": "Tareas",
