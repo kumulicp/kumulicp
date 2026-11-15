@@ -430,12 +430,12 @@ class PlansTest extends TestCase
 
         $plan->refresh();
         // Pricing fields must be nulled out for app type
-        $this->assertNull($plan->setting('base.prices.USD.amount'));
-        $this->assertNull($plan->setting('base.prices.USD.price_id'));
-        $this->assertNull($plan->setting('standard.prices.USD.amount'));
+        $this->assertNull(storedPrice($plan, 'base', 'USD'));
+        $this->assertNull(storedPrice($plan, 'base', 'USD', 'price_id'));
+        $this->assertNull(storedPrice($plan, 'standard', 'USD'));
         $this->assertNull($plan->setting('standard.max'));
-        $this->assertNull($plan->setting('storage.prices.USD.amount'));
-        $this->assertNull($plan->setting('application.prices.USD.amount'));
+        $this->assertNull(storedPrice($plan, 'storage', 'USD'));
+        $this->assertNull(storedPrice($plan, 'application', 'USD'));
         // Non-pricing fields are preserved
         $this->assertEquals('Constituent', $plan->setting('base.minimal_label'));
         // Access types are named by the organization's plan whatever its type; its basic users live on its app plans
@@ -500,19 +500,19 @@ class PlansTest extends TestCase
 
         $plan->refresh();
 
-        $this->assertEquals(10, $plan->setting('base.prices.USD.amount'));
-        $this->assertEquals(14, $plan->setting('base.prices.CAD.amount'));
-        $this->assertEquals('usd_base', $plan->setting('base.prices.USD.price_id'));
-        $this->assertEquals('cad_base', $plan->setting('base.prices.CAD.price_id'));
+        $this->assertEquals(10, storedPrice($plan, 'base', 'USD'));
+        $this->assertEquals(14, storedPrice($plan, 'base', 'CAD'));
+        $this->assertEquals('usd_base', storedPrice($plan, 'base', 'USD', 'price_id'));
+        $this->assertEquals('cad_base', storedPrice($plan, 'base', 'CAD', 'price_id'));
 
-        $this->assertEquals(5, $plan->setting('standard.prices.USD.amount'));
-        $this->assertEquals(7, $plan->setting('standard.prices.CAD.amount'));
+        $this->assertEquals(5, storedPrice($plan, 'standard', 'USD'));
+        $this->assertEquals(7, storedPrice($plan, 'standard', 'CAD'));
 
-        $this->assertEquals(3, $plan->setting('basic.prices.USD.amount'));
-        $this->assertEquals(4, $plan->setting('basic.prices.CAD.amount'));
+        $this->assertEquals(3, storedPrice($plan, 'basic', 'USD'));
+        $this->assertEquals(4, storedPrice($plan, 'basic', 'CAD'));
 
-        $this->assertEquals(1, $plan->setting('storage.prices.USD.amount'));
-        $this->assertEquals(2, $plan->setting('storage.prices.CAD.amount'));
+        $this->assertEquals(1, storedPrice($plan, 'storage', 'USD'));
+        $this->assertEquals(2, storedPrice($plan, 'storage', 'CAD'));
     }
 
     public function test_plan_edit_page_receives_all_enabled_currencies()

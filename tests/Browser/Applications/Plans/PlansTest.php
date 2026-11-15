@@ -41,9 +41,9 @@ describe('App Plans', function () {
             ->assertPathIs("/admin/apps/{$this->demoApp->slug}/plans/{$plan->id}");
 
         $plan->refresh();
-        expect((float) $plan->setting('base.prices.USD.amount'))->toBe(10.0);
-        expect($plan->setting('base.prices.USD.price_id'))->toBe('usd_base_id');
-        expect((float) $plan->setting('base.prices.CAD.amount'))->toBe(14.0);
-        expect($plan->setting('base.prices.CAD.price_id'))->toBe('cad_base_id');
+        expect((float) storedPrice($plan, 'base', 'USD'))->toBe(10.0);
+        expect(storedPrice($plan, 'base', 'USD', 'price_id'))->toBe('usd_base_id');
+        expect((float) storedPrice($plan, 'base', 'CAD'))->toBe(14.0);
+        expect(storedPrice($plan, 'base', 'CAD', 'price_id'))->toBe('cad_base_id');
     });
 });

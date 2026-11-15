@@ -230,15 +230,19 @@ class BulkEdit extends Controller
                 'trial_for' => (int) Arr::get($d, 'trial_for'),
             ];
 
-            foreach ($enabledCurrencies as $currency) {
-                foreach ($components as $component) {
-                    $planSettings["{$component}.prices.{$currency}.amount"] = Arr::get($d, "prices.{$component}.{$currency}.amount");
-                    $planSettings["{$component}.prices.{$currency}.price_id"] = Arr::get($d, "prices.{$component}.{$currency}.price_id");
-                }
-            }
-
             $plan->updateSettings($planSettings);
             $plan->save();
+
+            foreach ($enabledCurrencies as $currency) {
+                foreach ($components as $component) {
+                    $plan->setPrice(
+                        $component,
+                        $currency,
+                        Arr::get($d, "prices.{$component}.{$currency}.amount"),
+                        Arr::get($d, "prices.{$component}.{$currency}.price_id"),
+                    );
+                }
+            }
 
             if (Arr::get($d, 'default', false)) {
                 ApplicationFacade::plan($plan)->setDefault();

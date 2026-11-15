@@ -92,11 +92,11 @@ it('updates base, standard, basic, and storage prices for a single enabled curre
 
     $this->appPlan->refresh();
 
-    expect($this->appPlan->setting('base.prices.USD.amount'))->toEqual(12);
-    expect($this->appPlan->setting('base.prices.USD.price_id'))->toBe('usd_base');
-    expect($this->appPlan->setting('standard.prices.USD.amount'))->toEqual(8);
-    expect($this->appPlan->setting('basic.prices.USD.amount'))->toEqual(4);
-    expect($this->appPlan->setting('storage.prices.USD.amount'))->toEqual(2);
+    expect(storedPrice($this->appPlan, 'base', 'USD'))->toEqual(12);
+    expect(storedPrice($this->appPlan, 'base', 'USD', 'price_id'))->toBe('usd_base');
+    expect(storedPrice($this->appPlan, 'standard', 'USD'))->toEqual(8);
+    expect(storedPrice($this->appPlan, 'basic', 'USD'))->toEqual(4);
+    expect(storedPrice($this->appPlan, 'storage', 'USD'))->toEqual(2);
 });
 
 // ---------------------------------------------------------------------------
@@ -132,19 +132,19 @@ it('saves distinct prices per enabled currency for the app plan', function () {
 
     $this->appPlan->refresh();
 
-    expect($this->appPlan->setting('base.prices.USD.amount'))->toEqual(10);
-    expect($this->appPlan->setting('base.prices.CAD.amount'))->toEqual(14);
-    expect($this->appPlan->setting('base.prices.USD.price_id'))->toBe('usd_base');
-    expect($this->appPlan->setting('base.prices.CAD.price_id'))->toBe('cad_base');
+    expect(storedPrice($this->appPlan, 'base', 'USD'))->toEqual(10);
+    expect(storedPrice($this->appPlan, 'base', 'CAD'))->toEqual(14);
+    expect(storedPrice($this->appPlan, 'base', 'USD', 'price_id'))->toBe('usd_base');
+    expect(storedPrice($this->appPlan, 'base', 'CAD', 'price_id'))->toBe('cad_base');
 
-    expect($this->appPlan->setting('standard.prices.USD.amount'))->toEqual(5);
-    expect($this->appPlan->setting('standard.prices.CAD.amount'))->toEqual(7);
+    expect(storedPrice($this->appPlan, 'standard', 'USD'))->toEqual(5);
+    expect(storedPrice($this->appPlan, 'standard', 'CAD'))->toEqual(7);
 
-    expect($this->appPlan->setting('basic.prices.USD.amount'))->toEqual(3);
-    expect($this->appPlan->setting('basic.prices.CAD.amount'))->toEqual(4);
+    expect(storedPrice($this->appPlan, 'basic', 'USD'))->toEqual(3);
+    expect(storedPrice($this->appPlan, 'basic', 'CAD'))->toEqual(4);
 
-    expect($this->appPlan->setting('storage.prices.USD.amount'))->toEqual(1);
-    expect($this->appPlan->setting('storage.prices.CAD.amount'))->toEqual(2);
+    expect(storedPrice($this->appPlan, 'storage', 'USD'))->toEqual(1);
+    expect(storedPrice($this->appPlan, 'storage', 'CAD'))->toEqual(2);
 });
 
 it('gives the edit page pricing components and a feature list, even for a plan that lacks them', function () {

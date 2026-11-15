@@ -112,6 +112,7 @@ class Plans extends Controller
         $clone->archive = false;
         $clone->status = 'hidden';
         $clone->save();
+        $plan->copyPricesTo($clone);
 
         return redirect('/admin/service/plans/'.$clone->id)->with('success', __('admin.plans.cloned', ['plan' => $clone->name]));
     }
@@ -151,7 +152,7 @@ class Plans extends Controller
                 'domain_max' => $plan->domain_max,
                 'email_enabled' => $plan->email_enabled,
                 'email_server' => $plan->email_server ? $plan->email_server->id : null,
-                'settings' => $plan->settings ?? [],
+                'settings' => $plan->overlayPrices($plan->settings ?? []),
                 'app_plans' => $app_plans,
                 'archived' => $plan->archive,
                 'org_type' => $plan->org_type,
@@ -315,18 +316,6 @@ class Plans extends Controller
             'domains.transfer' => $request->input('domains.transfer'),
         ];
 
-        foreach ($enabledCurrencies as $currency) {
-            foreach ($components as $component) {
-                if ($isAppType && in_array($component, ['base', 'standard', 'basic', 'storage', 'application'])) {
-                    $settingsToUpdate["{$component}.prices.{$currency}.amount"] = null;
-                    $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = null;
-                } else {
-                    $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
-                    $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
-                }
-            }
-        }
-
         $plan->updateSettings($settingsToUpdate);
         $plan->status = $request->boolean('status') ? 'available' : 'hidden';
         if (Arr::get($validated, 'default') && (! $plan->is_default || $plan->isDirty('org_type'))) {
@@ -343,6 +332,21 @@ class Plans extends Controller
         }
 
         $plan->save();
+
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                if ($isAppType && in_array($component, ['base', 'standard', 'basic', 'storage', 'application'])) {
+                    $plan->setPrice($component, $currency, null, null);
+                } else {
+                    $plan->setPrice(
+                        $component,
+                        $currency,
+                        $request->input("prices.{$component}.{$currency}.amount"),
+                        $request->input("prices.{$component}.{$currency}.price_id"),
+                    );
+                }
+            }
+        }
 
         Cache::flush();
 

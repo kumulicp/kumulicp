@@ -120,8 +120,8 @@ it('updates base price independently per plan', function () {
     $this->plan1->refresh();
     $this->plan2->refresh();
 
-    expect($this->plan1->settings['base']['prices']['USD']['amount'])->toBe(25);
-    expect($this->plan2->settings['base']['prices']['USD']['amount'])->toBe(75);
+    expect(storedPrice($this->plan1, 'base', 'USD'))->toEqual(25);
+    expect(storedPrice($this->plan2, 'base', 'USD'))->toEqual(75);
 });
 
 it('updates standard user settings per plan', function () {
@@ -149,8 +149,8 @@ it('updates standard user settings per plan', function () {
 
     expect($this->plan1->settings['standard']['max'])->toBe(20);
     expect($this->plan2->settings['standard']['max'])->toBe(50);
-    expect($this->plan1->settings['standard']['prices']['USD']['amount'])->toBe(8);
-    expect($this->plan2->settings['standard']['prices']['USD']['amount'])->toBe(15);
+    expect(storedPrice($this->plan1, 'standard', 'USD'))->toEqual(8);
+    expect(storedPrice($this->plan2, 'standard', 'USD'))->toEqual(15);
 });
 
 it('updates basic user settings per plan', function () {

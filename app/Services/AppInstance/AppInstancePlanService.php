@@ -664,6 +664,7 @@ class AppInstancePlanService
             }
         }
 
+        $this->plan->syncFeaturePrices($features);
         $this->plan->updateSetting('features', $plan_settings);
 
         if ($plan_changed) {
