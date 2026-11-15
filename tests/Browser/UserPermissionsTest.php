@@ -55,6 +55,11 @@ describe('User Permissions Update', function () {
         $this->demoInstance->plan_id = $plan->id;
         $this->demoInstance->save();
 
+        // Access types are named by the organization's plan, not the app plan
+        $orgPlan = $this->demoInstance->organization->plan;
+        $orgPlan->updateSettings(['basic.name' => 'Basic Member']);
+        $orgPlan->save();
+
         $id = $this->demoInstance->id;
 
         $page = visit('/users/testing1/permissions')

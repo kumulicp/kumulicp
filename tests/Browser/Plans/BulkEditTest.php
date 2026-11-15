@@ -117,8 +117,8 @@ describe('Bulk Edit - Settings Tab', function () {
             ->assertValue('#plan-'.$this->plan2->id.'-name input', 'Beta Plan')
             ->assertValue('#plan-'.$this->plan1->id.'-description input', 'Alpha description')
             ->assertValue('#plan-'.$this->plan2->id.'-description input', 'Beta description')
-            ->assertValue('#plan-'.$this->plan1->id.'-base-price input', '5')
-            ->assertValue('#plan-'.$this->plan2->id.'-base-price input', '10')
+            ->assertValue('#plan-'.$this->plan1->id.'-base-price-USD input', '5')
+            ->assertValue('#plan-'.$this->plan2->id.'-base-price-USD input', '10')
             ->assertNotChecked('#plan-'.$this->plan1->id.'-payment-enabled')
             ->assertChecked('#plan-'.$this->plan2->id.'-payment-enabled');
     });
