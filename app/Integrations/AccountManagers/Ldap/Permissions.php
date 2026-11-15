@@ -171,10 +171,7 @@ class Permissions extends PermissionsManager implements PermissionsContract
             return;
         }
 
-        $app_name = LdapSupport::getAppInstanceID($app_instance);
-        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
-
-        if ($remaining === 0 && $this->ldapUser->groups()->exists($central_group)) {
+        if (! $this->hasRolesOnSharedApp($app_instance, $hub) && $this->ldapUser->groups()->exists($central_group)) {
             $this->ldapUser->groups()->detach($central_group);
         }
     }
@@ -234,12 +231,31 @@ class Permissions extends PermissionsManager implements PermissionsContract
             return;
         }
 
-        $app_name = LdapSupport::getAppInstanceID($app_instance);
-        $remaining = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
-
-        if ($remaining === 0) {
+        if (! $this->hasRolesOnSharedApp($app_instance, $hub)) {
             $nextcloud_user->removeFromGroup($group_id);
         }
+    }
+
+    // Each instance keeps its own role groups, but the central access group and the org's group folder
+    // are one per org on the shared app: they are only given up once none of the org's instances on
+    // that shared app has a role for the user any more.
+    private function hasRolesOnSharedApp(AppInstance $app_instance, AppInstance $hub): bool
+    {
+        $siblings = AppInstance::where('parent_id', $hub->id)
+            ->where('organization_id', $app_instance->organization_id)
+            ->get()
+            ->push($app_instance)
+            ->unique('id');
+
+        foreach ($siblings as $sibling) {
+            $app_name = LdapSupport::getAppInstanceID($sibling);
+
+            if ($this->ldapUser->groups()->in(Dn::create($sibling->organization, 'applications', $app_name))->count() > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function hasAppStandardAccess(AppInstance $app_instance)

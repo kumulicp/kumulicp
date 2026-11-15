@@ -61,7 +61,7 @@ abstract class PermissionsManager
             'categories' => $this->$get_categories(),
             'edit' => true,
             'access_type' => $has_access ? 'standard' : 'none',
-            'pricing' => Subscription::base()->payment_enabled,
+            'pricing' => (bool) Subscription::base()->payment_enabled,
             'access_types' => [
                 [
                     'text' => 'No access',
@@ -154,7 +154,7 @@ abstract class PermissionsManager
             'access_type' => $this->user->appUserAccessType($app_instance),
             'edit' => $can_edit,
             'access_types' => $this->getAppAccessTypes($app_instance),
-            'pricing' => Subscription::app_instance($app_instance)->payment_enabled,
+            'pricing' => (bool) Subscription::app_instance($app_instance)->payment_enabled,
         ];
     }
 

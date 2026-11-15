@@ -56,9 +56,6 @@ class LdapSupport
         $is_shared_child = (bool) $app_instance->sharedPlanParent();
         $app_label = $app_instance->application->name;
 
-        if ($is_shared_child && ! $app_instance->usesMultisitePermissions()) {
-            $app_instance = $app_instance->parent;
-        }
         $role_slug = $role->app_slug($app_instance);
         $role_dn = Dn::create($organization, 'applications', [$role_slug, $app_instance_id]);
         $group = Group::find($role_dn);
@@ -137,20 +134,12 @@ class LdapSupport
     // rule as getAppInstanceID() and AppRole::app_slug(), which decide where the groups are written.
     public static function roleGroupApp(AppInstance $app_instance): AppInstance
     {
-        if ($app_instance->parent && ! $app_instance->usesMultisitePermissions()) {
-            return $app_instance->parent;
-        }
-
-        return $app_instance;
+        return $app_instance->permissionsApp();
     }
 
     public static function getAppInstanceID(AppInstance $app_instance)
     {
-        if (! $app_instance->parent || $app_instance->usesMultisitePermissions()) {
-            return $app_instance->name;
-        } else {
-            return $app_instance->parent->name;
-        }
+        return $app_instance->permissionsApp()->name;
     }
 
     public static function cleanupControlPanelAccess(string $email)

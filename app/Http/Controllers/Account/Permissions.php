@@ -48,6 +48,7 @@ class Permissions extends Controller
             'access_types' => $user_access_types,
             'plan' => [
                 'type' => Subscription::base()->type,
+                'payment_enabled' => (bool) Subscription::base()->payment_enabled,
             ],
             'breadcrumbs' => [
                 [

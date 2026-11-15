@@ -159,7 +159,7 @@ import { useForm, Link } from '@inertiajs/vue3'
           <template v-if="accessTypeChanges.length > 0">
             <b>{{ $t('organization.users.accessChanged') }}</b>
             <div class="mt-2 mb-3">
-              <ul class="va-unordered">
+              <ul class="va-unordered permission-changes">
                 <li v-for="(change, index) in accessTypeChanges" :key="index">
                   {{ change }}
                 </li>
@@ -316,7 +316,8 @@ export default {
     },
     updatePermissions () {
       this.checkAccessType()
-      if (this.currentAccessType !== this.form.access_type) {
+      // Only a change that can affect what is paid for needs confirming
+      if (this.accessTypeChanges.length > 0) {
         this.showConfirmAccessTypeChange = true
       } else {
         this.form.post('/users/' + this.user.id + '/permissions')
@@ -358,15 +359,16 @@ export default {
             accessType = 'minimal'
           }
 
-          if (this.permissions[id].access_type !== appAccessType) {
-            this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType], name: this.permissions[id].name }))
+          // Only apps with a paid subscription can change the price (the admin toggle never does)
+          if (app.pricing && app.id !== 'control_panel_admin' && this.permissions[id].access_type !== appAccessType) {
+            this.accessTypeChanges.push(this.$t('organization.users.accessForApp', { type: this.accessTypes[appAccessType] ?? appAccessType, name: this.permissions[id].name }))
           }
           this.appAccessType[app.id] = appAccessType
           this.appAccessTypeFiltered[app.id] = appAccessType
         }
       } else if (this.plan.type === 'package') {
         const confirmedAccessType = this.confirmAccessType()
-        if (this.user.access_type !== confirmedAccessType) {
+        if (this.plan.payment_enabled && this.user.access_type !== confirmedAccessType) {
           if (this.user.access_type === 'standard' && confirmedAccessType === 'basic') {
             this.accessTypeChanges.push(this.$t('organization.users.userDowngradedTo', { type: this.accessTypes[confirmedAccessType] }))
           } else if ((this.user.access_type === 'basic' || confirmedAccessType === 'none' || confirmedAccessType === 'minimal') && confirmedAccessType === 'standard') {
@@ -471,4 +473,11 @@ export default {
 }
 </script>
 
-<style></style>
+<style>
+/* Vuestic puts the bullet at a fixed offset, which sits below the text's middle at this font size:
+   centre it on the first line of the item instead */
+ul.va-unordered.permission-changes > li:before {
+  margin-top: 0;
+  top: calc(0.5lh - 0.25rem);
+}
+</style>
