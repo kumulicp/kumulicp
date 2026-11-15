@@ -1274,6 +1274,14 @@
       "labelMessage": "Helps identify this app from others. Useful if you have multiple websites for example.",
       "multipleOrgsMessage": "There are multiple suborganizations you can assign this app to. Please select one.",
       "nothingLeftActivate": "There's nothing left to do except activate!",
+      "readiness": {
+        "blockedTitle": "This app can't be installed yet",
+        "issueCount": "{count} to fix",
+        "manageApp": "Manage app",
+        "needsSetup": "Needs setup",
+        "reviewSettings": "Review settings",
+        "reviewTitle": "Worth a look before installing"
+      },
       "select": "Select",
       "upgradePlanHere": "Upgrade Plan Here"
     },

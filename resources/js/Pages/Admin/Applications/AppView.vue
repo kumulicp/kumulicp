@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './AppsLayout.vue'
 import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
+import AppReadiness from '@/components/App/AppReadiness.vue'
 
 </script>
 <template>
@@ -9,6 +10,7 @@ import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
     <title>{{ $t('admin.apps.viewApp') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
+    <app-readiness :readiness="readiness" />
     <div class="row">
       <div class="flex flex-col xs12 lg2">
         <va-image
@@ -65,7 +67,8 @@ export default {
     return h(AppLayout, () => h(AppsLayout, () => page))
   },
   props: {
-    app: Object
+    app: Object,
+    readiness: Object
   }
 }
 </script>

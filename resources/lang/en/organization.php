@@ -9,6 +9,8 @@ return [
         'deactivated' => ':app will be deactivated on :date',
         'reactivated' => ':app reactivated!',
         'denied' => [
+            'admin_only' => 'Only administrators can install apps',
+            'not_ready' => "This app can't be installed until it has been set up",
             'activation' => ':app is unavailable to activate',
             'exists' => 'App doesn\'t exist',
             'parent_app' => 'You must select a :app instance before you can continue',
@@ -182,5 +184,32 @@ return [
         'exists' => 'Organization doesn\'t exist',
         'subscription' => 'No active subscription',
         'payment_method_required' => 'A default payment method is required',
+    ],
+    'readiness' => [
+        'enabled' => [
+            'message' => ':app is turned off',
+            'action' => 'Turn it on',
+        ],
+        'version_missing' => [
+            'message' => ':app has no version yet',
+            'action' => 'Add a version',
+        ],
+        'version_inactive' => [
+            'message' => ':app has no enabled version. Version :version still needs its tests passed or bypassed, and then to be enabled',
+            'action' => 'Open version :version',
+        ],
+        'plan_missing' => [
+            'message' => ':app has no plan. A plan sets the servers, features and settings it is installed with',
+            'action' => 'Add a plan',
+            'create_default' => 'Create a default plan',
+        ],
+        'plan_unedited' => [
+            'message' => 'The plan ":plan" has never been changed. A plan almost always needs a change or two, such as its server or settings, to work on your server',
+            'action' => 'Review the plan',
+        ],
+        'servers' => [
+            'message' => 'No server has been set up to run apps on',
+            'action' => 'Add a server',
+        ],
     ],
 ];

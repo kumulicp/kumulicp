@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     Route::get('retrieve', 'Admin\Applications\Plans@retrieve')->name('app.plans.retrieve');
                     Route::get('create', 'Admin\Applications\Plans@create')->name('app.plans.create');
                     Route::post('', 'Admin\Applications\Plans@store')->name('app.plans.store');
+                    Route::post('default', 'Admin\Applications\Plans@storeDefault')->name('app.plans.default');
                     Route::post('update_order', 'Admin\Applications\Plans@updateOrder')->name('app.plans.update_order');
                     Route::prefix('bulk-edit')->group(function () {
                         Route::get('', 'Admin\Applications\Plans\BulkEdit@view')->name('app.plans.bulk.view');

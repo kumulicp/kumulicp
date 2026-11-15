@@ -125,6 +125,7 @@ return [
             'archived' => 'Plan archived',
             'unarchived' => 'Plan unarchived',
             'cloned' => ':plan plan created',
+            'already_has_plan' => 'A plan for this app already exists',
             'first_plan_name' => 'First Plan',
             'first_plan_description' => 'First plan to be changed',
             'configurations_updated' => ':plan plan configurations updated',

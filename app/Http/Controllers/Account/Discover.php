@@ -14,12 +14,14 @@ use App\Rules\HostLabel;
 use App\Rules\OrgAppInstance;
 use App\Rules\OrgDomainName;
 use App\Rules\OrgSuborganization;
+use App\Services\Application\ApplicationReadiness;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Billing;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
@@ -30,21 +32,34 @@ class Discover extends Controller
     {
         Gate::authorize('active');
         $organization = Organization::account();
-        $apps = Subscription::base()->enabledApps();
+        $single = Tenancy::isSingle();
+        $is_admin = Gate::allows('admin');
+
+        // A single-organization install lists every app so an admin can see what still needs
+        // setting up; everyone else only sees the ones that can be installed
+        $apps = $single ? Application::orderBy('slug')->get() : Subscription::base()->enabledApps();
+
+        $readiness = $single ? $apps->mapWithKeys(fn ($app) => [$app->id => new ApplicationReadiness($app)]) : collect();
 
         return inertia('Organization/Discover/DiscoverApps', [
-            'apps' => $apps->map(function ($app) use ($organization) {
-                $is_installed = $app->is_installed($organization);
-
-                return [
+            'apps' => $apps
+                ->filter(fn ($app) => ! $single || $is_admin || $readiness[$app->id]->isReady())
+                ->map(fn ($app) => [
                     'name' => $app->name,
                     'slug' => $app->slug,
                     'description' => $app->short_description,
                     'category' => $app->category,
-                    'installed' => $is_installed,
+                    'installed' => $app->is_installed($organization),
                     'count' => $organization->app_instances()->where('application_id', $app->id)->count(),
-                ];
-            }),
+                    'readiness' => $single && $is_admin ? [
+                        'status' => $readiness[$app->id]->status(),
+                        'issues' => count($readiness[$app->id]->issues()),
+                    ] : null,
+                ])
+                ->values(),
+            'can' => [
+                'manage' => $is_admin,
+            ],
         ]);
     }
 
@@ -53,6 +68,12 @@ class Discover extends Controller
         Gate::authorize('view-app', $app);
 
         $organization = Organization::account();
+        $is_admin = Gate::allows('admin');
+        $readiness = Tenancy::isSingle() ? new ApplicationReadiness($app) : null;
+
+        // An app that isn't ready only exists for the admin who has to set it up
+        abort_if($readiness && ! $is_admin && ! $readiness->isReady(), 404);
+
         $version = AppVersion::where('application_id', $app->id)->orderBy('name', 'desc')->first();
         $parent_app = $app->parent_app;
         $is_installed = $app->is_installed($organization);
@@ -99,8 +120,13 @@ class Discover extends Controller
                 ] : null,
             ],
             'plan' => $plan,
+            'readiness' => $readiness && $is_admin ? [
+                'status' => $readiness->status(),
+                'items' => $readiness->issues(),
+            ] : null,
             'can' => [
                 'activate' => $can_activate->allowed(),
+                'manage' => $is_admin,
             ],
             'authorization' => [
                 'deny' => [

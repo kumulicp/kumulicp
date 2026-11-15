@@ -119,12 +119,11 @@ New `ApplicationReadiness` service (`Application::readiness()`) returns an order
 | Check | Fails when | Link target |
 |---|---|---|
 | `enabled` | `applications.enabled = 0` | `/admin/apps/{slug}/edit` (enable toggle) |
-| `version` | No `AppVersion` exists | `/admin/apps/{slug}/versions/create` |
-| `version_active` | Versions exist but none `active`. This usually means untested, see `AppVersion::canBeEnabled()` and the tests flow. | `/admin/apps/{slug}/versions/{name}` (tests, enable) |
+| `version` | No `AppVersion` exists, or none is `active` (usually untested, see `AppVersion::canBeEnabled()` and the tests flow) | `/admin/apps/{slug}/versions/create` when there is none, otherwise the newest version's page (`/admin/apps/{slug}/versions/{name}`) to test and enable it |
 | `plan` | No non-archived `AppPlan` | `/admin/apps/{slug}/plans/create`, plus a **"Create default plan"** button that runs the same logic as `Admin\Applications::store()` |
 | `plan_configured` | The plan has never been edited: `updated_at` equals `created_at`. A plan almost always needs a change or two to work on a given server, and a freshly created one has identical timestamps (decided). This replaces separate features/servers checks. | `/admin/apps/{slug}/plans/{id}/edit`. Shared-app plans (`AppPlan::usesSharedApp()`) are skipped: they are configured on the shared app, which single mode hides. |
-| `servers` | No usable servers at all | `/admin/server/servers` |
-| existing | `missing_parent_app`, primary domain | Existing behavior |
+| `servers` | No default web server, and no plan names one of its own | `/admin/server/servers` |
+| existing | `missing_parent_app`, primary domain | Existing behavior, still decided per organization in the `activate-app` gate |
 
 `plan_configured` is only a **warning**: it never blocks installing. A plan can be saved without changing anything and still
 be right. Saving the plan from its edit page is enough to clear it.
@@ -196,7 +195,7 @@ Each phase ships independently and keeps multi-tenant behavior unchanged.
 1. **Foundation.** `Tenancy` service, `tenancy_mode` setting, Inertia prop, installer choice, Pest helpers. *(done, #185)*
 2. **Unlimited plan.** `SingleTenantBasePlanService`, gate fixes, unlimited semantics. Discover now lists apps for the superaccount. *(done, #185)*
 3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards. *(in progress)* Notification no-ops were left out on purpose: with no billing driver the billing notifications and the invoice job already do nothing, and a single-organization install creates no new organizations. Revisit if one turns out to fire.
-4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards.
+4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards, admin-only install. *(in progress)* Readiness only applies in single mode; multi-tenant Discover still follows the organization's plan. The top-level Discover menu item stays in phase 5.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect.
 6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.
 7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.

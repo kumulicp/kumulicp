@@ -69,6 +69,7 @@ return [
             'archived' => 'Plan archivado',
             'unarchived' => 'Plan desarchivado',
             'cloned' => 'Plan :plan creado',
+            'already_has_plan' => 'Esta aplicación ya tiene un plan',
             'first_plan_name' => 'Primer plan',
             'first_plan_description' => 'Primer plan a modificar',
             'configurations_updated' => 'Configuraciones del plan :plan actualizadas',

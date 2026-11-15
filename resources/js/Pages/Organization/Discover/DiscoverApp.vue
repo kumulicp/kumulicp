@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PlanCard from '@/components/cards/PlanCard.vue'
+import AppReadiness from '@/components/App/AppReadiness.vue'
 import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
 import { Link } from '@inertiajs/vue3'
 
@@ -15,8 +16,9 @@ import { Link } from '@inertiajs/vue3'
         <va-card class="mb-4">
           <va-card-title>{{ app.name }}</va-card-title>
           <va-card-content>
+            <app-readiness :readiness="readiness" />
             <va-alert
-              v-if="authorization.deny.message"
+              v-if="authorization.deny.message && authorization.deny.code !== 'app_not_ready'"
               color="primary"
               outline
               class="mb-4"
@@ -78,6 +80,7 @@ export default {
     organization: Object,
     app: Object,
     plan: Object,
+    readiness: Object,
     can: Object,
     authorization: Object
   },

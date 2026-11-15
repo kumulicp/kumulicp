@@ -1271,6 +1271,14 @@
       "labelMessage": "Ayuda a identificar esta aplicación de otras. Útil si tienes varios sitios web, por ejemplo.",
       "multipleOrgsMessage": "Hay varias suborganizaciones a las que puedes asignar esta aplicación. Por favor selecciona una.",
       "nothingLeftActivate": "¡No queda nada más por hacer excepto activar!",
+      "readiness": {
+        "blockedTitle": "Esta aplicación aún no se puede instalar",
+        "issueCount": "{count} por resolver",
+        "manageApp": "Gestionar aplicación",
+        "needsSetup": "Requiere configuración",
+        "reviewSettings": "Revisar ajustes",
+        "reviewTitle": "Conviene revisarlo antes de instalar"
+      },
       "select": "Seleccionar",
       "upgradePlanHere": "Mejora Tu Plan Aquí"
     },

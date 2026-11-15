@@ -10,7 +10,9 @@ use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
+use App\Services\Application\ApplicationReadiness;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Facades\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -119,7 +121,13 @@ class Applications extends Controller
             })
             ->values();
 
+        $readiness = Tenancy::isSingle() ? new ApplicationReadiness($app) : null;
+
         return inertia()->render('Admin/Applications/AppView', [
+            'readiness' => $readiness ? [
+                'status' => $readiness->status(),
+                'items' => $readiness->issues(),
+            ] : null,
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
