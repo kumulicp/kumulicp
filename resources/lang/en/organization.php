@@ -26,6 +26,7 @@ return [
         ],
     ],
     'plan' => [
+        'updated_waiting' => "Plan updated. :app isn't active right now, so the changes to the app itself will be applied as soon as it is.",
         'updated' => 'Plan was updated!',
         'resubscribed' => 'Cancelled unsubscribing',
         'unavailable' => 'Plan unavailable',
@@ -155,6 +156,7 @@ return [
     ],
     'subscription' => [
         'expiry_notice' => 'Expires on :date.',
+        'pending_notice' => 'Changes to this app are waiting until it is active again.',
         'trial_notice' => "Free trial until :date. You won't be charged for this app until your first payment date after the trial ends.",
         'base_plan' => 'Base Plan',
         'updated' => 'Your subscription is being updated',

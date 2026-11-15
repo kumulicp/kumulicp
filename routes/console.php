@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Calls\ActivateBackup;
+use App\Console\Calls\ApplyPendingAppChanges;
 use App\Console\Calls\CheckUnavailableAppInstances;
 use App\Console\Calls\CheckVersionUpdates;
 use App\Console\Calls\DeactivatedAppInstanceCheck;
@@ -47,6 +48,7 @@ Schedule::call(new ScheduledOrganizationDeletionCheck)->name('scheduled-organiza
 Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-check')->everyMinute()->withoutOverlapping(15)->onOneServer();
 // Each unavailable app is only probed once its last check is 5 minutes old; a probe can take
 // its full timeout, so a slow pass must not overlap the next
+Schedule::call(new ApplyPendingAppChanges)->name('apply-pending-app-changes')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
 Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();

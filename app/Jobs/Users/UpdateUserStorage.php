@@ -3,6 +3,7 @@
 namespace App\Jobs\Users;
 
 use App\Events\Users\UserStorageUpdated;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
@@ -38,6 +39,11 @@ class UpdateUserStorage implements ShouldQueue
         $apps = $event->app_instance ? [$event->app_instance] : $organization->app_instances;
 
         foreach ($apps as $app) {
+            // An app that can't answer now gets this once it is active again
+            if (app(PendingAppChanges::class)->defer($app, ['storage' => true])) {
+                continue;
+            }
+
             if (Application::instance($app)->plan()->hasUserStorage()) {
                 if ($event->user_id) {
                     $users = ($user = AccountManager::users()->find($event->user_id)) ? [$user] : [];

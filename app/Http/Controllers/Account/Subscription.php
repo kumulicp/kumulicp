@@ -266,11 +266,11 @@ class Subscription extends Controller
     }
 
     /**
-     * Notes shown under an app's plan name: its free trial and when it expires.
+     * Notes shown under an app's plan name: its free trial, when it expires and changes waiting for the app.
      */
     private function planNotice($plan): ?string
     {
-        return collect([$plan->trialNotice(), $plan->expiryNotice()])->filter()->implode("\n") ?: null;
+        return collect([$plan->trialNotice(), $plan->expiryNotice(), $plan->pendingNotice()])->filter()->implode("\n") ?: null;
     }
 
     public function review(\App\Organization $organization, Plan $plan)

@@ -8,6 +8,7 @@ use App\Events\Users\UserStorageUpdated;
 use App\Organization;
 use App\Plan;
 use App\Services\AppInstance\AppInstancePlanService;
+use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Organization\BasePlanService;
 use App\Services\Organization\SingleTenantBasePlanService;
 use App\Support\Facades\Application;
@@ -186,7 +187,9 @@ class SubscriptionService
         // A Packaged plan decides per-user storage itself, so swapping the app plan changes nothing
         if ($this->base()->get()?->type !== 'package'
             && $previous_plan
-            && $previous_plan->setting('standard.storage') !== $plan->setting('standard.storage')) {
+            && $previous_plan->setting('standard.storage') !== $plan->setting('standard.storage')
+            // An app that can't answer now gets its users' storage updated once it is active again
+            && ! app(PendingAppChanges::class)->defer($app_instance, ['storage' => true])) {
             UserStorageUpdated::dispatch($this->organization, app_instance: $app_instance);
         }
 

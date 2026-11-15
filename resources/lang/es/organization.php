@@ -26,6 +26,7 @@ return [
         ],
     ],
     'plan' => [
+        'updated_waiting' => 'Plan actualizado. :app no está activa en este momento, por lo que los cambios en la aplicación se aplicarán en cuanto lo esté.',
         'updated' => '¡El plan fue actualizado!',
         'resubscribed' => 'Cancelación de la baja',
         'unavailable' => 'Plan no disponible',
@@ -152,6 +153,7 @@ return [
     ],
     'subscription' => [
         'expiry_notice' => 'Expira el :date.',
+        'pending_notice' => 'Los cambios en esta aplicación esperan a que vuelva a estar activa.',
         'trial_notice' => 'Prueba gratuita hasta el :date. No se te cobrará esta aplicación hasta tu primera fecha de pago después de que termine la prueba.',
         'base_plan' => 'Plan Base',
         'updated' => 'Tu suscripción se está actualizando',
