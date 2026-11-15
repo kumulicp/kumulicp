@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\API\Account\Users;
 use App\Http\Controllers\API\Backups;
 use App\Http\Controllers\API\Dkim;
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Route;
 | Loaded by bootstrap/app.php under the /api prefix.
 |
 */
+
+// Registered directly via the standard route — this must stay
+// outside the v1/auth:api group below since Stripe calls it unauthenticated.
+// Signature verification is applied by Cashier's WebhookController
+if (! Route::has('cashier.webhook')) {
+    Route::post('stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('cashier.webhook');
+}
 
 /*
  * Legacy unversioned endpoints, authenticated with the organization api_token.
