@@ -129,11 +129,11 @@ import { currencyByCode } from '@/constants/currencies'
           <va-button @click="addNewFeature()">{{ $t('admin.plans.addFeature') }}</va-button>
         </template>
       </AdminSettings>
-      <va-list-separator class="my-1" fit />
-      <AdminSettings>
-        <template #name>{{ $t('admin.plans.baseOptions') }}</template>
-        <template #settings>
-          <template v-if="form.type === 'package'">
+      <template v-if="form.type === 'package'">
+        <va-list-separator class="my-1" fit />
+        <AdminSettings>
+          <template #name>{{ $t('admin.plans.baseOptions') }}</template>
+          <template #settings>
             <template v-for="currency in enabled_currencies" :key="currency">
               <div class="row">
                 <div class="flex lg6 xs12">
@@ -160,8 +160,8 @@ import { currencyByCode } from '@/constants/currencies'
               </div>
             </template>
           </template>
-        </template>
-      </AdminSettings>
+        </AdminSettings>
+      </template>
       <va-list-separator class="my-1" fit />
       <AdminSettings>
         <template #name>{{ $t('admin.plans.accessTypeLabels') }}</template>
