@@ -177,3 +177,21 @@ it('switches the multi-organization feature flags off for the frontend in single
             ->where('flags.sharedApps', false)
             ->where('flags.subOrganizations', false));
 });
+
+it('does not offer the multi-organization features in single mode', function () {
+    useSingleTenancy();
+    $this->actingAs(User::where('username', 'demo')->firstOrFail());
+
+    $this->get('/admin/settings/features')
+        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'emails']));
+
+    $this->put('/admin/settings/features', ['features' => ['app-backups' => true, 'emails' => false]])
+        ->assertSessionHasNoErrors();
+});
+
+it('offers every feature in multi-tenant mode', function () {
+    $this->actingAs(User::where('username', 'demo')->firstOrFail());
+
+    $this->get('/admin/settings/features')
+        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'emails', 'shared-apps', 'sub-organizations']));
+});

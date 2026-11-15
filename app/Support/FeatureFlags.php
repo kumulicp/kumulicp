@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Support\Facades\Tenancy;
+use Illuminate\Support\Arr;
 use OffloadProject\Toggle\Facades\Toggle;
 
 /**
@@ -16,6 +18,12 @@ use OffloadProject\Toggle\Facades\Toggle;
 class FeatureFlags
 {
     /**
+     * Flags that only make sense with several organizations. A single-organization
+     * install neither offers them nor reports them as on.
+     */
+    public const MULTI_TENANT_ONLY = ['sub-organizations', 'shared-apps'];
+
+    /**
      * The flags that exist, keyed by name. The label and description of each
      * are in admin.settings.features.flags.
      *
@@ -23,12 +31,14 @@ class FeatureFlags
      */
     public static function definitions(): array
     {
-        return [
+        $definitions = [
             'sub-organizations' => ['beta' => true],
             'app-backups' => ['beta' => true],
             'shared-apps' => ['beta' => false],
             'emails' => ['beta' => false],
         ];
+
+        return Tenancy::isSingle() ? Arr::except($definitions, self::MULTI_TENANT_ONLY) : $definitions;
     }
 
     /**
