@@ -10,7 +10,31 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
+// nnjeim/world refuses to seed below 512M, and exits the whole PHP process when it is lower. Whatever ran
+// earlier in the same process may have lowered the limit (laravel-filemanager's ini overrides set 256M),
+// so this test makes sure it has what the seeder needs instead of depending on test order.
+function ensureWorldSeederMemory(): void
+{
+    $limit = ini_get('memory_limit');
+
+    if ($limit === '-1') {
+        return;
+    }
+
+    $bytes = (int) $limit * match (strtoupper(substr($limit, -1))) {
+        'G' => 1024 ** 3,
+        'M' => 1024 ** 2,
+        'K' => 1024,
+        default => 1,
+    };
+
+    if ($bytes < 512 * 1024 ** 2) {
+        ini_set('memory_limit', '512M');
+    }
+}
+
 beforeEach(function () {
+    ensureWorldSeederMemory();
     Cache::flush();
     (new TestSupports)->seed();
 });

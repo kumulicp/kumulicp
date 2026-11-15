@@ -32,7 +32,16 @@ return [
         'denied' => [
             'change' => 'Plan cannot be changed',
             'unavailable' => 'This plan is unavailable. Please select another plan',
-            'limit' => "You can't select this plan. Reduce the amount of users, emails, apps and/or storage you are using to comply with the limits",
+            'limit' => "You can't select this plan because you're over its limits (:limits). Reduce your usage to comply with them",
+            'limit_item' => ':name: :used in use, this plan allows :max',
+            'limits' => [
+                'base' => 'Base',
+                'standard' => 'Users',
+                'basic' => 'Volunteers',
+                'storage' => 'Additional storage',
+                'email' => 'Emails',
+                'application' => 'Total apps',
+            ],
             'subscribed' => 'You are already subscribed to this plan',
             'billing' => "You don't have a billable account",
         ],
@@ -145,6 +154,8 @@ return [
         ],
     ],
     'subscription' => [
+        'expiry_notice' => 'Expires on :date.',
+        'trial_notice' => "Free trial until :date. You won't be charged for this app until your first payment date after the trial ends.",
         'base_plan' => 'Base Plan',
         'updated' => 'Your subscription is being updated',
         'cancelled' => 'Your subscription has been cancelled. You have until the end of your subscription period to continue to use the '.env('APP_NAME').' services as normal.',

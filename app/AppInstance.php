@@ -474,6 +474,17 @@ class AppInstance extends Model
         return $deactivate_at !== null && Carbon::parse($deactivate_at)->lte(now());
     }
 
+    /**
+     * Whether the app is still in its free trial. Uses the raw column because the 'date' cast
+     * truncates the time, so a trial ending later today would already look over.
+     */
+    public function inTrial(): bool
+    {
+        $trial_ends_at = $this->attributes['trial_ends_at'] ?? null;
+
+        return $trial_ends_at !== null && Carbon::parse($trial_ends_at)->gt(now());
+    }
+
     public function scopeUnavailable(Builder $query)
     {
         return $query->where('status', self::STATUS_UNAVAILABLE);

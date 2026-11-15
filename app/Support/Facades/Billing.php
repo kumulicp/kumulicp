@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static bool isBillable()
+ * @method static bool hasBillingHistory()
  * @method static array intent()
  * @method static void update()
  * @method static void cancel()

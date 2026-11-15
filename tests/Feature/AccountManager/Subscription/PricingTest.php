@@ -122,12 +122,14 @@ it('recalculates pricing when adding additional storage', function (string $driv
 
     $app_pricing = Subscription::app_instance($demoApp);
     expect($app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price'])->toEqual(2.00);
-    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toEqual(4);
+    // Per-user storage is 2 GB from demo_app_2 under Pay per App but 1 GB from the package under Packaged
+    $user_storage = $plan_type === 'package' ? 3 : 4;
+    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toEqual($user_storage);
 
     grantPermission('testing2', $demoApp->id, ['demo_role']);
     setAdditionalStorage('testing2', $demoApp->id, 1);
 
-    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toEqual(4);
+    expect(AccountManager::users()->find('testing2')->appStorage($demoApp))->toEqual($user_storage);
     expect($app_pricing->optionStats(PlanEntity::ADDITIONAL_STORAGE)['total_price'])->toEqual(4.00);
 })->with('account_manager_drivers')->with('plan_types');
 

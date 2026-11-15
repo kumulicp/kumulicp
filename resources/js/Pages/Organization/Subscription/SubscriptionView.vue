@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
 
 </script>
 
@@ -7,6 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
   <Head>
     <title>{{ $t('organization.subscription.planOverview') }} - Control Panel</title>
   </Head>
+  <BillingSyncNotice />
   <va-card>
     <va-card-title>{{ $t('organization.subscription.upcomingInvoice') }}</va-card-title>
     <va-card-content>
@@ -60,6 +62,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
             <div class="va-title text-align-center">
               {{ item.name }}
             </div>
+            <div v-if="item.notice" class="trial-notice text-align-center mb-2">{{ item.notice }}</div>
             <va-scroll-container horizontal>
               <table class="va-table va-table--striped mb-2">
                 <thead>
@@ -138,6 +141,10 @@ export default {
 </script>
 
 <style>
+  .trial-notice {
+    color: var(--va-secondary);
+    font-size: 0.85rem;
+  }
   .payment_note {
     font-size: 12px
   }

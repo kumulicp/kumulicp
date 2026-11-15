@@ -53,14 +53,16 @@ it('calculates standard and basic user storage', function (string $driver, strin
     grantPermission('testing1', $demoApp->id, ['demo_role']);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(1);
 
+    // A Packaged plan decides per-user storage itself (base_1's basic.storage and standard.storage are
+    // both 1), so the app plan's 0.5 and 2 only apply under a Pay per App plan.
     grantPermission('testing1', $demoApp->id, ['basic_demo_role']);
-    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(0.5);
+    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe($plan_type === 'package' ? 1 : 0.5);
 
     $support->setSubscription($admin->organization, $support->basePlan1OfType($plan_type), $support->demo_app_2, $demoApp);
     expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(1);
 
     grantPermission('testing1', $demoApp->id, ['demo_role']);
-    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe(2);
+    expect(AccountManager::users()->find('testing1')->appStorage($demoApp))->toBe($plan_type === 'package' ? 1 : 2);
 })->with('account_manager_drivers')->with('plan_types');
 
 it('updates total app storage when switching between plan types', function (string $driver) {

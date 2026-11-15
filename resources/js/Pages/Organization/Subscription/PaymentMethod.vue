@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import BillingSyncNotice from '@/components/BillingSyncNotice.vue'
 import { Link, useForm } from '@inertiajs/vue3'
 
 </script>
@@ -7,6 +8,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('organization.subscription.paymentMethod') }} - Control Panel</title>
   </Head>
+  <BillingSyncNotice />
   <div class="organization">
     <div class="row row-equal">
       <div class="flex flex-col xs12 lg6">
@@ -171,7 +173,8 @@ export default {
     const el = document.getElementById('paymentMethodWidget')
     this.loadPaymentMethodComponent(this.driver, el, {
       hasDefaultPaymentMethod: this.hasDefaultPaymentMethod,
-      csrf_token: this.$page.props.csrf_token
+      csrf_token: this.$page.props.csrf_token,
+      locale: this.$i18n.locale
     })
   },
   unmounted () {

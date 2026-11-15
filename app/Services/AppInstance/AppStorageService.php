@@ -74,8 +74,9 @@ class AppStorageService
 
     public function userStorage()
     {
-        $storage_per_standard_user = Subscription::app_instance($this->app_instance)->setting('standard.storage');
-        $storage_per_basic_user = Subscription::app_instance($this->app_instance)->setting('basic.storage');
+        $subscription = Subscription::app_instance($this->app_instance);
+        $storage_per_standard_user = $subscription->userStorage('standard');
+        $storage_per_basic_user = $subscription->userStorage('basic');
         $standard_users = AccountManager::users()->appStandardUsers($this->app_instance);
         $basic_users = AccountManager::users()->appBasicUsers($this->app_instance);
 
