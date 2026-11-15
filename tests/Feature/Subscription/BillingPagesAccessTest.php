@@ -72,31 +72,33 @@ it('keeps the billing pages once the organization has had a subscription, even o
 });
 
 it('reports where the queued billing update stands', function () {
-    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => false, 'error' => null]);
+    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => false]);
 
     subscriptionTask($this->organization, TaskStatus::QUEUED);
     expect(BillingSyncState::for($this->organization)['pending'])->toBeTrue();
 
     subscriptionTask($this->organization, TaskStatus::COMPLETE);
-    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => false, 'error' => null]);
+    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => false]);
 
     subscriptionTask($this->organization, TaskStatus::FAILED, "No such price: 'dfg'");
-    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => true, 'error' => "No such price: 'dfg'"]);
+    expect(BillingSyncState::for($this->organization))->toBe(['pending' => false, 'failed' => true]);
 });
 
-it('shares the billing sync state, with the provider error for admins only', function () {
-    subscriptionTask($this->organization, TaskStatus::FAILED, "No such price: 'dfg'");
+it('never shares the reason a billing update failed, not even with admins', function () {
+    subscriptionTask($this->organization, TaskStatus::FAILED, "No such coupon: 'DISCOUNT1'");
 
     freshRequestFor($this);
-    $props = $this->get('/')->viewData('page')['props'];
-    expect($props['billing_sync']['failed'])->toBeTrue();
-    expect($props['billing_sync']['error'])->toBe("No such price: 'dfg'");
+    $page = $this->get('/');
+    $props = $page->viewData('page')['props'];
 
-    // Without admin access the provider's message stays out of the page
+    expect($props['billing_sync'])->toBe(['pending' => false, 'failed' => true]);
+    expect($page->getContent())->not->toContain('DISCOUNT1')->not->toContain('No such coupon');
+
+    // A customer without admin access gets the same
     AccountManager::users()->find('demo')->permissions()->removeControlPanelAdminAccess();
-    $this->actingAs(User::find($this->user->id));
+    freshRequestFor($this);
+    $page = $this->get('/');
 
-    $props = $this->get('/')->viewData('page')['props'];
-    expect($props['billing_sync']['failed'])->toBeTrue();
-    expect($props['billing_sync']['error'])->toBeNull();
+    expect($page->viewData('page')['props']['billing_sync'])->toBe(['pending' => false, 'failed' => true]);
+    expect($page->getContent())->not->toContain('DISCOUNT1');
 });

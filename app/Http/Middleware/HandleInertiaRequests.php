@@ -96,26 +96,6 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * The provider's own error message is for the control panel admins, not for customers.
-     */
-    private function billingSync(Request $request): ?array
-    {
-        $organization = $request->user()?->organization;
-
-        if (! $organization) {
-            return null;
-        }
-
-        $state = BillingSyncState::for($organization);
-
-        if (! $request->user()->can('admin')) {
-            $state['error'] = null;
-        }
-
-        return $state;
-    }
-
-    /**
      * Define the props that are shared by default.
      *
      * @return array
@@ -161,7 +141,7 @@ class HandleInertiaRequests extends Middleware
             // How many app instances are out of date, for the admin menu
             'pending_updates_count' => fn () => $request->user() && Gate::allows('admin') ? app(PendingUpdates::class)->count() : 0,
             // Whether the queued billing update of the organization is still running or failed
-            'billing_sync' => fn () => $this->billingSync($request),
+            'billing_sync' => fn () => $request->user()?->organization ? BillingSyncState::for($request->user()->organization) : null,
             'reset' => [
                 'menu' => session('reset_menu') !== null,
                 'step' => session('reset_step') !== null,

@@ -16,7 +16,10 @@ use App\Task;
 class BillingSyncState
 {
     /**
-     * @return array{pending: bool, failed: bool, error: ?string}
+     * Deliberately without the reason for a failure: it is the billing provider's own message (a missing
+     * coupon or price, say). Admins find it on the task.
+     *
+     * @return array{pending: bool, failed: bool}
      */
     public static function for(Organization $organization): array
     {
@@ -33,7 +36,6 @@ class BillingSyncState
         return [
             'pending' => (bool) $status?->isOpen() && ! $failed,
             'failed' => $failed,
-            'error' => $failed ? $latest->error_message : null,
         ];
     }
 }

@@ -9,7 +9,7 @@ const POLL_MS = 3000
 const MAX_POLLS = 60
 
 const page = usePage()
-const sync = computed(() => page.props.billing_sync as { pending: boolean, failed: boolean, error: string | null } | null)
+const sync = computed(() => page.props.billing_sync as { pending: boolean, failed: boolean } | null)
 const pending = computed(() => !!sync.value?.pending)
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -52,6 +52,5 @@ onBeforeUnmount(stopPolling)
   </va-alert>
   <va-alert v-else-if="sync?.failed" id="billingSyncFailed" color="danger" icon="fa-circle-exclamation" class="mb-4">
     {{ $t('organization.subscription.billingSync.failed') }}
-    <div v-if="sync.error" class="mt-1 va-text-secondary">{{ sync.error }}</div>
   </va-alert>
 </template>
