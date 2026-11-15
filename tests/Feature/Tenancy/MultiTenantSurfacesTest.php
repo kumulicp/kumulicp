@@ -16,7 +16,7 @@ beforeEach(function () {
     (new TestSupports)->seed();
 });
 
-function menuUrls(string $menu): array
+function tenancyMenuUrls(string $menu): array
 {
     return collect(Menu::build($menu))
         ->filter(fn ($item) => $item['perm'])
@@ -93,7 +93,7 @@ it('takes the multi-tenant pages out of the admin menu in single mode', function
     useSingleTenancy();
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-    $urls = menuUrls('admin');
+    $urls = tenancyMenuUrls('admin');
 
     expect($urls)->toContain('/admin/organizations/1');
     expect($urls)->not->toContain('/admin/organizations');
@@ -104,7 +104,7 @@ it('takes the multi-tenant pages out of the admin menu in single mode', function
 it('keeps the multi-tenant pages in the admin menu in multi-tenant mode', function () {
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-    $urls = menuUrls('admin');
+    $urls = tenancyMenuUrls('admin');
 
     expect($urls)->toContain('/admin/organizations');
     expect($urls)->toContain('/admin/service/plans');
@@ -114,7 +114,7 @@ it('takes the subscription out of the organization menu in single mode', functio
     useSingleTenancy();
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-    $urls = menuUrls('organization');
+    $urls = tenancyMenuUrls('organization');
 
     expect($urls)->not->toContain('/subscription');
     expect($urls)->not->toContain('/subscription/plans');
@@ -124,7 +124,7 @@ it('takes the subscription out of the organization menu in single mode', functio
 it('keeps the subscription in the organization menu in multi-tenant mode', function () {
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-    expect(menuUrls('organization'))->toContain('/subscription');
+    expect(tenancyMenuUrls('organization'))->toContain('/subscription');
 });
 
 it('has nothing to bill in single mode', function () {
