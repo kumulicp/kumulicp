@@ -33,7 +33,9 @@ function discoverApp(string $slug, array $attributes = [], bool $edited = true):
 
     if ($edited) {
         test()->travel(1)->minute();
-        $plan->update(['name' => 'Edited']);
+        // AppPlan is fully guarded, so assign rather than mass-assign
+        $plan->name = 'Edited';
+        $plan->save();
         test()->travelBack();
     }
 

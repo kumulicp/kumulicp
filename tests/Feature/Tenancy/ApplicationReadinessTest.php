@@ -33,7 +33,9 @@ function readinessApp(array $app = [], bool $version = true, bool $plan = true, 
 
         if ($edited) {
             test()->travel(1)->minute();
-            $app_plan->update(['name' => 'Edited']);
+            // AppPlan is fully guarded, so assign rather than mass-assign
+            $app_plan->name = 'Edited';
+            $app_plan->save();
             test()->travelBack();
         }
     }
@@ -122,7 +124,8 @@ it('stops warning once the plan has been edited', function () {
     $plan = $app->plans()->first();
 
     test()->travel(1)->minute();
-    $plan->update(['description' => 'Changed']);
+    $plan->description = 'Changed';
+    $plan->save();
     test()->travelBack();
 
     expect(readinessIssue(new ApplicationReadiness($app), 'plan_configured'))->toBeNull();
