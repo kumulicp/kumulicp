@@ -5,6 +5,7 @@ use App\Http\Middleware\Api\AddRequestId;
 use App\Http\Middleware\Api\ForceJsonResponse;
 use App\Http\Middleware\BlockTestOrganizations;
 use App\Http\Middleware\EnsureFeatureEnabled;
+use App\Http\Middleware\EnsureTenancyMode;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SecurityHeaders;
@@ -49,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth' => SetupAwareAuthenticate::class,
             'guest' => RedirectIfAuthenticated::class,
             'toggle' => EnsureFeatureEnabled::class,
+            'tenancy' => EnsureTenancyMode::class,
             'block-test-orgs' => BlockTestOrganizations::class,
         ]);
         // The block reads the organization route binding has resolved

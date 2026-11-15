@@ -18,7 +18,7 @@ import { Link } from '@inertiajs/vue3'
             <va-tabs v-model="selectTabIndex" center>
               <template #tabs>
                 <Link id="login" href="/login"><va-tab key="/login" name="/login">{{ $t('auth.login') }}</va-tab></Link>
-                <Link id="register" href="/register"><va-tab key="/register" name="/register">{{ $t('auth.sign_up') }}</va-tab></Link>
+                <Link v-if="!$page.props.tenancy.single" id="register" href="/register"><va-tab key="/register" name="/register">{{ $t('auth.sign_up') }}</va-tab></Link>
               </template>
             </va-tabs>
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
+use App\Support\Facades\Tenancy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use OffloadProject\Toggle\Facades\Toggle;
@@ -17,6 +18,9 @@ class MenuService
     public function admin()
     {
         $admin = Gate::allows('admin');
+        $multi = Tenancy::isMulti();
+        // A single-organization install has one organization, so there is no list to pick from
+        $single_organization = $multi ? null : Tenancy::organization();
 
         $this->admin = [
             'dashboard' => [
@@ -28,8 +32,8 @@ class MenuService
                 'order' => 50,
             ],
             'organizations' => [
-                'name' => __('labels.organizations'),
-                'url' => '/admin/organizations',
+                'name' => $single_organization ? __('labels.organization') : __('labels.organizations'),
+                'url' => $single_organization ? "/admin/organizations/{$single_organization->id}" : '/admin/organizations',
                 'icon' => 'fa-building-flag',
                 'perm' => $admin,
                 'external' => false,
@@ -63,7 +67,7 @@ class MenuService
                         'name' => __('labels.plans'),
                         'url' => '/admin/service/plans',
                         'icon' => 'fa-circle',
-                        'perm' => $admin,
+                        'perm' => $admin && $multi,
                         'external' => false,
                         'order' => 200,
                     ],
@@ -71,7 +75,7 @@ class MenuService
                         'name' => __('labels.shared_apps'),
                         'url' => '/admin/service/shared-apps',
                         'icon' => 'fa-circle',
-                        'perm' => $admin && Toggle::active('shared-apps'),
+                        'perm' => $admin && $multi && Toggle::active('shared-apps'),
                         'external' => false,
                         'order' => 300,
                     ],
@@ -177,6 +181,8 @@ class MenuService
         $organization = Organization::account();
         $organization_status = $organization->status;
         $billable = Gate::allows('has-billing-account');
+        // Plans, subscriptions and billing only exist for a hosting provider's customers
+        $multi = Tenancy::isMulti();
 
         return [
             'dashboard' => [
@@ -207,7 +213,7 @@ class MenuService
                 'name' => __('labels.plans'),
                 'url' => '/subscription/options',
                 'icon' => 'fa-flag-checkered',
-                'perm' => $organization_status == 'new',
+                'perm' => $multi && $organization_status == 'new',
                 'external' => false,
                 'order' => 300,
             ],
@@ -255,7 +261,7 @@ class MenuService
                         'name' => __('labels.suborganizations'),
                         'url' => '/settings/suborganizations',
                         'icon' => 'fa-building',
-                        'perm' => Toggle::active('sub-organizations') && Gate::allows('view-suborganizations'),
+                        'perm' => $multi && Toggle::active('sub-organizations') && Gate::allows('view-suborganizations'),
                         'external' => false,
                         'order' => 200,
                     ],
@@ -281,7 +287,7 @@ class MenuService
                 'name' => __('labels.subscription'),
                 'url' => '/subscription',
                 'icon' => 'vuestic-iconset-forms',
-                'perm' => $organization_status != 'new',
+                'perm' => $multi && $organization_status != 'new',
                 'order' => 800,
                 'submenu' => [
                     [

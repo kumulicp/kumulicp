@@ -14,6 +14,7 @@ use App\Plan;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
 use App\Support\Facades\FastCache;
+use App\Support\Facades\Tenancy;
 use App\Updates\PendingUpdates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -30,6 +31,11 @@ class Organizations extends Controller
 
     public function index()
     {
+        // A single-organization install has just the one, so go straight to it
+        if (Tenancy::isSingle() && $single_organization = Tenancy::organization()) {
+            return redirect("/admin/organizations/{$single_organization->id}");
+        }
+
         $organization = auth()->user()->organization;
         // The "shared" organization only exists to host shared app instances
         // -- it's not a real customer, so it's managed from the Shared Apps
