@@ -296,9 +296,9 @@ import { currencyByCode, buildCurrencyPrices } from '@/constants/currencies'
             <td :colspan="plans.length + 1"><strong>{{ $t('admin.plans.basicUsers') }}</strong></td>
           </tr>
           <tr>
-            <td class="setting-label">{{ $t('admin.plans.name') }}</td>
+            <td class="setting-label">{{ $t('admin.plans.enableBasicUsers') }}</td>
             <td v-for="plan in plans" :key="plan.id">
-              <va-input v-model="form.plans[plan.id].basic.name" immediateValidation />
+              <va-checkbox v-model="form.plans[plan.id].basic.enabled" />
             </td>
           </tr>
           <template v-for="currency in enabled_currencies" :key="'basic-price-' + currency">
@@ -516,7 +516,7 @@ export default {
           max: plan.settings?.standard?.max ?? 0
         },
         basic: {
-          name: plan.settings?.basic?.name ?? '',
+          enabled: plan.settings?.basic?.enabled ?? !!plan.settings?.basic?.name,
           storage: plan.settings?.basic?.storage ?? 0,
           max: plan.settings?.basic?.max ?? 0,
           amount: plan.settings?.basic?.amount ?? 0

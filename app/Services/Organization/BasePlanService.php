@@ -215,12 +215,12 @@ class BasePlanService
     public function basicStats()
     {
         return [
-            'label' => $this->plan->setting('basic.name').' User Price',
-            'calculation' => '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->plan->setting('basic.name'))),
+            'label' => $this->accessTypeLabel(AccessType::BASIC).' User Price',
+            'calculation' => '$'.$this->price('basic').' for every '.$this->plan->setting('basic.amount').' '.Str::plural(strtolower($this->accessTypeLabel(AccessType::BASIC))),
             'quantity' => $this->org_service->countEntity('basic'),
             'price' => $this->price('basic'),
             'total_price' => number_format($this->basicPriceTotal(), 2, '.', ', '),
-            'unit' => $this->plan->setting('basic.amount').' '.Str::plural(Str::lower($this->plan->setting('basic.name')), (int) $this->plan->setting('basic.amount')),
+            'unit' => $this->plan->setting('basic.amount').' '.Str::plural(Str::lower($this->accessTypeLabel(AccessType::BASIC)), (int) $this->plan->setting('basic.amount')),
         ];
     }
 
@@ -278,34 +278,58 @@ class BasePlanService
         $this->plan = $this->organization->plan;
     }
 
+    /**
+     * What an access type is called to the organization. The names are the organization plan's, whatever
+     * app they are for, and fall back to defaults when the plan doesn't name them.
+     */
+    public function accessTypeLabel(AccessType $access_type): string
+    {
+        return match ($access_type) {
+            AccessType::STANDARD => $this->setting('base.standard_label') ?: __('labels.access_standard'),
+            AccessType::BASIC => $this->setting('basic.name') ?: __('labels.access_basic'),
+            AccessType::MINIMAL => $this->setting('base.minimal_label') ?: __('labels.access_minimal'),
+            AccessType::NONE => __('labels.access_none'),
+        };
+    }
+
+    // Whether the plan has basic users. Plans saved before it could be set apart from the name are on when named
+    public function isBasicUsersEnabled(): bool
+    {
+        return (bool) ($this->setting('basic.enabled') ?? filled($this->setting('basic.name')));
+    }
+
+    // Whether the plan has minimal users. Plans saved before it could be set apart from the label are on when labelled
+    public function isMinimalUsersEnabled(): bool
+    {
+        return (bool) ($this->setting('base.minimal_enabled') ?? filled($this->setting('base.minimal_label')));
+    }
+
     public function availableAccessTypes()
     {
         $access_types = [
             [
                 'value' => 'standard',
-                'text' => 'Active User',
-                // 'disabled' => ! Gate::allows('update-standard-user', $user),
+                'text' => $this->accessTypeLabel(AccessType::STANDARD),
             ],
         ];
 
-        if ($this->setting('basic.name')) {
+        if ($this->isBasicUsersEnabled()) {
             $access_types[] = [
                 'value' => 'basic',
-                'text' => $this->setting('basic.name'),
-                // 'disabled' => ! Gate::allows('update-basic-user', $user),
+                'text' => $this->accessTypeLabel(AccessType::BASIC),
             ];
         }
 
-        if ($this->setting('base.minimal_label')) {
+        if ($this->isMinimalUsersEnabled()) {
             $access_types[] = [
                 'value' => 'minimal',
-                'text' => $this->setting('base.minimal_label'),
+                'text' => $this->accessTypeLabel(AccessType::MINIMAL),
             ];
         }
 
         $access_types[] = [
             'value' => 'none',
-            'text' => 'Disabled',
+            'text' => $this->accessTypeLabel(AccessType::NONE),
         ];
 
         return $access_types;
@@ -534,11 +558,9 @@ class BasePlanService
     {
         switch ($access_type) {
             case AccessType::STANDARD:
-                return __('labels.standard_user');
             case AccessType::BASIC:
-                return $this->setting('basic.name');
             case AccessType::MINIMAL:
-                return $this->setting('base.minimal_label');
+                return $this->accessTypeLabel($access_type);
             case AccessType::NONE:
                 return __('labels.none_user');
             default:

@@ -117,8 +117,8 @@ import { formatComponentPrices, formatComponentPriceIds } from '@/constants/curr
         <td></td>
       </tr>
       <tr>
-        <td><b>{{ $t('admin.plans.name') }}:</b> </td>
-        <td>{{ plan.settings.basic.name }}</td>
+        <td><b>{{ $t('admin.plans.enableBasicUsers') }}:</b> </td>
+        <td>{{ (plan.settings.basic.enabled ?? !!plan.settings.basic.name) ? $t('status.enabled') : $t('status.disabled') }}</td>
       </tr>
       <tr>
         <td><b>{{ $t('admin.plans.price') }}:</b></td>

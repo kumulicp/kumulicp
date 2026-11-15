@@ -161,12 +161,12 @@ it('updates basic user settings per plan', function () {
             'plans' => [
                 $this->plan1->id => bulkEditSettingsPayload([
                     'name' => 'Original Name One', 'description' => 'Original Desc One',
-                    'basic' => ['name' => 'Volunteer', 'storage' => 1, 'max' => 10, 'amount' => 5],
+                    'basic' => ['enabled' => true, 'storage' => 1, 'max' => 10, 'amount' => 5],
                     'prices' => ['basic' => ['USD' => ['amount' => 3, 'price_id' => 'bas_1']]],
                 ]),
                 $this->plan2->id => bulkEditSettingsPayload([
                     'name' => 'Original Name Two', 'description' => 'Original Desc Two',
-                    'basic' => ['name' => 'Member', 'storage' => 2, 'max' => 25, 'amount' => 10],
+                    'basic' => ['enabled' => false, 'storage' => 2, 'max' => 25, 'amount' => 10],
                     'prices' => ['basic' => ['USD' => ['amount' => 6, 'price_id' => 'bas_2']]],
                 ]),
             ],
@@ -176,8 +176,8 @@ it('updates basic user settings per plan', function () {
     $this->plan1->refresh();
     $this->plan2->refresh();
 
-    expect($this->plan1->settings['basic']['name'])->toBe('Volunteer');
-    expect($this->plan2->settings['basic']['name'])->toBe('Member');
+    expect($this->plan1->settings['basic']['enabled'])->toBeTrue();
+    expect($this->plan2->settings['basic']['enabled'])->toBeFalse();
     expect($this->plan1->settings['basic']['max'])->toBe(10);
     expect($this->plan2->settings['basic']['max'])->toBe(25);
     expect($this->plan1->settings['basic']['prices']['USD']['amount'])->toBe(3);
