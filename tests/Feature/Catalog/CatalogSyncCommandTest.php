@@ -16,7 +16,7 @@ beforeEach(function () {
 });
 
 it('imports nothing while the app catalog is disabled', function () {
-    config(['toggle.flags.app-catalog' => false]);
+    config(['toggle.flags.helmforge' => false]);
 
     $this->artisan('catalog:sync')->assertFailed();
 
@@ -25,7 +25,7 @@ it('imports nothing while the app catalog is disabled', function () {
 });
 
 it('imports the catalog when the app catalog is enabled', function () {
-    config(['toggle.flags.app-catalog' => true]);
+    config(['toggle.flags.helmforge' => true]);
 
     $this->artisan('catalog:sync')->assertSuccessful();
 
@@ -38,13 +38,13 @@ function catalogSyncEvent()
 }
 
 it('skips the daily sync while the app catalog is disabled', function () {
-    config(['toggle.flags.app-catalog' => false]);
+    config(['toggle.flags.helmforge' => false]);
 
     expect(catalogSyncEvent()->filtersPass(app()))->toBeFalse();
 });
 
 it('runs the daily sync when the app catalog is enabled', function () {
-    config(['toggle.flags.app-catalog' => true]);
+    config(['toggle.flags.helmforge' => true]);
 
     expect(catalogSyncEvent()->filtersPass(app()))->toBeTrue();
 });

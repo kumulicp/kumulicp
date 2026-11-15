@@ -38,6 +38,7 @@ class FeatureFlags
             'emails' => ['beta' => false],
             'domain-registrar' => ['beta' => false],
             'tickets' => ['beta' => true],
+            'helmforge' => ['beta' => true],
         ];
 
         return Tenancy::isSingle() ? Arr::except($definitions, self::MULTI_TENANT_ONLY) : $definitions;

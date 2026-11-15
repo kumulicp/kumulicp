@@ -22,7 +22,7 @@ class SingleTenantBasePlanService extends BasePlanService
 
     public function enabledApps()
     {
-        return Application::orderBy('slug')->where('enabled', 1)->get();
+        return Application::available()->orderBy('slug')->where('enabled', 1)->get();
     }
 
     public function appEnabled(Application $app)

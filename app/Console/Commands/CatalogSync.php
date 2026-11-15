@@ -17,8 +17,8 @@ class CatalogSync extends Command
 
     public function handle(ChartCatalogSync $sync): int
     {
-        if (Toggle::inactive('app-catalog')) {
-            $this->components->warn('The app catalog is disabled. Set TOGGLE_APP_CATALOG=true to enable it.');
+        if (Toggle::inactive('helmforge')) {
+            $this->components->warn('HelmForge is disabled. Enable it under Settings → Features.');
 
             return self::FAILURE;
         }

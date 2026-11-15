@@ -85,7 +85,8 @@ class BasePlanService
             ->filter(fn ($settings) => ! empty(Arr::get($settings, 'plans')))
             ->keys();
 
-        return Application::orderBy('slug')
+        return Application::available()
+            ->orderBy('slug')
             ->where('enabled', 1)
             ->whereIn('slug', $enabled_slugs)
             ->get();

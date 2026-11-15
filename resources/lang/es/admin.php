@@ -231,6 +231,9 @@ return [
                 'domain_registrar' => [
                     'label' => 'Registrador de dominios',
                     'description' => 'Permite que las organizaciones registren, transfieran y renueven nombres de dominio a través de su registrador. Agrega las páginas de administración de Dominios y TLD, las opciones de registrar y transferir al agregar un dominio, y las opciones de plan correspondientes. Conectar un dominio que ya posee siempre está disponible.',
+                'helmforge' => [
+                    'label' => 'HelmForge',
+                    'description' => 'Importa aplicaciones del repositorio de charts de HelmForge y las muestra junto a las aplicaciones integradas. Mientras está desactivado, las aplicaciones de HelmForge se ocultan de la lista de aplicaciones y de lo que las organizaciones pueden instalar, y la sincronización diaria del catálogo no se ejecuta. Las aplicaciones ya desplegadas siguen funcionando.',
                 ],
                 'tickets' => [
                     'label' => 'Tickets de soporte',

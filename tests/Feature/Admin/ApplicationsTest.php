@@ -11,6 +11,7 @@ use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use OffloadProject\Toggle\Facades\Toggle;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -266,6 +267,7 @@ class ApplicationsTest extends TestCase
 
     public function test_apps_list_reports_the_active_filters_and_the_options()
     {
+        config(['toggle.flags.helmforge' => true]);
         Application::factory()->create(['slug' => 'tagged'])->tags()->attach(Tag::findOrCreateMany(['Wiki']));
         Tag::findOrCreateMany(['unused']);
 
@@ -283,8 +285,31 @@ class ApplicationsTest extends TestCase
             );
     }
 
+    public function test_apps_list_hides_helmforge_apps_while_the_feature_is_off()
+    {
+        Application::factory()->create(['slug' => 'from_profile', 'source' => ApplicationSource::Profile]);
+        Application::factory()->create(['slug' => 'from_helmforge', 'source' => ApplicationSource::HelmForge]);
+        $mine = ['from_profile', 'from_helmforge'];
+
+        $this->assertSame(['from_profile'], array_values(array_intersect($this->listApps(['status' => 'all']), $mine)));
+        $this->assertSame([], array_values(array_intersect($this->listApps(['status' => 'all', 'source' => 'helmforge']), $mine)));
+
+        $this->actingAs($this->adminUser)->get('/admin/apps')
+            ->assertInertia(fn ($page) => $page->where('filter_options.sources', collect(ApplicationSource::cases())
+                ->reject(fn ($source) => $source === ApplicationSource::HelmForge)
+                ->map(fn ($source) => ['value' => $source->value, 'text' => $source->label()])->values()->all()));
+
+        // Turning it on through the features page brings them back
+        Toggle::enable('helmforge');
+        $this->assertSame(['from_helmforge', 'from_profile'], array_values(array_intersect($this->listApps(['status' => 'all']), $mine)));
+
+        Toggle::disable('helmforge');
+        $this->assertSame(['from_profile'], array_values(array_intersect($this->listApps(['status' => 'all']), $mine)));
+    }
+
     public function test_apps_list_filters_by_source()
     {
+        config(['toggle.flags.helmforge' => true]);
         Application::factory()->create(['slug' => 'from_profile', 'source' => ApplicationSource::Profile]);
         Application::factory()->create(['slug' => 'from_ui', 'source' => ApplicationSource::Generic]);
         Application::factory()->create(['slug' => 'from_helmforge', 'source' => ApplicationSource::HelmForge]);

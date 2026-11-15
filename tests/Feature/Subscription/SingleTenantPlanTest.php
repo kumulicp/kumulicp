@@ -9,6 +9,7 @@ use App\Services\Organization\SingleTenantBasePlanService;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Subscription;
 use Illuminate\Support\Facades\Gate;
+use OffloadProject\Toggle\Facades\Toggle;
 
 // Feature/Subscription's global beforeEach in Pest.php seeds, activates the demo
 // app, creates its plans, and acts as the demo user. base_1 caps demo_app at
@@ -178,4 +179,15 @@ it('lets the multi-tenant gate still require the plan to list the app plan', fun
 
     expect(Gate::allows('select-app-plan', $this->support->demo_app_1))->toBeTrue();
     expect(Gate::allows('select-app-plan', $this->support->demo_app_2))->toBeFalse();
+});
+
+it('offers HelmForge apps only while the HelmForge feature is on', function () {
+    $organization = makeSingleOrganization();
+    Application::factory()->create(['slug' => 'from_helmforge', 'source' => 'helmforge', 'enabled' => true]);
+    $base = fn () => (new SubscriptionService($organization))->base()->enabledApps()->pluck('slug');
+
+    expect($base())->not->toContain('from_helmforge');
+
+    Toggle::enable('helmforge');
+    expect($base())->toContain('from_helmforge');
 });

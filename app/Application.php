@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OffloadProject\Toggle\Facades\Toggle;
 
 /**
  * @property int $id
@@ -87,6 +88,19 @@ class Application extends Model
     public function isHelmForge(): bool
     {
         return $this->source === ApplicationSource::HelmForge;
+    }
+
+    /**
+     * Applications that may be offered right now: HelmForge ones only while
+     * the HelmForge feature is on.
+     *
+     * @param  Builder<Application>  $query
+     */
+    public function scopeAvailable(Builder $query): void
+    {
+        if (! Toggle::active('helmforge')) {
+            $query->where('source', '!=', ApplicationSource::HelmForge);
+        }
     }
 
     public function chartSource()

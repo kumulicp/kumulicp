@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use OffloadProject\Toggle\Facades\Toggle;
 
 class Applications extends Controller
 {
@@ -39,13 +40,14 @@ class Applications extends Controller
         // Capabilities live on the PHP app profiles rather than in the database,
         // so resolve the matching slugs up front and filter the query by them.
         $capability_slugs = ($filters['capability'] ?? null)
-            ? Application::pluck('slug')
+            ? Application::available()->pluck('slug')
                 ->filter(fn (string $slug) => ApplicationFacade::profile($slug)->isCompatible($filters['capability']))
                 ->values()
                 ->all()
             : null;
 
-        $apps = Application::with(['tags', 'versions' => fn ($query) => $query->where('status', 'active')])
+        $apps = Application::available()
+            ->with(['tags', 'versions' => fn ($query) => $query->where('status', 'active')])
             ->search($filters['search'] ?? null)
             ->withAnyTag($filters['tags'] ?? [])
             ->when($status !== 'all', fn ($query) => $query->where('enabled', $status === 'enabled'))
@@ -86,6 +88,7 @@ class Applications extends Controller
                     ->values()
                     ->all(),
                 'sources' => collect(ApplicationSource::cases())
+                    ->reject(fn (ApplicationSource $source) => $source === ApplicationSource::HelmForge && Toggle::inactive('helmforge'))
                     ->map(fn (ApplicationSource $source) => ['value' => $source->value, 'text' => $source->label()])
                     ->all(),
                 'tags' => Tag::has('applications')->orderBy('name')->get(['name', 'slug'])
