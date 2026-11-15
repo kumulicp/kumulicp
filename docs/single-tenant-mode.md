@@ -96,7 +96,8 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | Org menu: Sub-organizations | Hidden, `toggle:sub-organizations` forced off |
 | `has-billing-account` gate | Always deny, `Billing` forced to "no driver", Stripe check skipped in `Setup::settings()` |
 | `Account\Applications` deactivate: `Billing::periodEnds()` | Already falls back to `now()` with no billing |
-| Admin menu: Organizations list, Services → Plans, Services → Shared apps | Hidden, routes 404 |
+| Admin menu: Services → Plans, Services → Shared apps | Hidden, routes 404 |
+| Admin menu: Organizations | The list is replaced by a single **Organization** item that opens the one org's admin page (`/admin/organizations` redirects there). The per-org page keeps its apps, backups, logs, tasks and domains until phase 5 folds them into the main menu. |
 | Admin settings: Invoice, Registration (captcha) | Hidden |
 | Public registration: `Auth::routes()` register, `public/org/{slug}/register`, "Sign up" link on login | Disabled. New people arrive via Users → Add, SSO or LDAP. |
 | Org review step in Discover (suborg dropdown) | Never shown |
@@ -104,7 +105,8 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | Onboarding stepper in `AppLayout.vue` (choose plan → activate an app → add users; step 0 links to `/subscription/options`) | Hidden. The Getting started checklist replaces it (see 6). |
 | Notifications: new org, billing managers, invoices, trial expiry (`NotifyCpAdminOfNewOrganization`, `NotifyBillingManagers`, `InvoiceOrganization`) | Early return |
 | Delete, deactivate or schedule deletion of the only org | Blocked everywhere (`Admin\Organizations@remove/deactivate/schedule_deletion/notify_deletion`, `DeleteOrganization`, `unsubscribe` gate). The scheduled-deletion UI and the admin "Change plan" modal on the org page are hidden. |
-| Per-user "basic vs standard" user types and additional-storage upsells | Hidden. Everyone is `standard`. |
+| Per-user "basic vs standard" user types | Already absent: the installer's plan has no `basic.name`, so everyone is `standard`. |
+| Additional storage (`add-additional-storage`, `add-additional-app-storage`) | **Kept.** It is also how an admin raises a user's quota (for example in Nextcloud), so hiding it would remove real functionality, not just an upsell. |
 
 App-level plans (`AppPlan`, "pick Small or Large when installing") are **kept**. Only the *organization* plan goes away.
 In single mode they are relabeled **Profiles** in the copy (decided).
@@ -191,9 +193,9 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
 
 Each phase ships independently and keeps multi-tenant behavior unchanged.
 
-1. **Foundation.** `Tenancy` service, `tenancy_mode` setting, Inertia prop, installer choice, Pest helpers. *(in progress)*
-2. **Unlimited plan.** `SingleTenantBasePlanService`, gate fixes, unlimited semantics. Discover now lists apps for the superaccount.
-3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards, notification no-ops.
+1. **Foundation.** `Tenancy` service, `tenancy_mode` setting, Inertia prop, installer choice, Pest helpers. *(done, #185)*
+2. **Unlimited plan.** `SingleTenantBasePlanService`, gate fixes, unlimited semantics. Discover now lists apps for the superaccount. *(done, #185)*
+3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards. *(in progress)* Notification no-ops were left out on purpose: with no billing driver the billing notifications and the invoice job already do nothing, and a single-organization install creates no new organizations. Revisit if one turns out to fire.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect.
 6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.

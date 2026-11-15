@@ -15,6 +15,7 @@ use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Billing;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use App\User;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\Gate;
@@ -65,7 +66,8 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('delete-organization', function (User $user, \App\Organization $organization) {
-            return $organization->status === 'deactivated';
+            // The one organization of a single-organization install is never deleted
+            return $organization->status === 'deactivated' && ! Tenancy::isSingleOrganization($organization);
         });
 
         Gate::define('view-suborganizations', function (User $user) {
@@ -103,21 +105,25 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('unsubscribe', function (User $user, \App\Organization $organization) {
             return ($user->organization->id === $organization->id
                 || $user->organization->id === $organization->parent_organization?->id)
-                && $organization->status === 'active';
+                && $organization->status === 'active'
+                && ! Tenancy::isSingleOrganization($organization);
         });
 
         Gate::define('resubscribe', function (User $user, \App\Organization $organization) {
             return ($user->organization->id === $organization->id
                 || $user->organization->id === $organization->parent_organization?->id)
-                && $organization->status === 'deactivating';
+                && $organization->status === 'deactivating'
+                && ! Tenancy::isSingleOrganization($organization);
         });
 
         // The billing pages come from local state, not from the billing provider: its subscription is
         // only created by a queued task, and its history is worth keeping after payments stop
         Gate::define('has-billing-account', function (User $user) {
-            return (Billing::isBillable()
-                || count(Subscription::all()->paidSubscriptions()) > 0
-                || Billing::hasBillingHistory())
+            // A single-organization install has nothing to bill
+            return Tenancy::isMulti()
+                && (Billing::isBillable()
+                    || count(Subscription::all()->paidSubscriptions()) > 0
+                    || Billing::hasBillingHistory())
                 ? Response::allow()
                 : Response::deny(__('organization.plan.denied.billing'));
         });

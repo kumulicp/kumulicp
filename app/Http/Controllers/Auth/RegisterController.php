@@ -61,6 +61,8 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+        // Nobody signs themselves up for a single-organization install
+        $this->middleware('tenancy:multi');
     }
 
     /**

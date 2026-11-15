@@ -125,7 +125,7 @@ import OrganizationLayout from './OrganizationLayout.vue'
             </template>
           </div>
         </div>
-        <div class="row">
+        <div class="row" v-if="!$page.props.tenancy.single">
           <div class="flex flex-col xs12">
             <va-alert
               v-if="organization.deletion_scheduled_at"

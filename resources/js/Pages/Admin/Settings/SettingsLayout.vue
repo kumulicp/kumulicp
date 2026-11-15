@@ -28,15 +28,17 @@ export default {
   data () {
     const pathname = (new URL(window.location.href)).pathname
     const basePath = '/admin/settings'
+    // Invoices and self-registration only exist for a hosting provider's customers
+    const multi = !this.$page.props.tenancy.single
     const tabs = [
       {
         title: this.$t('settings.controlPanel'),
         url: basePath
       },
-      {
+      ...(multi ? [{
         title: this.$t('settings.invoice'),
         url: basePath + '/invoice'
-      },
+      }] : []),
       {
         title: this.$t('settings.ldap'),
         url: basePath + '/ldap'
@@ -49,10 +51,10 @@ export default {
         title: this.$t('settings.repoSecrets'),
         url: basePath + '/repo-secrets'
       },
-      {
+      ...(multi ? [{
         title: this.$t('settings.selfRegistration'),
         url: basePath + '/registration'
-      },
+      }] : []),
       {
         title: this.$t('settings.features'),
         url: basePath + '/features'

@@ -159,6 +159,8 @@ class HandleInertiaRequests extends Middleware
             'language' => app()->getLocale(),
             'locales' => config('locales.available'),
             'flags' => collect(Toggle::all())
+                // Features that only make sense with several organizations are off in a single-organization install
+                ->map(fn (bool $value, string $key) => $value && ! (Tenancy::isSingle() && in_array($key, ['shared-apps', 'sub-organizations'], true)))
                 ->mapWithKeys(fn (bool $value, string $key) => [Str::camel($key) => $value])
                 ->all(),
         ]);

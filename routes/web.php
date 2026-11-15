@@ -123,14 +123,18 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::prefix('{organization}')->group(function () {
                 Route::get('logs', 'Admin\Organizations@logs')->name('organizations.logs');
                 Route::get('tasks', 'Admin\Organizations@tasks')->name('organizations.tasks');
-                Route::get('remove', 'Admin\Organizations@remove')->name('organizations.remove');
-                Route::get('reactivate', 'Admin\Organizations@reactivate')->name('organizations.reactivate');
-                Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
-                Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
-                Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
-                Route::post('schedule_deletion', 'Admin\Organizations@schedule_deletion')->name('organizations.schedule_deletion');
-                Route::post('notify_deletion', 'Admin\Organizations@notify_deletion')->name('organizations.notify_deletion');
-                Route::delete('schedule_deletion', 'Admin\Organizations@cancel_deletion')->name('organizations.cancel_deletion');
+                // An organization's subscription and lifecycle only exist for a hosting
+                // provider: a single-organization install has exactly one, and it stays
+                Route::middleware('tenancy:multi')->group(function () {
+                    Route::get('remove', 'Admin\Organizations@remove')->name('organizations.remove');
+                    Route::get('reactivate', 'Admin\Organizations@reactivate')->name('organizations.reactivate');
+                    Route::get('deactivate', 'Admin\Organizations@deactivate')->name('organizations.deactivate');
+                    Route::post('update_subscription', 'Admin\Organizations@update_subscription')->name('organizations.update_subscription');
+                    Route::post('change_plan', 'Admin\Organizations@change_plan')->name('organizations.change_plan');
+                    Route::post('schedule_deletion', 'Admin\Organizations@schedule_deletion')->name('organizations.schedule_deletion');
+                    Route::post('notify_deletion', 'Admin\Organizations@notify_deletion')->name('organizations.notify_deletion');
+                    Route::delete('schedule_deletion', 'Admin\Organizations@cancel_deletion')->name('organizations.cancel_deletion');
+                });
                 Route::resource('backups', 'Admin\Organizations\BackupRestore')->middleware('toggle:app-backups');
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore')->middleware('toggle:app-backups');
                 Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->middleware('toggle:app-backups');
@@ -213,14 +217,16 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::prefix('settings')->group(function () {
             Route::get('', 'Admin\Settings@index')->name('server.settings');
             Route::put('', 'Admin\Settings@update')->name('server.settings.update');
-            Route::prefix('invoice')->group(function () {
+            Route::prefix('invoice')->middleware('tenancy:multi')->group(function () {
                 Route::get('', 'Admin\Settings\InvoiceSettings@index')->name('settings.invoice');
                 Route::put('', 'Admin\Settings\InvoiceSettings@update')->name('settings.invoice.update');
             });
             Route::get('ldap', 'Admin\Settings\LdapSettings@index')->name('server.settings.ldap');
             Route::put('ldap', 'Admin\Settings\LdapSettings@update')->name('server.settings.ldap.update');
-            Route::get('registration', 'Admin\Settings\RegistrationSettings@index')->name('settings.registration');
-            Route::put('registration', 'Admin\Settings\RegistrationSettings@update')->name('settings.registration.update');
+            Route::middleware('tenancy:multi')->group(function () {
+                Route::get('registration', 'Admin\Settings\RegistrationSettings@index')->name('settings.registration');
+                Route::put('registration', 'Admin\Settings\RegistrationSettings@update')->name('settings.registration.update');
+            });
             Route::get('features', 'Admin\Settings\FeatureSettings@index')->name('settings.features');
             Route::put('features', 'Admin\Settings\FeatureSettings@update')->name('settings.features.update');
             Route::get('security-tools', 'Admin\Settings\SecurityToolSettings@index')->name('settings.security_tools');
@@ -246,7 +252,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         });
 
         Route::prefix('service')->group(function () {
-            Route::prefix('plans')->group(function () {
+            Route::prefix('plans')->middleware('tenancy:multi')->group(function () {
                 Route::get('', 'Admin\Plans@index')->name('service.plans');
                 Route::get('create', 'Admin\Plans@create')->name('service.plans.create');
                 Route::post('', 'Admin\Plans@store')->name('service.plans.store');
@@ -263,16 +269,16 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('{announcement}/archive', 'Admin\Announcements@archive')->name('server.announcements.archive');
                 Route::get('{announcement}/notify', 'Admin\Announcements@notify')->name('server.announcements.notify');
             });
-            Route::prefix('shared-apps')->middleware('toggle:shared-apps')->group(function () {
+            Route::prefix('shared-apps')->middleware(['toggle:shared-apps', 'tenancy:multi'])->group(function () {
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
             });
-            Route::middleware('toggle:shared-apps')->prefix('shared-apps/{shared_app}')->group(function () {
+            Route::middleware(['toggle:shared-apps', 'tenancy:multi'])->prefix('shared-apps/{shared_app}')->group(function () {
                 Route::put('version', 'Admin\SharedApps@setVersion')->name('service.shared-apps.version');
                 Route::post('tests', 'Admin\SharedApps@startTests')->name('service.shared-apps.tests');
                 Route::post('tests/bypass', 'Admin\SharedApps@bypassTests')->name('service.shared-apps.tests.bypass');
                 Route::post('activate', 'Admin\SharedApps@deploy')->name('service.shared-apps.deploy');
             });
-            Route::resource('shared-apps', 'Admin\SharedApps')->only(['index', 'store', 'show'])->middleware('toggle:shared-apps');
+            Route::resource('shared-apps', 'Admin\SharedApps')->only(['index', 'store', 'show'])->middleware(['toggle:shared-apps', 'tenancy:multi']);
             Route::prefix('domains')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');
                 Route::get('tlds/refresh', 'Admin\Tlds@refresh')->name('service.domains.tlds.refresh');
@@ -312,7 +318,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::get('plans/{plan}/api', 'Account\Application\Plans@review_api')->name('organization.apps.plans.api');
     });
 
-    Route::prefix('subscription')->group(function () {
+    Route::prefix('subscription')->middleware('tenancy:multi')->group(function () {
         Route::get('', 'Account\Subscription@index')->name('organization.subscription.summary');
         Route::delete('', 'Account\Subscription@cancel')->name('organization.cancel');
         Route::get('plans', 'Account\Subscription@plans')->name('organization.subscription.plans');
@@ -341,7 +347,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('', 'Account\Organization@index')->name('settings.organization');
             Route::put('', 'Account\Organization@update')->name('settings.organization.update');
         });
-        Route::prefix('suborganizations')->middleware('toggle:sub-organizations')->group(function () {
+        Route::prefix('suborganizations')->middleware(['toggle:sub-organizations', 'tenancy:multi'])->group(function () {
             Route::get('', 'Account\Organization\Suborganization@index')->name('settings.suborganizations');
             Route::post('', 'Account\Organization\Suborganization@store')->name('settings.suborganizations.store');
             Route::get('{organization}', 'Account\Organization\Suborganization@edit')->name('settings.suborganizations.edit');
@@ -442,7 +448,7 @@ Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
     Route::post('{account}/{email}', 'Pub\ChangePassword@update')->name('public.password.update');
     Route::get('/users/done/{code}', 'Pub\ChangePassword@done')->name('public.changepassword.done');
 
-    Route::prefix('org/{organization:slug}')->group(function () {
+    Route::prefix('org/{organization:slug}')->middleware('tenancy:multi')->group(function () {
         Route::get('register', 'Pub\Register@show')->name('public.org.register');
         Route::post('register', 'Pub\Register@submit')->name('public.org.register.submit');
         Route::get('register/pending', 'Pub\Register@pending')->name('public.org.register.pending');

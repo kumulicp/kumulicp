@@ -8,6 +8,7 @@ use App\Integrations\Applications\Nextcloud\API\GroupFolders;
 use App\Support\ByteConversion;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
+use App\Support\Facades\Tenancy;
 use App\Support\Facades\Subscription;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -87,7 +88,7 @@ class HomeController extends Controller
         $plan = Organization::plan();
 
         return inertia('Organization/Dashboard/AccountDashboard', [
-            'trial_plan' => $plan ? $plan->type == 'trial' : false,
+            'trial_plan' => Tenancy::isMulti() && $plan ? $plan->type == 'trial' : false,
             'info_blocks' => $info_blocks,
             'nextcloud_folders' => $folder_groups,
             'announcements' => $announcements->map(function ($announcement) {
