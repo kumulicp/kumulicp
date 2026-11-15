@@ -48,7 +48,6 @@ return [
     'system_provided_domain' => 'System Provided Domain',
     'add_subdomain' => 'Add Subdomain',
     'parent_app_domain' => 'Parent App Domain',
-    'expiring' => 'Expires',
     'deactivating' => 'Deactivating',
     'retired' => 'Retired',
     'deactivated' => 'Deactivated',

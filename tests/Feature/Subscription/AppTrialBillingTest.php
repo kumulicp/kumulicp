@@ -88,3 +88,30 @@ it('has no notice for an app that is not in a trial', function () {
 
     expect($service->trialNotice())->toBeNull();
 });
+
+it('shows when an app expires under its plan name instead of in the status', function () {
+    $this->demoApp->forceFill(['deactivate_at' => now()->addDay()])->save();
+    $date = now()->addDay()->format('M d, Y');
+
+    app()->forgetScopedInstances();
+    Facade::clearResolvedInstances();
+    $this->actingAs(User::findOrFail($this->user->id));
+    $page = $this->get('/subscription/plans')->assertOk();
+
+    $row = collect($page->viewData('page')['props']['plans'])->firstWhere('entity.id', $this->demoApp->id);
+    expect($row['status'])->toBe(__('labels.active'));
+    expect($row['notice'])->toBe(__('organization.subscription.expiry_notice', ['date' => $date]));
+});
+
+it('lists both the trial and the expiry notes when an app has both', function () {
+    $this->demoApp->forceFill(['trial_ends_at' => now()->addHours(12), 'deactivate_at' => now()->addDays(2)])->save();
+
+    app()->forgetScopedInstances();
+    Facade::clearResolvedInstances();
+    $this->actingAs(User::findOrFail($this->user->id));
+    $page = $this->get('/subscription/plans')->assertOk();
+
+    $row = collect($page->viewData('page')['props']['plans'])->firstWhere('entity.id', $this->demoApp->id);
+    expect(explode("\n", $row['notice']))->toHaveCount(2);
+    expect($row['notice'])->toContain("won't be charged")->toContain('Expires on');
+});

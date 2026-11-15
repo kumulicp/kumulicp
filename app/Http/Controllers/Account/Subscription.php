@@ -191,13 +191,13 @@ class Subscription extends Controller
                 return [
                     'id' => $plan->id,
                     'name' => $plan->name,
-                    'status' => implode(' ', [__('labels.'.$plan->status()), $plan->app_instance->deactivate_at?->format('M d, Y')]),
+                    'status' => $this->appStatus($plan),
                     'type' => 'app',
                     'entity' => [
                         'name' => $plan->app_instance->label,
                         'id' => $plan->app_instance->id,
                     ],
-                    'notice' => $plan->trialNotice(),
+                    'notice' => $this->planNotice($plan),
                     'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                     'can' => [
                         'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),
@@ -231,13 +231,13 @@ class Subscription extends Controller
                         return [
                             'id' => $plan->id,
                             'name' => $plan->name,
-                            'status' => implode(' ', [__('labels.'.$plan->status()), $plan->app_instance->deactivate_at?->format('M d, Y')]),
+                            'status' => $this->appStatus($plan),
                             'type' => 'app',
                             'entity' => [
                                 'name' => $plan->app_instance->label,
                                 'id' => $plan->app_instance->id,
                             ],
-                            'notice' => $plan->trialNotice(),
+                            'notice' => $this->planNotice($plan),
                             'plans_url' => "/apps/{$plan->app_instance->id}/plans",
                             'can' => [
                                 'change_plan' => Gate::allows('change-app-plan', $plan->app_instance),
@@ -250,6 +250,27 @@ class Subscription extends Controller
             }),
             'prices' => $prices,
         ]);
+    }
+
+    /**
+     * The status of an app's plan, with the date it ends only while it is being deactivated: for an app
+     * that merely has an end date ("Active Nov 15") the date belongs in a note instead.
+     */
+    private function appStatus($plan): string
+    {
+        $label = __('labels.'.$plan->status());
+
+        return $plan->status() === 'deactivating' && $plan->app_instance->deactivate_at
+            ? $label.' '.$plan->app_instance->deactivate_at->format('M d, Y')
+            : $label;
+    }
+
+    /**
+     * Notes shown under an app's plan name: its free trial and when it expires.
+     */
+    private function planNotice($plan): ?string
+    {
+        return collect([$plan->trialNotice(), $plan->expiryNotice()])->filter()->implode("\n") ?: null;
     }
 
     public function review(\App\Organization $organization, Plan $plan)

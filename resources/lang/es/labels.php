@@ -48,7 +48,6 @@ return [
     'system_provided_domain' => 'Dominio proporcionado por el sistema',
     'add_subdomain' => 'Agregar subdominio',
     'parent_app_domain' => 'Dominio de la aplicación principal',
-    'expiring' => 'Expira',
     'deactivating' => 'Desactivando',
     'retired' => 'Retirado',
     'deactivated' => 'Desactivado',

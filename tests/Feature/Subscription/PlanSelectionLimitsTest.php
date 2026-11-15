@@ -99,14 +99,17 @@ it('has the limit wording in every language', function (string $locale) {
     expect(__('organization.plan.denied.limit', ['limits' => $item], $locale))->toContain($item);
 })->with(['en', 'es']);
 
-it('reports an instance with an end date as expiring instead of active', function () {
+it('notes when an active instance expires without changing its status', function () {
     $service = fn () => new AppInstancePlanService($this->demoApp->plan, $this->demoApp->fresh());
 
-    expect($service()->status())->toBe('active');
+    expect($service()->expiryNotice())->toBeNull();
 
     $this->demoApp->forceFill(['deactivate_at' => now()->addDay()])->save();
-    expect($service()->status())->toBe('expiring');
+    expect($service()->status())->toBe('active');
+    expect($service()->expiryNotice())->toBe(__('organization.subscription.expiry_notice', ['date' => now()->addDay()->format('M d, Y')]));
 
+    // Being deactivated has its own status, which carries the date
     $this->demoApp->forceFill(['status' => 'deactivating'])->save();
     expect($service()->status())->toBe('deactivating');
+    expect($service()->expiryNotice())->toBeNull();
 });

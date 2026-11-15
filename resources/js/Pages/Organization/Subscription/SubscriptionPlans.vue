@@ -196,6 +196,7 @@ export default {
   .trial-notice {
     color: var(--va-secondary);
     font-size: 0.85rem;
+    white-space: pre-line;
   }
 
   .text-color-primary {

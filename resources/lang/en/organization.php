@@ -154,6 +154,7 @@ return [
         ],
     ],
     'subscription' => [
+        'expiry_notice' => 'Expires on :date.',
         'trial_notice' => "Free trial until :date. You won't be charged for this app until your first payment date after the trial ends.",
         'base_plan' => 'Base Plan',
         'updated' => 'Your subscription is being updated',

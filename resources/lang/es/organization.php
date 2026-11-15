@@ -151,6 +151,7 @@ return [
         ],
     ],
     'subscription' => [
+        'expiry_notice' => 'Expira el :date.',
         'trial_notice' => 'Prueba gratuita hasta el :date. No se te cobrará esta aplicación hasta tu primera fecha de pago después de que termine la prueba.',
         'base_plan' => 'Plan Base',
         'updated' => 'Tu suscripción se está actualizando',

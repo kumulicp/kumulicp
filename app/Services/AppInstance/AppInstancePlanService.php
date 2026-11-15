@@ -194,15 +194,24 @@ class AppInstancePlanService
         return __('organization.subscription.trial_notice', ['date' => $this->app_instance->trial_ends_at->format('M d, Y')]);
     }
 
+    /**
+     * When the app ends although it isn't being deactivated (an expiring plan), otherwise nothing.
+     */
+    public function expiryNotice(): ?string
+    {
+        if (in_array($this->app_instance->status, ['deactivating', 'deactivated']) || ! $this->app_instance->deactivate_at) {
+            return null;
+        }
+
+        return __('organization.subscription.expiry_notice', ['date' => $this->app_instance->deactivate_at->format('M d, Y')]);
+    }
+
     public function status(): string
     {
         $plan_id = $this->plan->id;
 
         if (in_array($this->app_instance->status, ['deactivating', 'deactivated'])) {
             return $this->app_instance->status;
-        } elseif ($this->app_instance->deactivate_at) {
-            // Still running, but with an end date (an expiring plan): "Active Nov 15" reads like it starts then
-            return 'expiring';
         } elseif ($this->plan->archive) {
             return 'retired';
         } elseif ($plan_id == $this->app_instance->plan_id) {
