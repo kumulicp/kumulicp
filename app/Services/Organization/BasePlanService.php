@@ -28,9 +28,9 @@ use Illuminate\Support\Str;
  */
 class BasePlanService
 {
-    private $plan;
+    protected $plan;
 
-    private $org_service;
+    protected $org_service;
 
     public $pricing_options = [PlanEntity::BASE, PlanEntity::ADDITIONAL_STORAGE, PlanEntity::STANDARD_USER, PlanEntity::BASIC_USER, PlanEntity::EMAIL, PlanEntity::APPLICATION];
 
@@ -119,6 +119,19 @@ class BasePlanService
     public function appPlanEnabled(AppPlan $plan)
     {
         return in_array($plan->id, $this->appPlansList($plan->application));
+    }
+
+    /**
+     * Whether an organization on this plan may pick the app plan when it activates an app.
+     */
+    public function appPlanSelectable(AppPlan $plan): bool
+    {
+        $app_plans = Arr::get($this->app_plans, $plan->application->slug.'.plans');
+
+        return is_array($app_plans)
+            && in_array($plan->id, $app_plans)
+            && ! $plan->archive
+            && $this->appEnabled($plan->application);
     }
 
     /**

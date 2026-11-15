@@ -16,7 +16,6 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\User;
 use Illuminate\Auth\Access\Response;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -124,13 +123,7 @@ class AuthServiceProvider extends ServiceProvider
 
         /* APPS */
         Gate::define('select-app-plan', function (User $user, AppPlan $plan) {
-            $base_plan = Subscription::base();
-            $app_plans = Arr::get($base_plan->app_plans, $plan->application->slug.'.plans');
-
-            return is_array($app_plans)
-                && in_array($plan->id, $app_plans)
-                && ! $plan->archive
-                && $base_plan->appEnabled($plan->application)
+            return Subscription::base()->appPlanSelectable($plan)
                 ? Response::allow()
                 : Response::deny(__('organization.plan.unavailable'));
         });
