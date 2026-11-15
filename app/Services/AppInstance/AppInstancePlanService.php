@@ -181,6 +181,9 @@ class AppInstancePlanService
 
         if (in_array($this->app_instance->status, ['deactivating', 'deactivated'])) {
             return $this->app_instance->status;
+        } elseif ($this->app_instance->deactivate_at) {
+            // Still running, but with an end date (an expiring plan): "Active Nov 15" reads like it starts then
+            return 'expiring';
         } elseif ($this->plan->archive) {
             return 'retired';
         } elseif ($plan_id == $this->app_instance->plan_id) {

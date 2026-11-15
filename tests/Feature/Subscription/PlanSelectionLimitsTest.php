@@ -2,6 +2,7 @@
 
 use App\Organization;
 use App\Plan;
+use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\Organization\BasePlanService;
 
 // Feature/Subscription's global beforeEach in Pest.php seeds, activates the demo app and acts as the demo user.
@@ -97,3 +98,15 @@ it('has the limit wording in every language', function (string $locale) {
     expect($item)->toContain('Nextcloud')->toContain('2')->toContain('1');
     expect(__('organization.plan.denied.limit', ['limits' => $item], $locale))->toContain($item);
 })->with(['en', 'es']);
+
+it('reports an instance with an end date as expiring instead of active', function () {
+    $service = fn () => new AppInstancePlanService($this->demoApp->plan, $this->demoApp->fresh());
+
+    expect($service()->status())->toBe('active');
+
+    $this->demoApp->forceFill(['deactivate_at' => now()->addDay()])->save();
+    expect($service()->status())->toBe('expiring');
+
+    $this->demoApp->forceFill(['status' => 'deactivating'])->save();
+    expect($service()->status())->toBe('deactivating');
+});
