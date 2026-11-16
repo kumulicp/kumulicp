@@ -125,6 +125,25 @@ return [
         'category_archived' => 'Category archived.',
     ],
 
+    'settings' => [
+        'title' => 'Support settings',
+        'policy_created' => 'Service level policy created.',
+        'policy_saved' => 'Service level policy saved.',
+        'policy_deleted' => 'Service level policy deleted.',
+        'category_saved' => 'Policy for the category saved.',
+        'automation_saved' => 'Automation settings saved.',
+    ],
+
+    'canned' => [
+        'title' => 'Canned responses',
+        'saved' => 'Canned response saved.',
+        'deleted' => 'Canned response deleted.',
+    ],
+
+    'reports' => [
+        'title' => 'Reports',
+    ],
+
     'notifications' => [
         'view' => 'View ticket',
         'rate_prompt' => 'Open the ticket to tell us how we did. It takes a few seconds and helps us improve.',

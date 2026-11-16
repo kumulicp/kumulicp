@@ -125,6 +125,25 @@ return [
         'category_archived' => 'Categoría archivada.',
     ],
 
+    'settings' => [
+        'title' => 'Ajustes de soporte',
+        'policy_created' => 'Política de nivel de servicio creada.',
+        'policy_saved' => 'Política de nivel de servicio guardada.',
+        'policy_deleted' => 'Política de nivel de servicio eliminada.',
+        'category_saved' => 'Política de la categoría guardada.',
+        'automation_saved' => 'Ajustes de automatización guardados.',
+    ],
+
+    'canned' => [
+        'title' => 'Respuestas predefinidas',
+        'saved' => 'Respuesta predefinida guardada.',
+        'deleted' => 'Respuesta predefinida eliminada.',
+    ],
+
+    'reports' => [
+        'title' => 'Informes',
+    ],
+
     'notifications' => [
         'view' => 'Ver ticket',
         'rate_prompt' => 'Abra el ticket para decirnos qué tal lo hicimos. Lleva unos segundos y nos ayuda a mejorar.',
