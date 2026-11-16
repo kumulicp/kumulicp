@@ -5,7 +5,7 @@ import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
 import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
 import AppReadiness from '@/components/App/AppReadiness.vue'
-import { useForm } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
@@ -13,6 +13,9 @@ import { useForm } from '@inertiajs/vue3'
   </Head>
   <div class="row justify-center mb-3">
     <va-chip id="app-status" :color="app.enabled ? 'success' : 'danger'">{{ app.status_label }}</va-chip>
+  </div>
+  <div v-if="discover_url" class="row justify-center mb-3">
+    <Link id="view-in-discover" :href="discover_url">{{ $t('admin.apps.viewInDiscover') }}</Link>
   </div>
   <app-readiness :readiness="readiness" />
   <form @submit.prevent="form.post('/admin/apps/'+app.slug)">
@@ -158,6 +161,7 @@ export default {
   props: {
     app: Object,
     apps: Object,
+    discover_url: String,
     readiness: Object,
     errors: Object
   },

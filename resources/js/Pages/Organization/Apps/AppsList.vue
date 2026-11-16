@@ -42,6 +42,9 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   <div v-else>
                     {{ app.name }}
                   </div>
+                  <Link v-if="app.manage_url" :id="'manage-'+app.id" :href="app.manage_url" class="manage-link">
+                    {{ $t('organization.apps.manage') }}
+                  </Link>
                   <va-list-item-label caption v-for="(task, index) in app.tasks" :key="index">
                     {{ task.description }}
                   </va-list-item-label>

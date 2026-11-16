@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
 use App\Services\Application\ApplicationReadiness;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Facades\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -122,6 +123,7 @@ class Applications extends Controller
         $readiness = new ApplicationReadiness($app);
 
         return inertia()->render('Admin/Applications/AppView', [
+            'discover_url' => Tenancy::isSingle() ? "/discover/{$app->slug}" : null,
             'readiness' => [
                 'status' => $readiness->status(),
                 'items' => $readiness->issues(),
@@ -164,6 +166,7 @@ class Applications extends Controller
         $readiness = new ApplicationReadiness($app);
 
         return inertia()->render('Admin/Applications/AppEdit', [
+            'discover_url' => Tenancy::isSingle() ? "/discover/{$app->slug}" : null,
             'readiness' => [
                 'status' => $readiness->status(),
                 'items' => $readiness->issues(),

@@ -5,7 +5,8 @@ import { Link } from '@inertiajs/vue3'
 <template>
   <template v-for="(route, idx) in items"
       :key="idx">
-    <template v-if="!route.submenu">
+    <div v-if="route.type === 'header'" class="menu-header">{{ route.name }}</div>
+    <template v-else-if="!route.submenu">
       <va-sidebar-item v-if="route.external" :href="route.url">
         <va-sidebar-item-content>
           <va-icon :name="route.icon" />
@@ -107,7 +108,10 @@ export default {
     activeUrl () {
       const urls = []
       for (const item of this.items) {
-        urls.push(item.url)
+        // A section header has no page of its own
+        if (item.url) {
+          urls.push(item.url)
+        }
         if (item.submenu) {
           for (const child of item.submenu) {
             urls.push(child.url)
@@ -157,3 +161,23 @@ export default {
   }
 }
 </script>
+
+<style lang="scss">
+  // A heading that splits the menu into sections, for example Administration
+  .menu-header {
+    margin: 1rem 1rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--va-secondary);
+  }
+
+  // The sidebar has no room for the words when it is minimized
+  .va-sidebar--minimized .menu-header {
+    visibility: hidden;
+    height: 0.5rem;
+    margin: 0.5rem 0;
+    overflow: hidden;
+  }
+</style>

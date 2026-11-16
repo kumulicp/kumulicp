@@ -166,14 +166,17 @@ Settings        (organization, domains, email)
 Servers · Updates (with its pending badge) · Backups (only when `app-backups` is on) · Tasks · Logs · Security · Packages · System settings
 ```
 
-- Non-admins never see the Administration section (gate stays `can:admin`).
-- `MenuAccordion` needs a section-header item type and active-state matching that treats `/admin/...` as part of the same menu.
-- The menu cache key (`org_menu:{locale}`) must include admin status and mode. It currently doesn't, and
-  `FastCache` is keyed per-org only, so one admin and one non-admin in the same org would share a menu.
-- App cards and the Apps list get an admin-only **Manage** button leading to the admin app/plan/version pages.
-  The admin app page gets a "View in Discover" link. The two sides link both ways.
-- `/admin/organizations` redirects to the single org's page. Its tabs (apps, backups, logs, tasks, domains) are folded into
-  the main menu items, filtered to the one org, so the admin per-org screens are reused instead of rewritten.
+- Non-admins never see the Administration section (gate stays `can:admin`). Built as `MenuService::unified()`.
+- The menu is the same on every page, so `/admin/...` pages sit in the same sidebar and the longest-matching-url highlighting
+  already covers them. `MenuAccordion` draws an item with `type: header` as a section heading (hidden when the sidebar is minimized).
+- The menu is cached per admin or member (`unified_menu:{locale}:{admin|member}`), on top of the per-organization key `FastCache` already uses.
+- Admin items that would read like an organization item are renamed: the admin Dashboard is **Overview** and the admin Apps is **App catalog**.
+- Discover is a top-level item (single mode only; a multi-tenant install keeps reaching it from the Apps page).
+- The Apps list gets an admin-only **Manage** link to the admin page of that instance (`/admin/organizations/{id}/apps/{app}`),
+  and the admin app pages get a **View in Discover** link. Discover already linked to the admin app page.
+- `/admin/organizations` redirects to the single org's page (done in phase 3). **The Organization item stays in Administration** as the
+  hub for the per-org admin pages (apps, backups, logs, tasks, domains) instead of each tab becoming its own menu item: the per-org
+  tasks and logs largely repeat the server-wide Tasks and Logs items, and the apps are reached through the Manage links.
   Subscription actions on that page are hidden.
 
 ### 6. Installer
@@ -204,7 +207,7 @@ Each phase ships independently and keeps multi-tenant behavior unchanged.
 2. **Unlimited plan.** `SingleTenantBasePlanService`, gate fixes, unlimited semantics. Discover now lists apps for the superaccount. *(done, #185)*
 3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards. *(in progress)* Notification no-ops were left out on purpose: with no billing driver the billing notifications and the invoice job already do nothing, and a single-organization install creates no new organizations. Revisit if one turns out to fire.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards, admin-only install. *(in progress)* Readiness only applies in single mode; multi-tenant Discover still follows the organization's plan. The top-level Discover menu item stays in phase 5.
-5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect.
+5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect. *(in progress)*
 6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.
 7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.
 
