@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property array $settings
  * @property array|null $update_check
  * @property-read Application $application
+ * @property-read Collection<int, AppVersionImage> $images
  * @property-read RepoSecret|null $imageRegistry
  * @property-read RepoSecret|null $helmRepoSecret
  */
@@ -49,6 +50,81 @@ class AppVersion extends Model
                 $version->update_check = null;
             }
         });
+
+        // The charts still read the image from the settings, so the primary image
+        // follows them until the images are edited in their own right
+        static::saved(function (AppVersion $version) {
+            if ($version->wasRecentlyCreated || $version->wasChanged(['name', 'settings', 'image_registry_id'])) {
+                $version->syncLegacyPrimaryImage();
+            }
+        });
+    }
+
+    /**
+     * Every image the version runs, the primary one first.
+     *
+     * @return HasMany<AppVersionImage, $this>
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(AppVersionImage::class, 'app_version_id')
+            ->orderByRaw("CASE role WHEN 'primary' THEN 0 ELSE 1 END")
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    /**
+     * The image the app itself runs, which single-image apps have always had
+     * as their only one. Null when the version has no image configured.
+     */
+    public function primaryImage(): ?AppVersionImage
+    {
+        return $this->images->first(fn (AppVersionImage $image) => $image->isPrimary());
+    }
+
+    /**
+     * Keeps the primary image in step with image_repo_name, image_registry,
+     * image_registry_id and the version's name, which is its tag. A primary
+     * image that was edited as an image (no longer following the version's
+     * name) is left alone.
+     */
+    public function syncLegacyPrimaryImage(): void
+    {
+        $existing = $this->images()->where('role', AppVersionImage::ROLE_PRIMARY)->first();
+
+        if ($existing && ! $existing->tag_from_version_name) {
+            return;
+        }
+
+        $repository = $this->setting('image_repo_name');
+
+        if (! is_string($repository) || trim($repository) === '') {
+            $existing?->delete();
+            $this->unsetRelation('images');
+
+            return;
+        }
+
+        $attributes = [
+            'registry' => $this->setting('image_registry'),
+            'repository' => $repository,
+            'tag' => $this->name,
+            'registry_secret_id' => $this->image_registry_id,
+        ];
+
+        if ($existing) {
+            $existing->update($attributes);
+        } else {
+            $this->images()->create($attributes + [
+                'key' => AppVersionImage::PRIMARY_KEY,
+                'role' => AppVersionImage::ROLE_PRIMARY,
+                'source' => AppVersionImage::SOURCE_OVERRIDE,
+                'values_path' => 'image',
+                'tag_from_version_name' => true,
+            ]);
+        }
+
+        $this->unsetRelation('images');
     }
 
     /**
