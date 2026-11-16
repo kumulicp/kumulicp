@@ -59,7 +59,7 @@ class MenuService
                         'name' => __('labels.announcements'),
                         'url' => '/admin/service/announcements',
                         'icon' => 'fa-bullhorn',
-                        'perm' => $admin,
+                        'perm' => $admin && $multi,
                         'external' => false,
                         'order' => 100,
                     ],

@@ -17,7 +17,7 @@ import DashboardAnnouncements from './components/DashboardAnnouncements.vue'
       <div v-if="nextcloud_folders" class="flex flex-col lg6 xs12">
         <DashboardFoldersOverview v-if="nextcloud_folders" :folders="nextcloud_folders" />
       </div>
-      <div :class="'flex flex-col xs12 '+announcementsWidth">
+      <div v-if="!$page.props.tenancy.single" :class="'flex flex-col xs12 '+announcementsWidth">
         <DashboardAnnouncements :announcements="announcements" />
       </div>
     </div>

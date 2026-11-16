@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::get('countries/{country}/states', 'Account\Locations@states')->where('country', '[A-Za-z]{2}')->name('locations.states');
     });
 
-    Route::prefix('announcements')->group(function () {
+    Route::prefix('announcements')->middleware('tenancy:multi')->group(function () {
         Route::get('{id}', 'Account\Announcements@show')->name('organization.announcements.show');
     });
 
@@ -263,10 +263,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('{plan}/archive', 'Admin\Plans@archive')->name('service.plans.archive');
                 Route::get('{plan}/unarchive', 'Admin\Plans@unarchive')->name('service.plans.unarchive');
             });
-            Route::resource('announcements', 'Admin\Announcements');
-            Route::prefix('announcements')->group(function () {
-                Route::post('{announcement}/archive', 'Admin\Announcements@archive')->name('server.announcements.archive');
-                Route::get('{announcement}/notify', 'Admin\Announcements@notify')->name('server.announcements.notify');
+            Route::middleware('tenancy:multi')->group(function () {
+                Route::resource('announcements', 'Admin\Announcements');
+                Route::prefix('announcements')->group(function () {
+                    Route::post('{announcement}/archive', 'Admin\Announcements@archive')->name('server.announcements.archive');
+                    Route::get('{announcement}/notify', 'Admin\Announcements@notify')->name('server.announcements.notify');
+                });
             });
             Route::prefix('shared-apps')->middleware(['toggle:shared-apps', 'tenancy:multi'])->group(function () {
                 Route::get('activate', 'Admin\SharedApps@activate')->name('service.shared-apps.activate');
