@@ -35,7 +35,7 @@ class ReadinessObserver
         }
 
         // A version or a plan belongs to one app
-        if ($app = Application::find($model->application_id)) {
+        if ($app = Application::find($model->getAttribute('application_id'))) {
             (new ApplicationReadiness($app))->sync();
         }
     }
