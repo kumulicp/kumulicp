@@ -66,7 +66,7 @@ class AdminTicketsTest extends TicketsTestCase
         $note = $ticket->messages()->where('visibility', 'internal')->firstOrFail();
         $this->assertSame('staff', $note->author_kind);
         // A note changes nothing for the customer
-        $this->assertSame(TicketStatus::OPEN, $this->status($ticket));
+        $this->assertSame(TicketStatus::OPEN, $this->statusOf($ticket));
         $this->assertNull($ticket->fresh()->first_response_at);
 
         $this->actingAs($this->admin)->get('/admin/support/tickets/'.$ticket->number)

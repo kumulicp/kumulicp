@@ -170,13 +170,13 @@ class OrganizationTicketsTest extends TicketsTestCase
         $ticket = $this->ticketFor($this->alice);
 
         $this->actingAs($this->alice)->post('/support/tickets/'.$ticket->number.'/close')->assertRedirect();
-        $this->assertSame(TicketStatus::CLOSED, $this->status($ticket));
+        $this->assertSame(TicketStatus::CLOSED, $this->statusOf($ticket));
 
         // A closed ticket cannot be replied to until it is reopened
         $this->actingAs($this->alice)->post('/support/tickets/'.$ticket->number.'/messages', ['body' => '<p>hello?</p>'])->assertForbidden();
 
         $this->actingAs($this->alice)->post('/support/tickets/'.$ticket->number.'/reopen')->assertRedirect();
-        $this->assertSame(TicketStatus::OPEN, $this->status($ticket));
+        $this->assertSame(TicketStatus::OPEN, $this->statusOf($ticket));
     }
 
     public function test_a_member_can_edit_their_message_until_staff_reply(): void
@@ -243,11 +243,11 @@ class OrganizationTicketsTest extends TicketsTestCase
     {
         $ticket = $this->ticketFor($this->alice);
         $this->reply($ticket, $this->admin, '<p>Question for you</p>', staff: true);
-        $this->assertSame(TicketStatus::PENDING_CUSTOMER, $this->status($ticket));
+        $this->assertSame(TicketStatus::PENDING_CUSTOMER, $this->statusOf($ticket));
 
         $this->actingAs($this->alice)->post('/support/tickets/'.$ticket->number.'/messages', ['body' => '<p>Answer</p>'])->assertRedirect();
 
-        $this->assertSame(TicketStatus::PENDING_SUPPORT, $this->status($ticket));
+        $this->assertSame(TicketStatus::PENDING_SUPPORT, $this->statusOf($ticket));
     }
 
     public function test_a_reply_to_a_resolved_ticket_reopens_it(): void
@@ -257,7 +257,7 @@ class OrganizationTicketsTest extends TicketsTestCase
 
         $this->actingAs($this->alice)->post('/support/tickets/'.$ticket->number.'/messages', ['body' => '<p>Still broken</p>'])->assertRedirect();
 
-        $this->assertSame(TicketStatus::PENDING_SUPPORT, $this->status($ticket));
+        $this->assertSame(TicketStatus::PENDING_SUPPORT, $this->statusOf($ticket));
         $this->assertNull($ticket->fresh()->resolved_at);
     }
 

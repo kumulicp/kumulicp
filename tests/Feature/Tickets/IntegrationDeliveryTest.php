@@ -25,7 +25,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         return app(DeliveryRunner::class);
     }
 
-    private function run(TicketDelivery $delivery): ?int
+    private function runDelivery(TicketDelivery $delivery): ?int
     {
         return $this->runner()->run($delivery->id);
     }
@@ -196,7 +196,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->ticketFor($this->alice);
         $delivery = $this->latest();
 
-        $this->assertNull($this->run($delivery));
+        $this->assertNull($this->runDelivery($delivery));
 
         $delivery->refresh();
         $this->assertSame(['delivered', 1, 200], [$delivery->status, $delivery->attempts, $delivery->response_code]);
@@ -210,7 +210,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->assertNotNull($integration->last_success_at);
 
         // Nothing happens if it is run again
-        $this->assertNull($this->run($delivery));
+        $this->assertNull($this->runDelivery($delivery));
         Http::assertSentCount(1);
     }
 
@@ -221,7 +221,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->ticketFor($this->alice);
         $delivery = $this->latest();
 
-        $this->run($delivery);
+        $this->runDelivery($delivery);
 
         Http::assertSent(function (Request $request) use ($delivery) {
             preg_match('/^t=(\d+),v1=([0-9a-f]{64})$/', $request->header('X-KCP-Signature')[0], $m);
@@ -243,7 +243,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
 
         $waits = [];
         for ($i = 0; $i < 8; $i++) {
-            $waits[] = $this->run($delivery);
+            $waits[] = $this->runDelivery($delivery);
         }
 
         $this->assertSame([30, 120, 600, 1800, 3600, 7200, 14400, null], $waits);
@@ -258,7 +258,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->webhook(['ticket.created']);
         $this->ticketFor($this->alice);
 
-        $this->assertSame(90, $this->run($this->latest()));
+        $this->assertSame(90, $this->runDelivery($this->latest()));
     }
 
     public function test_a_refusal_is_not_retried(): void
@@ -268,7 +268,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->ticketFor($this->alice);
         $delivery = $this->latest();
 
-        $this->assertNull($this->run($delivery));
+        $this->assertNull($this->runDelivery($delivery));
 
         $this->assertSame(['failed', 1], [$delivery->fresh()->status, $delivery->fresh()->attempts]);
     }
@@ -285,11 +285,11 @@ class IntegrationDeliveryTest extends TicketsTestCase
 
         // A delivery gives up after 8 tries, so the 10 failures come from two of them
         for ($i = 0; $i < 8; $i++) {
-            $this->run($first);
+            $this->runDelivery($first);
         }
         $this->assertTrue($integration->fresh()->enabled);
-        $this->run($second);
-        $this->run($second);
+        $this->runDelivery($second);
+        $this->runDelivery($second);
 
         $integration->refresh();
         $this->assertFalse($integration->enabled);
@@ -298,7 +298,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         Notification::assertNotSentTo($this->alice, IntegrationDisabled::class);
 
         // Its remaining waiting delivery is stopped rather than retried against a dead endpoint
-        $this->assertNull($this->run($second));
+        $this->assertNull($this->runDelivery($second));
         $this->assertSame('failed', $second->fresh()->status);
     }
 
@@ -309,7 +309,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $delivery = $this->latest();
         $integration->forceFill(['enabled' => false])->save();
 
-        $this->assertNull($this->run($delivery));
+        $this->assertNull($this->runDelivery($delivery));
         $this->assertSame('failed', $delivery->fresh()->status);
         $this->assertStringContainsString('switched off', $delivery->fresh()->error);
 
@@ -317,7 +317,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $integration->forceFill(['enabled' => true])->save();
         $delivery->forceFill(['status' => 'pending', 'attempts' => 0])->save();
 
-        $this->assertNull($this->run($delivery));
+        $this->assertNull($this->runDelivery($delivery));
         $this->assertSame('delivered', $delivery->fresh()->status);
     }
 
@@ -329,9 +329,9 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->reply($ticket, $this->admin, '<p>Hello</p>', staff: true);
         [$first, $second] = TicketDelivery::orderBy('id')->get()->all();
 
-        $this->assertSame(30, $this->run($second));
-        $this->assertNull($this->run($first));
-        $this->assertNull($this->run($second));
+        $this->assertSame(30, $this->runDelivery($second));
+        $this->assertNull($this->runDelivery($first));
+        $this->assertNull($this->runDelivery($second));
         $this->assertSame('delivered', $second->fresh()->status);
     }
 
@@ -368,7 +368,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $integration = $this->github();
         $ticket = $this->ticketFor($this->alice, ['subject' => 'Cannot log in']);
 
-        $this->assertNull($this->run($this->latest()));
+        $this->assertNull($this->runDelivery($this->latest()));
 
         $link = TicketExternalLink::firstOrFail();
         $this->assertSame([$ticket->id, $integration->id, '42', '#42', 'https://github.com/acme/platform/issues/42', 'open'], [
@@ -399,9 +399,9 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $deliveries = TicketDelivery::orderBy('id')->get();
         $this->assertSame(['ticket.created', 'message.created', 'status.changed', 'time.logged'], $deliveries->pluck('event')->all());
 
-        $this->assertSame(30, $this->run($deliveries[1]));
+        $this->assertSame(30, $this->runDelivery($deliveries[1]));
         foreach ($deliveries as $delivery) {
-            $this->assertNull($this->run($delivery));
+            $this->assertNull($this->runDelivery($delivery));
         }
 
         $this->assertSame(['delivered', 'delivered', 'delivered', 'delivered'], TicketDelivery::orderBy('id')->pluck('status')->all());
@@ -427,13 +427,13 @@ class IntegrationDeliveryTest extends TicketsTestCase
         Http::fake(['api.github.com/*' => Http::sequence()->push(['number' => 1, 'html_url' => 'https://x/1'], 201)->push([], 200)]);
         $this->github();
         $ticket = $this->ticketFor($this->alice);
-        $this->run($this->latest());
+        $this->runDelivery($this->latest());
 
         $this->service()->changeStatus($ticket, $this->admin, TicketStatus::RESOLVED, true);
-        $this->run($this->latest());
+        $this->runDelivery($this->latest());
         $this->service()->changeStatus($ticket, $this->admin, TicketStatus::CLOSED, true);
         $closed = $this->latest();
-        $this->run($closed);
+        $this->runDelivery($closed);
 
         // Resolved then closed: GitHub is only told once
         Http::assertSent(fn (Request $r) => $r->method() === 'PATCH');
@@ -452,7 +452,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         Http::fake(['*' => Http::response(['number' => 1, 'html_url' => 'https://x/1'], 201)]);
         $this->github(['auto_create' => true, 'sync_state' => false, 'sync_time' => false]);
         $ticket = $this->ticketFor($this->alice);
-        $this->run($this->latest());
+        $this->runDelivery($this->latest());
         TicketDelivery::query()->delete();
 
         $this->service()->changeStatus($ticket, $this->admin, TicketStatus::RESOLVED, true);
@@ -475,7 +475,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->actingAs($this->admin)->post('/admin/support/tickets/'.$ticket->number.'/issues', ['integration_id' => $integration->id])->assertSessionHas('error');
         $this->assertSame(1, TicketDelivery::where('event', 'issue.create')->count());
 
-        $this->run($delivery);
+        $this->runDelivery($delivery);
         $this->assertSame('#3', TicketExternalLink::first()->external_key);
 
         $this->actingAs($this->admin)->post('/admin/support/tickets/'.$ticket->number.'/issues', ['integration_id' => $integration->id])->assertSessionHas('error');
@@ -505,7 +505,7 @@ class IntegrationDeliveryTest extends TicketsTestCase
         $this->github();
         $gitlab = $this->integration('gitlab', ['token' => 't', 'project' => 'a/b'], ['options' => []]);
         $ticket = $this->ticketFor($this->alice);
-        $this->run($this->latest());
+        $this->runDelivery($this->latest());
 
         $this->actingAs($this->admin)->get('/admin/support/tickets/'.$ticket->number)
             ->assertInertia(fn ($page) => $page

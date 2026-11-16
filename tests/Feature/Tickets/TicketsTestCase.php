@@ -167,7 +167,7 @@ abstract class TicketsTestCase extends TestCase
         return $this->service()->reply($ticket, $author, $body, $staff, $internal, $attachmentIds);
     }
 
-    protected function status(Ticket $ticket): TicketStatus
+    protected function statusOf(Ticket $ticket): TicketStatus
     {
         return $ticket->fresh()->status;
     }
