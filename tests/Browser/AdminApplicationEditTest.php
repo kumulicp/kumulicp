@@ -61,6 +61,7 @@ describe('Admin Application Screenshots', function () {
             ->click('[data-testid="screenshot-remove-confirm-button"]')
             ->assertMissing('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
             ->click('#submit')
+            ->assertSee("{$this->application->name} updated")
             ->assertPathIs("/admin/apps/{$this->application->slug}/edit")
             ->assertMissing('[data-testid="screenshot-thumb-'.$this->screenshotOne->id.'"]')
             ->assertVisible('[data-testid="screenshot-thumb-'.$this->screenshotTwo->id.'"]');
