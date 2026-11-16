@@ -140,7 +140,7 @@ class Tickets extends Controller
         Gate::authorize('manage', Ticket::class);
 
         $ticket = Ticket::where('number', $number)->firstOrFail();
-        $ticket->load(['organization.plan', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'tags', 'mergedInto']);
+        $ticket->load(['organization', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance', 'tags', 'mergedInto']);
         $user = $request->user();
 
         $this->unread->markRead($ticket, $user, true);
