@@ -5,9 +5,12 @@ use App\AppVersion;
 use App\Integrations\Applications\AppProfile;
 use App\Jobs\Applications\AddLdapGroups;
 use App\Organization;
+use App\OrgDomain;
+use App\OrgSubdomain;
 use App\Services\AppInstanceService;
 use App\Services\Application\AppPlanService;
 use App\Support\Facades\Application;
+use App\Support\Facades\Domain;
 use Illuminate\Support\Arr;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
@@ -60,4 +63,27 @@ it('manages applications via service', function () {
 
     expect(Application::plan($app_plan))->toBeInstanceOf(AppPlanService::class);
     expect(count(Application::instances($organization, 'demo_app')))->toBe(1);
+});
+
+it('makes a subdomain created for an activation an app subdomain once the app owns it', function () {
+    $support = new TestSupports;
+    $support->seed();
+
+    $organization = Organization::find(1);
+    Application::register(new DemoAppProfile);
+    $app = Application::initialize('demo_app');
+    $app_plan = AppPlan::factory()->create(['application_id' => $app->id]);
+    $version = AppVersion::factory()->create(['application_id' => $app->id]);
+
+    $parent = OrgDomain::factory()->create(['organization_id' => $organization->id, 'type' => 'managed']);
+
+    // What the Discover activation page does: the subdomain exists before the app does
+    $subdomain = Domain::addSubdomain('erp', $parent);
+    expect($subdomain->type)->toBe('none');
+
+    $app_instance = Application::activate($organization, $app, $version, $app_plan, domain: $subdomain);
+
+    $subdomain = OrgSubdomain::find($subdomain->id);
+    expect($subdomain->type)->toBe('app');
+    expect($subdomain->app_instance_id)->toBe($app_instance->get()->id);
 });

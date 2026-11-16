@@ -445,6 +445,11 @@ class ApplicationService
             $app_instance->primary_domain()->associate($domain);
 
             $domain->app_instance()->associate($app_instance);
+            // A subdomain made for the activation (Discover) has no app yet, so it is 'none'. Once an app
+            // owns it, it has to be an 'app' subdomain or it can't be picked for that app again later.
+            if ($domain->type === 'none') {
+                $domain->type = 'app';
+            }
             $domain->save();
         }
         $app_instance->save();
