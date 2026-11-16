@@ -157,3 +157,31 @@ it('updates the primary domain to an existing connected subdomain', function () 
     $this->demoApp->refresh();
     expect($this->demoApp->primary_domain_id)->toBe($subdomain->id);
 });
+
+it('lets the label change when the current domain is no longer one that can be chosen', function () {
+    $orgDomain = OrgDomain::factory()->create([
+        'organization_id' => $this->demoApp->organization_id,
+        'type' => 'managed',
+    ]);
+
+    // A host the app's domain options (base, subdomains, primary) can no longer offer: it is held by another app
+    $subdomain = OrgSubdomain::factory()->create([
+        'organization_id' => $this->demoApp->organization_id,
+        'parent_domain_id' => $orgDomain->id,
+        'host' => '@',
+        'name' => $orgDomain->name,
+        'type' => 'base',
+        'app_instance_id' => $this->demoApp->id,
+    ]);
+    $this->demoApp->primary_domain_id = $subdomain->id;
+    $this->demoApp->save();
+
+    $this->put('/apps/'.$this->demoApp->id, [
+        'label' => 'Relabelled',
+        'domain' => $subdomain->id,
+    ])->assertSessionHasNoErrors();
+
+    $this->demoApp->refresh();
+    expect($this->demoApp->label)->toBe('Relabelled');
+    expect($this->demoApp->primary_domain_id)->toBe($subdomain->id);
+});

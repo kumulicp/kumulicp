@@ -207,6 +207,13 @@ class Applications extends Controller
             'domain' => [
                 'required',
                 function (string $attribute, mixed $value, \Closure $fail) use ($app) {
+                    // The edit form always posts the app's current domain, even when the domain picker is
+                    // hidden (or the domain is no longer one the app could be given). Keeping the domain it
+                    // already has is not a choice, so it must not block saving other fields like the label.
+                    if ($this->isCurrentDomain($app, $value)) {
+                        return;
+                    }
+
                     if ($value === 0 && ! $app->application->hasDomainOption('base')) {
                         $fail(__('organization.domain.denied.type'));
 
@@ -302,6 +309,18 @@ class Applications extends Controller
         }
 
         return redirect('/apps/'.$app->id.'/edit')->with('success', __('organization.app.updated', ['app' => $app->label]));
+    }
+
+    /**
+     * Whether the submitted domain is the subdomain the app already has.
+     */
+    private function isCurrentDomain(AppInstance $app, mixed $value): bool
+    {
+        if (! is_int($value) && ! (is_string($value) && ctype_digit($value))) {
+            return false;
+        }
+
+        return $app->primary_domain_id !== null && (int) $value === (int) $app->primary_domain_id;
     }
 
     public function reactivate(Request $request, AppInstance $app)
