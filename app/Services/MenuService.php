@@ -355,15 +355,16 @@ class MenuService
             'order' => 900,
         ];
 
-        // These would otherwise read the same as the organization's own Dashboard and Apps
+        // These would otherwise read the same as the organization's own Dashboard and Apps. They are
+        // found by url because build() hands back the admin items without their keys.
         $renamed = [
-            'dashboard' => __('labels.overview'),
-            'apps' => __('labels.app_catalog'),
+            '/admin' => __('labels.overview'),
+            '/admin/apps' => __('labels.app_catalog'),
         ];
 
-        foreach ($this->build('admin') as $key => $item) {
-            if (is_string($key) && isset($renamed[$key])) {
-                $item['name'] = $renamed[$key];
+        foreach ($this->build('admin') as $item) {
+            if (isset($renamed[$item['url'] ?? ''])) {
+                $item['name'] = $renamed[$item['url']];
             }
 
             // After the header, whatever order the item has in the admin menu
