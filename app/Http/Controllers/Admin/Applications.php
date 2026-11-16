@@ -14,7 +14,6 @@ use App\Services\Application\ApplicationReadiness;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Tenancy;
 use App\Tag;
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
