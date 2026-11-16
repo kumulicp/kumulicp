@@ -334,8 +334,80 @@ class ApplicationService
             $application->enabled = false;
             $application->save();
 
+            $this->provisionDefaults($application);
+
             return $application;
         }
+    }
+
+    /**
+     * Gives an app that is set up for the first time what it needs to be usable:
+     * the version its profile recommends, as the active (default) one, and a
+     * default plan with the profile's default configuration. Profiles that
+     * recommend no version get neither, and are set up by hand as before.
+     *
+     * The app stays disabled: an admin still decides when to offer it.
+     */
+    private function provisionDefaults(Application $application): void
+    {
+        $recommendations = $this->profile($application->slug)->recommendations();
+        $version_name = Arr::get($recommendations, 'image_version');
+
+        if (! $version_name) {
+            return;
+        }
+
+        $version = new AppVersion;
+        $version->application_id = $application->id;
+        $version->name = $version_name;
+        $version->status = 'active';
+        $version->admin_path = Arr::get($recommendations, 'admin_path');
+        $version->roles = [];
+        $version->settings = array_filter([
+            'chart_name' => Arr::get($recommendations, 'helm_chart_name'),
+            'chart_version' => Arr::get($recommendations, 'helm_chart_version'),
+            'helm_repo_name' => Arr::get($recommendations, 'helm_chart_repo'),
+            'image_repo_name' => Arr::get($recommendations, 'image_repo'),
+            'image_registry' => Arr::get($recommendations, 'image_registry'),
+        ], fn ($value) => $value !== null);
+        $version->save();
+
+        $plan = new AppPlan;
+        $plan->application_id = $application->id;
+        $plan->name = __('admin.applications.plans.first_plan_name');
+        $plan->description = __('admin.applications.plans.first_plan_description');
+        $plan->features = [];
+        $plan->display_order = (int) AppPlan::max('display_order') + 1;
+        $plan->is_default = true;
+        $plan->settings = [
+            'server_type' => 'separate',
+            'base' => [],
+            'standard' => [],
+            'basic' => [],
+            'storage' => [],
+            'application' => [],
+            'configurations' => $this->defaultConfigurations($application),
+        ];
+        $plan->save();
+    }
+
+    /**
+     * The profile's configurations at their default values. Passwords have no
+     * default worth storing: they are set by the admin.
+     *
+     * @return array<string, mixed>
+     */
+    private function defaultConfigurations(Application $application): array
+    {
+        $configs = [];
+
+        foreach ($this->profile($application->slug)->configurations() as $name => $option) {
+            if (Arr::get($option, 'type') !== 'password' && array_key_exists('default', $option)) {
+                $configs[$name] = $option['default'];
+            }
+        }
+
+        return $configs;
     }
 
     public function activate(Organization $organization, Application $application, AppVersion $version, AppPlan $plan, ?AppInstance $parent_app = null, ?string $label = null, ?OrgSubdomain $domain = null, bool $with_configurations = true)

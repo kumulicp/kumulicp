@@ -57,3 +57,29 @@ it('labels every source', function () {
         expect($source->label())->not->toBe("admin.applications.sources.{$source->value}");
     }
 });
+
+it('sets up the recommended version as the default and a default plan when an app is first loaded', function () {
+    $app = app(ApplicationService::class)->initialize('nextcloud');
+
+    $version = $app->versions()->sole();
+    expect($version->name)->toBe('33.0.1');
+    expect($version->status)->toBe('active');
+    expect($version->setting('chart_name'))->toBe('nextcloud');
+    expect($version->setting('helm_repo_name'))->toBe('https://nextcloud.github.io/helm/');
+    expect($version->setting('chart_version'))->toBe('9.0.5');
+    expect($version->setting('image_repo_name'))->toBe('library/nextcloud');
+    expect($app->enabled)->toBeFalse();
+
+    $plan = $app->plans()->sole();
+    expect($plan->is_default)->toBeTrue();
+    expect($app->default_plan()->id)->toBe($plan->id);
+    expect($plan->setting('configurations.redis.enabled'))->toBeTrue();
+    expect($plan->setting('configurations'))->toBeArray()->not->toBeEmpty();
+});
+
+it('leaves an app without a recommended version without a version or plan', function () {
+    $app = app(ApplicationService::class)->initialize('generic');
+
+    expect($app->versions()->count())->toBe(0);
+    expect($app->plans()->count())->toBe(0);
+});
