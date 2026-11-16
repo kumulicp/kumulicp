@@ -82,7 +82,7 @@ class PayloadBuilder
             'impact' => $ticket->impact->value,
             'category' => $ticket->category?->name,
             'tags' => $ticket->tags->pluck('name')->values()->all(),
-            'organization' => ['name' => $ticket->organization?->name],
+            'organization' => ['name' => $ticket->organization->name],
             'created_at' => $ticket->created_at?->toIso8601String(),
         ];
 

@@ -302,7 +302,7 @@ class TicketIntegrations extends Controller
 
     private function form(?TicketIntegration $integration, TicketIntegrationDriver $driver)
     {
-        $config = $integration?->config ?? [];
+        $config = $integration->config ?? [];
 
         return inertia('Admin/Tickets/IntegrationEdit', [
             'integration' => $integration ? [
@@ -344,7 +344,7 @@ class TicketIntegrations extends Controller
             'breadcrumbs' => [
                 ['label' => __('tickets.admin.title'), 'url' => '/admin/support/tickets'],
                 ['label' => __('tickets.integrations.title'), 'url' => '/admin/support/integrations'],
-                ['label' => $integration?->name ?? $driver->label()],
+                ['label' => $integration->name ?? $driver->label()],
             ],
         ]);
     }
@@ -436,8 +436,9 @@ class TicketIntegrations extends Controller
 
             if ($field['type'] === 'secret') {
                 if ($blank && empty($existing[$key]) && ($field['generated'] ?? false)) {
-                    $config[$key] = Str::random(40);
-                    $revealed[$key] = $config[$key];
+                    $secret = Str::random(40);
+                    $config[$key] = $secret;
+                    $revealed[$key] = $secret;
                 } elseif (! $blank) {
                     $config[$key] = $value;
                 }

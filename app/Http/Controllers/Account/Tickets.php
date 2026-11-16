@@ -13,7 +13,6 @@ use App\Http\Resources\Tickets\OrgMessageResource;
 use App\Http\Resources\Tickets\OrgTicketResource;
 use App\Services\Tickets\TicketPreferences;
 use App\Services\Tickets\TicketService;
-use App\Services\Tickets\TicketStaff;
 use App\Services\Tickets\TicketSubscriptions;
 use App\Services\Tickets\TicketTimeline;
 use App\Services\Tickets\TicketUnread;
@@ -40,7 +39,6 @@ class Tickets extends Controller
 {
     public function __construct(
         private TicketService $tickets,
-        private TicketStaff $staff,
         private TicketUnread $unread,
         private TicketVersions $versions,
         private TicketPreferences $preferences,

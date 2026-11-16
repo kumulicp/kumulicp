@@ -147,7 +147,7 @@ class OutboundHttp
     {
         $header = $response->header('Retry-After');
 
-        if ($header === '' || $header === null) {
+        if ($header === '') {
             return null;
         }
 

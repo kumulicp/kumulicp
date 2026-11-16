@@ -7,6 +7,7 @@ use App\Ticket;
 use App\TicketCategory;
 use App\TicketSlaPolicy;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * Service level targets for tickets.
@@ -64,8 +65,8 @@ class TicketSla
         $resolution = $policy->target($priority, 'resolution');
 
         $ticket->sla_policy_id = $policy->id;
-        $ticket->sla_first_response_due_at = $first ? $calendar->addMinutes($start, $first) : null;
-        $ticket->sla_resolution_due_at = $resolution ? $calendar->addMinutes($start, $resolution + $ticket->sla_paused_minutes) : null;
+        $ticket->sla_first_response_due_at = $first ? Carbon::instance($calendar->addMinutes($start, $first)) : null;
+        $ticket->sla_resolution_due_at = $resolution ? Carbon::instance($calendar->addMinutes($start, $resolution + $ticket->sla_paused_minutes)) : null;
     }
 
     /**
@@ -96,7 +97,7 @@ class TicketSla
                 $ticket->sla_paused_at = null;
 
                 $resolution = $policy->target($ticket->priority->value, 'resolution');
-                $ticket->sla_resolution_due_at = $resolution ? $calendar->addMinutes($ticket->created_at, $resolution + $ticket->sla_paused_minutes) : null;
+                $ticket->sla_resolution_due_at = $resolution ? Carbon::instance($calendar->addMinutes($ticket->created_at, $resolution + $ticket->sla_paused_minutes)) : null;
             } else {
                 $ticket->sla_paused_at = null;
             }

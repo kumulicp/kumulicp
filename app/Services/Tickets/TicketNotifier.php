@@ -31,14 +31,14 @@ class TicketNotifier
         $author = $ticket->requester;
 
         // Confirmation to the people on the customer side, including whoever opened it
-        $this->send($this->customerSide($ticket, null), new TicketActivity($ticket, 'created', false, ['name' => $author?->name ?? '']));
+        $this->send($this->customerSide($ticket, null), new TicketActivity($ticket, 'created', false, ['name' => $author->name ?? '']));
 
-        $this->toSupport($ticket, 'created', ['name' => $author?->name ?? '']);
+        $this->toSupport($ticket, 'created', ['name' => $author->name ?? '']);
 
         // Rollout copy to the legacy support address
         $support_email = Settings::get('support_email');
         if ($support_email && config('tickets.copy_support_email')) {
-            Notification::route('mail', $support_email)->notify(new TicketActivity($ticket, 'created', true, ['name' => $author?->name ?? '']));
+            Notification::route('mail', $support_email)->notify(new TicketActivity($ticket, 'created', true, ['name' => $author->name ?? '']));
         }
     }
 
@@ -46,7 +46,7 @@ class TicketNotifier
     {
         $author = $message->author;
         $context = [
-            'name' => $author?->name ?? ($message->author_kind === TicketMessage::KIND_SYSTEM ? __('tickets.system_label') : ''),
+            'name' => $author->name ?? ($message->author_kind === TicketMessage::KIND_SYSTEM ? __('tickets.system_label') : ''),
             'excerpt' => Str::limit($message->body_text, 300),
         ];
 
@@ -78,7 +78,7 @@ class TicketNotifier
 
     public function statusChanged(Ticket $ticket, TicketStatus $from, ?User $actor): void
     {
-        $context = ['status' => $ticket->status->label(), 'name' => $actor?->name ?? ''];
+        $context = ['status' => $ticket->status->label(), 'name' => $actor->name ?? ''];
 
         $this->send($this->customerSide($ticket, $actor), new TicketActivity($ticket, 'status', false, $context));
         $this->send(
@@ -98,7 +98,7 @@ class TicketNotifier
 
         $this->send(
             collect([$assignee]),
-            new TicketActivity($ticket, 'assigned', $side === 'support', ['name' => $actor?->name ?? '', 'side' => $side]),
+            new TicketActivity($ticket, 'assigned', $side === 'support', ['name' => $actor->name ?? '', 'side' => $side]),
         );
     }
 

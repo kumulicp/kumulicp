@@ -35,13 +35,14 @@ class DeliveryRunner
      */
     public function run(int $deliveryId): ?int
     {
-        $delivery = TicketDelivery::with('integration')->find($deliveryId);
+        $delivery = TicketDelivery::find($deliveryId);
 
         if (! $delivery || $delivery->status !== TicketDelivery::PENDING) {
             return null;
         }
 
-        $integration = $delivery->integration;
+        // Looked up rather than loaded with the delivery: the integration can be deleted in between
+        $integration = TicketIntegration::find($delivery->integration_id);
 
         if (! $integration) {
             $this->giveUp($delivery, 'The integration was removed.');

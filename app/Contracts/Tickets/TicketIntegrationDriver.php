@@ -25,11 +25,12 @@ interface TicketIntegrationDriver
      * The settings this driver needs. The admin form is built from this, so a
      * new driver needs no front-end work. Each field is an array with:
      *   key, type (text|url|secret|select|number|toggle), label, and optionally
-     *   help, required, default, options (for select), pattern (regex).
+     *   help, required, default, options (for select), pattern (regex), generated
+     *   (a secret made for the admin when it is missing).
      * Fields of type "secret" are encrypted, never sent back to the browser,
      * and only replaced when a new value is submitted.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{key: string, type: string, label: string, help?: string, required?: bool, default?: mixed, options?: list<array{value: string, label?: string}>, pattern?: string, generated?: bool}>
      */
     public function configSchema(): array;
 

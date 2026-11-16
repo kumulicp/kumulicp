@@ -50,9 +50,9 @@ class TicketReports
             'csat' => $this->csat($created),
             'per_day' => $this->perDay($created, $resolved, $from, $to),
             'by_priority' => $this->group($created, fn (Ticket $ticket) => $ticket->priority->value),
-            'by_category' => $this->group($created, fn (Ticket $ticket) => $ticket->category?->name ?? '-'),
-            'by_assignee' => $this->group($created, fn (Ticket $ticket) => $ticket->supportAssignee?->name ?? '-'),
-            'by_organization' => $this->group($created, fn (Ticket $ticket) => $ticket->organization?->name ?? '-', 10),
+            'by_category' => $this->group($created, fn (Ticket $ticket) => $ticket->category->name ?? '-'),
+            'by_assignee' => $this->group($created, fn (Ticket $ticket) => $ticket->supportAssignee->name ?? '-'),
+            'by_organization' => $this->group($created, fn (Ticket $ticket) => $ticket->organization->name, 10),
             'time' => $this->time($from, $to),
         ];
     }
@@ -188,8 +188,8 @@ class TicketReports
         return [
             'total' => $entries->sum('minutes'),
             'billable' => $entries->where('billable', true)->sum('minutes'),
-            'by_organization' => $sum(fn (?Ticket $ticket) => $ticket?->organization?->name ?? '-'),
-            'by_category' => $sum(fn (?Ticket $ticket) => $ticket?->category?->name ?? '-'),
+            'by_organization' => $sum(fn (?Ticket $ticket) => $ticket?->organization->name ?? '-'),
+            'by_category' => $sum(fn (?Ticket $ticket) => $ticket?->category->name ?? '-'),
         ];
     }
 }

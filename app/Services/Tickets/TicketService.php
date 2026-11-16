@@ -22,6 +22,7 @@ use App\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -421,7 +422,7 @@ class TicketService
             $entry->minutes = $minutes;
             $entry->note = $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 500) : null;
             $entry->billable = $billable;
-            $entry->worked_at = $workedAt ?: now()->toDateString();
+            $entry->worked_at = $workedAt ? Carbon::parse($workedAt) : now();
             $entry->save();
 
             $this->record($ticket, 'time_logged', $actor, ['minutes' => $minutes, 'billable' => $billable], true);

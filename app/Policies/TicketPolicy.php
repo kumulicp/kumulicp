@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Enums\TicketStatus;
 use App\Services\Tickets\TicketService;
-use App\Services\Tickets\TicketStaff;
 use App\Ticket;
 use App\TicketMessage;
 use App\User;
@@ -18,7 +17,7 @@ use Illuminate\Support\Facades\Gate;
  */
 class TicketPolicy
 {
-    public function __construct(private TicketStaff $staff, private TicketService $service) {}
+    public function __construct(private TicketService $service) {}
 
     /**
      * Staff access to the admin side of tickets.

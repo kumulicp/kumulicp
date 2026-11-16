@@ -60,7 +60,7 @@ class TicketExporter
                 $entries = $time->get($ticket->id, collect());
 
                 yield array_map([$this, 'cell'], [
-                    $ticket->reference, $ticket->subject, $ticket->organization?->name, $ticket->requester?->name,
+                    $ticket->reference, $ticket->subject, $ticket->organization->name, $ticket->requester?->name,
                     $ticket->type->value, $ticket->status->value, $ticket->priority->value, $ticket->impact->value,
                     $ticket->category?->name, $ticket->supportAssignee?->name,
                     $ticket->created_at?->toIso8601String(), $ticket->first_response_at?->toIso8601String(),
@@ -108,9 +108,9 @@ class TicketExporter
                 'satisfaction' => $ticket->csat_score,
                 'satisfaction_comment' => $ticket->csat_comment,
             ])->all(),
-            'messages_written' => TicketMessage::withTrashed()->with('ticket:id,number')->where('author_id', $user->id)->orderBy('id')->get()
+            'messages_written' => TicketMessage::withTrashed()->with(['ticket' => fn ($query) => $query->withTrashed()->select('id', 'number')])->where('author_id', $user->id)->orderBy('id')->get()
                 ->map(fn (TicketMessage $message) => [
-                    'ticket' => $message->ticket ? config('tickets.prefix').'-'.$message->ticket->number : null,
+                    'ticket' => config('tickets.prefix').'-'.$message->ticket->number,
                     'visibility' => $message->visibility,
                     'written_at' => $message->created_at?->toIso8601String(),
                     'text' => $message->redacted_at ? null : $message->body_text,

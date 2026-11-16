@@ -40,7 +40,7 @@ final class BusinessCalendar
     {
         $this->continuous = empty($hours);
         $this->timezone = $hours['timezone'] ?? 'UTC';
-        $this->days = array_values($hours['days'] ?? [1, 2, 3, 4, 5]);
+        $this->days = $hours['days'] ?? [1, 2, 3, 4, 5];
         $this->start = $hours['start'] ?? '09:00';
         $this->end = $hours['end'] ?? '17:00';
         $this->holidays = array_fill_keys($hours['holidays'] ?? [], true);

@@ -433,31 +433,27 @@ class Tickets extends Controller
         $organization = $ticket->organization;
 
         return [
-            'organization' => $organization ? [
+            'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,
                 'status' => $organization->status,
                 'plan' => $organization->plan?->name,
                 'url' => '/admin/organizations/'.$organization->id,
-            ] : null,
+            ],
             'requester' => $ticket->requester ? [
                 'name' => $ticket->requester->name,
                 'email' => $ticket->requester->email,
             ] : null,
-            'apps' => $organization
-                ? $organization->app_instances()->orderBy('label')->limit(25)->get(['id', 'label', 'status'])
-                    ->map(fn ($app) => ['id' => $app->id, 'label' => $app->label, 'status' => $app->status])->all()
-                : [],
-            'tasks' => $organization
-                ? $organization->tasks()->latest('id')->limit(5)->get()
-                    ->map(fn ($task) => [
-                        'id' => $task->id,
-                        'name' => $task->action_slug ?: $task->action_group,
-                        'status' => $task->status->value,
-                        'error' => $task->error_message ? Str::limit($task->error_message, 160) : null,
-                        'created_at' => $task->created_at?->toIso8601String(),
-                    ])->all()
-                : [],
+            'apps' => $organization->app_instances()->orderBy('label')->limit(25)->get(['id', 'label', 'status'])
+                ->map(fn ($app) => ['id' => $app->id, 'label' => $app->label, 'status' => $app->status])->all(),
+            'tasks' => $organization->tasks()->latest('id')->limit(5)->get()
+                ->map(fn ($task) => [
+                    'id' => $task->id,
+                    'name' => $task->action_slug ?: $task->action_group,
+                    'status' => $task->status->value,
+                    'error' => $task->error_message ? Str::limit($task->error_message, 160) : null,
+                    'created_at' => $task->created_at?->toIso8601String(),
+                ])->all(),
         ];
     }
 
@@ -496,7 +492,7 @@ class Tickets extends Controller
         return [
             'time_entries' => $entries->map(fn (TicketTimeEntry $entry) => [
                 'id' => $entry->id,
-                'by' => $entry->user?->name ?? __('tickets.deleted_user'),
+                'by' => $entry->user->name ?? __('tickets.deleted_user'),
                 'minutes' => $entry->minutes,
                 'duration' => DurationParser::format($entry->minutes),
                 'note' => $entry->note,
@@ -510,7 +506,7 @@ class Tickets extends Controller
             ],
             'links' => $links->map(fn ($link) => [
                 'id' => $link->id,
-                'integration' => $link->integration?->name,
+                'integration' => $link->integration->name,
                 'key' => $link->external_key,
                 'url' => $link->external_url,
                 'state' => $link->external_state,
@@ -525,7 +521,7 @@ class Tickets extends Controller
             'deliveries' => TicketDelivery::with('integration')->where('ticket_id', $ticket->id)->latest('id')->limit(8)->get()
                 ->map(fn (TicketDelivery $delivery) => [
                     'id' => $delivery->id,
-                    'integration' => $delivery->integration?->name,
+                    'integration' => $delivery->integration->name,
                     'event' => $delivery->event,
                     'status' => $delivery->status,
                     'attempts' => $delivery->attempts,

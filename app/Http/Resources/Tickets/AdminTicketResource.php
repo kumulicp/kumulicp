@@ -33,7 +33,7 @@ class AdminTicketResource extends JsonResource
             'category_id' => $this->category_id,
             'category' => $this->category?->name,
             'app' => $this->appInstance?->label,
-            'organization' => $this->organization ? ['id' => $this->organization->id, 'name' => $this->organization->name] : null,
+            'organization' => ['id' => $this->organization->id, 'name' => $this->organization->name],
             'requester' => $this->person($this->requester),
             'customer_assignee' => $this->person($this->customerAssignee),
             'support_assignee' => $this->person($this->supportAssignee),
