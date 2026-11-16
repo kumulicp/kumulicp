@@ -160,14 +160,6 @@ class VersionTestingTest extends TestCase
         $this->assertTrue($this->candidate->refresh()->canBeEnabled());
     }
 
-    public function test_the_application_enable_path_is_gated_too()
-    {
-        $response = $this->actingAs($this->admin)->post("/admin/apps/{$this->application->slug}/enable", ['version' => $this->candidate->id]);
-
-        $response->assertSessionHas('error');
-        $this->assertSame('deactivated', $this->candidate->refresh()->status);
-    }
-
     // ─── The runner ──────────────────────────────────────────────────────────
 
     public function test_a_run_tests_every_plan_for_a_fresh_install_and_an_upgrade()

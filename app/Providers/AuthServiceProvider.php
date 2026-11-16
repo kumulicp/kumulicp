@@ -7,6 +7,7 @@ use App\Application;
 use App\AppPlan;
 use App\Plan;
 use App\Services\AppInstance\PendingAppChanges;
+use App\Services\Application\ApplicationReadiness;
 use App\Services\Organization\JointSubscriptionService;
 use App\Services\SubscriptionService;
 use App\Support\AccountManager\UserManager;
@@ -170,8 +171,20 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         /* APPS */
-        Gate::define('activate-app', function (User $user, Application $app) {
+        // Only an admin installs, removes or brings back apps in a single-organization install
+        $admin_only_in_single = fn (User $user) => ! Tenancy::isSingleOrganization($user->organization) || Gate::allows('admin');
+
+        Gate::define('activate-app', function (User $user, Application $app) use ($admin_only_in_single) {
             $organization = $user->organization;
+
+            if (! $admin_only_in_single($user)) {
+                return Response::deny(__('organization.app.denied.admin_only'), 'admin_required');
+            }
+
+            // A single-organization install lists every app, ready or not
+            if (Tenancy::isSingleOrganization($organization) && ! (new ApplicationReadiness($app))->isReady()) {
+                return Response::deny(__('organization.app.denied.not_ready'), 'app_not_ready');
+            }
             $subscription = $organization->suborganizations()->exists() ? new JointSubscriptionService($organization) : Subscription::access();
             $base_plan = Subscription::base();
 
@@ -226,16 +239,18 @@ class AuthServiceProvider extends ServiceProvider
                 : Response::deny(__('organization.plan.denied.change'));
         });
 
-        Gate::define('deactivate-app', function (User $user, AppInstance $app_instance) {
-            return $user->organization->status === 'active'
+        Gate::define('deactivate-app', function (User $user, AppInstance $app_instance) use ($admin_only_in_single) {
+            return $admin_only_in_single($user)
+                && $user->organization->status === 'active'
                 && $app_instance->status === 'active'
                 && $app_instance->belongsToOrganization($user->organization)
                 ? Response::allow()
                 : Response::deny(__('organization.app.denied.deactivation', ['app' => $app_instance->label]));
         });
 
-        Gate::define('reactivate-app', function (User $user, AppInstance $app_instance) {
-            return $user->organization->status === 'active'
+        Gate::define('reactivate-app', function (User $user, AppInstance $app_instance) use ($admin_only_in_single) {
+            return $admin_only_in_single($user)
+                && $user->organization->status === 'active'
                 && $app_instance->status === 'deactivating'
                 && $app_instance->belongsToOrganization($user->organization)
                 ? Response::allow()

@@ -9,6 +9,8 @@ return [
         'deactivated' => ':app se desactivará el :date',
         'reactivated' => '¡:app reactivada!',
         'denied' => [
+            'admin_only' => 'Solo los administradores pueden instalar aplicaciones',
+            'not_ready' => 'Esta aplicación no se puede instalar hasta que se haya configurado',
             'activation' => ':app no está disponible para activar',
             'exists' => 'La aplicación no existe',
             'parent_app' => 'Debes seleccionar una instancia de :app antes de poder continuar',
@@ -179,5 +181,28 @@ return [
         'exists' => 'La organización no existe',
         'subscription' => 'No hay una suscripción activa',
         'payment_method_required' => 'Se requiere un método de pago predeterminado',
+    ],
+    'readiness' => [
+        'version_missing' => [
+            'message' => ':app todavía no tiene ninguna versión',
+            'action' => 'Añadir una versión',
+        ],
+        'version_inactive' => [
+            'message' => ':app no tiene ninguna versión habilitada. La versión :version aún necesita superar o saltarse sus pruebas y después habilitarse',
+            'action' => 'Abrir la versión :version',
+        ],
+        'plan_missing' => [
+            'message' => ':app no tiene ningún plan. Un plan define los servidores, las funciones y los ajustes con los que se instala',
+            'action' => 'Añadir un plan',
+            'create_default' => 'Crear un plan predeterminado',
+        ],
+        'plan_unedited' => [
+            'message' => 'El plan ":plan" nunca se ha modificado. Casi siempre hace falta un cambio o dos, como su servidor o sus ajustes, para que funcione en tu servidor',
+            'action' => 'Revisar el plan',
+        ],
+        'servers' => [
+            'message' => 'No se ha configurado ningún servidor donde ejecutar aplicaciones',
+            'action' => 'Añadir un servidor',
+        ],
     ],
 ];

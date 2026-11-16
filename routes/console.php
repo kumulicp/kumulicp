@@ -13,6 +13,7 @@ use App\Console\Calls\NotifyBillingManagers;
 use App\Console\Calls\RecurringBackups;
 use App\Console\Calls\ScanUpdateDrift;
 use App\Console\Calls\ScheduledOrganizationDeletionCheck;
+use App\Console\Calls\SyncApplicationReadiness;
 use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use App\Services\VersionTesting\VersionTestRunner;
@@ -51,6 +52,7 @@ Schedule::call(new DeactivatedAppInstanceCheck)->name('deactivated-app-instance-
 Schedule::call(new ApplyPendingAppChanges)->name('apply-pending-app-changes')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckUnavailableAppInstances)->name('check-unavailable-apps')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new CheckVersionUpdates)->daily()->at('03:00');
+Schedule::call(new SyncApplicationReadiness)->name('sync-application-readiness')->hourly()->withoutOverlapping(15)->onOneServer();
 Schedule::call(new ScanUpdateDrift)->name('update-drift-scan')->daily()->at('03:30')->withoutOverlapping(60)->onOneServer();
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');

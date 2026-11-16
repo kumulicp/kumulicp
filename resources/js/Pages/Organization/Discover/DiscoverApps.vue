@@ -34,6 +34,18 @@ import { Link } from '@inertiajs/vue3'
               <!-- text column-->
                 <div class="flex flex-col xs8 lg:pl-3 sm:pl-8 pr-0 py-0 items-start">
                     <div class="pb-3" style="flex:none">
+                      <va-chip
+                        v-if="app.readiness && app.readiness.status !== 'ready'"
+                        :id="'readiness-'+app.slug"
+                        size="small"
+                        :color="app.readiness.status === 'blocked' ? 'danger' : 'warning'"
+                        class="mb-2"
+                      >
+                        <template v-if="app.readiness.status === 'blocked'">
+                          {{ $t('organization.discover.readiness.needsSetup') }} · {{ $t('organization.discover.readiness.issueCount', { count: app.readiness.issues }) }}
+                        </template>
+                        <template v-else>{{ $t('organization.discover.readiness.reviewSettings') }}</template>
+                      </va-chip>
                       <h5 class="mb-3">{{ app.category }}</h5>
                       <p>{{ app.description }}</p>
                     </div>
@@ -57,7 +69,8 @@ import { Link } from '@inertiajs/vue3'
 export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
-    apps: Object
+    apps: Object,
+    can: Object
   }
 }
 </script>

@@ -73,6 +73,8 @@ return [
     'none_org_type' => 'Individual',
     'superaccount' => 'Super Account',
     'enabled' => 'Enabled',
+    'ready' => 'Ready',
+    'not_ready' => 'Not ready',
     'package_manager' => 'Plugin Manager',
     'thanks' => 'Thanks',
 ];

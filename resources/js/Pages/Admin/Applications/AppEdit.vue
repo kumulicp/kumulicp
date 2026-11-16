@@ -4,47 +4,17 @@ import AppsLayout from './AppsLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import TinymceEditor from '@/components/FormInputs/TinymceEditor.vue'
 import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
+import AppReadiness from '@/components/App/AppReadiness.vue'
 import { useForm } from '@inertiajs/vue3'
 </script>
 <template>
   <Head>
     <title>{{ $t('admin.apps.editPageTitle') }} - Control Panel</title>
   </Head>
-  <div class="row justify-center">
-    <va-button class="" @click="showEnableDisable = !showEnableDisable">{{ app.toggle.label }}</va-button>
+  <div class="row justify-center mb-3">
+    <va-chip id="app-status" :color="app.enabled ? 'success' : 'danger'">{{ app.status_label }}</va-chip>
   </div>
-  <va-modal v-model="showEnableDisable"
-    :title="app.toggle.label+' '+$t('admin.apps.appWord')"
-    hide-default-actions
-    >
-    <template #default>
-        <div v-if="app.toggle.state == 'disable'">
-          {{ $t('admin.apps.disableWarning') }}
-        </div>
-        <div v-if="app.toggle.state == 'enable'">
-          <div v-if="!app.default_version.id">
-            <p class="mb-3">{{ $t('admin.apps.noDefaultVersion') }}</p>
-            <va-select v-model="toggle.version"
-              :options="app.versions"
-              value-by="id"
-              text-by="version"
-              class="mb-3"
-              immediateValidation
-              :error="$page.props.errors.version"
-              :error-messages="$page.props.errors.version"
-            />
-          </div>
-          {{ $t('admin.apps.enableWarning') }}
-        </div>
-      </template>
-      <template #footer="{ ok }">
-        <va-button color="textInverted" :disabled="form.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-        <va-button @click="toggle.post('/admin/apps/'+app.slug+'/'+app.toggle.state, {
-            onSuccess: () => showEnableDisable = false
-          })"
-          :disabled="form.processing" class="mr-2 mb-2">{{ app.toggle.label }}</va-button>
-    </template>
-  </va-modal>
+  <app-readiness :readiness="readiness" />
   <form @submit.prevent="form.post('/admin/apps/'+app.slug)">
     <AdminSettings>
       <template #name>{{ $t('admin.apps.aboutApp') }}</template>
@@ -188,11 +158,11 @@ export default {
   props: {
     app: Object,
     apps: Object,
+    readiness: Object,
     errors: Object
   },
   data () {
     return {
-      showEnableDisable: false,
       form: useForm({
         id: this.app.id,
         name: this.app.name,
@@ -206,9 +176,6 @@ export default {
         can_update_domain: this.app.can_update_domain,
         screenshots: [],
         remove_screenshots: []
-      }),
-      toggle: useForm({
-        version: ''
       }),
       access_types: [
           { value: 'minimal', text: this.$t('admin.apps.accessTypeMinimal') },

@@ -158,14 +158,45 @@ class Plans extends Controller
 
         $server_type = $validated['server_type'] ?? 'separate';
 
+        $plan = $this->newPlan($app, $request->name, $request->description, $server_type);
+
+        if ($server_type === 'shared') {
+            $this->connectToSharedApp($plan, AppInstance::findOrFail($validated['shared_app']));
+        }
+
+        $plan->save();
+
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
+    }
+
+    /**
+     * A first plan in one click, for an app that has none, to be set up on its edit page.
+     */
+    public function storeDefault(Application $app)
+    {
+        if ($app->plans()->visible()->where('archive', false)->exists()) {
+            return redirect("/admin/apps/{$app->slug}/plans")->with('error', __('admin.applications.plans.already_has_plan'));
+        }
+
+        $plan = $this->newPlan($app, __('admin.applications.plans.first_plan_name'), __('admin.applications.plans.first_plan_description'));
+        $plan->save();
+
+        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}/edit")->with('success', __('admin.applications.plans.added'));
+    }
+
+    /**
+     * An unsaved plan at the end of the display order, with every pricing component present but empty.
+     */
+    private function newPlan(Application $app, string $name, string $description, string $server_type = 'separate'): AppPlan
+    {
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
         $display_order = $order_num ? $order_num->display_order : 0;
 
         $plan = new AppPlan;
-        $plan->name = $request->name;
+        $plan->name = $name;
         $plan->application_id = $app->id;
-        $plan->description = $request->description;
+        $plan->description = $description;
         $plan->features = [];
         $plan->display_order = $display_order + 1;
         $plan->settings = [
@@ -177,13 +208,7 @@ class Plans extends Controller
             'application' => [],
         ];
 
-        if ($server_type === 'shared') {
-            $this->connectToSharedApp($plan, AppInstance::findOrFail($validated['shared_app']));
-        }
-
-        $plan->save();
-
-        return redirect("/admin/apps/{$app->slug}/plans/{$plan->id}")->with('success', __('admin.applications.plans.added'));
+        return $plan;
     }
 
     public function clone(Request $request, Application $app, AppPlan $plan)
