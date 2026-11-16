@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as SupportCollection;
 
 /**
  * @property int $id
@@ -80,6 +81,81 @@ class AppVersion extends Model
     public function primaryImage(): ?AppVersionImage
     {
         return $this->images->first(fn (AppVersionImage $image) => $image->isPrimary());
+    }
+
+    /**
+     * The images Kumulicp writes into the chart's values besides the primary one,
+     * which each chart still sets itself. Images the chart ships on its own and
+     * jobs' images are not written.
+     *
+     * @return SupportCollection<int, AppVersionImage>
+     */
+    public function extraImages(): SupportCollection
+    {
+        return $this->images
+            ->filter(fn (AppVersionImage $image) => $image->role === AppVersionImage::ROLE_COMPONENT && $image->source === AppVersionImage::SOURCE_OVERRIDE)
+            ->values();
+    }
+
+    /**
+     * Every registry login the version's images need to be pulled, once each:
+     * the version's own and those of its other images.
+     *
+     * @return SupportCollection<int, RepoSecret>
+     */
+    public function imageRegistrySecrets(): SupportCollection
+    {
+        $this->loadMissing('images.registrySecret');
+
+        $secrets = collect();
+
+        if ($this->requiresImageRegistryAuth()) {
+            $secrets->push($this->imageRegistry);
+        }
+
+        foreach ($this->images as $image) {
+            if ($image->requiresAuth()) {
+                $secrets->push($image->registrySecret);
+            }
+        }
+
+        return $secrets->unique('id')->values();
+    }
+
+    /**
+     * Gives this version the images of another, apart from the primary one,
+     * which follows the settings this version was given.
+     */
+    public function copyImagesFrom(AppVersion $source): void
+    {
+        $fillable = (new AppVersionImage)->getFillable();
+
+        foreach ($source->images()->where('role', '!=', AppVersionImage::ROLE_PRIMARY)->get() as $image) {
+            $this->images()->updateOrCreate(['key' => $image->key], $image->only($fillable));
+        }
+
+        $this->unsetRelation('images');
+    }
+
+    /**
+     * Adds the images a profile recommends besides the primary one (the
+     * 'images' of its recommendations).
+     *
+     * @param  array<string, mixed>  $recommendations
+     */
+    public function addRecommendedImages(array $recommendations): void
+    {
+        $fillable = (new AppVersionImage)->getFillable();
+
+        foreach ((array) Arr::get($recommendations, 'images', []) as $position => $image) {
+            $this->images()->updateOrCreate(['key' => $image['key']], Arr::only($image, $fillable) + [
+                'role' => AppVersionImage::ROLE_COMPONENT,
+                'source' => AppVersionImage::SOURCE_OVERRIDE,
+                'position' => $position + 1,
+            ]);
+        }
+
+        $this->unsetRelation('images');
     }
 
     /**

@@ -68,6 +68,40 @@ abstract class HelmChart extends Chart
             Arr::set($values, $key, $app_instance->configuration($config['name']));
         }
 
+        // Last, so a configuration that happens to name the same Helm path (a plan
+        // seeds every default) can't put back an image other than the one that was tested
+        return $this->applyImageOverrides($values);
+    }
+
+    // Writes the version's images besides the primary one (which each chart sets
+    // itself) at the values path they were given: `<path>.registry`, `.repository`,
+    // `.tag` and, when there is one, `.digest`. Only what the image has is written,
+    // as a null would make Helm drop the chart's own default, and what else the
+    // chart keeps under that path (pullPolicy, ...) is left as it is.
+    public function applyImageOverrides(array $values): array
+    {
+        $version = $this->app_instance->version;
+
+        if (! $version) {
+            return $values;
+        }
+
+        foreach ($version->extraImages() as $image) {
+            $path = trim($image->values_path, '. ');
+
+            if ($path === '') {
+                continue;
+            }
+
+            Arr::set($values, $path.'.repository', $image->repository);
+
+            foreach (['registry' => $image->effectiveRegistry(), 'tag' => $image->effectiveTag(), 'digest' => $image->digest] as $key => $value) {
+                if ($value) {
+                    Arr::set($values, $path.'.'.$key, $value);
+                }
+            }
+        }
+
         return $values;
     }
 

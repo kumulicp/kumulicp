@@ -1,6 +1,7 @@
 <?php
 
 use App\AppVersion;
+use App\AppVersionImage;
 use App\Console\Calls\CheckVersionUpdates;
 use App\RepoSecret;
 use App\Support\Facades\Application;
@@ -93,6 +94,28 @@ it('creates a version with previous_version — copies settings, roles and admin
     expect($version->image_registry_id)->toBe($image_registry->id);
     expect($version->roles['order'])->toBe($roles);
     expect($version->roles['default_admin_groups'])->toBe([$roles[0]]);
+});
+
+it('creates a version with previous_version — copies its other images', function () {
+    $source = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '1.0',
+        'settings' => ['image_repo_name' => 'library/demo', 'image_registry' => 'docker.io'],
+    ]);
+    AppVersionImage::factory()->create(['app_version_id' => $source->id, 'key' => 'redis', 'repository' => 'library/redis', 'tag' => '8.0.1', 'position' => 1]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '2.0',
+        'copy_from' => 'previous_version',
+        'copy_version' => $source->id,
+    ])->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/2.0");
+
+    $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '2.0')->firstOrFail();
+
+    // The primary image is made from the settings it was given, the rest are copied
+    expect($version->images->pluck('key')->all())->toBe(['primary', 'redis'])
+        ->and($version->primaryImage()->effectiveTag())->toBe('2.0')
+        ->and($version->images->last()->tag)->toBe('8.0.1');
 });
 
 // ─── Store validation ─────────────────────────────────────────────────────────

@@ -82,6 +82,29 @@ class DemoSeeder extends Seeder
             ],
         ]);
 
+        // Inserted as rows, so the versions' images are too (the primary image is the one in their settings)
+        $image = fn (int $version_id, string $key, string $repository, string $tag, bool $primary, string $path = 'image') => [
+            'app_version_id' => $version_id,
+            'key' => $key,
+            'role' => $primary ? 'primary' : 'component',
+            'source' => 'override',
+            'registry' => 'docker.io',
+            'repository' => $repository,
+            'tag' => $tag,
+            'values_path' => $path,
+            'tag_from_version_name' => $primary,
+            'update_policy' => 'track',
+            'position' => $primary ? 0 : 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        DB::table('app_version_images')->insert([
+            $image(1, 'primary', 'nextcloud', '33.0.1', true),
+            $image(1, 'imaginary', 'nextcloud/aio-imaginary', '20261109_101109', false, 'imaginary.image'),
+            $image(2, 'primary', 'bitnami/wordpress', '6.8.2-debian-12-r5', true),
+        ]);
+
         DB::table('app_roles')->insert([
             [
                 'id' => 1,

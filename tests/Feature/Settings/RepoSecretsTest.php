@@ -1,6 +1,8 @@
 <?php
 
+use App\Application;
 use App\AppVersion;
+use App\AppVersionImage;
 use App\RepoSecret;
 use App\User;
 use Tests\Support\TestSupports;
@@ -159,4 +161,48 @@ it('rejects mass migrating between mismatched secret types', function () {
     ]);
 
     $response->assertSessionHas('error');
+});
+
+it('moves the secret of a version\'s images with the version when mass migrating', function () {
+    $this->support->activateDemoApp();
+
+    $from = RepoSecret::factory()->create();
+    $to = RepoSecret::factory()->create();
+
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->support->demo_app->id,
+        'image_registry_id' => $from->id,
+        'settings' => ['image_repo_name' => 'library/demo'],
+    ]);
+    $component = AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'redis', 'registry_secret_id' => $from->id]);
+
+    $this->post('/admin/settings/repo-secrets/mass-migrate', ['from_id' => $from->id, 'to_id' => $to->id])
+        ->assertSessionDoesntHaveErrors();
+
+    expect($component->fresh()->registry_secret_id)->toBe($to->id)
+        ->and($version->fresh()->primaryImage()->registry_secret_id)->toBe($to->id);
+});
+
+it('prevents deleting a repo secret in use by an image of an app instance\'s version', function () {
+    $this->support->activateDemoApp();
+
+    $repo_secret = RepoSecret::factory()->create();
+
+    $app_instance = $this->support->demo_app->instances()->first();
+    AppVersionImage::factory()->create(['app_version_id' => $app_instance->version_id, 'key' => 'redis', 'registry_secret_id' => $repo_secret->id]);
+
+    $this->delete('/admin/settings/repo-secrets/'.$repo_secret->id)->assertSessionHas('error');
+
+    expect(RepoSecret::find($repo_secret->id))->not->toBeNull();
+});
+
+it('lets an image go on without its secret when the secret is deleted', function () {
+    $repo_secret = RepoSecret::factory()->create();
+    $version = AppVersion::factory()->create(['application_id' => Application::factory()->create()->id]);
+    $image = AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'redis', 'registry_secret_id' => $repo_secret->id]);
+
+    $this->delete('/admin/settings/repo-secrets/'.$repo_secret->id)->assertSessionDoesntHaveErrors();
+
+    expect(RepoSecret::find($repo_secret->id))->toBeNull()
+        ->and($image->fresh()->registry_secret_id)->toBeNull();
 });

@@ -2,9 +2,11 @@
 
 use App\AppPlan;
 use App\AppVersion;
+use App\AppVersionImage;
 use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 use App\Organization;
 use App\OrgServer;
+use App\RepoSecret;
 use App\Server;
 use App\Support\Facades\Application;
 
@@ -68,7 +70,8 @@ it('gives the app its own database password rather than the organization secret'
     expect($values['externalDatabase']['password'])->toBe('instance-database-secret');
 });
 
-function nextcloudChartValues(array $configurations = []): array
+// The chart for a new Nextcloud instance. Images are given to the version before it is activated.
+function nextcloudChart(array $configurations = [], array $images = []): NextcloudChart
 {
     $organization = Organization::factory()->create();
 
@@ -85,6 +88,10 @@ function nextcloudChartValues(array $configurations = []): array
             'image_registry' => 'docker.io',
         ],
     ]);
+
+    foreach ($images as $image) {
+        AppVersionImage::factory()->create($image + ['app_version_id' => $version->id]);
+    }
 
     $app_plan = AppPlan::factory()->create([
         'application_id' => $app->id,
@@ -104,7 +111,12 @@ function nextcloudChartValues(array $configurations = []): array
     $app_instance->web_server_id = $web_server->id;
     $app_instance->save();
 
-    return (new NextcloudChart($organization, $app_instance->fresh()))->values();
+    return new NextcloudChart($organization, $app_instance->fresh());
+}
+
+function nextcloudChartValues(array $configurations = []): array
+{
+    return nextcloudChart($configurations)->values();
 }
 
 it('leaves the chart security contexts and port 80 alone, so it matches the official chart', function () {
@@ -144,4 +156,84 @@ it('sets resources where the chart reads them, so every pod has requests and a m
         expect($resources['requests'])->toHaveKeys(['cpu', 'memory'])
             ->and($resources['limits'])->toHaveKey('memory');
     }
+});
+
+// ─── Images of the version ───────────────────────────────────────────────────
+
+function imaginaryImage(array $attributes = []): array
+{
+    return $attributes + [
+        'key' => 'imaginary',
+        'registry' => 'ghcr.io',
+        'repository' => 'nextcloud/aio-imaginary',
+        'tag' => '20270101_000000',
+        'values_path' => 'imaginary.image',
+    ];
+}
+
+it('runs imaginary from the image the version has for it', function () {
+    $values = nextcloudChart(['imaginary-enabled' => true], [imaginaryImage()])->valuesWithAdditionalConfigs();
+
+    expect($values['imaginary']['image'])->toMatchArray([
+        'registry' => 'ghcr.io',
+        'repository' => 'nextcloud/aio-imaginary',
+        'tag' => '20270101_000000',
+    ]);
+});
+
+it('does not let the imaginary configurations put back an image other than the version\'s', function () {
+    $values = nextcloudChart(
+        ['imaginary-enabled' => true, 'imaginary-image-tag' => 'from-the-plan'],
+        [imaginaryImage()]
+    )->valuesWithAdditionalConfigs();
+
+    expect($values['imaginary']['image']['tag'])->toBe('20270101_000000');
+});
+
+it('falls back to the imaginary configurations for a version without an image for it', function () {
+    $values = nextcloudChart(['imaginary-enabled' => true])->valuesWithAdditionalConfigs();
+
+    expect($values['imaginary']['image'])->toMatchArray(['registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary']);
+});
+
+it('writes other images beside what the chart keeps under their path', function () {
+    $values = nextcloudChart(['metrics-enabled' => true], [[
+        'key' => 'exporter',
+        'registry' => null,
+        'repository' => 'xperimental/nextcloud-exporter',
+        'tag' => '0.8.0',
+        'digest' => 'sha256:abc123',
+        'values_path' => 'metrics.image',
+    ]])->valuesWithAdditionalConfigs();
+
+    expect($values['metrics']['image'])->toBe([
+        'repository' => 'xperimental/nextcloud-exporter',
+        'tag' => '0.8.0',
+        'digest' => 'sha256:abc123',
+    ])->and($values['metrics']['resources'])->not->toBeEmpty();
+});
+
+it('leaves the primary image to the chart and does not write images the chart ships or jobs run', function () {
+    $values = nextcloudChart([], [
+        imaginaryImage(['key' => 'shipped', 'source' => 'chart', 'values_path' => 'shipped.image']),
+        imaginaryImage(['key' => 'migrate', 'role' => 'job', 'values_path' => 'migrate.image']),
+    ])->valuesWithAdditionalConfigs();
+
+    expect($values)->not->toHaveKeys(['shipped', 'migrate'])
+        ->and($values['image'])->toMatchArray(['repository' => 'library/nextcloud', 'tag' => '1.0']);
+});
+
+it('pulls every image with the registry login it needs, once each', function () {
+    $first = RepoSecret::factory()->create(['registry' => 'ghcr.io', 'username' => 'bot', 'password' => 'pw']);
+    $second = RepoSecret::factory()->create(['registry' => 'quay.io', 'username' => 'bot', 'password' => 'pw']);
+    $anonymous = RepoSecret::factory()->create(['registry' => 'docker.io']);
+
+    $chart = nextcloudChart([], [
+        imaginaryImage(['key' => 'one', 'registry_secret_id' => $first->id, 'position' => 1]),
+        imaginaryImage(['key' => 'two', 'registry_secret_id' => $second->id, 'position' => 2]),
+        imaginaryImage(['key' => 'three', 'registry_secret_id' => $first->id, 'position' => 3]),
+        imaginaryImage(['key' => 'four', 'registry_secret_id' => $anonymous->id, 'position' => 4]),
+    ]);
+
+    expect($chart->imagePullSecrets())->toBe([$first->k8sSecretName(), $second->k8sSecretName()]);
 });

@@ -72,6 +72,8 @@ class Versions extends Controller
             'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
         ]);
         $image_registry_id = null;
+        $copy_version = null;
+        $recommendations = [];
         if (in_array($validatedData['copy_from'], ['previous_version', 'update']) && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
@@ -109,6 +111,13 @@ class Versions extends Controller
         $app_version->admin_path = $admin_path;
         $app_version->image_registry_id = $image_registry_id;
         $app_version->save();
+
+        // The images besides the primary one, which follows the settings
+        if ($copy_version) {
+            $app_version->copyImagesFrom($copy_version);
+        } elseif ($recommendations) {
+            $app_version->addRecommendedImages($recommendations);
+        }
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
     }
