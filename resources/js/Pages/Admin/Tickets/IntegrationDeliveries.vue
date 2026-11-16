@@ -1,15 +1,21 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
+import TicketHeader from '@/components/tickets/TicketHeader.vue'
 </script>
 <template>
   <Head>
     <title>{{ $t('tickets.integrations.deliveries') }} - {{ integration.name }} - Control Panel</title>
   </Head>
+  <TicketHeader :title="$t('tickets.integrations.deliveriesFor', { name: integration.name })">
+    <template #actions>
+      <Link :href="`/admin/support/integrations/${integration.id}/edit`"><va-button preset="secondary" border-color="primary" icon="arrow_back">{{ integration.name }}</va-button></Link>
+    </template>
+  </TicketHeader>
+
   <va-card class="mb-4">
-    <va-card-title>{{ $t('tickets.integrations.deliveriesFor', { name: integration.name }) }}</va-card-title>
     <va-card-content>
-      <div class="mb-3" style="max-width: 16em">
+      <div class="t-period">
         <va-select
           v-model="statusFilter"
           :label="$t('tickets.integrations.filterStatus')"
@@ -20,8 +26,9 @@ import { Link } from '@inertiajs/vue3'
         />
       </div>
 
-      <va-scroll-container horizontal>
-        <table v-if="deliveries.data.length" class="va-table va-table--hoverable">
+      <p v-if="!deliveries.data.length" class="text-center py-4 mt-3">{{ $t('tickets.integrations.noDeliveries') }}</p>
+      <div v-else class="t-list mt-4">
+        <table class="va-table va-table--hoverable t-table t-list__table">
           <thead>
             <tr>
               <th>{{ $t('tickets.integrations.when') }}</th>
@@ -36,7 +43,7 @@ import { Link } from '@inertiajs/vue3'
           <tbody>
             <template v-for="delivery in deliveries.data" :key="delivery.id">
               <tr>
-                <td>{{ formatDate(delivery.created_at) }}</td>
+                <td class="t-muted">{{ formatDate(delivery.created_at) }}</td>
                 <td><Link v-if="delivery.ticket" :href="delivery.ticket.url">{{ delivery.ticket.reference }}</Link></td>
                 <td>{{ delivery.event }}</td>
                 <td><va-chip size="small" :color="colors[delivery.status]">{{ $t(`tickets.integrations.statuses.${delivery.status}`) }}</va-chip></td>
@@ -63,12 +70,41 @@ import { Link } from '@inertiajs/vue3'
             </template>
           </tbody>
         </table>
-        <p v-else>{{ $t('tickets.integrations.noDeliveries') }}</p>
-      </va-scroll-container>
+
+        <ul class="t-list__cards">
+          <li v-for="delivery in deliveries.data" :key="delivery.id" class="t-ticket">
+            <div class="t-ticket__top">
+              <span class="t-ticket__ref">{{ delivery.event }}</span>
+              <va-chip size="small" :color="colors[delivery.status]">{{ $t(`tickets.integrations.statuses.${delivery.status}`) }}</va-chip>
+            </div>
+            <div class="t-ticket__meta t-muted">
+              <span>{{ formatDate(delivery.created_at) }}</span>
+              <Link v-if="delivery.ticket" :href="delivery.ticket.url">{{ delivery.ticket.reference }}</Link>
+              <span>{{ $t('tickets.integrations.attempts') }}: {{ delivery.attempts }}</span>
+            </div>
+            <div v-if="delivery.response_code || delivery.error" class="delivery-result mt-1">
+              <span v-if="delivery.response_code">{{ delivery.response_code }}</span>
+              <span v-if="delivery.error" class="delivery-error"> {{ delivery.error }}</span>
+            </div>
+            <div class="t-actions mt-1">
+              <va-button size="small" preset="plain" @click="toggle(delivery)">{{ expanded === delivery.id ? $t('tickets.integrations.hide') : $t('tickets.integrations.payload') }}</va-button>
+              <va-button v-if="delivery.status === 'failed'" size="small" preset="plain" color="warning" @click="redeliver(delivery)">{{ $t('tickets.integrations.redeliver') }}</va-button>
+            </div>
+            <div v-if="expanded === delivery.id" class="mt-2">
+              <div class="mb-1"><strong>{{ $t('tickets.integrations.sent') }}</strong></div>
+              <pre class="delivery-payload">{{ payload ?? $t('tickets.integrations.loading') }}</pre>
+              <template v-if="delivery.response">
+                <div class="mb-1 mt-2"><strong>{{ $t('tickets.integrations.answer') }}</strong></div>
+                <pre class="delivery-payload">{{ delivery.response }}</pre>
+              </template>
+            </div>
+          </li>
+        </ul>
+      </div>
 
       <va-pagination
         v-if="deliveries.last_page > 1"
-        class="mt-3 mb-3 justify-center"
+        class="mt-4 justify-center"
         :model-value="deliveries.current_page"
         :pages="deliveries.last_page"
         direction-links
@@ -80,6 +116,7 @@ import { Link } from '@inertiajs/vue3'
 <script>
 import { router } from '@inertiajs/vue3'
 import axios from 'axios'
+import { formatDate } from '@/composables/ticketFormat'
 
 export default {
   layout: (h, page) => h(AppLayout, [page]),
@@ -128,9 +165,7 @@ export default {
     redeliver (delivery) {
       router.post(`${this.base()}/${delivery.id}/redeliver`, {}, { preserveScroll: true })
     },
-    formatDate (value) {
-      return value ? new Date(value).toLocaleString() : ''
-    },
+    formatDate,
   },
 }
 </script>
@@ -150,7 +185,7 @@ export default {
     padding: 0.75em;
     background: var(--va-background-secondary);
     border-radius: 4px;
-    font-size: 0.85em;
+    font-size: 0.85rem;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }

@@ -95,26 +95,25 @@ function formatSizeOf (attachment) {
     @drop.prevent="drop"
   >
     <div class="attachment-picker__actions">
-      <va-button size="small" color="secondary" icon="attach_file" @click="input.click()">{{ $t('tickets.attachments.add') }}</va-button>
-      <span class="attachment-picker__hint ml-2">{{ $t('tickets.attachments.hint', { files: maxFiles, size: maxFileMb }) }}</span>
+      <va-button size="small" preset="secondary" border-color="primary" icon="attach_file" @click="input.click()">{{ $t('tickets.attachments.add') }}</va-button>
+      <span class="attachment-picker__hint">{{ $t('tickets.attachments.hint', { files: maxFiles, size: maxFileMb }) }}</span>
       <input ref="input" type="file" multiple class="attachment-picker__input" @change="pick">
     </div>
 
     <ul v-if="modelValue.length || uploading.length" class="attachment-picker__list">
       <li v-for="attachment in modelValue" :key="attachment.id" class="attachment-picker__item">
-        <va-icon :name="attachment.is_image ? 'image' : 'description'" size="small" class="mr-1" />
+        <va-icon :name="attachment.is_image ? 'image' : 'description'" size="small" />
         <span class="attachment-picker__name">{{ attachment.name }}</span>
-        <span class="attachment-picker__size ml-2">{{ formatSizeOf(attachment) }}</span>
-        <span v-if="attachment.inline" class="attachment-picker__size ml-2">({{ $t('tickets.attachments.inText') }})</span>
-        <va-button preset="plain" size="small" color="danger" class="ml-2" :aria-label="$t('common.remove')" @click="remove(attachment)">{{ $t('common.remove') }}</va-button>
+        <span class="attachment-picker__size">{{ formatSizeOf(attachment) }}<template v-if="attachment.inline"> · {{ $t('tickets.attachments.inText') }}</template></span>
+        <va-button preset="plain" size="small" color="danger" :aria-label="$t('common.remove')" @click="remove(attachment)">{{ $t('common.remove') }}</va-button>
       </li>
       <li v-for="item in uploading" :key="item.key" class="attachment-picker__item">
         <span class="attachment-picker__name">{{ item.name }}</span>
         <template v-if="item.error">
-          <span class="attachment-picker__error ml-2">{{ item.error }}</span>
-          <va-button preset="plain" size="small" class="ml-2" @click="dismiss(item)">{{ $t('common.close') }}</va-button>
+          <span class="attachment-picker__error">{{ item.error }}</span>
+          <va-button preset="plain" size="small" @click="dismiss(item)">{{ $t('common.close') }}</va-button>
         </template>
-        <va-progress-bar v-else :model-value="item.progress" size="small" class="ml-2 attachment-picker__progress" />
+        <va-progress-bar v-else :model-value="item.progress" size="small" class="attachment-picker__progress" />
       </li>
     </ul>
   </div>
@@ -122,20 +121,34 @@ function formatSizeOf (attachment) {
 <style lang="scss">
   .attachment-picker {
     border: 1px dashed var(--va-background-border);
-    border-radius: 4px;
-    padding: 0.75em;
+    border-radius: 6px;
+    padding: 0.75rem;
 
     &--dragging {
       border-color: var(--va-primary);
       background: color-mix(in srgb, var(--va-primary) 6%, transparent);
     }
 
+    &__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.75rem;
+    }
+
     &__input { display: none; }
-    &__hint, &__size { color: var(--va-secondary); font-size: 0.85em; }
-    &__error { color: var(--va-danger); font-size: 0.9em; }
-    &__list { list-style: none; padding: 0; margin: 0.5em 0 0; }
-    &__item { display: flex; align-items: center; padding: 0.25em 0; }
-    &__name { overflow-wrap: anywhere; }
-    &__progress { width: 8em; }
+    &__hint, &__size { color: var(--va-text-secondary); font-size: 0.8rem; }
+    &__error { color: var(--va-danger); font-size: 0.9rem; }
+    &__list { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+    &__item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.15rem 0.5rem;
+      padding: 0.35rem 0;
+      border-top: 1px solid var(--va-background-border);
+    }
+    &__name { min-width: 0; flex: 1 1 8rem; overflow-wrap: anywhere; }
+    &__progress { width: 8rem; }
   }
 </style>

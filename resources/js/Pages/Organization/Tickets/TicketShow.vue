@@ -2,6 +2,9 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
 import TicketBadge from '@/components/tickets/TicketBadge.vue'
+import TicketHeader from '@/components/tickets/TicketHeader.vue'
+import TicketPanel from '@/components/tickets/TicketPanel.vue'
+import StarRating from '@/components/tickets/StarRating.vue'
 import TicketEditor from '@/components/tickets/TicketEditor.vue'
 import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
 import TicketThread from '@/components/tickets/TicketThread.vue'
@@ -11,88 +14,92 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
   <Head>
     <title>{{ ticket.reference }} {{ ticket.subject }} - Control Panel</title>
   </Head>
-  <div class="row">
-    <div class="flex flex-col xs12 lg8">
-      <va-card class="mb-4">
-        <va-card-title>
-          <div class="flex justify-between items-center w-full">
-            <span>{{ ticket.reference }}: {{ ticket.subject }}</span>
-            <TicketBadge :value="ticket.status.value" :label="ticket.status.label" />
-          </div>
-        </va-card-title>
-        <va-card-content>
-          <TicketThread :messages="messages" :messages-url="`${ticket.url}/messages`" :edit-window-minutes="edit_window_minutes" />
-        </va-card-content>
-      </va-card>
+  <TicketHeader :title="ticket.subject" :eyebrow="ticket.reference">
+    <template #meta>
+      <TicketBadge :value="ticket.status.value" :label="ticket.status.label" />
+      <span class="t-muted">{{ ticket.type.label }}</span>
+    </template>
+    <template #actions>
+      <va-button v-if="can.close" preset="secondary" border-color="danger" color="danger" @click="close">{{ $t('tickets.closeTicket') }}</va-button>
+      <va-button v-if="can.reopen" @click="reopen">{{ $t('tickets.reopenTicket') }}</va-button>
+    </template>
+  </TicketHeader>
 
-      <va-alert v-if="ticket.merged_into" color="info" class="mb-4" id="mergedNotice">
+  <div class="t-page t-page--sidebar">
+    <div class="t-col">
+      <va-alert v-if="ticket.merged_into" color="info" id="mergedNotice">
         {{ $t('tickets.merge.mergedInto') }}
-        <Link :href="ticket.merged_into.url" class="ml-1">{{ ticket.merged_into.reference }}</Link>
+        <Link :href="ticket.merged_into.url">{{ ticket.merged_into.reference }}</Link>
       </va-alert>
 
-      <va-card v-if="can.rate" id="ratingCard" class="mb-4">
+      <TicketThread :messages="messages" :messages-url="`${ticket.url}/messages`" :edit-window-minutes="edit_window_minutes" />
+
+      <va-card v-if="can.rate" id="ratingCard">
         <va-card-title>{{ $t('tickets.rating.title') }}</va-card-title>
         <va-card-content>
-          <p class="mb-2">{{ ticket.rating ? $t('tickets.rating.thanks') : $t('tickets.rating.prompt') }}</p>
-          <form @submit.prevent="sendRating">
-            <va-rating v-model="ratingForm.score" :max="5" color="warning" clearable class="mb-2" />
-            <div v-if="ratingForm.errors.score" class="va-message-list__message text-danger">{{ ratingForm.errors.score }}</div>
+          <p class="mb-3">{{ ticket.rating ? $t('tickets.rating.thanks') : $t('tickets.rating.prompt') }}</p>
+          <form class="t-stack" @submit.prevent="sendRating">
+            <div>
+              <StarRating v-model="ratingForm.score" />
+              <div v-if="ratingForm.errors.score" class="va-message-list__message text-danger">{{ ratingForm.errors.score }}</div>
+            </div>
             <va-textarea
               v-model="ratingForm.comment"
               :label="$t('tickets.rating.comment')"
               :max-length="1000"
               :min-rows="2"
               autosize
-              class="mb-2"
               :error="!!ratingForm.errors.comment"
               :error-messages="ratingForm.errors.comment"
             />
-            <va-button type="submit" id="sendRating" size="small" :disabled="ratingForm.processing || !ratingForm.score">{{ $t('tickets.rating.send') }}</va-button>
+            <div class="t-actions t-actions--stack">
+              <va-button type="submit" id="sendRating" :disabled="ratingForm.processing || !ratingForm.score">{{ $t('tickets.rating.send') }}</va-button>
+            </div>
           </form>
         </va-card-content>
       </va-card>
 
-      <va-card v-if="can.reply" class="mb-4">
+      <va-card v-if="can.reply">
         <va-card-title>{{ $t('tickets.reply') }}</va-card-title>
         <va-card-content>
           <form @submit.prevent="sendReply">
             <TicketEditor ref="editor" v-model="replyForm.body" :draft-key="`ticket-draft:${ticket.number}`" :error="replyForm.errors.body" @uploaded="imageUploaded" />
             <AttachmentPicker v-model="attachments" class="mt-3" :max-files="attachment_limits.files" :max-file-mb="attachment_limits.file_mb" />
             <div v-if="replyForm.errors.attachment_ids" class="va-message-list__message text-danger mt-1">{{ replyForm.errors.attachment_ids }}</div>
-            <va-button type="submit" id="sendReply" class="mt-3" :disabled="replyForm.processing">{{ $t('tickets.sendReply') }}</va-button>
+            <div class="t-actions t-actions--stack mt-3">
+              <va-button type="submit" id="sendReply" :disabled="replyForm.processing">{{ $t('tickets.sendReply') }}</va-button>
+            </div>
           </form>
         </va-card-content>
       </va-card>
-      <va-alert v-else-if="!ticket.merged_into" color="info" class="mb-4">{{ $t('tickets.closedNotice') }}</va-alert>
+      <va-alert v-else-if="!ticket.merged_into" color="info">{{ $t('tickets.closedNotice') }}</va-alert>
     </div>
 
-    <div class="flex flex-col xs12 lg4">
-      <va-card class="mb-4">
-        <va-card-title>{{ $t('tickets.details') }}</va-card-title>
-        <va-card-content>
-          <dl class="ticket-details">
-            <dt>{{ $t('tickets.type') }}</dt>
-            <dd>{{ ticket.type.label }}</dd>
-            <dt>{{ $t('tickets.impact') }}</dt>
-            <dd>{{ ticket.impact.label }}</dd>
-            <template v-if="ticket.category">
-              <dt>{{ $t('tickets.category') }}</dt>
-              <dd>{{ ticket.category }}</dd>
-            </template>
-            <template v-if="ticket.app">
-              <dt>{{ $t('tickets.relatedApp') }}</dt>
-              <dd>{{ ticket.app }}</dd>
-            </template>
-            <dt>{{ $t('tickets.requester') }}</dt>
-            <dd>{{ ticket.requester?.name || $t('tickets.deletedUser') }}</dd>
-            <dt>{{ $t('tickets.supportAssignee') }}</dt>
-            <dd id="supportAssignee">{{ ticket.support_assignee?.name || $t('tickets.unassigned') }}</dd>
-          </dl>
+    <div class="t-col">
+      <TicketPanel :title="$t('tickets.details')" open>
+        <dl class="t-details">
+          <dt>{{ $t('tickets.type') }}</dt>
+          <dd>{{ ticket.type.label }}</dd>
+          <dt>{{ $t('tickets.impact') }}</dt>
+          <dd>{{ ticket.impact.label }}</dd>
+          <template v-if="ticket.category">
+            <dt>{{ $t('tickets.category') }}</dt>
+            <dd>{{ ticket.category }}</dd>
+          </template>
+          <template v-if="ticket.app">
+            <dt>{{ $t('tickets.relatedApp') }}</dt>
+            <dd>{{ ticket.app }}</dd>
+          </template>
+          <dt>{{ $t('tickets.requester') }}</dt>
+          <dd>{{ ticket.requester?.name || $t('tickets.deletedUser') }}</dd>
+          <dt>{{ $t('tickets.supportAssignee') }}</dt>
+          <dd id="supportAssignee">{{ ticket.support_assignee?.name || $t('tickets.unassigned') }}</dd>
+        </dl>
 
+        <div class="t-stack mt-4">
           <va-select
             v-model="customerAssignee"
             id="customerAssignee"
-            class="mt-3"
             :label="$t('tickets.customerAssignee')"
             :options="members"
             value-by="id"
@@ -104,7 +111,6 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
           <va-select
             v-model="watchers"
             id="watchers"
-            class="mt-3"
             :label="$t('tickets.watchers.label')"
             :messages="$t('tickets.watchers.help')"
             :options="members"
@@ -117,34 +123,28 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
           <va-switch
             v-model="mutedLocal"
             id="mute"
-            class="mt-3"
             :label="$t('tickets.mute.label')"
             @update:model-value="saveMuted"
           />
 
-          <div class="mt-3">
-            <va-button v-if="can.edit_details" size="small" color="secondary" @click="showEdit = true">{{ $t('tickets.editDetails') }}</va-button>
-            <va-button v-if="can.close" size="small" color="danger" class="ml-2" @click="close">{{ $t('tickets.closeTicket') }}</va-button>
-            <va-button v-if="can.reopen" size="small" class="ml-2" @click="reopen">{{ $t('tickets.reopenTicket') }}</va-button>
+          <div v-if="can.edit_details" class="t-actions t-actions--stack">
+            <va-button preset="secondary" border-color="primary" @click="showEdit = true">{{ $t('tickets.editDetails') }}</va-button>
           </div>
-        </va-card-content>
-      </va-card>
+        </div>
+      </TicketPanel>
 
-      <va-card class="mb-4">
-        <va-card-title>{{ $t('tickets.activity') }}</va-card-title>
-        <va-card-content>
-          <TicketTimeline :events="timeline" />
-        </va-card-content>
-      </va-card>
+      <TicketPanel :title="$t('tickets.activity')">
+        <TicketTimeline :events="timeline" />
+      </TicketPanel>
     </div>
   </div>
 
-  <va-modal v-model="showEdit" hide-default-actions no-padding>
+  <va-modal v-model="showEdit" hide-default-actions no-padding size="small">
     <template #content>
       <va-card-title>{{ $t('tickets.editDetails') }}</va-card-title>
       <form @submit.prevent="saveDetails">
-        <va-card-content>
-          <va-input v-model="detailsForm.subject" class="mb-3" :label="$t('tickets.subject')" maxlength="150" :error="!!detailsForm.errors.subject" :error-messages="detailsForm.errors.subject" />
+        <va-card-content class="t-stack">
+          <va-input v-model="detailsForm.subject" :label="$t('tickets.subject')" maxlength="150" :error="!!detailsForm.errors.subject" :error-messages="detailsForm.errors.subject" />
           <va-select v-model="detailsForm.impact" :label="$t('tickets.impact')" :options="impactOptions" value-by="value" text-by="text" />
         </va-card-content>
         <va-card-actions align="right">
@@ -278,14 +278,3 @@ export default {
   },
 }
 </script>
-<style lang="scss">
-  .ticket-details {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.4em 1em;
-    margin: 0;
-
-    dt { color: var(--va-secondary); }
-    dd { margin: 0; }
-  }
-</style>

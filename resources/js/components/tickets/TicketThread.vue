@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import TicketEditor from './TicketEditor.vue'
+import { formatDate, formatSize } from '@/composables/ticketFormat'
 
 // The conversation. Each message is already sanitized server-side; it is the
 // only thing rendered with v-html. Editing happens in place.
@@ -17,16 +18,6 @@ const props = defineProps({
 const editingId = ref(null)
 const redactTarget = ref(null)
 const form = useForm({ body: '' })
-
-function formatDate (value) {
-  return value ? new Date(value).toLocaleString() : ''
-}
-
-function formatSize (bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
 
 function startEdit (message) {
   editingId.value = message.id
@@ -56,36 +47,40 @@ function save (message) {
 }
 </script>
 <template>
-  <div class="ticket-thread">
+  <div class="ticket-thread t-col">
     <va-card
       v-for="message in messages"
       :key="message.id"
       :id="`message-${message.id}`"
-      class="ticket-message mb-3"
+      class="ticket-message"
       :class="{ 'ticket-message--internal': message.internal, 'ticket-message--staff': message.kind === 'staff' }"
     >
       <va-card-content>
-        <div class="ticket-message__header mb-2">
-          <strong>{{ message.author }}</strong>
-          <va-chip v-if="message.kind === 'staff'" size="small" color="primary" class="ml-2">{{ $t('tickets.support') }}</va-chip>
-          <va-chip v-if="message.internal" size="small" color="warning" class="ml-2">{{ $t('tickets.internalNote') }}</va-chip>
-          <span class="ticket-message__date ml-2">{{ formatDate(message.created_at) }}</span>
-          <span v-if="message.edited_at" class="ticket-message__date ml-2" :title="formatDate(message.edited_at)">({{ $t('tickets.edited') }})</span>
-          <va-button
-            v-if="staffView && !message.redacted && editingId !== message.id"
-            preset="plain"
-            size="small"
-            color="danger"
-            class="ml-2"
-            @click="redactTarget = message"
-          >{{ $t('tickets.redact.button') }}</va-button>
-          <va-button
-            v-if="message.can_edit && editingId !== message.id"
-            preset="plain"
-            size="small"
-            class="ml-2"
-            @click="startEdit(message)"
-          >{{ $t('common.edit') }}</va-button>
+        <div class="ticket-message__header">
+          <div class="ticket-message__who">
+            <strong>{{ message.author }}</strong>
+            <va-chip v-if="message.kind === 'staff'" size="small" color="primary">{{ $t('tickets.support') }}</va-chip>
+            <va-chip v-if="message.internal" size="small" color="warning">{{ $t('tickets.internalNote') }}</va-chip>
+          </div>
+          <div v-if="(staffView && !message.redacted && editingId !== message.id) || (message.can_edit && editingId !== message.id)" class="ticket-message__actions">
+            <va-button
+              v-if="staffView && !message.redacted && editingId !== message.id"
+              preset="plain"
+              size="small"
+              color="danger"
+              @click="redactTarget = message"
+            >{{ $t('tickets.redact.button') }}</va-button>
+            <va-button
+              v-if="message.can_edit && editingId !== message.id"
+              preset="plain"
+              size="small"
+              @click="startEdit(message)"
+            >{{ $t('common.edit') }}</va-button>
+          </div>
+          <div class="ticket-message__when t-muted">
+            {{ formatDate(message.created_at) }}
+            <span v-if="message.edited_at" :title="formatDate(message.edited_at)">· {{ $t('tickets.edited') }}</span>
+          </div>
         </div>
 
         <template v-if="editingId === message.id">
@@ -98,13 +93,13 @@ function save (message) {
         <div v-else-if="message.redacted" class="ticket-message__redacted">{{ $t('tickets.redacted') }}</div>
         <div v-else class="ticket-message__body" v-html="message.body_html"></div>
 
-        <ul v-if="message.attachments?.length" class="ticket-message__attachments mt-3">
+        <ul v-if="message.attachments?.length" class="ticket-message__attachments">
           <li v-for="attachment in message.attachments" :key="attachment.id">
             <a :href="`${attachment.url}?download=1`" class="ticket-message__attachment">
               <img v-if="attachment.is_image" :src="attachment.url" :alt="attachment.name" class="ticket-message__thumb">
               <va-icon v-else name="description" size="small" />
               <span>{{ attachment.name }}</span>
-              <span class="ticket-message__date">{{ formatSize(attachment.size) }}</span>
+              <span class="t-muted">{{ formatSize(attachment.size) }}</span>
             </a>
           </li>
         </ul>
@@ -129,15 +124,40 @@ function save (message) {
     background: color-mix(in srgb, var(--va-warning) 8%, var(--va-background-element));
   }
 
-  .ticket-message__date {
-    color: var(--va-secondary);
-    font-size: 0.85em;
+  .ticket-message__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.15rem 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .ticket-message__who {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
+  }
+
+  .ticket-message__actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+  }
+
+  .ticket-message__when {
+    flex: 1 0 100%;
+    order: 3;
+    font-size: 0.8rem;
   }
 
   .ticket-message__attachments {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 0.9rem 0 0;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em;
@@ -146,11 +166,17 @@ function save (message) {
   .ticket-message__attachment {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     gap: 0.5em;
-    padding: 0.25em 0.5em;
+    padding: 0.35em 0.6em;
     border: 1px solid var(--va-background-border);
     border-radius: 4px;
     text-decoration: none;
+  }
+
+  .ticket-message__attachment span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .ticket-message__thumb {
@@ -167,7 +193,7 @@ function save (message) {
 
   .ticket-message__redacted {
     font-style: italic;
-    color: var(--va-secondary);
+    color: var(--va-text-secondary);
   }
 
   .ticket-message__body {
@@ -180,7 +206,7 @@ function save (message) {
       margin: 0.5em 0;
       padding-left: 1em;
       border-left: 3px solid var(--va-background-border);
-      color: var(--va-secondary);
+      color: var(--va-text-secondary);
     }
     pre {
       padding: 0.75em;

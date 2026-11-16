@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@fontsource-variable/source-sans-3";
+@import "./tickets.css";
 
 @theme {
     --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

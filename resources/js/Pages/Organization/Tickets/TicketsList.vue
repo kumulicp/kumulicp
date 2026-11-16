@@ -1,85 +1,58 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import TicketBadge from '@/components/tickets/TicketBadge.vue'
+import TicketHeader from '@/components/tickets/TicketHeader.vue'
+import TicketFilterBar from '@/components/tickets/TicketFilterBar.vue'
+import TicketTable from '@/components/tickets/TicketTable.vue'
 import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
 </script>
 <template>
   <Head>
     <title>{{ $t('tickets.title') }} - Control Panel</title>
   </Head>
+  <TicketHeader :title="$t('tickets.title')">
+    <template #actions>
+      <TicketPreferences :preferences="preferences" />
+      <Link href="/support/tickets/create">
+        <va-button id="newTicket" icon="add">{{ $t('tickets.newTicket') }}</va-button>
+      </Link>
+    </template>
+  </TicketHeader>
+
   <va-card class="mb-4">
-    <va-card-title>
-      <div class="flex justify-between items-center w-full">
-        <span>{{ $t('tickets.title') }}</span>
-        <span>
-          <TicketPreferences :preferences="preferences" class="mr-2" />
-          <Link href="/support/tickets/create">
-            <va-button id="newTicket">{{ $t('tickets.newTicket') }}</va-button>
-          </Link>
-        </span>
-      </div>
-    </va-card-title>
     <va-card-content>
-      <div class="row mb-3">
-        <div class="flex xs12 md4 pr-2">
-          <va-select
-            v-model="assigned"
-            :label="$t('tickets.assignedTo')"
-            :options="assignedOptions"
-            value-by="value"
-            text-by="text"
-            @update:model-value="apply"
-          />
-        </div>
-        <div class="flex xs12 md4 pr-2">
-          <va-select
-            v-model="status"
-            :label="$t('tickets.statusTab')"
-            :options="statusOptions"
-            value-by="value"
-            text-by="text"
-            @update:model-value="apply"
-          />
-        </div>
-        <div class="flex xs12 md4">
+      <TicketFilterBar :active="activeFilters">
+        <va-select
+          v-model="assigned"
+          :label="$t('tickets.assignedTo')"
+          :options="assignedOptions"
+          value-by="value"
+          text-by="text"
+          @update:model-value="apply"
+        />
+        <va-select
+          v-model="status"
+          :label="$t('tickets.statusTab')"
+          :options="statusOptions"
+          value-by="value"
+          text-by="text"
+          @update:model-value="apply"
+        />
+        <template #search>
           <va-input
             v-model="q"
             :label="$t('common.search')"
+            clearable
             @keyup.enter="apply"
             @clear="apply"
-            clearable
           />
-        </div>
-      </div>
+        </template>
+      </TicketFilterBar>
 
-      <va-scroll-container horizontal>
-        <table class="va-table va-table--hoverable mt-3" v-if="tickets.data.length">
-          <thead>
-            <tr>
-              <th>{{ $t('tickets.reference') }}</th>
-              <th>{{ $t('tickets.subject') }}</th>
-              <th>{{ $t('tickets.statusColumn') }}</th>
-              <th>{{ $t('tickets.customerAssignee') }}</th>
-              <th>{{ $t('tickets.supportAssignee') }}</th>
-              <th>{{ $t('tickets.lastActivity') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="ticket in tickets.data" :key="ticket.number" :class="{ 'ticket-row--unread': ticket.unread }">
-              <td><span v-if="ticket.unread" class="ticket-unread-dot" :title="$t('tickets.unread')"></span><Link :href="ticket.url">{{ ticket.reference }}</Link></td>
-              <td><Link :href="ticket.url">{{ ticket.subject }}</Link></td>
-              <td><TicketBadge :value="ticket.status.value" :label="ticket.status.label" /></td>
-              <td>{{ ticket.customer_assignee?.name || '-' }}</td>
-              <td>{{ ticket.support_assignee?.name || $t('tickets.unassigned') }}</td>
-              <td>{{ formatDate(ticket.last_activity_at) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </va-scroll-container>
+      <TicketTable v-if="tickets.data.length" class="mt-4" :tickets="tickets.data" />
 
       <!-- Nothing here is not the same as nothing at all, so say what else exists -->
-      <div v-if="!tickets.data.length" class="text-center py-6" id="emptyState">
+      <div v-else class="text-center py-6" id="emptyState">
         <p v-if="filters.assigned === 'me' && counts.organization_open > 0">
           {{ $t('tickets.emptyMine', { mine: counts.mine_open, open: counts.organization_open }) }}
         </p>
@@ -93,7 +66,7 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
 
       <va-pagination
         v-if="tickets.last_page > 1"
-        class="mt-3 mb-3 justify-center"
+        class="mt-4 justify-center"
         :model-value="tickets.current_page"
         :pages="tickets.last_page"
         direction-links
@@ -125,6 +98,10 @@ export default {
     }
   },
   computed: {
+    // Filters that differ from where the list opens (my open tickets)
+    activeFilters () {
+      return (this.assigned !== 'me' ? 1 : 0) + (this.status !== 'open' ? 1 : 0)
+    },
     assignedOptions () {
       return [
         { value: 'me', text: this.$t('tickets.assignedToMe') },
@@ -170,23 +147,6 @@ export default {
     goToPage (page) {
       router.get('/support/tickets', { assigned: this.assigned, status: this.status, q: this.q || undefined, page }, { preserveState: true })
     },
-    formatDate (value) {
-      return value ? new Date(value).toLocaleString() : ''
-    },
   },
 }
 </script>
-<style lang="scss">
-  .ticket-row--unread {
-    font-weight: 600;
-  }
-
-  .ticket-unread-dot {
-    display: inline-block;
-    width: 0.6em;
-    height: 0.6em;
-    margin-right: 0.4em;
-    border-radius: 50%;
-    background: var(--va-primary);
-  }
-</style>

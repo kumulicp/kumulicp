@@ -25,3 +25,9 @@ const color = computed(() => colors[props.value] || 'secondary')
 <template>
   <va-chip size="small" :color="color" class="ticket-badge">{{ label }}</va-chip>
 </template>
+<style>
+  .ticket-badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+</style>

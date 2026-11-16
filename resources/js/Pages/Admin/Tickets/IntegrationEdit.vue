@@ -1,190 +1,185 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link } from '@inertiajs/vue3'
+import TicketHeader from '@/components/tickets/TicketHeader.vue'
 </script>
 <template>
   <Head>
     <title>{{ integration ? integration.name : driver.label }} - Control Panel</title>
   </Head>
+  <TicketHeader :title="integration ? integration.name : $t('tickets.integrations.newOfType', { type: driver.label })">
+    <template #meta>
+      <va-chip size="small" color="info">{{ driver.label }}</va-chip>
+    </template>
+    <template #actions>
+      <Link href="/admin/support/integrations"><va-button preset="secondary" border-color="primary" icon="arrow_back">{{ $t('tickets.integrations.title') }}</va-button></Link>
+    </template>
+  </TicketHeader>
 
-  <va-alert v-if="revealed && Object.keys(revealed).length" color="warning" class="mb-4" id="revealed">
-    <div><strong>{{ $t('tickets.integrations.secretShown') }}</strong></div>
-    <div v-for="(value, key) in revealed" :key="key" class="integration-secret">
-      <code>{{ value }}</code>
-      <va-button size="small" preset="plain" @click="copy(value)">{{ $t('tickets.integrations.copy') }}</va-button>
-    </div>
-  </va-alert>
-
-  <va-alert v-if="integration && integration.disabled_reason" color="danger" class="mb-4">
-    {{ integration.disabled_reason }}
-  </va-alert>
-
-  <va-card class="mb-4">
-    <va-card-title>
-      <div class="flex justify-between items-center w-full">
-        <span>{{ integration ? integration.name : $t('tickets.integrations.newOfType', { type: driver.label }) }}</span>
-        <va-chip size="small" color="secondary">{{ driver.label }}</va-chip>
+  <div class="t-col t-col--narrow">
+    <va-alert v-if="revealed && Object.keys(revealed).length" color="warning" id="revealed">
+      <div><strong>{{ $t('tickets.integrations.secretShown') }}</strong></div>
+      <div v-for="(value, key) in revealed" :key="key" class="integration-secret">
+        <code>{{ value }}</code>
+        <va-button size="small" preset="plain" @click="copy(value)">{{ $t('tickets.integrations.copy') }}</va-button>
       </div>
-    </va-card-title>
-    <va-card-content>
-      <form @submit.prevent="save">
-        <va-input
-          v-model="form.name"
-          id="name"
-          class="mb-3"
-          :label="$t('tickets.integrations.name')"
-          required-mark
-          :error="!!form.errors.name"
-          :error-messages="form.errors.name"
-        />
+    </va-alert>
 
-        <!-- The driver's own settings: the form is built from its schema -->
-        <template v-for="field in driver.schema" :key="field.key">
-          <template v-if="field.type === 'secret' && field.generated">
-            <div v-if="integration" class="mb-3">
-              <div class="va-input-label">{{ field.label }}</div>
-              <div class="integration-help">{{ field.help }}</div>
-              <va-button size="small" color="secondary" class="mr-2 mt-1" @click.prevent="reveal">{{ $t('tickets.integrations.reveal') }}</va-button>
-              <va-button v-if="integration.has_generated_secret" size="small" color="warning" class="mt-1" @click.prevent="rotate">{{ $t('tickets.integrations.rotate') }}</va-button>
-            </div>
-            <div v-else class="mb-3 integration-help">{{ $t('tickets.integrations.secretWillBeGenerated') }}</div>
+    <va-alert v-if="integration && integration.disabled_reason" color="danger">
+      {{ integration.disabled_reason }}
+    </va-alert>
+
+    <va-card>
+      <va-card-content>
+        <form class="t-stack t-form-sections" @submit.prevent="save">
+          <va-input
+            v-model="form.name"
+            id="name"
+            :label="$t('tickets.integrations.name')"
+            required-mark
+            :error="!!form.errors.name"
+            :error-messages="form.errors.name"
+          />
+
+          <!-- The driver's own settings: the form is built from its schema -->
+          <template v-for="field in driver.schema" :key="field.key">
+            <template v-if="field.type === 'secret' && field.generated">
+              <div v-if="integration">
+                <div class="va-input-label">{{ field.label }}</div>
+                <div class="t-muted">{{ field.help }}</div>
+                <div class="t-actions mt-2">
+                  <va-button size="small" preset="secondary" border-color="primary" @click.prevent="reveal">{{ $t('tickets.integrations.reveal') }}</va-button>
+                  <va-button v-if="integration.has_generated_secret" size="small" preset="secondary" border-color="warning" color="warning" @click.prevent="rotate">{{ $t('tickets.integrations.rotate') }}</va-button>
+                </div>
+              </div>
+              <div v-else class="t-muted">{{ $t('tickets.integrations.secretWillBeGenerated') }}</div>
+            </template>
+
+            <va-input
+              v-else-if="field.type === 'secret'"
+              v-model="form.config[field.key]"
+              type="password"
+              autocomplete="new-password"
+              :label="field.label"
+              :placeholder="integration && integration.secrets_set[field.key] ? $t('tickets.integrations.secretSaved') : ''"
+              :messages="field.help"
+              :required-mark="field.required && !(integration && integration.secrets_set[field.key])"
+              :error="!!form.errors['config.' + field.key]"
+              :error-messages="form.errors['config.' + field.key]"
+            />
+
+            <va-switch v-else-if="field.type === 'toggle'" v-model="form.config[field.key]" :label="field.label" />
+
+            <va-select
+              v-else-if="field.type === 'select'"
+              v-model="form.config[field.key]"
+              :label="field.label"
+              :options="field.options"
+              value-by="value"
+              text-by="text"
+              :messages="field.help"
+            />
+
+            <va-input
+              v-else
+              v-model="form.config[field.key]"
+              :label="field.label"
+              :type="field.type === 'number' ? 'number' : 'text'"
+              :placeholder="field.default || ''"
+              :messages="field.help"
+              :required-mark="field.required"
+              :error="!!form.errors['config.' + field.key]"
+              :error-messages="form.errors['config.' + field.key]"
+            />
           </template>
 
-          <va-input
-            v-else-if="field.type === 'secret'"
-            v-model="form.config[field.key]"
-            type="password"
-            autocomplete="new-password"
-            class="mb-3"
-            :label="field.label"
-            :placeholder="integration && integration.secrets_set[field.key] ? $t('tickets.integrations.secretSaved') : ''"
-            :messages="field.help"
-            :required-mark="field.required && !(integration && integration.secrets_set[field.key])"
-            :error="!!form.errors['config.' + field.key]"
-            :error-messages="form.errors['config.' + field.key]"
-          />
+          <!-- Which events a webhook wants -->
+          <fieldset v-if="driver.kind === 'webhook'" class="t-fieldset">
+            <legend class="va-input-label">{{ $t('tickets.integrations.eventsLabel') }}</legend>
+            <va-checkbox
+              v-for="event in driver.events"
+              :key="event"
+              v-model="form.events"
+              :array-value="event"
+              :label="$t(`tickets.integrations.eventNames.${event.replace('.', '_')}`)"
+              class="d-block"
+            />
+            <div v-if="form.errors.events" class="text-danger">{{ form.errors.events }}</div>
+          </fieldset>
 
-          <va-switch v-else-if="field.type === 'toggle'" v-model="form.config[field.key]" class="mb-3" :label="field.label" />
+          <!-- How a tracker follows the ticket -->
+          <fieldset v-if="driver.kind === 'tracker'" class="t-fieldset">
+            <va-switch v-model="form.options.auto_create" class="d-block" :label="$t('tickets.integrations.autoCreate')" />
+            <va-switch v-model="form.options.sync_state" class="d-block" :label="$t('tickets.integrations.syncState')" />
+            <va-switch v-model="form.options.sync_time" class="d-block" :label="timeLabel" />
+          </fieldset>
 
-          <va-select
-            v-else-if="field.type === 'select'"
-            v-model="form.config[field.key]"
-            class="mb-3"
-            :label="field.label"
-            :options="field.options"
-            value-by="value"
-            text-by="text"
-            :messages="field.help"
-          />
-
-          <va-input
-            v-else
-            v-model="form.config[field.key]"
-            class="mb-3"
-            :label="field.label"
-            :type="field.type === 'number' ? 'number' : 'text'"
-            :placeholder="field.default || ''"
-            :messages="field.help"
-            :required-mark="field.required"
-            :error="!!form.errors['config.' + field.key]"
-            :error-messages="form.errors['config.' + field.key]"
-          />
-        </template>
-
-        <!-- Which events a webhook wants -->
-        <div v-if="driver.kind === 'webhook'" class="mb-3">
-          <div class="va-input-label">{{ $t('tickets.integrations.eventsLabel') }}</div>
-          <va-checkbox
-            v-for="event in driver.events"
-            :key="event"
-            v-model="form.events"
-            :array-value="event"
-            :label="$t(`tickets.integrations.eventNames.${event.replace('.', '_')}`)"
-            class="d-block"
-          />
-          <div v-if="form.errors.events" class="text-danger">{{ form.errors.events }}</div>
-        </div>
-
-        <!-- How a tracker follows the ticket -->
-        <div v-if="driver.kind === 'tracker'" class="mb-3">
-          <va-switch v-model="form.options.auto_create" class="d-block mb-2" :label="$t('tickets.integrations.autoCreate')" />
-          <va-switch v-model="form.options.sync_state" class="d-block mb-2" :label="$t('tickets.integrations.syncState')" />
-          <va-switch v-model="form.options.sync_time" class="d-block mb-2" :label="timeLabel" />
-        </div>
-
-        <!-- What the tracker may send back -->
-        <div v-if="driver.inbound" class="mb-3">
-          <div class="va-input-label">{{ $t('tickets.integrations.inbound.title') }}</div>
-          <div class="integration-help mb-2">{{ $t('tickets.integrations.inbound.help') }}</div>
-          <div v-if="integration && integration.inbound_url" class="mb-2" id="inboundUrl">
-            <div class="integration-help">{{ $t('tickets.integrations.inbound.url') }}</div>
-            <div class="integration-secret">
-              <code>{{ integration.inbound_url }}</code>
-              <va-button size="small" preset="plain" @click.prevent="copy(integration.inbound_url)">{{ $t('tickets.integrations.copy') }}</va-button>
+          <!-- What the tracker may send back -->
+          <fieldset v-if="driver.inbound" class="t-fieldset">
+            <legend class="va-input-label">{{ $t('tickets.integrations.inbound.title') }}</legend>
+            <div class="t-muted">{{ $t('tickets.integrations.inbound.help') }}</div>
+            <div v-if="integration && integration.inbound_url" id="inboundUrl">
+              <div class="t-muted">{{ $t('tickets.integrations.inbound.url') }}</div>
+              <div class="integration-secret">
+                <code>{{ integration.inbound_url }}</code>
+                <va-button size="small" preset="plain" @click.prevent="copy(integration.inbound_url)">{{ $t('tickets.integrations.copy') }}</va-button>
+              </div>
             </div>
-          </div>
-          <div v-else class="integration-help mb-2">{{ $t('tickets.integrations.inbound.urlAfterSave') }}</div>
-          <va-switch v-model="form.options.inbound_comments" class="d-block mb-2" :label="$t('tickets.integrations.inbound.comments')" />
-          <va-switch v-model="form.options.inbound_resolve" class="d-block mb-2" :label="$t('tickets.integrations.inbound.resolve')" />
-        </div>
+            <div v-else class="t-muted">{{ $t('tickets.integrations.inbound.urlAfterSave') }}</div>
+            <va-switch v-model="form.options.inbound_comments" class="d-block" :label="$t('tickets.integrations.inbound.comments')" />
+            <va-switch v-model="form.options.inbound_resolve" class="d-block" :label="$t('tickets.integrations.inbound.resolve')" />
+          </fieldset>
 
-        <!-- What is allowed to leave -->
-        <div class="mb-3">
-          <va-switch v-model="form.options.include_requester" class="d-block mb-1" :label="$t('tickets.integrations.includeRequester')" />
-          <div class="integration-help mb-2">{{ $t('tickets.integrations.privacyHelp') }}</div>
-        </div>
+          <!-- What is allowed to leave -->
+          <fieldset class="t-fieldset">
+            <va-switch v-model="form.options.include_requester" class="d-block" :label="$t('tickets.integrations.includeRequester')" />
+            <div class="t-muted">{{ $t('tickets.integrations.privacyHelp') }}</div>
+          </fieldset>
 
-        <!-- Which tickets -->
-        <div class="mb-3">
-          <div class="va-input-label">{{ $t('tickets.integrations.filtersLabel') }}</div>
-          <div class="integration-help mb-2">{{ $t('tickets.integrations.filtersHelp') }}</div>
-          <div class="row">
-            <div class="flex xs12 md4 pr-2 mb-2">
+          <!-- Which tickets -->
+          <fieldset class="t-fieldset">
+            <legend class="va-input-label">{{ $t('tickets.integrations.filtersLabel') }}</legend>
+            <div class="t-muted">{{ $t('tickets.integrations.filtersHelp') }}</div>
+            <div class="t-form-grid t-form-grid--2">
               <va-select v-model="form.filters.types" :label="$t('tickets.type')" :options="choices.types" value-by="value" text-by="text" multiple clearable />
-            </div>
-            <div class="flex xs12 md4 pr-2 mb-2">
               <va-select v-model="form.filters.priorities" :label="$t('tickets.priorityLabel')" :options="choices.priorities" value-by="value" text-by="text" multiple clearable />
-            </div>
-            <div class="flex xs12 md4 mb-2">
               <va-select v-model="form.filters.categories" :label="$t('tickets.category')" :options="choices.categories" value-by="value" text-by="text" multiple clearable />
             </div>
+          </fieldset>
+
+          <!-- Danger zone for private addresses -->
+          <fieldset class="t-fieldset">
+            <va-switch v-model="form.options.allow_internal" class="d-block" :label="$t('tickets.integrations.allowInternal')" />
+            <div class="t-muted t-danger-text">{{ $t('tickets.integrations.allowInternalHelp') }}</div>
+          </fieldset>
+
+          <va-switch v-if="!integration" v-model="form.enabled" :label="$t('tickets.integrations.startOn')" />
+
+          <div class="t-actions t-actions--stack">
+            <va-button type="submit" id="save" :disabled="form.processing">{{ $t('common.save') }}</va-button>
+            <Link href="/admin/support/integrations"><va-button preset="secondary" border-color="primary">{{ $t('common.cancel') }}</va-button></Link>
           </div>
-        </div>
+        </form>
+      </va-card-content>
+    </va-card>
 
-        <!-- Danger zone for private addresses -->
-        <div class="mb-3">
-          <va-switch v-model="form.options.allow_internal" class="d-block mb-1" :label="$t('tickets.integrations.allowInternal')" />
-          <div class="integration-help text-danger">{{ $t('tickets.integrations.allowInternalHelp') }}</div>
+    <va-card v-if="integration">
+      <va-card-title>{{ $t('tickets.integrations.manage') }}</va-card-title>
+      <va-card-content class="t-stack">
+        <div class="t-actions t-actions--stack">
+          <va-button preset="secondary" border-color="primary" :disabled="testing" @click="test">{{ $t('tickets.integrations.test') }}</va-button>
+          <span v-if="testResult" :class="testResult.ok ? 'text-success' : 'text-danger'">{{ testResult.message }}</span>
         </div>
-
-        <div v-if="!integration" class="mb-3">
-          <va-switch v-model="form.enabled" :label="$t('tickets.integrations.startOn')" />
+        <div class="t-actions t-actions--stack">
+          <Link :href="`/admin/support/integrations/${integration.id}/deliveries`"><va-button preset="secondary" border-color="primary">{{ $t('tickets.integrations.deliveries') }}</va-button></Link>
+          <va-button preset="secondary" :border-color="integration.enabled ? 'warning' : 'success'" :color="integration.enabled ? 'warning' : 'success'" @click="toggleEnabled">
+            {{ integration.enabled ? $t('tickets.integrations.switchOff') : $t('tickets.integrations.switchOn') }}
+          </va-button>
+          <va-button preset="secondary" border-color="danger" color="danger" @click="showDelete = true">{{ $t('common.delete') }}</va-button>
         </div>
-
-        <div class="mt-4">
-          <va-button type="submit" id="save" :disabled="form.processing">{{ $t('common.save') }}</va-button>
-          <Link href="/admin/support/integrations"><va-button color="textInverted" class="ml-2">{{ $t('common.cancel') }}</va-button></Link>
-        </div>
-      </form>
-    </va-card-content>
-  </va-card>
-
-  <va-card v-if="integration" class="mb-4">
-    <va-card-title>{{ $t('tickets.integrations.manage') }}</va-card-title>
-    <va-card-content>
-      <div class="mb-3">
-        <va-button color="secondary" :disabled="testing" @click="test">{{ $t('tickets.integrations.test') }}</va-button>
-        <span v-if="testResult" class="ml-3" :class="testResult.ok ? 'text-success' : 'text-danger'">{{ testResult.message }}</span>
-      </div>
-      <div>
-        <Link :href="`/admin/support/integrations/${integration.id}/deliveries`"><va-button color="secondary" class="mr-2">{{ $t('tickets.integrations.deliveries') }}</va-button></Link>
-        <va-button :color="integration.enabled ? 'warning' : 'success'" class="mr-2" @click="toggleEnabled">
-          {{ integration.enabled ? $t('tickets.integrations.switchOff') : $t('tickets.integrations.switchOn') }}
-        </va-button>
-        <va-button color="danger" @click="showDelete = true">{{ $t('common.delete') }}</va-button>
-      </div>
-    </va-card-content>
-  </va-card>
+      </va-card-content>
+    </va-card>
+  </div>
 
   <va-modal v-model="showDelete" hide-default-actions :title="$t('tickets.integrations.deleteTitle')" :message="$t('tickets.integrations.deleteMessage')">
     <template #footer="{ cancel }">
@@ -294,20 +289,36 @@ export default {
 }
 </script>
 <style lang="scss">
-  .integration-help {
-    color: var(--va-secondary);
-    font-size: 0.85em;
-  }
-
   .integration-secret {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5em;
-    margin-top: 0.5em;
+    gap: 0.25rem 0.5rem;
+    margin-top: 0.5rem;
     overflow-wrap: anywhere;
+
+    code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
   }
 
   .d-block {
     display: block;
+  }
+
+  .t-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+
+    legend {
+      padding: 0 0.35rem;
+    }
   }
 </style>

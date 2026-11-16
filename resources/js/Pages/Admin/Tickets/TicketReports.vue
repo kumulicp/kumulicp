@@ -1,49 +1,57 @@
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue'
+import { Link } from '@inertiajs/vue3'
+import TicketHeader from '@/components/tickets/TicketHeader.vue'
 </script>
 <template>
   <Head>
     <title>{{ $t('tickets.reports.title') }} - Control Panel</title>
   </Head>
-  <va-card class="mb-4">
-    <va-card-title>
-      <div class="flex justify-between items-center w-full">
-        <span>{{ $t('tickets.reports.title') }}</span>
-        <a :href="exportUrl" class="no-underline"><va-button size="small" color="secondary">{{ $t('tickets.reports.exportCsv') }}</va-button></a>
-      </div>
-    </va-card-title>
-    <va-card-content>
-      <div class="row items-end mb-3">
-        <div class="flex xs12 md4 pr-2">
+  <TicketHeader :title="$t('tickets.reports.title')">
+    <template #meta>
+      <span class="t-muted">{{ report.period.from }} → {{ report.period.to }}</span>
+    </template>
+    <template #actions>
+      <Link href="/admin/support/tickets"><va-button preset="secondary" border-color="primary" icon="arrow_back">{{ $t('tickets.admin.title') }}</va-button></Link>
+      <a :href="exportUrl" class="t-link-reset"><va-button preset="secondary" border-color="primary" icon="download">{{ $t('tickets.reports.exportCsv') }}</va-button></a>
+    </template>
+  </TicketHeader>
+
+  <div class="t-col">
+    <va-card>
+      <va-card-content>
+        <div class="t-period">
           <va-select v-model="days" :label="$t('tickets.reports.period')" :options="periodOptions" value-by="value" text-by="text" @update:model-value="reload" />
         </div>
-        <div class="flex xs12 md8 integration-help">{{ report.period.from }} → {{ report.period.to }}</div>
-      </div>
-
-      <div class="row report-tiles mb-4">
-        <div v-for="tile in tiles" :key="tile.label" class="flex xs6 md3 mb-2 pr-2">
-          <div class="report-tile">
-            <div class="report-tile__value">{{ tile.value }}</div>
-            <div class="report-tile__label">{{ tile.label }}</div>
+        <div class="t-tiles mt-4">
+          <div v-for="tile in tiles" :key="tile.label" class="t-tile">
+            <div class="t-tile__value">{{ tile.value }}</div>
+            <div class="t-muted">{{ tile.label }}</div>
           </div>
         </div>
-      </div>
+      </va-card-content>
+    </va-card>
 
-      <h3 class="va-h6 mb-2">{{ $t('tickets.reports.perDay') }}</h3>
-      <div class="report-bars mb-4" role="img" :aria-label="$t('tickets.reports.perDay')">
-        <div v-for="day in report.per_day" :key="day.date" class="report-bars__day" :title="`${day.date}: ${day.created} / ${day.resolved}`">
-          <div class="report-bars__bar report-bars__bar--created" :style="{ height: barHeight(day.created) }"></div>
-          <div class="report-bars__bar report-bars__bar--resolved" :style="{ height: barHeight(day.resolved) }"></div>
+    <va-card>
+      <va-card-title>{{ $t('tickets.reports.perDay') }}</va-card-title>
+      <va-card-content>
+        <div class="report-bars" role="img" :aria-label="$t('tickets.reports.perDay')">
+          <div v-for="day in report.per_day" :key="day.date" class="report-bars__day" :title="`${day.date}: ${day.created} / ${day.resolved}`">
+            <div class="report-bars__bar report-bars__bar--created" :style="{ height: barHeight(day.created) }"></div>
+            <div class="report-bars__bar report-bars__bar--resolved" :style="{ height: barHeight(day.resolved) }"></div>
+          </div>
         </div>
-      </div>
-      <div class="integration-help mb-4">
-        <span class="report-key report-key--created"></span>{{ $t('tickets.reports.created') }}
-        <span class="report-key report-key--resolved ml-3"></span>{{ $t('tickets.reports.resolved') }}
-      </div>
+        <div class="t-muted mt-2">
+          <span class="report-key report-key--created"></span>{{ $t('tickets.reports.created') }}
+          <span class="report-key report-key--resolved ml-3"></span>{{ $t('tickets.reports.resolved') }}
+        </div>
+      </va-card-content>
+    </va-card>
 
-      <div class="row">
-        <div class="flex xs12 lg6 pr-2 mb-4">
-          <h3 class="va-h6 mb-2">{{ $t('tickets.reports.satisfaction') }}</h3>
+    <div class="t-cols">
+      <va-card>
+        <va-card-title>{{ $t('tickets.reports.satisfaction') }}</va-card-title>
+        <va-card-content>
           <div v-if="report.csat.count">
             <div v-for="score in [5, 4, 3, 2, 1]" :key="score" class="report-row">
               <span class="report-row__label">{{ score }} ★</span>
@@ -51,37 +59,43 @@ import AppLayout from '@/layouts/AppLayout.vue'
               <span class="report-row__value">{{ report.csat.distribution[score] }}</span>
             </div>
           </div>
-          <div v-else class="integration-help">{{ $t('tickets.reports.noRatings') }}</div>
-        </div>
+          <div v-else class="t-muted">{{ $t('tickets.reports.noRatings') }}</div>
+        </va-card-content>
+      </va-card>
 
-        <div class="flex xs12 lg6 mb-4">
-          <h3 class="va-h6 mb-2">{{ $t('tickets.reports.timeLogged') }}</h3>
-          <table v-if="report.time.total" class="va-table">
-            <thead><tr><th>{{ $t('tickets.organization') }}</th><th>{{ $t('tickets.reports.total') }}</th><th>{{ $t('tickets.time.billable') }}</th></tr></thead>
-            <tbody>
-              <tr v-for="row in report.time.by_organization" :key="row.name"><td>{{ row.name }}</td><td>{{ fmt(row.minutes) }}</td><td>{{ fmt(row.billable) }}</td></tr>
-            </tbody>
-          </table>
-          <div v-else class="integration-help">{{ $t('tickets.reports.noTime') }}</div>
-        </div>
-      </div>
+      <va-card>
+        <va-card-title>{{ $t('tickets.reports.timeLogged') }}</va-card-title>
+        <va-card-content>
+          <div v-if="report.time.total" class="t-scroll-x">
+            <table class="va-table">
+              <thead><tr><th>{{ $t('tickets.organization') }}</th><th>{{ $t('tickets.reports.total') }}</th><th>{{ $t('tickets.time.billable') }}</th></tr></thead>
+              <tbody>
+                <tr v-for="row in report.time.by_organization" :key="row.name"><td>{{ row.name }}</td><td>{{ fmt(row.minutes) }}</td><td>{{ fmt(row.billable) }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="t-muted">{{ $t('tickets.reports.noTime') }}</div>
+        </va-card-content>
+      </va-card>
 
-      <div class="row">
-        <div v-for="table in tables" :key="table.key" class="flex xs12 lg6 pr-2 mb-4">
-          <h3 class="va-h6 mb-2">{{ table.title }}</h3>
-          <table class="va-table">
-            <thead><tr><th>{{ $t('tickets.reports.name') }}</th><th>{{ $t('tickets.reports.tickets') }}</th><th>{{ $t('tickets.reports.firstResponse') }}</th><th>{{ $t('tickets.reports.rating') }}</th></tr></thead>
-            <tbody>
-              <tr v-for="row in table.rows" :key="row.name">
-                <td>{{ row.name }}</td><td>{{ row.tickets }}</td><td>{{ fmt(row.first_response) }}</td><td>{{ row.csat ?? '-' }}</td>
-              </tr>
-              <tr v-if="!table.rows.length"><td colspan="4">-</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </va-card-content>
-  </va-card>
+      <va-card v-for="table in tables" :key="table.key">
+        <va-card-title>{{ table.title }}</va-card-title>
+        <va-card-content>
+          <div class="t-scroll-x">
+            <table class="va-table">
+              <thead><tr><th>{{ $t('tickets.reports.name') }}</th><th>{{ $t('tickets.reports.tickets') }}</th><th>{{ $t('tickets.reports.firstResponse') }}</th><th>{{ $t('tickets.reports.rating') }}</th></tr></thead>
+              <tbody>
+                <tr v-for="row in table.rows" :key="row.name">
+                  <td>{{ row.name }}</td><td>{{ row.tickets }}</td><td>{{ fmt(row.first_response) }}</td><td>{{ row.csat ?? '-' }}</td>
+                </tr>
+                <tr v-if="!table.rows.length"><td colspan="4">-</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </va-card-content>
+      </va-card>
+    </div>
+  </div>
 </template>
 <script>
 import { router } from '@inertiajs/vue3'
@@ -150,21 +164,11 @@ export default {
 }
 </script>
 <style lang="scss">
-  .report-tile {
-    width: 100%;
-    padding: 0.75em 1em;
-    border: 1px solid var(--va-background-border);
-    border-radius: 6px;
-
-    &__value { font-size: 1.6em; font-weight: 600; }
-    &__label { color: var(--va-secondary); font-size: 0.85em; }
-  }
-
   .report-bars {
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    height: 8em;
+    height: 8rem;
     padding: 0 0 1px;
     border-bottom: 1px solid var(--va-background-border);
 
@@ -188,11 +192,11 @@ export default {
   .report-row {
     display: flex;
     align-items: center;
-    gap: 0.5em;
-    margin-bottom: 0.3em;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
 
     &__label { width: 3em; }
-    &__bar { flex: 1; height: 0.8em; background: var(--va-background-secondary); border-radius: 3px; overflow: hidden; }
+    &__bar { flex: 1; height: 0.8rem; background: var(--va-background-secondary); border-radius: 3px; overflow: hidden; }
     &__bar > span { display: block; height: 100%; background: var(--va-warning); }
     &__value { width: 2.5em; text-align: right; }
   }
