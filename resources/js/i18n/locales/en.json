@@ -1241,6 +1241,9 @@
     "baseDomain": "Base Domain Name",
     "slug": "Slug",
     "dashboard": {
+      "gettingStarted": "Getting started",
+      "gettingStartedIntro": "A few things to set up before your control panel is ready to use.",
+      "optional": "Optional",
       "discoverApps": "Discover apps",
       "group": "Group",
       "nextcloudFolders": "Nextcloud Team Folders",

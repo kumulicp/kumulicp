@@ -1,0 +1,45 @@
+{
+  "admin": {
+    "plans": {
+      "addPlan": "Add Profile",
+      "archivePlan": "Archive Profile",
+      "archivedPlan": "Archived Profile",
+      "changeOrder": "Change the order of how the profiles will be displayed to users by dragging them",
+      "cloneHelp": "All settings are copied from {name}. Choose a name for the new profile.",
+      "defaultPlan": "Default Profile",
+      "defaultPlanCaption": "Checking this box will override the current default profile if another profile is set as your default",
+      "editPlan": "Edit Profile",
+      "plan": "Profile",
+      "plans": "Profiles",
+      "secretsDescription": "Secrets are added to every app on this profile as environment variables and stored in the app's Kubernetes Secret. A value can be replaced but never viewed again.",
+      "serverTypeFixedCaption": "Chosen when the profile was created and can't be changed here"
+    },
+    "roles": {
+      "accessTypeCaption": "The access type is related to the access types in the profiles"
+    },
+    "versionTests": {
+      "plan": "Profile"
+    },
+    "versions": {
+      "testChangedEnabled": "This version or one of the app's profiles has changed since it was last tested. Consider running the tests again.",
+      "testStale": "The version or one of the app's profiles has changed since it was tested. Run the tests again, or bypass them, to enable it."
+    }
+  },
+  "organization": {
+    "apps": {
+      "planSettings": "{label} Profile Settings",
+      "plansTitle": "{label} Profiles"
+    },
+    "discover": {
+      "appPlanOverview": "App Profile Overview",
+      "appPlans": "App Profiles",
+      "chooseYourPlan": "Choose Your Profile"
+    }
+  },
+  "plan": {
+    "change": "Change Profile"
+  },
+  "plans": {
+    "currentPlan": "Current Profile"
+  }
+}

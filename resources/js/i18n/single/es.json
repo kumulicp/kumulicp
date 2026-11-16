@@ -1,0 +1,45 @@
+{
+  "admin": {
+    "plans": {
+      "addPlan": "Agregar Perfil",
+      "archivePlan": "Archivar Perfil",
+      "archivedPlan": "Perfil Archivado",
+      "changeOrder": "Cambia el orden en que se mostrarán los perfiles a los usuarios arrastrándolos",
+      "cloneHelp": "Todos los ajustes se copian de {name}. Elige un nombre para el nuevo perfil.",
+      "defaultPlan": "Perfil Predeterminado",
+      "defaultPlanCaption": "Marcar esta casilla anulará el perfil predeterminado actual si otro perfil está establecido como predeterminado",
+      "editPlan": "Editar Perfil",
+      "plan": "Perfil",
+      "plans": "Perfiles",
+      "secretsDescription": "Los secretos se agregan como variables de entorno a todas las aplicaciones de este perfil y se guardan en el Secret de Kubernetes de la aplicación. Un valor se puede reemplazar pero no volver a ver.",
+      "serverTypeFixedCaption": "Se elige al crear el perfil y no se puede cambiar aquí"
+    },
+    "roles": {
+      "accessTypeCaption": "El tipo de acceso está relacionado con los tipos de acceso en los perfiles"
+    },
+    "versionTests": {
+      "plan": "Perfil"
+    },
+    "versions": {
+      "testChangedEnabled": "Esta versión o uno de los perfiles de la aplicación ha cambiado desde la última prueba. Considera volver a ejecutar las pruebas.",
+      "testStale": "La versión o uno de los perfiles de la aplicación ha cambiado desde que se probó. Vuelve a ejecutar las pruebas, u omítelas, para habilitarla."
+    }
+  },
+  "organization": {
+    "apps": {
+      "planSettings": "Configuración del Perfil {label}",
+      "plansTitle": "Perfiles de {label}"
+    },
+    "discover": {
+      "appPlanOverview": "Resumen del Perfil de la Aplicación",
+      "appPlans": "Perfiles de la Aplicación",
+      "chooseYourPlan": "Elige Tu Perfil"
+    }
+  },
+  "plan": {
+    "change": "Cambiar Perfil"
+  },
+  "plans": {
+    "currentPlan": "Perfil Actual"
+  }
+}

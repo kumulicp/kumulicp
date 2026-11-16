@@ -205,4 +205,26 @@ return [
             'action' => 'Añadir un servidor',
         ],
     ],
+    'getting_started' => [
+        'servers' => [
+            'label' => 'Añade un servidor',
+            'hint' => 'Las aplicaciones necesitan un servidor donde ejecutarse.',
+        ],
+        'app_ready' => [
+            'label' => 'Prepara una aplicación para instalar',
+            'hint' => 'Una aplicación necesita una versión habilitada y un plan antes de poder instalarse.',
+        ],
+        'domain' => [
+            'label' => 'Configura un dominio',
+            'hint' => 'Dale una dirección a tus aplicaciones: añade tu propio dominio o configura el dominio base del sistema.',
+        ],
+        'app_installed' => [
+            'label' => 'Instala tu primera aplicación',
+            'hint' => 'Elige una aplicación en Descubrir e instálala.',
+        ],
+        'sso' => [
+            'label' => 'Configura el inicio de sesión único',
+            'hint' => 'Deja que las personas inicien sesión con una cuenta que ya tienen.',
+        ],
+    ],
 ];

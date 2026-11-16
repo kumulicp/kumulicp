@@ -185,17 +185,26 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
   (today it hardcodes `__('setup.first_org')`).
 - `Setup::build()`: in single mode, save `tenancy_mode`, use the entered org name, create the same `superaccount`
   + unlimited `Plan` + admin user as today, and mark the org `active` with `step = 4` (already done) so nobody lands on the "new org" welcome flow.
-- After install, redirect an admin straight to a **Getting started** checklist on the dashboard:
-  servers added, first app ready, domain set, SSO/LDAP (optional). This replaces the multi-tenant `Welcome` page.
+- A **Getting started** card on the organization dashboard, for the admin only, until everything required is done
+  (`App\Support\GettingStarted`): a server added, an app ready, a domain set (the system base domain counts), an app installed,
+  and single sign-on as an optional suggestion. Each step links to where it is done. It replaces the multi-tenant `Welcome` page.
+  Nobody is redirected to it: the dashboard is where an admin lands anyway.
 
 ### 7. More ways to make it feel single-tenant
 
-- **Branding**: show the org name and logo in the navbar instead of "Welcome to Control Panel". The theme colors already exist in `Settings`.
-- **Dashboard**: merge in the admin signals an operator wants every day (failed tasks, security findings, apps with
-  updates available). Drop the multi-tenant admin widgets (org counts, plan subscribers, new orgs).
+- **Branding**: the navbar shows the organization's name instead of "Welcome to Control Panel". A logo is not done: there is
+  no setting to hold one yet. The theme colors already exist in `Settings`.
+- **Dashboard**: the admin **Overview** stays its own page, with the organization count and plan-subscriber widgets
+  removed (they are meaningless with one organization), so what is left is the daily signals: failed tasks, security
+  findings, apps with updates available. Folding them into the organization dashboard is a possible follow-up.
+- **Profiles**: an app plan is called a **profile** in a single-organization install, since nobody subscribes to it. The
+  words live in `resources/lang/{locale}/single.php` (PHP strings) and `resources/js/i18n/single/{locale}.json` (Vue strings),
+  laid over the normal strings (`SingleOrganizationTerms`, `useSingleOrganizationTerms`). It covers the strings the
+  app-plan, Discover and readiness pages use. Strings about organization plans are left alone, since those pages are hidden.
+  A test checks that every override exists and keeps its placeholders.
 - **Backups**: the per-org backup screens under Admin → Organizations become the main "Backups" page. They sit behind the `app-backups` toggle (off by default), so the item only shows when that is on.
-- **Support**: the help-desk modal currently files a ticket to the control-panel operator. In single mode the operator
-  is the user, so make it a link to the docs URL or an internal contact. Confirm with `Account\Support` before changing.
+- **Support**: left as it is. The help-desk modal emails the address in the `support_email` setting, so a single-organization
+  install can point it at whoever should get the tickets.
 - **Version-test organizations** stay hidden (`Organization::notTest()`), so test runs never show up as tenants.
 - **README and docs**: add an "Installation modes" section.
 
@@ -208,7 +217,7 @@ Each phase ships independently and keeps multi-tenant behavior unchanged.
 3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards. *(in progress)* Notification no-ops were left out on purpose: with no billing driver the billing notifications and the invoice job already do nothing, and a single-organization install creates no new organizations. Revisit if one turns out to fire.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards, admin-only install. *(in progress)* Readiness only applies in single mode; multi-tenant Discover still follows the organization's plan. The top-level Discover menu item stays in phase 5.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect. *(in progress)*
-6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.
+6. **Dashboard, Getting started, polish.** Overview trimmed, Getting started card, organization name in the navbar, profile wording. *(in progress)*
 7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.
 
 ## Testing

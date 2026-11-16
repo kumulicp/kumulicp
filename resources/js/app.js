@@ -4,7 +4,7 @@ import { createApp, h } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import vuesticGlobalConfig from './services/global-config'
-import i18n from './i18n'
+import i18n, { useSingleOrganizationTerms } from './i18n'
 import { createVuestic } from 'vuestic-ui'
 import stores from './stores'
 import 'vuestic-ui/styles/essential.css'
@@ -45,6 +45,11 @@ createInertiaApp({
     const language = props.initialPage.props.language
     if (language) {
       i18n.global.locale.value = language
+    }
+
+    // The mode is fixed when the control panel is installed, so the first page says it for good
+    if (props.initialPage.props.tenancy?.single) {
+      useSingleOrganizationTerms()
     }
 
     VueApp.use(plugin)

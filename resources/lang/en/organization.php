@@ -208,4 +208,26 @@ return [
             'action' => 'Add a server',
         ],
     ],
+    'getting_started' => [
+        'servers' => [
+            'label' => 'Add a server',
+            'hint' => 'Apps need a server to run on.',
+        ],
+        'app_ready' => [
+            'label' => 'Get an app ready to install',
+            'hint' => 'An app needs an enabled version and a plan before it can be installed.',
+        ],
+        'domain' => [
+            'label' => 'Set a domain',
+            'hint' => 'Give your apps an address: add your own domain, or set the system base domain.',
+        ],
+        'app_installed' => [
+            'label' => 'Install your first app',
+            'hint' => 'Pick an app in Discover and install it.',
+        ],
+        'sso' => [
+            'label' => 'Set up single sign-on',
+            'hint' => 'Let people log in with an account they already have.',
+        ],
+    ],
 ];

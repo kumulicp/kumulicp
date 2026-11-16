@@ -10,8 +10,10 @@ use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
 use App\Support\Facades\Subscription;
 use App\Support\Facades\Tenancy;
+use App\Support\GettingStarted;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Response;
 
@@ -88,7 +90,11 @@ class HomeController extends Controller
 
         $plan = Organization::plan();
 
+        // The admin of a single-organization install is walked through setting it up, until it is
+        $getting_started = Tenancy::isSingle() && Gate::allows('admin') ? new GettingStarted(Organization::account()) : null;
+
         return inertia('Organization/Dashboard/AccountDashboard', [
+            'getting_started' => $getting_started && ! $getting_started->isComplete() ? $getting_started->steps() : null,
             'trial_plan' => Tenancy::isMulti() && $plan ? $plan->type == 'trial' : false,
             'info_blocks' => $info_blocks,
             'nextcloud_folders' => $folder_groups,
