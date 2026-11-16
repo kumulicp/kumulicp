@@ -51,8 +51,10 @@ when it is present but null. Either way "unlimited" is not expressible today and
   by the installer and then stored in the DB, so the DB is the source of truth afterwards.
 - A small `Tenancy` service and facade (`Tenancy::isSingle()`, `isMulti()`, `organization()`) follows the existing
   `Settings` facade pattern. The mode is also shared to Vue as `$page.props.tenancy.single`.
-- The mode is fixed after install. The only way to change it is the `kumulicp:tenancy` artisan command (phase 7),
-  which refuses to switch to single unless exactly one non-test org exists. There is no admin UI for it.
+- The mode is fixed after install. The only way to change it is the `kumulicp:tenancy` artisan command,
+  which refuses to switch to single unless exactly one non-test organization exists, it is the superaccount, and no shared
+  apps are running. It asks for confirmation (`--force` skips it), clears the per-organization caches built for the old mode
+  (`Tenancy::switchTo`) and tells queue workers to restart. There is no admin UI for it.
   Existing multi-tenant installs are **not** auto-converted.
 
 ### 2. "Unlimited plan" is computed, not stored
@@ -207,7 +209,7 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
 - **Support**: left as it is. The help-desk modal emails the address in the `support_email` setting, so a single-organization
   install can point it at whoever should get the tickets.
 - **Version-test organizations** stay hidden (`Organization::notTest()`), so test runs never show up as tenants.
-- **README and docs**: add an "Installation modes" section.
+- **README and docs**: the README has an "Installation mode" section. There is no changelog file to add an entry to.
 
 ## Phased delivery
 
@@ -219,7 +221,7 @@ Each phase ships independently and keeps multi-tenant behavior unchanged.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards, admin-only install. *(in progress)* Readiness only applies in single mode; multi-tenant Discover still follows the organization's plan. The top-level Discover menu item stays in phase 5.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect. *(in progress)*
 6. **Dashboard, Getting started, polish.** Overview trimmed, Getting started card, organization name in the navbar, profile wording. *(in progress)*
-7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.
+7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check. *(done)*
 
 ## Testing
 
