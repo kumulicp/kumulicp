@@ -75,7 +75,11 @@ class SecurityHeaders
                 "form-action 'self'",
             ]);
 
-        $response->headers->set('Content-Security-Policy', $csp);
+        // A response may already carry a stricter policy of its own (ticket
+        // attachment downloads do); never replace that with the page one.
+        if (! $response->headers->has('Content-Security-Policy')) {
+            $response->headers->set('Content-Security-Policy', $csp);
+        }
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');

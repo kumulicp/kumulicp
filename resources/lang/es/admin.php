@@ -230,6 +230,10 @@ return [
                     'label' => 'Registrador de dominios',
                     'description' => 'Permite que las organizaciones registren, transfieran y renueven nombres de dominio a través de su registrador. Agrega las páginas de administración de Dominios y TLD, las opciones de registrar y transferir al agregar un dominio, y las opciones de plan correspondientes. Conectar un dominio que ya posee siempre está disponible.',
                 ],
+                'tickets' => [
+                    'label' => 'Tickets de soporte',
+                    'description' => 'Agrega una mesa de ayuda. Las organizaciones abren y siguen tickets desde su cuenta, y los administradores los gestionan desde Soporte en el menú de administración: asignación, prioridades, SLA, automatización, integraciones e informes.',
+                ],
             ],
         ],
     ],

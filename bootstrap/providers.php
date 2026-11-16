@@ -7,6 +7,7 @@ use App\Providers\BillingServiceProvider;
 use App\Providers\DomainServiceProvider;
 use App\Providers\EmailServiceProvider;
 use App\Providers\EventServiceProvider;
+use App\Providers\TicketIntegrationServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -16,4 +17,5 @@ return [
     DomainServiceProvider::class,
     EmailServiceProvider::class,
     BillingServiceProvider::class,
+    TicketIntegrationServiceProvider::class,
 ];

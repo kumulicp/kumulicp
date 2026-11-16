@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'tickets' => 'Support tickets',
     'nonprofit' => 'Non-profit',
     'business' => 'Business',
     'family' => 'Family',

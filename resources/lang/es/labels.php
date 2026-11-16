@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'tickets' => 'Tickets de soporte',
     'nonprofit' => 'Sin fines de lucro',
     'business' => 'Empresa',
     'family' => 'Familia',
