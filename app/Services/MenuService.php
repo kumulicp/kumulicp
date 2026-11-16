@@ -59,7 +59,7 @@ class MenuService
                         'name' => __('labels.announcements'),
                         'url' => '/admin/service/announcements',
                         'icon' => 'fa-bullhorn',
-                        'perm' => $admin,
+                        'perm' => $admin && $multi,
                         'external' => false,
                         'order' => 100,
                     ],
@@ -209,6 +209,15 @@ class MenuService
                 'external' => false,
                 'order' => 200,
             ],
+            'discover' => [
+                'name' => __('labels.discover'),
+                'url' => '/discover',
+                'icon' => 'fa-compass',
+                // In a single-organization install Discover is the one catalog of apps
+                'perm' => Tenancy::isSingle() && $organization_status != 'new',
+                'external' => false,
+                'order' => 250,
+            ],
             'plans' => [
                 'name' => __('labels.plans'),
                 'url' => '/subscription/options',
@@ -324,6 +333,46 @@ class MenuService
                 'order' => 10000,
             ],
         ];
+    }
+
+    /**
+     * One menu for a single-organization install: everything an organization member
+     * sees, then, for an admin, an Administration section with the admin pages. There
+     * is no separate admin area to switch to.
+     *
+     * @return array<int|string, array<string, mixed>>
+     */
+    public function unified(): array
+    {
+        $items = $this->build('organization');
+
+        $items[] = [
+            'name' => __('labels.administration'),
+            'type' => 'header',
+            'url' => null,
+            'perm' => Gate::allows('admin'),
+            'external' => false,
+            'order' => 900,
+        ];
+
+        // These would otherwise read the same as the organization's own Dashboard and Apps. They are
+        // found by url because build() hands back the admin items without their keys.
+        $renamed = [
+            '/admin' => __('labels.overview'),
+            '/admin/apps' => __('labels.app_catalog'),
+        ];
+
+        foreach ($this->build('admin') as $item) {
+            if (isset($renamed[$item['url'] ?? ''])) {
+                $item['name'] = $renamed[$item['url']];
+            }
+
+            // After the header, whatever order the item has in the admin menu
+            $item['order'] = 1000 + ($item['order'] ?? 0);
+            $items[] = $item;
+        }
+
+        return $items;
     }
 
     public function registerItem(string $menu, array|\Closure $item, ?string $menu_item = null)

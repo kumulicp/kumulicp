@@ -621,6 +621,7 @@
       "massUpgradeConfirm": "Actualizar aplicaciones"
     },
     "apps": {
+      "viewInDiscover": "Ver en Descubrir",
       "appSettings": "Configuración de la Aplicación",
       "pageTitle": "Aplicación de la Organización - Panel de Control",
       "pageTitleShort": "Aplicación de la Organización",
@@ -1203,6 +1204,7 @@
       "pageTitle": "{title}"
     },
     "apps": {
+      "manage": "Gestionar",
       "loginPassword": "Contraseña de Inicio de Sesión",
       "recommendPasswordChange": "Se recomienda cambiar esta contraseña al iniciar sesión",
       "settingsTitle": "Configuración de la Aplicación",

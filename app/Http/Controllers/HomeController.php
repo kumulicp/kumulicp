@@ -8,8 +8,8 @@ use App\Integrations\Applications\Nextcloud\API\GroupFolders;
 use App\Support\ByteConversion;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Settings;
-use App\Support\Facades\Tenancy;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
@@ -31,7 +31,8 @@ class HomeController extends Controller
         $o = Organization::account()->slug;
         $date = new Carbon;
         $converter = new ByteConversion;
-        $announcements = Announcement::latest()->limit(5)->get();
+        // Announcements are how a hosting provider talks to its organizations
+        $announcements = Tenancy::isMulti() ? Announcement::latest()->limit(5)->get() : collect();
 
         $folder_groups = null;
         $nextcloud = Organization::appByName('nextcloud');

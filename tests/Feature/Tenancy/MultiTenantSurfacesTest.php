@@ -1,5 +1,6 @@
 <?php
 
+use App\Announcement;
 use App\Organization;
 use App\Support\Facades\Menu;
 use App\User;
@@ -35,6 +36,7 @@ dataset('multi_tenant_pages', [
     'service plans' => '/admin/service/plans',
     'invoice settings' => '/admin/settings/invoice',
     'registration settings' => '/admin/settings/registration',
+    'announcements' => '/admin/service/announcements',
 ]);
 
 it('hides the pages only a hosting provider uses in single mode', function (string $url) {
@@ -194,4 +196,18 @@ it('offers every feature in multi-tenant mode', function () {
 
     $this->get('/admin/settings/features')
         ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'emails', 'shared-apps', 'sub-organizations']));
+});
+
+it('keeps announcements off the dashboard and out of the menu in single mode', function () {
+    $announcement = Announcement::create(['title' => 'Maintenance', 'short_description' => 'x', 'description' => 'x']);
+    useSingleTenancy();
+
+    $this->actingAs(User::where('username', 'demo')->firstOrFail())
+        ->get("/announcements/{$announcement->id}")
+        ->assertNotFound();
+
+    $this->get('/')
+        ->assertInertia(fn ($page) => $page->has('announcements', 0));
+
+    expect(tenancyMenuUrls('admin'))->not->toContain('/admin/service/announcements');
 });

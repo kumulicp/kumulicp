@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from './AppsLayout.vue'
 import ScreenshotGallery from '@/components/ScreenshotGallery.vue'
+import { Link } from '@inertiajs/vue3'
 import AppReadiness from '@/components/App/AppReadiness.vue'
 
 </script>
@@ -10,6 +11,9 @@ import AppReadiness from '@/components/App/AppReadiness.vue'
     <title>{{ $t('admin.apps.viewApp') }} - Control Panel</title>
   </Head>
   <div class="app-profile">
+    <div v-if="discover_url" class="mb-3">
+      <Link id="view-in-discover" :href="discover_url">{{ $t('admin.apps.viewInDiscover') }}</Link>
+    </div>
     <app-readiness :readiness="readiness" />
     <div class="row">
       <div class="flex flex-col xs12 lg2">
@@ -68,6 +72,7 @@ export default {
   },
   props: {
     app: Object,
+    discover_url: String,
     readiness: Object
   }
 }

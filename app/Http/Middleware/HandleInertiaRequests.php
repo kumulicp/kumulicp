@@ -68,7 +68,14 @@ class HandleInertiaRequests extends Middleware
 
         $locale = app()->getLocale();
 
-        if ($path_info && Str::of($path_info)->explode('/')[1] == 'admin' && Gate::allows('admin')) {
+        if (Tenancy::isSingle()) {
+            // One menu for admin and member alike, whatever page this is. What it shows an admin
+            // differs from what it shows a member, so they are cached apart.
+            $audience = Gate::allows('admin') ? 'admin' : 'member';
+            $menu = FastCache::retrieve("unified_menu:{$locale}:{$audience}", function () {
+                return Menu::unified();
+            });
+        } elseif ($path_info && Str::of($path_info)->explode('/')[1] == 'admin' && Gate::allows('admin')) {
             $menu = FastCache::retrieve("admin_menu:{$locale}", function () {
                 return Menu::build('admin');
             });

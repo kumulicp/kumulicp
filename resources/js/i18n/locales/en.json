@@ -621,6 +621,7 @@
       "massUpgradeConfirm": "Upgrade apps"
     },
     "apps": {
+      "viewInDiscover": "View in Discover",
       "appSettings": "App Settings",
       "pageTitle": "Organization App - Control Panel",
       "pageTitleShort": "Organization App",
@@ -1206,6 +1207,7 @@
       "pageTitle": "{title}"
     },
     "apps": {
+      "manage": "Manage",
       "loginPassword": "Login Password",
       "recommendPasswordChange": "It's recommended you change this password when you login",
       "settingsTitle": "App Settings",

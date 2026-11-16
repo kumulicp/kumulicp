@@ -19,6 +19,7 @@ use App\Support\Facades\Billing;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
+use App\Support\Facades\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Gate;
@@ -29,10 +30,12 @@ class Applications extends Controller
     {
         $organization = Organization::account();
         $apps = Organization::apps(['organization', 'version']);
+        // An admin of a single-organization install manages an app from the same list
+        $can_manage = Tenancy::isSingle() && Gate::allows('admin');
 
         if (! $apps->isEmpty()) {
             return inertia('Organization/Apps/AppsList', [
-                'apps' => $apps->map(function ($app) {
+                'apps' => $apps->map(function ($app) use ($can_manage) {
                     $tasks = $app->tasks()->where('background', 0)->whereIn('status', TaskStatus::openValues())->get();
 
                     return [
@@ -40,6 +43,7 @@ class Applications extends Controller
                         'name' => $app->label,
                         'has_admin_address' => ! is_null($app->version->admin_path),
                         'status' => $app->status,
+                        'manage_url' => $can_manage ? "/admin/organizations/{$app->organization_id}/apps/{$app->id}" : null,
                         'address' => $app->address(),
                         'admin_address' => $app->admin_address(),
                         'tasks' => $tasks->map(function ($task) {
