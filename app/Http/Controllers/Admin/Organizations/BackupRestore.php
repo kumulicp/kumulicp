@@ -9,6 +9,7 @@ use App\OrgBackup;
 use App\Server;
 use App\Services\OrgServerService;
 use App\Support\Facades\Backup;
+use App\Support\Facades\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -57,19 +58,21 @@ class BackupRestore extends Controller
                 'pages' => $backups->lastPage(),
                 'page' => $backups->currentPage(),
             ],
-            'breadcrumbs' => [
-                [
-                    'label' => __('admin.organizations.organizations'),
-                    'url' => '/admin/organizations',
+            'breadcrumbs' => Tenancy::isSingle()
+                ? [['label' => __('labels.backups')]]
+                : [
+                    [
+                        'label' => __('admin.organizations.organizations'),
+                        'url' => '/admin/organizations',
+                    ],
+                    [
+                        'label' => $organization->name,
+                        'url' => '/admin/organizations/'.$organization->id,
+                    ],
+                    [
+                        'label' => __('admin.organizations.details'),
+                    ],
                 ],
-                [
-                    'label' => $organization->name,
-                    'url' => '/admin/organizations/'.$organization->id,
-                ],
-                [
-                    'label' => __('admin.organizations.details'),
-                ],
-            ],
         ]);
     }
 

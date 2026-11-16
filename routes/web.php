@@ -120,8 +120,13 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::resource('organizations', 'Admin\Organizations')->middleware('block-test-orgs');
         Route::prefix('organizations')->middleware('block-test-orgs')->group(function () {
             Route::prefix('{organization}')->group(function () {
-                Route::get('logs', 'Admin\Organizations@logs')->name('organizations.logs');
-                Route::get('tasks', 'Admin\Organizations@tasks')->name('organizations.tasks');
+                // The organization's own hub pages repeat the server-wide Tasks, Logs and Domains
+                // pages and the Apps list, so a single-organization install doesn't have them
+                Route::middleware('tenancy:multi')->group(function () {
+                    Route::get('logs', 'Admin\Organizations@logs')->name('organizations.logs');
+                    Route::get('tasks', 'Admin\Organizations@tasks')->name('organizations.tasks');
+                    Route::get('domains', 'Admin\Organizations\Domains@index')->name('organizations.domains.index');
+                });
                 // An organization's subscription and lifecycle only exist for a hosting
                 // provider: a single-organization install has exactly one, and it stays
                 Route::middleware('tenancy:multi')->group(function () {
@@ -138,7 +143,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->name('organizations.backup.restore')->middleware('toggle:app-backups');
                 Route::post('backups/{backup}/restore', 'Admin\Organizations\BackupRestore@restore')->middleware('toggle:app-backups');
                 Route::prefix('apps')->group(function () {
-                    Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index');
+                    Route::get('', 'Admin\Organizations\Applications@index')->name('organizations.applications.index')->middleware('tenancy:multi');
                     Route::prefix('{app}')->group(function () {
                         Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
@@ -153,7 +158,6 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('upgrade/{version}', 'Admin\Organizations\Applications@upgrade')->name('organizations.app.upgrade');
                     });
                 });
-                Route::get('domains', 'Admin\Organizations\Domains@index')->name('organizations.domains.index');
             });
         });
 

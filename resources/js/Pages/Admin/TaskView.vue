@@ -66,7 +66,10 @@ import { useToast } from 'vuestic-ui'
           </tr>
           <tr v-if="task.organization">
             <td>{{ $t('admin.tasks.organization') }}</td>
-            <td><Link :href="'/admin/organizations/' + task.organization.id">{{ task.organization.name }}</Link></td>
+            <td>
+              <template v-if="$page.props.tenancy.single">{{ task.organization.name }}</template>
+              <Link v-else :href="'/admin/organizations/' + task.organization.id">{{ task.organization.name }}</Link>
+            </td>
           </tr>
           <tr v-if="task.application">
             <td>{{ $t('admin.tasks.application') }}</td>

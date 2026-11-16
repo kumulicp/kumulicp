@@ -1,6 +1,10 @@
 <?php
 
 use App\Announcement;
+use App\AppInstance;
+use App\Application;
+use App\AppPlan;
+use App\AppVersion;
 use App\Organization;
 use App\Support\Facades\Menu;
 use App\User;
@@ -77,12 +81,40 @@ it('closes the subscription and lifecycle actions of the organization in single 
     expect(Organization::find(1)->status)->not->toBe('deactivated');
 });
 
-it('goes straight to the one organization instead of listing organizations', function () {
+it('has no organization pages in single mode, and sends the old addresses to the overview', function () {
     useSingleTenancy();
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-    $this->get('/admin/organizations')->assertRedirect('/admin/organizations/1');
+    $this->get('/admin/organizations')->assertRedirect('/admin');
+    $this->get('/admin/organizations/1')->assertRedirect('/admin');
+
+    foreach (['logs', 'tasks', 'domains', 'apps'] as $page) {
+        $this->get("/admin/organizations/1/{$page}")->assertNotFound();
+    }
+});
+
+it('keeps the settings pages of an app instance in single mode', function () {
+    useSingleTenancy();
+    $this->actingAs(User::where('username', 'demo')->firstOrFail());
+    $app = Application::factory()->create();
+    $instance = AppInstance::factory()->create([
+        'organization_id' => 1,
+        'application_id' => $app->id,
+        'version_id' => AppVersion::factory()->create(['application_id' => $app->id])->id,
+        'plan_id' => AppPlan::factory()->create(['application_id' => $app->id])->id,
+    ]);
+
+    $this->get("/admin/organizations/1/apps/{$instance->id}")->assertOk();
+    $this->get("/admin/organizations/1/apps/{$instance->id}/edit")->assertOk();
+});
+
+it('has the organization pages in multi-tenant mode', function () {
+    $this->actingAs(User::where('username', 'demo')->firstOrFail());
+
     $this->get('/admin/organizations/1')->assertOk();
+    foreach (['logs', 'tasks', 'domains', 'apps'] as $page) {
+        $this->get("/admin/organizations/1/{$page}")->assertOk();
+    }
 });
 
 it('lists organizations in multi-tenant mode', function () {
@@ -97,7 +129,7 @@ it('takes the multi-tenant pages out of the admin menu in single mode', function
 
     $urls = tenancyMenuUrls('admin');
 
-    expect($urls)->toContain('/admin/organizations/1');
+    expect($urls)->not->toContain('/admin/organizations/1');
     expect($urls)->not->toContain('/admin/organizations');
     expect($urls)->not->toContain('/admin/service/plans');
     expect($urls)->not->toContain('/admin/service/shared-apps');

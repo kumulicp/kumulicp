@@ -97,7 +97,7 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | `has-billing-account` gate | Always deny, `Billing` forced to "no driver", Stripe check skipped in `Setup::settings()` |
 | `Account\Applications` deactivate: `Billing::periodEnds()` | Already falls back to `now()` with no billing |
 | Admin menu: Services → Plans, Services → Shared apps | Hidden, routes 404 |
-| Admin menu: Organizations | The list is replaced by a single **Organization** item that opens the one org's admin page (`/admin/organizations` redirects there). The per-org page keeps its apps, backups, logs, tasks and domains until phase 5 folds them into the main menu. |
+| Admin menu: Organizations | Gone. The organization hub (details, apps list, logs, tasks, domains) only repeats pages that already exist, so `/admin/organizations` and `/admin/organizations/{id}` redirect to the admin Overview and the hub's logs, tasks, domains and apps-list pages 404. What stays is the per-app admin pages under `/admin/organizations/{id}/apps/{app}`, reached from the Manage link on Apps. |
 | Admin settings: Invoice, Registration (captcha) | Hidden |
 | Public registration: `Auth::routes()` register, `public/org/{slug}/register`, "Sign up" link on login | Disabled. New people arrive via Users → Add, SSO or LDAP. |
 | Org review step in Discover (suborg dropdown) | Never shown |
@@ -174,10 +174,11 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
 - Discover is a top-level item (single mode only; a multi-tenant install keeps reaching it from the Apps page).
 - The Apps list gets an admin-only **Manage** link to the admin page of that instance (`/admin/organizations/{id}/apps/{app}`),
   and the admin app pages get a **View in Discover** link. Discover already linked to the admin app page.
-- `/admin/organizations` redirects to the single org's page (done in phase 3). **The Organization item stays in Administration** as the
-  hub for the per-org admin pages (apps, backups, logs, tasks, domains) instead of each tab becoming its own menu item: the per-org
-  tasks and logs largely repeat the server-wide Tasks and Logs items, and the apps are reached through the Manage links.
-  Subscription actions on that page are hidden.
+- There is no Organization item and no organization page. `/admin/organizations` and `/admin/organizations/{id}` redirect to the
+  Overview. The organization's name, address and contact are under Settings → Organization, its domains under Settings → Domains,
+  and tasks and logs are the server-wide Tasks and Logs. The per-app admin pages (view, edit, helm values) stay where the Manage link
+  already points, with their breadcrumb going back to Apps. The one-off backup and restore page of the organization is still routed
+  (`/admin/organizations/{id}/backups`, behind `app-backups`) but nothing links to it yet. Open item: give it a home.
 
 ### 6. Installer
 

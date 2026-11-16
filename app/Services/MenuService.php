@@ -19,8 +19,6 @@ class MenuService
     {
         $admin = Gate::allows('admin');
         $multi = Tenancy::isMulti();
-        // A single-organization install has one organization, so there is no list to pick from
-        $single_organization = $multi ? null : Tenancy::organization();
 
         $this->admin = [
             'dashboard' => [
@@ -32,10 +30,11 @@ class MenuService
                 'order' => 50,
             ],
             'organizations' => [
-                'name' => $single_organization ? __('labels.organization') : __('labels.organizations'),
-                'url' => $single_organization ? "/admin/organizations/{$single_organization->id}" : '/admin/organizations',
+                'name' => __('labels.organizations'),
+                'url' => '/admin/organizations',
                 'icon' => 'fa-building-flag',
-                'perm' => $admin,
+                // A single-organization install has no list of organizations and no page for its one
+                'perm' => $admin && $multi,
                 'external' => false,
                 'order' => 100,
             ],
