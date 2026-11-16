@@ -22,3 +22,13 @@
 :root .va-text-secondary {
   color: var(--va-text-secondary);
 }
+
+// Input helper messages (and the character counter) default to the brand
+// secondary colour too, which made them pink. Use the grey secondary text
+// colour instead. Error/success messages are unaffected because Vuestic sets
+// their colour inline. `:root:root` beats Vuestic's `:root` declarations
+// regardless of stylesheet order.
+:root:root {
+  --va-message-list-color: var(--va-text-secondary);
+  --va-input-wrapper-counter-color: var(--va-text-secondary);
+}
