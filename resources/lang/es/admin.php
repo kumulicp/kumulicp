@@ -58,8 +58,6 @@ return [
         ],
         'added' => ':app agregada',
         'updated' => ':app actualizada',
-        'enabled' => ':app está habilitada',
-        'disabled' => 'La aplicación fue deshabilitada. Las organizaciones que la hayan activado podrán seguir usándola. Las organizaciones ya no podrán realizar instalaciones nuevas ni ejecutar actualizaciones personalizadas.',
         'plans' => [
             'plans' => 'Planes',
             'added' => 'Plan agregado',
@@ -102,7 +100,6 @@ return [
             'mass_upgrade_started' => 'Actualizando a :version todas las aplicaciones que usan una versión anterior',
         ],
         'denied' => [
-            'enable' => 'Esta aplicación aún no se puede habilitar. Primero debes habilitar una versión predeterminada.',
         ],
         'compatibility' => [
             'compatibility' => 'Compatibilidad',

@@ -73,6 +73,8 @@ return [
     'none_org_type' => 'Individual',
     'superaccount' => 'Súper cuenta',
     'enabled' => 'Habilitado',
+    'ready' => 'Lista',
+    'not_ready' => 'No lista',
     'package_manager' => 'Gestor de complementos',
     'thanks' => 'Gracias',
 ];

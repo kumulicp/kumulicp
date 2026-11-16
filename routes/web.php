@@ -37,8 +37,6 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::post('', 'Admin\Applications@store')->name('app.store');
             Route::prefix('{app:slug}')->group(function () {
                 Route::get('', 'Admin\Applications@show');
-                Route::post('enable', 'Admin\Applications@enable');
-                Route::post('disable', 'Admin\Applications@disable');
                 Route::get('edit', 'Admin\Applications@edit');
                 Route::post('', 'Admin\Applications@update');
                 Route::prefix('plans')->group(function () {

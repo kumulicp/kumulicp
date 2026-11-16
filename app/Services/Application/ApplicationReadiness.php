@@ -14,6 +14,10 @@ use Illuminate\Support\Collection;
  * An issue is either blocking (the app can't be installed until it is fixed) or
  * only a warning. Nothing here is specific to an organization.
  *
+ * Whether an app is ready is also what its saved status says: in a single
+ * organization install `enabled` is kept in step with isReady() (see sync()),
+ * so it is the result of these checks and never one of them.
+ *
  * Each issue is an array:
  *  - key: which check found it
  *  - blocking: whether it stops the app being installed
@@ -36,7 +40,6 @@ class ApplicationReadiness
     public function issues(): array
     {
         return $this->issues ??= array_values(array_filter([
-            $this->enabled(),
             $this->version(),
             $this->plan(),
             $this->planConfigured(),
@@ -62,15 +65,33 @@ class ApplicationReadiness
         return count($this->issues()) > 0 ? 'warning' : 'ready';
     }
 
-    private function enabled(): ?array
+    /**
+     * Keep the app's saved status (its `enabled` column) in step with whether it
+     * is ready, so that nobody has to turn an app on or off by hand. Returns
+     * whether the status changed.
+     */
+    public function sync(): bool
     {
-        if ($this->app->enabled) {
-            return null;
+        $ready = $this->isReady();
+
+        if ((bool) $this->app->enabled === $ready) {
+            return false;
         }
 
-        return $this->issue('enabled', true, __('organization.readiness.enabled.message', ['app' => $this->app->name]), [
-            $this->action(__('organization.readiness.enabled.action'), "/admin/apps/{$this->app->slug}/edit"),
-        ]);
+        // Quietly: nothing else needs to hear about it, and it would loop back here
+        $this->app->enabled = $ready;
+        $this->app->saveQuietly();
+
+        return true;
+    }
+
+    /**
+     * Sync every app, for the ones whose inputs changed without a model event.
+     * Returns how many apps changed status.
+     */
+    public static function syncAll(): int
+    {
+        return Application::all()->filter(fn (Application $app) => (new self($app))->sync())->count();
     }
 
     private function version(): ?array

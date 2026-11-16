@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 use App\AppInstance;
+use App\AppPlan;
+use App\AppVersion;
 use App\Monitoring\AppInstanceObserver;
 use App\Organization;
+use App\Server;
 use App\Services\AppProfileRegistry;
+use App\Services\Application\ReadinessObserver;
 use App\Services\BillingDriverRegistry;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
@@ -83,6 +87,12 @@ class AppServiceProvider extends ServiceProvider
         }
 
         AppInstance::observe(AppInstanceObserver::class);
+
+        // An app is ready or not depending on its versions, its plans and the servers, so its
+        // saved status is worked out again whenever one of them changes
+        foreach ([AppVersion::class, AppPlan::class, Server::class] as $model) {
+            $model::observe(ReadinessObserver::class);
+        }
 
         // The uptime monitor makes its own requests, so in local dev it needs the
         // same route to the cluster's ingress that API calls get. A handler set

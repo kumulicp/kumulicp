@@ -186,10 +186,6 @@ return [
         'payment_method_required' => 'A default payment method is required',
     ],
     'readiness' => [
-        'enabled' => [
-            'message' => ':app is turned off',
-            'action' => 'Turn it on',
-        ],
         'version_missing' => [
             'message' => ':app has no version yet',
             'action' => 'Add a version',

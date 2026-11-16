@@ -183,10 +183,6 @@ return [
         'payment_method_required' => 'Se requiere un método de pago predeterminado',
     ],
     'readiness' => [
-        'enabled' => [
-            'message' => ':app está desactivada',
-            'action' => 'Activarla',
-        ],
         'version_missing' => [
             'message' => ':app todavía no tiene ninguna versión',
             'action' => 'Añadir una versión',

@@ -118,12 +118,20 @@ New `ApplicationReadiness` service (`Application::readiness()`) returns an order
 
 | Check | Fails when | Link target |
 |---|---|---|
-| `enabled` | `applications.enabled = 0` | `/admin/apps/{slug}/edit` (enable toggle) |
 | `version` | No `AppVersion` exists, or none is `active` (usually untested, see `AppVersion::canBeEnabled()` and the tests flow) | `/admin/apps/{slug}/versions/create` when there is none, otherwise the newest version's page (`/admin/apps/{slug}/versions/{name}`) to test and enable it |
 | `plan` | No non-archived `AppPlan` | `/admin/apps/{slug}/plans/create`, plus a **"Create default plan"** button that runs the same logic as `Admin\Applications::store()` |
 | `plan_configured` | The plan has never been edited: `updated_at` equals `created_at`. A plan almost always needs a change or two to work on a given server, and a freshly created one has identical timestamps (decided). This replaces separate features/servers checks. | `/admin/apps/{slug}/plans/{id}/edit`. Shared-app plans (`AppPlan::usesSharedApp()`) are skipped: they are configured on the shared app, which single mode hides. |
 | `servers` | No default web server, and no plan names one of its own | `/admin/server/servers` |
 | existing | `missing_parent_app`, primary domain | Existing behavior, still decided per organization in the `activate-app` gate |
+
+**The saved status is the result of these checks, in every mode.** Nobody turns an app on or off by hand any more: the
+enable and disable buttons and routes are gone. The `applications.enabled` column is now a cache of "is this app ready",
+kept up to date by a `ReadinessObserver` on versions, plans and servers (a server change re-checks every app), plus an
+hourly `SyncApplicationReadiness` that catches anything that changed without a model event. The admin app pages show
+**Ready** or **Not ready** and list what is missing. This is why there is no "turned off" check in the table above: it
+would depend on its own result. The `activate-app` gate still checks readiness live rather than trusting the cached value.
+One consequence: an admin can no longer hide a ready app from new installs by switching it off. Archiving its plans or
+deactivating its version does that.
 
 `plan_configured` is only a **warning**: it never blocks installing. A plan can be saved without changing anything and still
 be right. Saving the plan from its edit page is enough to clear it.

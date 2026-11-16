@@ -114,8 +114,6 @@ return [
         ],
         'added' => ':app added',
         'updated' => ':app updated',
-        'enabled' => ':app is enabled',
-        'disabled' => 'Application was disabled. Organizations who have activated it will continue to be able to use it. Organizations will no longer be able to do fresh installs it or run custom updates.',
         'plans' => [
             'plans' => 'Plans',
             'added' => 'Plan added',
@@ -158,7 +156,6 @@ return [
             'mass_upgrade_started' => 'Upgrading every app that runs an older version to :version',
         ],
         'denied' => [
-            'enable' => 'This application cannot be enabled yet. You must first enable a default version.',
         ],
         'compatibility' => [
             'compatibility' => 'Compatibility',

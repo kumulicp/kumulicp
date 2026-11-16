@@ -12,8 +12,6 @@ use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
 use App\Services\Application\ApplicationReadiness;
 use App\Support\Facades\Application as ApplicationFacade;
-use App\Support\Facades\Tenancy;
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -33,7 +31,7 @@ class Applications extends Controller
                     'id' => $app->id,
                     'slug' => $app->slug,
                     'name' => $app->name,
-                    'status' => $app->enabled ? __('labels.enabled') : __('labels.disabled'),
+                    'status' => $app->enabled ? __('labels.ready') : __('labels.not_ready'),
                     'source' => $app->source->label(),
                     'versions' => $app->versions->map(fn (AppVersion $version) => [
                         'id' => $version->id,
@@ -121,13 +119,13 @@ class Applications extends Controller
             })
             ->values();
 
-        $readiness = Tenancy::isSingle() ? new ApplicationReadiness($app) : null;
+        $readiness = new ApplicationReadiness($app);
 
         return inertia()->render('Admin/Applications/AppView', [
-            'readiness' => $readiness ? [
+            'readiness' => [
                 'status' => $readiness->status(),
                 'items' => $readiness->issues(),
-            ] : null,
+            ],
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
@@ -163,9 +161,13 @@ class Applications extends Controller
     public function edit(Application $app)
     {
         $apps = Application::all();
-        $default_version = $app->versions()->where('status', 'active')->first();
+        $readiness = new ApplicationReadiness($app);
 
         return inertia()->render('Admin/Applications/AppEdit', [
+            'readiness' => [
+                'status' => $readiness->status(),
+                'items' => $readiness->issues(),
+            ],
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
@@ -180,24 +182,11 @@ class Applications extends Controller
                 'description' => $app->description,
                 'can_update_domain' => $app->can_update_domain,
                 'enabled' => $app->enabled == 1 ? true : false,
+                'status_label' => $app->enabled ? __('labels.ready') : __('labels.not_ready'),
                 'screenshots' => $app->screenshots->map(function ($screenshot) {
                     return [
                         'id' => $screenshot->id,
                         'url' => $screenshot->url,
-                    ];
-                }),
-                'toggle' => [
-                    'state' => $app->enabled ? 'disable' : 'enable',
-                    'label' => $app->enabled ? 'Disable' : 'Enable',
-                ],
-                'default_version' => $default_version ? [
-                    'id' => $default_version->id,
-                    'version' => $default_version->name,
-                ] : [],
-                'versions' => $app->versions->map(function ($version) {
-                    return [
-                        'id' => $version->id,
-                        'version' => $version->name,
                     ];
                 }),
             ],
@@ -278,48 +267,5 @@ class Applications extends Controller
         $app->save();
 
         return redirect("/admin/apps/{$app->slug}/edit")->with('success', __('admin.applications.apps', ['app' => $app->name]));
-    }
-
-    public function enable(Request $request, Application $app)
-    {
-        $validated = $request->validate([
-            'version' => [
-                function (string $attribute, mixed $value, Closure $fail) use ($app) {
-                    if (is_null($app->active_version()) && is_null($value)) {
-                        $fail("The {$attribute} is required to enable this app.");
-                    }
-                },
-            ],
-        ]);
-        $version = $app->versions()->where('id', $validated['version'])->first();
-
-        if (! $version) {
-            $version = $app->versions()->where('status', 'active')->first();
-        }
-
-        // Turning the app back on with the version it already runs needs no testing; a different one does
-        if ($version && $version->status !== 'active' && ! $version->canBeEnabled()) {
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
-        }
-
-        if ($version) {
-            $version->status = 'active';
-            $version->save();
-
-            $app->enabled = true;
-            $app->save();
-
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.enabled', ['app' => $app->name]));
-        } else {
-            return redirect('/admin/apps/'.$app->slug.'/edit')->with('error', __('admin.applications.denied.enable'));
-        }
-    }
-
-    public function disable(Request $request, Application $app)
-    {
-        $app->enabled = false;
-        $app->save();
-
-        return redirect('/admin/apps/'.$app->slug.'/edit')->with('success', __('admin.applications.disabled'));
     }
 }

@@ -4,6 +4,7 @@ use App\Application;
 use App\AppPlan;
 use App\AppVersion;
 use App\Server;
+use App\Console\Calls\SyncApplicationReadiness;
 use App\Services\Application\ApplicationReadiness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
@@ -22,7 +23,7 @@ beforeEach(function () {
  */
 function readinessApp(array $app = [], bool $version = true, bool $plan = true, bool $edited = true): Application
 {
-    $application = Application::factory()->create(array_merge(['enabled' => true], $app));
+    $application = Application::factory()->create($app);
 
     if ($version) {
         AppVersion::factory()->create(['application_id' => $application->id]);
@@ -54,17 +55,6 @@ it('has nothing to say about an app that is ready', function () {
     expect($readiness->issues())->toBe([]);
     expect($readiness->isReady())->toBeTrue();
     expect($readiness->status())->toBe('ready');
-});
-
-it('blocks an app that is turned off and links to where it is turned on', function () {
-    $app = readinessApp(['enabled' => false]);
-    $readiness = new ApplicationReadiness($app);
-
-    $issue = readinessIssue($readiness, 'enabled');
-    expect($issue['blocking'])->toBeTrue();
-    expect($issue['actions'][0]['url'])->toBe("/admin/apps/{$app->slug}/edit");
-    expect($readiness->isReady())->toBeFalse();
-    expect($readiness->status())->toBe('blocked');
 });
 
 it('blocks an app with no version and links to adding one', function () {
@@ -164,8 +154,81 @@ it('does not need a default server when the plan names its own', function () {
 
 it('lists every problem at once, in the order they are fixed', function () {
     Server::query()->update(['default_web_server' => 0]);
-    $app = readinessApp(['enabled' => false], version: false, plan: false);
+    $app = readinessApp(version: false, plan: false);
 
     expect(collect((new ApplicationReadiness($app))->issues())->pluck('key')->all())
-        ->toBe(['enabled', 'version', 'plan', 'servers']);
+        ->toBe(['version', 'plan', 'servers']);
+});
+
+// What the saved status (the `enabled` column) does: it follows readiness, in every mode.
+
+function readinessEnabled(Application $app): bool
+{
+    return (bool) $app->fresh()->enabled;
+}
+
+it('turns an app on when it is ready and off when it stops being ready', function (string $mode) {
+    $mode === 'single' ? useSingleTenancy() : useMultiTenancy();
+    $app = readinessApp();
+    $app->forceFill(['enabled' => false])->saveQuietly();
+
+    expect((new ApplicationReadiness($app))->sync())->toBeTrue();
+    expect(readinessEnabled($app))->toBeTrue();
+    expect((new ApplicationReadiness($app))->sync())->toBeFalse();
+
+    $app->plans()->delete();
+
+    expect((new ApplicationReadiness($app))->sync())->toBeTrue();
+    expect(readinessEnabled($app))->toBeFalse();
+})->with(['multi', 'single']);
+
+it('keeps the status up to date as versions, plans and servers change', function (string $mode) {
+    $mode === 'single' ? useSingleTenancy() : useMultiTenancy();
+    $app = Application::factory()->create(['enabled' => false]);
+
+    $version = AppVersion::factory()->create(['application_id' => $app->id]);
+    expect(readinessEnabled($app))->toBeFalse();
+
+    $plan = AppPlan::factory()->create(['application_id' => $app->id]);
+    expect(readinessEnabled($app))->toBeTrue();
+
+    $version->status = 'deactivated';
+    $version->save();
+    expect(readinessEnabled($app))->toBeFalse();
+
+    $version->status = 'active';
+    $version->save();
+    expect(readinessEnabled($app))->toBeTrue();
+
+    $plan->archive = true;
+    $plan->save();
+    expect(readinessEnabled($app))->toBeFalse();
+
+    $plan->archive = false;
+    $plan->save();
+    expect(readinessEnabled($app))->toBeTrue();
+
+    Server::query()->get()->each->delete();
+    expect(readinessEnabled($app))->toBeFalse();
+})->with(['multi', 'single']);
+
+it('catches up on changes that skipped the model events', function () {
+    $ready = readinessApp();
+    $bare = Application::factory()->create(['enabled' => false]);
+
+    // A query-builder update raises no model event, so nothing noticed
+    Application::query()->update(['enabled' => true]);
+    expect(readinessEnabled($bare))->toBeTrue();
+
+    expect(ApplicationReadiness::syncAll())->toBe(1);
+    expect(readinessEnabled($bare))->toBeFalse();
+    expect(readinessEnabled($ready))->toBeTrue();
+});
+
+it('is what the scheduled sync runs', function () {
+    $bare = Application::factory()->create(['enabled' => true]);
+
+    (new SyncApplicationReadiness)();
+
+    expect(readinessEnabled($bare))->toBeFalse();
 });

@@ -14,21 +14,25 @@ use Tests\TestCase;
 uses(TestCase::class, RefreshDatabase::class);
 
 // The seeded demo organization is a superaccount and the demo user is an admin.
-// Three apps: one ready, one turned off (blocked) and one whose plan nobody has edited (warning).
+// Three apps: one ready, one with no version (blocked) and one whose plan nobody has edited (warning).
 
 beforeEach(function () {
     (new TestSupports)->seed();
     useSingleTenancy();
 
     $this->ready_app = discoverApp('ready-app');
-    $this->off_app = discoverApp('off-app', ['enabled' => false]);
+    $this->blocked_app = discoverApp('blocked-app', version: false);
     $this->warn_app = discoverApp('warn-app', edited: false);
 });
 
-function discoverApp(string $slug, array $attributes = [], bool $edited = true): Application
+function discoverApp(string $slug, array $attributes = [], bool $edited = true, bool $version = true): Application
 {
-    $app = Application::factory()->create(array_merge(['slug' => $slug, 'name' => ucfirst($slug), 'enabled' => true], $attributes));
-    AppVersion::factory()->create(['application_id' => $app->id]);
+    $app = Application::factory()->create(array_merge(['slug' => $slug, 'name' => ucfirst($slug)], $attributes));
+
+    if ($version) {
+        AppVersion::factory()->create(['application_id' => $app->id]);
+    }
+
     $plan = AppPlan::factory()->create(['application_id' => $app->id]);
 
     if ($edited) {
@@ -60,10 +64,10 @@ it('lists every app with what it still needs for an admin', function () {
             ->where('apps', function ($apps) {
                 $apps = collect($apps)->keyBy('slug');
 
-                return $apps->keys()->sort()->values()->all() === ['off-app', 'ready-app', 'warn-app']
+                return $apps->keys()->sort()->values()->all() === ['blocked-app', 'ready-app', 'warn-app']
                     && $apps['ready-app']['readiness']['status'] === 'ready'
-                    && $apps['off-app']['readiness']['status'] === 'blocked'
-                    && $apps['off-app']['readiness']['issues'] === 1
+                    && $apps['blocked-app']['readiness']['status'] === 'blocked'
+                    && $apps['blocked-app']['readiness']['issues'] === 1
                     && $apps['warn-app']['readiness']['status'] === 'warning';
             }));
 });
@@ -86,11 +90,11 @@ it('only lists the apps that can be installed for everyone else, without the det
 
 it('shows an admin what is wrong with an app and where to fix it', function () {
     $this->actingAs(discoverAdmin())
-        ->get('/discover/off-app')
+        ->get('/discover/blocked-app')
         ->assertInertia(fn ($page) => $page
             ->where('readiness.status', 'blocked')
-            ->where('readiness.items.0.key', 'enabled')
-            ->where('readiness.items.0.actions.0.url', '/admin/apps/off-app/edit')
+            ->where('readiness.items.0.key', 'version')
+            ->where('readiness.items.0.actions.0.url', '/admin/apps/blocked-app/versions/create')
             ->where('can.activate', false)
             ->where('authorization.deny.code', 'app_not_ready'));
 });
@@ -111,7 +115,7 @@ it('hides an app that is not ready from everyone but an admin', function () {
     discoverMakeNotAdmin();
     $this->actingAs(discoverAdmin());
 
-    $this->get('/discover/off-app')->assertNotFound();
+    $this->get('/discover/blocked-app')->assertNotFound();
     $this->get('/discover/ready-app')
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('readiness', null));
@@ -130,11 +134,11 @@ it('only lets an admin install an app', function () {
 it('refuses to install an app that is not ready even with a hand-made request', function () {
     $this->actingAs(discoverAdmin());
 
-    expect(Gate::inspect('activate-app', $this->off_app)->code())->toBe('app_not_ready');
+    expect(Gate::inspect('activate-app', $this->blocked_app)->code())->toBe('app_not_ready');
 
-    $plan = $this->off_app->plans()->first();
-    $this->post("/discover/off-app/plans/{$plan->id}/activate", ['label' => 'x', 'domain' => 'default'])->assertForbidden();
-    $this->get("/discover/off-app/plans/{$plan->id}/review")->assertForbidden();
+    $plan = $this->blocked_app->plans()->first();
+    $this->post("/discover/blocked-app/plans/{$plan->id}/activate", ['label' => 'x', 'domain' => 'default'])->assertForbidden();
+    $this->get("/discover/blocked-app/plans/{$plan->id}/review")->assertForbidden();
 });
 
 it('only lets an admin deactivate or bring back an app', function () {
@@ -175,14 +179,13 @@ it('does not create a second plan from the one-click button', function () {
 
 it('shows the same checklist on the admin app page', function () {
     $this->actingAs(discoverAdmin())
-        ->get('/admin/apps/off-app')
+        ->get('/admin/apps/blocked-app')
         ->assertInertia(fn ($page) => $page->where('readiness.status', 'blocked'));
 });
 
-it('lists apps the multi-tenant way and shows no checklist in multi-tenant mode', function () {
+it('lists apps the multi-tenant way in multi-tenant mode', function () {
     useMultiTenancy();
     $this->actingAs(discoverAdmin());
 
     $this->get('/discover')->assertInertia(fn ($page) => $page->has('apps', 0));
-    $this->get('/admin/apps/off-app')->assertInertia(fn ($page) => $page->where('readiness', null));
 });
