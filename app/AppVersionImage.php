@@ -104,7 +104,7 @@ class AppVersionImage extends Model
     public function effectiveTag(): ?string
     {
         if ($this->tag_from_version_name) {
-            return $this->version?->name;
+            return $this->version->name;
         }
 
         return $this->tag;
