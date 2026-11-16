@@ -1,12 +1,11 @@
 <script setup>
 // Short activity list: status changes, assignments and so on.
+import { formatDate } from '@/composables/ticketFormat'
+
 defineProps({
   events: { type: Array, required: true },
 })
 
-function formatDate (value) {
-  return value ? new Date(value).toLocaleString() : ''
-}
 </script>
 <template>
   <ul v-if="events.length" class="ticket-timeline">
@@ -49,12 +48,12 @@ function formatDate (value) {
     &__item {
       padding: 0.4em 0;
       border-bottom: 1px solid var(--va-background-border);
-      font-size: 0.9em;
+      font-size: 0.9rem;
     }
 
     &__date {
-      color: var(--va-secondary);
-      font-size: 0.85em;
+      color: var(--va-text-secondary);
+      font-size: 0.8rem;
     }
   }
 </style>

@@ -1619,7 +1619,8 @@
       "apps": "Apps",
       "relatedToTicket": "this ticket",
       "recentTasks": "Recent tasks",
-      "watchersHelp": "Customer colleagues and support staff who follow this ticket"
+      "watchersHelp": "Customer colleagues and support staff who follow this ticket",
+      "manage": "Manage"
     },
     "attachments": {
       "title": "Attachments",
@@ -1817,7 +1818,7 @@
       "title": "Reports",
       "exportCsv": "Export CSV",
       "period": "Period",
-      "lastDays": "Last {days} days",
+      "lastDays": "Last {count} days",
       "perDay": "Per day",
       "created": "Opened",
       "resolved": "Resolved",
@@ -1891,6 +1892,12 @@
       "retentionHelp": "Permanently deletes closed tickets and their attachments.",
       "zeroOff": "0 turns it off.",
       "more": "More"
+    },
+    "list": {
+      "people": "People",
+      "support": "Support",
+      "assignedTo": "Assigned to",
+      "filters": "Filters"
     }
   }
 }

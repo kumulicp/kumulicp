@@ -7,10 +7,14 @@ import { useForm } from '@inertiajs/vue3'
 const props = defineProps({
   // { events: [...], matrix: { event: { mail: bool, panel: bool } } }
   preferences: { type: Object, required: true },
+  // The page opens it from its own menu instead
+  hideButton: { type: Boolean, default: false },
 })
 
 const open = ref(false)
 const form = useForm({ preferences: JSON.parse(JSON.stringify(props.preferences.matrix)) })
+
+defineExpose({ show: () => { open.value = true } })
 
 function save () {
   form.put('/support/tickets/preferences', {
@@ -20,9 +24,9 @@ function save () {
 }
 </script>
 <template>
-  <va-button size="small" color="secondary" @click="open = true">{{ $t('tickets.preferences.title') }}</va-button>
+  <va-button v-if="!hideButton" preset="secondary" border-color="primary" @click="open = true">{{ $t('tickets.preferences.title') }}</va-button>
 
-  <va-modal v-model="open" hide-default-actions no-padding>
+  <va-modal v-model="open" hide-default-actions no-padding size="small">
     <template #content>
       <va-card-title>{{ $t('tickets.preferences.title') }}</va-card-title>
       <form @submit.prevent="save">

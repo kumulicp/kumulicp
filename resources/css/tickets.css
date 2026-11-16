@@ -1,0 +1,628 @@
+/*
+ * Shared layout for the support desk screens (customer and staff).
+ * Mobile first: everything stacks, then widens. Class names are prefixed t-
+ * so they can not collide with Vuestic or Tailwind utilities.
+ */
+
+/* Quiet text: dates, hints, labels. (--va-secondary is the brand pink, not a grey.) */
+.t-muted {
+    color: var(--va-text-secondary);
+    font-size: 0.875rem;
+}
+
+.t-link-reset {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* ---- Page layout -------------------------------------------------------- */
+
+.t-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .t-page--sidebar {
+        grid-template-columns: minmax(0, 1fr) 22rem;
+        gap: 1.25rem;
+    }
+}
+
+.t-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+}
+
+/* ---- Page header -------------------------------------------------------- */
+
+.t-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.t-header__main {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.t-header__title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.t-header__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.t-header__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+    .t-header__title {
+        font-size: 1.25rem;
+    }
+
+    .t-header {
+        padding-inline: 0.25rem;
+    }
+}
+
+/* ---- Buttons in a row --------------------------------------------------- */
+
+.t-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+    .t-actions--stack > .va-button,
+    .t-actions--stack > a,
+    .t-actions--stack > a .va-button {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+/* ---- Filters ------------------------------------------------------------ */
+
+.t-filters {
+    display: flex;
+    flex-direction: column;
+}
+
+.t-filters__bar {
+    display: flex;
+    order: -1;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.t-filters__search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.t-filters__toggle {
+    flex: 0 0 auto;
+}
+
+.t-filters__fields {
+    display: none;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.t-filters--open .t-filters__fields {
+    display: grid;
+}
+
+@media (min-width: 768px) {
+    .t-filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+        gap: 0.75rem;
+        align-items: end;
+    }
+
+    .t-filters__bar {
+        order: 99;
+    }
+
+    .t-filters__toggle {
+        display: none;
+    }
+
+    .t-filters__fields {
+        display: contents;
+        margin: 0;
+    }
+}
+
+/* Quick views: one scrollable row on a phone, wrapping on a desk */
+.t-views {
+    display: flex;
+    gap: 0.4rem;
+    margin: 0 -0.25rem 1rem;
+    padding: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.t-views::-webkit-scrollbar {
+    display: none;
+}
+
+.t-views > .va-button {
+    flex: 0 0 auto;
+}
+
+@media (min-width: 768px) {
+    .t-views {
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+}
+
+/* ---- Ticket list: table when there is room, cards when there is not ------ */
+
+.t-list {
+    container-type: inline-size;
+}
+
+.t-list__table {
+    display: none;
+}
+
+.t-list__cards {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@container (min-width: 44rem) {
+    .t-list__table {
+        display: table;
+    }
+
+    .t-list__cards {
+        display: none;
+    }
+}
+
+.t-ticket {
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+}
+
+.t-ticket--unread {
+    border-left: 4px solid var(--va-primary);
+}
+
+.t-ticket__link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.t-ticket__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.t-ticket__ref {
+    margin-right: auto;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--va-text-secondary);
+}
+
+.t-ticket__subject {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--va-primary);
+    overflow-wrap: anywhere;
+}
+
+.t-ticket--unread .t-ticket__subject {
+    font-weight: 700;
+}
+
+.t-ticket__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.9rem;
+    margin-top: 0.4rem;
+}
+
+.t-ticket__meta b {
+    font-weight: 600;
+    color: inherit;
+}
+
+.t-unread-dot {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-right: 0.4rem;
+    border-radius: 50%;
+    background: var(--va-primary);
+    vertical-align: middle;
+}
+
+.t-table td,
+.t-table th {
+    vertical-align: middle;
+}
+
+.t-table__stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    align-items: flex-start;
+}
+
+.t-row--unread td {
+    font-weight: 600;
+}
+
+/* ---- Collapsible side panels --------------------------------------------- */
+
+.t-panel__head {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.t-panel__title {
+    flex: 1 1 auto;
+}
+
+.t-panel__chevron {
+    transition: transform 0.15s;
+}
+
+.t-panel--open .t-panel__chevron {
+    transform: rotate(180deg);
+}
+
+.t-panel__body {
+    display: none;
+}
+
+.t-panel--open .t-panel__body {
+    display: block;
+}
+
+@media (min-width: 1024px) {
+    .t-panel__head {
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .t-panel .t-panel__chevron {
+        display: none !important;
+    }
+
+    .t-panel__body {
+        display: block;
+    }
+}
+
+/* ---- Key/value details --------------------------------------------------- */
+
+.t-details {
+    display: grid;
+    grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr);
+    gap: 0.45rem 1rem;
+    margin: 0;
+}
+
+.t-details dt {
+    color: var(--va-text-secondary);
+    font-size: 0.875rem;
+}
+
+.t-details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ---- Small helpers -------------------------------------------------------- */
+
+.t-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.t-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem 1rem;
+}
+
+@media (min-width: 640px) {
+    .t-form-grid--2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.t-danger-text {
+    color: var(--va-danger);
+}
+
+.t-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.t-row-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.2rem 0;
+}
+
+/* Little menu opened from a button */
+.t-menu {
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
+    padding: 0.25rem;
+}
+
+.t-menu__item {
+    display: block;
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.t-menu__item:hover,
+.t-menu__item:focus-visible {
+    background: var(--va-background-element, rgba(0, 0, 0, 0.05));
+    color: var(--va-primary);
+}
+
+.t-subtitle {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.t-list-plain {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.t-list-plain > li {
+    padding: 0.2rem 0;
+}
+
+.t-break {
+    overflow-wrap: anywhere;
+}
+
+/* Public reply / internal note switch in the reply card */
+.t-switch {
+    display: inline-flex;
+    padding: 0.2rem;
+    border-radius: 0.5rem;
+    background: var(--va-background-element, rgba(0, 0, 0, 0.05));
+    gap: 0.2rem;
+}
+
+.t-switch__option {
+    padding: 0.4rem 0.9rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: none;
+    color: var(--va-text-secondary);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.t-switch__option--active {
+    background: var(--va-primary);
+    color: #fff;
+}
+
+.t-switch__option--note.t-switch__option--active {
+    background: var(--va-warning);
+    color: #1f1f1f;
+}
+
+/* Small forms and settings rows */
+.t-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.t-inline-form > .va-input {
+    flex: 1 1 14rem;
+}
+
+.t-category-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--va-background-border);
+}
+
+@media (min-width: 640px) {
+    .t-category-row {
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+    }
+}
+
+.t-category-row__name {
+    font-weight: 600;
+}
+
+.t-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.t-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+
+.t-targets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.t-targets__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 0.75rem;
+}
+
+.t-targets__name {
+    grid-column: 1 / -1;
+    font-weight: 600;
+}
+
+@media (min-width: 640px) {
+    .t-targets__row {
+        grid-template-columns: 7rem repeat(2, minmax(0, 1fr));
+        align-items: end;
+    }
+
+    .t-targets__name {
+        grid-column: auto;
+        padding-bottom: 0.6rem;
+    }
+}
+
+/* Report tiles and two-column card grids */
+.t-period {
+    max-width: 20rem;
+}
+
+.t-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+@media (min-width: 768px) {
+    .t-tiles {
+        grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    }
+}
+
+.t-tile {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+}
+
+.t-tile__value {
+    font-size: 1.6rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.t-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (min-width: 1100px) {
+    .t-cols {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Switches with a long label: let the label wrap and take its own height
+   (Vuestic gives it a zero line-height, so a second line overlaps what follows). */
+:is(.t-col, .t-page, .t-stack, .t-fieldset) .va-switch__container {
+    height: auto;
+    min-height: 32px;
+    align-items: center;
+}
+
+:is(.t-col, .t-page, .t-stack, .t-fieldset) .va-switch__label {
+    height: auto !important;
+    padding: 0.2rem 0 0.2rem 0.25rem;
+    line-height: 1.3 !important;
+}
+
+/* Settings-style pages read better in a column than stretched across a wide screen */
+.t-col--narrow {
+    max-width: 56rem;
+}
+
+.t-col > .va-alert {
+    width: 100%;
+}
+
+.delivery-result span + span {
+    margin-left: 0.4rem;
+}
