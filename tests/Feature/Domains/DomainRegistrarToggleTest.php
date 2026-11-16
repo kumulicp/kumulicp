@@ -9,6 +9,9 @@ use Tests\Support\TestSupports;
 beforeEach(function () {
     $support = new TestSupports;
     $support->seed();
+    // The migration turns the flag on when a registrar is configured (REGISTRAR_DRIVER), which
+    // would override the config these tests set. Start from no stored value.
+    Toggle::delete('domain-registrar');
     $support->createBase2Plan();
     $this->user = User::where('username', 'demo')->firstOrFail();
     $this->actingAs($this->user);
@@ -50,7 +53,8 @@ it('blocks registering and transferring a domain in while the registrar feature 
 it('denies the registrar gates while the registrar feature is off', function () {
     config(['toggle.flags.domain-registrar' => false]);
 
-    $domain = new OrgDomain(['name' => 'example.com']);
+    $domain = new OrgDomain;
+    $domain->name = 'example.com';
     $domain->organization()->associate($this->user->organization);
 
     expect(Gate::allows('register-domains'))->toBeFalse()
