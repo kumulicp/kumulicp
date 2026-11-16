@@ -1238,6 +1238,9 @@
     "baseDomain": "Nombre de Dominio Base",
     "slug": "Slug",
     "dashboard": {
+      "gettingStarted": "Primeros pasos",
+      "gettingStartedIntro": "Unas pocas cosas por configurar antes de que tu panel de control esté listo para usar.",
+      "optional": "Opcional",
       "discoverApps": "Descubrir aplicaciones",
       "group": "Grupo",
       "nextcloudFolders": "Carpetas de Equipo de Nextcloud",

@@ -5,12 +5,15 @@ import { Link } from '@inertiajs/vue3'
 <template>
   <va-card class="mb-4">
     <va-card-content>
-      <va-tabs v-model="value" hide-slider>
-        <template #tabs>
-          <Link v-for="(tab, index) in tabs" :key="index" :href="tab.url"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
-        </template>
-      </va-tabs>
-      <va-separator />
+      <!-- A single-organization install has no organization pages to move between -->
+      <template v-if="!$page.props.tenancy.single">
+        <va-tabs v-model="value" hide-slider>
+          <template #tabs>
+            <Link v-for="(tab, index) in tabs" :key="index" :href="tab.url"><va-tab :key="tab.title" :name="tab.title">{{ tab.title }}</va-tab></Link>
+          </template>
+        </va-tabs>
+        <va-separator />
+      </template>
       <slot></slot>
     </va-card-content>
   </va-card>

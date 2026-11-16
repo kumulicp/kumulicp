@@ -39,6 +39,18 @@ it('gives the single organization an unlimited base plan', function () {
     expect($base)->toBeInstanceOf(SingleTenantBasePlanService::class);
 });
 
+it('has domains and email on whatever the stored plan says', function () {
+    $organization = makeSingleOrganization();
+    $organization->plan->update(['domain_enabled' => false, 'email_enabled' => false]);
+
+    $base = (new SubscriptionService($organization->fresh()))->base();
+
+    expect($base->domainsEnabled())->toBeTrue();
+    expect($base->emailEnabled())->toBeTrue();
+    expect($base->setting('domains.connect'))->toBeTrue();
+    expect($base->isDomainMax())->toBeFalse();
+});
+
 it('keeps the ordinary base plan outside single mode', function () {
     $organization = Organization::find(1);
     $organization->type = 'superaccount';

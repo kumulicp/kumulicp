@@ -170,7 +170,10 @@ import axios from 'axios'
             <tbody>
               <tr v-for="instance in instances" :key="instance.id">
                 <td><va-checkbox v-model="selected" :array-value="instance.id" /></td>
-                <td><Link :href="'/admin/organizations/' + instance.organization.id">{{ instance.organization.name }}</Link></td>
+                <td>
+                  <template v-if="$page.props.tenancy.single">{{ instance.organization.name }}</template>
+                  <Link v-else :href="'/admin/organizations/' + instance.organization.id">{{ instance.organization.name }}</Link>
+                </td>
                 <td>{{ instance.label }}</td>
                 <td>{{ instance.version }}</td>
                 <td>

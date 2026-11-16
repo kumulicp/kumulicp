@@ -31,9 +31,9 @@ class Organizations extends Controller
 
     public function index()
     {
-        // A single-organization install has just the one, so go straight to it
-        if (Tenancy::isSingle() && $single_organization = Tenancy::organization()) {
-            return redirect("/admin/organizations/{$single_organization->id}");
+        // A single-organization install has no list of organizations, or a page for the one it has
+        if (Tenancy::isSingle()) {
+            return redirect('/admin');
         }
 
         $organization = auth()->user()->organization;
@@ -66,6 +66,10 @@ class Organizations extends Controller
 
     public function show(Organization $organization)
     {
+        if (Tenancy::isSingle()) {
+            return redirect('/admin');
+        }
+
         $subscription = (new SubscriptionService($organization))->all();
         $out_of_date = app(PendingUpdates::class)->byInstance($organization->app_instances->pluck('id')->all());
 

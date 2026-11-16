@@ -29,7 +29,7 @@ import { Link } from '@inertiajs/vue3'
     </va-card>
 
     <div class="row row-equal mb-1">
-      <div class="flex xs12 sm6 md3">
+      <div v-if="organizations" class="flex xs12 sm6 md3">
         <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0">{{ organizations.total }}</h2>
@@ -38,7 +38,7 @@ import { Link } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
       </div>
-      <div class="flex xs12 sm6 md3">
+      <div :class="'flex xs12 sm6 ' + statWidth">
         <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0">{{ applications.total }}</h2>
@@ -47,7 +47,7 @@ import { Link } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
       </div>
-      <div class="flex xs12 sm6 md3">
+      <div :class="'flex xs12 sm6 ' + statWidth">
         <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0" :class="{ 'text-danger': stats.failed_jobs > 0 }">{{ stats.failed_jobs }}</h2>
@@ -55,7 +55,7 @@ import { Link } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
       </div>
-      <div class="flex xs12 sm6 md3">
+      <div :class="'flex xs12 sm6 ' + statWidth">
         <va-card class="mb-2">
           <va-card-content>
             <h2 class="va-h2 ma-0" :class="{ 'text-warning': stats.error_logs_last_day > 0 }">{{ stats.error_logs_last_day }}</h2>
@@ -127,7 +127,7 @@ import { Link } from '@inertiajs/vue3'
     </div>
 
     <div class="row">
-      <div class="flex xs12 lg6">
+      <div v-if="plans" class="flex xs12 lg6">
         <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.plan_usage') }}</va-card-title>
           <va-card-content>
@@ -156,7 +156,7 @@ import { Link } from '@inertiajs/vue3'
           </va-card-content>
         </va-card>
       </div>
-      <div class="flex xs12 lg6">
+      <div :class="'flex xs12 ' + (plans ? 'lg6' : 'lg12')">
         <va-card class="mb-2">
           <va-card-title>{{ $t('admin.dashboard.app_usage') }}</va-card-title>
           <va-card-content>
@@ -305,6 +305,10 @@ export default {
     stats: Object
   },
   computed: {
+    // Three cards share the row when there is no organization count, four when there is
+    statWidth () {
+      return this.organizations ? 'md3' : 'md4'
+    },
     taskStatusList () {
       const statuses = { ...this.task_statuses }
       const ordered = TASK_STATUS_ORDER.filter((status) => status in statuses)

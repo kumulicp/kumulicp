@@ -69,6 +69,29 @@ class SingleTenantBasePlanService extends BasePlanService
         return false;
     }
 
+    /**
+     * Every option a plan can switch on is on, whatever the stored plan says: the plan can't be edited
+     * in a single-organization install, and it may have been saved before these options existed.
+     */
+    public function domainsEnabled()
+    {
+        return true;
+    }
+
+    public function emailEnabled()
+    {
+        return true;
+    }
+
+    /**
+     * Bringing a domain you already own is on. Registering or transferring one is a paid service with
+     * a payment method, which a single-organization install has none of, so those stay as saved.
+     */
+    public function setting($setting)
+    {
+        return $setting === 'domains.connect' ? true : $this->plan->setting($setting);
+    }
+
     public function isDomainMax()
     {
         return false;

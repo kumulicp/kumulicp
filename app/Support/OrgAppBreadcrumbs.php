@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\AppInstance;
 use App\Organization;
+use App\Support\Facades\Tenancy;
 
 class OrgAppBreadcrumbs
 {
@@ -23,6 +24,19 @@ class OrgAppBreadcrumbs
                 [
                     'url' => '/admin/service/shared-apps/'.$app->id,
                     'label' => $app->label,
+                ],
+                [
+                    'label' => $app->application->name,
+                ],
+            ];
+        }
+
+        // The organization's own pages only exist in a multi-tenant install
+        if (Tenancy::isSingle()) {
+            return [
+                [
+                    'label' => __('admin.applications.apps'),
+                    'url' => '/apps',
                 ],
                 [
                     'label' => $app->application->name,

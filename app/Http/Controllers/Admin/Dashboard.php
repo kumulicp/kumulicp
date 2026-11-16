@@ -13,6 +13,7 @@ use App\Plan;
 use App\SecurityFinding;
 use App\SecurityScan;
 use App\Server;
+use App\Support\Facades\Tenancy;
 use App\Support\SafeErrorMessage;
 use App\Task;
 use App\Updates\PendingUpdates;
@@ -24,7 +25,10 @@ class Dashboard extends Controller
     {
         $now = Carbon::now();
 
-        $organizations = [
+        // A single-organization install has no customers to count and no plans they subscribe to
+        $multi = Tenancy::isMulti();
+
+        $organizations = ! $multi ? null : [
             'total' => Organization::notTest()->count(),
             'active' => Organization::notTest()->where('status', 'active')->count(),
             'new' => Organization::notTest()->where('status', 'new')->count(),
@@ -34,7 +38,7 @@ class Dashboard extends Controller
             'suborganizations' => Organization::notTest()->whereNotNull('parent_organization_id')->count(),
         ];
 
-        $plans = Plan::withCount('subscribers')
+        $plans = ! $multi ? null : Plan::withCount('subscribers')
             ->orderByDesc('subscribers_count')
             ->get()
             ->map(fn (Plan $plan) => [

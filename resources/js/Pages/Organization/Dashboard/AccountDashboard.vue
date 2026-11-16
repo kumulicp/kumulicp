@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import DashboardTrialInfo from './components/DashboardTrialInfo.vue'
+import DashboardGettingStarted from './components/DashboardGettingStarted.vue'
 import DashboardInfoBlock from './components/DashboardInfoBlock.vue'
 import DashboardFoldersOverview from './components/DashboardFoldersOverview.vue'
 import DashboardAnnouncements from './components/DashboardAnnouncements.vue'
@@ -12,6 +13,7 @@ import DashboardAnnouncements from './components/DashboardAnnouncements.vue'
   </Head>
   <div class="dashboard">
     <DashboardTrialInfo v-if="trial_plan" />
+    <DashboardGettingStarted v-if="getting_started" :steps="getting_started" />
     <DashboardInfoBlock class="mb-2" :blocks="info_blocks" />
     <div class="row">
       <div v-if="nextcloud_folders" class="flex flex-col lg6 xs12">
@@ -28,6 +30,7 @@ import DashboardAnnouncements from './components/DashboardAnnouncements.vue'
 export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
+    getting_started: Array,
     announcements: Object,
     info_blocks: Object,
     nextcloud_folders: Object,

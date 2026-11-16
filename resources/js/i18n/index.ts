@@ -17,9 +17,24 @@ Object.entries(fileNameToLocaleModuleDict)
     messages[localeNameLocaleMessagesTuple[0]] = localeNameLocaleMessagesTuple[1]
   })
 
-export default createI18n({
+const i18n = createI18n({
   legacy: false,
   locale: 'en',
   fallbackLocale: 'en',
   messages,
 })
+
+// What a single-organization install calls things differently, laid over the normal strings:
+// an app plan is a "profile" there, since nobody subscribes to it
+const singleOrganizationFiles = import.meta.glob('./single/*.json', {
+  eager: true,
+}) as Record<string, { default: Record<string, unknown> }>
+
+export function useSingleOrganizationTerms (): void {
+  Object.entries(singleOrganizationFiles).forEach(([fileName, module]) => {
+    const locale = fileName.split('/').pop()!.replace('.json', '')
+    i18n.global.mergeLocaleMessage(locale, module.default)
+  })
+}
+
+export default i18n

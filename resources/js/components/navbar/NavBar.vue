@@ -27,7 +27,7 @@ const colors = computed(() => getColors())
     <va-navbar-item class="navbar-item-slot">
       <div class="app-navbar-center">
         <span class="app-navbar-center__text mr-2"
-          >{{ $t('navbar.welcomeToControlPanel') }}</span
+          >{{ $page.props.tenancy.single ? $page.props.auth.organization.name : $t('navbar.welcomeToControlPanel') }}</span
         >
       </div>
     </va-navbar-item>

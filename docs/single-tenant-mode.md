@@ -97,7 +97,7 @@ Add a `tenancy:multi` route middleware (sibling of `toggle:`) that 404s in singl
 | `has-billing-account` gate | Always deny, `Billing` forced to "no driver", Stripe check skipped in `Setup::settings()` |
 | `Account\Applications` deactivate: `Billing::periodEnds()` | Already falls back to `now()` with no billing |
 | Admin menu: Services → Plans, Services → Shared apps | Hidden, routes 404 |
-| Admin menu: Organizations | The list is replaced by a single **Organization** item that opens the one org's admin page (`/admin/organizations` redirects there). The per-org page keeps its apps, backups, logs, tasks and domains until phase 5 folds them into the main menu. |
+| Admin menu: Organizations | Gone. The organization hub (details, apps list, logs, tasks, domains) only repeats pages that already exist, so `/admin/organizations` and `/admin/organizations/{id}` redirect to the admin Overview and the hub's logs, tasks, domains and apps-list pages 404. What stays is the per-app admin pages under `/admin/organizations/{id}/apps/{app}`, reached from the Manage link on Apps. |
 | Admin settings: Invoice, Registration (captcha) | Hidden |
 | Public registration: `Auth::routes()` register, `public/org/{slug}/register`, "Sign up" link on login | Disabled. New people arrive via Users → Add, SSO or LDAP. |
 | Org review step in Discover (suborg dropdown) | Never shown |
@@ -174,28 +174,38 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
 - Discover is a top-level item (single mode only; a multi-tenant install keeps reaching it from the Apps page).
 - The Apps list gets an admin-only **Manage** link to the admin page of that instance (`/admin/organizations/{id}/apps/{app}`),
   and the admin app pages get a **View in Discover** link. Discover already linked to the admin app page.
-- `/admin/organizations` redirects to the single org's page (done in phase 3). **The Organization item stays in Administration** as the
-  hub for the per-org admin pages (apps, backups, logs, tasks, domains) instead of each tab becoming its own menu item: the per-org
-  tasks and logs largely repeat the server-wide Tasks and Logs items, and the apps are reached through the Manage links.
-  Subscription actions on that page are hidden.
+- There is no Organization item and no organization page. `/admin/organizations` and `/admin/organizations/{id}` redirect to the
+  Overview. The organization's name, address and contact are under Settings → Organization, its domains under Settings → Domains,
+  and tasks and logs are the server-wide Tasks and Logs. The per-app admin pages (view, edit, helm values) stay where the Manage link
+  already points, with their breadcrumb going back to Apps. The one-off backup and restore page of the organization is still routed
+  (`/admin/organizations/{id}/backups`, behind `app-backups`) but nothing links to it yet. Open item: give it a home.
 
 ### 6. Installer
 
 - `Setup::settings()`: skip the Stripe check in single mode. Add "Installation type" and an **Organization name** field
   (today it hardcodes `__('setup.first_org')`).
 - `Setup::build()`: in single mode, save `tenancy_mode`, use the entered org name, create the same `superaccount`
-  + unlimited `Plan` + admin user as today, and mark the org `active` with `step = 4` (already done) so nobody lands on the "new org" welcome flow.
-- After install, redirect an admin straight to a **Getting started** checklist on the dashboard:
-  servers added, first app ready, domain set, SSO/LDAP (optional). This replaces the multi-tenant `Welcome` page.
+  + unlimited `Plan` (with the domains and email options on; `SingleTenantBasePlanService` reports both as on whatever is stored) + admin user as today, and mark the org `active` with `step = 4` (already done) so nobody lands on the "new org" welcome flow.
+- A **Getting started** card on the organization dashboard, for the admin only, until everything required is done
+  (`App\Support\GettingStarted`): a server added, an app ready, a domain set (the system base domain counts), an app installed,
+  and single sign-on as an optional suggestion. Each step links to where it is done. It replaces the multi-tenant `Welcome` page.
+  Nobody is redirected to it: the dashboard is where an admin lands anyway.
 
 ### 7. More ways to make it feel single-tenant
 
-- **Branding**: show the org name and logo in the navbar instead of "Welcome to Control Panel". The theme colors already exist in `Settings`.
-- **Dashboard**: merge in the admin signals an operator wants every day (failed tasks, security findings, apps with
-  updates available). Drop the multi-tenant admin widgets (org counts, plan subscribers, new orgs).
+- **Branding**: the navbar shows the organization's name instead of "Welcome to Control Panel". A logo is not done: there is
+  no setting to hold one yet. The theme colors already exist in `Settings`.
+- **Dashboard**: the admin **Overview** stays its own page, with the organization count and plan-subscriber widgets
+  removed (they are meaningless with one organization), so what is left is the daily signals: failed tasks, security
+  findings, apps with updates available. Folding them into the organization dashboard is a possible follow-up.
+- **Profiles**: an app plan is called a **profile** in a single-organization install, since nobody subscribes to it. The
+  words live in `resources/lang/{locale}/single.php` (PHP strings) and `resources/js/i18n/single/{locale}.json` (Vue strings),
+  laid over the normal strings (`SingleOrganizationTerms`, `useSingleOrganizationTerms`). It covers the strings the
+  app-plan, Discover and readiness pages use. Strings about organization plans are left alone, since those pages are hidden.
+  A test checks that every override exists and keeps its placeholders.
 - **Backups**: the per-org backup screens under Admin → Organizations become the main "Backups" page. They sit behind the `app-backups` toggle (off by default), so the item only shows when that is on.
-- **Support**: the help-desk modal currently files a ticket to the control-panel operator. In single mode the operator
-  is the user, so make it a link to the docs URL or an internal contact. Confirm with `Account\Support` before changing.
+- **Support**: left as it is. The help-desk modal emails the address in the `support_email` setting, so a single-organization
+  install can point it at whoever should get the tickets.
 - **Version-test organizations** stay hidden (`Organization::notTest()`), so test runs never show up as tenants.
 - **README and docs**: add an "Installation modes" section.
 
@@ -208,7 +218,7 @@ Each phase ships independently and keeps multi-tenant behavior unchanged.
 3. **Hide multi-tenant surfaces.** `tenancy:multi` middleware, menu items, registration, billing, org delete guards. *(in progress)* Notification no-ops were left out on purpose: with no billing driver the billing notifications and the invoice job already do nothing, and a single-organization install creates no new organizations. Revisit if one turns out to fire.
 4. **Readiness and Discover.** `ApplicationReadiness`, Discover badges, warning panel with deep links, "Create default plan", server-side guards, admin-only install. *(in progress)* Readiness only applies in single mode; multi-tenant Discover still follows the organization's plan. The top-level Discover menu item stays in phase 5.
 5. **Unified navigation.** Single admin+org menu, section header, menu cache key, Manage and View-in-Discover links, `/admin/organizations` redirect. *(in progress)*
-6. **Dashboard, Getting started, polish.** Merged dashboard, branding, support, copy.
+6. **Dashboard, Getting started, polish.** Overview trimmed, Getting started card, organization name in the navbar, profile wording. *(in progress)*
 7. **Docs and upgrade.** README section, `artisan kumulicp:tenancy` command (the only way to change the mode) with its safety check, changelog.
 
 ## Testing

@@ -9,6 +9,7 @@ use App\Support\Facades\Settings;
 use App\Support\Facades\Tenancy;
 use App\Support\FeatureFlags;
 use App\Support\SharedAppContext;
+use App\Support\SingleOrganizationTerms;
 use App\Updates\PendingUpdates;
 use Closure;
 use Illuminate\Http\Request;
@@ -48,6 +49,11 @@ class HandleInertiaRequests extends Middleware
             ?? Settings::get('default_locale', null)
             ?? config('app.locale')
         );
+
+        // An app plan is a profile in a single-organization install
+        if (Tenancy::isSingle()) {
+            SingleOrganizationTerms::apply();
+        }
 
         return parent::handle($request, $next);
     }

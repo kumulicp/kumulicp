@@ -119,10 +119,14 @@ import { Link, useForm } from '@inertiajs/vue3'
         <tbody>
           <tr v-for="(backup, index) in backups.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="index">
             <td>
-              <Link :href="'/admin/organizations/'+backup.organization.id">{{ backup.recurrence }}</Link>
+              <template v-if="$page.props.tenancy.single">{{ backup.recurrence }}</template>
+              <Link v-else :href="'/admin/organizations/'+backup.organization.id">{{ backup.recurrence }}</Link>
             </td>
             <td>{{ backup.delete_after }} {{ backup.delete_interval }}</td>
-            <td><Link :href="'/admin/organizations/'+backup.organization.id">{{ backup.organization.name }}</Link></td>
+            <td>
+              <template v-if="$page.props.tenancy.single">{{ backup.organization.name }}</template>
+              <Link v-else :href="'/admin/organizations/'+backup.organization.id">{{ backup.organization.name }}</Link>
+            </td>
             <td><Link :href="'/admin/apps/'+backup.application.id">{{ backup.application.name }}</Link></td>
             <td><Link :href="'/admin/server/servers/'+backup.server.id">{{ backup.server.name }}</Link></td>
             <td>{{ backup.time }}</td>
