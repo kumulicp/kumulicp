@@ -21,7 +21,7 @@ describe('Plan Order', function () {
             ->assertSee('Order Plan A')
             ->drag('tr:has-text("Order Plan C")', 'tr:has-text("Order Plan A")')
             ->click('button:has-text("Update Order")')
-            ->assertPathIs('/admin/service/plans');
+            ->assertSee('Plan order updated');
 
         expect(Plan::whereIn('name', ['Order Plan A', 'Order Plan B', 'Order Plan C'])->orderBy('display_order')->pluck('name')->all())
             ->toBe(['Order Plan C', 'Order Plan A', 'Order Plan B']);
@@ -44,7 +44,7 @@ describe('Plan Order', function () {
             ->assertSee('App Order A')
             ->drag('tr:has-text("App Order C")', 'tr:has-text("App Order A")')
             ->click('button:has-text("Update Order")')
-            ->assertSee('App Order C');
+            ->assertSee('Plan order updated');
 
         expect(AppPlan::whereIn('name', ['App Order A', 'App Order B', 'App Order C'])->orderBy('display_order')->pluck('name')->all())
             ->toBe(['App Order C', 'App Order A', 'App Order B']);

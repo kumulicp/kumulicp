@@ -266,6 +266,6 @@ class Applications extends Controller
         $app->can_update_domain = $request->can_update_domain;
         $app->save();
 
-        return redirect("/admin/apps/{$app->slug}/edit")->with('success', __('admin.applications.apps', ['app' => $app->name]));
+        return redirect("/admin/apps/{$app->slug}/edit")->with('success', __('admin.applications.updated', ['app' => $app->name]));
     }
 }
