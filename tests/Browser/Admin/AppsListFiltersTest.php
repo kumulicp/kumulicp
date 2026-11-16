@@ -4,9 +4,13 @@ use App\Application;
 use App\Enums\ApplicationSource;
 use App\Tag;
 use App\User;
+use OffloadProject\Toggle\Facades\Toggle;
 
 describe('Admin Apps List Filters', function () {
     beforeEach(function () {
+        // HelmForge apps are only listed while the feature is on
+        Toggle::enable('helmforge');
+
         Application::factory()->create(['slug' => 'filter_on', 'name' => 'Alpha Enabled', 'enabled' => true, 'source' => ApplicationSource::Generic]);
         Application::factory()->create(['slug' => 'filter_off', 'name' => 'Beta Disabled', 'enabled' => false, 'source' => ApplicationSource::HelmForge])
             ->tags()->attach(Tag::findOrCreateMany(['wiki']));

@@ -32,11 +32,17 @@ class ChartSource extends Model
         'last_synced_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<RepoSecret, $this>
+     */
     public function helmRepoSecret(): BelongsTo
     {
         return $this->belongsTo(RepoSecret::class, 'helm_repo_secret_id');
     }
 
+    /**
+     * @return HasMany<Application, $this>
+     */
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class, 'chart_source_id');
