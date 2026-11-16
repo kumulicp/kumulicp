@@ -6,6 +6,7 @@ use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 
 /**
@@ -47,7 +48,10 @@ class Plan extends Model
         'features' => 'array',
     ];
 
-    public function subscribers()
+    /**
+     * @return HasMany<Organization, $this>
+     */
+    public function subscribers(): HasMany
     {
         return $this->hasMany('App\Organization', 'plan_id');
     }

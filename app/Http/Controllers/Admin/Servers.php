@@ -153,17 +153,13 @@ class Servers extends Controller
                 'is_backup_server' => $server->is_backup_server,
             ],
             'backup_servers' => Server::where('is_backup_server', true)->where('type', $server->type)->whereNot('id', $server->id)->get()->map(function ($server) {
+                /** @var array{id: int|null, name: string} */
                 return [
                     'id' => $server->id,
                     'name' => $server->name,
                 ];
-            })->push([
-                'id' => $server->id,
-                'name' => 'Self',
-            ])->push([
-                'id' => null,
-                'name' => 'None',
-            ]),
+            })->push(['id' => $server->id, 'name' => 'Self'])
+                ->push(['id' => null, 'name' => 'None']),
             'can' => [
                 'activate' => $successful_test_count > 0,
                 'test_settings' => (bool) $has_config_test,

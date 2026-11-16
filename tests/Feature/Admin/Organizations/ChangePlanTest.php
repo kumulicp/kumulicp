@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin\Organizations;
 
 use App\Organization;
 use App\Plan;
+use App\Support\Facades\AccountManager;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\TestSupports;
@@ -83,7 +84,19 @@ class ChangePlanTest extends TestCase
         $this->adminUser();
         $org = $this->organization();
         $plan = Plan::factory()->create(['org_type' => 'business']);
-        $user = User::factory()->create();
+        $account = AccountManager::users(Organization::find(1))->add([
+            'username' => 'testnonadmin',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'name' => 'Test User',
+            'email' => 'testnonadmin@example.com',
+            'password' => 'password',
+            'phone_number' => '1234567890',
+        ]);
+        $account->permissions()->addControlPanelAccess();
+        $user = $account->databaseUser();
+        $user->email_verified_at = now();
+        $user->save();
 
         $this->actingAs($user)
             ->post("/admin/organizations/{$org->id}/change_plan", ['plan_id' => $plan->id])

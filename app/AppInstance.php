@@ -145,7 +145,10 @@ class AppInstance extends Model
         return $this->belongsTo('App\AppInstance', 'parent_id');
     }
 
-    public function database_server()
+    /**
+     * @return BelongsTo<OrgServer, $this>
+     */
+    public function database_server(): BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'database_server_id');
     }
@@ -158,7 +161,10 @@ class AppInstance extends Model
         return $this->belongsTo('App\OrgServer', 'web_server_id');
     }
 
-    public function sso_server()
+    /**
+     * @return BelongsTo<OrgServer, $this>
+     */
+    public function sso_server(): BelongsTo
     {
         return $this->belongsTo('App\OrgServer', 'sso_server_id');
     }
