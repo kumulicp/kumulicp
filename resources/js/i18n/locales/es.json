@@ -688,6 +688,7 @@
       "domainOptionParent": "Usar Dominio Padre (Solo usar si esta tiene una aplicación padre establecida)",
       "aboutApp": "Acerca de la Aplicación",
       "settings": "Configuración",
+      "appWord": "Aplicación",
       "appsTitle": "Aplicaciones",
       "version": "Versión",
       "chartVersion": "Chart de Helm",

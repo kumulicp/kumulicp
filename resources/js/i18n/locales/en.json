@@ -686,6 +686,7 @@
       "domainOptionParent": "Parent Domain (Only use if this has a parent app set)",
       "aboutApp": "About App",
       "settings": "Settings",
+      "appWord": "App",
       "appsTitle": "Apps",
       "version": "Version",
       "chartVersion": "Helm Chart",
