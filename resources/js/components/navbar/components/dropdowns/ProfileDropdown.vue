@@ -22,14 +22,14 @@ const { colors } = useColors()
             </div>
           </Link>
         </va-list-item>
-        <va-list-item v-if="$page.props.auth.can.admin && !isAdmin">
+        <va-list-item v-if="!$page.props.tenancy.single && $page.props.auth.can.admin && !isAdmin">
           <a href="/admin" class="profile-dropdown__item">
             <div class="profile-item">
               {{ $t('navbar.systemAdmin') }}
             </div>
           </a>
         </va-list-item>
-        <va-list-item v-if="$page.props.auth.can.admin && isAdmin">
+        <va-list-item v-if="!$page.props.tenancy.single && $page.props.auth.can.admin && isAdmin">
           <a href="/" class="profile-dropdown__item">
             <div class="profile-item">
               {{ $t('navbar.yourDashboard') }}
