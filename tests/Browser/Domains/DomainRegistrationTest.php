@@ -3,12 +3,14 @@
 use App\OrgDomain;
 use App\Tld;
 use App\User;
+use OffloadProject\Toggle\Facades\Toggle;
 use Tests\Support\TestSupports;
 
 describe('Domain Registration', function () {
     beforeEach(function () {
         setupRegistrarDriver('fake');
         setupBillingDriver('fake');
+        Toggle::enable('domain-registrar');
 
         $support = new TestSupports;
 
@@ -133,6 +135,7 @@ describe('Domain Transfer', function () {
     beforeEach(function () {
         setupRegistrarDriver('fake');
         setupBillingDriver('fake');
+        Toggle::enable('domain-registrar');
 
         $support = new TestSupports;
 

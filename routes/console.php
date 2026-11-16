@@ -18,6 +18,7 @@ use App\Console\Calls\SyncAppMonitors;
 use App\Integrations\Registrars\Namecheap\Jobs\UpdateTransferStatus;
 use App\Services\VersionTesting\VersionTestRunner;
 use Illuminate\Support\Facades\Schedule;
+use OffloadProject\Toggle\Facades\Toggle;
 use Spatie\UptimeMonitor\Commands\CheckCertificates;
 use Spatie\UptimeMonitor\Commands\CheckUptime;
 
@@ -39,7 +40,7 @@ use Spatie\UptimeMonitor\Commands\CheckUptime;
 Schedule::call(new DispatchTasks)->name('task-dispatcher')->everyMinute()->withoutOverlapping(15)->onOneServer();
 Schedule::call(fn () => app(VersionTestRunner::class)->syncProvisioning())->name('version-test-sync')->everyMinute()->withoutOverlapping(5);
 Schedule::call(new RecurringBackups)->everyMinute();
-Schedule::call(new UpdateTransferStatus)->everyMinute();
+Schedule::call(new UpdateTransferStatus)->everyMinute()->when(fn () => Toggle::active('domain-registrar'));
 Schedule::call(new NextcloudStorageChecks)->daily();
 Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();

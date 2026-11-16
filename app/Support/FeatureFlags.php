@@ -36,6 +36,7 @@ class FeatureFlags
             'app-backups' => ['beta' => true],
             'shared-apps' => ['beta' => false],
             'emails' => ['beta' => false],
+            'domain-registrar' => ['beta' => false],
         ];
 
         return Tenancy::isSingle() ? Arr::except($definitions, self::MULTI_TENANT_ONLY) : $definitions;

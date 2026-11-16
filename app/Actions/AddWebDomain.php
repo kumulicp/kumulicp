@@ -50,7 +50,7 @@ class AddWebDomain extends Action
                     $app_domain = new OrgDomain;
                     $app_domain->parent_domain_id = $domain->id;
                     $app_domain->app_instance_id = $app->id;
-                    $app_domain->tld_id = $tld->id;
+                    $app_domain->tld_id = $tld?->id;
                     $app_domain->host = $app->name;
                     $app_domain->name = $app->name.'.'.$domain->name;
                     $app_domain->is_managed = $domain->is_managed;

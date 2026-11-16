@@ -102,6 +102,7 @@ return [
         'denied' => [
             'access' => 'No tienes permiso para acceder a los dominios',
             'add' => 'No se pueden agregar dominios',
+            'registrar_disabled' => 'El registro y la transferencia de dominios no están disponibles. Aún puedes conectar un dominio que ya posees',
             'edit' => 'Este dominio no se puede editar',
             'update' => 'Este dominio no se puede editar',
             'ip' => ':domain debe apuntar a la dirección IP :ip. Verifica que tu configuración DNS sea correcta',

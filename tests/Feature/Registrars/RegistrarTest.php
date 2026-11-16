@@ -15,6 +15,9 @@ beforeEach(function () {
     setupRegistrarDriver('fake');
     setupBillingDriver('fake');
 
+    // Registering and transferring domains are behind the domain-registrar feature
+    config(['toggle.flags.domain-registrar' => true]);
+
     $this->tld = Tld::firstOrCreate(
         ['name' => 'com'],
         [
