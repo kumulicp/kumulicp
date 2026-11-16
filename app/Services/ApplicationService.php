@@ -346,7 +346,9 @@ class ApplicationService
      * default plan with the profile's default configuration. Profiles that
      * recommend no version get neither, and are set up by hand as before.
      *
-     * The app stays disabled: an admin still decides when to offer it.
+     * Whether the app is then switched on is not decided here: it follows its
+     * readiness (see ReadinessObserver), so it comes on by itself once it has a
+     * server to run on.
      */
     private function provisionDefaults(Application $application): void
     {
