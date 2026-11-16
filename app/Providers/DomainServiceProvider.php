@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use OffloadProject\Toggle\Facades\Toggle;
 
 class DomainServiceProvider extends ServiceProvider
 {
@@ -110,6 +111,10 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('register-domains', function (User $user) {
+            if (! Toggle::active('domain-registrar')) {
+                return Response::deny(__('organization.domain.denied.registrar_disabled'));
+            }
+
             $organization_subscription_service = Subscription::all();
 
             if (! Billing::hasDefaultPaymentMethod()) {
@@ -125,6 +130,10 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('transfer-domains', function (User $user) {
+            if (! Toggle::active('domain-registrar')) {
+                return Response::deny(__('organization.domain.denied.registrar_disabled'));
+            }
+
             $organization_subscription_service = Subscription::all();
 
             if (! Billing::hasDefaultPaymentMethod()) {
@@ -148,7 +157,8 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('transfer-in-domain', function (User $user, OrgDomain $domain) {
-            return $user->organization->status !== 'deactivated'
+            return Toggle::active('domain-registrar')
+                && $user->organization->status !== 'deactivated'
                 && Billing::hasDefaultPaymentMethod()
                 && $domain->status === 'active'
                 && $domain->type === 'connection'
@@ -178,7 +188,8 @@ class DomainServiceProvider extends ServiceProvider
                 $max_renew_years = 0;
             }
 
-            return $user->organization->status !== 'deactivated'
+            return Toggle::active('domain-registrar')
+                && $user->organization->status !== 'deactivated'
                 && Billing::hasDefaultPaymentMethod()
                 && $domain->belongsToOrganization($user->organization)
                 && $domain->type == 'managed'
@@ -187,7 +198,8 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('reactivate-domain', function (User $user, OrgDomain $domain) {
-            return $user->organization->status !== 'deactivated'
+            return Toggle::active('domain-registrar')
+                && $user->organization->status !== 'deactivated'
                 && Billing::hasDefaultPaymentMethod()
                 && $domain->transfer_id > 0
                 && $domain->type == 'managed'
@@ -204,7 +216,8 @@ class DomainServiceProvider extends ServiceProvider
         });
 
         Gate::define('request-domain-transfer', function (User $user, OrgDomain $domain) {
-            return $user->organization->status !== 'deactivated'
+            return Toggle::active('domain-registrar')
+                && $user->organization->status !== 'deactivated'
                 && $domain->belongsToOrganization($user->organization)
                 && $domain->type === 'managed'
                 && (new Carbon($domain->registered_at))->addDays(60) < now();

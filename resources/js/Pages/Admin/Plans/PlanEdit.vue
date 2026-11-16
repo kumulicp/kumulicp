@@ -500,18 +500,20 @@ import { currencyByCode } from '@/constants/currencies'
               class="my-2"
               immediateValidation
               />
-            <va-checkbox v-model="form.domains.register"
-              :label="$t('admin.plans.registerDomains')"
-              :messages="$t('admin.plans.registerDomainsMessage')"
-              class="my-2"
-              immediateValidation
-              />
-            <va-checkbox v-model="form.domains.transfer"
-              :label="$t('admin.plans.transferDomains')"
-              :messages="$t('admin.plans.transferDomainsMessage')"
-              class="my-2"
-              immediateValidation
-              />
+            <template v-if="$page.props.flags.domainRegistrar">
+              <va-checkbox v-model="form.domains.register"
+                :label="$t('admin.plans.registerDomains')"
+                :messages="$t('admin.plans.registerDomainsMessage')"
+                class="my-2"
+                immediateValidation
+                />
+              <va-checkbox v-model="form.domains.transfer"
+                :label="$t('admin.plans.transferDomains')"
+                :messages="$t('admin.plans.transferDomainsMessage')"
+                class="my-2"
+                immediateValidation
+                />
+            </template>
             <va-input
               type="number"
               :label="$t('admin.plans.maxDomains')"

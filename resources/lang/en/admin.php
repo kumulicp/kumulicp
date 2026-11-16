@@ -283,6 +283,10 @@ return [
                     'label' => 'Email',
                     'description' => 'Lets organizations create and manage email accounts for their domains. Adds the Email menu and the email server option on plans.',
                 ],
+                'domain_registrar' => [
+                    'label' => 'Domain registrar',
+                    'description' => 'Lets organizations register, transfer and renew domain names through your registrar. Adds the Domains and TLDs admin pages, the register and transfer options when adding a domain, and the matching plan options. Connecting a domain you already own is always available.',
+                ],
             ],
         ],
     ],

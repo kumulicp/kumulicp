@@ -104,6 +104,7 @@ return [
         'denied' => [
             'access' => 'You do not have permission to access domains',
             'add' => "Domains can't be added",
+            'registrar_disabled' => "Domain registration and transfers aren't available. You can still connect a domain you already own",
             'edit' => "This domain can't be edited",
             'update' => "This domain can't be edited",
             'ip' => ':domain must point to ip address :ip . Check that your DNS settings are correct',

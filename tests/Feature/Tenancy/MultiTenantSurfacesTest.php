@@ -185,9 +185,9 @@ it('does not offer the multi-organization features in single mode', function () 
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
     $this->get('/admin/settings/features')
-        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'emails']));
+        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'domain-registrar', 'emails']));
 
-    $this->put('/admin/settings/features', ['features' => ['app-backups' => true, 'emails' => false]])
+    $this->put('/admin/settings/features', ['features' => ['app-backups' => true, 'domain-registrar' => false, 'emails' => false]])
         ->assertSessionHasNoErrors();
 });
 
@@ -195,7 +195,7 @@ it('offers every feature in multi-tenant mode', function () {
     $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
     $this->get('/admin/settings/features')
-        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'emails', 'shared-apps', 'sub-organizations']));
+        ->assertInertia(fn ($page) => $page->where('features', fn ($features) => collect($features)->pluck('key')->sort()->values()->all() === ['app-backups', 'domain-registrar', 'emails', 'shared-apps', 'sub-organizations']));
 });
 
 it('keeps announcements off the dashboard and out of the menu in single mode', function () {

@@ -226,6 +226,10 @@ return [
                     'label' => 'Correo electrónico',
                     'description' => 'Permite que las organizaciones creen y gestionen cuentas de correo para sus dominios. Agrega el menú Correo electrónico y la opción de servidor de correo en los planes.',
                 ],
+                'domain_registrar' => [
+                    'label' => 'Registrador de dominios',
+                    'description' => 'Permite que las organizaciones registren, transfieran y renueven nombres de dominio a través de su registrador. Agrega las páginas de administración de Dominios y TLD, las opciones de registrar y transferir al agregar un dominio, y las opciones de plan correspondientes. Conectar un dominio que ya posee siempre está disponible.',
+                ],
             ],
         ],
     ],

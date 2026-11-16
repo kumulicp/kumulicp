@@ -280,7 +280,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('activate', 'Admin\SharedApps@deploy')->name('service.shared-apps.deploy');
             });
             Route::resource('shared-apps', 'Admin\SharedApps')->only(['index', 'store', 'show'])->middleware(['toggle:shared-apps', 'tenancy:multi']);
-            Route::prefix('domains')->group(function () {
+            Route::prefix('domains')->middleware('toggle:domain-registrar')->group(function () {
                 Route::get('', 'Admin\Domains@index')->name('service.domains.index');
                 Route::get('tlds/refresh', 'Admin\Tlds@refresh')->name('service.domains.tlds.refresh');
                 Route::resource('tlds', 'Admin\Tlds');
@@ -357,14 +357,17 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         });
         Route::prefix('domains')->group(function () {
             Route::get('', 'Account\Web\Domains@index')->name('organization.settings.web.domains');
-            Route::get('availability', 'Account\Web\Register@availability')->name('organization.settings.web.availability');
-            Route::post('availability', 'Account\Web\Register@select')->name('organization.settings.web.select');
-            Route::post('check', 'Account\Web\Register@check')->name('organization.settings.web.check');
-            Route::get('register/{domain}', 'Account\Web\Register@setup')->name('organization.settings.web.registration');
-            Route::post('register/{domain}', 'Account\Web\Register@register')->name('organization.settings.web.register');
-            Route::get('transfer', 'Account\Web\Transfer@setup')->name('organization.settings.web.transfer.setup');
-            Route::post('transfer', 'Account\Web\Transfer@transfer')->name('organization.settings.web.transfer');
-            Route::post('transfer/price', 'Account\Web\Transfer@price')->name('organization.settings.web.transfer.price');
+            // Registering and transferring a domain in need the registrar feature. Connecting one you own does not.
+            Route::middleware('toggle:domain-registrar')->group(function () {
+                Route::get('availability', 'Account\Web\Register@availability')->name('organization.settings.web.availability');
+                Route::post('availability', 'Account\Web\Register@select')->name('organization.settings.web.select');
+                Route::post('check', 'Account\Web\Register@check')->name('organization.settings.web.check');
+                Route::get('register/{domain}', 'Account\Web\Register@setup')->name('organization.settings.web.registration');
+                Route::post('register/{domain}', 'Account\Web\Register@register')->name('organization.settings.web.register');
+                Route::get('transfer', 'Account\Web\Transfer@setup')->name('organization.settings.web.transfer.setup');
+                Route::post('transfer', 'Account\Web\Transfer@transfer')->name('organization.settings.web.transfer');
+                Route::post('transfer/price', 'Account\Web\Transfer@price')->name('organization.settings.web.transfer.price');
+            });
             Route::get('connect', 'Account\Web\Connect@setup')->name('organization.settings.web.connect');
             Route::post('connect', 'Account\Web\Connect@add')->name('organization.settings.web.connect.add');
             Route::prefix('{domain:name}')->group(function () {

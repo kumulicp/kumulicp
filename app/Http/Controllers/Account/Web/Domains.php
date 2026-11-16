@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use OffloadProject\Toggle\Facades\Toggle;
 
 class Domains extends Controller
 {
@@ -124,11 +125,12 @@ class Domains extends Controller
             $email_ip = $email_server->server->ip;
         }
 
-        $tld = $domain->tld;
+        // Renewal prices come from the registrar, so they only exist when the registrar feature is on
+        $tld = Toggle::active('domain-registrar') ? $domain->tld : null;
         $year = 0;
         $total = 0;
         $max_renewal_years = null;
-        if (method_exists(Domain::registrar($domain), 'maxRenewalYears')) {
+        if ($tld && method_exists(Domain::registrar($domain), 'maxRenewalYears')) {
             $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
         }
 

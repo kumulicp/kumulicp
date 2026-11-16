@@ -72,6 +72,7 @@ return [
         'emails' => env('TOGGLE_EMAILS', false),
         'shared-apps' => env('TOGGLE_SHARED_APPS', false),
         'app-backups' => env('TOGGLE_APP_BACKUPS', false),
+        'domain-registrar' => env('TOGGLE_DOMAIN_REGISTRAR', false),
     ],
 
     'database_flags' => [

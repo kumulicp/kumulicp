@@ -83,7 +83,7 @@ class MenuService
                         'name' => __('labels.domains'),
                         'url' => '/admin/service/domains',
                         'icon' => 'fa-circle',
-                        'perm' => $admin,
+                        'perm' => $admin && Toggle::active('domain-registrar'),
                         'external' => false,
                         'order' => 300,
                     ],
