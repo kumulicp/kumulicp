@@ -109,6 +109,54 @@ class AdminTicketsTest extends TicketsTestCase
         $this->assertSame(1, $ticket->lock_version);
     }
 
+    public function test_saving_with_the_status_it_already_has_still_saves_the_rest(): void
+    {
+        $ticket = $this->ticketFor($this->alice);
+
+        // The form always sends the status it was loaded with
+        $this->actingAs($this->admin)->post('/admin/support/tickets/'.$ticket->number, [
+            'lock_version' => $ticket->lock_version,
+            'status' => $ticket->status->value,
+            'priority' => 'urgent',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertSame('urgent', $ticket->priority->value);
+        $this->assertSame(1, $ticket->lock_version);
+    }
+
+    public function test_a_merged_ticket_can_still_be_edited_without_changing_its_status(): void
+    {
+        $target = $this->ticketFor($this->alice);
+        $source = $this->ticketFor($this->alice);
+        $this->service()->merge($source, $target, $this->admin);
+        $source->refresh();
+
+        $this->actingAs($this->admin)->post('/admin/support/tickets/'.$source->number, [
+            'lock_version' => $source->lock_version,
+            'status' => $source->status->value,
+            'priority' => 'high',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('high', $source->fresh()->priority->value);
+    }
+
+    public function test_a_refused_status_saves_nothing_else(): void
+    {
+        $target = $this->ticketFor($this->alice);
+        $source = $this->ticketFor($this->alice);
+        $this->service()->merge($source, $target, $this->admin);
+        $source->refresh();
+
+        $this->actingAs($this->admin)->post('/admin/support/tickets/'.$source->number, [
+            'lock_version' => $source->lock_version,
+            'status' => $source->status === TicketStatus::OPEN ? 'on_hold' : 'open',
+            'priority' => 'high',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertNotSame('high', $source->fresh()->priority->value);
+    }
+
     public function test_internal_events_are_not_in_the_customer_timeline(): void
     {
         $ticket = $this->ticketFor($this->alice);

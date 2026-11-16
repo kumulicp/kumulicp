@@ -277,17 +277,28 @@ class TicketService
         });
     }
 
-    public function changeStatus(Ticket $ticket, ?User $actor, TicketStatus $to, bool $asStaff): Ticket
+    /**
+     * Throws when the ticket cannot be moved to this status. Lets a caller make
+     * several changes at once check this first, so a refusal saves nothing.
+     *
+     * @throws ValidationException
+     */
+    public function assertCanChangeStatus(Ticket $ticket, TicketStatus $to, bool $asStaff): void
     {
-        $from = $ticket->status;
-
         if ($ticket->isMerged()) {
             throw ValidationException::withMessages(['status' => __('tickets.errors.merged')]);
         }
 
-        if (! $this->workflow->canChange($from, $to, $asStaff)) {
+        if (! $this->workflow->canChange($ticket->status, $to, $asStaff)) {
             throw ValidationException::withMessages(['status' => __('tickets.errors.invalid_transition')]);
         }
+    }
+
+    public function changeStatus(Ticket $ticket, ?User $actor, TicketStatus $to, bool $asStaff): Ticket
+    {
+        $from = $ticket->status;
+
+        $this->assertCanChangeStatus($ticket, $to, $asStaff);
 
         $event = null;
 

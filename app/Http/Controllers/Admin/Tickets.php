@@ -365,12 +365,21 @@ class Tickets extends Controller
             throw ValidationException::withMessages(['lock_version' => __('tickets.errors.stale')]);
         }
 
+        // The form sends the status it was loaded with, so only a real move counts. Check it
+        // before saving anything: a refused status must not leave the other changes half saved
+        $status = isset($data['status']) ? TicketStatus::from($data['status']) : null;
+        $status = $status !== $ticket->status ? $status : null;
+
+        if ($status) {
+            $this->tickets->assertCanChangeStatus($ticket, $status, asStaff: true);
+        }
+
         if (Arr::hasAny($data, ['subject', 'impact'])) {
             $this->tickets->updateDetails($ticket, $user, Arr::only($data, ['subject', 'impact']), asStaff: true);
         }
 
-        if (isset($data['status'])) {
-            $this->tickets->changeStatus($ticket, $user, TicketStatus::from($data['status']), asStaff: true);
+        if ($status) {
+            $this->tickets->changeStatus($ticket, $user, $status, asStaff: true);
         }
 
         if (isset($data['priority'])) {
