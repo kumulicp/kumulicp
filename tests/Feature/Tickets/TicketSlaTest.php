@@ -98,7 +98,10 @@ class TicketSlaTest extends TicketsTestCase
     public function test_the_state_of_a_clock_over_time(): void
     {
         $this->slaPolicy('Standard', $this->standardTargets(), null, true);
-        $ticket = $this->ticketFor($this->alice, ['priority' => 'high']);
+        $ticket = $this->ticketFor($this->alice);
+        // Only staff set a priority
+        $this->service()->changePriority($ticket, $this->admin, TicketPriority::HIGH);
+        $ticket->refresh();
         $state = fn (string $time) => $this->sla()->state($ticket, Carbon::parse("2026-11-02 $time", 'UTC'))['first_response'];
 
         $this->assertSame('ok', $state('10:10'));

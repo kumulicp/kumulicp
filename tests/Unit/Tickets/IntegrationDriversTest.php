@@ -118,11 +118,11 @@ it('retries when the connection fails', function () {
 });
 
 it('explains a failed GitHub test', function () {
-    Http::fake(['*' => Http::response(['full_name' => 'acme/platform'], 200)]);
+    // A second Http::fake() would not replace the first, so the answers come in turn
+    Http::fake(['*' => Http::sequence()->push(['full_name' => 'acme/platform'], 200)->push([], 404)]);
     $ok = app(GitHubDriver::class)->testConnection(new IntegrationConfig(['token' => 't', 'repository' => 'acme/platform']));
     expect([$ok->ok, $ok->message])->toBe([true, 'Connected to acme/platform.']);
 
-    Http::fake(['*' => Http::response([], 404)]);
     $missing = app(GitHubDriver::class)->testConnection(new IntegrationConfig(['token' => 't', 'repository' => 'acme/platform']));
     expect($missing->ok)->toBeFalse()->and($missing->message)->toContain('not found');
 });
@@ -183,19 +183,21 @@ it('signs the exact bytes it sends', function () {
 
 it('signs with both secrets while one is being rotated, and only the new one afterwards', function () {
     $driver = app(GenericWebhookDriver::class);
-    $rotating = new IntegrationConfig(['url' => 'https://hooks.example.test/in', 'secret' => 'new', 'previous_secret' => 'old', 'previous_secret_until' => time() + 3600]);
-    $expired = new IntegrationConfig(['url' => 'https://hooks.example.test/in', 'secret' => 'new', 'previous_secret' => 'old', 'previous_secret_until' => time() - 5]);
+    // The old secret stops being signed with once its time has passed, counted from the moment of signing
+    $signedAt = time();
+    $rotating = new IntegrationConfig(['url' => 'https://hooks.example.test/in', 'secret' => 'new', 'previous_secret' => 'old', 'previous_secret_until' => $signedAt + 3600]);
+    $expired = new IntegrationConfig(['url' => 'https://hooks.example.test/in', 'secret' => 'new', 'previous_secret' => 'old', 'previous_secret_until' => $signedAt - 5]);
 
-    $both = $driver->signature($rotating, 1700000000, 'body');
+    $both = $driver->signature($rotating, $signedAt, 'body');
 
     expect(substr_count($both, 'v1='))->toBe(2)
-        ->and($both)->toContain(hash_hmac('sha256', '1700000000.body', 'new'))
-        ->and($both)->toContain(hash_hmac('sha256', '1700000000.body', 'old'))
-        ->and(substr_count($driver->signature($expired, 1700000000, 'body'), 'v1='))->toBe(1);
+        ->and($both)->toContain(hash_hmac('sha256', $signedAt.'.body', 'new'))
+        ->and($both)->toContain(hash_hmac('sha256', $signedAt.'.body', 'old'))
+        ->and(substr_count($driver->signature($expired, $signedAt, 'body'), 'v1='))->toBe(1);
 });
 
 it('tests a webhook with a ping that carries no ticket data', function () {
-    Http::fake(['*' => Http::response('ok', 200)]);
+    Http::fake(['*' => Http::sequence()->push('ok', 200)->push('nope', 500)]);
     $config = new IntegrationConfig(['url' => 'https://hooks.example.test/in', 'secret' => 's']);
 
     $result = app(GenericWebhookDriver::class)->testConnection($config);
@@ -203,7 +205,6 @@ it('tests a webhook with a ping that carries no ticket data', function () {
     expect($result->ok)->toBeTrue();
     Http::assertSent(fn (Request $r) => $r->header('X-KCP-Event')[0] === 'ping' && ! str_contains($r->body(), '"ticket":'));
 
-    Http::fake(['*' => Http::response('nope', 500)]);
     $failed = app(GenericWebhookDriver::class)->testConnection($config);
     expect($failed->ok)->toBeFalse()->and($failed->message)->toContain('500');
 });

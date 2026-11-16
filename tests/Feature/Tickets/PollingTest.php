@@ -180,7 +180,7 @@ class PollingTest extends TicketsTestCase
     {
         $this->getJson('/support/tickets/summary')->assertUnauthorized();
 
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
         $this->actingAs($this->alice)->getJson('/support/tickets/summary')->assertNotFound();
     }
 }

@@ -25,7 +25,7 @@ class AdminTicketsTest extends TicketsTestCase
 
     public function test_the_feature_flag_hides_the_admin_side(): void
     {
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
 
         $this->actingAs($this->admin)->get('/admin/support/tickets')->assertNotFound();
     }

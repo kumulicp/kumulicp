@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use OffloadProject\Toggle\Facades\Toggle;
 use Tests\Support\FakeHostResolver;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -45,9 +46,14 @@ abstract class TicketsTestCase extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Due times and report windows are asserted in UTC, whatever the app's own timezone is
+        config(['app.timezone' => 'UTC']);
+        date_default_timezone_set('UTC');
 
+        // The members here are plain database users, which an LDAP directory knows nothing about
+        setupAccountManagerDriver('db');
         (new TestSupports)->seed();
-        config(['toggle.flags.tickets' => true]);
+        $this->ticketsFeature(true);
         Notification::fake();
         Storage::fake('tickets');
         // Jobs only run when a test runs them, and nothing may reach the real network
@@ -63,6 +69,17 @@ abstract class TicketsTestCase extends TestCase
         $this->alice = $this->member($this->orgA, 'alice');
         $this->bob = $this->member($this->orgA, 'bob');
         $this->carol = $this->member($this->orgB, 'carol');
+    }
+
+    /**
+     * Switch the `tickets` feature on or off. A value saved under Settings → Features beats the
+     * config, and the flag is cached once read, so both are cleared first.
+     */
+    protected function ticketsFeature(bool $enabled): void
+    {
+        Toggle::delete('tickets');
+        config(['toggle.flags.tickets' => $enabled]);
+        Toggle::forgetCache('tickets');
     }
 
     protected function member(Organization $organization, string $username): User

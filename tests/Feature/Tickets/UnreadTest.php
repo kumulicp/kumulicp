@@ -5,21 +5,14 @@ namespace Tests\Feature\Tickets;
 use App\Enums\TicketStatus;
 use App\Services\Tickets\TicketUnread;
 use App\TicketRead;
-use Inertia\Testing\AssertableInertia as Assert;
 
 class UnreadTest extends TicketsTestCase
 {
     private function unreadInList(string $url, $user, int $number): bool
     {
-        $found = null;
+        $tickets = collect($this->actingAs($user)->get($url)->assertOk()->viewData('page')['props']['tickets']['data']);
 
-        $this->actingAs($user)->get($url)->assertInertia(fn (Assert $page) => $page->where('tickets.data', function ($tickets) use (&$found, $number) {
-            $found = $tickets->firstWhere('number', $number)['unread'] ?? null;
-
-            return true;
-        }));
-
-        return (bool) $found;
+        return (bool) ($tickets->firstWhere('number', $number)['unread'] ?? false);
     }
 
     public function test_your_own_messages_are_never_unread(): void

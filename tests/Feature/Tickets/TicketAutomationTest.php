@@ -192,9 +192,10 @@ class TicketAutomationTest extends TicketsTestCase
 
     public function test_merged_tickets_are_left_alone(): void
     {
-        $this->automation()->update(['auto_assign' => 'round_robin', 'reminder_days' => 1]);
         $target = $this->ticketFor($this->alice);
         $source = $this->ticketIn(['status' => TicketStatus::PENDING_CUSTOMER, 'merged_into_id' => $target->id, 'last_activity_at' => now()->subDays(10)]);
+        // Switched on after the tickets exist, so creating them does not assign them
+        $this->automation()->update(['auto_assign' => 'round_robin', 'reminder_days' => 1]);
 
         $this->runner()->run();
 

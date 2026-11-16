@@ -22,7 +22,7 @@ class TicketAssigneeSweepTest extends TicketsTestCase
 
         $this->assertSame(1, $changed);
         $this->assertSame($this->alice->id, $ticket->fresh()->customer_assignee_id);
-        $this->assertSame('assignee_removed', $ticket->events()->latest('id')->first()->type);
+        $this->assertSame('assignee_removed', $ticket->events()->reorder()->latest('id')->first()->type);
         Notification::assertSentTo($this->alice, TicketActivity::class, fn ($n) => $n->event === 'assigned');
     }
 

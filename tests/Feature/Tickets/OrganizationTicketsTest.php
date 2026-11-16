@@ -10,7 +10,7 @@ class OrganizationTicketsTest extends TicketsTestCase
 {
     public function test_the_feature_flag_hides_tickets(): void
     {
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
 
         $this->actingAs($this->alice)->get('/support/tickets')->assertNotFound();
     }
@@ -152,7 +152,7 @@ class OrganizationTicketsTest extends TicketsTestCase
         $this->actingAs($this->bob)->put('/support/tickets/'.$ticket->number, ['customer_assignee_id' => $this->bob->id])->assertRedirect();
 
         $this->assertSame($this->bob->id, $ticket->fresh()->customer_assignee_id);
-        $this->assertSame('assigned', $ticket->events()->latest('id')->first()->type);
+        $this->assertSame('assigned', $ticket->events()->reorder()->latest('id')->first()->type);
     }
 
     public function test_the_customer_assignee_cannot_be_someone_from_another_organization(): void

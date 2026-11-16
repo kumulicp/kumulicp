@@ -33,7 +33,7 @@ class IntegrationsAdminTest extends TicketsTestCase
 
     public function test_the_feature_flag_hides_the_pages(): void
     {
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
 
         $this->actingAs($this->admin)->get('/admin/support/integrations')->assertNotFound();
     }
@@ -59,7 +59,7 @@ class IntegrationsAdminTest extends TicketsTestCase
                 ->component('Admin/Tickets/IntegrationEdit')
                 ->where('driver.key', 'gitlab')
                 ->where('driver.kind', 'tracker')
-                ->where('driver.schema', fn ($schema) => $schema->pluck('key')->all() === ['token', 'project', 'base_url', 'labels'])
+                ->where('driver.schema', fn ($schema) => $schema->pluck('key')->all() === ['token', 'project', 'base_url', 'labels', 'webhook_secret'])
                 ->where('integration', null));
 
         $this->actingAs($this->admin)->get('/admin/support/integrations/create?driver=nonsense')->assertNotFound();
@@ -178,12 +178,14 @@ class IntegrationsAdminTest extends TicketsTestCase
         $this->assertSame('sekrit', $integration->fresh()->config['previous_secret']);
     }
 
-    public function test_a_tracker_has_no_secret_to_rotate_or_reveal(): void
+    public function test_a_tracker_has_no_signing_secret_to_rotate_but_can_show_its_webhook_secret(): void
     {
         $integration = $this->github();
 
         $this->actingAs($this->admin)->post('/admin/support/integrations/'.$integration->id.'/secret/rotate')->assertNotFound();
-        $this->actingAs($this->admin)->postJson('/admin/support/integrations/'.$integration->id.'/secret/reveal')->assertNotFound();
+        // The secret the tracker signs its calls to us with is shown so it can be entered in the tracker
+        $this->actingAs($this->admin)->postJson('/admin/support/integrations/'.$integration->id.'/secret/reveal')
+            ->assertOk()->assertJsonStructure(['webhook_secret']);
     }
 
     public function test_staff_can_ask_to_see_the_signing_secret_again(): void

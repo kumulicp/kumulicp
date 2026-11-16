@@ -117,10 +117,13 @@ class FeatureSettingsTest extends TestCase
 
     public function test_update_requires_every_flag_to_be_a_boolean()
     {
+        // Flags the environment enables are saved by the migration, so count against that
+        $before = DB::table('toggles')->count();
+
         $this->put('/admin/settings/features', ['features' => ['emails' => 'maybe']])
             ->assertSessionHasErrors(['features.emails', 'features.app-backups']);
 
-        $this->assertSame(0, DB::table('toggles')->count());
+        $this->assertSame($before, DB::table('toggles')->count());
     }
 
     public function test_unknown_flags_are_ignored()

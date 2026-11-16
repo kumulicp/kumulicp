@@ -35,7 +35,7 @@ class TicketSettingsTest extends TicketsTestCase
 
     public function test_the_feature_flag_hides_the_settings(): void
     {
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
 
         $this->actingAs($this->admin)->get('/admin/support/settings')->assertNotFound();
         $this->actingAs($this->admin)->get('/admin/support/reports')->assertNotFound();

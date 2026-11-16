@@ -137,7 +137,7 @@ class TicketReports
         $resolvedByDay = $resolved->countBy(fn (Ticket $ticket) => $ticket->resolved_at->toDateString());
         $days = [];
 
-        for ($day = $from->copy(); $day->lte($to) && count($days) <= self::MAX_DAYS; $day->addDay()) {
+        for ($day = $from->copy(); $day->lte($to) && count($days) <= self::MAX_DAYS; $day = $day->addDay()) {
             $date = $day->toDateString();
             $days[] = ['date' => $date, 'created' => (int) ($createdByDay[$date] ?? 0), 'resolved' => (int) ($resolvedByDay[$date] ?? 0)];
         }

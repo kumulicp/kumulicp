@@ -115,7 +115,7 @@ class InboundWebhookTest extends TicketsTestCase
 
     public function test_the_feature_flag_closes_the_endpoint(): void
     {
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
 
         $this->githubCall($this->comment())->assertNotFound();
     }

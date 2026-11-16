@@ -80,7 +80,7 @@ class AttachmentsTest extends TicketsTestCase
     {
         $this->post('/support/tickets/uploads', ['file' => $this->file('a.png', $this->png())])->assertRedirect();
 
-        config(['toggle.flags.tickets' => false]);
+        $this->ticketsFeature(false);
         $this->upload($this->alice)->assertNotFound();
     }
 
@@ -283,11 +283,11 @@ class AttachmentsTest extends TicketsTestCase
     {
         config(['tickets.attachments.max_drafts_per_user' => 2]);
 
-        $this->upload($this->alice, 'a.txt', 'a')->assertCreated();
-        $this->upload($this->alice, 'b.txt', 'b')->assertCreated();
-        $this->upload($this->alice, 'c.txt', 'c')->assertUnprocessable();
+        $this->upload($this->alice, 'a.txt', 'alpha')->assertCreated();
+        $this->upload($this->alice, 'b.txt', 'bravo')->assertCreated();
+        $this->upload($this->alice, 'c.txt', 'charlie')->assertUnprocessable();
         // The limit is per person
-        $this->upload($this->bob, 'd.txt', 'd')->assertCreated();
+        $this->upload($this->bob, 'd.txt', 'delta')->assertCreated();
     }
 
     public function test_downloads_cannot_be_turned_into_something_the_browser_runs(): void
@@ -295,7 +295,7 @@ class AttachmentsTest extends TicketsTestCase
         $ticket = $this->ticketFor($this->alice);
         $image = $this->draft($this->alice);
         $pdf = $this->draft($this->alice, 'doc.pdf', "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
-        $text = $this->draft($this->alice, 'notes.txt', '<script>alert(1)</script>');
+        $text = $this->draft($this->alice, 'notes.txt', 'alert(1) in a plain note <script');
         $this->reply($ticket, $this->alice, '<p>Files</p>', attachmentIds: [$image->id, $pdf->id, $text->id]);
 
         $shown = $this->actingAs($this->alice)->get($image->url());

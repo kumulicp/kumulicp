@@ -287,6 +287,10 @@ return [
                     'label' => 'Domain registrar',
                     'description' => 'Lets organizations register, transfer and renew domain names through your registrar. Adds the Domains and TLDs admin pages, the register and transfer options when adding a domain, and the matching plan options. Connecting a domain you already own is always available.',
                 ],
+                'tickets' => [
+                    'label' => 'Support tickets',
+                    'description' => 'Adds a support desk. Organizations open and follow tickets from their account, and admins work them from Support in the admin menu: assignment, priorities, SLAs, automation, integrations and reports.',
+                ],
             ],
         ],
     ],

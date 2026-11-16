@@ -315,7 +315,8 @@ class IntegrationDeliveryTest extends TicketsTestCase
 
         Http::fake(['*' => Http::response('ok', 200)]);
         $integration->forceFill(['enabled' => true])->save();
-        $delivery->forceFill(['status' => 'pending', 'attempts' => 0])->save();
+        // The runner changed the row, not this copy of it
+        $delivery->refresh()->forceFill(['status' => 'pending', 'attempts' => 0])->save();
 
         $this->assertNull($this->runDelivery($delivery));
         $this->assertSame('delivered', $delivery->fresh()->status);
