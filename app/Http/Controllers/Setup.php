@@ -115,6 +115,15 @@ class Setup extends Controller
         $plan->type = 'app';
         $plan->app_plans = json_decode('{}', true);
         $plan->settings = json_decode('{"base": {"price": null, "storage": null, "price_id": null}, "basic": {"max": null, "name": null, "price": null, "amount": null, "storage": null, "price_id": null}, "email": {"max": null, "price": null, "storage": null, "price_id": null}, "storage": {"max": null, "price": null, "amount": null, "price_id": null}, "standard": {"max": null, "price": null, "storage": null, "price_id": null}, "application": {"max": null, "price": null, "price_id": null}, "suborganizations": {"enabled": false}}', true);
+        // The one organization of a single-organization install has nothing to subscribe to, so it gets
+        // every option a plan can switch on. Payment and sub-organizations stay off: they only exist
+        // for a hosting provider's customers.
+        $plan->domain_enabled = $mode === TenancyMode::Single;
+        $plan->email_enabled = $mode === TenancyMode::Single;
+        if ($mode === TenancyMode::Single) {
+            // Connecting a domain you own. Registering or transferring one needs a payment method.
+            $plan->updateSettings(['domains.connect' => true]);
+        }
         $plan->archive = true;
         $plan->save();
 

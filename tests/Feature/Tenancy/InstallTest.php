@@ -40,6 +40,32 @@ it('installs a single organization with the name it was given', function () {
     expect($organization->status)->toBe('active');
 });
 
+it('switches on domains and email on the plan of a single organization install', function () {
+    $this->post('/install', installPayload([
+        'tenancy_mode' => 'single',
+        'organization_name' => 'Acme Church',
+    ]))->assertSessionHasNoErrors();
+
+    $plan = Organization::where('type', 'superaccount')->sole()->plan;
+
+    expect($plan->domain_enabled)->toBeTrue();
+    expect($plan->email_enabled)->toBeTrue();
+    expect($plan->setting('domains.connect'))->toBeTrue();
+    expect($plan->domain_max)->toBeNull();
+    // Billing and sub-organizations are for a hosting provider's customers
+    expect($plan->payment_enabled)->toBeFalse();
+    expect($plan->setting('suborganizations.enabled'))->toBeFalse();
+});
+
+it('leaves domains and email off on the first plan of a multi-tenant install', function () {
+    $this->post('/install', installPayload())->assertSessionHasNoErrors();
+
+    $plan = Organization::where('type', 'superaccount')->sole()->plan;
+
+    expect($plan->domain_enabled)->toBeFalse();
+    expect($plan->email_enabled)->toBeFalse();
+});
+
 it('installs as multi-tenant when no mode is sent', function () {
     $this->post('/install', installPayload())->assertSessionHasNoErrors();
 

@@ -185,7 +185,7 @@ Servers · Updates (with its pending badge) · Backups (only when `app-backups` 
 - `Setup::settings()`: skip the Stripe check in single mode. Add "Installation type" and an **Organization name** field
   (today it hardcodes `__('setup.first_org')`).
 - `Setup::build()`: in single mode, save `tenancy_mode`, use the entered org name, create the same `superaccount`
-  + unlimited `Plan` + admin user as today, and mark the org `active` with `step = 4` (already done) so nobody lands on the "new org" welcome flow.
+  + unlimited `Plan` (with the domains and email options on; `SingleTenantBasePlanService` reports both as on whatever is stored) + admin user as today, and mark the org `active` with `step = 4` (already done) so nobody lands on the "new org" welcome flow.
 - A **Getting started** card on the organization dashboard, for the admin only, until everything required is done
   (`App\Support\GettingStarted`): a server added, an app ready, a domain set (the system base domain counts), an app installed,
   and single sign-on as an optional suggestion. Each step links to where it is done. It replaces the multi-tenant `Welcome` page.
