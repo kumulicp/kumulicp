@@ -7,6 +7,7 @@ use App\Contracts\Billing\SubscriptionGateway;
 use App\Integrations\Billing\Fake\FakeBillingGateway;
 use App\Integrations\Billing\Stripe\StripeGateway;
 use App\Notifications\NewOrganizationSubscription;
+use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
 use App\Services\Billing\SubscriptionRequestBuilder;
 use App\Support\Facades\Organization as OrganizationFacade;
@@ -106,6 +107,24 @@ class BillingService
 
         if ($created && $request->firstSubscription) {
             Organization::where('type', 'superaccount')->first()?->notifyAdmins(new NewOrganizationSubscription);
+        }
+    }
+
+    /**
+     * Cancel the organization's subscription, and tell the superaccount admins
+     * when there was one to cancel.
+     */
+    public function cancel(): void
+    {
+        $driver = $this->driver();
+        if (! $driver instanceof SubscriptionGateway) {
+            return;
+        }
+
+        if ($driver->cancel()) {
+            Organization::where('type', 'superaccount')->first()?->notifyAdmins(
+                new OrganizationCancelledSubscription($this->organization ?? OrganizationFacade::account())
+            );
         }
     }
 

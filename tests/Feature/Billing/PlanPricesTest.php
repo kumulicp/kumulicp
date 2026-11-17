@@ -3,6 +3,7 @@
 use App\AppPlan;
 use App\Plan;
 use App\PlanPrice;
+use App\Support\Facades\Settings;
 use Illuminate\Support\Facades\DB;
 
 // Plan and AppPlan share the same price behaviour (HasPlanPrices), so every test runs on both.
@@ -166,3 +167,67 @@ it('stores the owner under a short alias, not a class name', function (string $k
     expect(DB::table('plan_prices')->value('priceable_type'))->toBe($expected);
     expect(PlanPrice::first()->priceable->is($plan))->toBeTrue();
 })->with('priced_plans');
+
+it('shows the amount of a price that has no id for the billing driver', function (string $kind) {
+    $plan = pricedPlan($kind);
+    $plan->setPrice('base', 'USD', 10, null);       // priced, but not set up in the billing engine
+    $plan->setPrice('base', 'CAD', 14, null);
+    $plan->setPrice('standard', 'USD', 3, 'std_id');
+
+    // priceFor() is about what can be billed, so it has nothing for these
+    expect($plan->fresh()->priceFor('base', 'CAD')['price_id'])->toBeNull();
+
+    // amountFor() is about what the plan costs
+    expect($plan->fresh()->amountFor('base', 'CAD'))->toBe(14.0);
+    expect($plan->fresh()->amountFor('base', 'EUR'))->toBe(10.0);   // falls back to the default currency
+    expect($plan->fresh()->amountFor('base'))->toBe(10.0);          // and the default currency is the default
+    expect($plan->fresh()->amountFor('standard', 'CAD'))->toBe(3.0);
+    expect($plan->fresh()->amountFor('email', 'CAD'))->toBeNull();
+})->with('priced_plans');
+
+it('falls back to the flat price for the amount of a plan that has no rows', function (string $kind) {
+    $plan = pricedPlan($kind);
+    $plan->settings = ['base' => ['price' => 7]];
+    $plan->save();
+
+    expect($plan->amountFor('base', 'CAD'))->toBe(7);
+})->with('priced_plans');
+
+it('says whether setting a price changed anything', function (string $kind) {
+    $plan = pricedPlan($kind);
+
+    expect($plan->setPrice('base', 'USD', 10, 'usd_base'))->toBeTrue();       // new
+    expect($plan->setPrice('base', 'USD', '10.00', 'usd_base'))->toBeFalse(); // same, however it is written
+    expect($plan->setPrice('base', 'USD', 12, 'usd_base'))->toBeTrue();       // amount
+    expect($plan->setPrice('base', 'USD', 12, 'other'))->toBeTrue();          // id
+    expect($plan->setPrice('base', 'USD', null, null))->toBeTrue();           // removed
+    expect($plan->setPrice('base', 'USD', null, null))->toBeFalse();          // already gone
+    expect($plan->setPrice('email', 'CAD', '', ''))->toBeFalse();             // blank input for a price that never existed
+})->with('priced_plans');
+
+it('saves feature prices per enabled currency, and says whether any changed', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+    $plan = AppPlan::factory()->create();
+    $features = ['deck' => ['status' => 'optional', 'prices' => [
+        'USD' => ['amount' => 2, 'price_id' => 'usd_deck'],
+        'CAD' => ['amount' => 3, 'price_id' => 'cad_deck'],
+        'EUR' => ['amount' => 4, 'price_id' => 'eur_deck'],   // not enabled
+    ]]];
+
+    expect($plan->syncFeaturePrices($features))->toBeTrue();
+    expect($plan->syncFeaturePrices($features))->toBeFalse();   // nothing new the second time
+
+    expect($plan->fresh()->featurePriceId('deck', 'USD'))->toBe('usd_deck');
+    expect($plan->fresh()->featurePriceId('deck', 'CAD'))->toBe('cad_deck');
+    expect($plan->prices()->where('currency', 'EUR')->count())->toBe(0);
+});
+
+it('leaves the other currencies of a feature alone when only the flat price is sent', function () {
+    $plan = AppPlan::factory()->create();
+    $plan->setPrice('feature.deck', 'CAD', 3, 'cad_deck');
+
+    $plan->syncFeaturePrices(['deck' => ['price' => 2, 'price_id' => 'usd_deck']]);
+
+    expect($plan->fresh()->featurePriceId('deck', 'USD'))->toBe('usd_deck');
+    expect($plan->fresh()->featurePriceId('deck', 'CAD'))->toBe('cad_deck');
+});

@@ -443,16 +443,16 @@ class Plans extends Controller
         $plan->updateSettings($settingsToUpdate);
         $plan->save();
 
+        $prices = [];
         foreach ($enabledCurrencies as $currency) {
             foreach ($components as $component) {
-                $plan->setPrice(
-                    $component,
-                    $currency,
-                    $request->input("prices.{$component}.{$currency}.amount"),
-                    $request->input("prices.{$component}.{$currency}.price_id"),
-                );
+                $prices[$component][$currency] = [
+                    'amount' => $request->input("prices.{$component}.{$currency}.amount"),
+                    'price_id' => $request->input("prices.{$component}.{$currency}.price_id"),
+                ];
             }
         }
+        $plan->syncPrices($prices);
 
         // Update default plan
         if (Arr::get($validated, 'default', false)) {

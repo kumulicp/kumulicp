@@ -27,10 +27,18 @@ class SubscriptionAspect extends Aspect
     {
         $plan = $app_instance->plan;
 
-        return Fingerprint::of([
+        $inputs = [
             'plan' => $plan ? ['id' => $plan->id, 'payment_enabled' => $plan->payment_enabled] : null,
             'settings' => AspectInputs::planSettings($app_instance, $this->key()),
             'features' => AspectInputs::featurePricing($plan),
-        ]);
+        ];
+
+        // Prices live in plan_prices rather than the plan's settings. Left out
+        // when there are none, so a plan without prices keeps its fingerprint.
+        if ($prices = AspectInputs::planPrices($plan)) {
+            $inputs['prices'] = $prices;
+        }
+
+        return Fingerprint::of($inputs);
     }
 }

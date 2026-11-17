@@ -333,20 +333,18 @@ class Plans extends Controller
 
         $plan->save();
 
+        $prices = [];
         foreach ($enabledCurrencies as $currency) {
             foreach ($components as $component) {
-                if ($isAppType && in_array($component, ['base', 'standard', 'basic', 'storage', 'application'])) {
-                    $plan->setPrice($component, $currency, null, null);
-                } else {
-                    $plan->setPrice(
-                        $component,
-                        $currency,
-                        $request->input("prices.{$component}.{$currency}.amount"),
-                        $request->input("prices.{$component}.{$currency}.price_id"),
-                    );
-                }
+                $cleared = $isAppType && in_array($component, ['base', 'standard', 'basic', 'storage', 'application']);
+
+                $prices[$component][$currency] = [
+                    'amount' => $cleared ? null : $request->input("prices.{$component}.{$currency}.amount"),
+                    'price_id' => $cleared ? null : $request->input("prices.{$component}.{$currency}.price_id"),
+                ];
             }
         }
+        $plan->syncPrices($prices);
 
         Cache::flush();
 
