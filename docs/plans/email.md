@@ -10,6 +10,18 @@ Every change names the item below it belongs to, and a slice is only finished wh
 
 ## Implementation status
 
+**2b, written and being run in CI** (branch `claude/lucid-gauss-rsgui3`): giving a user an organization address, without `orgMail`.
+- `mailboxes` table and `Mailbox` model (`pending` while offered, `active` once accepted; the previous email and recovery email are kept so it can be undone). `config/email.php` has the undo window (7 days), the recovery takeover delay (24 hours) and the confirmation link lifetime.
+- `MailboxService`: `offer`, `plan`, `accept`, `undo`, `remove`. Accepting a different address moves the current email to the recovery email (or keeps a working recovery email, or asks for one when the current email is on a hosted domain); the address the user already has is only recorded. Writes happen in an order that never loses the old address, a failure puts everything back, the old address is told, and `MailboxActivated`, `MailboxDeactivated` and `UserUpdated` are dispatched (a mail server driver that keeps its own accounts listens for the first two).
+- Recovery email: usable means set, different from `mail` and not on a hosted domain. Resets and invites go to it (both user models). Changing it needs the password and a confirmation link, a replacement takes 24 hours to take over, and the old address is told. The address a user is created with is kept as their recovery email.
+- Profile page: an organization email card (get, review an offer, undo) with the modal described under "Transition flow", a recovery email section, and, with an organization address, a read-only sign-in email.
+- Reminder banner (dismissible for the session) for users with an organization address and no usable recovery email, and the count on `/admin/email`.
+- `orgMail` is removed: the `ldap_org_email` setting and its field on the LDAP settings page, the `org_email` mapping, the writes in the docker-mailserver driver (a user's own entry becomes the mailbox: the mail object class, quota and storage attributes; `mail` is set by the switch), and the user pages (they read the mailbox record).
+- `email:migrate-org-mail` (dry run unless `--apply`) turns old `orgMail` values into mailboxes without changing what anyone signs in with.
+- Found and fixed: `isUserAccessType('standard')` compared an enum to a string in both drivers, so no user could ever be given an organization address; and `orgMail` is not in a standard schema (the CI directory rejects it), which is why the old tests failed.
+
+**Still to do for 2b:** pending mailboxes on a domain that is still being activated and the readiness list before its DNS is switched (the Fastmail case, hole 2); the users list badge for a missing recovery email; the per-app audit (2d); the checklist below.
+
 **Done** (branch `claude/lucid-gauss-rsgui3`, commit `573795d`) - all of it is Phase 2, item 2a:
 - LDAP settings page: an **aliases** attribute and a **recovery email** attribute (`ldap_aliases`, `ldap_recovery_email`). Each must be a valid attribute name and must not be used by any other mapping (defaults included, case-insensitive); the two cannot share one either.
 - `LdapEmailAttributes`: aliases are always available without LDAP; with LDAP they are only available once an attribute is set. Recovery email syncs to LDAP only with LDAP and an attribute.
@@ -46,6 +58,9 @@ Every change names the item below it belongs to, and a slice is only finished wh
 | New org address, same as the user's `mail` | (An address hosted elsewhere moving to us, such as `me@kumulicp.com` leaving Fastmail.) `mail` does not change, so there is no swap, no risk modal and nothing for apps to notice. The mailbox is recorded and the recovery email is the only thing left to ask for. |
 | New org address, different from `mail` | The current `mail` becomes the recovery email, unless that is not usable (see "usable" below), in which case a recovery address has to be given first. An existing usable recovery email is never overwritten silently. |
 | A usable recovery email | One that exists, differs from `mail`, and is not on a domain this server hosts. |
+| Undo | Yes, for 7 days (`EMAIL_UNDO_DAYS`): `mail` and the recovery email go back and the mailbox returns to `pending`. It does not repair accounts an app already made. |
+| Moving mail from another provider | Not built (a separate project). The readiness list only warns. |
+| Reminder | A dismissible banner, not blocking. |
 | Who can switch a user's `mail` | The user, from the modal below. An admin can provision a mailbox for them, but it stays `pending` and `mail` does not change until the user accepts. |
 | Mail-server attributes on users | docker-mailserver stays supported, so the Dovecot attributes (`mailQuota`, `mailHomeDirectory`, `mailStorageDirectory`, the mail object class) are still written for a user with an active mailbox. Stalwart does not use them. |
 
@@ -136,12 +151,12 @@ Exit: the LDAP email suite passes against a live directory in CI (not yet checke
 ### Phase 2 - Identity and mailbox model
 
 - [x] **2a. Attribute settings, recovery storage and sync page** (done, see above).
-- [ ] **2b. Recovery email, and org addresses without `orgMail`.** The swap and the removal of `orgMail` go together, because without `orgMail` nothing else records that a user's `mail` is an org address. Split in five parts, in this order; the flow itself is described under "Transition flow".
-  - *2b-i Recovery email.* Set it when a user is created (the invite address) and let users change it, with a confirm link before a new address is trusted, a notice to the old one, and a short cooldown on reset. Reset links and invites go to the recovery email (falling back to `mail`, with a warning, when it is not usable). Other notifications stay on `mail`. Reject a recovery address on a domain this server hosts. Adds a verified column to `user_recovery_emails`.
-  - *2b-ii The reminder.* A persistent, non-blocking banner (dismissible per session) for any user with an active org mailbox and no usable recovery email. Also a count on the `/admin/email` page, a badge in the users list, and an item in the domain readiness list (2b-iv).
-  - *2b-iii `mailboxes` (minimal, pulled forward from 2c) and removing `orgMail`.* `mailboxes`: organization, domain, local part, address (unique, lowercase), optional username of the user it belongs to, status (`pending` or `active`). `MailAddressRegistry` reads it as well as the directory, and ignores the requesting user's own `mail` when it is the same address. Drop `orgMail` from `LdapEmailInterface::createUserEmail/deleteUserEmail`, `LdapMailAddressRegistry`, the `ldap_org_email` setting and its field on the LDAP settings page, the `org_email` mapping (and its place in the attribute conflict check) and the user pages (they show the mailbox instead). The dead `profile.org_emails` branch in `ProfileEdit.vue` goes with it. One org address per user.
-  - *2b-iv The transition flow.* The button, the modal, the writes and the undo, as described below. Includes pre-provisioning for a domain that is moving to us, and a readiness list before its DNS is switched.
-  - *2b-v `email:migrate-org-mail`.* An artisan command, dry run by default, per organization or per user, for accounts that still have `orgMail` values. It applies the same rules as the flow (same address: record only; different address: swap) and removes the `orgMail` values. A user with more than one `orgMail` value is listed and skipped: the extra addresses need aliases (2e) or a person's decision. Until it has been run the code still reads `orgMail`, so nothing is lost in between.
+- [ ] **2b. Recovery email, and org addresses without `orgMail`.** The swap and the removal of `orgMail` go together, because without `orgMail` nothing else records that a user's `mail` is an org address.
+  - [x] *2b-i Recovery email.* Created with the user, changed with the password and a confirmation link, a replacement takes over after 24 hours, resets and invites go to it, and it can't be on a hosted domain or equal to `mail`.
+  - [x] *2b-ii The reminder.* Banner, admin count. Not yet: the badge in the users list, and the item in the domain readiness list.
+  - [x] *2b-iii `mailboxes` and removing `orgMail`.* The registry reads the mailbox table and the users' sign-in emails (and still the legacy `orgMail`, until it has been migrated) and ignores the requesting user's own `mail`.
+  - [ ] *2b-iv The transition flow.* Done: the button, modal, writes, notice to the old address, admin offer, undo. Not done: `pending` mailboxes while a domain is still being activated, and the readiness list before its DNS is switched (hole 2).
+  - [x] *2b-v `email:migrate-org-mail`.* Dry run by default. An address that is the one the user signs in with is hosted and its `orgMail` value cleared; any other is offered and the user accepts it from their profile; a later run clears the value once they have. A user with several values is listed and skipped.
 - [ ] **2c. Aliases table and the rest of the mailboxes.** `mailbox_addresses` (address globally unique and case-insensitive, `is_primary`) on top of the 2b `mailboxes`. Backfill standalone mailboxes from LDAP with an idempotent artisan command that has `--dry-run` and reports collisions. Count limits from the tables, not from a live mail-server query on every page load. Back `MailAddressRegistry` by driver so uniqueness no longer needs a directory. Also fixes `countEmail()` ignoring user-linked mailboxes.
 - [ ] **2d. Rollout safety for the swap.** Audit WordPress and CiviCRM for the claim that identifies a user (and Nextcloud's `oidc-mapping-user-id` on existing installs). Show an impact preview with the user's apps before the swap. The migration command from 2b only runs on existing accounts after the audit.
 - [ ] **2e. Aliases.** Store aliases as non-primary rows in `mailbox_addresses`. With LDAP, write them to the mapped aliases attribute and add them to the sync page; without LDAP, push them to Stalwart. Gate the UI on `LdapEmailAttributes::aliasesEnabled()`. Decide the per-plan alias cap (see open questions).
@@ -176,10 +191,7 @@ Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and t
 
 ## Open questions
 
-- Existing `orgMail` users: convert only the ones an admin picks, or let the migration command run per organization once the audit (2d) is done?
-- An undo window after the swap (say 7 days): put `mail` back and the mailbox to `pending`. It does not repair app accounts that were already duplicated. Worth having?
-- Moving off another provider: build an IMAP import, or only warn in the readiness list?
-- How hard should the reminder be: a dismissible banner (assumed), or blocking after some time?
+- Existing `orgMail` users: run the migration command per organization once the audit (2d) is done, or per user an admin picks? (It can already do either: `--organization`, `--user`.)
 - Orphans on the sync page: keep them report-only, or let DB-wins clear them after a confirmation?
 - Alias cap per mailbox: a plan setting, default unlimited and not billed?
 - Do user-linked addresses stay available in `db` mode? Assumed yes, through the `mailboxes` record (the `db` account manager has never had a second address).
