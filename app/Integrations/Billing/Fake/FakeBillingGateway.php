@@ -38,7 +38,10 @@ class FakeBillingGateway implements BillingContract
         return false;
     }
 
-    public function cancel(): void {}
+    public function cancel(): bool
+    {
+        return false;
+    }
 
     public function sendInvoices(): void {}
 

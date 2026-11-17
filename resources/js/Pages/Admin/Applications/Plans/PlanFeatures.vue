@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import PlanLayout from './PlanLayout.vue'
 import AdminSettings from '@/components/AdminSettings.vue'
 import { useForm } from '@inertiajs/vue3'
+import { buildCurrencyPrices, currencyByCode } from '@/constants/currencies'
 
 </script>
 <template>
@@ -52,25 +53,33 @@ import { useForm } from '@inertiajs/vue3'
           </template>
           <!-- Billing is for the plans organizations subscribe to -->
           <template v-if="!plan.hidden">
-          <va-input
-            v-model="form['features'][feature.value]['price']"
-            type="number"
-            :label="$t('admin.plans.price')"
-            immediateValidation
-            min="0"
-            step=".01"
-            class="pb-2"
-          >
-            <template #prependInner>
-              {{ $t('admin.plans.currencySymbol') }}
-            </template>
-          </va-input>
-          <va-input
-            v-model="form['features'][feature.value]['price_id']"
-            :label="$t('admin.plans.productID')"
-            immediateValidation
-            class="pb-2"
-          />
+          <template v-for="currency in enabled_currencies" :key="currency">
+            <div class="row">
+              <div class="flex lg6 xs12">
+                <va-input
+                  v-model="form['features'][feature.value]['prices'][currency]['amount']"
+                  type="number"
+                  :label="$t('admin.plans.price') + ' (' + currency + ')'"
+                  immediateValidation
+                  min="0"
+                  step=".01"
+                  class="pb-2"
+                >
+                  <template #prependInner>
+                    {{ currencySymbol(currency) }}
+                  </template>
+                </va-input>
+              </div>
+              <div class="flex lg6 xs12">
+                <va-input
+                  v-model="form['features'][feature.value]['prices'][currency]['price_id']"
+                  :label="$t('admin.plans.productID') + ' (' + currency + ')'"
+                  immediateValidation
+                  class="pb-2"
+                />
+              </div>
+            </div>
+          </template>
           <va-select
             v-model="form['features'][feature.value]['payment_type']"
             immediateValidation
@@ -100,9 +109,21 @@ export default {
     plan: Object,
     errors: Object,
     app: Object,
-    features: Object
+    features: Object,
+    enabled_currencies: {
+      type: Array,
+      default: () => ['USD']
+    }
   },
   data () {
+    // Every feature gets a price for every enabled currency, from its saved prices
+    // (or the single price older plans have, for the first currency)
+    const planFeatures = this.plan.settings.features ?? {}
+    const features: Record<string, any> = {}
+    for (const [name, feature] of Object.entries(planFeatures)) {
+      features[name] = { ...feature, prices: buildCurrencyPrices(planFeatures, name, this.enabled_currencies) }
+    }
+
     return {
       feature_options: [
         { text: this.$t('status.disabled'), value: 'disabled' },
@@ -114,8 +135,13 @@ export default {
         { text: this.$t('admin.plans.addToBill'), value: 'addon' }
       ],
       form: useForm({
-        features: this.plan.settings.features
+        features
       })
+    }
+  },
+  methods: {
+    currencySymbol (code: string) {
+      return currencyByCode(code)?.symbol ?? code
     }
   }
 }

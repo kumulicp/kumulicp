@@ -4,7 +4,6 @@ namespace App\Integrations\Billing\Stripe;
 
 use App\Contracts\BillingContract;
 use App\Contracts\PlanContract;
-use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
 use App\Services\Billing\SubscriptionRequestBuilder;
 use App\Support\Billing\SubscriptionLine;
@@ -122,14 +121,15 @@ class StripeGateway implements BillingContract
         return true;
     }
 
-    public function cancel(): void
+    public function cancel(): bool
     {
-        if ($this->organization->subscribed('default')) {
-            $this->organization->subscription('default')->cancel();
-
-            $superaccount = Organization::where('type', 'superaccount')->first();
-            $superaccount->notifyAdmins(new OrganizationCancelledSubscription($this->organization));
+        if (! $this->organization->subscribed('default')) {
+            return false;
         }
+
+        $this->organization->subscription('default')->cancel();
+
+        return true;
     }
 
     public function discount(): array

@@ -543,3 +543,29 @@ it('redirects with plan ids after configurations update', function () {
     $response->assertRedirectContains('plans[]='.$this->plan1->id);
     $response->assertRedirectContains('plans[]='.$this->plan2->id);
 });
+
+it('saves feature prices per currency, independently per plan', function () {
+    \App\Support\Facades\Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+    $this->actingAs($this->user)->put(
+        "/admin/apps/{$this->demoApp->slug}/plans/bulk-edit/features",
+        [
+            'plan_ids' => [$this->plan1->id, $this->plan2->id],
+            'plans' => [
+                $this->plan1->id => ['features' => ['optional-feature' => ['status' => 'optional', 'prices' => [
+                    'USD' => ['amount' => 2, 'price_id' => 'usd_one'],
+                    'CAD' => ['amount' => 3, 'price_id' => 'cad_one'],
+                ]]]],
+                $this->plan2->id => ['features' => ['optional-feature' => ['status' => 'optional', 'prices' => [
+                    'USD' => ['amount' => 7, 'price_id' => 'usd_two'],
+                    'CAD' => ['amount' => '', 'price_id' => ''],
+                ]]]],
+            ],
+        ]
+    )->assertRedirect();
+
+    expect(storedPrice($this->plan1->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBe('cad_one');
+    expect(storedPrice($this->plan1->fresh(), 'feature.optional-feature', 'USD'))->toEqual(2);
+    expect(storedPrice($this->plan2->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_two');
+    expect(storedPrice($this->plan2->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBeNull();
+});

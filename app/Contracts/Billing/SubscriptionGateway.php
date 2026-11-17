@@ -23,7 +23,12 @@ interface SubscriptionGateway
      */
     public function syncSubscription(SubscriptionRequest $request): bool;
 
-    public function cancel(): void;
+    /**
+     * Cancel the organization's subscription at the end of the period it has paid for.
+     *
+     * @return bool true when there was a subscription to cancel
+     */
+    public function cancel(): bool;
 
     public function sendInvoices(): void;
 

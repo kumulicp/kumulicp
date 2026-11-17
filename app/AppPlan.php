@@ -141,7 +141,10 @@ class AppPlan extends Model
         ];
     }
 
-    public function displayFeatures()
+    /**
+     * @param  string|null  $currency  the currency the prices are shown in; the default currency when none is given
+     */
+    public function displayFeatures(?string $currency = null)
     {
         $basic_label = Subscription::base()->accessTypeLabel(AccessType::BASIC);
 
@@ -149,23 +152,23 @@ class AppPlan extends Model
             'prices' => collect([
                 [
                     'name' => 'Base Price',
-                    'description' => '$'.$this->setting('base.price'),
-                    'price' => $this->setting('base.price'),
+                    'description' => '$'.$this->amountFor('base', $currency),
+                    'price' => $this->amountFor('base', $currency),
                 ],
                 [
                     'name' => 'Users',
-                    'description' => '$'.$this->setting('standard.price').' per user',
-                    'price' => $this->setting('standard.price'),
+                    'description' => '$'.$this->amountFor('standard', $currency).' per user',
+                    'price' => $this->amountFor('standard', $currency),
                 ],
                 [
                     'name' => Str::plural(strtolower($basic_label)),
-                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
-                    'price' => $this->setting('basic.price'),
+                    'description' => '$'.$this->amountFor('basic', $currency).' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
+                    'price' => $this->amountFor('basic', $currency),
                 ],
                 [
                     'name' => 'Additional Storage',
-                    'description' => '$'.$this->setting('storage.price').' for every '.$this->setting('storage.amount').'GB',
-                    'price' => $this->setting('storage.price'),
+                    'description' => '$'.$this->amountFor('storage', $currency).' for every '.$this->setting('storage.amount').'GB',
+                    'price' => $this->amountFor('storage', $currency),
                 ],
             ])->filter(function ($feature) {
                 return ! empty($feature['description']) && ! empty($feature['price']);

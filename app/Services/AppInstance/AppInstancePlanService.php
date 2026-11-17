@@ -60,7 +60,7 @@ class AppInstancePlanService
      */
     public function price($entity)
     {
-        return $this->plan->priceFor($entity, $this->organization->billingCurrency())['amount'];
+        return $this->plan->amountFor($entity, $this->organization->billingCurrency());
     }
 
     private function baseSubscription(): BasePlanService
@@ -664,7 +664,8 @@ class AppInstancePlanService
             }
         }
 
-        $this->plan->syncFeaturePrices($features);
+        $plan_changed = $this->plan->syncFeaturePrices($features) || $plan_changed;
+
         $this->plan->updateSetting('features', $plan_settings);
 
         if ($plan_changed) {

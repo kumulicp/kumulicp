@@ -1,6 +1,7 @@
 <?php
 
 use App\Notifications\NewOrganizationSubscription;
+use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
 use App\Services\Billing\SubscriptionRequestBuilder;
 use App\Support\Facades\Billing;
@@ -160,6 +161,48 @@ describe('BillingService::update', function () {
 
         Billing::update();
 
+        Notification::assertNothingSent();
+    });
+});
+
+describe('BillingService::cancel', function () {
+    beforeEach(function () {
+        Billing::register('recording', RecordingSubscriptionGateway::class);
+    });
+
+    it('tells the superaccount admins when there was a subscription to cancel', function () {
+        paidPackageOrganization();
+        config(['billing.default' => 'recording']);
+        RecordingSubscriptionGateway::$cancels = true;
+        Notification::fake();
+
+        Billing::cancel();
+
+        expect(RecordingSubscriptionGateway::$cancelCalls)->toBe(1);
+        $superaccount = Organization::where('type', 'superaccount')->first();
+        Notification::assertSentTimes(OrganizationCancelledSubscription::class, count($superaccount->admins()));
+    });
+
+    it('stays quiet when the driver had nothing to cancel', function () {
+        paidPackageOrganization();
+        config(['billing.default' => 'recording']);
+        RecordingSubscriptionGateway::$cancels = false;
+        Notification::fake();
+
+        Billing::cancel();
+
+        expect(RecordingSubscriptionGateway::$cancelCalls)->toBe(1);
+        Notification::assertNothingSent();
+    });
+
+    it('does nothing when no billing driver is configured', function () {
+        paidPackageOrganization();
+        config(['billing.default' => null]);
+        Notification::fake();
+
+        Billing::cancel();
+
+        expect(RecordingSubscriptionGateway::$cancelCalls)->toBe(0);
         Notification::assertNothingSent();
     });
 });

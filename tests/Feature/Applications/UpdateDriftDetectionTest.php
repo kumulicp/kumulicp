@@ -219,3 +219,56 @@ it('lists what is out of date with a command', function () {
 
     $this->artisan('updates:scan')->expectsOutput('Everything is up to date.')->assertSuccessful();
 });
+
+it('notes an edit to the prices of the plan an instance uses, and flags the subscription', function () {
+    $instance = detectionInstance();
+
+    $instance->plan->syncPrices(['base' => ['USD' => ['amount' => 9, 'price_id' => 'price_base']]]);
+
+    $change = DefinitionChange::sole();
+    expect($change->subject_type)->toBe(AppPlan::class)
+        ->and($change->subject_id)->toBe($instance->plan_id)
+        ->and($change->changed)->toContain('prices')
+        ->and(driftedAspects($instance))->toContain('subscription');
+});
+
+it('does not note saving the prices a plan already has', function () {
+    $instance = detectionInstance();
+    $prices = ['base' => ['USD' => ['amount' => 9, 'price_id' => 'price_base']]];
+    $instance->plan->syncPrices($prices);
+    DefinitionChange::query()->delete();
+
+    $instance->plan->syncPrices($prices);
+
+    expect(DefinitionChange::count())->toBe(0);
+});
+
+it('notes a change to the price of a feature', function () {
+    $instance = detectionInstance();
+
+    $instance->plan->syncFeaturePrices(['deck' => ['status' => 'optional', 'price' => 2, 'price_id' => 'price_deck']]);
+
+    expect(DefinitionChange::sole()->changed)->toContain('prices')
+        ->and(driftedAspects($instance))->toContain('subscription');
+});
+
+it('forgets what is out of date when a price edit is undone', function () {
+    $instance = detectionInstance();
+
+    $instance->plan->syncPrices(['base' => ['USD' => ['amount' => 9, 'price_id' => 'price_base']]]);
+    expect(driftedAspects($instance))->toContain('subscription');
+
+    // A plan with no prices has the fingerprint it had before it had any
+    $instance->plan->syncPrices(['base' => ['USD' => ['amount' => null, 'price_id' => null]]]);
+
+    expect(driftedAspects($instance))->not->toContain('subscription');
+});
+
+it('does not note the prices of a plan that no instance uses', function () {
+    $instance = detectionInstance();
+    $unused = AppPlan::factory()->create(['application_id' => $instance->application_id]);
+
+    $unused->syncPrices(['base' => ['USD' => ['amount' => 9, 'price_id' => 'price_base']]]);
+
+    expect(DefinitionChange::count())->toBe(0);
+});

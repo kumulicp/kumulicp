@@ -5,6 +5,7 @@ namespace App\Updates;
 use App\AppInstance;
 use App\AppPlan;
 use App\Integrations\Applications\AppFeature;
+use App\Support\Billing\PlanPriceBackfill;
 use App\Support\Facades\Application;
 use App\Updates\Steps\FeatureActionStep;
 use Illuminate\Support\Arr;
@@ -96,17 +97,39 @@ class AspectInputs
     }
 
     /**
+     * The plan's prices, from its plan_prices rows: per component and currency,
+     * the amount and the billing drivers' ids. They are the subscription's, and
+     * no longer part of the plan's settings.
+     *
+     * @return array<string, array<string, array{amount: float|null, ids: array<string, string>|null}>>
+     */
+    public static function planPrices(?AppPlan $plan): array
+    {
+        $prices = [];
+
+        foreach ($plan->prices ?? [] as $price) {
+            $prices[$price->component][$price->currency] = [
+                'amount' => $price->amount,
+                'ids' => $price->external_ids,
+            ];
+        }
+
+        return $prices;
+    }
+
+    /**
      * What the plan says the features that cost something cost, and whether
      * they are on: the subscription's. A feature without a price isn't billed.
      */
     public static function featurePricing(?AppPlan $plan): array
     {
         $pricing = [];
+        $priced = self::planPrices($plan);
 
         foreach ((array) $plan?->setting('features') as $name => $feature) {
             $feature = is_array($feature) ? Arr::only($feature, self::FEATURE_PRICING) : [];
 
-            if (array_filter(Arr::only($feature, ['price', 'price_id', 'prices']))) {
+            if (array_filter(Arr::only($feature, ['price', 'price_id', 'prices'])) || isset($priced[PlanPriceBackfill::featureComponent((string) $name)])) {
                 $pricing[$name] = $feature;
             }
         }

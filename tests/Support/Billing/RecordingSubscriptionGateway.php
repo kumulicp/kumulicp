@@ -20,12 +20,20 @@ class RecordingSubscriptionGateway implements SubscriptionGateway
     /** What syncSubscription() reports: whether it created a new subscription */
     public static bool $creates = false;
 
+    /** What cancel() reports: whether there was a subscription to cancel */
+    public static bool $cancels = false;
+
+    /** How many times cancel() was called */
+    public static int $cancelCalls = 0;
+
     public function __construct(?Organization $organization = null) {}
 
     public static function reset(): void
     {
         self::$requests = [];
         self::$creates = false;
+        self::$cancels = false;
+        self::$cancelCalls = 0;
     }
 
     public function isBillable(): bool
@@ -40,7 +48,12 @@ class RecordingSubscriptionGateway implements SubscriptionGateway
         return self::$creates;
     }
 
-    public function cancel(): void {}
+    public function cancel(): bool
+    {
+        self::$cancelCalls++;
+
+        return self::$cancels;
+    }
 
     public function sendInvoices(): void {}
 

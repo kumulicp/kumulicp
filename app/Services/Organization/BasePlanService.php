@@ -283,7 +283,7 @@ class BasePlanService
      */
     public function price($entity)
     {
-        return $this->plan->priceFor($entity, $this->organization->billingCurrency())['amount'];
+        return $this->plan->amountFor($entity, $this->organization->billingCurrency());
     }
 
     public function refresh()

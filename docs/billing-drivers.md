@@ -34,6 +34,10 @@ superaccount admins can be told about it.
 
 The trial length is `BILLING_TRIAL_DAYS` (default 30).
 
+`Billing::cancel()` works the same way: `cancel()` on the driver returns `true`
+when there was a subscription to cancel, and `BillingService` then tells the
+superaccount admins. A driver never sends admin notifications itself.
+
 ## Where prices live
 
 Prices are rows in `plan_prices` (see `App\PlanPrice`, `App\Support\Billing\HasPlanPrices`):
@@ -46,6 +50,13 @@ Prices are rows in `plan_prices` (see `App\PlanPrice`, `App\Support\Billing\HasP
 driver, falling back to the default currency. A driver's `externalId` in a
 `SubscriptionLine` is that value, so switching drivers only needs the new
 driver's ids filled in; amounts are not entered twice.
+
+`$plan->amountFor('standard', 'CAD')` is the price to show: it does not need the
+price to have an id for the configured driver, so a plan that is priced but not
+yet set up in the billing engine still shows what it costs.
+
+Editing a plan's prices is noted for the app instances on it, like any other edit
+to the plan, so their subscription shows as out of date until it is brought up to date.
 
 Components are `base`, `standard`, `basic`, `storage`, `application`, `email`,
 and `feature.{name}` for optional app features.

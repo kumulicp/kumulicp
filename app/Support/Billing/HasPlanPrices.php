@@ -4,6 +4,7 @@ namespace App\Support\Billing;
 
 use App\PlanPrice;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\Updates\Detection\DefinitionChanges;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -44,6 +45,28 @@ trait HasPlanPrices
             'amount' => $this->setting("{$component}.price"),
             'price_id' => $this->setting("{$component}.price_id"),
         ];
+    }
+
+    /**
+     * The amount of a component in the given currency (the default currency when
+     * none is given), for showing what a plan costs.
+     *
+     * Unlike priceFor() this does not need the price to have an id for the active
+     * billing driver: a plan that is priced but not (yet) set up in the billing
+     * engine still shows its price.
+     */
+    public function amountFor(string $component, ?string $currency = null): mixed
+    {
+        foreach ($this->priceCurrencies($currency ?? SettingsFacade::get('default_currency', 'USD')) as $candidate) {
+            $amount = $this->priceRow($component, $candidate)?->amount;
+
+            if ($amount !== null) {
+                return $amount;
+            }
+        }
+
+        // Legacy flat format
+        return $this->setting("{$component}.price");
     }
 
     /**
@@ -88,11 +111,16 @@ trait HasPlanPrices
      * Create, update or remove one price. A price with neither an amount nor an
      * id for any driver is deleted. Only $driver's id is touched, so ids stored
      * for other billing engines are kept.
+     *
+     * Does not note the change for the app instances that depend on the plan;
+     * syncPrices() and syncFeaturePrices() do, once for all the prices they change.
+     *
+     * @return bool whether the price is different from what was stored
      */
-    public function setPrice(string $component, string $currency, mixed $amount, ?string $externalId, ?string $driver = null): void
+    public function setPrice(string $component, string $currency, mixed $amount, ?string $externalId, ?string $driver = null): bool
     {
         $driver ??= PlanPrice::activeDriver();
-        $amount = ($amount === '' || $amount === null) ? null : $amount;
+        $amount = ($amount === '' || $amount === null) ? null : (float) $amount;
         $externalId = ($externalId === '' || $externalId === null) ? null : $externalId;
 
         $row = $this->prices()->where('component', $component)->where('currency', $currency)->first();
@@ -102,6 +130,12 @@ trait HasPlanPrices
             unset($externalIds[$driver]);
         } else {
             $externalIds[$driver] = $externalId;
+        }
+
+        $changed = ($row?->amount !== $amount) || (($row->external_ids ?? []) != $externalIds);
+
+        if (! $changed) {
+            return false;
         }
 
         if ($amount === null && $externalIds === []) {
@@ -114,6 +148,8 @@ trait HasPlanPrices
         }
 
         $this->unsetRelation('prices');
+
+        return true;
     }
 
     /**
@@ -124,34 +160,56 @@ trait HasPlanPrices
      */
     public function syncPrices(array $prices, ?string $driver = null): void
     {
+        $changed = false;
+
         foreach ($prices as $component => $currencies) {
             foreach ($currencies as $currency => $entry) {
-                $this->setPrice($component, $currency, $entry['amount'] ?? null, $entry['price_id'] ?? null, $driver);
+                $changed = $this->setPrice($component, $currency, $entry['amount'] ?? null, $entry['price_id'] ?? null, $driver) || $changed;
             }
+        }
+
+        if ($changed) {
+            $this->recordPriceChange();
         }
     }
 
     /**
-     * Keep the default-currency price rows of optional features in step with the
-     * flat price/price_id the features form submits. Rows in other currencies are
-     * left alone.
+     * Save the prices of optional features as the features form submits them.
+     *
+     * A feature with per-currency "prices" ([currency => [amount, price_id]]) has
+     * those saved for each enabled currency it lists; the others are left alone.
+     * One with only the flat price/price_id has them saved as its default-currency
+     * price.
      *
      * @param  array<string, mixed>  $features  feature name => submitted feature (or 'on'/'off')
+     * @return bool whether any price is different from what was stored
      */
-    public function syncFeaturePrices(array $features): void
+    public function syncFeaturePrices(array $features): bool
     {
-        $currency = SettingsFacade::get('default_currency', 'USD');
+        $default = SettingsFacade::get('default_currency', 'USD');
+        $changed = false;
 
         foreach ($features as $name => $feature) {
             $feature = is_array($feature) ? $feature : [];
+            $component = PlanPriceBackfill::featureComponent((string) $name);
+            $perCurrency = $feature['prices'] ?? null;
 
-            $this->setPrice(
-                PlanPriceBackfill::featureComponent((string) $name),
-                $currency,
-                $feature['price'] ?? null,
-                $feature['price_id'] ?? null,
-            );
+            if (is_array($perCurrency) && $perCurrency !== []) {
+                foreach ($this->enabledCurrencies() as $currency) {
+                    if (is_array($perCurrency[$currency] ?? null)) {
+                        $changed = $this->setPrice($component, $currency, $perCurrency[$currency]['amount'] ?? null, $perCurrency[$currency]['price_id'] ?? null) || $changed;
+                    }
+                }
+            } else {
+                $changed = $this->setPrice($component, $default, $feature['price'] ?? null, $feature['price_id'] ?? null) || $changed;
+            }
         }
+
+        if ($changed) {
+            $this->recordPriceChange();
+        }
+
+        return $changed;
     }
 
     /**
@@ -177,7 +235,10 @@ trait HasPlanPrices
      */
     public function clearPrices(string $component): void
     {
-        $this->prices()->where('component', $component)->delete();
+        if ($this->prices()->where('component', $component)->delete() > 0) {
+            $this->recordPriceChange();
+        }
+
         $this->unsetRelation('prices');
     }
 
@@ -224,11 +285,30 @@ trait HasPlanPrices
         return $settings;
     }
 
+    /**
+     * Prices are rows of their own, so editing one doesn't touch the plan and the
+     * observers that watch the plan don't see it. Say it for them: the app
+     * instances on the plan are looked at for a subscription that went out of date.
+     * (A plan that no instance depends on is not noted.)
+     */
+    private function recordPriceChange(): void
+    {
+        app(DefinitionChanges::class)->record($this, 'updated', ['prices']);
+    }
+
     private function priceRow(string $component, string $currency): ?PlanPrice
     {
         return $this->prices->first(
             fn (PlanPrice $price) => $price->component === $component && $price->currency === $currency
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function enabledCurrencies(): array
+    {
+        return json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
     }
 
     /**

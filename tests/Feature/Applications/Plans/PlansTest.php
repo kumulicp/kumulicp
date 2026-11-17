@@ -582,3 +582,85 @@ it('takes the domain settings an app had onto each of its plans, and drops them 
         expect(Schema::hasColumn('applications', $column))->toBeFalse();
     }
 });
+
+function featuresUrl(): string
+{
+    return '/admin/apps/'.test()->demoApp->slug.'/plans/'.test()->appPlan->id.'/features';
+}
+
+it('shows the features page the enabled currencies and the price of each feature in them', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+    $this->appPlan->updateSetting('features', ['optional-feature' => ['status' => 'optional', 'price' => 2, 'price_id' => 'usd_feat']]);
+    $this->appPlan->setPrice('feature.optional-feature', 'CAD', 3, 'cad_feat');
+
+    $this->actingAs($this->user)->get(featuresUrl())->assertInertia(fn ($page) => $page
+        ->where('enabled_currencies', ['USD', 'CAD'])
+        ->where('plan.settings.features.optional-feature.price_id', 'usd_feat')
+        ->where('plan.settings.features.optional-feature.prices.CAD.price_id', 'cad_feat'));
+});
+
+it('saves the price of a feature in each enabled currency', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'CAD' => ['amount' => 3, 'price_id' => 'cad_feat'],
+        ]],
+    ]])->assertRedirect();
+
+    $plan = $this->appPlan->fresh();
+    expect(storedPrice($plan, 'feature.optional-feature', 'USD'))->toEqual(2);
+    expect(storedPrice($plan, 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+    expect(storedPrice($plan, 'feature.optional-feature', 'CAD'))->toEqual(3);
+    expect(storedPrice($plan, 'feature.optional-feature', 'CAD', 'price_id'))->toBe('cad_feat');
+    // Billing reads the price in the organization's currency
+    expect($plan->featurePriceId('optional-feature', 'CAD'))->toBe('cad_feat');
+    // The flat price older code reads is the default currency's
+    expect($plan->setting('features.optional-feature.price_id'))->toBe('usd_feat');
+});
+
+it('clears a currency of a feature price that was emptied', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+    $this->appPlan->setPrice('feature.optional-feature', 'CAD', 3, 'cad_feat');
+
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'CAD' => ['amount' => '', 'price_id' => ''],
+        ]],
+    ]])->assertRedirect();
+
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBeNull();
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+});
+
+it('does not save a feature price in a currency that is not enabled', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'EUR' => ['amount' => 5, 'price_id' => 'eur_feat'],
+        ]],
+    ]])->assertRedirect();
+
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+    expect($this->appPlan->prices()->where('currency', 'EUR')->count())->toBe(0);
+});
+
+it('rejects a feature price that is not a number', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => ['USD' => ['amount' => 'not-a-number', 'price_id' => 'usd_feat']]],
+    ]])->assertSessionHasErrors('features.optional-feature.prices.USD.amount');
+
+    expect($this->appPlan->prices()->count())->toBe(0);
+});
+
+it('still saves the single price older forms send', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'price' => 4, 'price_id' => 'flat_feat'],
+    ]])->assertRedirect();
+
+    $plan = $this->appPlan->fresh();
+    expect($plan->featurePriceId('optional-feature', 'USD'))->toBe('flat_feat');
+    expect($plan->featurePriceAmount('optional-feature', 'USD'))->toEqual(4);
+});
