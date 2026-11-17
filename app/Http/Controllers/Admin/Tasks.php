@@ -15,6 +15,7 @@ use App\Support\SafeErrorMessage;
 use App\Support\TaskHelpers;
 use App\Support\Time;
 use App\Task;
+use App\TaskDependency;
 use App\TaskEvent;
 use App\TaskStep;
 use Illuminate\Database\Eloquent\Builder;
@@ -231,13 +232,6 @@ class Tasks extends Controller
     {
         $task->load(['organization', 'application', 'version', 'app_instance']);
 
-        $describe = fn (Task $other) => [
-            'id' => $other->id,
-            'description' => $other->description,
-            'status' => $other->status->value,
-            'gate' => $other->pivot->gate,
-        ];
-
         return inertia()->render('Admin/TaskView', [
             'task' => [
                 'id' => $task->id,
@@ -270,7 +264,7 @@ class Tasks extends Controller
                 'attempt' => $event->attempt,
                 'message' => SafeErrorMessage::scrub($event->message),
                 'context' => $event->context,
-                'created_at' => $event->created_at?->toIso8601String(),
+                'created_at' => $event->created_at->toIso8601String(),
             ]),
             'steps' => $task->steps()->get()->map(fn (TaskStep $step) => [
                 'name' => $step->name,
@@ -280,8 +274,8 @@ class Tasks extends Controller
                 'seconds' => $step->started_at && $step->finished_at ? (int) round($step->started_at->diffInSeconds($step->finished_at, true)) : null,
                 'error' => SafeErrorMessage::scrub($step->error),
             ]),
-            'waiting_for' => $task->dependencies()->get()->map($describe),
-            'waited_on_by' => $task->dependents()->get()->map($describe),
+            'waiting_for' => $task->dependencies()->get()->map(fn (Task $other) => $this->describeDependency($other)),
+            'waited_on_by' => $task->dependents()->get()->map(fn (Task $other) => $this->describeDependency($other)),
             'values' => $this->displayValues($task->customValues()),
             'breadcrumbs' => [
                 [
@@ -293,6 +287,22 @@ class Tasks extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * A task on the other side of a dependency, with the gate it is linked by.
+     *
+     * @param  Task&object{pivot: TaskDependency}  $other  loaded through dependencies() or dependents()
+     * @return array{id: int, description: string, status: string, gate: mixed}
+     */
+    private function describeDependency(Task $other): array
+    {
+        return [
+            'id' => $other->id,
+            'description' => $other->description,
+            'status' => $other->status->value,
+            'gate' => $other->pivot->gate,
+        ];
     }
 
     /**
