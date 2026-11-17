@@ -31,6 +31,7 @@ class OrgTicketResource extends JsonResource
             'impact' => ['value' => $this->impact->value, 'label' => $this->impact->label()],
             'category' => $this->category?->name,
             'app' => $this->appInstance?->label,
+            'app_instance' => $this->appInstance ? ['id' => $this->appInstance->id, 'label' => $this->appInstance->label, 'url' => '/apps/'.$this->appInstance->id] : null,
             'requester' => $this->person($this->requester),
             'customer_assignee' => $this->person($this->customerAssignee),
             'support_assignee' => $this->supportAssignee ? ['name' => $this->supportAssignee->name] : null,

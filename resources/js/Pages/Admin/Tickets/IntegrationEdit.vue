@@ -307,18 +307,4 @@ export default {
     display: block;
   }
 
-  .t-fieldset {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    min-width: 0;
-    margin: 0;
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--va-background-border);
-    border-radius: 0.5rem;
-
-    legend {
-      padding: 0 0.35rem;
-    }
-  }
 </style>

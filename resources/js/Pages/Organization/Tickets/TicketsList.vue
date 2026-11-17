@@ -38,6 +38,15 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
           text-by="text"
           @update:model-value="apply"
         />
+        <va-select
+          v-if="apps.length"
+          v-model="app"
+          :label="$t('tickets.relatedApp')"
+          :options="appOptions"
+          value-by="value"
+          text-by="text"
+          @update:model-value="apply"
+        />
         <template #search>
           <va-input
             v-model="q"
@@ -86,6 +95,7 @@ export default {
     filters: Object,
     counts: Object,
     members: Array,
+    apps: Array,
     me: Number,
     version: String,
     preferences: Object,
@@ -94,13 +104,14 @@ export default {
     return {
       assigned: this.filters.assigned,
       status: this.filters.status,
+      app: this.filters.app === null || this.filters.app === undefined ? 'all' : (this.filters.app === 'none' ? 'none' : Number(this.filters.app)),
       q: this.filters.q,
     }
   },
   computed: {
     // Filters that differ from where the list opens (my open tickets)
     activeFilters () {
-      return (this.assigned !== 'me' ? 1 : 0) + (this.status !== 'open' ? 1 : 0)
+      return (this.assigned !== 'me' ? 1 : 0) + (this.status !== 'open' ? 1 : 0) + (this.app !== 'all' ? 1 : 0)
     },
     assignedOptions () {
       return [
@@ -108,6 +119,13 @@ export default {
         { value: 'all', text: this.$t('tickets.allTickets') },
         { value: 'unassigned', text: this.$t('tickets.noOneAssigned') },
         ...this.members.filter(member => member.id !== this.me).map(member => ({ value: `user:${member.id}`, text: member.name })),
+      ]
+    },
+    appOptions () {
+      return [
+        { value: 'all', text: this.$t('tickets.list.allApps') },
+        ...this.apps,
+        { value: 'none', text: this.$t('tickets.list.noApp') },
       ]
     },
     statusOptions () {
@@ -142,10 +160,10 @@ export default {
   },
   methods: {
     apply () {
-      router.get('/support/tickets', { assigned: this.assigned, status: this.status, q: this.q || undefined }, { preserveState: true, replace: true })
+      router.get('/support/tickets', { assigned: this.assigned, status: this.status, app: this.app === 'all' ? undefined : this.app, q: this.q || undefined }, { preserveState: true, replace: true })
     },
     goToPage (page) {
-      router.get('/support/tickets', { assigned: this.assigned, status: this.status, q: this.q || undefined, page }, { preserveState: true })
+      router.get('/support/tickets', { assigned: this.assigned, status: this.status, app: this.app === 'all' ? undefined : this.app, q: this.q || undefined, page }, { preserveState: true })
     },
   },
 }

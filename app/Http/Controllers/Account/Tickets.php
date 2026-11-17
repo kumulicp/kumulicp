@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Account;
 
+use App\AppInstance;
 use App\Enums\TicketImpact;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
@@ -55,6 +56,7 @@ class Tickets extends Controller
         $filters = [
             'assigned' => $this->assignedFilter($request->query('assigned')),
             'status' => $this->statusTab($request->query('status')),
+            'app' => $this->appFilter($request->query('app'), $organization_id),
             'q' => trim((string) $request->query('q', '')),
         ];
 
@@ -70,10 +72,18 @@ class Tickets extends Controller
 
         $this->applyStatusTab($query, $filters['status']);
 
+        match (true) {
+            $filters['app'] === 'none' => $query->whereNull('app_instance_id'),
+            $filters['app'] !== null => $query->where('app_instance_id', (int) $filters['app']),
+            default => null,
+        };
+
         if ($filters['q'] !== '') {
             $query->where(function ($query) use ($filters) {
-                $query->where('subject', 'like', '%'.addcslashes($filters['q'], '%_\\').'%')
-                    ->orWhere('number', (int) preg_replace('/\D/', '', $filters['q']));
+                $like = '%'.addcslashes($filters['q'], '%_\\').'%';
+                $query->where('subject', 'like', $like)
+                    ->orWhere('number', (int) preg_replace('/\D/', '', $filters['q']))
+                    ->orWhereHas('appInstance', fn ($app) => $app->where('label', 'like', $like));
             });
         }
 
@@ -91,6 +101,7 @@ class Tickets extends Controller
                 'organization_open' => Ticket::forOrganization($organization_id)->whereIn('status', TicketStatus::openValues())->count(),
             ],
             'members' => $this->members($user),
+            'apps' => $this->appOptions($organization_id),
             'me' => $user->id,
             'version' => $this->versions->organization($organization_id),
             'preferences' => $this->preferencesFor($user),
@@ -111,8 +122,9 @@ class Tickets extends Controller
             'impacts' => collect(TicketImpact::cases())->map(fn (TicketImpact $impact) => ['value' => $impact->value, 'text' => $impact->label()])->all(),
             'categories' => TicketCategory::where('active', true)->orderBy('sort')->orderBy('name')->get(['id', 'name'])
                 ->map(fn (TicketCategory $category) => ['value' => $category->id, 'text' => $category->name])->all(),
-            'apps' => $user->organization->app_instances()->orderBy('label')->get(['id', 'label'])
-                ->map(fn ($app) => ['value' => $app->id, 'text' => $app->label])->all(),
+            'apps' => $this->appOptions($user->organization_id),
+            // "Get help" links from an app page arrive as ?app=ID
+            'selected_app' => $this->appFilter($request->query('app'), $user->organization_id) ? (int) $request->query('app') : null,
             'members' => $this->members($user),
             'me' => $user->id,
             'attachment_limits' => [
@@ -159,11 +171,13 @@ class Tickets extends Controller
             'can' => [
                 'reply' => Gate::allows('reply', $ticket),
                 'edit_details' => $ticket->first_response_at === null,
+                'edit_app' => $ticket->status->isOpen(),
                 'close' => $ticket->status->isOpen(),
                 'reopen' => ! $ticket->status->isOpen() && ! $ticket->isMerged(),
                 'rate' => ! $ticket->status->isOpen() && ! $ticket->isMerged(),
             ],
             'members' => $this->members($user),
+            'apps' => $this->appOptions($ticket->organization_id),
             'me' => $user->id,
             'version' => $this->versions->ticket($ticket),
             'last_message_id' => (int) $ticket->publicMessages()->max('id'),
@@ -212,6 +226,10 @@ class Tickets extends Controller
 
         if (Arr::hasAny($data, ['subject', 'impact'])) {
             $this->tickets->updateDetails($ticket, $user, Arr::only($data, ['subject', 'impact']), asStaff: false);
+        }
+
+        if (array_key_exists('app_instance_id', $data)) {
+            $this->tickets->changeApp($ticket, $user, $data['app_instance_id'], asStaff: false);
         }
 
         if (array_key_exists('customer_assignee_id', $data)) {
@@ -372,6 +390,32 @@ class Tickets extends Controller
             ->get(['id', 'name'])
             ->map(fn (User $member) => ['id' => $member->id, 'name' => $member->name])
             ->all();
+    }
+
+    /**
+     * The organization's apps, for pickers and filters.
+     *
+     * @return list<array{value: int, text: string}>
+     */
+    private function appOptions(int $organization_id): array
+    {
+        return AppInstance::where('organization_id', $organization_id)->orderBy('label')->get(['id', 'label'])
+            ->map(fn (AppInstance $app) => ['value' => $app->id, 'text' => $app->label])->all();
+    }
+
+    /**
+     * An app filter: the id of one of the organization's apps, "none" (tickets
+     * about no app in particular), or null. Anything else is ignored.
+     */
+    private function appFilter(mixed $value, int $organization_id): ?string
+    {
+        if ($value === 'none') {
+            return 'none';
+        }
+
+        $id = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $id && AppInstance::where('organization_id', $organization_id)->whereKey($id)->exists() ? (string) $id : null;
     }
 
     /**

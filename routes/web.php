@@ -153,7 +153,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     Route::put('', 'Admin\TicketIntegrations@update')->name('admin.tickets.integrations.update');
                     Route::delete('', 'Admin\TicketIntegrations@destroy')->name('admin.tickets.integrations.destroy');
                     Route::put('enabled', 'Admin\TicketIntegrations@setEnabled')->name('admin.tickets.integrations.enabled');
-                    Route::post('test', 'Admin\TicketIntegrations@test')->middleware('throttle:20,1')->name('admin.tickets.integrations.test');
+                    Route::post('test', 'Admin\TicketIntegrations@test')->middleware('throttle:20,1,tickets-integration-test:')->name('admin.tickets.integrations.test');
                     Route::post('secret/rotate', 'Admin\TicketIntegrations@rotateSecret')->name('admin.tickets.integrations.secret.rotate');
                     Route::post('secret/reveal', 'Admin\TicketIntegrations@revealSecret')->name('admin.tickets.integrations.secret.reveal');
                     Route::get('deliveries', 'Admin\TicketIntegrations@deliveries')->name('admin.tickets.integrations.deliveries');
@@ -167,7 +167,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('', 'Admin\Tickets@index')->name('admin.tickets.index');
                 Route::get('{number}', 'Admin\Tickets@show')->whereNumber('number')->name('admin.tickets.show');
                 Route::post('{number}', 'Admin\Tickets@update')->whereNumber('number')->name('admin.tickets.update');
-                Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply'))->name('admin.tickets.reply');
+                Route::post('{number}/messages', 'Admin\Tickets@reply')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.reply').',tickets-reply:')->name('admin.tickets.reply');
                 Route::put('{number}/messages/{message}', 'Admin\Tickets@updateMessage')->whereNumber('number')->name('admin.tickets.messages.update');
                 Route::post('{number}/merge', 'Admin\Tickets@merge')->whereNumber('number')->name('admin.tickets.merge');
                 Route::post('{number}/messages/{message}/redact', 'Admin\Tickets@redact')->whereNumber('number')->name('admin.tickets.messages.redact');
@@ -176,7 +176,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('{number}/time', 'Admin\Tickets@logTime')->whereNumber('number')->name('admin.tickets.time.store');
                 Route::delete('{number}/time/{entry}', 'Admin\Tickets@deleteTime')->whereNumber('number')->name('admin.tickets.time.destroy');
                 Route::post('{number}/issues', 'Admin\Tickets@createIssue')->whereNumber('number')->name('admin.tickets.issues.store');
-                Route::get('{number}/poll', 'Admin\Tickets@poll')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.poll'))->name('admin.tickets.poll');
+                Route::get('{number}/poll', 'Admin\Tickets@poll')->whereNumber('number')->middleware('throttle:'.config('tickets.throttle.poll').',tickets-poll:')->name('admin.tickets.poll');
                 Route::put('{number}/watchers', 'Admin\Tickets@updateWatchers')->whereNumber('number')->name('admin.tickets.watchers');
                 Route::put('{number}/subscription', 'Admin\Tickets@updateSubscription')->whereNumber('number')->name('admin.tickets.subscription');
             });
@@ -512,23 +512,23 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
     Route::prefix('support/tickets')->middleware('toggle:tickets')->group(function () {
         Route::get('', 'Account\Tickets@index')->name('organization.tickets.index');
         Route::get('create', 'Account\Tickets@create')->name('organization.tickets.create');
-        Route::post('', 'Account\Tickets@store')->middleware('throttle:'.config('tickets.throttle.create'))->name('organization.tickets.store');
+        Route::post('', 'Account\Tickets@store')->middleware('throttle:'.config('tickets.throttle.create').',tickets-create:')->name('organization.tickets.store');
         // Shared by customers and staff; access is decided per file
-        Route::post('uploads', 'Account\TicketAttachments@store')->middleware('throttle:'.config('tickets.throttle.upload'))->name('tickets.uploads.store');
+        Route::post('uploads', 'Account\TicketAttachments@store')->middleware('throttle:'.config('tickets.throttle.upload').',tickets-upload:')->name('tickets.uploads.store');
         Route::delete('uploads/{attachment}', 'Account\TicketAttachments@destroy')->name('tickets.uploads.destroy');
         Route::get('attachments/{attachment}', 'Account\TicketAttachments@show')->name('tickets.attachments.show');
         // Polled by open pages and the navigation badge; shared by customers and staff
-        Route::get('summary', 'Account\Tickets@summary')->middleware('throttle:'.config('tickets.throttle.poll'))->name('tickets.summary');
+        Route::get('summary', 'Account\Tickets@summary')->middleware('throttle:'.config('tickets.throttle.poll').',tickets-poll:')->name('tickets.summary');
         Route::put('preferences', 'Account\Tickets@updatePreferences')->name('tickets.preferences');
         Route::prefix('{number}')->where(['number' => '[0-9]+'])->group(function () {
             Route::get('', 'Account\Tickets@show')->name('organization.tickets.show');
             Route::put('', 'Account\Tickets@update')->name('organization.tickets.update');
-            Route::post('messages', 'Account\Tickets@reply')->middleware('throttle:'.config('tickets.throttle.reply'))->name('organization.tickets.reply');
+            Route::post('messages', 'Account\Tickets@reply')->middleware('throttle:'.config('tickets.throttle.reply').',tickets-reply:')->name('organization.tickets.reply');
             Route::put('messages/{message}', 'Account\Tickets@updateMessage')->name('organization.tickets.messages.update');
             Route::post('close', 'Account\Tickets@close')->name('organization.tickets.close');
             Route::post('reopen', 'Account\Tickets@reopen')->name('organization.tickets.reopen');
             Route::post('rating', 'Account\Tickets@rate')->name('organization.tickets.rating');
-            Route::get('poll', 'Account\Tickets@poll')->middleware('throttle:'.config('tickets.throttle.poll'))->name('organization.tickets.poll');
+            Route::get('poll', 'Account\Tickets@poll')->middleware('throttle:'.config('tickets.throttle.poll').',tickets-poll:')->name('organization.tickets.poll');
             Route::put('watchers', 'Account\Tickets@updateWatchers')->name('organization.tickets.watchers');
             Route::put('subscription', 'Account\Tickets@updateSubscription')->name('organization.tickets.subscription');
         });
@@ -543,7 +543,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
 // holds a secret and the call must carry the tracker's own signature (see TicketInbound).
 Route::post('webhooks/tickets/{integration}/{token}', TicketInbound::class)
     ->where(['integration' => '[0-9]+', 'token' => '[A-Za-z0-9]{20,80}'])
-    ->middleware(['toggle:tickets', 'throttle:120,1'])
+    ->middleware(['toggle:tickets', 'throttle:120,1,tickets-inbound:'])
     ->withoutMiddleware(ValidateCsrfToken::class)
     ->name('tickets.inbound');
 

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Tickets;
 
+use App\AppInstance;
+use App\Application;
 use App\Enums\TicketStatus;
 use App\Organization;
 use App\Services\Tickets\Integrations\HostResolver;
@@ -158,6 +160,24 @@ abstract class TicketsTestCase extends TestCase
             'high' => ['first_response' => 30, 'resolution' => 240],
             'urgent' => ['first_response' => 15, 'resolution' => 120],
         ];
+    }
+
+    /**
+     * A customer's instance of an application. Built by hand: AppInstance is fully guarded.
+     */
+    protected function appInstance(Organization $organization, Application $application, string $label = 'App'): AppInstance
+    {
+        $instance = new AppInstance;
+        $instance->application_id = $application->id;
+        $instance->version_id = 1;
+        $instance->organization_id = $organization->id;
+        $instance->name = strtolower($label).'-'.$organization->id.'-'.$application->id;
+        $instance->label = $label;
+        $instance->api_password = '';
+        $instance->status = 'active';
+        $instance->save();
+
+        return $instance;
     }
 
     protected function service(): TicketService

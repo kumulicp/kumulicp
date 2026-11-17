@@ -105,6 +105,7 @@ return [
         'internal_staff_only' => 'Solo el personal de soporte puede añadir notas internas.',
         'closed' => 'Este ticket está cerrado. Reábralo para responder.',
         'cannot_edit' => 'Esto ya no se puede editar.',
+        'app_not_found' => 'Elige una de las aplicaciones de la organización.',
         'invalid_transition' => 'El ticket no se puede mover a ese estado.',
         'invalid_duration' => 'Introduzca una duración entre 1 minuto y 24 horas, como 45m, 1h30 o 1.5h.',
         'merged' => 'Este ticket se fusionó con otro.',

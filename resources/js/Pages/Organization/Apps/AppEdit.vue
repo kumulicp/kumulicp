@@ -17,6 +17,10 @@ import { useForm, Link } from '@inertiajs/vue3'
       {{ $t('organization.apps.labelSettings', { label: app.label }) }}
     </va-card-title>
     <va-card-content>
+      <div v-if="$page.props.flags?.tickets" class="mb-4 flex flex-wrap gap-2">
+        <Link :href="`/support/tickets/create?app=${app.id}`"><va-button size="small" icon="support_agent">{{ $t('tickets.getHelp') }}</va-button></Link>
+        <Link :href="`/support/tickets?assigned=all&status=all&app=${app.id}`"><va-button size="small" preset="secondary" border-color="primary">{{ $t('tickets.viewAppTickets') }}</va-button></Link>
+      </div>
       <va-alert
         color="primary"
         border="top"

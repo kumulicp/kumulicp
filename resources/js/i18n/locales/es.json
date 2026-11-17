@@ -1939,7 +1939,9 @@
       "merged_into": "{actor} fusionó este ticket con otro",
       "reminder_sent": "Se envió un recordatorio",
       "rated": "{actor} valoró la atención",
-      "message_redacted": "{actor} eliminó el contenido de un mensaje"
+      "message_redacted": "{actor} eliminó el contenido de un mensaje",
+      "app_changed": "{actor} asignó la aplicación relacionada: {name}",
+      "app_removed": "{actor} quitó la aplicación relacionada"
     },
     "admin": {
       "title": "Tickets",
@@ -1971,7 +1973,8 @@
       "relatedToTicket": "este ticket",
       "recentTasks": "Tareas recientes",
       "watchersHelp": "Compañeros del cliente y personal de soporte que siguen este ticket",
-      "manage": "Gestionar"
+      "manage": "Gestionar",
+      "ticketsForApp": "Todos los tickets de esta aplicación"
     },
     "attachments": {
       "title": "Archivos adjuntos",
@@ -2242,13 +2245,26 @@
       "retentionDays": "Eliminar tickets cerrados tras (días)",
       "retentionHelp": "Elimina para siempre los tickets cerrados y sus adjuntos.",
       "zeroOff": "0 lo desactiva.",
-      "more": "Más"
+      "more": "Más",
+      "appRules": {
+        "title": "Por aplicación",
+        "help": "Los tickets sobre una aplicación se asignan a estas personas, por turnos (o a quien tenga menos tickets abiertos, según lo elegido arriba). Las aplicaciones sin regla usan a las personas indicadas arriba.",
+        "app": "Aplicación",
+        "people": "Quién atiende esta aplicación",
+        "add": "Añadir una aplicación"
+      }
     },
     "list": {
       "people": "Personas",
       "support": "Soporte",
       "assignedTo": "Asignado a",
-      "filters": "Filtros"
-    }
+      "filters": "Filtros",
+      "allApps": "Todas las aplicaciones",
+      "noApp": "Sin aplicación"
+    },
+    "relatedAppHelp": "De cuál de tus aplicaciones trata, si aplica.",
+    "openApp": "Abrir {name}",
+    "getHelp": "Obtener ayuda con esta aplicación",
+    "viewAppTickets": "Tickets de esta aplicación"
   }
 }

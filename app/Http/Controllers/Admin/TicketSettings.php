@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Application;
 use App\Enums\TicketPriority;
 use App\Http\Controllers\Controller;
 use App\Services\Tickets\TicketAutomation;
@@ -35,7 +36,8 @@ class TicketSettings extends Controller
             'policies' => TicketSlaPolicy::orderBy('name')->get()->map(fn (TicketSlaPolicy $policy) => $this->present($policy))->values()->all(),
             'categories' => TicketCategory::where('active', true)->orderBy('name')->get(['id', 'name', 'sla_policy_id'])
                 ->map(fn (TicketCategory $category) => ['id' => $category->id, 'name' => $category->name, 'sla_policy_id' => $category->sla_policy_id])->all(),
-            'automation' => collect($this->automation->settings())->except('rr_last')->all(),
+            'automation' => $this->automationForForm(),
+            'applications' => Application::orderBy('name')->get(['id', 'name'])->map(fn (Application $application) => ['value' => $application->id, 'text' => $application->name])->all(),
             'staff' => $this->staff->users()->sortBy('name')->values()->map(fn (User $user) => ['id' => $user->id, 'name' => $user->name])->all(),
             'priorities' => collect(TicketPriority::cases())->map(fn ($case) => ['value' => $case->value, 'text' => $case->label()])->all(),
             'breadcrumbs' => [
@@ -118,6 +120,10 @@ class TicketSettings extends Controller
             'auto_assign' => ['required', Rule::in(TicketAutomation::MODES)],
             'pool_ids' => ['present', 'array'],
             'pool_ids.*' => ['integer'],
+            'app_rules' => ['sometimes', 'array', 'max:200'],
+            'app_rules.*.application_id' => ['required', 'integer', 'distinct', Rule::exists('applications', 'id')],
+            'app_rules.*.pool_ids' => ['required', 'array', 'min:1'],
+            'app_rules.*.pool_ids.*' => ['integer'],
             'reminder_days' => ['required', 'integer', 'min:0', 'max:365'],
             'auto_resolve_days' => ['required', 'integer', 'min:0', 'max:365'],
             'auto_close_days' => ['required', 'integer', 'min:0', 'max:365'],
@@ -127,6 +133,22 @@ class TicketSettings extends Controller
         $this->automation->update($data);
 
         return back()->with('success', __('tickets.settings.automation_saved'));
+    }
+
+    /**
+     * The rules as the form edits them: the per-app rules as a list, without the turn-taking bookkeeping.
+     *
+     * @return array<string, mixed>
+     */
+    private function automationForForm(): array
+    {
+        $settings = collect($this->automation->settings())->except(['rr_last', 'rr_by_app'])->all();
+        $settings['app_rules'] = collect($settings['app_rules'])
+            ->map(fn (array $people, int|string $applicationId) => ['application_id' => (int) $applicationId, 'pool_ids' => array_values($people)])
+            ->values()
+            ->all();
+
+        return $settings;
     }
 
     /**

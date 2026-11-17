@@ -57,7 +57,8 @@ function destroy () {
       </div>
     </va-card-title>
     <va-card-content>
-      <form class="t-stack" @submit.prevent="save">
+      <!-- novalidate: the browser would only accept whole hours here (Vuestic does not pass a step on to the field); the server checks the numbers -->
+      <form class="t-stack" novalidate @submit.prevent="save">
         <div class="t-form-grid t-form-grid--2">
           <va-input v-model="form.name" :label="$t('tickets.integrations.name')" :error="!!form.errors.name" :error-messages="form.errors.name" />
           <div class="t-stack">
@@ -72,8 +73,8 @@ function destroy () {
           <div class="t-targets">
             <div v-for="priority in priorities" :key="priority.value" class="t-targets__row">
               <div class="t-targets__name">{{ priority.text }}</div>
-              <va-input v-model="form.targets[priority.value].first_response" type="number" min="0" step="0.25" :label="$t('tickets.sla.clocks.first_response')" :error="!!form.errors[`targets.${priority.value}.first_response`]" />
-              <va-input v-model="form.targets[priority.value].resolution" type="number" min="0" step="0.25" :label="$t('tickets.sla.clocks.resolution')" :error="!!form.errors[`targets.${priority.value}.resolution`]" />
+              <va-input v-model="form.targets[priority.value].first_response" type="number" min="0" :label="$t('tickets.sla.clocks.first_response')" :error="!!form.errors[`targets.${priority.value}.first_response`]" />
+              <va-input v-model="form.targets[priority.value].resolution" type="number" min="0" :label="$t('tickets.sla.clocks.resolution')" :error="!!form.errors[`targets.${priority.value}.resolution`]" />
             </div>
           </div>
         </div>

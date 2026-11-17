@@ -21,6 +21,20 @@ import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
   <va-card class="mb-4">
     <va-card-content>
       <form class="t-stack t-form" @submit.prevent="submit">
+        <va-select
+          v-if="apps.length"
+          v-model="form.app_instance_id"
+          id="app"
+          :label="$t('tickets.relatedApp')"
+          :messages="$t('tickets.relatedAppHelp')"
+          :options="apps"
+          value-by="value"
+          text-by="text"
+          clearable
+          :error="!!form.errors.app_instance_id"
+          :error-messages="form.errors.app_instance_id"
+        />
+
         <va-input
           v-model="form.subject"
           id="subject"
@@ -36,7 +50,6 @@ import AttachmentPicker from '@/components/tickets/AttachmentPicker.vue'
           <va-select v-model="form.type" :label="$t('tickets.type')" :options="types" value-by="value" text-by="text" :error="!!form.errors.type" :error-messages="form.errors.type" />
           <va-select v-model="form.impact" :label="$t('tickets.impact')" :options="impacts" value-by="value" text-by="text" :error="!!form.errors.impact" :error-messages="form.errors.impact" />
           <va-select v-if="categories.length" v-model="form.category_id" :label="$t('tickets.category')" :options="categories" value-by="value" text-by="text" clearable />
-          <va-select v-if="apps.length" v-model="form.app_instance_id" :label="$t('tickets.relatedApp')" :options="apps" value-by="value" text-by="text" clearable />
           <va-select
             v-model="form.customer_assignee_id"
             id="customerAssignee"
@@ -80,6 +93,7 @@ export default {
     impacts: Array,
     categories: Array,
     apps: Array,
+    selected_app: { type: Number, default: null },
     members: Array,
     me: Number,
     attachment_limits: Object,
@@ -93,7 +107,7 @@ export default {
         type: 'question',
         impact: 'minor',
         category_id: null,
-        app_instance_id: null,
+        app_instance_id: this.selected_app,
         customer_assignee_id: this.me,
       }),
     }
