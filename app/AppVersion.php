@@ -527,6 +527,50 @@ class AppVersion extends Model
         return (new VersionComparator)->isNewer($latest, $this->name) ? $latest : null;
     }
 
+    /**
+     * The other images (not the primary one, see newerImageTag()) the update check
+     * found a newer tag for, if still newer than the tag they run with.
+     *
+     * @return array<int, array{key: string, label: string, current: string|null, latest: string}>
+     */
+    public function newerImageTags(): array
+    {
+        $results = Arr::get($this->update_check ?? [], 'images', []);
+        $comparator = new VersionComparator;
+        $found = [];
+
+        foreach ($this->images as $image) {
+            $latest = $results[$image->key]['latest'] ?? null;
+
+            if (! $image->isPrimary() && $comparator->isNewer($latest, $image->effectiveTag())) {
+                $found[] = ['key' => $image->key, 'label' => $image->label ?: $image->key, 'current' => $image->effectiveTag(), 'latest' => $latest];
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * The other images the update check could not look up, with why.
+     *
+     * @return array<int, array{key: string, label: string, error: string}>
+     */
+    public function imageCheckErrors(): array
+    {
+        $results = Arr::get($this->update_check ?? [], 'images', []);
+        $errors = [];
+
+        foreach ($this->images as $image) {
+            $error = $results[$image->key]['error'] ?? null;
+
+            if (! $image->isPrimary() && $error) {
+                $errors[] = ['key' => $image->key, 'label' => $image->label ?: $image->key, 'error' => $error];
+            }
+        }
+
+        return $errors;
+    }
+
     // The newest chart version that passed the compatibility check, if still newer than the one in use
     public function newerChartVersion(): ?string
     {
@@ -566,6 +610,8 @@ class AppVersion extends Model
             'checked_at' => (new Carbon($check['checked_at']))->format('Y-m-d H:i'),
             'image' => $this->newerImageTag(),
             'image_error' => Arr::get($check, 'image.error'),
+            'images' => $this->newerImageTags(),
+            'images_errors' => $this->imageCheckErrors(),
             'chart_current' => $this->setting('chart_version'),
             'chart' => $this->newerChartVersion(),
             'chart_error' => Arr::get($check, 'chart.error'),

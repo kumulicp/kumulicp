@@ -294,6 +294,67 @@ it('shows newer images and compatible charts on the versions page', function () 
         );
 });
 
+it('shows newer tags for the other images, and the ones that could not be checked', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.1',
+        'settings' => ['chart_version' => '9.0.0'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => null,
+            'images' => [
+                'imaginary' => ['current' => '20261109_101109', 'latest' => '20270101_000000', 'policy' => 'track', 'error' => null],
+                'redis' => ['current' => '8.0.1', 'latest' => null, 'policy' => 'track', 'error' => 'The registry timed out'],
+                'proxy' => ['current' => '2.0.0', 'latest' => null, 'policy' => 'pinned', 'error' => null],
+            ],
+            'chart' => null,
+        ],
+    ]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'imaginary', 'label' => 'Imaginary', 'tag' => '20261109_101109', 'position' => 1]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'redis', 'tag' => '8.0.1', 'position' => 2]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'proxy', 'tag' => '2.0.0', 'position' => 3]);
+
+    $this->withoutVite()
+        ->get("/admin/apps/{$this->demoApp->slug}/versions")
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Admin/Applications/Versions/VersionsList')
+            ->where('versions', fn ($versions) => collect($versions)->contains(fn ($row) => $row['id'] === $version->id
+                && $row['updates']['image'] === null
+                && count($row['updates']['images']) === 1
+                && $row['updates']['images'][0]['key'] === 'imaginary'
+                && $row['updates']['images'][0]['label'] === 'Imaginary'
+                && $row['updates']['images'][0]['current'] === '20261109_101109'
+                && $row['updates']['images'][0]['latest'] === '20270101_000000'
+                && count($row['updates']['images_errors']) === 1
+                && $row['updates']['images_errors'][0]['label'] === 'redis'
+                && $row['updates']['images_errors'][0]['error'] === 'The registry timed out'))
+        );
+});
+
+it('lists a version on the dashboard when only one of its other images has a newer tag', function () {
+    $version = AppVersion::factory()->create([
+        'application_id' => $this->demoApp->id,
+        'name' => '33.0.1',
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => null,
+            'images' => ['imaginary' => ['current' => '1.0.0', 'latest' => '1.1.0', 'policy' => 'track', 'error' => null]],
+            'chart' => null,
+        ],
+    ]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'imaginary', 'tag' => '1.0.0']);
+
+    $this->withoutVite()
+        ->get('/admin')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('app_updates', fn ($updates) => collect($updates)->contains(fn ($row) => $row['id'] === $version->id
+                && $row['image'] === null
+                && $row['images'][0]['latest'] === '1.1.0'))
+        );
+});
+
 it('hides stored updates once the version has caught up', function () {
     $version = AppVersion::factory()->create([
         'application_id' => $this->demoApp->id,

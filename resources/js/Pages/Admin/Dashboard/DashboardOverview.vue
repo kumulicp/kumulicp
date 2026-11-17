@@ -115,6 +115,7 @@ import { Link } from '@inertiajs/vue3'
                     <td>{{ update.version }}</td>
                     <td>
                       <va-badge v-if="update.image" color="success" class="mr-1" :text="$t('admin.versions.imageBadge', { latest: update.image })" />
+                      <va-badge v-for="image in update.images" :key="image.key" color="success" class="mr-1" :text="$t('admin.versions.otherImageBadge', { image: image.label, latest: image.latest })" />
                       <va-badge v-if="update.chart" color="success" class="mr-1" :text="$t('admin.versions.chartBadge', { latest: update.chart })" />
                     </td>
                   </tr>

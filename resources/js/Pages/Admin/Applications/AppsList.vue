@@ -153,10 +153,11 @@ import { Link, useForm, router } from '@inertiajs/vue3'
               <div v-for="version in app.versions" :key="'updates-' + version.id">
                 <template v-if="version.updates">
                   <va-badge v-if="version.updates.image" color="success" class="mr-1" :text="$t('admin.versions.imageBadge', { latest: version.updates.image })" />
+                  <va-badge v-for="image in version.updates.images" :key="image.key" color="success" class="mr-1" :text="$t('admin.versions.otherImageBadge', { image: image.label, latest: image.latest })" />
                   <va-badge v-if="version.updates.chart" color="success" class="mr-1" :text="$t('admin.versions.chartBadge', { latest: version.updates.chart })" />
                   <va-badge v-if="version.updates.chart_incompatible" color="warning" class="mr-1" :text="$t('admin.versions.chartBlockedBadge', { latest: version.updates.chart_incompatible.version })" />
-                  <va-badge v-if="version.updates.image_error || version.updates.chart_error" color="danger" class="mr-1" :text="$t('admin.versions.checkFailedBadge')" />
-                  <div v-if="!version.updates.image && !version.updates.chart && !version.updates.chart_incompatible && !version.updates.image_error && !version.updates.chart_error" class="va-text-secondary">{{ $t('admin.versions.upToDate') }}</div>
+                  <va-badge v-if="version.updates.image_error || version.updates.images_errors.length || version.updates.chart_error" color="danger" class="mr-1" :text="$t('admin.versions.checkFailedBadge')" />
+                  <div v-if="!version.updates.image && !version.updates.images.length && !version.updates.chart && !version.updates.chart_incompatible && !version.updates.image_error && !version.updates.images_errors.length && !version.updates.chart_error" class="va-text-secondary">{{ $t('admin.versions.upToDate') }}</div>
                 </template>
                 <span v-else class="va-text-secondary">{{ $t('admin.versions.notChecked') }}</span>
               </div>

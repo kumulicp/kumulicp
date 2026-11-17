@@ -10,7 +10,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   </Head>
   <div v-for="version in versionsWithUpdates" :key="'updates-' + version.id" class="mb-3">
     <va-alert
-      v-if="version.updates.image || version.updates.chart"
+      v-if="version.updates.image || version.updates.images.length || version.updates.chart"
       color="success"
       border="top"
       border-color="success"
@@ -18,6 +18,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       :id="'updatesAvailable' + version.id"
     >
       <div v-if="version.updates.image">{{ $t('admin.versions.newerImage', { version: version.version, latest: version.updates.image }) }}</div>
+      <div v-for="image in version.updates.images" :key="image.key">{{ $t('admin.versions.newerOtherImage', { image: image.label, current: image.current, latest: image.latest }) }}</div>
       <div v-if="version.updates.chart">{{ $t('admin.versions.newerChart', { current: version.updates.chart_current, latest: version.updates.chart }) }}</div>
       <div v-for="(warning, index) in (version.updates.chart ? version.updates.chart_warnings : [])" :key="index" class="va-text-secondary" style="font-size: 0.85rem">{{ warning }}</div>
       <div class="mt-1">{{ $t('admin.versions.adoptUpdate') }}</div>
@@ -38,13 +39,14 @@ import { Link, useForm } from '@inertiajs/vue3'
       </ul>
     </va-alert>
     <va-alert
-      v-if="version.updates.image_error || version.updates.chart_error"
+      v-if="version.updates.image_error || version.updates.images_errors.length || version.updates.chart_error"
       color="danger"
       border="top"
       border-color="danger"
       class="mb-2"
     >
       <div v-if="version.updates.image_error">{{ $t('admin.versions.imageCheckFailed', { error: version.updates.image_error }) }}</div>
+      <div v-for="image in version.updates.images_errors" :key="image.key">{{ $t('admin.versions.otherImageCheckFailed', { image: image.label, error: image.error }) }}</div>
       <div v-if="version.updates.chart_error">{{ $t('admin.versions.chartCheckFailed', { error: version.updates.chart_error }) }}</div>
     </va-alert>
   </div>
