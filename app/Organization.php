@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Cashier\Billable;
@@ -160,7 +161,10 @@ class Organization extends Model
         return $this->belongsToMany('App\Application', 'app_instances', 'organization_id', 'application_id');
     }
 
-    public function app_instances()
+    /**
+     * @return HasMany<AppInstance, $this>
+     */
+    public function app_instances(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'organization_id');
     }
