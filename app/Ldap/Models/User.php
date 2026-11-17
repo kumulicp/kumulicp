@@ -17,6 +17,11 @@ use LdapRecord\Models\Concerns\CanAuthenticate;
 use LdapRecord\Models\Model;
 use LdapRecord\Models\OpenLDAP\Entry;
 
+/**
+ * @property string $mailQuota
+ * @property string $mailHomeDirectory
+ * @property string $mailStorageDirectory
+ */
 class User extends Entry implements Authenticatable
 {
     use CanAuthenticate, Notifiable;

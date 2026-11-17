@@ -25,9 +25,9 @@ class EmailAccountsControllerTest extends TestCase
         $this->actingAs($user);
         $organization = $user->organization;
 
-        // The routes sit behind the emails feature and the plan has to include email
+        // The routes sit behind the emails feature and the plan has to include domains and email
         config(['toggle.flags.emails' => true]);
-        $organization->plan->forceFill(['email_enabled' => true])->save();
+        $organization->plan->forceFill(['domain_enabled' => true, 'email_enabled' => true])->save();
 
         // A mail server for the domain to belong to
         DB::table('servers')->insert([[
