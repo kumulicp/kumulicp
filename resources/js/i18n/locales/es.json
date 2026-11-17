@@ -1686,6 +1686,7 @@
   },
   "recoveryEmail": {
     "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de la de tu organización.",
+    "missingBadge": "Sin correo de recuperación",
     "reminderAction": "Añadir un correo de recuperación",
     "label": "Correo de recuperación",
     "hint": "Solo se usa para enviar un enlace de restablecimiento de contraseña. No puede ser una dirección alojada aquí.",

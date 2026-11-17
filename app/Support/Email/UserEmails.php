@@ -14,7 +14,7 @@ use App\UserRecoveryEmail;
 class UserEmails
 {
     /**
-     * @return array{personal_email: string|null, org_email: string|null}
+     * @return array{personal_email: string|null, org_email: string|null, recovery_missing: bool}
      */
     public static function for(UserManager $user): array
     {
@@ -28,7 +28,7 @@ class UserEmails
      *
      * @param  array<int, string>  $usernames
      * @param  array<string, string>  $mail  Each user's `mail`, by username
-     * @return array<string, array{personal_email: string|null, org_email: string|null}>
+     * @return array<string, array{personal_email: string|null, org_email: string|null, recovery_missing: bool}>
      */
     public static function lookup(array $usernames, array $mail): array
     {
@@ -42,11 +42,21 @@ class UserEmails
         foreach ($usernames as $username) {
             $mailbox = $mailboxes->get($username);
 
+            // Someone with an organization address needs a recovery email that works next to it
             $emails[$username] = $mailbox
-                ? ['personal_email' => $recovery->get($username), 'org_email' => $mailbox->address]
-                : ['personal_email' => $mail[$username] ?? null, 'org_email' => null];
+                ? [
+                    'personal_email' => $recovery->get($username),
+                    'org_email' => $mailbox->address,
+                    'recovery_missing' => self::unusable($recovery->get($username), $mailbox->address),
+                ]
+                : ['personal_email' => $mail[$username] ?? null, 'org_email' => null, 'recovery_missing' => false];
         }
 
         return $emails;
+    }
+
+    private static function unusable(?string $recovery, string $address): bool
+    {
+        return $recovery === null || strcasecmp($recovery, $address) === 0 || HostedDomains::isHosted($recovery);
     }
 }

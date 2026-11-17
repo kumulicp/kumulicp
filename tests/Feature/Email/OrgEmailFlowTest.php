@@ -223,6 +223,21 @@ class OrgEmailFlowTest extends TestCase
         $this->assertDatabaseHas('mailboxes', ['address' => 'jdoe@corp.org', 'status' => Mailbox::PENDING]);
     }
 
+    public function test_the_users_list_shows_the_organization_address_and_flags_a_missing_recovery_email()
+    {
+        OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com']);
+        $this->post('/profile/org-email', $this->payload([
+            'domain' => OrgDomain::where('name', 'example.com')->value('id'),
+            'local_part' => 'demo',
+            'acknowledge' => false,
+        ]));
+
+        $this->get('/users')->assertInertia(fn ($page) => $page
+            ->where('users.0.id', 'demo')
+            ->where('users.0.org_email', 'demo@example.com')
+            ->where('users.0.recovery_missing', true));
+    }
+
     public function test_an_administrator_offering_an_address_changes_nothing_for_the_user_yet()
     {
         $response = $this->get('/users/demo/create/accountemail/'.$this->corp->id);

@@ -65,6 +65,7 @@ class Users extends Controller
                     'name' => $user->attribute('name'),
                     'personal_email' => $emails[$user->attribute('username')]['personal_email'],
                     'org_email' => $emails[$user->attribute('username')]['org_email'],
+                    'recovery_missing' => $emails[$user->attribute('username')]['recovery_missing'],
                     'access_type' => $user->userAccessType()?->label(),
                     'links' => [
                         'edit' => route('users.edit', $user->attribute('username')),

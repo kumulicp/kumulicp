@@ -355,6 +355,20 @@ class MailboxServiceTest extends TestCase
         $this->assertDatabaseCount('mailboxes', 0);
     }
 
+    public function test_users_with_an_organization_address_and_no_usable_recovery_email_are_flagged()
+    {
+        $this->assertFalse(UserEmails::for($this->manager)['recovery_missing'], 'no organization address, nothing to flag');
+
+        $mailbox = $this->service->offer($this->manager, $this->domain('example.com'), 'demo');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->assertTrue(UserEmails::for(AccountManager::users()->find('demo'))['recovery_missing']);
+
+        $this->recovery->set('demo', 'backup@gmail.com');
+
+        $this->assertFalse(UserEmails::for(AccountManager::users()->find('demo'))['recovery_missing']);
+    }
+
     // --- who may have one
 
     public function test_only_standard_users_count_as_standard()

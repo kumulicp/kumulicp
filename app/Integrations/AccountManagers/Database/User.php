@@ -94,6 +94,11 @@ class User extends UserManager
         }
     }
 
+    public function save()
+    {
+        return $this->user->save();
+    }
+
     public function updateOrganization(Organization $organization)
     {
         $this->user->organization()->associate($organization);

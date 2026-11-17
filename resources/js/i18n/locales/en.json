@@ -1689,6 +1689,7 @@
   },
   "recoveryEmail": {
     "reminder": "Add a recovery email. If you forget your password, the reset link can only reach you at an address other than your organization one.",
+    "missingBadge": "No recovery email",
     "reminderAction": "Add a recovery email",
     "label": "Recovery Email",
     "hint": "Only used to send a password reset link. It can't be an address hosted here.",
