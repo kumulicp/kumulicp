@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Tickets;
 
+use App\Application;
 use App\Services\Tickets\TicketAutomation;
 use App\TicketCategory;
 use App\TicketSlaPolicy;
@@ -156,5 +157,35 @@ class TicketSettingsTest extends TicketsTestCase
         }
 
         $this->assertSame(365, app(TicketAutomation::class)->settings()['retention_days']);
+    }
+
+    public function test_app_rules_are_saved_listed_and_validated(): void
+    {
+        $nextcloud = Application::factory()->create();
+        $wordpress = Application::factory()->create();
+        $rules = ['auto_assign' => 'round_robin', 'pool_ids' => [], 'reminder_days' => 3, 'auto_resolve_days' => 7, 'auto_close_days' => 7, 'retention_days' => 0];
+        $sam = $this->staffMember('sam');
+
+        $this->actingAs($this->admin)->put('/admin/support/settings/automation', $rules + ['app_rules' => [
+            ['application_id' => $nextcloud->id, 'pool_ids' => [$sam->id, $this->admin->id]],
+        ]])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)->get('/admin/support/settings')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('automation.app_rules', [['application_id' => $nextcloud->id, 'pool_ids' => [$sam->id, $this->admin->id]]])
+                ->missing('automation.rr_by_app')
+                ->has('applications', 2));
+
+        foreach ([
+            'unknown application' => [['application_id' => 999999, 'pool_ids' => [$sam->id]]],
+            'nobody chosen' => [['application_id' => $wordpress->id, 'pool_ids' => []]],
+            'the same application twice' => [['application_id' => $wordpress->id, 'pool_ids' => [$sam->id]], ['application_id' => $wordpress->id, 'pool_ids' => [$sam->id]]],
+        ] as $case => $bad) {
+            $this->actingAs($this->admin)->put('/admin/support/settings/automation', $rules + ['app_rules' => $bad])->assertSessionHasErrors();
+        }
+
+        // Saving the form with the list emptied removes the rules
+        $this->actingAs($this->admin)->put('/admin/support/settings/automation', $rules + ['app_rules' => []])->assertSessionHasNoErrors();
+        $this->assertSame([], app(TicketAutomation::class)->settings()['app_rules']);
     }
 }

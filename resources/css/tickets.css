@@ -635,3 +635,39 @@
 .t-app-link {
     font-weight: 600;
 }
+
+/* One "who takes this app" rule in the automation settings */
+.t-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--va-background-border);
+}
+
+@media (min-width: 768px) {
+    .t-rule {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
+        align-items: start;
+    }
+}
+
+.t-rule__remove {
+    justify-self: start;
+}
+
+/* A bordered group of related controls */
+.t-fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+}
+
+.t-fieldset legend {
+    padding: 0 0.35rem;
+}

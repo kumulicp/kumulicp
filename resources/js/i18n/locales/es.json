@@ -2220,7 +2220,14 @@
       "retentionDays": "Eliminar tickets cerrados tras (días)",
       "retentionHelp": "Elimina para siempre los tickets cerrados y sus adjuntos.",
       "zeroOff": "0 lo desactiva.",
-      "more": "Más"
+      "more": "Más",
+      "appRules": {
+        "title": "Por aplicación",
+        "help": "Los tickets sobre una aplicación se asignan a estas personas, por turnos (o a quien tenga menos tickets abiertos, según lo elegido arriba). Las aplicaciones sin regla usan a las personas indicadas arriba.",
+        "app": "Aplicación",
+        "people": "Quién atiende esta aplicación",
+        "add": "Añadir una aplicación"
+      }
     },
     "list": {
       "people": "Personas",

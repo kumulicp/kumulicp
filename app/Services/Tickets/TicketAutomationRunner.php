@@ -53,7 +53,7 @@ class TicketAutomationRunner
             ->get()
             ->each(function (Ticket $ticket) use (&$count) {
                 $this->guard(function () use ($ticket, &$count) {
-                    if ($assignee = $this->automation->pickAssignee()) {
+                    if ($assignee = $this->automation->pickAssignee($ticket)) {
                         $this->tickets->assign($ticket, TicketService::SUPPORT, $assignee, null);
                         $count++;
                     }

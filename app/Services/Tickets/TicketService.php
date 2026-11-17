@@ -84,7 +84,7 @@ class TicketService
 
             // Nobody chosen by the category: the automatic rules may pick someone
             $autoAssigned = false;
-            if (! $ticket->support_assignee_id && ($picked = $this->automation->pickAssignee())) {
+            if (! $ticket->support_assignee_id && ($picked = $this->automation->pickAssignee($ticket))) {
                 $ticket->support_assignee_id = $picked->id;
                 $autoAssigned = true;
             }

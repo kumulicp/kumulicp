@@ -2250,7 +2250,14 @@
       "retentionDays": "Delete closed tickets after (days)",
       "retentionHelp": "Permanently deletes closed tickets and their attachments.",
       "zeroOff": "0 turns it off.",
-      "more": "More"
+      "more": "More",
+      "appRules": {
+        "title": "By app",
+        "help": "Tickets about an app go to these people, in turn (or by fewest open tickets, as chosen above). Apps without a rule use the people listed above.",
+        "app": "App",
+        "people": "Who takes this app",
+        "add": "Add an app"
+      }
     },
     "list": {
       "people": "People",

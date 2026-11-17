@@ -7,6 +7,7 @@ use App\Notifications\Tickets\TicketActivity;
 use App\Services\Tickets\TicketAutomation;
 use App\Services\Tickets\TicketAutomationRunner;
 use App\Ticket;
+use App\TicketCategory;
 use App\TicketEvent;
 use App\User;
 use Carbon\Carbon;
@@ -201,5 +202,111 @@ class TicketAutomationTest extends TicketsTestCase
 
         $this->assertNull($source->fresh()->reminder_sent_at);
         $this->assertNull($source->fresh()->support_assignee_id);
+    }
+
+    // ---- rules per app
+
+    public function test_app_rules_are_stored_as_a_map_without_duplicates_or_empty_rules(): void
+    {
+        $this->automation()->update(['auto_assign' => 'round_robin', 'app_rules' => [
+            ['application_id' => 10, 'pool_ids' => [1, 2, 2]],
+            ['application_id' => 10, 'pool_ids' => [3]],
+            ['application_id' => 20, 'pool_ids' => []],
+            ['application_id' => 0, 'pool_ids' => [1]],
+        ]]);
+
+        $this->assertSame([10 => [1, 2]], $this->automation()->settings()['app_rules']);
+
+        // An update that does not mention them leaves them alone; an empty list clears them
+        $this->automation()->update(['reminder_days' => 5]);
+        $this->assertSame([10 => [1, 2]], $this->automation()->settings()['app_rules']);
+        $this->automation()->update(['app_rules' => []]);
+        $this->assertSame([], $this->automation()->settings()['app_rules']);
+    }
+
+    public function test_tickets_about_an_app_take_turns_among_the_people_chosen_for_it(): void
+    {
+        $sam = $this->staffMember('sam');
+        $tess = $this->staffMember('tess');
+        $nextcloud = Application::factory()->create();
+        $wordpress = Application::factory()->create();
+        $nextcloudApp = $this->appInstance($this->orgA, $nextcloud, 'Files');
+        $wordpressApp = $this->appInstance($this->orgA, $wordpress, 'Blog');
+
+        $this->automation()->update([
+            'auto_assign' => 'round_robin',
+            'pool_ids' => [$this->admin->id],
+            'app_rules' => [
+                ['application_id' => $nextcloud->id, 'pool_ids' => [$sam->id, $tess->id]],
+                ['application_id' => $wordpress->id, 'pool_ids' => [$tess->id]],
+            ],
+        ]);
+
+        $assignee = fn (array $data = []) => $this->ticketFor($this->alice, $data)->fresh()->support_assignee_id;
+
+        $first = $assignee(['app_instance_id' => $nextcloudApp->id]);
+        $second = $assignee(['app_instance_id' => $nextcloudApp->id]);
+        $third = $assignee(['app_instance_id' => $nextcloudApp->id]);
+
+        // Turns inside the app's own people, nobody else
+        $this->assertEqualsCanonicalizing([$sam->id, $tess->id], [$first, $second]);
+        $this->assertSame($first, $third);
+
+        // One person for the other app; no app (or an app without a rule) uses the general pool
+        $this->assertSame($tess->id, $assignee(['app_instance_id' => $wordpressApp->id]));
+        $this->assertSame($this->admin->id, $assignee());
+        $other = $this->appInstance($this->orgA, Application::factory()->create(), 'Other');
+        $this->assertSame($this->admin->id, $assignee(['app_instance_id' => $other->id]));
+    }
+
+    public function test_a_category_default_still_wins_over_the_app_rule(): void
+    {
+        $sam = $this->staffMember('sam');
+        $tess = $this->staffMember('tess');
+        $application = Application::factory()->create();
+        $app = $this->appInstance($this->orgA, $application);
+        $category = new TicketCategory(['name' => 'Billing', 'slug' => 'billing']);
+        $category->active = true;
+        $category->default_support_assignee_id = $tess->id;
+        $category->save();
+        $this->automation()->update(['auto_assign' => 'round_robin', 'app_rules' => [['application_id' => $application->id, 'pool_ids' => [$sam->id]]]]);
+
+        $ticket = $this->ticketFor($this->alice, ['app_instance_id' => $app->id, 'category_id' => $category->id]);
+
+        $this->assertSame($tess->id, $ticket->fresh()->support_assignee_id);
+    }
+
+    public function test_when_nobody_on_the_apps_rule_is_available_the_general_pool_is_used(): void
+    {
+        $sam = $this->staffMember('sam');
+        $application = Application::factory()->create();
+        $app = $this->appInstance($this->orgA, $application);
+        $sam->forceFill(['is_allowed' => false])->save();
+        $this->automation()->update(['auto_assign' => 'round_robin', 'pool_ids' => [$this->admin->id], 'app_rules' => [['application_id' => $application->id, 'pool_ids' => [$sam->id]]]]);
+
+        $this->assertSame($this->admin->id, $this->ticketFor($this->alice, ['app_instance_id' => $app->id])->fresh()->support_assignee_id);
+    }
+
+    public function test_the_runner_uses_the_app_rules_for_tickets_nobody_was_assigned(): void
+    {
+        $sam = $this->staffMember('sam');
+        $application = Application::factory()->create();
+        $app = $this->appInstance($this->orgA, $application);
+        $ticket = $this->ticketFor($this->alice, ['app_instance_id' => $app->id]);
+
+        $this->automation()->update(['auto_assign' => 'least_loaded', 'pool_ids' => [$this->admin->id], 'app_rules' => [['application_id' => $application->id, 'pool_ids' => [$sam->id]]]]);
+        $this->runner()->run();
+
+        $this->assertSame($sam->id, $ticket->fresh()->support_assignee_id);
+    }
+
+    public function test_off_means_off_whatever_the_rules(): void
+    {
+        $sam = $this->staffMember('sam');
+        $application = Application::factory()->create();
+        $app = $this->appInstance($this->orgA, $application);
+        $this->automation()->update(['auto_assign' => 'off', 'app_rules' => [['application_id' => $application->id, 'pool_ids' => [$sam->id]]]]);
+
+        $this->assertNull($this->ticketFor($this->alice, ['app_instance_id' => $app->id])->fresh()->support_assignee_id);
     }
 }
