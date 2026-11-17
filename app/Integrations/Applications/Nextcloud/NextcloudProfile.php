@@ -11,6 +11,15 @@ use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 
 class NextcloudProfile extends AppProfile
 {
+    // Nextcloud's maintained imaginary build. The tag is exact (dated), never `latest`.
+    // Versions carry it as an image of their own; these are what a configuration
+    // defaults to and what a new version is recommended.
+    private const IMAGINARY_REGISTRY = 'docker.io';
+
+    private const IMAGINARY_REPOSITORY = 'nextcloud/aio-imaginary';
+
+    private const IMAGINARY_TAG = '20261109_101109';
+
     protected $name = 'nextcloud';
 
     protected $activation_type = 'chart';
@@ -63,6 +72,17 @@ class NextcloudProfile extends AppProfile
         'helm_chart_repo' => 'https://nextcloud.github.io/helm/',
         'helm_chart_name' => 'nextcloud',
         'helm_chart_version' => '9.0.5',
+        'images' => [
+            [
+                'key' => 'imaginary',
+                'label' => 'Imaginary',
+                'registry' => self::IMAGINARY_REGISTRY,
+                'repository' => self::IMAGINARY_REPOSITORY,
+                'tag' => self::IMAGINARY_TAG,
+                'values_path' => 'imaginary.image',
+                'tag_pattern' => '^\\d{8}_\\d{6}$',
+            ],
+        ],
     ];
 
     protected $configurations = [
@@ -534,21 +554,21 @@ class NextcloudProfile extends AppProfile
         'imaginary-image-registry' => [
             'name' => 'imaginary-image-registry',
             'type' => 'string',
-            'default' => 'docker.io',
+            'default' => self::IMAGINARY_REGISTRY,
             'persistent' => false,
             'validations' => 'required|string',
         ],
         'imaginary-image-repository' => [
             'name' => 'imaginary-image-repository',
             'type' => 'string',
-            'default' => 'nextcloud/aio-imaginary',
+            'default' => self::IMAGINARY_REPOSITORY,
             'persistent' => false,
             'validations' => 'required|string',
         ],
         'imaginary-image-tag' => [
             'name' => 'imaginary-image-tag',
             'type' => 'string',
-            'default' => '20261109_101109',
+            'default' => self::IMAGINARY_TAG,
             'persistent' => false,
             'validations' => 'required|string',
         ],

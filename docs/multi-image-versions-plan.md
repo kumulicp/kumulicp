@@ -77,13 +77,17 @@ Backfill migration: one `primary` image row per existing version from
   and fall back to the old settings. `imagePullSecrets()` returns the distinct secrets
   across all images.
 - `HelmChart` gets one generic step, `applyImageOverrides(array $values)`, that writes
-  every `source = override` image at its `values_path` (`Arr::set`). It runs before
-  `modifyValues()` so chart modifiers still have the last word. Charts keep their
-  explicit primary block until they are migrated, so nothing changes for them at first.
-- Precedence: version image > profile default. The old `imaginary-image-*` and
-  `redis.image` configurations become fallbacks for a release, then are removed.
-  An instance that explicitly overrides one shows a "shadows version image" warning in
-  the instance's Update list instead of silently winning.
+  every `source = override` component image at its `values_path` (`Arr::set`). It runs
+  **last** in `valuesWithAdditionalConfigs()`, after the plan's configurations, because a
+  configuration is written as a raw Helm path (`imaginary-image-tag` becomes
+  `imaginary.image.tag`) and a plan seeds every default: run earlier, a seeded default
+  would put back an image other than the one that was tested. Charts keep their explicit
+  primary block until they are migrated, so nothing changes for them at first.
+- Precedence: version image > plan/instance configuration > profile default. The old
+  `imaginary-image-*` configurations stay as the fallback for a version without an image
+  for it. An instance that explicitly overrides one should show a "shadows version image"
+  warning in the instance's Update list instead of silently losing; that needs UI, so it
+  comes with phase 7.
 - Rendering the images into the values means `ValuesContract::removedKeys()` and
   `schemaErrors()` check every image path against a candidate chart automatically.
 
@@ -159,9 +163,12 @@ Each phase ships on its own and leaves existing apps unchanged.
 
 1. **Model and backfill.** Migration, `AppVersionImage`, relations, primary-image
    accessors, backfill. Chart code unchanged. Tests: backfill, accessors.
-2. **Rendering.** `applyImageOverrides`, multi-secret `imagePullSecrets`, precedence and
-   shadow warning. Move Nextcloud `imaginary` (and `redis`) onto image rows as the first
-   real migration. Tests: extend `NextcloudChartTest`, `GenericAppChartTest`.
+2. **Rendering.** `applyImageOverrides`, multi-secret `imagePullSecrets` (and creating each
+   secret in the cluster), copying images to new versions, and precedence. Moves Nextcloud
+   `imaginary` onto image rows as the first real migration. `redis` is left for later: its
+   configuration sets only a registry and tag, so its repository (the chart's default) would
+   have to be guessed. The shadow warning moves to phase 7. Tests: extend
+   `NextcloudChartTest`, `VersionsTest`, `RepoSecretsTest`.
 3. **Update checks.** Per-image checker, per-image result and UI badges, shared tag
    cache, digest handling. Tests: extend `VersionsTest`, add resolver unit tests.
 4. **Fingerprints, drift, impact.** Include images with the byte-identical rule for

@@ -373,6 +373,7 @@ class ApplicationService
             'image_registry' => Arr::get($recommendations, 'image_registry'),
         ], fn ($value) => $value !== null);
         $version->save();
+        $version->addRecommendedImages($recommendations);
 
         $plan = new AppPlan;
         $plan->application_id = $application->id;
