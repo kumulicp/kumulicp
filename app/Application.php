@@ -213,7 +213,7 @@ class Application extends Model
     {
         $plan = $this->plans()->orderBy('id')->first();
 
-        return Arr::only($plan?->settings ?? [], ['can_update_domain', 'domain_option', 'parent_app_id']);
+        return Arr::only($plan->settings ?? [], ['can_update_domain', 'domain_option', 'parent_app_id']);
     }
 
     /**

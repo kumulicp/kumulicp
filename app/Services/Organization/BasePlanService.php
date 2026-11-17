@@ -104,7 +104,7 @@ class BasePlanService
     public function appPlans(Application $app, $archived = true, $display_order = false)
     {
         $app_plans = $this->appPlansList($app);
-        $plans = AppPlan::whereIn('id', $app_plans);
+        $plans = AppPlan::whereIn('id', is_array($app_plans) ? $app_plans : []);
 
         if ($archived === false) {
             $plans->where('archive', false);
