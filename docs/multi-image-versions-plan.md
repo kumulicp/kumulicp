@@ -169,8 +169,15 @@ Each phase ships on its own and leaves existing apps unchanged.
    configuration sets only a registry and tag, so its repository (the chart's default) would
    have to be guessed. The shadow warning moves to phase 7. Tests: extend
    `NextcloudChartTest`, `VersionsTest`, `RepoSecretsTest`.
-3. **Update checks.** Per-image checker, per-image result and UI badges, shared tag
-   cache, digest handling. Tests: extend `VersionsTest`, add resolver unit tests.
+3. **Update checks.** Per-image checker (`update_check.images`, with `image` kept as the
+   primary image's), policies (`track`, `minor`, `patch`, `pinned`, `ignore`) and
+   `tag_pattern`, digests offered only together with their new tag, a resolver cache so a
+   run asks each repository once (and waits for a dead registry once), and badges for the
+   other images on the apps list, versions page and dashboard. Not yet: adopting an update
+   copies the other images as they are and the "new version from update" option still
+   appears only for a newer primary tag; choosing which images to bump is phase 7. Tests:
+   extend `VersionUpdateCheckerTest`, `VersionComparatorTest`, `RegistryClientTest`,
+   `VersionsTest`.
 4. **Fingerprints, drift, impact.** Include images with the byte-identical rule for
    legacy versions; observer and `ImpactResolver`. Tests: extend
    `UpdateDriftDetectionTest`, `VersionTestingTest` (stale after an image change; not

@@ -350,3 +350,57 @@ it('recommends the imaginary image the migration gave existing versions', functi
         'values_path' => 'imaginary.image',
     ]);
 });
+
+// ─── Update check results ────────────────────────────────────────────────────
+
+function checkedImageVersion(Application $application): AppVersion
+{
+    $version = imageVersion($application, [], ['update_check' => [
+        'checked_at' => '2026-10-14T03:00:00+00:00',
+        'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+        'images' => [
+            'primary' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'imaginary' => ['current' => '20261109_101109', 'latest' => '20270101_000000', 'error' => null],
+        ],
+        'chart' => null,
+    ]]);
+
+    AppVersionImage::factory()->create([
+        'app_version_id' => $version->id,
+        'key' => 'imaginary',
+        'tag' => '20261109_101109',
+    ]);
+
+    return $version->fresh();
+}
+
+it('lists the other images with a newer tag than they run with, never the primary one', function () {
+    $version = checkedImageVersion($this->application);
+
+    expect($version->newerImageTags())->toBe([
+        ['key' => 'imaginary', 'label' => 'imaginary', 'current' => '20261109_101109', 'latest' => '20270101_000000'],
+    ])->and($version->newerImageTag())->toBe('33.0.2');
+});
+
+it('stops listing an image once it runs the tag that was found', function () {
+    $version = checkedImageVersion($this->application);
+
+    $version->images()->where('key', 'imaginary')->update(['tag' => '20270101_000000']);
+
+    expect($version->fresh()->newerImageTags())->toBe([]);
+});
+
+it('has nothing to list from a check made before images were checked', function () {
+    $version = imageVersion($this->application, [], ['update_check' => [
+        'checked_at' => '2026-10-14T03:00:00+00:00',
+        'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+        'chart' => null,
+    ]]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'imaginary']);
+
+    $summary = $version->fresh()->updateSummary();
+
+    expect($summary['images'])->toBe([])
+        ->and($summary['images_errors'])->toBe([])
+        ->and($summary['image'])->toBe('33.0.2');
+});

@@ -459,6 +459,8 @@ return [
         'error_module_delete_failed' => "No se pudo eliminar por completo el módulo ':module'. Es posible que algunos archivos aún estén en uso; inténtalo de nuevo.",
     ],
     'version_updates' => [
+        'digest_unavailable' => 'La etiqueta :tag no tiene digest en el registro, así que no se puede ofrecer para una imagen fijada por digest.',
+        'invalid_tag_pattern' => 'El patrón de etiquetas :pattern no es una expresión regular válida.',
         'chart_version_missing' => 'El chart :chart no tiene publicada la versión :version.',
         'chart_unreadable' => 'No se pudo leer el paquete del chart: :error',
         'chart_download_failed' => 'No se pudo descargar el chart :version: :error',

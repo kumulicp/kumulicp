@@ -537,6 +537,8 @@ return [
         'settingsUpdated' => 'Package manager settings updated.',
     ],
     'version_updates' => [
+        'digest_unavailable' => 'The tag :tag has no digest in the registry, so it cannot be offered for an image kept by digest.',
+        'invalid_tag_pattern' => 'The tag pattern :pattern is not a valid regular expression.',
         'chart_version_missing' => 'Chart :chart has no published version :version.',
         'chart_unreadable' => 'The chart package could not be read: :error',
         'chart_download_failed' => 'Chart :version could not be downloaded: :error',
