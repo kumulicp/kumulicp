@@ -288,6 +288,7 @@ return [
                 'domain_registrar' => [
                     'label' => 'Domain registrar',
                     'description' => 'Lets organizations register, transfer and renew domain names through your registrar. Adds the Domains and TLDs admin pages, the register and transfer options when adding a domain, and the matching plan options. Connecting a domain you already own is always available.',
+                ],
                 'helmforge' => [
                     'label' => 'HelmForge',
                     'description' => 'Imports apps from the HelmForge chart repository and lists them alongside the built-in apps. While off, HelmForge apps are hidden from the apps list and from what organizations can install, and the daily catalog sync does not run. Apps already deployed keep running.',
