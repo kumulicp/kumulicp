@@ -223,11 +223,6 @@ class Applications extends Controller
                 'slug' => $app->slug,
                 'category' => $app->category,
                 'tags' => $app->tags->sortBy('name')->pluck('name')->values()->all(),
-                'parent_app' => [
-                    'id' => $app->parent_app_id != 0 ? $app->parent_app_id : null,
-                ],
-                'domain_option' => $app->domain_option,
-                'access_type' => $app->access_type,
                 'short_description' => $app->short_description,
                 'description' => $app->description,
                 'enabled' => $app->enabled == 1 ? true : false,
@@ -239,12 +234,6 @@ class Applications extends Controller
                     ];
                 }),
             ],
-            'apps' => $apps->map(function ($app) {
-                return [
-                    'value' => $app->id,
-                    'text' => $app->name,
-                ];
-            }),
             'tag_options' => Tag::orderBy('name')->pluck('name'),
             'breadcrumbs' => [
                 [
