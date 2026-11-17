@@ -31,12 +31,15 @@ class ReleaseAspect extends Aspect
         return $app_instance->usesOwnResources();
     }
 
-    public function fingerprint(AppInstance $app_instance): string
+    /**
+     * @param  bool  $with_images  false gives the fingerprint from before the images were part of it
+     */
+    public function fingerprint(AppInstance $app_instance, bool $with_images = true): string
     {
         $version = $app_instance->version;
         $plan = $app_instance->plan;
 
-        return Fingerprint::of([
+        $payload = [
             'version' => $version ? [
                 'id' => $version->id,
                 'name' => $version->name,
@@ -61,6 +64,15 @@ class ReleaseAspect extends Aspect
                 'override' => AspectInputs::configurations($app_instance, Arr::except((array) $app_instance->setting('override', []), ['pvc']), $this->key()),
             ],
             'features' => AspectInputs::features($app_instance, $this->key()),
-        ]);
+        ];
+
+        // Only the images that are deployed, and left out when there is nothing to add,
+        // so an instance whose version has only the image its settings describe isn't
+        // out of date for a change that was made to the fingerprint
+        if ($with_images && $version && $images = $version->imageInputs(deployed_only: true)) {
+            $payload['images'] = $images;
+        }
+
+        return Fingerprint::of($payload);
     }
 }
