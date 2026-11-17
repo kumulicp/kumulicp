@@ -98,6 +98,16 @@ class AppVersionImage extends Model
     }
 
     /**
+     * Whether what Kumulicp deploys depends on this image: the primary one and the
+     * components it writes into the chart's values. The chart's own images and the
+     * jobs' are only recorded.
+     */
+    public function isDeployed(): bool
+    {
+        return $this->isPrimary() || ($this->role === self::ROLE_COMPONENT && $this->source === self::SOURCE_OVERRIDE);
+    }
+
+    /**
      * The tag the image runs with. A single-image app keeps using the version's
      * name as its tag, so the two can't drift apart.
      */

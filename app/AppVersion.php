@@ -123,6 +123,40 @@ class AppVersion extends Model
     }
 
     /**
+     * What the images add to what the version is, beyond its name and settings,
+     * which already cover the primary image that follows them (so a version with
+     * only that one adds nothing, and keeps the fingerprint it had before images
+     * were part of it). Only what changes what runs: not an image's label, its
+     * place in the list, or how it is checked for updates.
+     *
+     * @param  bool  $deployed_only  Only the images the deployment depends on, as an instance's release does; a version test covers them all
+     * @return array<string, array<string, mixed>> by the image's key
+     */
+    public function imageInputs(bool $deployed_only = false): array
+    {
+        $inputs = [];
+
+        foreach ($this->images()->get() as $image) {
+            if ($image->tag_from_version_name || ($deployed_only && ! $image->isDeployed())) {
+                continue;
+            }
+
+            $inputs[$image->key] = [
+                'role' => $image->role,
+                'source' => $image->source,
+                'registry' => $image->registry,
+                'repository' => $image->repository,
+                'tag' => $image->tag,
+                'digest' => $image->digest,
+                'registry_secret_id' => $image->registry_secret_id,
+                'values_path' => $image->values_path,
+            ];
+        }
+
+        return $inputs;
+    }
+
+    /**
      * Gives this version the images of another, apart from the primary one,
      * which follows the settings this version was given.
      */

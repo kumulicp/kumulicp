@@ -36,6 +36,31 @@ writes back itself (ids, quotas, `override.pvc`, `sso`), timestamps or counters:
 the instance would be out of date again as soon as it was updated. Cosmetic
 fields (a plan's name, description or order) belong outside every fingerprint.
 
+### A version's images
+
+A version carries its images (`app_version_images`, see `docs/multi-image-versions-plan.md`).
+What each image runs (its role, source, registry, repository, tag, digest, registry login
+and where it goes in the chart's values) is part of two fingerprints:
+
+- the **release** aspect of every instance of the version, for the images that are deployed:
+  the primary image and the components Kumulicp writes into the chart's values
+  (`AppVersionImage::isDeployed()`). An image the chart ships, or a job runs, is only
+  recorded and flags nothing;
+- the **version's tests** (`VersionFingerprint`), for every image, so changing one means
+  testing the version again.
+
+What is only about showing an image or checking it for updates (label, position, update
+policy, tag pattern, group) is in neither. The primary image that follows the version's
+`name` and settings adds nothing: they are in the fingerprints already. That is also what
+keeps the fingerprint of a version whose only image is that one exactly what it was before
+images were part of it (`AppVersion::imageInputs()` is empty, and the `images` key is
+left out), so adding this flagged nothing.
+
+A version that already had an image of its own when this was added (Nextcloud's imaginary)
+would have looked changed though it renders as before, so a migration stamps every stored
+fingerprint that was still current under the old calculation with the new one. Anything that
+was out of date or stale stays so.
+
 ### Which aspect a configuration or feature belongs to
 
 The plan's and the instance's configurations and features are split between the
@@ -95,6 +120,12 @@ out of date is always decided by the fingerprints, so a missed edit (a change
 made without the models, a pivot like a role's implied roles that has to be
 recorded by hand, as `Roles::update` does) is found by the nightly scan
 (`ScanUpdateDrift`, 03:30), which looks at every instance.
+
+An edit to a version's image (`VersionImageObserver`) is noted as an edit to its version,
+with `images` as what changed. Edits to what is only about showing an image or checking it
+for updates are not noted, nor are those to the primary image that follows the version's
+settings: they are noted as the version's own. A bulk update of the images (moving them to
+another registry login, say) isn't seen, and is found by the nightly scan.
 
 Not watched yet: servers, applications and the organization plans (`Plan`). None of
 the aspects depend on them.

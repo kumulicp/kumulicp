@@ -4,11 +4,13 @@ use App\AppInstance;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\AppVersionImage;
 use App\Console\Calls\ScanUpdateDrift;
 use App\DefinitionChange;
 use App\Organization;
 use App\Server;
 use App\Updates\Detection\DefinitionChanges;
+use App\Updates\Aspects\ReleaseAspect;
 use App\Updates\Detection\ImpactResolver;
 use App\Updates\UpdateDrift;
 use App\UpdateState;
@@ -271,4 +273,148 @@ it('does not note the prices of a plan that no instance uses', function () {
     $unused->syncPrices(['base' => ['USD' => ['amount' => 9, 'price_id' => 'price_base']]]);
 
     expect(DefinitionChange::count())->toBe(0);
+});
+
+// ─── A version's images ──────────────────────────────────────────────────────
+
+function addVersionImage(AppInstance $instance, array $attributes = []): AppVersionImage
+{
+    return AppVersionImage::factory()->create($attributes + [
+        'app_version_id' => $instance->version_id,
+        'key' => 'imaginary',
+        'repository' => 'nextcloud/aio-imaginary',
+        'tag' => '20261109_101109',
+        'values_path' => 'imaginary.image',
+    ]);
+}
+
+it('notes an image added to the version an instance runs and flags only the release', function () {
+    $instance = detectionInstance();
+
+    addVersionImage($instance);
+
+    $change = DefinitionChange::sole();
+
+    expect($change->subject_type)->toBe(AppVersion::class)
+        ->and($change->subject_id)->toBe($instance->version_id)
+        ->and($change->changed)->toBe(['images'])
+        ->and(driftedAspects($instance))->toBe(['release']);
+});
+
+it('notes a change to what an image runs, and an image being removed', function () {
+    $instance = detectionInstance();
+    $image = addVersionImage($instance);
+    app(UpdateDrift::class)->dismiss($instance->fresh());
+    DefinitionChange::query()->delete();
+
+    $image->update(['tag' => '20270101_000000']);
+
+    expect(DefinitionChange::sole()->changed)->toBe(['images'])
+        ->and(driftedAspects($instance))->toBe(['release']);
+
+    app(UpdateDrift::class)->dismiss($instance->fresh());
+    DefinitionChange::query()->delete();
+
+    $image->delete();
+
+    expect(DefinitionChange::sole()->changed)->toBe(['images'])
+        ->and(driftedAspects($instance))->toBe(['release']);
+});
+
+it('does not note an edit to what only changes how an image is shown or checked for updates', function () {
+    $instance = detectionInstance();
+    $image = addVersionImage($instance);
+    app(UpdateDrift::class)->dismiss($instance->fresh());
+    DefinitionChange::query()->delete();
+
+    $image->update(['label' => 'Imaginary', 'position' => 4, 'update_policy' => 'pinned', 'tag_pattern' => '^\d+$', 'group' => 'media']);
+
+    expect(DefinitionChange::count())->toBe(0)
+        ->and(driftedAspects($instance))->toBe([]);
+});
+
+it('notes the primary image following the version\'s settings once, as the version\'s change', function () {
+    $instance = detectionInstance();
+    $instance->version->updateSettings(['image_repo_name' => 'library/demo']);
+    app(UpdateDrift::class)->dismiss($instance->fresh());
+    DefinitionChange::query()->delete();
+
+    $instance->version->updateSettings(['image_repo_name' => 'library/other']);
+
+    $change = DefinitionChange::sole();
+
+    expect($change->changed)->toContain('settings')->not->toContain('images')
+        ->and($instance->version->fresh()->primaryImage()->repository)->toBe('library/other')
+        ->and(driftedAspects($instance))->toBe(['release']);
+});
+
+it('does not flag an instance for an image the chart ships or a job runs', function () {
+    $instance = detectionInstance();
+
+    addVersionImage($instance, ['key' => 'shipped', 'source' => 'chart']);
+    addVersionImage($instance, ['key' => 'migrate', 'role' => 'job']);
+
+    // The edits were looked at, and found nothing that is deployed differently
+    expect(driftedAspects($instance))->toBe([]);
+});
+
+it('does not look at the instances of other versions when an image is added', function () {
+    $instance = detectionInstance();
+    $other = AppVersion::factory()->create(['application_id' => $instance->application_id, 'name' => '9.9']);
+
+    AppVersionImage::factory()->create(['app_version_id' => $other->id, 'key' => 'imaginary']);
+
+    expect(DefinitionChange::count())->toBe(0)
+        ->and(driftedAspects($instance))->toBe([]);
+});
+
+it('keeps the release fingerprint of an instance whose version only has the image its settings describe', function () {
+    $instance = detectionInstance();
+    $instance->version->updateSettings(['image_repo_name' => 'library/demo']);
+
+    $aspect = new ReleaseAspect;
+    $instance = $instance->fresh();
+
+    expect($instance->version->images)->toHaveCount(1)
+        ->and($aspect->fingerprint($instance))->toBe($aspect->fingerprint($instance, false));
+});
+
+it('stamps the release of an instance whose version already had images, so it is not flagged for it', function () {
+    $instance = detectionInstance();
+
+    // The image was there before images were part of the release (no edit was seen)
+    DB::table('app_version_images')->insert([
+        'app_version_id' => $instance->version_id, 'key' => 'imaginary', 'role' => 'component', 'source' => 'override',
+        'registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary', 'tag' => '20261109_101109',
+        'values_path' => 'imaginary.image', 'tag_from_version_name' => false, 'update_policy' => 'track', 'position' => 1,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->toBe(['release']);
+
+    (require base_path('database/migrations/2026_11_17_000000_restamp_fingerprints_for_version_images.php'))->up();
+
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->toBe([]);
+
+    // And it is still noticed when the image does change
+    AppVersionImage::where('app_version_id', $instance->version_id)->first()->update(['tag' => '20270101_000000']);
+
+    expect(driftedAspects($instance))->toBe(['release']);
+});
+
+it('does not stamp away what was already out of date', function () {
+    $instance = detectionInstance();
+
+    DB::table('app_version_images')->insert([
+        'app_version_id' => $instance->version_id, 'key' => 'imaginary', 'role' => 'component', 'source' => 'override',
+        'registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary', 'tag' => '20261109_101109',
+        'values_path' => 'imaginary.image', 'tag_from_version_name' => false, 'update_policy' => 'track', 'position' => 1,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    // Changed since it was applied, without the models noticing
+    AppVersion::whereKey($instance->version_id)->update(['settings' => json_encode(['chart_version' => '9.9.9'])]);
+
+    (require base_path('database/migrations/2026_11_17_000000_restamp_fingerprints_for_version_images.php'))->up();
+
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->toBe(['release']);
 });

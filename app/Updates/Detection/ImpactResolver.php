@@ -35,6 +35,16 @@ class ImpactResolver
         AppRole::class => ['label', 'description', 'category', 'created_at', 'updated_at'],
     ];
 
+    /**
+     * The attributes of a version's image that are only about how it is shown or
+     * checked for updates, not about what runs. Images aren't watched like the
+     * definitions above: an edit to one is noted as an edit to its version (see
+     * VersionImageObserver), whose instances are the ones it can affect.
+     *
+     * @var array<int, string>
+     */
+    private const IMAGE_COSMETIC = ['label', 'position', 'update_policy', 'tag_pattern', 'group', 'created_at', 'updated_at'];
+
     /** @return array<int, class-string> */
     public function watched(): array
     {
@@ -51,6 +61,17 @@ class ImpactResolver
     public function relevant(string $subject_type, array $changed): array
     {
         return array_values(array_diff($changed, self::COSMETIC[$subject_type] ?? []));
+    }
+
+    /**
+     * What is left of the changed attributes of an image once the cosmetic ones are taken out.
+     *
+     * @param  array<int, string>  $changed
+     * @return array<int, string>
+     */
+    public function relevantImageAttributes(array $changed): array
+    {
+        return array_values(array_diff($changed, self::IMAGE_COSMETIC));
     }
 
     /**

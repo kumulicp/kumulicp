@@ -178,10 +178,14 @@ Each phase ships on its own and leaves existing apps unchanged.
    appears only for a newer primary tag; choosing which images to bump is phase 7. Tests:
    extend `VersionUpdateCheckerTest`, `VersionComparatorTest`, `RegistryClientTest`,
    `VersionsTest`.
-4. **Fingerprints, drift, impact.** Include images with the byte-identical rule for
-   legacy versions; observer and `ImpactResolver`. Tests: extend
-   `UpdateDriftDetectionTest`, `VersionTestingTest` (stale after an image change; not
-   stale after migration).
+4. **Fingerprints, drift, impact.** Images are part of `VersionFingerprint` (all of them) and
+   `ReleaseAspect` (the deployed ones), omitted when the version only has the image its
+   settings describe so nothing changes for it. A migration stamps the stored fingerprints
+   (test runs, instances' release) that were current under the old calculation, for versions
+   that already had images (Nextcloud's imaginary). Edits to an image are noted as edits to
+   its version (`VersionImageObserver`), apart from what only concerns display or update
+   checks. Documented in `docs/updates.md`. Tests: `VersionImageFingerprintTest`, extend
+   `UpdateDriftDetectionTest`.
 5. **Discovery and chart diff.** Chart scanner, `source = chart` rows, diff in
    `ChartCompatibilityChecker`, discovery button.
 6. **Test-run safety.** `image_snapshot`, preflight, conformance check, optional Trivy.

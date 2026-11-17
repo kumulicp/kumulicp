@@ -15,7 +15,10 @@ use Illuminate\Support\Arr;
  */
 class VersionFingerprint
 {
-    public function for(AppVersion $version): string
+    /**
+     * @param  bool  $with_images  false gives the fingerprint from before the images were part of it
+     */
+    public function for(AppVersion $version, bool $with_images = true): string
     {
         $plans = AppPlan::where('application_id', $version->application_id)
             ->where('archive', 0)
@@ -25,7 +28,7 @@ class VersionFingerprint
             ->map(fn (AppPlan $plan) => $this->planPayload($plan))
             ->all();
 
-        return $this->hash($version, $plans);
+        return $this->hash($version, $plans, $with_images);
     }
 
     /**
@@ -33,9 +36,9 @@ class VersionFingerprint
      * shared app's own plan is tested. It covers that plan's servers, so
      * changing them after the test counts as a change.
      */
-    public function forPlan(AppVersion $version, AppPlan $plan): string
+    public function forPlan(AppVersion $version, AppPlan $plan, bool $with_images = true): string
     {
-        return $this->hash($version, [$this->planPayload($plan)]);
+        return $this->hash($version, [$this->planPayload($plan)], $with_images);
     }
 
     /**
@@ -56,7 +59,7 @@ class VersionFingerprint
     /**
      * @param  array<int, array<string, mixed>>  $plans
      */
-    private function hash(AppVersion $version, array $plans): string
+    private function hash(AppVersion $version, array $plans, bool $with_images): string
     {
         $payload = [
             'version' => [
@@ -71,6 +74,12 @@ class VersionFingerprint
             ],
             'plans' => $plans,
         ];
+
+        // Left out when there is nothing to add, so a version with only the image its
+        // settings describe keeps the fingerprint (and the passed tests) it had
+        if ($with_images && $images = $version->imageInputs()) {
+            $payload['images'] = $images;
+        }
 
         return Fingerprint::of($payload);
     }

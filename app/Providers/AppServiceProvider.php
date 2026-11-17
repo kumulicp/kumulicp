@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\AppInstance;
 use App\AppPlan;
 use App\AppVersion;
+use App\AppVersionImage;
 use App\Monitoring\AppInstanceObserver;
 use App\Organization;
 use App\Server;
@@ -24,6 +25,7 @@ use App\Updates\Aspects\SsoAspect;
 use App\Updates\Aspects\SubscriptionAspect;
 use App\Updates\Detection\DefinitionObserver;
 use App\Updates\Detection\ImpactResolver;
+use App\Updates\Detection\VersionImageObserver;
 use App\Updates\Steps\LdapGroupsStep;
 use App\Updates\Steps\ReleaseStep;
 use App\Updates\Steps\SettingsJobStep;
@@ -111,6 +113,9 @@ class AppServiceProvider extends ServiceProvider
         foreach (app(ImpactResolver::class)->watched() as $definition) {
             $definition::observe(DefinitionObserver::class);
         }
+
+        // A version's images are part of the version
+        AppVersionImage::observe(VersionImageObserver::class);
 
         Paginator::useBootstrap();
 
