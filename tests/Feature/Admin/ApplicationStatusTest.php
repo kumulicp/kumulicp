@@ -43,7 +43,8 @@ it('says whether each app is ready on the apps list', function (string $mode) {
     statusApp('ready-app', ready: true);
     statusApp('bare-app', ready: false);
 
-    $this->get('/admin/apps')
+    // The list shows enabled apps by default, and a not-ready app is not enabled.
+    $this->get('/admin/apps?status=all')
         ->assertInertia(fn ($page) => $page->where('apps', function ($apps) {
             $apps = collect($apps)->keyBy('slug');
 
