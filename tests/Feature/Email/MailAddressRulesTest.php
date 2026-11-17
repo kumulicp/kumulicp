@@ -9,6 +9,7 @@ use App\Services\Email\MailAddressRegistry;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Email\FakeMailAddressRegistry;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -60,7 +61,6 @@ class MailAddressRulesTest extends TestCase
     public static function invalidLocalParts(): array
     {
         return [
-            'empty' => [''],
             'uppercase' => ['Jane'],
             'leading dot' => ['.jane'],
             'trailing dot' => ['jane.'],
@@ -74,9 +74,7 @@ class MailAddressRulesTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider validLocalParts
-     */
+    #[DataProvider('validLocalParts')]
     public function test_a_valid_local_part_passes(string $local_part)
     {
         $validator = Validator::make(['email' => $local_part], ['email' => [new EmailLocalPart]]);
@@ -84,15 +82,21 @@ class MailAddressRulesTest extends TestCase
         $this->assertTrue($validator->passes());
     }
 
-    /**
-     * @dataProvider invalidLocalParts
-     */
+    #[DataProvider('invalidLocalParts')]
     public function test_an_invalid_local_part_is_rejected_with_the_explanation(string $local_part)
     {
         $validator = Validator::make(['email' => $local_part], ['email' => [new EmailLocalPart]]);
 
         $this->assertTrue($validator->fails());
         $this->assertSame(__('messages.rule.email_local_part'), $validator->errors()->first('email'));
+    }
+
+    public function test_an_empty_local_part_is_rejected_by_required()
+    {
+        // Laravel skips a rule that is not implicit for an empty value, so the controller pairs this one with `required`
+        $validator = Validator::make(['email' => ''], ['email' => ['required', 'string', new EmailLocalPart]]);
+
+        $this->assertTrue($validator->fails());
     }
 
     public function test_the_full_address_is_checked_not_just_the_local_part()
