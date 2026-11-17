@@ -12,6 +12,20 @@ use Illuminate\Support\Facades\Gate;
 
 class Forwarders extends Controller
 {
+    /**
+     * Whether the mail server can forward. A driver that never says (the interface doesn't
+     * ask for it) is assumed to; one that doesn't support it says so with supportsForwarders().
+     */
+    private function supported($email_server): bool
+    {
+        return ! method_exists($email_server, 'supportsForwarders') || $email_server->supportsForwarders();
+    }
+
+    private function unsupported()
+    {
+        return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.forwarders'));
+    }
+
     public function index()
     {
         Gate::authorize('view-emails');
@@ -21,6 +35,11 @@ class Forwarders extends Controller
         $email_forwarders = $organization->email_forwarders;
 
         $email_domains = $organization->domains()->emailEnabled()->active()->where('type', '!=', 'connection')->get();
+
+        $first_domain = $email_domains->first() ?? $custom_domains->first();
+        if ($first_domain && ! $this->supported(Domain::connect($first_domain, 'email'))) {
+            return $this->unsupported();
+        }
         $default_domain = $email_domains->filter(function ($domain, int $key) {
             return $domain->is_primary;
         })->first();
@@ -70,6 +89,10 @@ class Forwarders extends Controller
         $forwarder_email = $validated['forwarder'] != 'new' ? $validated['forwarder'] : $validated['new_forwarder'].'@'.$domain->name;
 
         $email_server = Domain::connect($domain, 'email');
+        if (! $this->supported($email_server)) {
+            return $this->unsupported();
+        }
+
         $email_response = $email_server->addEmail($domain, $validated['forwarder'], 'forwarder', ['forwarder' => $forwarder_email, 'destination' => $validated['destination']]);
 
         $forwarder = EmailForwarder::where('organization_id', $organization->id)->where('email', $forwarder_email)->first();
@@ -95,9 +118,11 @@ class Forwarders extends Controller
         Gate::authorize('edit-email-settings', $forwarder);
 
         $email_server = Domain::connect($forwarder->domain, 'email');
-        if ($email_server) {
-            $email_server->deleteEmailForwarders($forwarder->email, $destination);
+        if (! $this->supported($email_server)) {
+            return $this->unsupported();
         }
+
+        $email_server->deleteEmailForwarders($forwarder->email, $destination);
 
         return redirect('/settings/email/forwarders/')->with('success', __('organization.email.deleted', ['email' => $forwarder->email]));
     }

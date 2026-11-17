@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Ldap\Actions\Dn;
+use App\Ldap\Actions\PasswordHash;
 use App\Ldap\Models\Admin;
 use App\Support\Facades\AccountManager;
 use Illuminate\Console\Command;
@@ -37,7 +38,7 @@ class ProvisionLdapDirectoryReader extends Command
             $account->setDn($dn);
         }
 
-        $account->userPassword = '{CRYPT}'.crypt($password, '$1$'.Str::random(8).'$');
+        $account->userPassword = PasswordHash::make($password);
         $account->save();
 
         $this->info('Directory reader account provisioned at: '.$dn);

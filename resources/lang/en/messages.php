@@ -97,6 +97,7 @@ return [
         'domain_available' => 'Your domain format is incorrect. (Example: example.com)',
         'domain_name' => 'Must be standard domain (example.com). If you believe your domain should work, click the question mark at the top',
         'domain_name_required' => 'Domain name required',
+        'email_local_part' => 'Use lowercase letters and numbers, with single dots, hyphens or underscores between them (for example jane.doe). Up to 64 characters.',
         'email_address_exists' => 'This email is already being used by another user',
         'group_name_not_used' => 'Group name already exists',
         'main_contact' => 'Phone number required for main contacts',

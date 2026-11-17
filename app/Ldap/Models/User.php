@@ -5,6 +5,7 @@ namespace App\Ldap\Models;
 use App\AppInstance;
 use App\AppRole;
 use App\Ldap\Actions\Dn;
+use App\Ldap\Actions\PasswordHash;
 use App\SuborgUser;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization;
@@ -12,7 +13,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Arr;
-use LdapRecord\Models\Attributes\Password;
 use LdapRecord\Models\Concerns\CanAuthenticate;
 use LdapRecord\Models\Model;
 use LdapRecord\Models\OpenLDAP\Entry;
@@ -97,7 +97,7 @@ class User extends Entry implements Authenticatable
 
     public function setPassword(string $password)
     {
-        $this->setAttribute('userPassword', Password::md5Crypt($password));
+        $this->setAttribute('userPassword', PasswordHash::make($password));
     }
 
     public function apps()
