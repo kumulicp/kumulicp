@@ -130,7 +130,10 @@ it('is not stopped by tasks created before the key existed', function () {
 it('swaps a replacing action in for the open task that has not started', function () {
     $organization = dedupOrganization();
 
+    // A new task is queued straight away, and a queued one is never swapped out
+    // (see below), so put it back to waiting
     $first = ActionFacade::execute(new DedupReplacingAction($organization, ['a' => 1]));
+    $first->forceFill(['status' => 'pending'])->save();
     $second = ActionFacade::execute(new DedupReplacingAction($organization, ['a' => 2]));
 
     expect($second)->toBeInstanceOf(Task::class);
