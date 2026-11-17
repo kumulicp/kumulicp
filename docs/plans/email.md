@@ -1,6 +1,6 @@
 # Plan: Email ready for production (Stalwart, optionally on top of LDAP)
 
-Status: in progress. Phase 1 (LDAP hardening) is written and waiting on a run against a live directory; the settings foundation of Phase 2 (2a) is merged.
+Status: in progress. Phase 1 (LDAP hardening) and most of 2b (an organization address without `orgMail`) are built and pass CI, including the tests that run against a live directory; the settings foundation of Phase 2 (2a) is merged. What is left is listed under "Still to do for 2b".
 
 Goal: email that is ready for production, on a Stalwart mail server that is managed by a separate plugin (not in this repository). Stalwart must be able to use LDAP as its authentication backend **and** run without LDAP, so everything email-related has to layer on LDAP optionally. Setting KumuliCP up should not need custom LDAP attributes unless an admin wants a feature that cannot work without one.
 
@@ -10,7 +10,7 @@ Every change names the item below it belongs to, and a slice is only finished wh
 
 ## Implementation status
 
-**2b, written and being run in CI** (branch `claude/lucid-gauss-rsgui3`): giving a user an organization address, without `orgMail`.
+**2b, built and passing CI** (branch `claude/lucid-gauss-rsgui3`): giving a user an organization address, without `orgMail`.
 - `mailboxes` table and `Mailbox` model (`pending` while offered, `active` once accepted; the previous email and recovery email are kept so it can be undone). `config/email.php` has the undo window (7 days), the recovery takeover delay (24 hours) and the confirmation link lifetime.
 - `MailboxService`: `offer`, `plan`, `accept`, `undo`, `remove`. Accepting a different address moves the current email to the recovery email (or keeps a working recovery email, or asks for one when the current email is on a hosted domain); the address the user already has is only recorded. Writes happen in an order that never loses the old address, a failure puts everything back, the old address is told, and `MailboxActivated`, `MailboxDeactivated` and `UserUpdated` are dispatched (a mail server driver that keeps its own accounts listens for the first two).
 - Recovery email: usable means set, different from `mail` and not on a hosted domain. Resets and invites go to it (both user models). Changing it needs the password and a confirmation link, a replacement takes 24 hours to take over, and the old address is told. The address a user is created with is kept as their recovery email.
@@ -30,10 +30,10 @@ Every change names the item below it belongs to, and a slice is only finished wh
 - Deleting a user removes their recovery email (both account manager drivers).
 - English and Spanish strings, feature and unit tests (an in-memory directory fake stands in for LDAP).
 
-**Not verified yet** (the environment these were written in could not install Composer dependencies, so no PHP test has been run)
-- Every test added for 2a and Phase 1 is unrun. `php -l`, `eslint` and `vue-tsc` pass; `vite build` could not run.
-- Phase 1 tests that need a live directory are in `tests/Feature/AccountManager/` (`LdapEmailInterfaceTest`, plus the 2a `RecoveryEmailCleanupTest`) and only run in the `AccountManagerLdap` suite. The rest run in the normal suites against in-memory fakes.
-- The LDAP calls were checked by reading LdapRecord 3.8.6's source, not by running them: `setAttribute($attr, [])` followed by `save()` removes the attribute, `addAttributeValue()` skips a value already there, and `whereEndsWith`, `whereHas` and `exists()` exist.
+**Verified, and what is not**
+- CI (phpstan, eslint, the Unit and Feature suites, the `AccountManagerLdap` suite against a real OpenLDAP, the browser tests) passes for everything above, on both PHP runtimes. That includes the directory tests: the docker-mailserver driver, hosting an address a user already has, and switching to a different address and back.
+- Not exercised by any test: the new profile card and modal as a person sees it (the browser tests don't open it), and the Spanish text.
+- The Stalwart plugin is outside this repository, so nothing here has run against Stalwart. `MailboxActivated` and `MailboxDeactivated` are the hooks for it, and the plugin has to listen for them.
 
 **Differences from the first version of this plan**
 - Built before Phase 1. It is independent of it, but the cheap Phase 1 fixes should go next.
@@ -123,7 +123,7 @@ An admin who wants a user to have an address creates the mailbox as `pending` an
 
 ## Phases
 
-### Phase 1 - LDAP hardening (written, not yet run against a directory)
+### Phase 1 - LDAP hardening (done; CI runs its tests, including against a live directory)
 
 Independent of Stalwart. Each item has a test; the ones that need a directory are marked (LDAP).
 
@@ -146,7 +146,7 @@ Found, not fixed (belongs to later items):
 - `ProfileEdit.vue` has a branch for `profile.org_emails` that the controller never fills, so it never shows. Remove or replace it in 2d.
 - `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f).
 
-Exit: the LDAP email suite passes against a live directory in CI (not yet checked).
+Exit: the LDAP email suite passes against a live directory in CI (checked: it does).
 
 ### Phase 2 - Identity and mailbox model
 
