@@ -102,7 +102,6 @@ class VersionUpdateChecker
 
             $result['latest'] = $latest;
         } catch (Throwable $exception) {
-            unset($result['digest']);
             $result['error'] = $this->message($exception);
         }
 
