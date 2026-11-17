@@ -85,7 +85,8 @@ class ApplicationActivate extends NativeAction
 
         // A new activation; a rebuilt one has its instance already
         if (! (array_key_exists('app_instance_id', $custom_values) && AppInstance::find($custom_values['app_instance_id']))) {
-            $parent_app_instance = $parent_app_instance ?? $is_shared_app ? $plan->shared_app : null;
+            // The parent the caller names, else the hub a shared plan lives in
+            $parent_app_instance = $parent_app_instance ?? ($is_shared_app ? $plan->shared_app : null);
             $this->parent_app_instance = $parent_app_instance;
         }
 
