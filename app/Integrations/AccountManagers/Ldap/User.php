@@ -9,6 +9,7 @@ use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\User as LdapUser;
+use App\Mailbox;
 use App\Organization;
 use App\SuborgUser;
 use App\Support\AccountManager\UserManager;
@@ -122,7 +123,8 @@ class User extends UserManager
 
     public function isUserAccessType($type)
     {
-        return $this->userAccessType() == $type;
+        // userAccessType() is an AccessType, never the string: compare what it stands for
+        return $this->userAccessType()->value === $type;
     }
 
     public function update(array $data)
@@ -255,6 +257,7 @@ class User extends UserManager
         }
 
         UserRecoveryEmail::where('username', $this->attribute('username'))->delete();
+        Mailbox::where('username', $this->attribute('username'))->delete();
 
         $this->removeFromAllGroups();
         $this->user->delete();
@@ -271,7 +274,6 @@ class User extends UserManager
             'username' => Settings::get('ldap_username', 'cn'),
             'personal_email' => Settings::get('ldap_personal_email', 'mail'),
             'name' => Settings::get('ldap_name', 'displayName'),
-            'org_email' => Settings::get('ldap_org_email', 'mail'),
             'access_type' => Settings::get('ldap_access_type', 'employeeType'),
             'password' => Settings::get('ldap_password', 'userPassword'),
         ];

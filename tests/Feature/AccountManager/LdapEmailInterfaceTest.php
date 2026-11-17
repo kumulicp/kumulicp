@@ -4,9 +4,13 @@ use App\Integrations\ServerManagers\DockerMailServer\Interfaces\LdapEmailInterfa
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Email;
 use App\Ldap\Models\User as LdapUser;
+use App\Mailbox;
 use App\OrgDomain;
+use App\Services\Email\RecoveryEmailService;
 use App\Support\Facades\AccountManager;
+use App\Services\Email\MailboxService;
 use App\Support\Facades\Settings;
+use Illuminate\Support\Facades\DB;
 use App\User;
 use Tests\Support\TestSupports;
 
@@ -26,11 +30,20 @@ function ldapEmailFixtures(string $driver): array
     test()->actingAs($admin);
     $organization = $admin->organization;
 
+    // The LDAP mail server the two domains belong to (its interface answers without extra setup)
+    DB::table('servers')->insert([[
+        'id' => 2, 'app_instance_id' => 0, 'name' => 'Mail', 'address' => 'mail.local', 'host' => 'mail.local',
+        'api_key' => 'api_key', 'api_secret' => 'api_secret', 'default_web_server' => 0, 'default_email_server' => 1,
+        'default_database_server' => 0, 'internal_address' => 'localhost', 'type' => 'email', 'interface' => 'ldap',
+        'settings' => '{}', 'ip' => '127.0.0.1', 'status' => 'active',
+    ]]);
+    DB::table('org_servers')->insert([['id' => 2, 'organization_id' => $organization->id, 'server_id' => 2]]);
+
     return [
         new LdapEmailInterface,
         $organization,
-        OrgDomain::factory()->create(['organization_id' => $organization->id, 'name' => 'example.com']),
-        OrgDomain::factory()->create(['organization_id' => $organization->id, 'name' => 'myexample.com']),
+        OrgDomain::factory()->create(['organization_id' => $organization->id, 'name' => 'example.com', 'email_server_id' => 2]),
+        OrgDomain::factory()->create(['organization_id' => $organization->id, 'name' => 'myexample.com', 'email_server_id' => 2]),
     ];
 }
 
@@ -65,38 +78,34 @@ it('lists only the mailboxes at exactly the domain, not ones whose domain merely
         ->and(array_column($interface->emailList($other_domain), 'email'))->toBe(['jo@myexample.com']);
 })->with('account_manager_drivers');
 
-it('adds and removes a user\'s mailboxes, leaving a plain user once the last one is gone', function (string $driver) {
+it('makes a user\'s own entry a mailbox and turns it back into a plain user', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
-    [$interface, $organization, $domain, $other_domain] = ldapEmailFixtures($driver);
+    [$interface, $organization, $domain] = ldapEmailFixtures($driver);
     $user = AccountManager::users()->find('testing1');
     $dn = Dn::create($organization, 'users', 'testing1');
     $classes = fn () => array_map('strtolower', LdapUser::find($dn)->getAttribute('objectclass'));
 
     $interface->createUserEmail($user, $domain);
     $interface->createUserEmail($user, $domain);
-    $interface->createUserEmail($user, $other_domain);
 
-    $with_mail = LdapUser::find($dn);
-    expect($with_mail->getAttribute('orgmail'))->toEqualCanonicalizing(['testing1@example.com', 'testing1@myexample.com'])
-        ->and($classes())->toContain('postfixbookmailaccount')
-        ->and($with_mail->getFirstAttribute('mailQuota'))->toBe('1G');
+    $mailbox = LdapUser::find($dn);
+    expect($classes())->toContain('postfixbookmailaccount')
+        ->and($mailbox->getFirstAttribute('mailQuota'))->toBe('1G')
+        ->and($mailbox->getFirstAttribute('mailHomeDirectory'))->toBe('/var/mail/demo/testing1/')
+        ->and($mailbox->getFirstAttribute('mailStorageDirectory'))->toBe('maildir:/var/mail/demo/testing1/')
+        ->and($mailbox->getFirstAttribute('mail'))->toBe('testing1@example.com');
 
-    $interface->deleteUserEmail($user, 'TESTING1@example.com');
-
-    expect(LdapUser::find($dn)->getAttribute('orgmail'))->toEqual(['testing1@myexample.com'])
-        ->and($classes())->toContain('postfixbookmailaccount');
-
-    $interface->deleteUserEmail($user, 'testing1@myexample.com');
+    $interface->deleteUserEmail($user);
 
     $plain = LdapUser::find($dn);
-    expect($plain->getAttribute('orgmail') ?? [])->toBe([])
-        ->and($plain->getAttribute('mailquota') ?? [])->toBe([])
+    expect($plain->getAttribute('mailquota') ?? [])->toBe([])
         ->and($plain->getAttribute('mailhomedirectory') ?? [])->toBe([])
         ->and($plain->getAttribute('mailstoragedirectory') ?? [])->toBe([])
-        ->and($classes())->not->toContain('postfixbookmailaccount');
+        ->and($classes())->not->toContain('postfixbookmailaccount')
+        ->and($plain->getFirstAttribute('mail'))->toBe('testing1@example.com');
 })->with('account_manager_drivers');
 
-it('refuses to add a mailbox to a user that is not in the directory', function (string $driver) {
+it('refuses to make a mailbox of a user that is not in the directory', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
     [$interface, $organization, $domain] = ldapEmailFixtures($driver);
     $user = AccountManager::users()->find('testing1');
@@ -105,15 +114,57 @@ it('refuses to add a mailbox to a user that is not in the directory', function (
     expect(fn () => $interface->createUserEmail($user, $domain))->toThrow(RuntimeException::class);
 })->with('account_manager_drivers');
 
-it('reads a user\'s mailboxes back through the mapped org email attribute', function (string $driver) {
+it('hosts the address a user already signs in with without changing their email', function (string $driver) {
     skipUnlessDriver('ldap', $driver);
-    [$interface, , $domain, $other_domain] = ldapEmailFixtures($driver);
-    Settings::update('ldap_org_email', 'orgMail');
-    $interface->createUserEmail(AccountManager::users()->find('testing1'), $domain);
-    $interface->createUserEmail(AccountManager::users()->find('testing1'), $other_domain);
+    [, $organization, $domain] = ldapEmailFixtures($driver);
+    $user = AccountManager::users()->find('testing1');
+    $dn = Dn::create($organization, 'users', 'testing1');
+    $mailboxes = app(MailboxService::class);
 
+    $mailbox = $mailboxes->offer($user, $domain, 'testing1');
+    $mailboxes->accept($user, $mailbox);
+
+    $entry = LdapUser::find($dn);
+    expect($mailbox->fresh()->status)->toBe(Mailbox::ACTIVE)
+        ->and($mailbox->fresh()->swapped_at)->toBeNull()
+        ->and($entry->getFirstAttribute('mail'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $entry->getAttribute('objectclass')))->toContain('postfixbookmailaccount');
+})->with('account_manager_drivers');
+
+it('switches a user to an organization address, moving their email to the recovery email, and switches back', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    [, $organization, , $other_domain] = ldapEmailFixtures($driver);
+    $user = AccountManager::users()->find('testing1');
+    $dn = Dn::create($organization, 'users', 'testing1');
+    $mailboxes = app(MailboxService::class);
+    $recovery = app(RecoveryEmailService::class);
+
+    $mailbox = $mailboxes->offer($user, $other_domain, 'testing1');
+    $mailboxes->accept($user, $mailbox);
+
+    $entry = LdapUser::find($dn);
+    expect($entry->getFirstAttribute('mail'))->toBe('testing1@myexample.com')
+        ->and($recovery->get('testing1'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $entry->getAttribute('objectclass')))->toContain('postfixbookmailaccount')
+        ->and($mailbox->fresh()->previous_mail)->toBe('testing1@example.com')
+        ->and($mailbox->fresh()->canBeUndone())->toBeTrue();
+
+    $mailboxes->undo(AccountManager::users()->find('testing1'), $mailbox->fresh());
+
+    $back = LdapUser::find($dn);
+    expect($back->getFirstAttribute('mail'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $back->getAttribute('objectclass')))->not->toContain('postfixbookmailaccount')
+        ->and($mailbox->fresh()->status)->toBe(Mailbox::PENDING);
+})->with('account_manager_drivers');
+
+it('treats a user whose access type is standard as one who may be given an organization address', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    ldapEmailFixtures($driver);
     $user = AccountManager::users()->find('testing1');
 
-    expect($user->attribute('org_email', 'array'))->toEqualCanonicalizing(['testing1@example.com', 'testing1@myexample.com'])
-        ->and($user->attribute('personal_email'))->toBe('testing1@example.com');
+    $user->update(['access_type' => 'standard']);
+    $user->save();
+
+    expect(AccountManager::users()->find('testing1')->isUserAccessType('standard'))->toBeTrue()
+        ->and(AccountManager::users()->find('testing1')->isUserAccessType('basic'))->toBeFalse();
 })->with('account_manager_drivers');

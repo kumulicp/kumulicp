@@ -72,15 +72,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           :error="$page.props.errors.personal_email"
           :error-messages="$page.props.errors.personal_email"
           />
-        <va-input v-model="form.org_email"
-          :label="$t('settings.ldapOrganizationEmail')"
-          class="mb-3"
-          id="orgEmail"
-          placeholder="mail"
-          immediateValidation
-          :error="$page.props.errors.org_email"
-          :error-messages="$page.props.errors.org_email"
-          />
         <va-input v-model="form.aliases"
           :label="$t('settings.ldapAliases')"
           class="mb-3"
@@ -148,7 +139,6 @@ export default {
         username: this.settings.username,
         personal_email: this.settings.personal_email,
         name: this.settings.name,
-        org_email: this.settings.org_email,
         aliases: this.settings.aliases,
         recovery_email: this.settings.recovery_email,
         access_type: this.settings.access_type,

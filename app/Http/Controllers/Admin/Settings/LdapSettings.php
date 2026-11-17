@@ -22,7 +22,6 @@ class LdapSettings extends Controller
                 'username' => Settings::get('ldap_username'),
                 'personal_email' => Settings::get('ldap_personal_email'),
                 'name' => Settings::get('ldap_name'),
-                'org_email' => Settings::get('ldap_org_email'),
                 'aliases' => Settings::get('ldap_aliases'),
                 'recovery_email' => Settings::get('ldap_recovery_email'),
                 'access_type' => Settings::get('ldap_access_type'),
@@ -53,7 +52,6 @@ class LdapSettings extends Controller
             'username' => 'nullable|string|max:100',
             'personal_email' => 'nullable|string|max:100',
             'name' => 'nullable|string|max:100',
-            'org_email' => 'nullable|string|max:100',
             'aliases' => $new_attribute,
             'recovery_email' => $new_attribute,
             'access_type' => 'nullable|string|max:100',
@@ -80,7 +78,6 @@ class LdapSettings extends Controller
         Settings::update('ldap_username', Arr::get($validated, 'username'));
         Settings::update('ldap_personal_email', Arr::get($validated, 'personal_email'));
         Settings::update('ldap_name', Arr::get($validated, 'name'));
-        Settings::update('ldap_org_email', Arr::get($validated, 'org_email'));
         Settings::update('ldap_aliases', Arr::get($validated, 'aliases'));
         Settings::update('ldap_recovery_email', Arr::get($validated, 'recovery_email'));
         Settings::update('ldap_access_type', Arr::get($validated, 'access_type'));

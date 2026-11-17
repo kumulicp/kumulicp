@@ -147,6 +147,18 @@ return [
             'delete' => 'No tienes permiso para eliminar esta cuenta de correo',
             'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
         ],
+        'mailbox' => [
+            'has_one' => 'Este usuario ya tiene un correo de la organización, o uno pendiente de aceptar. Elimínalo antes de elegir otro.',
+            'taken' => ':email ya está en uso. Elige otro nombre.',
+            'not_pending' => 'No hay ningún correo de la organización pendiente de aceptar.',
+            'recovery_required' => 'Tu correo actual está en un dominio alojado aquí, así que no puede recuperar tu cuenta. Indica antes un correo de recuperación en otro proveedor.',
+            'undo_expired' => 'Es demasiado tarde para volver atrás, o no hay nada de lo que volver.',
+            'failed' => 'No se pudo configurar el correo de la organización. No se cambió nada. Inténtalo de nuevo y avisa a soporte si sigue ocurriendo.',
+            'offered' => 'Se ha ofrecido :email a :name. Tiene que aceptarlo desde su perfil.',
+            'accepted' => 'Ahora inicias sesión con :email.',
+            'undone' => 'Has vuelto a :email.',
+            'removed' => 'Se eliminó :email.',
+        ],
     ],
     'suborganization' => [
         'created' => '¡Suborganización creada con éxito!',

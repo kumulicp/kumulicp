@@ -506,6 +506,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
     Route::prefix('profile')->group(function () {
         Route::get('', 'Profile@index')->name('profile');
         Route::post('update/passwd', 'Profile@updatePassword')->name('profile.update.password');
+        Route::post('org-email', 'Account\User\OrgEmail@store')->name('profile.org_email.store');
+        Route::post('org-email/accept', 'Account\User\OrgEmail@accept')->name('profile.org_email.accept');
+        Route::post('org-email/undo', 'Account\User\OrgEmail@undo')->name('profile.org_email.undo');
         Route::post('recovery-email', 'Profile@requestRecoveryEmail')->name('profile.recovery.request');
         Route::get('recovery-email/{hash}', 'Profile@confirmRecoveryEmail')->middleware('signed')->name('profile.recovery.confirm');
         Route::post('', 'Profile@update')->name('profile.update');

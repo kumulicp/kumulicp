@@ -29,7 +29,7 @@ class MailAddressAvailable implements DataAwareRule, ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $domain = auth()->user()?->organization?->domains()->find($this->data['domain'] ?? null);
+        $domain = auth()->user()->organization?->domains()->find($this->data['domain'] ?? null);
 
         // A missing or foreign domain is reported by the domain's own rule
         if (! $domain || ! is_string($value)) {
@@ -38,7 +38,7 @@ class MailAddressAvailable implements DataAwareRule, ValidationRule
 
         $address = Str::lower($value.'@'.$domain->name);
 
-        if (app(MailAddressRegistry::class)->inUse($address, auth()->user()?->username)) {
+        if (app(MailAddressRegistry::class)->inUse($address, auth()->user()->username)) {
             $fail('messages.rule.ldap_email_not_exists')->translate();
         }
     }

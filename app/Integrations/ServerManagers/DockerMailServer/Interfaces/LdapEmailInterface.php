@@ -183,6 +183,12 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
 
     public function deleteEmailForwarders(string $forwarder_address, string $destination_address) {}
 
+    /**
+     * Makes the user's own directory entry a docker-mailserver mailbox: the mail object class,
+     * the quota and where the mail is kept. Their address is their `mail`, which is set by
+     * the switch to the address (not here), and they sign in to the mailbox with the
+     * password of their account.
+     */
     public function createUserEmail(UserManager $user, OrgDomain $domain)
     {
         $username = $user->attribute('username');
@@ -192,12 +198,10 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
             throw new \RuntimeException("User $username was not found in the directory.");
         }
 
-        $email_address = strtolower("$username@{$domain->name}");
         $email_location = "/var/mail/{$domain->organization->slug}/$username/";
 
         // addAttributeValue() skips a value the user already has
         $ldap_user->addAttributeValue('objectClass', 'PostfixBookMailAccount');
-        $ldap_user->addAttributeValue('orgMail', $email_address);
         if ($quota = self::quota($domain->organization->plan->setting('email.storage'))) {
             $ldap_user->mailQuota = $quota;
         }
@@ -207,15 +211,16 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
 
         return [
             'username' => $ldap_user->getFirstAttribute('cn'),
-            'emails' => $ldap_user->getAttribute('orgmail'),
+            'emails' => $ldap_user->getAttribute('mail'),
         ];
     }
 
     /**
-     * Takes one address off the user. Once the user has none left, the mail attributes and
-     * the mail object class that came with the first one go too, so a plain user is left.
+     * Turns the user's entry back into a plain user: the mail attributes and the object class
+     * that came with the mailbox go. (The address is their `mail`, which stays; what it is
+     * set to is up to the caller.)
      */
-    public function deleteUserEmail(UserManager $user, string $email)
+    public function deleteUserEmail(UserManager $user, ?string $email = null)
     {
         $username = $user->attribute('username');
         $ldap_user = User::find(Dn::create($user->organization(), 'users', $username));
@@ -224,22 +229,14 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
             return;
         }
 
-        $remaining = array_values(array_filter(
-            $ldap_user->getAttribute('orgmail') ?? [],
-            fn ($address) => strcasecmp($address, $email) !== 0,
-        ));
-        $ldap_user->setAttribute('orgMail', $remaining);
-
-        if ($remaining === []) {
-            foreach (['mailQuota', 'mailHomeDirectory', 'mailStorageDirectory'] as $attribute) {
-                $ldap_user->setAttribute($attribute, []);
-            }
-
-            $ldap_user->setAttribute('objectClass', array_values(array_filter(
-                $ldap_user->getAttribute('objectclass') ?? [],
-                fn ($class) => strcasecmp($class, 'PostfixBookMailAccount') !== 0,
-            )));
+        foreach (['mailQuota', 'mailHomeDirectory', 'mailStorageDirectory'] as $attribute) {
+            $ldap_user->setAttribute($attribute, []);
         }
+
+        $ldap_user->setAttribute('objectClass', array_values(array_filter(
+            $ldap_user->getAttribute('objectclass') ?? [],
+            fn ($class) => strcasecmp($class, 'PostfixBookMailAccount') !== 0,
+        )));
 
         $ldap_user->save();
     }

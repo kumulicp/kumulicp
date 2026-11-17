@@ -13,13 +13,17 @@ use App\Http\Controllers\Controller;
 use App\NewUserCode;
 use App\Notifications\ResetPassword;
 use App\OrgDomain;
+use App\Mailbox;
 use App\Rules\AccountEmailChecks;
+use App\Rules\EmailLocalPart;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
 use App\Rules\UserNotExists;
 use App\Services\AdditionalStorageService;
+use App\Services\Email\MailboxException;
+use App\Services\Email\MailboxService;
 use App\SuborgUser;
-use App\Support\Email\AddressDomains;
+use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Domain;
@@ -31,6 +35,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -47,13 +52,19 @@ class Users extends Controller
             'none' => __('labels.deactivated'),
         ];
 
+        $users = AccountManager::users()->collect();
+        $emails = UserEmails::lookup(
+            $users->map(fn ($user) => $user->attribute('username'))->all(),
+            $users->mapWithKeys(fn ($user) => [$user->attribute('username') => $user->attribute('email')])->all(),
+        );
+
         return inertia('Organization/Users/UsersList', [
-            'users' => AccountManager::users()->collect()->map(function ($user, $value) {
+            'users' => $users->map(function ($user, $value) use ($emails) {
                 return [
                     'id' => $user->attribute('username'),
                     'name' => $user->attribute('name'),
-                    'personal_email' => $user->attribute('personal_email'),
-                    'org_email' => $user->attribute('org_email'),
+                    'personal_email' => $emails[$user->attribute('username')]['personal_email'],
+                    'org_email' => $emails[$user->attribute('username')]['org_email'],
                     'access_type' => $user->userAccessType()?->label(),
                     'links' => [
                         'edit' => route('users.edit', $user->attribute('username')),
@@ -147,6 +158,8 @@ class Users extends Controller
             }
         }
 
+        $user_emails = UserEmails::for($user);
+
         return inertia('Organization/Users/UserView', [
             'user' => [
                 'id' => $user->attribute('username'),
@@ -154,8 +167,8 @@ class Users extends Controller
                 'first_name' => $user->attribute('first_name'),
                 'last_name' => $user->attribute('last_name'),
                 'phone_number' => $user->attribute('phone_number'),
-                'personal_email' => $user->attribute('personal_email'),
-                'org_email' => $user->attribute('org_email'),
+                'personal_email' => $user_emails['personal_email'],
+                'org_email' => $user_emails['org_email'],
                 'type' => Subscription::base()->accessTypeName($user->userAccessType()),
                 'storage' => $user_storage,
                 'url' => [
@@ -300,21 +313,21 @@ class Users extends Controller
             }
         }
 
+        $user_emails = UserEmails::for($user);
+        $mailbox = app(MailboxService::class)->forUser($user->attribute('username'));
+
         $email_domains = [];
         $add_email_account = false;
-        if (auth()->user()->can('add-user-email-account', $user->attribute('username'))) {
+        // One organization address per user: only someone who has none (not even an offer) can be given one
+        if (! $mailbox && auth()->user()->can('add-user-email-account', $user->attribute('username'))) {
             $add_email_account = true;
-            $emails = Arr::wrap($user->attribute('org_email', 'array'));
 
             $email_domains = $organization->domains()->emailEnabled()->get()->map(function ($email_domain) {
                 return [
                     'id' => $email_domain->id,
                     'name' => $email_domain->name,
                 ];
-            })
-                // Domains the user has no address at yet
-                ->reject(fn (array $domain) => AddressDomains::hasAddressAt($emails, $domain['name']))
-                ->values();
+            })->values();
         }
 
         return inertia('Organization/Users/UserEdit', [
@@ -324,8 +337,10 @@ class Users extends Controller
                 'first_name' => $user->attribute('first_name'),
                 'last_name' => $user->attribute('last_name'),
                 'phone_number' => $user->attribute('phone_number'),
-                'personal_email' => $user->attribute('email'),
-                'org_email' => $user->attribute('org_email'),
+                'personal_email' => $user_emails['personal_email'],
+                'org_email' => $user_emails['org_email'],
+                // Offered by an administrator and not accepted by the user yet
+                'offered_email' => $mailbox?->status === Mailbox::PENDING ? $mailbox->address : null,
                 'additional_storage' => $user_storage,
                 'organization' => $user->organization()->id,
                 'can' => [
@@ -364,11 +379,13 @@ class Users extends Controller
 
         $organization = auth()->user()->organization;
 
+        // Someone with an organization address signs in with it: it is theirs to change, not the administrator's
+        $has_mailbox = app(MailboxService::class)->active($userid) !== null;
+
         /* Validate */
-        $validatedData = $request->validate([
+        $rules = [
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($userid)],
             'phone_number' => [new MainContact($userid, $organization)],
             'additional_storage' => 'nullable|array',
             'organization' => [
@@ -381,7 +398,13 @@ class Users extends Controller
                     $fail(__('messages.rule.organization'));
                 },
             ],
-        ]);
+        ];
+
+        if (! $has_mailbox) {
+            $rules['personal_email'] = ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($userid)];
+        }
+
+        $validatedData = $request->validate($rules);
 
         $new_organization = \App\Organization::find($validatedData['organization']);
 
@@ -410,13 +433,18 @@ class Users extends Controller
         }
 
         $name = $request->first_name.' '.$request->last_name;
-        $user->update([
+        $attributes = [
             'phone_number' => str_replace('_', '', $request->phone_number),
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'name' => $name,
-            'email' => $request->personal_email,
-        ]);
+        ];
+
+        if (! $has_mailbox) {
+            $attributes['email'] = $request->personal_email;
+        }
+
+        $user->update($attributes);
         $user->updateOrganization($new_organization);
         $user->save();
 
@@ -442,45 +470,52 @@ class Users extends Controller
         return redirect('/users')->with('success', __('organization.user.removed', ['user' => $userid]));
     }
 
-    public function createAccountEmail(string $username, OrgDomain $domain)
+    /**
+     * An administrator offers the user an organization address (their username at the domain).
+     * Nothing about the user changes until they accept it from their profile: switching what
+     * someone signs in with can orphan their accounts in apps, so it is theirs to decide.
+     */
+    public function createAccountEmail(string $username, OrgDomain $domain, MailboxService $mailboxes)
     {
         $user = AccountManager::users()->find($username);
         Gate::authorize('view-user', $user);
         Gate::authorize('edit-user', $user);
         Gate::authorize('add-user-email-account-to-domain', [$username, $domain]);
 
-        try {
-            $email_server = Domain::connect($domain, 'email');
-            $add_email_response = $email_server->createUserEmail($user, $domain);
-        } catch (Throwable $e) {
-            report($e);
-            Log::critical($e->getMessage(), ['organization_id' => $domain->organization_id]);
+        $local_part = Str::lower($username);
 
-            return redirect('/users/'.$username)->with('error', __('organization.user.denied.email_failed'));
+        if (Validator::make(['local_part' => $local_part], ['local_part' => [new EmailLocalPart]])->fails()) {
+            return redirect('/users/'.$username)->with('error', __('messages.rule.email_local_part'));
         }
 
-        return redirect('/users/'.$username)->with('success', __('organization.user.email.created', ['user' => $user->attribute('name')]));
+        try {
+            $mailbox = $mailboxes->offer($user, $domain, $local_part, $user->attribute('name'));
+        } catch (MailboxException $e) {
+            return redirect('/users/'.$username)->with('error', $e->getMessage());
+        }
+
+        return redirect('/users/'.$username)->with('success', __('organization.email.mailbox.offered', ['name' => $user->attribute('name'), 'email' => $mailbox->address]));
     }
 
-    public function removeAccountEmail(string $username, string $email_address)
+    public function removeAccountEmail(string $username, string $email_address, MailboxService $mailboxes)
     {
         $user = AccountManager::users()->find($username);
         Gate::authorize('view-user', $user);
         Gate::authorize('edit-user', $user);
 
-        $split = explode('@', $email_address);
-        $domain = OrgDomain::where('name', $split[1])
-            ->where('organization_id', auth()->user()->organization->id)
-            ->first();
+        $mailbox = $mailboxes->forUser($username);
 
-        if (! $domain) {
+        if (! $mailbox || strcasecmp($mailbox->address, $email_address) !== 0) {
             return redirect('/users/'.$username)->with('error', __('organization.user.denied.email_failed'));
         }
 
-        $email_server = Domain::connect($domain, 'email');
-        $email_server->deleteUserEmail($user, $email_address);
+        try {
+            $mailboxes->remove($user, $mailbox);
+        } catch (MailboxException $e) {
+            return redirect('/users/'.$username)->with('error', $e->getMessage());
+        }
 
-        return redirect('/users/'.$username)->with('success', __('organization.user.email.removed', ['user' => $user->attribute('name')]));
+        return redirect('/users/'.$username)->with('success', __('organization.email.mailbox.removed', ['email' => $email_address]));
     }
 
     public function resetPassword(string $username)
