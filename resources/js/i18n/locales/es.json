@@ -1650,6 +1650,21 @@
     "passed": "Aprobado",
     "failed": "Fallido"
   },
+  "recoveryEmail": {
+    "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de la de tu organización.",
+    "reminderAction": "Añadir un correo de recuperación",
+    "label": "Correo de recuperación",
+    "hint": "Solo se usa para enviar un enlace de restablecimiento de contraseña. No puede ser una dirección alojada aquí.",
+    "none": "Sin definir",
+    "notUsable": "Este no se puede usar para un restablecimiento, así que el enlace va a tu correo de inicio de sesión.",
+    "pending": "Esperando a que abras el enlace enviado a {email}",
+    "add": "Añadir",
+    "change": "Cambiar",
+    "newAddress": "Nuevo correo de recuperación",
+    "save": "Enviar enlace de confirmación",
+    "signInEmail": "Correo electrónico",
+    "signInEmailHint": "Es el correo con el que inicias sesión. Viene con tu dirección de la organización y se cambia desde allí."
+  },
   "orgEmail": {
     "title": "Correo electrónico",
     "description": "La base de datos del panel de control es la fuente de verdad de los datos de correo. Use esta página para copiarlos de nuevo al directorio si alguna vez dejan de coincidir.",
@@ -1660,6 +1675,7 @@
     "recoveryTitle": "Correos de recuperación",
     "recoveryCount": "Hay {count} correos de recuperación guardados en el panel de control.",
     "recoveryNoLdap": "Los correos de recuperación se guardan solo en la base de datos del panel de control. No hay directorio con el que sincronizar.",
+    "recoveryMissing": "{count} usuarios con una dirección de la organización no tienen un correo de recuperación utilizable.",
     "recoveryNoAttribute": "No hay un atributo LDAP definido para el correo de recuperación, así que no hay nada que sincronizar. Defina uno en la configuración de LDAP para guardarlo también en el directorio.",
     "recoveryAttribute": "Sincronizado con el atributo LDAP {attribute}.",
     "syncButton": "Sincronizar con LDAP",

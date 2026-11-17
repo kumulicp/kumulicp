@@ -97,11 +97,15 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ $t('organization.users.personalEmail') }}:</h5>
+                <h5>{{ profile.has_mailbox ? $t('recoveryEmail.signInEmail') : $t('organization.users.personalEmail') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
-              <va-list-item-label>
+              <va-list-item-label v-if="profile.has_mailbox">
+                <div id="signInEmail">{{ profile.personal_email }}</div>
+                <small class="va-text-secondary">{{ $t('recoveryEmail.signInEmailHint') }}</small>
+              </va-list-item-label>
+              <va-list-item-label v-else>
                 <va-input v-model="form.personal_email"
                   id="personalEmail"
                   immediateValidation
@@ -110,6 +114,65 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                   :error-messages="$page.props.errors.personal_email"
                   />
               </va-list-item-label>
+            </va-list-item-section>
+          </va-list-item>
+
+          <va-list-separator class="my-1" fit />
+          <va-list-item class="pb-3">
+            <va-list-item-section label>
+              <va-list-item-label>
+                <h5>{{ $t('recoveryEmail.label') }}:</h5>
+              </va-list-item-label>
+            </va-list-item-section>
+            <va-list-item-section>
+              <va-list-item-label>
+                <div id="recoveryEmail">{{ recovery.email || $t('recoveryEmail.none') }}</div>
+                <small class="va-text-secondary d-block">{{ $t('recoveryEmail.hint') }}</small>
+                <small v-if="recovery.email && !recovery.usable" id="recoveryNotUsable" class="va-text-danger d-block">{{ $t('recoveryEmail.notUsable') }}</small>
+                <small v-if="recovery.pending" id="recoveryPending" class="va-text-secondary d-block">{{ $t('recoveryEmail.pending', { email: recovery.pending }) }}</small>
+                <va-button class="mt-2" size="small" preset="secondary" id="changeRecoveryEmail" @click="showRecoveryModal = true">
+                  {{ recovery.email ? $t('recoveryEmail.change') : $t('recoveryEmail.add') }}
+                </va-button>
+              </va-list-item-label>
+              <va-modal v-model="showRecoveryModal" no-outside-dismiss size="small">
+                <template #content="{ ok }">
+                  <form @submit.prevent="recovery_form.post('/profile/recovery-email', {
+                    onSuccess: () => { recovery_form.reset(); showRecoveryModal = false }
+                  })">
+                    <va-card-title>{{ $t('recoveryEmail.label') }}</va-card-title>
+                    <va-card-content>
+                      <va-input v-model="recovery_form.recovery_email"
+                        id="newRecoveryEmail"
+                        type="email"
+                        required-mark
+                        immediateValidation
+                        :label="$t('recoveryEmail.newAddress')"
+                        class="mb-3"
+                        :error="!!$page.props.errors.recovery_email"
+                        :error-messages="$page.props.errors.recovery_email"
+                      />
+                      <va-input v-model="recovery_form.current_password"
+                        id="recoveryCurrentPassword"
+                        type="password"
+                        required-mark
+                        immediateValidation
+                        :label="$t('auth.currentPassword')"
+                        class="mb-3"
+                        :error="!!$page.props.errors.current_password"
+                        :error-messages="$page.props.errors.current_password"
+                      />
+                    </va-card-content>
+                    <va-card-actions align="right">
+                      <va-button color="textInverted" @click="ok">
+                        {{ $t('common.cancel') }}
+                      </va-button>
+                      <va-button type="submit" id="sendRecoveryEmail" :disabled="recovery_form.processing" class="mr-2 mb-2">
+                        {{ $t('recoveryEmail.save') }}
+                      </va-button>
+                    </va-card-actions>
+                  </form>
+                </template>
+              </va-modal>
             </va-list-item-section>
           </va-list-item>
 
@@ -233,12 +296,18 @@ export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
     profile: Object,
+    recovery: Object,
     locales: Object,
     errors: Object
   },
   data () {
     return {
       showChangePasswordModal: false,
+      showRecoveryModal: false,
+      recovery_form: useForm({
+        recovery_email: '',
+        current_password: ''
+      }),
       localeOptions: Object.entries(this.locales || {}).map(([code, name]) => ({ code, name })),
       password_form: useForm({
         current_password: '',

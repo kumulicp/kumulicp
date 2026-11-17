@@ -1653,6 +1653,21 @@
     "passed": "Passed",
     "failed": "Failed"
   },
+  "recoveryEmail": {
+    "reminder": "Add a recovery email. If you forget your password, the reset link can only reach you at an address other than your organization one.",
+    "reminderAction": "Add a recovery email",
+    "label": "Recovery Email",
+    "hint": "Only used to send a password reset link. It can't be an address hosted here.",
+    "none": "Not set",
+    "notUsable": "This one can't be used for a reset, so the link goes to your sign-in email.",
+    "pending": "Waiting for you to open the link sent to {email}",
+    "add": "Add",
+    "change": "Change",
+    "newAddress": "New recovery email",
+    "save": "Send confirmation link",
+    "signInEmail": "Email",
+    "signInEmailHint": "This is the email you sign in with. It comes with your organization address and is changed from there."
+  },
   "orgEmail": {
     "title": "Email",
     "description": "The control panel's database is the source of truth for email data. Use this page to copy it back to the directory if the two ever drift apart.",
@@ -1663,6 +1678,7 @@
     "recoveryTitle": "Recovery emails",
     "recoveryCount": "{count} recovery emails are saved in the control panel.",
     "recoveryNoLdap": "Recovery emails are kept in the control panel's database only. There is no directory to sync with.",
+    "recoveryMissing": "{count} users with an organization address have no usable recovery email.",
     "recoveryNoAttribute": "No LDAP attribute is set for the recovery email, so there is nothing to sync. Set one on the LDAP settings page to keep it in the directory too.",
     "recoveryAttribute": "Synced to the LDAP attribute {attribute}.",
     "syncButton": "Sync to LDAP",

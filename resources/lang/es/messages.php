@@ -93,6 +93,8 @@ return [
         'domain_available' => 'El formato de tu dominio es incorrecto. (Ejemplo: example.com)',
         'domain_name' => 'Debe ser un dominio estándar (example.com). Si crees que tu dominio debería funcionar, haz clic en el signo de interrogación en la parte superior',
         'domain_name_required' => 'Se requiere el nombre de dominio',
+        'recovery_email_same' => 'El correo de recuperación tiene que ser distinto del correo con el que inicias sesión.',
+        'recovery_email_hosted' => 'El correo de recuperación no puede ser una dirección alojada aquí: no podrías leerlo cuando más lo necesitas.',
         'email_local_part' => 'Usa letras minúsculas y números, con puntos, guiones o guiones bajos sueltos entre ellos (por ejemplo jane.doe). Hasta 64 caracteres.',
         'email_address_exists' => 'Este correo ya está siendo usado por otro usuario',
         'group_name_not_used' => 'El nombre del grupo ya existe',
@@ -122,6 +124,21 @@ return [
         'failed' => 'con errores',
     ],
     'notification' => [
+        'recovery' => [
+            'confirm_subject' => 'Confirma tu correo de recuperación',
+            'confirm_line' => 'Esta dirección se indicó como correo de recuperación de la cuenta :username en :panel_name. Solo se usa para enviar un enlace de restablecimiento de contraseña.',
+            'confirm_action' => 'Confirmar esta dirección',
+            'confirm_ignore' => 'Si no fuiste tú, ignora este correo y no cambia nada. El enlace funciona durante :hours horas.',
+            'changed_subject' => 'Cambió el correo de recuperación de tu cuenta',
+            'changed_line' => 'El correo de recuperación de la cuenta :username en :panel_name cambió a :new.',
+            'changed_delay' => 'Hasta el :date los restablecimientos de contraseña seguirán llegando a esta dirección. Si no fuiste tú, inicia sesión y cambia tu contraseña ahora.',
+        ],
+        'primary_email' => [
+            'subject' => 'Cambió el correo de tu cuenta',
+            'line' => 'El correo con el que inicias sesión en la cuenta :username en :panel_name cambió de :old a :new.',
+            'recovery' => 'Esta dirección es ahora tu correo de recuperación y solo se usa para enviar un enlace de restablecimiento de contraseña.',
+            'undo' => 'Si no fuiste tú, o quieres volver atrás, puedes hacerlo hasta el :date desde tu perfil.',
+        ],
         'app_unavailable_warning' => [
             'title' => ':app no responde',
             'message' => 'No pudimos conectarnos con :app. Volveremos a comprobarlo en :minutes minutos. Si sigue sin responder, pausaremos nuestra conexión con la aplicación y te avisaremos.',

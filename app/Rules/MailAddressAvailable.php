@@ -38,7 +38,7 @@ class MailAddressAvailable implements DataAwareRule, ValidationRule
 
         $address = Str::lower($value.'@'.$domain->name);
 
-        if (app(MailAddressRegistry::class)->inUse($address)) {
+        if (app(MailAddressRegistry::class)->inUse($address, auth()->user()?->username)) {
             $fail('messages.rule.ldap_email_not_exists')->translate();
         }
     }

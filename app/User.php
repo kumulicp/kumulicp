@@ -3,6 +3,7 @@
 namespace App;
 
 use App\Enums\AccessType;
+use App\Services\Email\RecoveryEmailService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Collection;
@@ -77,6 +78,15 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
     /**
      * @return BelongsTo<Organization, $this>
      */
+    /**
+     * Password resets and invites go to the recovery email when there is a usable one,
+     * everything else to the email the account signs in with.
+     */
+    public function routeNotificationForMail($notification)
+    {
+        return app(RecoveryEmailService::class)->routeFor($notification, (string) $this->username, (string) $this->email);
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
