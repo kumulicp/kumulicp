@@ -46,6 +46,7 @@ Schedule::call(fn () => app(VersionTestRunner::class)->syncProvisioning())->name
 Schedule::call(new RecurringBackups)->everyMinute();
 Schedule::call(new UpdateTransferStatus)->everyMinute()->when(fn () => Toggle::active('domain-registrar'));
 Schedule::call(new NextcloudStorageChecks)->daily();
+Schedule::command('catalog:sync')->daily()->withoutOverlapping()->when(fn () => Toggle::active('helmforge'));
 Schedule::call(new ActivateBackup)->everyMinute();
 Schedule::call(new DeleteBackups)->everyMinute();
 Schedule::call(new NotifyBillingManagers)->daily();

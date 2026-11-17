@@ -5,10 +5,13 @@ namespace App;
 use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Support\VersionUpdates\VersionComparator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OffloadProject\Toggle\Facades\Toggle;
 
 /**
  * @property int $id
@@ -20,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property AccessType $access_type
  * @property bool $can_update_domain
  * @property ApplicationSource $source
+ * @property int|null $chart_source_id
+ * @property array|null $catalog
  * @property-read Collection<int, Organization> $organizations
  * @property-read Collection<int, AppInstance> $instances
  * @property-read int|null $total_instances
@@ -30,6 +35,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read Collection<int, AppPlan> $plans
  * @property-read Collection<int, AppRole> $roles
  * @property-read Collection<int, AppScreenshot> $screenshots
+ * @property-read Collection<int, Tag> $tags
  */
 class Application extends Model
 {
@@ -57,6 +63,7 @@ class Application extends Model
         'can_update_domain' => 'boolean',
         'domain_option' => 'array',
         'source' => ApplicationSource::class,
+        'catalog' => 'array',
     ];
 
     /**
@@ -75,6 +82,65 @@ class Application extends Model
         }
 
         return false;
+    }
+
+    // Imported from the HelmForge chart repository rather than backed by a hand-written profile
+    public function isHelmForge(): bool
+    {
+        return $this->source === ApplicationSource::HelmForge;
+    }
+
+    /**
+     * Applications that may be offered right now: HelmForge ones only while
+     * the HelmForge feature is on.
+     *
+     * @param  Builder<Application>  $query
+     */
+    public function scopeAvailable(Builder $query): void
+    {
+        if (! Toggle::active('helmforge')) {
+            $query->where('source', '!=', ApplicationSource::HelmForge);
+        }
+    }
+
+    public function chartSource()
+    {
+        return $this->belongsTo(ChartSource::class, 'chart_source_id');
+    }
+
+    /**
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'application_tag');
+    }
+
+    /**
+     * @param  Builder<Application>  $query
+     */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        if ($term === null || trim($term) === '') {
+            return;
+        }
+
+        $like = '%'.addcslashes(trim($term), '\%_').'%';
+
+        $query->where(fn (Builder $query) => $query->where('name', 'like', $like)->orWhere('slug', 'like', $like));
+    }
+
+    /**
+     * Applications carrying any of the given tag slugs.
+     *
+     * @param  Builder<Application>  $query
+     * @param  array<int, string>  $slugs
+     */
+    public function scopeWithAnyTag(Builder $query, array $slugs): void
+    {
+        if ($slugs) {
+            $query->whereHas('tags', fn (Builder $query) => $query->whereIn('tags.slug', $slugs));
+        }
     }
 
     public function organizations()
