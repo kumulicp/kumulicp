@@ -95,7 +95,14 @@ class ExampleAppInstance
 
     private static function organization(): Organization
     {
-        return Organization::where('slug', self::ORGANIZATION_SLUG)->first() ?? Organization::forceCreate([
+        $organization = Organization::where('slug', self::ORGANIZATION_SLUG)->first();
+
+        // It has to read as an enabled organization: the charts build a deactivated one's app switched off
+        if ($organization && $organization->status !== 'active') {
+            $organization->forceFill(['status' => 'active'])->save();
+        }
+
+        return $organization ?? Organization::forceCreate([
             'slug' => self::ORGANIZATION_SLUG,
             'name' => 'Example',
             'description' => 'Owns the example app instances used to preview Helm values',

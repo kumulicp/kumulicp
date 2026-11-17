@@ -32,3 +32,17 @@ it('deactivates organizations whose paid subscription has ended', function () {
 
     expect($deactivated)->toBe([$ended->id]);
 });
+
+// The example organization (see ExampleAppInstance) has no plan on purpose. Deactivating it
+// built its example instance's charts switched off, with ingress disabled.
+it('leaves the example organization alone', function () {
+    Notification::fake();
+    Mail::fake();
+
+    $example = Organization::factory()->create(['type' => Organization::TYPE_EXAMPLE, 'plan_id' => null]);
+
+    (new ExpiredSubscriptionsCheck)();
+
+    expect($example->fresh()->status)->toBe('active')
+        ->and(Task::where('action_slug', 'deactivate_organization')->exists())->toBeFalse();
+});

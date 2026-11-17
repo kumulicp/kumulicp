@@ -217,6 +217,16 @@ describe('example instance', function () {
             ->and(Organization::notTest()->where('type', Organization::TYPE_EXAMPLE)->exists())->toBeFalse();
     });
 
+    it('renders the example as an enabled app even if its organization was deactivated', function () {
+        $this->actingAs($this->user)->postJson($this->exampleUrl, ['configurations' => []])->assertOk();
+        Organization::where('type', Organization::TYPE_EXAMPLE)->update(['status' => 'deactivated']);
+
+        // Generating again puts it right
+        $this->actingAs($this->user)->postJson($this->exampleUrl, ['configurations' => []])->assertOk();
+
+        expect(Organization::where('type', Organization::TYPE_EXAMPLE)->sole()->status)->toBe('active');
+    });
+
     it('says so when the app has no version to make an example from', function () {
         $this->version->delete();
 

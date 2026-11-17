@@ -15,7 +15,8 @@ class ExpiredSubscriptionsCheck
 {
     public function __invoke()
     {
-        $organizations = Organization::where('status', '!=', 'deactivated')->get();
+        // The example organization has no plan by design; it is not a customer to bill or deactivate
+        $organizations = Organization::where('status', '!=', 'deactivated')->where('type', '!=', Organization::TYPE_EXAMPLE)->get();
 
         foreach ($organizations as $organization) {
             OrganizationFacade::setOrganization($organization);
