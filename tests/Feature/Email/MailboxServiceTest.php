@@ -169,7 +169,10 @@ class MailboxServiceTest extends TestCase
         $this->service->accept($this->manager, $mailbox);
 
         $this->assertNotNull(\App\UserRecoveryEmail::where('username', 'demo')->first()->verified_at);
-        $this->assertSame(['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org'], UserEmails::for(AccountManager::users()->find('demo')));
+        $this->assertSame(
+            ['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org', 'recovery_missing' => false],
+            UserEmails::for(AccountManager::users()->find('demo')),
+        );
     }
 
     public function test_accepting_the_address_the_user_already_has_only_records_the_mailbox()
@@ -379,7 +382,7 @@ class MailboxServiceTest extends TestCase
         $this->assertTrue(AccountManager::users()->find('demo')->isUserAccessType('standard'));
         $this->assertFalse(AccountManager::users()->find('demo')->isUserAccessType('basic'));
 
-        $user->forceFill(['access_type' => null])->save();
+        $user->forceFill(['access_type' => AccessType::NONE])->save();
 
         $this->assertFalse(AccountManager::users()->find('demo')->isUserAccessType('standard'));
     }

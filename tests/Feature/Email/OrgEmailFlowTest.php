@@ -211,6 +211,8 @@ class OrgEmailFlowTest extends TestCase
     public function test_the_switch_can_be_undone_from_the_profile_with_the_password()
     {
         $this->post('/profile/org-email', $this->payload());
+        // The next request loads the user again, with the email they sign in with now
+        $this->actingAs($this->user->fresh());
 
         $this->post('/profile/org-email/undo', ['current_password' => 'wrong-password'])->assertSessionHasErrors('current_password');
         $this->assertSame('jdoe@corp.org', $this->email());
