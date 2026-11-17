@@ -88,10 +88,12 @@ it('switches back to multi, with a warning about what it leaves behind', functio
 it('will not switch to single while there is more than one organization', function () {
     Organization::factory()->create(['name' => 'Acme Church', 'slug' => 'acme', 'type' => 'business']);
 
+    // The count and the names are one line of output, and an expectation consumes the line it matches
     $this->artisan('kumulicp:tenancy', ['mode' => 'single', '--force' => true])
-        ->expectsOutputToContain('There must be exactly one organization, and there are 2')
-        ->expectsOutputToContain('Acme Church')
+        ->expectsOutputToContain('Acme Church. Delete the others first.')
         ->assertExitCode(1);
+
+    expect(Organization::notTest()->count())->toBe(2);
 
     expect(Tenancy::isMulti())->toBeTrue();
 });
