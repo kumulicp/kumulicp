@@ -7,6 +7,10 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 
 ## Features
 
+### Version
+
+The core version (currently 0.5.0) is set in the `VERSION` file and can be read by plugins with `App\Support\CoreVersion` to handle version compatibility (see docs/versioning.md)
+
 ### Admin
 
 - Built on Kubernetes: Direct API calls to K8s or through the Rancher API

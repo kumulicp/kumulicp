@@ -3,6 +3,7 @@
         "php": "^8.4",
         "asm89/stack-cors": "^2.0",
         "composer/installers": "^2.0",
+        "composer/semver": "^3.4",
         "directorytree/ldaprecord": "^3.3.0",
         "directorytree/ldaprecord-laravel": "^3.1.2",
         "doctrine/dbal": "^4.4.3",
