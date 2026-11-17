@@ -107,7 +107,7 @@ class AspectInputs
     {
         $prices = [];
 
-        foreach ($plan?->prices ?? [] as $price) {
+        foreach ($plan->prices ?? [] as $price) {
             $prices[$price->component][$price->currency] = [
                 'amount' => $price->amount,
                 'ids' => $price->external_ids,
