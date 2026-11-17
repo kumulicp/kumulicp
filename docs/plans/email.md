@@ -41,6 +41,22 @@ Every change names the item below it belongs to, and a slice is only finished wh
 | Aliases without LDAP | Always on; Stalwart is managed directly. |
 | LDAP without extras | Still works with no custom attributes: no aliases, recovery email in the database only. |
 | SSO matching | On the identity `mail` only. |
+| `orgMail` | Removed. A user's org address is their `mail`; there is no second attribute for it. A DB record (`mailboxes`) says that the `mail` is an org mailbox. |
+| Org addresses per user | One, until aliases (2e) exist. A second address on another domain becomes an alias later. |
+| Mail-server attributes on users | The Dovecot attributes (`mailQuota`, `mailHomeDirectory`, `mailStorageDirectory`, the mail object class) stay until docker-mailserver is retired in Phase 5; Stalwart does not use them. |
+
+## Which apps a changed `mail` can affect
+
+An account breaks when an app uses the **email as its key**, or links a new login to an existing account **by email**. Then the next login arrives with the new address and the app makes a second, empty account; the old one is orphaned (not deleted). Apps keyed by a stable id (`sub`, `uid`, entry UUID) only show the new address.
+
+Checked in this repository:
+- **Authentik** (SSO): the OIDC `sub` is `hashed_user_id`, a stable value that does not depend on the email.
+- **Nextcloud, LDAP:** the username is `cn` and the internal id comes from the entry UUID. `mail` is used for display and notifications, and the login filter also accepts `mail`, so the old address stops working as a login name. The username is unaffected.
+- **Nextcloud, OIDC:** the user id mapping defaults to `preferred_username` (the `oidc-mapping-user-id` setting). Safe unless an admin set it to `email`.
+- **WordPress** and **CiviCRM Standalone:** both can use LDAP and OIDC, but this repository does not set which claim identifies a user; that lives in the app's own plugin or configuration. **Not determinable from here: audit them (2d).**
+- **KumuliCP itself:** keyed by `cn` and the entry guid. `users.email` is unique and re-imported at login, SSO matches on `mail`, and the password reset lookup reads `mail`. All three are covered by 2b.
+
+Apps that are known to key on or link by email (general knowledge, not checked against any version here): ERPNext/Frappe (the user id is the email), Bitwarden and Vaultwarden (the email is the account identity), and Grafana, Discourse and Mattermost in their default link-by-email setups. Apps keyed by a stable id, such as GitLab, Gitea, Synapse and Immich, are generally fine. There is no count to give: it depends on how each app is configured, which is why 2d audits every profile before the swap is offered to existing users.
 
 ## Phases
 
@@ -72,9 +88,14 @@ Exit: the LDAP email suite passes against a live directory in CI (not yet checke
 ### Phase 2 - Identity and mailbox model
 
 - [x] **2a. Attribute settings, recovery storage and sync page** (done, see above).
-- [ ] **2b. Wire the recovery email.** Set it when a user is created (the invite address) and let users change it. Require a confirm link before a new recovery address is trusted, notify the old one on change, and add a short cooldown on reset. Password reset and "forgot password" send to the recovery address, with a generic response. Reject a recovery address on a domain this server hosts. Adds a verified column to `user_recovery_emails`.
-- [ ] **2c. Mailboxes and addresses.** `mailboxes` (organization, domain, local part, optional user, display name, status) and `mailbox_addresses` (address globally unique and case-insensitive, `is_primary`). Backfill from LDAP with an idempotent artisan command that has `--dry-run` and reports collisions. Count limits from this table, not from a live mail-server query on every page load. Back `MailAddressRegistry` with this table (by driver) so uniqueness no longer needs a directory. Also fixes `countEmail()` ignoring user-linked mailboxes.
-- [ ] **2d. Identity swap.** Creating a mailbox for a user moves their current `mail` to the recovery email and sets `mail` to the mailbox address; deleting it restores `mail`. Import the user afterwards so `users.email` updates. Opt-in per user with an impact preview. Audit every app profile that matches accounts by email first (WordPress and CiviCRM first).
+- [ ] **2b. Recovery email, and org addresses without `orgMail`.** The swap and the removal of `orgMail` go together, because without `orgMail` nothing else records that a user's `mail` is an org address.
+  - *Recovery email.* Set it when a user is created (the invite address) and let users change it. Require a confirm link before a new recovery address is trusted, notify the old one on change, and add a short cooldown on reset. Password reset and "forgot password" send to the recovery address, with a generic response. Reject a recovery address on a domain this server hosts. Adds a verified column to `user_recovery_emails`.
+  - *`mailboxes` (minimal, pulled forward from 2c).* organization, domain, local part, address (unique, lowercase), optional username of the user it belongs to, status. `MailAddressRegistry` reads it as well as the directory.
+  - *The swap.* Giving a user an org address moves their current `mail` to the recovery email, sets `mail` to the new address and records the mailbox. Removing it restores `mail` from the recovery email. The user is re-imported afterwards (so `users.email` updates) and the Authentik LDAP source is synced (the existing `SyncLDAP` listener). One org address per user.
+  - *Removing `orgMail`.* Drop it from `LdapEmailInterface::createUserEmail/deleteUserEmail`, `LdapMailAddressRegistry`, the `ldap_org_email` setting and its field on the LDAP settings page, the `org_email` attribute mapping (and its place in the attribute conflict check), and the user pages (they show the mailbox record instead). The dead `profile.org_emails` branch in `ProfileEdit.vue` goes with it.
+  - *`email:migrate-org-mail`.* An artisan command, dry run by default, per organization or per user, for accounts that still have `orgMail` values. It does what the swap does and removes the `orgMail` values. A user with more than one `orgMail` value is listed and skipped: the extra addresses need aliases (2e) or a person's decision. Until it has been run the code still reads `orgMail`, so nothing is lost in between.
+- [ ] **2c. Aliases table and the rest of the mailboxes.** `mailbox_addresses` (address globally unique and case-insensitive, `is_primary`) on top of the 2b `mailboxes`. Backfill standalone mailboxes from LDAP with an idempotent artisan command that has `--dry-run` and reports collisions. Count limits from the tables, not from a live mail-server query on every page load. Back `MailAddressRegistry` by driver so uniqueness no longer needs a directory. Also fixes `countEmail()` ignoring user-linked mailboxes.
+- [ ] **2d. Rollout safety for the swap.** Audit WordPress and CiviCRM for the claim that identifies a user (and Nextcloud's `oidc-mapping-user-id` on existing installs). Show an impact preview with the user's apps before the swap. The migration command from 2b only runs on existing accounts after the audit.
 - [ ] **2e. Aliases.** Store aliases as non-primary rows in `mailbox_addresses`. With LDAP, write them to the mapped aliases attribute and add them to the sync page; without LDAP, push them to Stalwart. Gate the UI on `LdapEmailAttributes::aliasesEnabled()`. Decide the per-plan alias cap (see open questions).
 - [ ] **2f. Contract cleanup.** Fix the `EmailContract` drift (the forwarder call passes an array where a password is expected), remove the blocking `checkConnection()` retry loop from request paths, and retire the LDAP `Domain` entries Stalwart does not need.
 
@@ -107,10 +128,11 @@ Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and t
 
 ## Open questions
 
-- Existing users: swap `mail` on request only, or let an admin run a bulk swap per organization?
+- Existing `orgMail` users: convert only the ones an admin picks, or let the migration command run per organization once the audit (2d) is done?
+- Keep the Dovecot attributes on user entries until docker-mailserver is retired (assumed), or drop them as soon as `orgMail` goes?
 - Orphans on the sync page: keep them report-only, or let DB-wins clear them after a confirmation?
 - Alias cap per mailbox: a plan setting, default unlimited and not billed?
-- Do user-linked addresses stay available in `db` mode (the `db` account manager has no `org_email` today)? Assumed yes, through `mailboxes.user_id`.
+- Do user-linked addresses stay available in `db` mode? Assumed yes, through the `mailboxes` record (the `db` account manager has never had a second address).
 - Forwarders: keep as a feature (built on Stalwart aliases) or drop?
 - Which Stalwart version does the plugin target, and does tenancy there need the Enterprise edition?
 - Passwords for user-linked mailboxes: authenticate against the user entry (one password) or give each mailbox its own? Either way the identity address stays on the user entry.
