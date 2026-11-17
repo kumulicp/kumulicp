@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\AppInstance;
 use App\Contracts\Tickets\TracksIssues;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
@@ -67,11 +68,12 @@ class Tickets extends Controller
             'priority' => Arr::first(TicketPriority::cases(), fn ($p) => $p->value === $request->query('priority'))?->value,
             'category' => $request->integer('category') ?: null,
             'organization' => $request->integer('organization') ?: null,
+            'app' => $this->appFilter($request->query('app')),
             'sla' => in_array($request->query('sla'), ['breached', 'at_risk'], true) ? $request->query('sla') : null,
             'q' => trim((string) $request->query('q', '')),
         ];
 
-        $query = $this->unread->annotate(Ticket::query(), $user, true)->with(['organization', 'requester', 'customerAssignee', 'supportAssignee', 'category']);
+        $query = $this->unread->annotate(Ticket::query(), $user, true)->with(['organization', 'requester', 'customerAssignee', 'supportAssignee', 'category', 'appInstance']);
 
         match (true) {
             $filters['assigned'] === 'me' => $query->where('support_assignee_id', $user->id),
@@ -97,12 +99,16 @@ class Tickets extends Controller
 
         $query->when($filters['priority'], fn ($q, $priority) => $q->where('priority', $priority))
             ->when($filters['category'], fn ($q, $category) => $q->where('category_id', $category))
-            ->when($filters['organization'], fn ($q, $organization) => $q->where('organization_id', $organization));
+            ->when($filters['organization'], fn ($q, $organization) => $q->where('organization_id', $organization))
+            ->when($filters['app'] === 'none', fn ($q) => $q->whereNull('app_instance_id'))
+            ->when($filters['app'] !== null && $filters['app'] !== 'none', fn ($q) => $q->where('app_instance_id', (int) $filters['app']));
 
         if ($filters['q'] !== '') {
             $query->where(function ($query) use ($filters) {
-                $query->where('subject', 'like', '%'.addcslashes($filters['q'], '%_\\').'%')
-                    ->orWhere('number', (int) preg_replace('/\D/', '', $filters['q']));
+                $like = '%'.addcslashes($filters['q'], '%_\\').'%';
+                $query->where('subject', 'like', $like)
+                    ->orWhere('number', (int) preg_replace('/\D/', '', $filters['q']))
+                    ->orWhereHas('appInstance', fn ($app) => $app->where('label', 'like', $like));
             });
         }
 
@@ -122,6 +128,7 @@ class Tickets extends Controller
             ],
             'staff' => $this->staffOptions(),
             'categories' => $this->categoryOptions(),
+            'apps' => $this->ticketedApps($filters['app']),
             'priorities' => collect(TicketPriority::cases())->map(fn ($p) => ['value' => $p->value, 'text' => $p->label()])->all(),
             'me' => $user->id,
             'version' => $this->versions->all(),
@@ -156,6 +163,8 @@ class Tickets extends Controller
             'statuses' => collect(TicketStatus::cases())->map(fn ($s) => ['value' => $s->value, 'text' => $s->label()])->all(),
             'priorities' => collect(TicketPriority::cases())->map(fn ($p) => ['value' => $p->value, 'text' => $p->label()])->all(),
             'categories' => $this->categoryOptions(),
+            'app_options' => $ticket->organization->app_instances()->orderBy('label')->get(['id', 'label', 'status'])
+                ->map(fn (AppInstance $app) => ['value' => $app->id, 'text' => $app->label.($app->status && $app->status !== 'active' ? ' ('.$app->status.')' : '')])->all(),
             'me' => $user->id,
             'version' => $this->versions->ticket($ticket),
             'last_message_id' => (int) $ticket->messages()->max('id'),
@@ -390,6 +399,10 @@ class Tickets extends Controller
             $this->tickets->changeCategory($ticket, $user, $data['category_id']);
         }
 
+        if (array_key_exists('app_instance_id', $data)) {
+            $this->tickets->changeApp($ticket, $user, $data['app_instance_id'], asStaff: true);
+        }
+
         foreach (['support_assignee_id' => TicketService::SUPPORT, 'customer_assignee_id' => TicketService::CUSTOMER] as $field => $side) {
             if (array_key_exists($field, $data)) {
                 $assignee = $data[$field] ? User::find($data[$field]) : null;
@@ -453,8 +466,15 @@ class Tickets extends Controller
                 'name' => $ticket->requester->name,
                 'email' => $ticket->requester->email,
             ] : null,
-            'apps' => $organization->app_instances()->orderBy('label')->limit(25)->get(['id', 'label', 'status'])
-                ->map(fn ($app) => ['id' => $app->id, 'label' => $app->label, 'status' => $app->status])->all(),
+            'apps' => $organization->app_instances()->orderBy('label')->limit(25)->get(['id', 'label', 'status', 'organization_id'])
+                ->map(fn ($app) => [
+                    'id' => $app->id,
+                    'label' => $app->label,
+                    'status' => $app->status,
+                    'url' => '/admin/organizations/'.$app->organization_id.'/apps/'.$app->id,
+                    // Every ticket about this app, whatever its state
+                    'tickets_url' => '/admin/support/tickets?'.http_build_query(['assigned' => 'all', 'status' => 'all', 'app' => $app->id]),
+                ])->all(),
             'tasks' => $organization->tasks()->latest('id')->limit(5)->get()
                 ->map(fn ($task) => [
                     'id' => $task->id,
@@ -464,6 +484,40 @@ class Tickets extends Controller
                     'created_at' => $task->created_at?->toIso8601String(),
                 ])->all(),
         ];
+    }
+
+    /**
+     * Apps that tickets have been raised about, labelled with their organization
+     * so two customers' "WordPress" can be told apart. For the inbox filter.
+     *
+     * @param  string|null  $selected  An app being filtered on, kept in the list even when it has no tickets
+     * @return list<array{value: int, text: string}>
+     */
+    private function ticketedApps(?string $selected = null): array
+    {
+        return AppInstance::with('organization:id,name')
+            ->where(fn ($query) => $query
+                ->whereIn('id', Ticket::query()->whereNotNull('app_instance_id')->select('app_instance_id'))
+                ->when($selected && $selected !== 'none', fn ($query) => $query->orWhere('id', (int) $selected)))
+            ->orderBy('label')
+            ->limit(500)
+            ->get(['id', 'label', 'organization_id'])
+            ->map(fn (AppInstance $app) => ['value' => $app->id, 'text' => $app->label.($app->organization ? ' - '.$app->organization->name : '')])
+            ->all();
+    }
+
+    /**
+     * An app id, "none" (tickets about no app in particular) or null.
+     */
+    private function appFilter(mixed $value): ?string
+    {
+        if ($value === 'none') {
+            return 'none';
+        }
+
+        $id = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $id ? (string) $id : null;
     }
 
     /**

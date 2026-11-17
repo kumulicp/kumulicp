@@ -32,6 +32,7 @@ class AdminUpdateTicketRequest extends FormRequest
             'category_id' => ['sometimes', 'nullable', 'integer'],
             'support_assignee_id' => ['sometimes', 'nullable', 'integer'],
             'customer_assignee_id' => ['sometimes', 'nullable', 'integer'],
+            'app_instance_id' => ['sometimes', 'nullable', 'integer'],
             'tags' => ['sometimes', 'array', 'max:20'],
             'tags.*' => ['string', 'max:50'],
         ];

@@ -1914,7 +1914,9 @@
       "merged_into": "{actor} fusionó este ticket con otro",
       "reminder_sent": "Se envió un recordatorio",
       "rated": "{actor} valoró la atención",
-      "message_redacted": "{actor} eliminó el contenido de un mensaje"
+      "message_redacted": "{actor} eliminó el contenido de un mensaje",
+      "app_changed": "{actor} asignó la aplicación relacionada: {name}",
+      "app_removed": "{actor} quitó la aplicación relacionada"
     },
     "admin": {
       "title": "Tickets",
@@ -1946,7 +1948,8 @@
       "relatedToTicket": "este ticket",
       "recentTasks": "Tareas recientes",
       "watchersHelp": "Compañeros del cliente y personal de soporte que siguen este ticket",
-      "manage": "Gestionar"
+      "manage": "Gestionar",
+      "ticketsForApp": "Todos los tickets de esta aplicación"
     },
     "attachments": {
       "title": "Archivos adjuntos",
@@ -2223,7 +2226,13 @@
       "people": "Personas",
       "support": "Soporte",
       "assignedTo": "Asignado a",
-      "filters": "Filtros"
-    }
+      "filters": "Filtros",
+      "allApps": "Todas las aplicaciones",
+      "noApp": "Sin aplicación"
+    },
+    "relatedAppHelp": "De cuál de tus aplicaciones trata, si aplica.",
+    "openApp": "Abrir {name}",
+    "getHelp": "Obtener ayuda con esta aplicación",
+    "viewAppTickets": "Tickets de esta aplicación"
   }
 }

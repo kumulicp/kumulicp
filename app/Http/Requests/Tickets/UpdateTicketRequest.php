@@ -25,6 +25,7 @@ class UpdateTicketRequest extends FormRequest
             'subject' => ['sometimes', 'required', 'string', 'max:'.config('tickets.max_subject_length')],
             'impact' => ['sometimes', 'required', Rule::enum(TicketImpact::class)],
             'customer_assignee_id' => ['sometimes', 'nullable', 'integer'],
+            'app_instance_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 }

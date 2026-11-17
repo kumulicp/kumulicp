@@ -16,6 +16,22 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
     </div>
   </va-alert>
   <va-list>
+    <template v-if="$page.props.flags?.tickets">
+      <va-list-item class="py-3">
+        <va-list-item-section label>
+          <va-list-item-label>
+            <h5>{{ $t('tickets.admin.title') }}</h5>
+          </va-list-item-label>
+        </va-list-item-section>
+        <va-list-item-section>
+          <va-list-item-label>
+            <Link :href="`/admin/support/tickets?assigned=all&status=all&app=${app.id}`">{{ $t('tickets.admin.ticketsForApp') }}</Link>
+          </va-list-item-label>
+        </va-list-item-section>
+      </va-list-item>
+      <va-list-separator class="my-1" fit />
+    </template>
+
     <va-list-item class="py-3">
       <va-list-item-section label>
         <va-list-item-label>

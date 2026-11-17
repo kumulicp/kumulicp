@@ -17,6 +17,7 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
   <TicketHeader :title="ticket.subject" :eyebrow="ticket.reference">
     <template #meta>
       <TicketBadge :value="ticket.status.value" :label="ticket.status.label" />
+      <Link v-if="ticket.app_instance" :href="ticket.app_instance.url" class="t-app-link">{{ ticket.app_instance.label }}</Link>
       <span class="t-muted">{{ ticket.type.label }}</span>
     </template>
     <template #actions>
@@ -86,9 +87,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
             <dt>{{ $t('tickets.category') }}</dt>
             <dd>{{ ticket.category }}</dd>
           </template>
-          <template v-if="ticket.app">
+          <template v-if="ticket.app_instance && !(can.edit_app && apps.length)">
             <dt>{{ $t('tickets.relatedApp') }}</dt>
-            <dd>{{ ticket.app }}</dd>
+            <dd><Link :href="ticket.app_instance.url" class="t-app-link">{{ ticket.app_instance.label }}</Link></dd>
           </template>
           <dt>{{ $t('tickets.requester') }}</dt>
           <dd>{{ ticket.requester?.name || $t('tickets.deletedUser') }}</dd>
@@ -97,6 +98,22 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
         </dl>
 
         <div class="t-stack mt-4">
+          <div v-if="can.edit_app && apps.length">
+            <va-select
+              v-model="appInstance"
+              id="appInstance"
+              :label="$t('tickets.relatedApp')"
+              :options="apps"
+              value-by="value"
+              text-by="text"
+              clearable
+              :error="!!appErrors"
+              :error-messages="appErrors"
+              @update:model-value="changeApp"
+            />
+            <Link v-if="ticket.app_instance" :href="ticket.app_instance.url" class="t-app-link t-muted">{{ $t('tickets.openApp', { name: ticket.app_instance.label }) }}</Link>
+          </div>
+
           <va-select
             v-model="customerAssignee"
             id="customerAssignee"
@@ -168,6 +185,7 @@ export default {
     timeline: Array,
     can: Object,
     members: Array,
+    apps: { type: Array, default: () => [] },
     me: Number,
     edit_window_minutes: Number,
     attachment_limits: Object,
@@ -183,6 +201,8 @@ export default {
       ratingForm: useForm({ score: this.ticket.rating?.score ?? 0, comment: this.ticket.rating?.comment ?? '' }),
       detailsForm: useForm({ subject: this.ticket.subject, impact: this.ticket.impact.value }),
       customerAssignee: this.ticket.customer_assignee?.id ?? null,
+      appInstance: this.ticket.app_instance?.id ?? null,
+      appErrors: null,
       watchers: [...this.watcher_ids],
       mutedLocal: this.muted,
       toast: useToast(),
@@ -207,6 +227,9 @@ export default {
     // Another visit to the same page (after a reply, say) brings fresh props
     'ticket.customer_assignee' (value) {
       this.customerAssignee = value?.id ?? null
+    },
+    'ticket.app_instance' (value) {
+      this.appInstance = value?.id ?? null
     },
   },
   mounted () {
@@ -259,6 +282,13 @@ export default {
     },
     imageUploaded (attachment) {
       this.attachments.push({ ...attachment, inline: true })
+    },
+    changeApp (value) {
+      this.appErrors = null
+      router.put(this.ticket.url, { app_instance_id: value ?? null }, {
+        preserveScroll: true,
+        onError: (errors) => { this.appErrors = errors.app_instance_id || Object.values(errors)[0] },
+      })
     },
     changeCustomerAssignee (value) {
       router.put(this.ticket.url, { customer_assignee_id: value ?? null }, { preserveScroll: true })

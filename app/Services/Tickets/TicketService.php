@@ -2,6 +2,7 @@
 
 namespace App\Services\Tickets;
 
+use App\AppInstance;
 use App\Enums\TicketImpact;
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
@@ -352,6 +353,49 @@ class TicketService
             $this->sla->apply($ticket);
             $ticket->save();
             $this->record($ticket, 'category_changed', $actor, ['from' => $from, 'to' => $category?->id], true);
+        });
+
+        return $ticket;
+    }
+
+    /**
+     * Point the ticket at one of the organization's apps (or at none).
+     * Customers may do it while the ticket is open; staff any time.
+     *
+     * @throws ValidationException when the app is not one of the ticket organization's
+     * @throws AuthorizationException when a customer tries it on a finished ticket
+     */
+    public function changeApp(Ticket $ticket, User $actor, ?int $appInstanceId, bool $asStaff): Ticket
+    {
+        if (! $asStaff && ! $ticket->status->isOpen()) {
+            throw new AuthorizationException(__('tickets.errors.cannot_edit'));
+        }
+
+        $app = null;
+
+        if ($appInstanceId) {
+            $app = AppInstance::where('organization_id', $ticket->organization_id)->find($appInstanceId);
+
+            if (! $app) {
+                throw ValidationException::withMessages(['app_instance_id' => __('tickets.errors.app_not_found')]);
+            }
+        }
+
+        if ($ticket->app_instance_id === $app?->id) {
+            return $ticket;
+        }
+
+        DB::transaction(function () use ($ticket, $actor, $app) {
+            $from = $ticket->appInstance;
+            $ticket->app_instance_id = $app?->id;
+            $ticket->save();
+            $ticket->unsetRelation('appInstance');
+            $this->record($ticket, 'app_changed', $actor, [
+                'from' => $from?->id,
+                'to' => $app?->id,
+                'from_label' => $from?->label,
+                'to_label' => $app?->label,
+            ]);
         });
 
         return $ticket;

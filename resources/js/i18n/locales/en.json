@@ -1944,7 +1944,9 @@
       "merged_into": "{actor} merged this ticket into another",
       "reminder_sent": "A reminder was sent",
       "rated": "{actor} rated the support",
-      "message_redacted": "{actor} removed the content of a message"
+      "message_redacted": "{actor} removed the content of a message",
+      "app_changed": "{actor} set the related app to {name}",
+      "app_removed": "{actor} removed the related app"
     },
     "admin": {
       "title": "Tickets",
@@ -1976,7 +1978,8 @@
       "relatedToTicket": "this ticket",
       "recentTasks": "Recent tasks",
       "watchersHelp": "Customer colleagues and support staff who follow this ticket",
-      "manage": "Manage"
+      "manage": "Manage",
+      "ticketsForApp": "All tickets for this app"
     },
     "attachments": {
       "title": "Attachments",
@@ -2253,7 +2256,13 @@
       "people": "People",
       "support": "Support",
       "assignedTo": "Assigned to",
-      "filters": "Filters"
-    }
+      "filters": "Filters",
+      "allApps": "All apps",
+      "noApp": "No app"
+    },
+    "relatedAppHelp": "Which of your apps this is about, if any.",
+    "openApp": "Open {name}",
+    "getHelp": "Get help with this app",
+    "viewAppTickets": "Tickets for this app"
   }
 }

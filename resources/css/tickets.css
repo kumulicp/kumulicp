@@ -148,11 +148,15 @@
     }
 
     .t-filters__bar {
-        order: 99;
+        grid-column: 1 / -1;
     }
 
-    .t-filters__toggle {
-        display: none;
+    .t-filters__search {
+        max-width: 28rem;
+    }
+
+    .t-filters .t-filters__toggle {
+        display: none !important;
     }
 
     .t-filters__fields {
@@ -625,4 +629,9 @@
 
 .delivery-result span + span {
     margin-left: 0.4rem;
+}
+
+/* The app a ticket is about */
+.t-app-link {
+    font-weight: 600;
 }
