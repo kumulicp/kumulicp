@@ -47,7 +47,7 @@ class PlanValuesPreview
 
         $source = [
             'label' => $instance->label,
-            'organization' => $instance->organization?->name ?? '',
+            'organization' => $instance->organization->name ?? '',
         ];
 
         DB::beginTransaction();
