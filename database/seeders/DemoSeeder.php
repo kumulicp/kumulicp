@@ -21,11 +21,8 @@ class DemoSeeder extends Seeder
                 'slug' => 'nextcloud',
                 'short_description' => 'Nextcloud',
                 'description' => 'Nextcloud',
-                'domain_option' => ['base'],
-                'parent_app_id' => 0,
                 'enabled' => 1,
                 'category' => 'File Sharing & Collaboration',
-                'access_type' => 'standard',
             ],
             [
                 'id' => 2,
@@ -33,11 +30,8 @@ class DemoSeeder extends Seeder
                 'slug' => 'wordpress',
                 'short_description' => 'Wordpress',
                 'description' => 'Wordpress',
-                'domain_option' => ['base'],
-                'parent_app_id' => 0,
                 'enabled' => 1,
                 'category' => 'Website Builder',
-                'access_type' => 'basic',
             ],
         ]);
 
@@ -277,6 +271,13 @@ class DemoSeeder extends Seeder
                 'is_default' => 0,
             ],
         ]);
+
+        // The domains an app can be reached at are set on each of its plans
+        foreach (DB::table('app_plans')->get() as $plan) {
+            DB::table('app_plans')->where('id', $plan->id)->update([
+                'settings' => json_encode([...json_decode($plan->settings, true), 'domain_option' => ['base'], 'parent_app_id' => null]),
+            ]);
+        }
 
         DB::table('organizations')->insert([
             [

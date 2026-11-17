@@ -716,8 +716,7 @@ it('moves the monitor when the app changes address, and removes it with the app'
 
 it('gives an app that lives at its parent address no monitor of its own, and uses the parent\'s', function () {
     $hub = availabilityTestInstance();
-    $hub->application->domain_option = ['parent'];
-    $hub->application->save();
+    $hub->plan->updateSetting('domain_option', ['parent']);
 
     $child = test()->makeChildInstance($hub->fresh(), 'shared-child');
 

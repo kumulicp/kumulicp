@@ -493,16 +493,16 @@ class ApplicationService
     }
 
     // Needed here instead of AppInstanceService because some parent apps needed before app is activated
-    public function availableParents(Application $app)
+    public function availableParents(AppPlan $plan)
     {
         $organization = Organization::account();
         $collection = collect();
 
-        if ($app->parent_app) {
-            $collection = $app->parent_app->instances()->where('organization_id', $organization->id)->doesntHave('children')->get();
+        if ($parent_app = $plan->parentApplication()) {
+            $collection = $parent_app->instances()->where('organization_id', $organization->id)->doesntHave('children')->get();
 
             foreach ($organization->suborganizations as $sub) {
-                $apps = $app->parent_app->instances()->where('organization_id', $sub->id)->doesntHave('children')->get();
+                $apps = $parent_app->instances()->where('organization_id', $sub->id)->doesntHave('children')->get();
                 if (count($apps) > 0) {
                     $collection = $collection->merge($apps);
                 }

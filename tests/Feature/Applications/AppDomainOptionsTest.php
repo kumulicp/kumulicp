@@ -31,8 +31,7 @@ describe('Discover review domain options', function () {
     });
 
     it('only lists the system domain option when only base is allowed', function () {
-        $this->application->domain_option = ['base'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['base']);
 
         $response = $this->get("/discover/{$this->application->slug}/plans/{$this->plan->id}/review");
 
@@ -51,8 +50,7 @@ describe('Discover review domain options', function () {
             'status' => 'active',
         ]);
 
-        $this->application->domain_option = ['subdomains'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['subdomains']);
 
         $response = $this->get("/discover/{$this->application->slug}/plans/{$this->plan->id}/review");
 
@@ -64,8 +62,7 @@ describe('Discover review domain options', function () {
     });
 
     it('rejects activation with the base domain type when not allowed', function () {
-        $this->application->domain_option = ['subdomains'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['subdomains']);
 
         OrgDomain::factory()->create([
             'organization_id' => $this->user->organization_id,
@@ -82,8 +79,7 @@ describe('Discover review domain options', function () {
     });
 
     it('rejects activation with a new subdomain when not allowed', function () {
-        $this->application->domain_option = ['base'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['base']);
 
         $response = $this->post("/discover/{$this->application->slug}/plans/{$this->plan->id}/activate", [
             'label' => 'My App',
@@ -94,8 +90,7 @@ describe('Discover review domain options', function () {
     });
 
     it('rejects activation with the parent domain type when not allowed', function () {
-        $this->application->domain_option = ['base'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['base']);
 
         $response = $this->post("/discover/{$this->application->slug}/plans/{$this->plan->id}/activate", [
             'label' => 'My App',
@@ -106,8 +101,7 @@ describe('Discover review domain options', function () {
     });
 
     it('allows activation with the base domain type when allowed', function () {
-        $this->application->domain_option = ['base'];
-        $this->application->save();
+        $this->plan->updateSetting('domain_option', ['base']);
 
         $response = $this->post("/discover/{$this->application->slug}/plans/{$this->plan->id}/activate", [
             'label' => 'My App',
@@ -128,9 +122,7 @@ describe('Activated app domain options', function () {
 
         $this->demoApp = $this->support->demo_app->instances()->first();
 
-        $application = $this->demoApp->application;
-        $application->can_update_domain = true;
-        $application->save();
+        $this->demoApp->plan->updateSetting('can_update_domain', true);
 
         $server = Server::factory()->create(['ip' => '203.0.113.10']);
         $orgServer = new OrgServer;
@@ -142,9 +134,7 @@ describe('Activated app domain options', function () {
     });
 
     it('only allows adding a custom subdomain when subdomains is allowed', function () {
-        $application = $this->demoApp->application;
-        $application->domain_option = ['subdomains'];
-        $application->save();
+        $this->demoApp->plan->updateSetting('domain_option', ['subdomains']);
 
         $response = $this->get('/apps/'.$this->demoApp->id.'/edit');
 
@@ -155,9 +145,7 @@ describe('Activated app domain options', function () {
     });
 
     it('does not allow adding a custom subdomain when only base is allowed', function () {
-        $application = $this->demoApp->application;
-        $application->domain_option = ['base'];
-        $application->save();
+        $this->demoApp->plan->updateSetting('domain_option', ['base']);
 
         $response = $this->get('/apps/'.$this->demoApp->id.'/edit');
 
@@ -168,9 +156,7 @@ describe('Activated app domain options', function () {
     });
 
     it('does not offer domain choices when the app uses the parent domain', function () {
-        $application = $this->demoApp->application;
-        $application->domain_option = ['parent'];
-        $application->save();
+        $this->demoApp->plan->updateSetting('domain_option', ['parent']);
 
         $response = $this->get('/apps/'.$this->demoApp->id.'/edit');
 
@@ -181,9 +167,7 @@ describe('Activated app domain options', function () {
     });
 
     it('rejects switching to a base domain when not allowed', function () {
-        $application = $this->demoApp->application;
-        $application->domain_option = ['subdomains'];
-        $application->save();
+        $this->demoApp->plan->updateSetting('domain_option', ['subdomains']);
 
         $response = $this->put('/apps/'.$this->demoApp->id, [
             'label' => 'My App',
@@ -194,9 +178,7 @@ describe('Activated app domain options', function () {
     });
 
     it('rejects adding a new custom subdomain connection when subdomains is not allowed', function () {
-        $application = $this->demoApp->application;
-        $application->domain_option = ['base'];
-        $application->save();
+        $this->demoApp->plan->updateSetting('domain_option', ['base']);
 
         $parentDomain = OrgDomain::factory()->create([
             'organization_id' => $this->demoApp->organization_id,

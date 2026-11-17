@@ -121,6 +121,9 @@ class Plans extends Controller
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
+                'can_update_domain' => $plan->canUpdateDomain(),
+                'domain_option' => $plan->domainOptions(),
+                'parent_app' => $plan->parentApplication()?->name,
             ],
             'features' => $features->map(function ($feature) {
                 return [
@@ -200,6 +203,7 @@ class Plans extends Controller
         $plan->features = [];
         $plan->display_order = $display_order + 1;
         $plan->settings = [
+            ...$app->inheritedPlanSettings(),
             'server_type' => $server_type,
             'base' => [],
             'standard' => [],
@@ -296,7 +300,14 @@ class Plans extends Controller
                 'expires_after' => $plan->setting('expires_after'),
                 'trial_for' => $plan->setting('trial_for'),
                 'self_registration_enabled' => $plan->selfRegistrationEnabled(),
+                'can_update_domain' => $plan->canUpdateDomain(),
+                'domain_option' => $plan->domainOptions(),
+                'parent_app' => $plan->setting('parent_app_id'),
             ],
+            'apps' => Application::where('id', '!=', $app->id)->orderBy('name')->get()->map(fn (Application $other) => [
+                'value' => $other->id,
+                'text' => $other->name,
+            ])->values(),
             'web_servers' => $web_servers->map(function ($server) {
                 return [
                     'value' => $server->id,
@@ -363,6 +374,10 @@ class Plans extends Controller
             // Chosen when the plan is created; the settings only carry it along.
             'server_type' => 'nullable|in:separate,shared',
             'self_registration_enabled' => 'nullable|bool',
+            'can_update_domain' => 'nullable|boolean',
+            'domain_option' => 'nullable|array',
+            'domain_option.*' => 'in:subdomains,primary,base,parent',
+            'parent_app' => ['nullable', 'numeric', Rule::exists('applications', 'id'), Rule::notIn([$app->id])],
         ], $currencyRules));
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
@@ -410,6 +425,19 @@ class Plans extends Controller
 
         if (! $plan->hidden && $server_type) {
             $settingsToUpdate['server_type'] = $server_type;
+        }
+
+        // Only what the form sent, so a request without them leaves a plan as it was
+        if ($request->has('can_update_domain')) {
+            $settingsToUpdate['can_update_domain'] = $request->boolean('can_update_domain');
+        }
+
+        if ($request->has('domain_option')) {
+            $settingsToUpdate['domain_option'] = array_values($request->input('domain_option') ?? []);
+        }
+
+        if ($request->has('parent_app')) {
+            $settingsToUpdate['parent_app_id'] = $request->filled('parent_app') ? (int) $request->input('parent_app') : null;
         }
 
         $plan->updateSettings($settingsToUpdate);

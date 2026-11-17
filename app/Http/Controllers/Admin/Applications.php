@@ -6,7 +6,6 @@ use App\Application;
 use App\AppPlan;
 use App\AppScreenshot;
 use App\AppVersion;
-use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Http\Controllers\Controller;
 use App\Integrations\Applications\AppProfile;
@@ -185,10 +184,6 @@ class Applications extends Controller
                 'name' => $app->name,
                 'slug' => $app->slug,
                 'category' => $app->category,
-                'parent_app' => [
-                    'id' => $app->parent_app_id != 0 ? $app->parent_app_id : null,
-                ],
-                'access_type' => $app->access_type,
                 'short_description' => $app->short_description,
                 'description' => $app->description,
                 'enabled' => $app->enabled == 1 ? true : false,
@@ -214,7 +209,6 @@ class Applications extends Controller
 
     public function edit(Application $app)
     {
-        $apps = Application::all();
         $readiness = new ApplicationReadiness($app);
 
         return inertia()->render('Admin/Applications/AppEdit', [
@@ -236,7 +230,6 @@ class Applications extends Controller
                 'access_type' => $app->access_type,
                 'short_description' => $app->short_description,
                 'description' => $app->description,
-                'can_update_domain' => $app->can_update_domain,
                 'enabled' => $app->enabled == 1 ? true : false,
                 'status_label' => $app->enabled ? __('labels.ready') : __('labels.not_ready'),
                 'screenshots' => $app->screenshots->map(function ($screenshot) {
@@ -274,13 +267,8 @@ class Applications extends Controller
             'tags' => 'nullable|array|max:30',
             'tags.*' => 'string|max:50',
             'image' => 'nullable|file|image|mimes:png',
-            'parent_app' => 'nullable|numeric',
-            'access_type' => ['required', 'string', 'max:15', Rule::enum(AccessType::class)],
             'short_description' => 'required',
             'description' => 'required',
-            'domain_option' => 'present|array',
-            'domain_option.*' => 'in:subdomains,primary,base,parent',
-            'can_update_domain' => 'boolean',
             'screenshots' => 'nullable|array',
             'screenshots.*' => 'file|image|mimes:png,jpg,jpeg,webp',
             'remove_screenshots' => 'nullable|array',
@@ -319,10 +307,6 @@ class Applications extends Controller
         $app->category = $request->category;
         $app->short_description = strip_tags($request->short_description);
         $app->description = clean($request->description, 'rich_text');
-        $app->parent_app_id = $request->parent_app ?? 0;
-        $app->access_type = $request->access_type;
-        $app->domain_option = $request->domain_option ?? [];
-        $app->can_update_domain = $request->can_update_domain;
         $app->save();
         $app->tags()->sync(Tag::findOrCreateMany($request->input('tags', []))->modelKeys());
 

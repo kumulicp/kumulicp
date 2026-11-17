@@ -14,9 +14,10 @@ beforeEach(function () {
     $this->organization = Organization::find(1);
     $this->other = Organization::factory()->create();
 
-    $this->application = Application::factory()->create(['domain_option' => ['base']]);
+    $this->application = Application::factory()->create();
     $this->version = AppVersion::factory()->create(['application_id' => $this->application->id, 'status' => 'active']);
     $this->plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+    $this->plan->updateSetting('domain_option', ['base']);
 });
 
 function instanceIn(Organization $organization, array $attributes = []): AppInstance
@@ -50,8 +51,7 @@ it('does not call an app an addon to a shared app that is another organizations'
 });
 
 it('shows the parent address for an app whose domain option is parent', function () {
-    $this->application->domain_option = ['parent'];
-    $this->application->save();
+    $this->plan->updateSetting('domain_option', ['parent']);
     $shared = instanceIn($this->other);
     $child = instanceIn($this->organization, ['parent_id' => $shared->id]);
 
@@ -62,8 +62,7 @@ it('shows the parent address for an app whose domain option is parent', function
 });
 
 it('leaves a multisite child its own domain instead of its parents', function () {
-    $this->application->domain_option = ['base', 'subdomains'];
-    $this->application->save();
+    $this->plan->updateSetting('domain_option', ['base', 'subdomains']);
     $shared = instanceIn($this->other);
     $child = instanceIn($this->organization, ['parent_id' => $shared->id]);
 

@@ -18,10 +18,9 @@ describe('App Domain Update', function () {
 
         $this->demoApp = $support->demo_app->instances()->first();
 
-        $application = $this->demoApp->application;
-        $application->domain_option = ['base', 'subdomains', 'primary'];
-        $application->can_update_domain = true;
-        $application->save();
+        $plan = $this->demoApp->plan;
+        $plan->updateSettings(['domain_option' => ['base', 'subdomains', 'primary'], 'can_update_domain' => true]);
+        $plan->save();
 
         $server = Server::factory()->create(['ip' => '203.0.113.10']);
         $orgServer = new OrgServer;

@@ -304,9 +304,9 @@ class AppInstanceService
 
     public function orgSubdomains(Organization $organization)
     {
-        $application = $this->app_instance->application;
-        $allowsPrimary = $application->hasDomainOption('primary');
-        $allowsSubdomains = $application->hasDomainOption('subdomains');
+        $plan = $this->app_instance->plan;
+        $allowsPrimary = (bool) $plan?->hasDomainOption('primary');
+        $allowsSubdomains = (bool) $plan?->hasDomainOption('subdomains');
 
         if (! $allowsPrimary && ! $allowsSubdomains) {
             return collect();
@@ -332,9 +332,9 @@ class AppInstanceService
 
     public function isSubdomainAvailable(OrgSubdomain $domain)
     {
-        $application = $this->app_instance->application;
-        $allowsPrimary = $application->hasDomainOption('primary');
-        $allowsSubdomains = $application->hasDomainOption('subdomains');
+        $plan = $this->app_instance->plan;
+        $allowsPrimary = (bool) $plan?->hasDomainOption('primary');
+        $allowsSubdomains = (bool) $plan?->hasDomainOption('subdomains');
 
         return in_array($domain->app_instance_id, [$this->app_instance->id, 0, null])
             && $domain->type === 'app'

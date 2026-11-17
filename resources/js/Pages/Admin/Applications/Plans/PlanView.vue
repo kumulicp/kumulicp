@@ -58,6 +58,18 @@ import { formatComponentPrices, formatComponentPriceIds } from '@/constants/curr
         <td><b>{{ $t('admin.plans.maxDomains') }}:</b></td>
         <td>{{ plan.domain_max }}</td>
       </tr>
+      <tr>
+        <td><b>{{ $t('admin.plans.canUpdateDomain') }}:</b></td>
+        <td>{{ plan.can_update_domain }}</td>
+      </tr>
+      <tr>
+        <td><b>{{ $t('admin.plans.domainTypeAllowed') }}:</b></td>
+        <td>{{ domainOptionLabels }}</td>
+      </tr>
+      <tr>
+        <td><b>{{ $t('admin.plans.parentApp') }}:</b></td>
+        <td>{{ plan.parent_app ?? $t('admin.versions.none') }}</td>
+      </tr>
       </template>
       <tr>
         <td><b>{{ $t('admin.plans.webServer') }}:</b></td>
@@ -252,6 +264,17 @@ export default {
     sso_servers: Object,
     parent_servers: Object,
     enabled_currencies: Array
+  },
+  computed: {
+    domainOptionLabels () {
+      const labels = {
+        subdomains: this.$t('admin.plans.domainOptionSubdomains'),
+        primary: this.$t('admin.plans.domainOptionPrimary'),
+        base: this.$t('admin.plans.domainOptionBase'),
+        parent: this.$t('admin.plans.domainOptionParent')
+      }
+      return (this.plan.domain_option ?? []).map(option => labels[option] ?? option).join(', ') || this.$t('admin.versions.none')
+    }
   },
   methods: {
     formatComponentPrices,
