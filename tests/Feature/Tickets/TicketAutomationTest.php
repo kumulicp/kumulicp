@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Tickets;
 
+use App\Application;
 use App\Enums\TicketStatus;
 use App\Notifications\Tickets\TicketActivity;
 use App\Services\Tickets\TicketAutomation;
