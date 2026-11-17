@@ -8,6 +8,7 @@ use App\AppVersion;
 use App\Monitoring\AppInstanceObserver;
 use App\Organization;
 use App\Server;
+use App\Plan;
 use App\Services\AppProfileRegistry;
 use App\Services\Application\ReadinessObserver;
 use App\Services\BillingDriverRegistry;
@@ -32,6 +33,7 @@ use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
@@ -111,6 +113,13 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Paginator::useBootstrap();
+
+        // Stored in plan_prices.priceable_type instead of class names
+        Relation::morphMap([
+            'plan' => Plan::class,
+            'app_plan' => AppPlan::class,
+        ]);
+
         Cashier::useCustomerModel(Organization::class);
         // Cashier::calculateTaxes();
         Event::listen(function (SocialiteWasCalled $event) {

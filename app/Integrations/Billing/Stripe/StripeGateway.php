@@ -4,13 +4,13 @@ namespace App\Integrations\Billing\Stripe;
 
 use App\Contracts\BillingContract;
 use App\Contracts\PlanContract;
-use App\Notifications\NewOrganizationSubscription;
 use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
-use App\Services\Organization\JointSubscriptionService;
+use App\Services\Billing\SubscriptionRequestBuilder;
+use App\Support\Billing\SubscriptionLine;
+use App\Support\Billing\SubscriptionRequest;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization as OrganizationFacade;
-use App\Support\Facades\Subscription;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -69,56 +69,57 @@ class StripeGateway implements BillingContract
         ];
     }
 
-    public function update(): void
+    /**
+     * Apply the request to the organization's Stripe subscription: create one
+     * (with the trial, if the request has one) or swap the items of the existing
+     * one. Does nothing until the organization has a payment method on file.
+     */
+    public function syncSubscription(SubscriptionRequest $request): bool
     {
-        $plan_pricing = $this->stripePricing();
+        $organization = $request->organization;
 
-        if ($this->organization->status !== 'deactivated' && count($plan_pricing) > 0 && $this->organization->hasDefaultPaymentMethod()) {
-            // If organization already has a subscription of any time (active, canceled, etc)
-            if ($this->organization->subscribed('default') && ! $this->organization->subscription('default')->ended()) {
-
-                // If subscription cancelled or if current subscription does not have a stripe plan, but stripe stil indicated organization is on grace period and pending subscription is same as previous subscription.
-                if (! $this->organization->subscription('default')->active() && $this->organization->subscription('default')->onGracePeriod()) {
-                    $this->organization->subscription('default')->resume();
-                }
-
-                $organization_subscription = $this->organization->subscription('default');
-
-                if ($this->organization->discount_id) {
-                    $organization_subscription->applyCoupon($this->organization->discount_id);
-                }
-
-                $organization_subscription->noProrate()->swap($plan_pricing);
-            }
-
-            // If not on any plan or original plan canceled, add new plan
-            else {
-                // Extract stripe ids
-                $ids = [];
-                foreach ($plan_pricing as $id => $quantity) {
-                    $ids[] = $id;
-                }
-
-                // Create new subscription
-                $new_subscription = $this->organization->newSubscription('default', $ids);
-                if ($this->organization->discount_id) {
-                    $new_subscription->withCoupon($this->organization->discount_id);
-                }
-
-                foreach ($plan_pricing as $id => $details) {
-                    $new_subscription->quantity((int) $details['quantity'], $id);
-                }
-
-                // Add trial period if no previous subscription
-                if ($this->organization->setting('step') === 1) {
-                    $superaccount = Organization::where('type', 'superaccount')->first();
-                    $superaccount->notifyAdmins(new NewOrganizationSubscription);
-
-                    $new_subscription->trialDays(30);
-                }
-                $new_subscription->noProrate()->add();
-            }
+        if (! $organization->hasDefaultPaymentMethod()) {
+            return false;
         }
+
+        $items = $this->stripeItems($request->lines);
+
+        // If organization already has a subscription of any time (active, canceled, etc)
+        if ($organization->subscribed('default') && ! $organization->subscription('default')->ended()) {
+
+            // If subscription cancelled or if current subscription does not have a stripe plan, but stripe stil indicated organization is on grace period and pending subscription is same as previous subscription.
+            if (! $organization->subscription('default')->active() && $organization->subscription('default')->onGracePeriod()) {
+                $organization->subscription('default')->resume();
+            }
+
+            $organization_subscription = $organization->subscription('default');
+
+            if ($request->discountId) {
+                $organization_subscription->applyCoupon($request->discountId);
+            }
+
+            $organization_subscription->noProrate()->swap($items);
+
+            return false;
+        }
+
+        // If not on any plan or original plan canceled, add new plan
+        $new_subscription = $organization->newSubscription('default', array_keys($items));
+        if ($request->discountId) {
+            $new_subscription->withCoupon($request->discountId);
+        }
+
+        foreach ($items as $id => $details) {
+            $new_subscription->quantity((int) $details['quantity'], $id);
+        }
+
+        // Trial period if no previous subscription
+        if ($request->trialDays > 0) {
+            $new_subscription->trialDays($request->trialDays);
+        }
+        $new_subscription->noProrate()->add();
+
+        return true;
     }
 
     public function cancel(): void
@@ -294,20 +295,30 @@ class StripeGateway implements BillingContract
         return 'active';
     }
 
-    public function stripePricing()
+    /**
+     * The organization's billable items as Stripe subscription items
+     * ([price id => ['quantity' => n]]).
+     *
+     * @deprecated what is billed is worked out for every driver by SubscriptionRequestBuilder
+     */
+    public function stripePricing(): array
     {
-        if ($this->organization->setting('include_in_parent_invoice') === true && ! is_null($this->organization->parent_organization)) {
-            $this->organization = OrganizationFacade::setOrganization($this->organization->parent_organization);
-            $subscription = new JointSubscriptionService($this->organization);
-        } else {
-            if ($this->organization->suborganizations()->count() > 0) {
-                $subscription = new JointSubscriptionService($this->organization);
-            } else {
-                $subscription = Subscription::all();
-            }
+        return $this->stripeItems(app(SubscriptionRequestBuilder::class)->build($this->organization)->lines);
+    }
+
+    /**
+     * @param  Collection<int, SubscriptionLine>  $lines
+     * @return array<string, array{quantity: int}>
+     */
+    private function stripeItems(Collection $lines): array
+    {
+        $items = [];
+
+        foreach ($lines as $line) {
+            $items[$line->externalId] = ['quantity' => $line->quantity];
         }
 
-        return $this->pricingFromPlans($subscription->paidSubscriptions());
+        return $items;
     }
 
     /**

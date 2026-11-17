@@ -96,10 +96,10 @@ describe('Admin Plans', function () {
             ->click('#submit')
             ->assertPathIs('/admin/service/plans');
 
-        $plan->refresh();
-        expect((float) $plan->setting('base.prices.USD.amount'))->toBe(10.0);
-        expect($plan->setting('base.prices.USD.price_id'))->toBe('usd_base_id');
-        expect((float) $plan->setting('base.prices.CAD.amount'))->toBe(14.0);
-        expect($plan->setting('base.prices.CAD.price_id'))->toBe('cad_base_id');
+        // Prices are saved to the plan_prices table, not the plan's settings
+        expect(storedPrice($plan, 'base', 'USD'))->toBe(10.0);
+        expect(storedPrice($plan, 'base', 'USD', 'price_id'))->toBe('usd_base_id');
+        expect(storedPrice($plan, 'base', 'CAD'))->toBe(14.0);
+        expect(storedPrice($plan, 'base', 'CAD', 'price_id'))->toBe('cad_base_id');
     });
 });

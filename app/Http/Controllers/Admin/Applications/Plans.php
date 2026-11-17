@@ -234,6 +234,7 @@ class Plans extends Controller
         $clone->is_default = false;
         $clone->archive = false;
         $clone->save();
+        $plan->copyPricesTo($clone);
 
         return redirect("/admin/apps/{$app->slug}/plans/{$clone->id}")->with('success', __('admin.applications.plans.cloned', ['plan' => $clone->name]));
     }
@@ -407,19 +408,23 @@ class Plans extends Controller
             'self_registration_enabled' => $request->boolean('self_registration_enabled'),
         ];
 
-        foreach ($enabledCurrencies as $currency) {
-            foreach ($components as $component) {
-                $settingsToUpdate["{$component}.prices.{$currency}.amount"] = $request->input("prices.{$component}.{$currency}.amount");
-                $settingsToUpdate["{$component}.prices.{$currency}.price_id"] = $request->input("prices.{$component}.{$currency}.price_id");
-            }
-        }
-
         if (! $plan->hidden && $server_type) {
             $settingsToUpdate['server_type'] = $server_type;
         }
 
         $plan->updateSettings($settingsToUpdate);
         $plan->save();
+
+        foreach ($enabledCurrencies as $currency) {
+            foreach ($components as $component) {
+                $plan->setPrice(
+                    $component,
+                    $currency,
+                    $request->input("prices.{$component}.{$currency}.amount"),
+                    $request->input("prices.{$component}.{$currency}.price_id"),
+                );
+            }
+        }
 
         // Update default plan
         if (Arr::get($validated, 'default', false)) {

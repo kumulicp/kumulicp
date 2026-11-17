@@ -4,6 +4,7 @@ namespace Tests\Support\Billing;
 
 use App\Contracts\BillingContract;
 use App\Organization;
+use App\Support\Billing\SubscriptionRequest;
 use App\Support\Facades\Organization as OrganizationFacade;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -27,7 +28,20 @@ class FakeBillingGateway implements BillingContract
         return true;
     }
 
-    public function update(): void {}
+    public function syncSubscription(SubscriptionRequest $request): bool
+    {
+        return false;
+    }
+
+    public function intent(): array
+    {
+        return ['client_secret' => null];
+    }
+
+    public function discount(): array
+    {
+        return [];
+    }
 
     public function cancel(): void {}
 
