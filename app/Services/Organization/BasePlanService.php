@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property array|null $app_plans
  *
- * @method array appPlansList(Application $app)
+ * @method mixed appPlansList(Application $app)
  * @method mixed setting(string $setting)
  */
 class BasePlanService
