@@ -67,14 +67,14 @@ class Profile extends Controller
                 'previous_mail' => $mailbox->canBeUndone() ? $mailbox->previous_mail : null,
                 'undo_until' => $mailbox->canBeUndone() ? $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))->toDayDateTimeString() : null,
                 // Whether accepting an offer changes the email, and what the person has to give
-                'plan' => $mailbox->status === Mailbox::PENDING ? $mailboxes->plan($user, $mailbox) : null,
+                'plan' => $mailbox->status === Mailbox::PENDING && $user ? $mailboxes->plan($user, $mailbox) : null,
             ] : null,
             'can_get' => ! $mailbox && $domains->isNotEmpty() && Gate::allows('add-user-email-account', $profile->username),
             'domains' => $domains->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
             'default_name' => Str::lower($profile->username),
             // When the email now is on a domain hosted here it can't become the recovery email
             'current_hosted' => HostedDomains::isHosted($profile->email),
-            'apps' => collect($user->allUserApps())
+            'apps' => collect($user ? $user->allUserApps() : [])
                 ->map(fn ($app) => ['name' => $app->label, 'identity' => AppIdentity::for($app)])
                 ->values(),
         ];

@@ -16,7 +16,6 @@ use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -38,7 +37,8 @@ class OrgEmail extends Controller
             'local_part' => ['required', 'string', new EmailLocalPart, new MailAddressAvailable],
             'recovery_email' => ['nullable', 'email:rfc,filter', 'max:255'],
             'current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email)],
-            'acknowledge' => [Rule::requiredIf(fn () => ! $this->sameAddress($request, $user)), 'accepted'],
+            // `accepted` fails when the field is absent, so it is only asked for when the warning applies
+            'acknowledge' => $this->sameAddress($request, $user) ? ['nullable'] : ['required', 'accepted'],
         ]);
 
         $domain = OrgDomain::findOrFail($validated['domain']);
@@ -70,10 +70,7 @@ class OrgEmail extends Controller
         $validated = $request->validate([
             'recovery_email' => ['nullable', 'email:rfc,filter', 'max:255'],
             'current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email)],
-            'acknowledge' => [
-                Rule::requiredIf(fn () => $mailbox && $mailboxes->plan($user, $mailbox)['changes_email']),
-                'accepted',
-            ],
+            'acknowledge' => $mailbox && $mailboxes->plan($user, $mailbox)['changes_email'] ? ['required', 'accepted'] : ['nullable'],
         ]);
 
         if (! $mailbox || $mailbox->status !== Mailbox::PENDING) {
