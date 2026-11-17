@@ -71,6 +71,12 @@ class Organization extends Model
 {
     use Billable, HasFactory;
 
+    /**
+     * The organization that owns the example instances apps show Helm values
+     * from before they have an instance of their own.
+     */
+    public const TYPE_EXAMPLE = 'example';
+
     protected $table = 'organizations';
 
     protected $hidden = [
@@ -422,20 +428,23 @@ class Organization extends Model
     }
 
     /**
-     * Leave out the throwaway organizations created for tests.
+     * Leave out the throwaway organizations created for tests, and the one
+     * that owns an app's example instance (see ExampleAppInstance).
      */
     public function scopeNotTest(Builder $query)
     {
-        return $query->where(function (Builder $query) {
-            $query->whereNull('organizations.account_test_id')->orWhere('organizations.account_test_id', 0);
-        });
+        return $query->where('organizations.type', '!=', self::TYPE_EXAMPLE)
+            ->where(function (Builder $query) {
+                $query->whereNull('organizations.account_test_id')->orWhere('organizations.account_test_id', 0);
+            });
     }
 
     /**
-     * Whether this is a throwaway organization created for a test.
+     * Whether this is a throwaway organization created for a test, or the one
+     * that owns example instances.
      */
     public function isTest(): bool
     {
-        return ! empty($this->account_test_id);
+        return ! empty($this->account_test_id) || $this->type === self::TYPE_EXAMPLE;
     }
 }
