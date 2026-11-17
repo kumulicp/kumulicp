@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\AppPlan;
 use App\Application;
 use App\Organization;
 use App\Server;
@@ -75,10 +76,10 @@ class OrganizationService
         return $this->apps;
     }
 
-    public function availableDomains(Application $app)
+    public function availableDomains(AppPlan $plan)
     {
-        $allowsPrimary = $app->hasDomainOption('primary');
-        $allowsSubdomains = $app->hasDomainOption('subdomains');
+        $allowsPrimary = $plan->hasDomainOption('primary');
+        $allowsSubdomains = $plan->hasDomainOption('subdomains');
 
         if (! $allowsPrimary && ! $allowsSubdomains) {
             return collect();

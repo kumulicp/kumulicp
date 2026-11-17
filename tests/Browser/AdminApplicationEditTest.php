@@ -10,8 +10,6 @@ describe('Admin Application Screenshots', function () {
             'slug' => 'browser_test_app_screenshots',
             'name' => 'Browser Test App Screenshots',
             'category' => 'Original Category',
-            'access_type' => 'basic',
-            'domain_option' => [],
         ]);
 
         $this->screenshotOne = AppScreenshot::create([

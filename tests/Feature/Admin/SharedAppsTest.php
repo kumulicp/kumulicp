@@ -612,16 +612,13 @@ class SharedAppsTest extends TestCase
         $shared->save();
         $edit = "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/edit";
 
-        $app = $shared->application;
-        $app->can_update_domain = false;
-        $app->save();
+        $shared->plan->updateSetting('can_update_domain', false);
         $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia
             ->where('app.managed_externally', false)
             ->where('domain.editable', false)
             ->where('domain.deployed', true));
 
-        $app->can_update_domain = true;
-        $app->save();
+        $shared->plan->updateSetting('can_update_domain', true);
         $this->actingAs($admin)->get($edit)->assertInertia(fn ($inertia) => $inertia
             ->where('domain.editable', true));
     }

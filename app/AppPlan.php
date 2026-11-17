@@ -222,6 +222,48 @@ class AppPlan extends Model
         return (bool) $this->setting('self_registration_enabled');
     }
 
+    /**
+     * The kinds of domain an app on this plan can be reached at: subdomains, primary,
+     * base or parent.
+     *
+     * @return array<int, string>
+     */
+    public function domainOptions(): array
+    {
+        $options = $this->setting('domain_option', []);
+
+        return is_array($options) ? array_values($options) : [];
+    }
+
+    /**
+     * Determine whether the given domain type(s) are allowed for an app on this plan.
+     *
+     * @param  string|array<int, string>  $types
+     */
+    public function hasDomainOption($types): bool
+    {
+        return count(array_intersect((array) $types, $this->domainOptions())) > 0;
+    }
+
+    /**
+     * Whether the domain of an app on this plan can be changed once it is activated.
+     */
+    public function canUpdateDomain(): bool
+    {
+        return (bool) $this->setting('can_update_domain');
+    }
+
+    /**
+     * The app an app on this plan is an addon to (a CiviCRM in a WordPress), which has to be
+     * activated first.
+     */
+    public function parentApplication(): ?Application
+    {
+        $id = $this->setting('parent_app_id');
+
+        return $id ? Application::find($id) : null;
+    }
+
     // The settings that are safe to send to the browser: everything except the
     // plan's custom secrets (see PlanSecretsService), which only the server uses.
     /**

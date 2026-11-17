@@ -2,7 +2,6 @@
 
 namespace App;
 
-use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Support\VersionUpdates\VersionComparator;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,16 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use OffloadProject\Toggle\Facades\Toggle;
+use Illuminate\Support\Arr;
 
 /**
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property int|null $parent_app_id
  * @property string|null $description
- * @property array $domain_option
- * @property AccessType $access_type
- * @property bool $can_update_domain
  * @property ApplicationSource $source
  * @property int|null $chart_source_id
  * @property array|null $catalog
@@ -29,8 +25,6 @@ use OffloadProject\Toggle\Facades\Toggle;
  * @property-read Collection<int, AppInstance> $instances
  * @property-read int|null $total_instances
  * @property-read int|null $active_instances
- * @property-read Collection<int, Application> $children
- * @property-read Application|null $parent_app
  * @property-read Collection<int, AppVersion> $versions
  * @property-read Collection<int, AppPlan> $plans
  * @property-read Collection<int, AppRole> $roles
@@ -49,7 +43,6 @@ class Application extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'domain_option' => '[]',
         'source' => 'generic',
     ];
 
@@ -59,9 +52,6 @@ class Application extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'access_type' => AccessType::class,
-        'can_update_domain' => 'boolean',
-        'domain_option' => 'array',
         'source' => ApplicationSource::class,
         'catalog' => 'array',
     ];
@@ -174,16 +164,6 @@ class Application extends Model
             ->values();
     }
 
-    public function children()
-    {
-        return $this->hasMany('App\Application', 'parent_app_id');
-    }
-
-    public function parent_app()
-    {
-        return $this->belongsTo('App\Application', 'parent_app_id');
-    }
-
     public function active_version()
     {
         return $this->versions()->where('status', 'active')->first();
@@ -210,15 +190,6 @@ class Application extends Model
         return $this->plans()->where('is_default', 1)->first();
     }
 
-    public function get_parent_slug()
-    {
-        if ($this->parent_app_id) {
-            return $this->parent_app->slug;
-        }
-
-        return $this->slug;
-    }
-
     /**
      * @return HasMany<AppRole, $this>
      */
@@ -230,6 +201,27 @@ class Application extends Model
     public function screenshots()
     {
         return $this->hasMany('App\AppScreenshot', 'application_id')->orderBy('display_order');
+    }
+
+    /**
+     * The domain and parent app settings a new plan of the app starts with: those of its
+     * first plan, so that adding a plan doesn't leave an app that can't be activated.
+     *
+     * @return array<string, mixed>
+     */
+    public function inheritedPlanSettings(): array
+    {
+        $plan = $this->plans()->orderBy('id')->first();
+
+        return Arr::only($plan->settings ?? [], ['can_update_domain', 'domain_option', 'parent_app_id']);
+    }
+
+    /**
+     * Whether any plan of the app makes it an addon to another app.
+     */
+    public function hasParentApp(): bool
+    {
+        return $this->plans->contains(fn (AppPlan $plan) => $plan->parentApplication() !== null);
     }
 
     public function is_installed(Organization $organization)

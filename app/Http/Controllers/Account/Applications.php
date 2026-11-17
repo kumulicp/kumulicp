@@ -82,7 +82,6 @@ class Applications extends Controller
 
         $organization = Organization::account();
         $version = $app->version()->where('status', 'active')->first();
-        $application = $app->application;
 
         $parent_app_instance = $app->parent()->with(['application', 'primary_domain'])->first();
 
@@ -94,12 +93,13 @@ class Applications extends Controller
         // Whose address the app is reached at follows the application's domain option: 'parent' apps (the
         // children of one Nextcloud, an addon in a WordPress) are reached at their parent's, while others
         // (a multisite ERPNext) have a domain of their own, which the domain list below picks.
-        $inherits_domain = $parent_app_instance && $application->hasDomainOption('parent');
+        $plan = $app->plan;
+        $inherits_domain = $parent_app_instance && $plan?->hasDomainOption('parent');
 
         $domains = [];
         $parent_domains = [];
-        $can_add_custom_subdomains = $application->hasDomainOption('subdomains');
-        if ($app->application->can_update_domain && ! $application->hasDomainOption('parent')) {
+        $can_add_custom_subdomains = (bool) $plan?->hasDomainOption('subdomains');
+        if ($plan?->canUpdateDomain() && ! $plan->hasDomainOption('parent')) {
             $domains = Application::instance($app)->availableDomains()->map(function ($domain) {
                 return [
                     'text' => $domain->name,
@@ -214,13 +214,13 @@ class Applications extends Controller
                         return;
                     }
 
-                    if ($value === 0 && ! $app->application->hasDomainOption('base')) {
+                    if ($value === 0 && ! $app->plan?->hasDomainOption('base')) {
                         $fail(__('organization.domain.denied.type'));
 
                         return;
                     }
 
-                    if ($value === 'connection' && ! $app->application->hasDomainOption('subdomains')) {
+                    if ($value === 'connection' && ! $app->plan?->hasDomainOption('subdomains')) {
                         $fail(__('organization.domain.denied.type'));
 
                         return;

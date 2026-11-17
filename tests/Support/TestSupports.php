@@ -419,13 +419,14 @@ class TestSupports
     {
         $nextcloud = Application::firstOrCreate(
             ['slug' => 'nextcloud'],
-            ['name' => 'Nextcloud', 'short_description' => 'Nextcloud', 'description' => 'Nextcloud', 'domain_option' => ['base'], 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'File Sharing & Collaboration', 'access_type' => 'standard']
+            ['name' => 'Nextcloud', 'short_description' => 'Nextcloud', 'description' => 'Nextcloud', 'enabled' => 1, 'category' => 'File Sharing & Collaboration']
         );
 
         $app_plan = new AppPlan;
         $app_plan->name = 'test';
         $app_plan->application_id = $nextcloud->id;
         $app_plan->settings = [
+            'domain_option' => ['base'],
             'base' => ['max' => null, 'price' => null, 'storage' => null, 'price_id' => null],
             'basic' => ['max' => 100, 'name' => 'Basic Nextcloud', 'price' => null, 'amount' => null, 'storage' => 0.5, 'price_id' => null],
             'storage' => ['max' => 3, 'price' => null, 'amount' => 5, 'price_id' => null],
@@ -438,6 +439,7 @@ class TestSupports
         $app_plan->name = 'test2';
         $app_plan->application_id = $nextcloud->id;
         $app_plan->settings = [
+            'domain_option' => ['base'],
             'base' => ['max' => null, 'price' => null, 'storage' => null, 'price_id' => null],
             'basic' => ['max' => 100, 'name' => 'Basic Nextcloud', 'price' => null, 'amount' => null, 'storage' => 1.5, 'price_id' => null],
             'storage' => ['max' => 3, 'price' => null, 'amount' => 5, 'price_id' => null],
@@ -451,13 +453,14 @@ class TestSupports
     {
         $wordpress = Application::firstOrCreate(
             ['slug' => 'wordpress'],
-            ['name' => 'Wordpress', 'short_description' => 'Wordpress', 'description' => 'Wordpress', 'domain_option' => ['base'], 'parent_app_id' => 0, 'enabled' => 1, 'category' => 'Website Builder', 'access_type' => 'basic']
+            ['name' => 'Wordpress', 'short_description' => 'Wordpress', 'description' => 'Wordpress', 'enabled' => 1, 'category' => 'Website Builder']
         );
 
         $app_plan = new AppPlan;
         $app_plan->name = 'test1';
         $app_plan->application_id = $wordpress->id;
         $app_plan->settings = [
+            'domain_option' => ['base'],
             'base' => ['max' => null, 'price' => null, 'storage' => null, 'price_id' => null],
             'basic' => ['max' => 1, 'name' => 'Basic Wordpress', 'price' => null, 'amount' => null, 'storage' => 1.5, 'price_id' => null],
             'storage' => ['max' => 3, 'price' => null, 'amount' => 5, 'price_id' => null],
@@ -470,6 +473,7 @@ class TestSupports
         $app_plan->name = 'test2';
         $app_plan->application_id = $wordpress->id;
         $app_plan->settings = [
+            'domain_option' => ['base'],
             'base' => ['max' => null, 'price' => null, 'storage' => null, 'price_id' => null],
             'basic' => ['max' => 2, 'name' => 'Basic Wordpress', 'price' => null, 'amount' => null, 'storage' => 1.5, 'price_id' => null],
             'storage' => ['max' => 3, 'price' => null, 'amount' => 5, 'price_id' => null],

@@ -118,6 +118,7 @@ class SharedApps extends Controller
         $plan->hidden = true;
         $plan->features = [];
         $plan->settings = [
+            ...$application->inheritedPlanSettings(),
             'base' => [],
             'standard' => [],
             'basic' => [],

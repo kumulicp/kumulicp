@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property array|null $app_plans
  *
- * @method array appPlansList(Application $app)
+ * @method mixed appPlansList(Application $app)
  * @method mixed setting(string $setting)
  */
 class BasePlanService
@@ -104,7 +104,7 @@ class BasePlanService
     public function appPlans(Application $app, $archived = true, $display_order = false)
     {
         $app_plans = $this->appPlansList($app);
-        $plans = AppPlan::whereIn('id', $app_plans);
+        $plans = AppPlan::whereIn('id', is_array($app_plans) ? $app_plans : []);
 
         if ($archived === false) {
             $plans->where('archive', false);

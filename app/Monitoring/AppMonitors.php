@@ -139,7 +139,7 @@ class AppMonitors
     // Mirrors AppInstance::domain(): a child that lives under its parent's domain
     private function sharesParentAddress(AppInstance $app): bool
     {
-        return $app->parent_id !== null && (bool) $app->application?->hasDomainOption('parent');
+        return $app->parent_id !== null && (bool) $app->plan?->hasDomainOption('parent');
     }
 
     // The results belong to the address and to the time the monitor was checking

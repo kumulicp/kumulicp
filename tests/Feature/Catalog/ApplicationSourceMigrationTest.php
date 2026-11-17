@@ -11,7 +11,7 @@ it('backfills the source of existing applications, with catalog apps as HelmForg
     $migration->down();
 
     foreach (['nextcloud', 'added-in-ui', 'gitea'] as $slug) {
-        DB::table('applications')->insert(['name' => $slug, 'slug' => $slug, 'short_description' => '', 'description' => '', 'enabled' => 0, 'domain_option' => '[]', 'catalog' => $slug === 'gitea' ? '{"chart_name":"gitea"}' : null]);
+        DB::table('applications')->insert(['name' => $slug, 'slug' => $slug, 'short_description' => '', 'description' => '', 'enabled' => 0, 'catalog' => $slug === 'gitea' ? '{"chart_name":"gitea"}' : null]);
     }
 
     $migration->up();

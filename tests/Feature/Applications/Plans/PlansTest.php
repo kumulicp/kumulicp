@@ -6,6 +6,8 @@ use App\AppPlan;
 use App\Organization;
 use App\Support\Facades\Settings;
 use App\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 
@@ -461,4 +463,122 @@ it('does not clone a hidden shared app plan', function () {
     )->assertNotFound();
 
     expect(AppPlan::count())->toBe($count);
+});
+
+it('saves where the app can be reached and which app it is an addon to on the plan', function () {
+    $parent = Application::factory()->create();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload([
+            'can_update_domain' => true,
+            'domain_option' => ['base', 'subdomains'],
+            'parent_app' => $parent->id,
+        ])
+    )->assertSessionHasNoErrors();
+
+    $plan = $this->appPlan->fresh();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base', 'subdomains'])
+        ->and($plan->hasDomainOption('base'))->toBeTrue()
+        ->and($plan->hasDomainOption('parent'))->toBeFalse()
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('clears the parent app of a plan', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSetting('parent_app_id', $parent->id);
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload(['domain_option' => [], 'parent_app' => null])
+    )->assertSessionHasNoErrors();
+
+    expect($this->appPlan->fresh()->parentApplication())->toBeNull();
+});
+
+it('leaves the domain settings of a plan alone when an update does not send them', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['base'], 'parent_app_id' => $parent->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload()
+    )->assertSessionHasNoErrors();
+
+    $plan = $this->appPlan->fresh();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base'])
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('rejects an unknown domain option, a missing parent app and an app that is its own parent on a plan', function () {
+    $url = "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}";
+
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['domain_option' => ['everywhere']]))
+        ->assertSessionHasErrors('domain_option.0');
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['parent_app' => 999999]))
+        ->assertSessionHasErrors('parent_app');
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['parent_app' => $this->demoApp->id]))
+        ->assertSessionHasErrors('parent_app');
+});
+
+it('gives the plan edit page its domain settings and the other apps to pick a parent from', function () {
+    $other = Application::factory()->create(['name' => 'Another App']);
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['primary'], 'parent_app_id' => $other->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->get("/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/edit")
+        ->assertInertia(fn ($page) => $page
+            ->where('plan.can_update_domain', true)
+            ->where('plan.domain_option', ['primary'])
+            ->where('plan.parent_app', $other->id)
+            ->where('apps', fn ($apps) => collect($apps)->pluck('value')->contains($other->id)
+                && ! collect($apps)->pluck('value')->contains($this->demoApp->id))
+        );
+});
+
+it('starts a new plan with the domain settings the app already has', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['base'], 'parent_app_id' => $parent->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'Another plan',
+        'description' => 'Another description',
+    ])->assertRedirect();
+
+    $plan = AppPlan::where('name', 'Another plan')->firstOrFail();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base'])
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('takes the domain settings an app had onto each of its plans, and drops them from the app', function () {
+    $migration = require database_path('migrations/2026_11_17_100000_move_domain_and_parent_app_settings_to_app_plans.php');
+    $migration->down();
+
+    $parent = Application::factory()->create();
+    DB::table('applications')->where('id', $this->demoApp->id)->update([
+        'can_update_domain' => true,
+        'domain_option' => json_encode(['base', 'parent']),
+        'parent_app_id' => $parent->id,
+    ]);
+
+    $migration->up();
+
+    foreach ($this->demoApp->plans as $plan) {
+        expect($plan->canUpdateDomain())->toBeTrue()
+            ->and($plan->domainOptions())->toBe(['base', 'parent'])
+            ->and($plan->parentApplication()?->id)->toBe($parent->id)
+            ->and($plan->setting('base'))->toBeArray();
+    }
+
+    foreach (['access_type', 'can_update_domain', 'domain_option', 'parent_app_id'] as $column) {
+        expect(Schema::hasColumn('applications', $column))->toBeFalse();
+    }
 });

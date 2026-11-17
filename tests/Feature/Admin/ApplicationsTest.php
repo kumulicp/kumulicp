@@ -34,11 +34,8 @@ class ApplicationsTest extends TestCase
         return array_merge([
             'name' => 'Updated App',
             'category' => 'Productivity',
-            'access_type' => 'standard',
             'short_description' => 'An updated short description',
             'description' => 'An updated description',
-            'domain_option' => [],
-            'can_update_domain' => false,
         ], $overrides);
     }
 
@@ -49,7 +46,6 @@ class ApplicationsTest extends TestCase
             'slug' => 'test_app_view',
             'name' => 'Test App View',
             'category' => 'Communication',
-            'access_type' => 'basic',
             'short_description' => 'Original short description',
             'description' => 'Original description',
         ]);
@@ -61,8 +57,13 @@ class ApplicationsTest extends TestCase
                 ->component('Admin/Applications/AppEdit')
                 ->where('app.name', 'Test App View')
                 ->where('app.category', 'Communication')
-                ->where('app.access_type', 'basic')
                 ->where('app.short_description', 'Original short description')
+                // Only what organizations see: what the app does is set on its roles and plans
+                ->missing('app.access_type')
+                ->missing('app.parent_app')
+                ->missing('app.domain_option')
+                ->missing('app.can_update_domain')
+                ->missing('apps')
             );
     }
 
@@ -109,39 +110,6 @@ class ApplicationsTest extends TestCase
         $this->actingAs($user)
             ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['category' => '']))
             ->assertSessionHasErrors('category');
-    }
-
-    public function test_update_requires_valid_access_type()
-    {
-        $user = $this->adminUser();
-        $app = Application::factory()->create(['slug' => 'test_app_req_access_type']);
-
-        $this->actingAs($user)
-            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['access_type' => 'invalid']))
-            ->assertSessionHasErrors('access_type');
-    }
-
-    public function test_update_requires_valid_domain_option()
-    {
-        $user = $this->adminUser();
-        $app = Application::factory()->create(['slug' => 'test_app_req_domain_option']);
-
-        $this->actingAs($user)
-            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['domain_option' => 'invalid']))
-            ->assertSessionHasErrors('domain_option');
-    }
-
-    public function test_update_can_set_a_parent_app()
-    {
-        $user = $this->adminUser();
-        $parent = Application::factory()->create(['slug' => 'test_app_parent']);
-        $app = Application::factory()->create(['slug' => 'test_app_child']);
-
-        $this->actingAs($user)
-            ->post("/admin/apps/{$app->slug}", $this->validUpdatePayload(['parent_app' => $parent->id]))
-            ->assertRedirect("/admin/apps/{$app->slug}/edit");
-
-        $this->assertDatabaseHas('applications', ['id' => $app->id, 'parent_app_id' => $parent->id]);
     }
 
     public function test_update_strips_tags_from_short_description()

@@ -178,7 +178,9 @@ class AuthServiceProvider extends ServiceProvider
         // Only an admin installs, removes or brings back apps in a single-organization install
         $admin_only_in_single = fn (User $user) => ! Tenancy::isSingleOrganization($user->organization) || Gate::allows('admin');
 
-        Gate::define('activate-app', function (User $user, Application $app) use ($admin_only_in_single) {
+        // What an app needs before it can be activated depends on the plan it is activated on. Without a
+        // plan (the app's own page, which lists them all) the app can be activated if any plan can be.
+        Gate::define('activate-app', function (User $user, Application $app, ?AppPlan $plan = null) use ($admin_only_in_single) {
             $organization = $user->organization;
 
             if (! $admin_only_in_single($user)) {
@@ -194,15 +196,27 @@ class AuthServiceProvider extends ServiceProvider
 
             $plans_with_higher_app_limit = $subscription->isAppLimitReached($app);
 
+            $plan_denials = ($plan ? collect([$plan]) : AppFacade::availablePlans($app, $organization))
+                ->map(function (AppPlan $candidate) use ($organization) {
+                    if ($candidate->parentApplication() && AppFacade::availableParents($candidate)->count() == 0) {
+                        return Response::deny(__('organization.app.denied.no_parent_app', ['app' => $candidate->application->name, 'parent_app' => $candidate->parentApplication()->name]), 'missing_parent_app');
+                    }
+
+                    if ($candidate->hasDomainOption(['subdomains', 'primary']) && ! $candidate->hasDomainOption(['base', 'parent']) && count($organization->main_domains()) === 0) {
+                        return Response::deny(__('organization.app.denied.primary_domain'));
+                    }
+
+                    return null;
+                });
+            $plan_denial = $plan_denials->isNotEmpty() && $plan_denials->every(fn ($denial) => $denial !== null) ? $plan_denials->first() : null;
+
             // If app limit hasn't been reached and there is no parent app or if there is a parent app, that it has been installed
             if ($base_plan->isMaxApps($app) && $plans_with_higher_app_limit) {
                 return Response::deny(__('organization.app.denied.plan_limit', ['max' => $base_plan->appMax($app)]), 'plan_limit_reached');
             } elseif ($base_plan->isMaxApps($app) && ! $plans_with_higher_app_limit) {
                 return Response::deny(__('organization.app.denied.limit'), 'limit_reached');
-            } elseif ($app->parent_app && AppFacade::availableParents($app)->count() == 0) {
-                return Response::deny(__('organization.app.denied.no_parent_app', ['app' => $app->name, 'parent_app' => $app->parent_app->name]), 'missing_parent_app');
-            } elseif ($app->hasDomainOption(['subdomains', 'primary']) && ! $app->hasDomainOption(['base', 'parent']) && count($organization->main_domains()) === 0) {
-                return Response::deny(__('organization.app.denied.primary_domain'));
+            } elseif ($plan_denial) {
+                return $plan_denial;
             }
 
             return $organization->status !== 'deactivated' && $app->versions()->where('status', 'active')->first() && $base_plan->appEnabled($app)
