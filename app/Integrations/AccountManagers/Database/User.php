@@ -8,6 +8,7 @@ use App\Group as GroupModel;
 use App\Organization;
 use App\Support\AccountManager\UserManager;
 use App\User as UserModel;
+use App\UserRecoveryEmail;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -156,6 +157,8 @@ class User extends UserManager
 
     public function delete()
     {
+        UserRecoveryEmail::where('username', $this->user->username)->delete();
+
         $this->user->delete();
     }
 

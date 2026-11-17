@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\EmailForwarder;
+use App\Ldap\LdapRecoveryEmailDirectory;
 use App\OrgDomain;
+use App\Services\Email\RecoveryEmailDirectory;
 use App\Services\EmailService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization;
@@ -29,6 +31,9 @@ class EmailServiceProvider extends ServiceProvider
         $this->app->scoped('email', function ($app) {
             return new EmailService;
         });
+
+        // Where a recovery email is mirrored to when LDAP is in use. Tests replace it with a fake.
+        $this->app->bind(RecoveryEmailDirectory::class, LdapRecoveryEmailDirectory::class);
     }
 
     /**

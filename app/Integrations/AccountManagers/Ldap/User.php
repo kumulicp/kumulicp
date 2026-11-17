@@ -12,6 +12,7 @@ use App\Ldap\Models\User as LdapUser;
 use App\Organization;
 use App\SuborgUser;
 use App\Support\AccountManager\UserManager;
+use App\UserRecoveryEmail;
 use App\Support\Facades\Settings;
 use App\User as DbUser;
 use LdapRecord\Container;
@@ -250,6 +251,8 @@ class User extends UserManager
         if ($db_user = DbUser::where('guid', $this->user->getFirstAttribute('entryUUID'))->first()) {
             $db_user->forceDelete();
         }
+
+        UserRecoveryEmail::where('username', $this->attribute('username'))->delete();
 
         $this->removeFromAllGroups();
         $this->user->delete();
