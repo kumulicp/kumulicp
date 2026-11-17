@@ -76,9 +76,12 @@ COPY --from=vendor /app /app
 WORKDIR /app
 RUN npm ci && npm run build
 # Assemble only what the app needs to run. Tests, docs, scripts, docker/, node_modules, resources/js and
-# friends stay behind in this stage. (`modules/` is empty: it is not in git and nothing installs into it.)
+# friends stay behind in this stage. (`modules/` is empty here: it is not in git. It is a persistent volume at
+# runtime, where the plugin manager installs plugins; the empty directory is just its mount point.)
+# VERSION is the core version (config('app.version'), App\Support\CoreVersion); without it plugins and
+# `artisan about` fail.
 RUN mkdir -p /dist/resources /dist/modules \
- && cp -a artisan composer.json app bootstrap config database public routes storage vendor /dist/ \
+ && cp -a artisan composer.json VERSION app bootstrap config database public routes storage vendor /dist/ \
  && cp -a resources/views resources/lang /dist/resources/
 
 # --- production: the runtime image -------------------------------------------------------------
@@ -121,7 +124,8 @@ RUN a2enmod rewrite
 RUN echo "TLS_REQCERT never" >> /etc/ldap/ldap.conf
 
 # The built app (see the `assets` stage for what is in it). Owned by root, so the app cannot rewrite
-# its own code; only storage/ and bootstrap/cache are writable by www-data.
+# its own code; only storage/, modules/ (plugins, a volume at runtime) and bootstrap/cache are writable
+# by www-data.
 COPY --from=assets /dist /var/www/html
 COPY --from=source /revision /etc/kumulicp-revision
 COPY env.defaults /var/www/html/.env.defaults
@@ -139,11 +143,12 @@ RUN ln -s /tmp/.env /var/www/html/.env \
 # and let entrypoint.sh merge it in on start. Everything else in storage/ is created at runtime.
 RUN mkdir -p /usr/local/share/kumulicp \
  && mv /var/www/html/storage/app /usr/local/share/kumulicp/storage-app \
- && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+ && chown -R www-data:www-data /var/www/html/storage /var/www/html/modules /var/www/html/bootstrap/cache
 
 # Run as www-data (33:33); nothing at runtime needs root and Apache listens on 8080. HOME is /tmp
 # (an emptyDir in the chart). With a read-only root filesystem, mount emptyDirs on /tmp,
-# /var/run/apache2, /var/lock/apache2 and /var/www/html/bootstrap/cache.
+# /var/run/apache2, /var/lock/apache2 and /var/www/html/bootstrap/cache, and persistent volumes on
+# /var/www/html/storage and /var/www/html/modules (installed plugins must survive a restart).
 ENV HOME=/tmp
 USER 33:33
 EXPOSE 8080
