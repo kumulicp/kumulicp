@@ -19,7 +19,8 @@ use Throwable;
  *
  * Charts are built from a real app instance (organization, domain, servers,
  * version), so the example borrows one: a subscriber of the plan when it has
- * any, otherwise any other live instance of the app. The plan the instance
+ * any, otherwise any other live instance of the app, otherwise the app's
+ * example instance if one was generated (see ExampleAppInstance). The plan the instance
  * sees is swapped for an in-memory copy carrying the unsaved values, and the
  * whole render runs in a transaction that is always rolled back, because chart
  * builders persist small bookkeeping settings.
@@ -32,10 +33,13 @@ class PlanValuesPreview
 
     public const OK = 'ok';
 
+    /** There is no instance and the app has no version to make an example one from. */
+    public const NO_VERSION = 'no_version';
+
     /**
      * @param  array<string, mixed>  $configurations  the form's configuration values, keyed by name
      * @param  array<string, array<string, mixed>>  $additionalConfigs  configs added to the plan, keyed by name
-     * @return array{status: string, charts: array<int, array{name: string, values: mixed}>, instance: array{label: string, organization: string}|null}
+     * @return array{status: string, charts: array<int, array{name: string, values: mixed}>, instance: array{label: string, organization: string, example: bool}|null}
      */
     public function render(Application $app, AppPlan $plan, array $configurations, array $additionalConfigs = []): array
     {
@@ -48,6 +52,7 @@ class PlanValuesPreview
         $source = [
             'label' => $instance->label,
             'organization' => $instance->organization->name ?? '',
+            'example' => $instance->status === AppInstance::STATUS_EXAMPLE,
         ];
 
         DB::beginTransaction();
@@ -81,13 +86,16 @@ class PlanValuesPreview
 
     private function instance(Application $app, AppPlan $plan): ?AppInstance
     {
-        return AppInstance::query()
+        $instance = AppInstance::query()
             ->where('application_id', $app->id)
             ->notDeactivated()
             ->with('organization')
             ->orderByRaw('plan_id = ? desc', [$plan->id])
             ->latest('id')
             ->first();
+
+        // Only while the app has none of its own
+        return $instance ?? ExampleAppInstance::for($app);
     }
 
     /**

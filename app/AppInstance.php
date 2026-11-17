@@ -6,6 +6,7 @@ use App\Integrations\Applications\DemoApp\DemoAppExtensions;
 use App\Integrations\Applications\Nextcloud\NextcloudExtensions;
 use App\Monitoring\AppMonitor;
 use App\Services\AppInstance\PendingAppChanges;
+use App\Support\ExampleAppInstance;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings;
 use Carbon\Carbon;
@@ -69,11 +70,27 @@ class AppInstance extends Model
     public const STATUS_UNAVAILABLE = 'unavailable';
 
     /**
+     * A placeholder that was never deployed, kept so an app with no instance
+     * yet has something to render example Helm values from (see
+     * ExampleAppInstance). It is not a customer's app: the scopes and checks
+     * that look at running apps leave it out, and the first real instance to
+     * become active removes it.
+     */
+    public const STATUS_EXAMPLE = 'example';
+
+    /**
      * What waited for the app to be active is done as soon as it is (see PendingAppChanges). After the commit,
      * so it works with the app as it was saved, not as a transaction around the save left it.
      */
     protected static function booted(): void
     {
+        // The example only stands in until the app has an instance of its own
+        static::saved(function (AppInstance $app) {
+            if ($app->status === 'active' && $app->wasChanged('status') && $app->application_id) {
+                ExampleAppInstance::clear($app->application_id);
+            }
+        });
+
         static::saved(function (AppInstance $app) {
             if ($app->status === 'active' && $app->wasChanged('status') && PendingAppChanges::hasPending($app)) {
                 $id = $app->getKey();
@@ -497,7 +514,7 @@ class AppInstance extends Model
 
     public function scopeNotDeactivated(Builder $query)
     {
-        return $query->where('status', '!=', 'deactivated')->where('status', '!=', 'deactivating');
+        return $query->whereNotIn('status', ['deactivated', 'deactivating', self::STATUS_EXAMPLE]);
     }
 
     /**

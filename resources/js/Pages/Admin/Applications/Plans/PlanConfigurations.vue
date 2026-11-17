@@ -248,11 +248,17 @@ import { buildRows, newArrayItem, parseArrayConfigName, removalMap } from '@/ser
     </div>
     <p class="values-preview__caption va-text-secondary">
       <template v-if="preview.instance">
-        {{ $t('admin.plans.valuesPreviewSource', { app: preview.instance.label, organization: preview.instance.organization }) }}
+        {{ $t(preview.instance.example ? 'admin.plans.valuesPreviewExampleSource' : 'admin.plans.valuesPreviewSource', { app: preview.instance.label, organization: preview.instance.organization }) }}
       </template>
       {{ $t('admin.plans.valuesPreviewNotice') }}
     </p>
-    <va-alert v-if="preview.status === 'no_instance'" color="info" class="mb-2">{{ $t('admin.plans.valuesPreviewNoInstance') }}</va-alert>
+    <va-alert v-if="preview.status === 'no_instance'" color="info" class="mb-2">
+      {{ $t('admin.plans.valuesPreviewNoInstance') }}
+      <div class="mt-2">
+        <va-button size="small" :loading="previewLoading" :disabled="previewLoading" @click="generatePreview">{{ $t('admin.plans.generatePreview') }}</va-button>
+      </div>
+    </va-alert>
+    <va-alert v-else-if="preview.status === 'no_version'" color="warning" class="mb-2">{{ $t('admin.plans.valuesPreviewNoVersion') }}</va-alert>
     <va-alert v-else-if="preview.status === 'failed'" color="danger" class="mb-2">{{ $t('admin.plans.valuesPreviewFailed') }}</va-alert>
     <div v-for="chart in preview.charts" :key="chart.name" class="mb-3">
       <h5 class="mb-1">{{ chart.name }}</h5>
@@ -375,14 +381,18 @@ export default {
       clearTimeout(this.previewTimer)
       this.previewTimer = setTimeout(() => this.fetchPreview(), 500)
     },
-    async fetchPreview () {
+    // Makes an example instance on the app's latest version for the preview to borrow
+    generatePreview () {
+      return this.fetchPreview('/example')
+    },
+    async fetchPreview (path = '') {
       clearTimeout(this.previewTimer)
       const requestId = ++this.previewRequestId
       this.previewLoading = true
 
       try {
         const { data } = await axios.post(
-          '/admin/apps/' + this.app.slug + '/plans/' + this.plan.id + '/configurations/preview',
+          '/admin/apps/' + this.app.slug + '/plans/' + this.plan.id + '/configurations/preview' + path,
           { configurations: this.form.configurations, additionalConfigs: this.form.additionalConfigs }
         )
         // A newer request (or closing the panel) supersedes this response

@@ -75,6 +75,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('configurations', 'Admin\Applications\Plans\Configurations@edit')->name('app.plans.configurations.edit');
                         Route::put('configurations', 'Admin\Applications\Plans\Configurations@update')->name('app.plans.configurations.update');
                         Route::post('configurations/preview', 'Admin\Applications\Plans\Configurations@preview')->name('app.plans.configurations.preview');
+                        Route::post('configurations/preview/example', 'Admin\Applications\Plans\Configurations@generatePreview')->name('app.plans.configurations.preview.example');
                         Route::get('secrets', 'Admin\Applications\Plans\Secrets@edit')->name('app.plans.secrets.edit');
                         Route::put('secrets', 'Admin\Applications\Plans\Secrets@update')->name('app.plans.secrets.update');
                         Route::post('secrets/reveal', 'Admin\Applications\Plans\Secrets@reveal')->name('app.plans.secrets.reveal');
