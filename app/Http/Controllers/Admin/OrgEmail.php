@@ -38,12 +38,12 @@ class OrgEmail extends Controller
         $result = $recovery_emails->sync();
 
         if (! $result['enabled']) {
-            return redirect('/admin/org/email')->with('error', __('admin.email.sync_unavailable'));
+            return redirect('/admin/email')->with('error', __('admin.email.sync_unavailable'));
         }
 
         $flash = count($result['failed']) > 0 || count($result['missing']) > 0 ? 'error' : 'success';
 
-        return redirect('/admin/org/email')
+        return redirect('/admin/email')
             ->with($flash, __('admin.email.sync_finished', [
                 'updated' => $result['updated'],
                 'unchanged' => $result['unchanged'],

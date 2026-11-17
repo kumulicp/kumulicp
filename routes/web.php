@@ -33,7 +33,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
     Route::prefix('admin')->middleware('can:admin')->group(function () {
         Route::get('', 'Admin\Dashboard@index')->name('admin.dashboard');
 
-        Route::prefix('org/email')->group(function () {
+        Route::prefix('email')->group(function () {
             Route::get('', 'Admin\OrgEmail@index')->name('admin.org.email');
             Route::post('sync', 'Admin\OrgEmail@sync')->name('admin.org.email.sync');
         });

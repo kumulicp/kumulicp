@@ -172,7 +172,7 @@ class MenuService
                     ],
                     [
                         'name' => __('labels.email'),
-                        'url' => '/admin/org/email',
+                        'url' => '/admin/email',
                         'icon' => 'fa-envelope',
                         'perm' => $admin,
                         'external' => false,

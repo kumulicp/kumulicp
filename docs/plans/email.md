@@ -14,7 +14,7 @@ Every change names the item below it belongs to, and a slice is only finished wh
 - LDAP settings page: an **aliases** attribute and a **recovery email** attribute (`ldap_aliases`, `ldap_recovery_email`). Each must be a valid attribute name and must not be used by any other mapping (defaults included, case-insensitive); the two cannot share one either.
 - `LdapEmailAttributes`: aliases are always available without LDAP; with LDAP they are only available once an attribute is set. Recovery email syncs to LDAP only with LDAP and an attribute.
 - `user_recovery_emails` table (keyed by username, because an LDAP user has no DB row until first login), `RecoveryEmailService` (DB first, then mirrored to LDAP; an LDAP failure never undoes the save), and `sync()`.
-- `/admin/org/email` page with the alias status, the recovery email status and a **Sync to LDAP** button that makes the directory match the database and lists what was updated, missing, failed and orphaned (orphans are reported, never deleted).
+- `/admin/email` page with the alias status, the recovery email status and a **Sync to LDAP** button that makes the directory match the database and lists what was updated, missing, failed and orphaned (orphans are reported, never deleted).
 - Deleting a user removes their recovery email (both account manager drivers).
 - English and Spanish strings, feature and unit tests (an in-memory directory fake stands in for LDAP).
 
@@ -27,7 +27,7 @@ Every change names the item below it belongs to, and a slice is only finished wh
 - Built before Phase 1. It is independent of it, but the cheap Phase 1 fixes should go next.
 - The recovery email is stored in the database and *optionally* mirrored to an LDAP attribute. It was first planned as database-only.
 - Aliases with LDAP live in an attribute the admin adds and maps, not as extra `mail` values on a mailbox entry. This also settles the open question about where aliases go.
-- The sync page is at `/admin/org/email`, as asked. Nothing else uses an `/admin/org` prefix.
+- The sync page is at `/admin/email`, as asked. Nothing else uses an `/admin/org` prefix.
 
 ## Decisions
 

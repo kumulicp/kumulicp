@@ -45,7 +45,7 @@ const sync_form = useForm({})
       <va-button id="syncRecoveryEmails"
         :disabled="!recovery.sync_enabled"
         :loading="sync_form.processing"
-        @click="sync_form.post('/admin/org/email/sync')"
+        @click="sync_form.post('/admin/email/sync')"
       >
         {{ $t('orgEmail.syncButton') }}
       </va-button>

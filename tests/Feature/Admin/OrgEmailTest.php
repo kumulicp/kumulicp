@@ -33,7 +33,7 @@ class OrgEmailTest extends TestCase
         config(['account_manager.driver' => 'db']);
         UserRecoveryEmail::create(['username' => 'jane', 'email' => 'jane@example.com']);
 
-        $this->get('/admin/org/email')->assertInertia(fn ($page) => $page
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
             ->component('Admin/Email/EmailSync')
             ->where('ldap_enabled', false)
             ->where('aliases.enabled', true)
@@ -45,14 +45,14 @@ class OrgEmailTest extends TestCase
     {
         config(['account_manager.driver' => 'ldap']);
 
-        $this->get('/admin/org/email')->assertInertia(fn ($page) => $page
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
             ->where('ldap_enabled', true)
             ->where('aliases.enabled', false)
             ->where('aliases.attribute', null));
 
         Settings::update('ldap_aliases', 'proxyAddresses');
 
-        $this->get('/admin/org/email')->assertInertia(fn ($page) => $page
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
             ->where('aliases.enabled', true)
             ->where('aliases.attribute', 'proxyAddresses'));
     }
@@ -62,7 +62,7 @@ class OrgEmailTest extends TestCase
         config(['account_manager.driver' => 'ldap']);
         Settings::update('ldap_recovery_email', 'recoveryMail');
 
-        $this->get('/admin/org/email')->assertInertia(fn ($page) => $page
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
             ->where('recovery.attribute', 'recoveryMail')
             ->where('recovery.sync_enabled', true));
     }
@@ -74,9 +74,9 @@ class OrgEmailTest extends TestCase
         UserRecoveryEmail::create(['username' => 'jane', 'email' => 'jane@example.com']);
         $this->directory->entries = ['jane' => 'stale@example.com'];
 
-        $response = $this->post('/admin/org/email/sync');
+        $response = $this->post('/admin/email/sync');
 
-        $response->assertRedirect('/admin/org/email');
+        $response->assertRedirect('/admin/email');
         $response->assertSessionHas('success');
         $this->assertSame('jane@example.com', $this->directory->entries['jane']);
         $this->assertSame(1, session('sync_result')['updated']);
@@ -88,9 +88,9 @@ class OrgEmailTest extends TestCase
         Settings::update('ldap_recovery_email', 'recoveryMail');
         UserRecoveryEmail::create(['username' => 'gone', 'email' => 'gone@example.com']);
 
-        $this->post('/admin/org/email/sync')->assertSessionHas('error');
+        $this->post('/admin/email/sync')->assertSessionHas('error');
 
-        $this->get('/admin/org/email')->assertInertia(fn ($page) => $page
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
             ->where('sync_result.missing', ['gone']));
     }
 
@@ -101,9 +101,9 @@ class OrgEmailTest extends TestCase
         UserRecoveryEmail::create(['username' => 'jane', 'email' => 'jane@example.com']);
         $this->directory->entries = ['jane' => null];
 
-        $response = $this->post('/admin/org/email/sync');
+        $response = $this->post('/admin/email/sync');
 
-        $response->assertRedirect('/admin/org/email');
+        $response->assertRedirect('/admin/email');
         $response->assertSessionHas('error');
         $this->assertSame([], $this->directory->writes);
     }
