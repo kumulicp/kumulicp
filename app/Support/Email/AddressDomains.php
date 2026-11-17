@@ -15,6 +15,8 @@ class AddressDomains
         $suffix = '@'.strtolower($domain);
 
         foreach ($addresses as $address) {
+            // Values come from raw LDAP attributes, so don't trust the PHPDoc type at runtime
+            // @phpstan-ignore function.alreadyNarrowedType
             if (is_string($address) && str_ends_with(strtolower($address), $suffix)) {
                 return true;
             }

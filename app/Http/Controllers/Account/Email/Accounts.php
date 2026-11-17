@@ -148,7 +148,7 @@ class Accounts extends Controller
     {
         $parts = explode('@', $email_address);
 
-        if (count($parts) !== 2 || $parts[1] === '') {
+        if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '') {
             return null;
         }
 
