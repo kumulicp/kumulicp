@@ -51,10 +51,21 @@ jobs:
               echo "Tag $TAG already exists" >&2
               exit 1
             fi
-            git tag "$TAG"
-            git push origin "$TAG"
           else
             TAG="${GITHUB_REF#refs/tags/}"
+          fi
+
+          # The core version lives in the VERSION file (see docs/versioning.md)
+          # and plugins read it at runtime, so a release must match it exactly.
+          FILE_VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "v${FILE_VERSION}" != "$TAG" ]; then
+            echo "Tag $TAG does not match the VERSION file (${FILE_VERSION}). Update VERSION and commit it before releasing." >&2
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            git tag "$TAG"
+            git push origin "$TAG"
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 

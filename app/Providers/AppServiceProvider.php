@@ -13,6 +13,7 @@ use App\Services\Application\ReadinessObserver;
 use App\Services\BillingDriverRegistry;
 use App\Services\MenuService;
 use App\Sso\OidcProvider;
+use App\Support\CoreVersion;
 use App\Support\DevIngress;
 use App\Updates\AspectRegistry;
 use App\Updates\Aspects\ReleaseAspect;
@@ -30,6 +31,7 @@ use App\Updates\Steps\SubscriptionStep;
 use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Event;
@@ -85,6 +87,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.proxy') == 'true') {
             URL::forceScheme('https');
         }
+
+        AboutCommand::add('Kumuli CP', fn () => ['Core Version' => CoreVersion::current()]);
 
         AppInstance::observe(AppInstanceObserver::class);
 
