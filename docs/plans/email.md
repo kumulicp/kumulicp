@@ -1,6 +1,6 @@
 # Plan: Email ready for production (Stalwart, optionally on top of LDAP)
 
-Status: in progress. Phase 1 is not started; the settings foundation of Phase 2 is built (see the implementation status).
+Status: in progress. Phase 1 (LDAP hardening) is written and waiting on a run against a live directory; the settings foundation of Phase 2 (2a) is merged.
 
 Goal: email that is ready for production, on a Stalwart mail server that is managed by a separate plugin (not in this repository). Stalwart must be able to use LDAP as its authentication backend **and** run without LDAP, so everything email-related has to layer on LDAP optionally. Setting KumuliCP up should not need custom LDAP attributes unless an admin wants a feature that cannot work without one.
 
@@ -18,16 +18,16 @@ Every change names the item below it belongs to, and a slice is only finished wh
 - Deleting a user removes their recovery email (both account manager drivers).
 - English and Spanish strings, feature and unit tests (an in-memory directory fake stands in for LDAP).
 
-**Not verified yet** (the build environment could not install Composer dependencies)
-- None of the PHP tests have been run. `php -l`, `eslint` and `vue-tsc` pass; `vite build` could not run.
-- `LdapRecoveryEmailDirectory` (clearing an attribute with `setAttribute($attr, [])`, and `whereHas`) needs a real directory to confirm.
-- `tests/Feature/AccountManager/RecoveryEmailCleanupTest.php` needs LDAP for its `ldap` run.
+**Not verified yet** (the environment these were written in could not install Composer dependencies, so no PHP test has been run)
+- Every test added for 2a and Phase 1 is unrun. `php -l`, `eslint` and `vue-tsc` pass; `vite build` could not run.
+- Phase 1 tests that need a live directory are in `tests/Feature/AccountManager/` (`LdapEmailInterfaceTest`, plus the 2a `RecoveryEmailCleanupTest`) and only run in the `AccountManagerLdap` suite. The rest run in the normal suites against in-memory fakes.
+- The LDAP calls were checked by reading LdapRecord 3.8.6's source, not by running them: `setAttribute($attr, [])` followed by `save()` removes the attribute, `addAttributeValue()` skips a value already there, and `whereEndsWith`, `whereHas` and `exists()` exist.
 
 **Differences from the first version of this plan**
 - Built before Phase 1. It is independent of it, but the cheap Phase 1 fixes should go next.
 - The recovery email is stored in the database and *optionally* mirrored to an LDAP attribute. It was first planned as database-only.
 - Aliases with LDAP live in an attribute the admin adds and maps, not as extra `mail` values on a mailbox entry. This also settles the open question about where aliases go.
-- The sync page is at `/admin/email`, as asked. Nothing else uses an `/admin/org` prefix.
+- The sync page is at `/admin/email`: review dropped the `/admin/org` prefix that was first asked for.
 
 ## Decisions
 
@@ -44,29 +44,36 @@ Every change names the item below it belongs to, and a slice is only finished wh
 
 ## Phases
 
-### Phase 1 - LDAP hardening (not started)
+### Phase 1 - LDAP hardening (written, not yet run against a directory)
 
-Independent of Stalwart; do this next. Each item gets a test.
+Independent of Stalwart. Each item has a test; the ones that need a directory are marked (LDAP).
 
-- [ ] `config/ldap.php`: default port `387` should be `389`.
-- [ ] Uniqueness rule: `LdapEmailNotExists` looks up `cn=<local part>` but entries are created as `cn=<full address>`, so it never matches. Make uniqueness global across addresses, not per organization.
-- [ ] Allow dots, hyphens, underscores and `+` in the local part (`alpha_num` rejects `jane.doe`).
-- [ ] Quota unit mismatch (`addEmail` writes `...G`, `updateEmail` writes a bare number).
-- [ ] `Accounts::destroy` calls `Domain::connect()` before checking the domain exists.
-- [ ] Hashing: stop using MD5-crypt for user and mailbox passwords; remove the hardcoded salt for the org admin password.
-- [ ] `emailList` matches domains by substring (`a.com` also matches `mya.com`).
-- [ ] `deleteUserEmail` leaves the mail object class and quota attributes behind.
-- [ ] Forwarder methods on the LDAP driver are empty stubs, so the forwarders page is broken on it. Decide: build on Stalwart aliases, or drop.
-- [ ] `email_server_customer_id` and `email_server_domain_id` are integer columns but the driver stores `'ldap'`; make them strings.
-- [ ] `attribute($key, 'array')` on the LDAP user is broken, and `UserView.vue` references an undefined `org_email`.
+- [x] `config/ldap.php`: default port `387` is now `389`. Test: `LdapPasswordHashTest`.
+- [x] Mailbox address uniqueness. The old rule looked up `cn=<local part>` and never matched. `MailAddressAvailable` checks the full address (local part plus the chosen domain, lowercased) against a `MailAddressRegistry`. The LDAP registry searches the whole directory for the address in `mail` or `orgMail`, so it holds across organizations and covers user-linked mailboxes. `LdapEmailNotExists` is gone. Test: `MailAddressRulesTest`.
+- [x] Local part: `EmailLocalPart` allows lowercase letters and digits with single `.`, `-` or `_` between them, up to 64 characters. `+` is deliberately **not** allowed: mail servers read `name+tag` as a tag on `name`, so such a mailbox could never be reached. Test: `MailAddressRulesTest`.
+- [x] Quota: `LdapEmailInterface::quota()` writes `5G` everywhere (add, update, user mailboxes) and leaves the attribute out when the plan sets none. Tests: `LdapMailQuotaTest`, `LdapEmailInterfaceTest` (LDAP).
+- [x] `Accounts::destroy` no longer connects before checking the domain; it also refuses anything that is not `name@domain`. The same unchecked `explode()` in `update` is fixed, and `update` no longer fails when no password is sent. Test: `EmailAccountsControllerTest`.
+- [x] Hashing: one `PasswordHash::make()` (salted SHA-512 crypt, `{CRYPT}$6$...`) for users, mailboxes, the org admin and the directory reader account. The hardcoded salt is gone. Hashes already in the directory are left as they are and verify as before. Tests: `LdapPasswordHashTest`, `LdapEmailInterfaceTest` (LDAP).
+- [x] `emailList` matches `*@domain` exactly (`a.com` no longer matches `mya.com`). Test: `LdapEmailInterfaceTest` (LDAP).
+- [x] `deleteUserEmail` removes an address case-insensitively and, once the user has none left, also removes the quota, home and storage attributes and the mail object class. Test: `LdapEmailInterfaceTest` (LDAP).
+- [x] Forwarders: the LDAP driver now answers `supportsForwarders(): false` and its stubs return empty lists instead of `null`. The forwarders pages redirect to the email accounts page with a message instead of failing. The method is **not** on `EmailContract`, so the Stalwart plugin is not forced to add it (a driver that does not say is treated as supporting forwarding). Whether to build forwarding on Stalwart or drop it stays an open question. Test: `EmailAccountsControllerTest`.
+- [x] `email_server_customer_id`, `email_server_domain_id` and `org_servers.server_customer_id` are now strings (numbers carry over; a rollback clears ids that are not numbers). Test: `MakeMailServerIdsStringsTest`.
+- [x] `attribute($key, 'array')` on the LDAP user returned the wrong thing (it mapped the key twice). The user edit page's "domains still available" filter matched by substring (`strpos`) and is now `AddressDomains::hasAddressAt()`. `UserView.vue` linked to an undefined `org_email`. Tests: `LdapUserAttributeTest`, `AddressDomainsTest`, `LdapEmailInterfaceTest` (LDAP).
 
-Exit: the LDAP email suite passes against a live directory in CI.
+Found along the way, and fixed: `createUserEmail` and `deleteUserEmail` could never have worked on LDAP. They were typed `UserInterface`, which nothing implements, so PHP threw a `TypeError` for every call, and they called `account()`, which the LDAP user does not have. They now take the shared `UserManager` and use `organization()`. Test: `LdapEmailInterfaceTest` (LDAP).
+
+Found, not fixed (belongs to later items):
+- The address registry is bound to LDAP for every driver. With the `db` driver and a standalone Stalwart the rule would query a directory that is not there; 2c swaps the binding to the mailbox tables.
+- `ProfileEdit.vue` has a branch for `profile.org_emails` that the controller never fills, so it never shows. Remove or replace it in 2d.
+- `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f).
+
+Exit: the LDAP email suite passes against a live directory in CI (not yet checked).
 
 ### Phase 2 - Identity and mailbox model
 
 - [x] **2a. Attribute settings, recovery storage and sync page** (done, see above).
 - [ ] **2b. Wire the recovery email.** Set it when a user is created (the invite address) and let users change it. Require a confirm link before a new recovery address is trusted, notify the old one on change, and add a short cooldown on reset. Password reset and "forgot password" send to the recovery address, with a generic response. Reject a recovery address on a domain this server hosts. Adds a verified column to `user_recovery_emails`.
-- [ ] **2c. Mailboxes and addresses.** `mailboxes` (organization, domain, local part, optional user, display name, status) and `mailbox_addresses` (address globally unique and case-insensitive, `is_primary`). Backfill from LDAP with an idempotent artisan command that has `--dry-run` and reports collisions. Count limits from this table, not from a live mail-server query on every page load. Also fixes `countEmail()` ignoring user-linked mailboxes.
+- [ ] **2c. Mailboxes and addresses.** `mailboxes` (organization, domain, local part, optional user, display name, status) and `mailbox_addresses` (address globally unique and case-insensitive, `is_primary`). Backfill from LDAP with an idempotent artisan command that has `--dry-run` and reports collisions. Count limits from this table, not from a live mail-server query on every page load. Back `MailAddressRegistry` with this table (by driver) so uniqueness no longer needs a directory. Also fixes `countEmail()` ignoring user-linked mailboxes.
 - [ ] **2d. Identity swap.** Creating a mailbox for a user moves their current `mail` to the recovery email and sets `mail` to the mailbox address; deleting it restores `mail`. Import the user afterwards so `users.email` updates. Opt-in per user with an impact preview. Audit every app profile that matches accounts by email first (WordPress and CiviCRM first).
 - [ ] **2e. Aliases.** Store aliases as non-primary rows in `mailbox_addresses`. With LDAP, write them to the mapped aliases attribute and add them to the sync page; without LDAP, push them to Stalwart. Gate the UI on `LdapEmailAttributes::aliasesEnabled()`. Decide the per-plan alias cap (see open questions).
 - [ ] **2f. Contract cleanup.** Fix the `EmailContract` drift (the forwarder call passes an array where a password is expected), remove the blocking `checkConnection()` retry loop from request paths, and retire the LDAP `Domain` entries Stalwart does not need.

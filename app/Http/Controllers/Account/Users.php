@@ -19,6 +19,7 @@ use App\Rules\MainContact;
 use App\Rules\UserNotExists;
 use App\Services\AdditionalStorageService;
 use App\SuborgUser;
+use App\Support\Email\AddressDomains;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Domain;
@@ -303,7 +304,7 @@ class Users extends Controller
         $add_email_account = false;
         if (auth()->user()->can('add-user-email-account', $user->attribute('username'))) {
             $add_email_account = true;
-            $emails = $user->attribute('org_email', 'array');
+            $emails = Arr::wrap($user->attribute('org_email', 'array'));
 
             $email_domains = $organization->domains()->emailEnabled()->get()->map(function ($email_domain) {
                 return [
@@ -311,18 +312,9 @@ class Users extends Controller
                     'name' => $email_domain->name,
                 ];
             })
-                ->filter(function (array $domain, int $key) use ($emails) {
-                    $use = true;
-                    if ($emails) {
-                        foreach ($emails as $email) {
-                            if (strpos($email, $domain['name'])) {
-                                $use = false;
-                            }
-                        }
-                    }
-
-                    return $use ? $domain : false;
-                });
+                // Domains the user has no address at yet
+                ->reject(fn (array $domain) => AddressDomains::hasAddressAt($emails, $domain['name']))
+                ->values();
         }
 
         return inertia('Organization/Users/UserEdit', [

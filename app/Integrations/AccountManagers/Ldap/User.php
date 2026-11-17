@@ -53,11 +53,13 @@ class User extends UserManager
     {
         $attribute = $this->mapKey($attribute);
 
-        if ($type == 'string') {
-            return $this->getFirstAttribute($attribute);
-        } elseif ($type == 'array') {
-            return $this->attribute($attribute);
+        // Every value of the attribute for an array, otherwise only the first. The key is mapped
+        // once, above: mapping an attribute name a second time finds no mapping for it.
+        if ($type == 'array') {
+            return $this->user->getAttribute($attribute) ?? [];
         }
+
+        return $this->getFirstAttribute($attribute);
     }
 
     public function databaseUser()

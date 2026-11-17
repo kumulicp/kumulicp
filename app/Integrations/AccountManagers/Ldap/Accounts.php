@@ -4,6 +4,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 
 use App\Integrations\AccountManagers\Ldap\Seeders\DemoSeeder;
 use App\Ldap\Actions\Dn;
+use App\Ldap\Actions\PasswordHash;
 use App\Ldap\Models\Admin;
 use App\Ldap\Models\Group;
 use App\Ldap\Models\Organization as LdapOrganization;
@@ -38,7 +39,7 @@ class Accounts
         if (! $org = Admin::find('cn=admin,'.$org_dn)) {
             $admin = new Admin;
             $admin->cn = 'admin';
-            $admin->userPassword = '{CRYPT}'.crypt($organization->secretpw, '$1$3nc8yp7$');
+            $admin->userPassword = PasswordHash::make($organization->secretpw);
             $admin->inside($org_dn);
             $admin->save();
         }

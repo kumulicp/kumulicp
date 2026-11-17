@@ -58,7 +58,7 @@ import UserLayout from './UserLayout.vue'
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
-                <div class="my-1"><a :href="'mailto:' + org_email">{{ user.org_email }}</a></div>
+                <div class="my-1"><a :href="'mailto:' + user.org_email">{{ user.org_email }}</a></div>
               </va-list-item-section>
             </va-list-item>
           </template>

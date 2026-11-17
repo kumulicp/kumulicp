@@ -2,20 +2,20 @@
 
 namespace App\Integrations\ServerManagers\DockerMailServer\Interfaces;
 
-use App\Contracts\AccountManager\UserInterface;
 use App\Contracts\OrganizationInterface;
 use App\Contracts\ServerManager\EmailContract;
 use App\Integrations\ServerManagers\DockerMailServer\MailserverJobs;
 use App\Integrations\ServerManagers\Kubernetes\Actions\RunJob;
 use App\Ldap\Actions\Dn;
+use App\Ldap\Actions\PasswordHash;
 use App\Ldap\Models\Domain;
 use App\Ldap\Models\Email;
 use App\Ldap\Models\User;
 use App\OrgDomain;
 use App\Server;
+use App\Support\AccountManager\UserManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
-use LdapRecord\Models\Attributes\Password;
 
 class LdapEmailInterface implements EmailContract, OrganizationInterface
 {
@@ -52,6 +52,19 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
     }
 
     /**
+     * A mailbox quota the way the directory stores it: gigabytes with a trailing G (5 becomes "5G").
+     * Null when the plan sets none, so the attribute is left out rather than written empty.
+     */
+    public static function quota(string|int|float|null $gigabytes): ?string
+    {
+        if (! is_numeric($gigabytes) || (float) $gigabytes <= 0) {
+            return null;
+        }
+
+        return rtrim(rtrim(number_format((float) $gigabytes, 2, '.', ''), '0'), '.').'G';
+    }
+
+    /**
      * @phpstan-impure
      */
     public function existsEmail(OrgDomain $domain, string $address)
@@ -61,7 +74,7 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
 
     public function emailList(OrgDomain $domain)
     {
-        $emails = Email::in(Dn::create($domain->organization, 'emails'))->whereContains('mail', $domain->name)->get();
+        $emails = Email::in(Dn::create($domain->organization, 'emails'))->whereEndsWith('mail', '@'.$domain->name)->get();
 
         return $emails->map(function ($email) {
             return [
@@ -99,11 +112,13 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
             $email->uid = $username;
             $email->sn = 'email';
             $email->displayName = $name;
-            $email->mailQuota = $domain->organization->plan->setting('email.storage').'G';
+            if ($quota = self::quota($domain->organization->plan->setting('email.storage'))) {
+                $email->mailQuota = $quota;
+            }
             $email->mailHomeDirectory = $email_location;
             $email->mailStorageDirectory = 'maildir:'.$email_location;
             $email->setDn(Dn::create($organization, 'emails', $address));
-            $email->userPassword = Password::md5Crypt($password);
+            $email->userPassword = PasswordHash::make($password);
             $email->save();
         }
 
@@ -122,9 +137,11 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
         if ($email) {
             $email->displayName = $name;
             if ($password) {
-                $email->userPassword = Password::md5Crypt($password);
+                $email->userPassword = PasswordHash::make($password);
             }
-            $email->mailQuota = $domain->organization->plan->setting('email.storage');
+            if ($quota = self::quota($domain->organization->plan->setting('email.storage'))) {
+                $email->mailQuota = $quota;
+            }
             $email->save();
 
             return [
@@ -145,40 +162,86 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
         }
     }
 
-    public function listEmailForwarders(OrgDomain $domain) {}
+    /**
+     * Forwarding is not built on the directory: the methods below only answer "none" so a
+     * caller that asks anyway doesn't get nothing back. Callers should ask this first.
+     */
+    public function supportsForwarders(): bool
+    {
+        return false;
+    }
 
-    public function emailForwarders(string $email_address) {}
+    public function listEmailForwarders(OrgDomain $domain)
+    {
+        return [];
+    }
+
+    public function emailForwarders(string $email_address)
+    {
+        return ['list' => []];
+    }
 
     public function deleteEmailForwarders(string $forwarder_address, string $destination_address) {}
 
-    public function createUserEmail(UserInterface $user, OrgDomain $domain)
+    public function createUserEmail(UserManager $user, OrgDomain $domain)
     {
         $username = $user->attribute('username');
-        if ($user = User::find(Dn::create($user->account(), 'users', $username))) {
-            $email_address = "$username@{$domain->name}";
-            $email_location = "/var/mail/{$domain->organization->slug}/$username/";
+        $ldap_user = User::find(Dn::create($user->organization(), 'users', $username));
 
-            $user->addAttributeValue('objectClass', 'PostfixBookMailAccount');
-            $user->addAttributeValue('orgMail', $email_address);
-            $user->mailQuota = $domain->organization->plan->setting('email.storage').'G';
-            $user->mailHomeDirectory = $email_location;
-            $user->mailStorageDirectory = 'maildir:'.$email_location;
-            $user->save();
+        if (! $ldap_user instanceof User) {
+            throw new \RuntimeException("User $username was not found in the directory.");
         }
 
+        $email_address = strtolower("$username@{$domain->name}");
+        $email_location = "/var/mail/{$domain->organization->slug}/$username/";
+
+        // addAttributeValue() skips a value the user already has
+        $ldap_user->addAttributeValue('objectClass', 'PostfixBookMailAccount');
+        $ldap_user->addAttributeValue('orgMail', $email_address);
+        if ($quota = self::quota($domain->organization->plan->setting('email.storage'))) {
+            $ldap_user->mailQuota = $quota;
+        }
+        $ldap_user->mailHomeDirectory = $email_location;
+        $ldap_user->mailStorageDirectory = 'maildir:'.$email_location;
+        $ldap_user->save();
+
         return [
-            'username' => $user->getFirstAttribute('cn'),
-            'emails' => $user->getAttribute('orgmail'),
+            'username' => $ldap_user->getFirstAttribute('cn'),
+            'emails' => $ldap_user->getAttribute('orgmail'),
         ];
     }
 
-    public function deleteUserEmail(UserInterface $user, string $email)
+    /**
+     * Takes one address off the user. Once the user has none left, the mail attributes and
+     * the mail object class that came with the first one go too, so a plain user is left.
+     */
+    public function deleteUserEmail(UserManager $user, string $email)
     {
         $username = $user->attribute('username');
-        if ($user = User::find(Dn::create($user->account(), 'users', $username))) {
-            $user->removeAttributes(['orgMail' => $email]);
-            $user->save();
+        $ldap_user = User::find(Dn::create($user->organization(), 'users', $username));
+
+        if (! $ldap_user instanceof User) {
+            return;
         }
+
+        $remaining = array_values(array_filter(
+            $ldap_user->getAttribute('orgmail') ?? [],
+            fn ($address) => strcasecmp($address, $email) !== 0,
+        ));
+        $ldap_user->setAttribute('orgMail', $remaining);
+
+        if ($remaining === []) {
+            foreach (['mailQuota', 'mailHomeDirectory', 'mailStorageDirectory'] as $attribute) {
+                $ldap_user->setAttribute($attribute, []);
+            }
+
+            $ldap_user->setAttribute('objectClass', array_values(array_filter(
+                $ldap_user->getAttribute('objectclass') ?? [],
+                fn ($class) => strcasecmp($class, 'PostfixBookMailAccount') !== 0,
+            )));
+        }
+
+        $ldap_user->save();
     }
 
     public function createDkimKey(OrgDomain $domain)
