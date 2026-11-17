@@ -206,6 +206,7 @@ return [
         'registration_settings' => 'Autorregistro',
         'updated' => 'Configuración actualizada',
         'ldap_settings' => 'Configuración de LDAP',
+        'ldap_attribute_not_unique' => 'Este atributo ya se usa en la asignación de :other. Necesita un atributo propio.',
         'invoice_settings' => 'Configuración de facturación',
         'features' => [
             'features' => 'Funciones',
@@ -473,5 +474,9 @@ return [
         'kube_version_unparsable' => 'No se pudo leer el kubeVersion :constraint del chart.',
         'cluster_repo_without_rancher' => ':repo es el nombre de un ClusterRepo de Rancher, pero ningún servidor Rancher ejecuta esta aplicación, así que no se pudo comprobar.',
         'server_missing_address' => 'El servidor :server no tiene dirección.',
+    ],
+    'email' => [
+        'sync_unavailable' => 'No hay nada que sincronizar: LDAP no está en uso, o no hay un atributo LDAP definido para el correo de recuperación.',
+        'sync_finished' => 'Sincronización terminada: :updated actualizados, :unchanged ya estaban sincronizados, :problems con problemas.',
     ],
 ];

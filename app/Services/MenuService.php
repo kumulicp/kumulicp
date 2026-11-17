@@ -170,6 +170,14 @@ class MenuService
                         'external' => false,
                         'order' => 800,
                     ],
+                    [
+                        'name' => __('labels.email'),
+                        'url' => '/admin/org/email',
+                        'icon' => 'fa-envelope',
+                        'perm' => $admin,
+                        'external' => false,
+                        'order' => 900,
+                    ],
                 ],
             ],
             'settings' => [

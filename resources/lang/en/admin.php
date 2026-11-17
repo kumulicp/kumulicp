@@ -262,6 +262,7 @@ return [
         'registration_settings' => 'Self-registration',
         'updated' => 'Settings updated',
         'ldap_settings' => 'LDAP Settings',
+        'ldap_attribute_not_unique' => 'This attribute is already used for the :other mapping. It needs an attribute of its own.',
         'invoice_settings' => 'Invoice Settings',
         'system_checks_settings' => 'System Checks',
         'features' => [
@@ -550,5 +551,9 @@ return [
         'kube_version_unparsable' => 'The chart\'s kubeVersion :constraint could not be read.',
         'cluster_repo_without_rancher' => ':repo is a Rancher ClusterRepo name, but no Rancher server runs this app, so it could not be checked.',
         'server_missing_address' => 'Server :server has no address.',
+    ],
+    'email' => [
+        'sync_unavailable' => 'There is nothing to sync: LDAP is not in use, or no LDAP attribute is set for the recovery email.',
+        'sync_finished' => 'Sync finished: :updated updated, :unchanged already in sync, :problems with problems.',
     ],
 ];

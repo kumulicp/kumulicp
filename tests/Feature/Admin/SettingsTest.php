@@ -232,6 +232,85 @@ class SettingsTest extends TestCase
         $response->assertSessionHasErrors('first_name');
     }
 
+    public function test_ldap_settings_save_the_aliases_and_recovery_email_attributes()
+    {
+        $response = $this->put('/admin/settings/ldap', [
+            'aliases' => 'proxyAddresses',
+            'recovery_email' => 'recoveryMail',
+        ]);
+
+        $response->assertRedirect('admin/settings/ldap');
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('server_settings', ['key' => 'ldap_aliases', 'value' => 'proxyAddresses']);
+        $this->assertDatabaseHas('server_settings', ['key' => 'ldap_recovery_email', 'value' => 'recoveryMail']);
+    }
+
+    public function test_ldap_settings_clearing_the_new_attributes_removes_them()
+    {
+        $this->put('/admin/settings/ldap', ['aliases' => 'proxyAddresses', 'recovery_email' => 'recoveryMail']);
+
+        $this->put('/admin/settings/ldap', ['aliases' => '', 'recovery_email' => '']);
+
+        $this->assertDatabaseMissing('server_settings', ['key' => 'ldap_aliases']);
+        $this->assertDatabaseMissing('server_settings', ['key' => 'ldap_recovery_email']);
+    }
+
+    public function test_ldap_settings_page_shows_the_saved_aliases_and_recovery_email_attributes()
+    {
+        $this->put('/admin/settings/ldap', ['aliases' => 'proxyAddresses', 'recovery_email' => 'recoveryMail']);
+
+        $this->get('/admin/settings/ldap')->assertInertia(fn ($page) => $page
+            ->component('Admin/Settings/LdapSettings')
+            ->where('settings.aliases', 'proxyAddresses')
+            ->where('settings.recovery_email', 'recoveryMail'));
+    }
+
+    public function test_ldap_settings_reject_an_invalid_attribute_name_for_the_new_attributes()
+    {
+        $response = $this->put('/admin/settings/ldap', [
+            'aliases' => 'has space',
+            'recovery_email' => '1startsWithDigit',
+        ]);
+
+        $response->assertSessionHasErrors(['aliases', 'recovery_email']);
+        $this->assertDatabaseMissing('server_settings', ['key' => 'ldap_aliases']);
+    }
+
+    public function test_ldap_settings_reject_aliases_that_use_the_default_mail_attribute()
+    {
+        $response = $this->put('/admin/settings/ldap', ['aliases' => 'mail']);
+
+        $response->assertSessionHasErrors('aliases');
+        $this->assertDatabaseMissing('server_settings', ['key' => 'ldap_aliases']);
+    }
+
+    public function test_ldap_settings_reject_a_new_attribute_another_mapping_uses_in_any_letter_case()
+    {
+        $response = $this->put('/admin/settings/ldap', [
+            'org_email' => 'organizationMail',
+            'recovery_email' => 'ORGANIZATIONMAIL',
+        ]);
+
+        $response->assertSessionHasErrors('recovery_email');
+    }
+
+    public function test_ldap_settings_reject_aliases_and_recovery_email_sharing_an_attribute()
+    {
+        $response = $this->put('/admin/settings/ldap', [
+            'aliases' => 'extraMail',
+            'recovery_email' => 'extraMail',
+        ]);
+
+        $response->assertSessionHasErrors(['aliases', 'recovery_email']);
+    }
+
+    public function test_ldap_settings_rejects_the_new_attributes_exceeding_max_length()
+    {
+        $response = $this->put('/admin/settings/ldap', ['aliases' => str_repeat('x', 101)]);
+
+        $response->assertSessionHasErrors('aliases');
+    }
+
     // ---------------------------------------------------------------------------
     // SSO Providers
     // ---------------------------------------------------------------------------
