@@ -151,6 +151,10 @@ return [
             'delete' => "You don't have permission to delete this email account",
             'forwarders' => "Forwarding isn't available on this mail server.",
         ],
+        'mailbox' => [
+            'has_one' => 'This user already has an organization email, or one waiting to be accepted. Remove it before choosing another.',
+            'taken' => ':email is already taken. Choose another name.',
+        ],
     ],
     'suborganization' => [
         'created' => 'Suborganization successfully created!',

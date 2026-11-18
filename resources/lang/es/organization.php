@@ -148,6 +148,10 @@ return [
             'delete' => 'No tienes permiso para eliminar esta cuenta de correo',
             'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
         ],
+        'mailbox' => [
+            'has_one' => 'Este usuario ya tiene un correo de la organización, o uno pendiente de aceptar. Elimínalo antes de elegir otro.',
+            'taken' => ':email ya está en uso. Elige otro nombre.',
+        ],
     ],
     'suborganization' => [
         'created' => '¡Suborganización creada con éxito!',
