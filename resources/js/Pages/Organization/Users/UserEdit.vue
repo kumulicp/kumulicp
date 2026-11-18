@@ -67,9 +67,10 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.personal_email"
-            :label="$t('organization.users.personalEmail')"
+            :label="user.org_email ? $t('recoveryEmail.label') : $t('organization.users.personalEmail')"
             id="personalEmail"
-            required-mark
+            :disabled="!!user.org_email"
+            :required-mark="!user.org_email"
             immediateValidation
             :error="$page.props.errors.personal_email"
             :error-messages="$page.props.errors.personal_email"
@@ -87,19 +88,23 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             />
         </div>
       </div>
-      <div v-if="user.org_email || user.can.add_email_account" class="row">
+      <div v-if="user.org_email || user.offered_email || user.can.add_email_account" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <h5>{{ $t('organization.users.organizationalEmail') }}</h5>
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
             <div class="row">
               <div class="flex flex-col xs11">
-                <a :href="'mailto:'+org_email" class="mr-3">
+                <a v-if="user.org_email" :href="'mailto:'+user.org_email" class="mr-3">
                   <div class="py-1">{{ user.org_email }}</div>
                 </a>
+                <div v-else-if="user.offered_email" id="offeredEmail" class="py-1">
+                  {{ user.offered_email }}
+                  <small class="va-text-secondary d-block">{{ $t('organization.users.offeredEmail') }}</small>
+                </div>
               </div>
-              <div class="flex flex-col xs1">
-                <a :href="'/users/'+user.id+'/remove/accountemail/'+user.org_email" class="ml-3">
+              <div v-if="user.org_email || user.offered_email" class="flex flex-col xs1">
+                <a :href="'/users/'+user.id+'/remove/accountemail/'+(user.org_email || user.offered_email)" class="ml-3">
                   <va-icon name="entypo-cancel"
                     :title="$t('organization.users.deleteEmail')"
                     color="danger"

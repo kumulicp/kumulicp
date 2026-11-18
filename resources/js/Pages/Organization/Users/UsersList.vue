@@ -93,7 +93,8 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                       <Link :href="user.links.show">{{ user.name }}</Link>
                     </td>
                     <td>
-                      <a :href="'mailto:'+user.personal_email">{{ user.personal_email }}</a>
+                      <a :href="'mailto:'+(user.org_email || user.personal_email)">{{ user.org_email || user.personal_email }}</a>
+                      <va-badge v-if="user.recovery_missing" color="warning" class="ml-2" :text="$t('recoveryEmail.missingBadge')" />
                     </td>
                     <td>{{ user.access_type }}</td>
                     <td v-if="can.active" class="va-text-right vertical-middle hidden xl:table-cell">

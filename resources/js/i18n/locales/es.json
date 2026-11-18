@@ -1597,8 +1597,9 @@
       "phoneNumber": "Número de Teléfono",
       "language": "Idioma",
       "organizationalEmail": "Correo de la Organización",
+      "offeredEmail": "Ofrecido. Entra en vigor cuando el usuario lo acepte desde su perfil.",
       "deleteEmail": "Eliminar Correo",
-      "addEmailAccount": "Agregar cuenta de correo @{domain}",
+      "addEmailAccount": "Ofrecer un correo de la organización @{domain}",
       "appStorage": "Almacenamiento para {app}",
       "storageLabel": "Almacenamiento",
       "storageError": "Error al establecer el almacenamiento",
@@ -1714,6 +1715,7 @@
   },
   "recoveryEmail": {
     "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de la de tu organización.",
+    "missingBadge": "Sin correo de recuperación",
     "reminderAction": "Añadir un correo de recuperación",
     "label": "Correo de recuperación",
     "hint": "Solo se usa para enviar un enlace de restablecimiento de contraseña. No puede ser una dirección alojada aquí.",
