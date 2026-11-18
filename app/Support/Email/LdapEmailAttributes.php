@@ -26,7 +26,6 @@ class LdapEmailAttributes
         'phone_number' => 'telephoneNumber',
         'username' => 'cn',
         'personal_email' => 'mail',
-        'org_email' => 'mail',
         'access_type' => 'employeeType',
         'password' => 'userPassword',
     ];

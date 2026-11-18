@@ -29,34 +29,27 @@ class LdapUserAttributeTest extends TestCase
         $entry = new LdapUser;
         $entry->setDn(Dn::create('demo', 'users', 'jane'));
         $entry->setAttribute('cn', 'jane');
-        $entry->setAttribute('mail', ['jane@gmail.com']);
-        $entry->setAttribute('orgMail', ['jane@example.com', 'jane@example.org']);
+        $entry->setAttribute('mail', ['jane@example.com', 'jane@example.org']);
+        $entry->setAttribute('telephoneNumber', ['111', '222']);
 
         $this->user = new LdapAccountUser($entry);
     }
 
     public function test_the_array_type_returns_every_value_of_the_mapped_attribute()
     {
-        Settings::update('ldap_org_email', 'orgMail');
-
-        $this->assertEqualsCanonicalizing(
-            ['jane@example.com', 'jane@example.org'],
-            $this->user->attribute('org_email', 'array'),
-        );
+        $this->assertEqualsCanonicalizing(['jane@example.com', 'jane@example.org'], $this->user->attribute('email', 'array'));
     }
 
     public function test_the_array_type_returns_an_empty_list_when_the_attribute_is_missing()
     {
-        Settings::update('ldap_org_email', 'noSuchAttribute');
+        Settings::update('ldap_phone_number', 'noSuchAttribute');
 
-        $this->assertSame([], $this->user->attribute('org_email', 'array'));
+        $this->assertSame([], $this->user->attribute('phone_number', 'array'));
     }
 
     public function test_the_default_type_returns_only_the_first_value()
     {
-        Settings::update('ldap_org_email', 'orgMail');
-
-        $this->assertContains($this->user->attribute('org_email'), ['jane@example.com', 'jane@example.org']);
-        $this->assertSame('jane@gmail.com', $this->user->attribute('personal_email'));
+        $this->assertContains($this->user->attribute('email'), ['jane@example.com', 'jane@example.org']);
+        $this->assertContains($this->user->attribute('phone_number'), ['111', '222']);
     }
 }

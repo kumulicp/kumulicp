@@ -1778,7 +1778,6 @@
     "ldap": "LDAP",
     "ldapFullName": "Nombre Completo",
     "ldapPersonalEmail": "Correo Personal",
-    "ldapOrganizationEmail": "Correo de la Organización",
     "ldapAliases": "Alias",
     "ldapAliasesHint": "Opcional. Necesita un atributo propio que su directorio permita con varios valores. Déjelo en blanco para mantener los alias desactivados mientras se use LDAP.",
     "ldapRecoveryEmail": "Correo de recuperación",

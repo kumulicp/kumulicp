@@ -274,7 +274,6 @@ class User extends UserManager
             'username' => Settings::get('ldap_username', 'cn'),
             'personal_email' => Settings::get('ldap_personal_email', 'mail'),
             'name' => Settings::get('ldap_name', 'displayName'),
-            'org_email' => Settings::get('ldap_org_email', 'mail'),
             'access_type' => Settings::get('ldap_access_type', 'employeeType'),
             'password' => Settings::get('ldap_password', 'userPassword'),
         ];

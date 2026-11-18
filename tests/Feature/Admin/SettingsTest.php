@@ -207,7 +207,6 @@ class SettingsTest extends TestCase
             'phone_number' => 'telephoneNumber',
             'username' => 'uid',
             'personal_email' => 'mail',
-            'org_email' => 'organizationMail',
             'access_type' => 'employeeType',
             'password' => 'userPassword',
         ]);
@@ -287,7 +286,7 @@ class SettingsTest extends TestCase
     public function test_ldap_settings_reject_a_new_attribute_another_mapping_uses_in_any_letter_case()
     {
         $response = $this->put('/admin/settings/ldap', [
-            'org_email' => 'organizationMail',
+            'phone_number' => 'organizationMail',
             'recovery_email' => 'ORGANIZATIONMAIL',
         ]);
 

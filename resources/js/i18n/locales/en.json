@@ -1786,7 +1786,6 @@
     "ldap": "LDAP",
     "ldapFullName": "Full Name",
     "ldapPersonalEmail": "Personal Email",
-    "ldapOrganizationEmail": "Organization Email",
     "ldapAliases": "Aliases",
     "ldapAliasesHint": "Optional. Needs an attribute of its own that your directory allows several values for. Leave it blank to keep aliases turned off while LDAP is in use.",
     "ldapRecoveryEmail": "Recovery Email",
