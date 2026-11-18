@@ -9,19 +9,28 @@ import SelfManageDomainModal from './modals/SelfManageDomainModal.vue'
 import RemoveDomainModal from './modals/RemoveDomainModal.vue'
 import TransferInDomainModal from './modals/TransferInDomainModal.vue'
 import { Link, useForm } from '@inertiajs/vue3'
+import { useToast } from 'vuestic-ui'
 
 </script>
 <template>
   <Head>
     <title>{{ $t('organization.webDomains.domainSettings') }} - Control Panel</title>
   </Head>
-  <div class="row justify-center mb-3">
-    <new-domain-modal :showModal="showAddDomain" @update:showModal="showAddDomain = $event" />
+  <div class="domain-header">
+    <div class="domain-header__title">
+      <h4 class="va-h4 domain-header__name">{{ domain.name }}</h4>
+      <div class="domain-header__badges">
+        <va-chip v-if="domainTypeLabel" size="small" outline color="secondary">{{ domainTypeLabel }}</va-chip>
+        <va-chip size="small" :color="emailStatus.color" :outline="emailStatus.outline" class="domain-header__email">
+          <va-icon name="fa-envelope" size="small" class="mr-1" />
+          {{ emailStatus.label }}
+        </va-chip>
+      </div>
+    </div>
     <va-button-dropdown v-if="number_of_actions > 0"
       size="medium"
       :label="$t('organization.webDomains.actions')"
       color="secondary"
-      class="ml-3 my-2"
       :verticalScrollOnOverflow="false"
     >
       <div>
@@ -35,7 +44,6 @@ import { Link, useForm } from '@inertiajs/vue3'
       </div>
     </va-button-dropdown>
   </div>
-  <h5 class="va-h5 mb-3">{{ domain.name }}</h5>
   <va-alert
     v-if="domain.email.status == 'activating'"
     dense
@@ -52,9 +60,10 @@ import { Link, useForm } from '@inertiajs/vue3'
     color="warning"
     icon="warning"
     outline
-    class="mb-2 py-2"
+    class="mb-4 py-2"
   >
     <span v-if="domain.type == 'connection'">{{ $t('organization.webDomains.beforeEmailAccounts') }}</span>
+    <span v-else>{{ $t('organization.webDomains.waitingDns') }}</span>
   </va-alert>
   <form v-if="organizations.length > 1" @submit.prevent="form.post('/settings/domains/'+domain.name)">
     <div class="row my-3">
@@ -79,85 +88,101 @@ import { Link, useForm } from '@inertiajs/vue3'
       </div>
     </div>
   </form>
-  <div v-if="domain.email.status != 'disabled'">
-    <va-list-separator fit />
-    <va-scroll-container
-      v-if="domain.type =='connection'"
-      color="primary"
-      horizontal
-    >
-      <table class="va-table va-table--hoverable mt-3">
-        <thead>
-          <tr>
-            <th>{{ $t('organization.webDomains.type') }}</th>
-            <th>{{ $t('organization.webDomains.host') }}</th>
-            <th>{{ $t('organization.webDomains.value') }}</th>
-            <th>{{ $t('organization.webDomains.priority') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(record, index) in domain.required_records" :key="index">
-            <td>
-                {{ record.type }}
-            </td>
-            <td>
-                {{ record.host }}
-            </td>
-            <td style="max-width: 800px; overflow: auto">
-                {{ record.value }}
-            </td>
-            <td>
-                {{ record.ttl }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </va-scroll-container>
-  </div>
 
-  <va-list-separator class="my-3" fit />
-  <h6 class="va-h6">{{ $t('organization.webDomains.subdomains') }}</h6>
-  <div class="row justify-center">
-    <va-button @click="showAddRecordModal = true">{{ $t('organization.webDomains.addHost') }}</va-button>
+  <va-collapse v-if="domain.email.status != 'disabled' && domain.required_records.length > 0" class="records-panel mb-3">
+    <template #header-content>
+      <div class="records-panel__header">
+        <va-icon name="fa-envelope" color="secondary" />
+        <span class="records-panel__title">{{ $t('organization.webDomains.emailRecords') }}</span>
+        <span class="va-text-secondary">{{ $t('organization.webDomains.recordCount', { count: domain.required_records.length }) }}</span>
+      </div>
+    </template>
+    <p class="va-text-secondary mb-3">
+      {{ domain.type === 'connection' ? $t('organization.webDomains.emailRecordsConnectionHelp') : $t('organization.webDomains.emailRecordsManagedHelp') }}
+    </p>
+    <table class="va-table dns-table">
+      <thead>
+        <tr>
+          <th>{{ $t('organization.webDomains.type') }}</th>
+          <th>{{ $t('organization.webDomains.host') }}</th>
+          <th>{{ $t('organization.webDomains.value') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="record in domain.required_records" :key="record.type + record.host">
+          <td><span class="record-type">{{ record.type }}</span></td>
+          <td class="dns-table__host">{{ record.host }}</td>
+          <td class="dns-table__value-cell">
+            <div class="dns-table__value-wrap">
+              <div class="dns-table__value" tabindex="0">{{ record.value }}</div>
+              <va-button
+                size="small"
+                preset="plain"
+                :icon="copiedKey === record.type + record.host ? 'fa-check' : 'fa-copy'"
+                :color="copiedKey === record.type + record.host ? 'success' : 'secondary'"
+                :title="$t('organization.webDomains.copyValue')"
+                :aria-label="$t('organization.webDomains.copyValue')"
+                @click="copyValue(record)"
+              />
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </va-collapse>
+
+  <div class="section-header">
+    <h6 class="va-h6 section-header__title">{{ $t('organization.webDomains.dnsRecords') }}</h6>
+    <va-button size="small" icon="fa-plus" @click="showAddRecordModal = true">{{ $t('organization.webDomains.addRecord') }}</va-button>
   </div>
+  <div v-if="subdomains.length === 0" class="va-text-secondary py-4 text-center">{{ $t('organization.webDomains.noDnsRecords') }}</div>
   <va-scroll-container
+    v-else
     color="primary"
     horizontal
   >
-    <table class="va-table va-table--hoverable mt-3">
+    <table class="va-table va-table--hoverable dns-table">
       <thead>
         <tr>
-          <th style>{{ $t('organization.webDomains.type') }}</th>
+          <th>{{ $t('organization.webDomains.type') }}</th>
           <th>{{ $t('organization.webDomains.host') }}</th>
-          <th style="width: 30%">{{ $t('organization.webDomains.domainName') }}</th>
-          <th style="width: 50%">{{ $t('organization.webDomains.ipValueApp') }}</th>
+          <th>{{ $t('organization.webDomains.value') }}</th>
           <th v-if="domain.type === 'managed'">{{ $t('organization.webDomains.ttl') }}</th>
-          <th style="width: 200px"></th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="subdomain in subdomains.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="subdomain.name">
-          <td>{{ subdomain.type }}</td>
-          <td>{{ subdomain.host }}</td>
-          <td>{{ subdomain.name }}</td>
-          <td style="max-width: 800px; overflow: auto">
-            <Link v-if="subdomain.app !== null" :href="'/apps/'+subdomain.app.id+'/edit'">{{ subdomain.app.name }}</Link>
-            <span v-else>{{ subdomain.value }}</span>
+          <td><span class="record-type">{{ subdomain.type }}</span></td>
+          <td class="dns-table__host" :title="subdomain.name">{{ subdomain.host }}</td>
+          <td class="dns-table__value-cell">
+            <div class="dns-table__value-wrap">
+              <div class="dns-table__value" tabindex="0">
+                <Link v-if="subdomain.app !== null" :href="'/apps/'+subdomain.app.id+'/edit'">{{ subdomain.app.name }}</Link>
+                <span v-else>{{ subdomain.value }}</span>
+              </div>
+            </div>
           </td>
-          <td v-if="domain.type === 'managed'">{{ subdomain.ttl }}</td>
-          <td class="va-text-right">
+          <td v-if="domain.type === 'managed'" class="dns-table__ttl">{{ subdomain.ttl }}</td>
+          <td class="dns-table__actions">
             <va-button v-if="subdomain.can.edit"
-              class="mr-2"
+              size="small"
+              preset="plain"
+              icon="fa-pen"
+              color="secondary"
               :title="$t('organization.webDomains.editName', { name: subdomain.name })"
-              @click="showEditRecord(subdomain)">
-              {{ $t('common.edit') }}
-            </va-button>
+              :aria-label="$t('organization.webDomains.editName', { name: subdomain.name })"
+              @click="showEditRecord(subdomain)"
+            />
             <va-button v-if="subdomain.can.delete"
+              size="small"
+              preset="plain"
+              icon="fa-trash"
               color="danger"
               :title="$t('organization.webDomains.removeName', { name: subdomain.name })"
-              @click="deleteSubdomain(subdomain)">
-              {{ $t('common.delete') }}
-            </va-button>
+              :aria-label="$t('organization.webDomains.removeName', { name: subdomain.name })"
+              @click="deleteSubdomain(subdomain)"
+            />
           </td>
         </tr>
       </tbody>
@@ -166,7 +191,7 @@ import { Link, useForm } from '@inertiajs/vue3'
   <va-modal v-model="showAddRecordModal" no-outside-dismiss no-padding size="small" class="p-0">
     <template #content="{ ok }">
       <form @submit.prevent="recordForm.post('/settings/domains/'+domain.name+'/subdomains', {onSuccess: () => recordAdded()})">
-        <va-card-title class="m-0">{{ $t('organization.webDomains.addHost') }}</va-card-title>
+        <va-card-title class="m-0">{{ $t('organization.webDomains.addDnsRecord') }}</va-card-title>
         <va-card-content class="m-0">
           <va-select v-model="recordForm.type"
             v-if="domain.type === 'managed'"
@@ -347,6 +372,7 @@ export default {
 
     return {
       curPageValue: 1,
+      copiedKey: null,
       pageSize: 100,
       actions: {
         enable_email: false,
@@ -364,6 +390,7 @@ export default {
         organization: this.domain.organization.id,
         redirect_to: redirectTo
       }),
+      toast: useToast(),
       remove: useForm({}),
       recordForm: useForm({
         host: '',
@@ -392,6 +419,21 @@ export default {
     }
   },
   computed: {
+    domainTypeLabel () {
+      return {
+        managed: this.$t('organization.webDomains.typeManaged'),
+        connection: this.$t('organization.webDomains.typeConnection')
+      }[this.domain.type] ?? null
+    },
+    emailStatus () {
+      const statuses = {
+        active: { label: this.$t('organization.webDomains.emailStatusActive'), color: 'success', outline: false },
+        activating: { label: this.$t('organization.webDomains.emailStatusActivating'), color: 'primary', outline: false },
+        waiting_dns: { label: this.$t('organization.webDomains.waitingDns'), color: 'warning', outline: false }
+      }
+
+      return statuses[this.domain.email.status] ?? { label: this.$t('organization.webDomains.emailStatusDisabled'), color: 'secondary', outline: true }
+    },
     number_of_actions () {
       let n = 0
       Object.values(this.domain.actions).forEach((value) => {
@@ -404,6 +446,17 @@ export default {
     }
   },
   methods: {
+    async copyValue (record) {
+      try {
+        await navigator.clipboard.writeText(record.value)
+      } catch {
+        this.toast.init({ message: this.$t('organization.webDomains.copyFailed'), color: 'danger' })
+        return
+      }
+
+      this.copiedKey = record.type + record.host
+      setTimeout(() => { this.copiedKey = null }, 2000)
+    },
     showActionModal (domain, action) {
       this.actions[action] = true
       // this.showDomainAction = !this.showDomainAction
@@ -455,5 +508,133 @@ export default {
     display: flex;
     justify-content: left;
     align-items: center;
+  }
+
+  .domain-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+
+    &__title {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.875rem;
+      min-width: 0;
+    }
+
+    &__name {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    &__badges {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--va-background-border);
+
+    &__title {
+      margin: 0;
+    }
+  }
+
+  .records-panel {
+    border: 1px solid var(--va-background-border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+
+    &__header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.625rem;
+    }
+
+    &__title {
+      font-weight: 600;
+    }
+  }
+
+  // Compact record tables: tight cells. Full width on mobile and tablet; on a wide screen the table stops growing
+  // at a readable width instead of spanning the whole card. The value column takes the space the others leave and
+  // scrolls on its own when a TXT/DKIM value is longer than that.
+  .va-table.dns-table {
+    width: 100%;
+
+    th,
+    td {
+      padding: 0.375rem 0.75rem;
+      vertical-align: middle;
+    }
+
+    @media (min-width: 1200px) {
+      max-width: 64rem;
+    }
+  }
+
+  .dns-table__value-cell {
+    width: 100%;
+    max-width: 0;
+  }
+
+  .dns-table__value-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .dns-table__value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+
+  // The app's base styles set a font on every element, so the children (span, link) need it too
+  .dns-table__value,
+  .dns-table__value * {
+    font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  }
+
+  .dns-table__host {
+    white-space: nowrap;
+    font-family: Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  }
+
+  .dns-table__ttl {
+    white-space: nowrap;
+    color: var(--va-text-secondary);
+  }
+
+  .dns-table__actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .record-type {
+    display: inline-block;
+    min-width: 3rem;
+    padding: 0.0625rem 0.5rem;
+    border-radius: 0.25rem;
+    background: var(--va-background-element);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
   }
 </style>

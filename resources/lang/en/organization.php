@@ -130,6 +130,7 @@ return [
             'remove' => ':domain cannot be removed',
             'self_managed' => ':domain cannot be self managed',
             'extended_attributes' => 'Extended attributes validation failed',
+            'registration_failed' => ':domain could not be registered. You have not been charged.',
             'transferring' => 'There has been an error transferring your domain. We have been notified of the error and will look into it immediately.',
         ],
     ],
