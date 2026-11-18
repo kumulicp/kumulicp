@@ -155,6 +155,8 @@ return [
             'recovery_required' => 'Tu correo actual está en un dominio alojado aquí, así que no puede recuperar tu cuenta. Indica antes un correo de recuperación en otro proveedor.',
             'undo_expired' => 'Es demasiado tarde para volver atrás, o no hay nada de lo que volver.',
             'failed' => 'No se pudo configurar el correo de la organización. No se cambió nada. Inténtalo de nuevo y avisa a soporte si sigue ocurriendo.',
+            'accepted' => 'Ahora inicias sesión con :email.',
+            'undone' => 'Has vuelto a :email.',
         ],
     ],
     'suborganization' => [

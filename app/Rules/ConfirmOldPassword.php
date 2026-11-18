@@ -25,7 +25,8 @@ class ConfirmOldPassword implements Rule
     {
         $user = AccountManager::users()->findEmail($this->email);
 
-        return $user->isPassword($value);
+        // No such user (the email changed under the session): nothing to confirm against
+        return $user !== null && $user->isPassword($value);
     }
 
     /**

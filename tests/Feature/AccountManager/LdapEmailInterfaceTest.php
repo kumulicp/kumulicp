@@ -156,3 +156,15 @@ it('switches a user to an organization address, moving their email to the recove
         ->and(array_map('strtolower', $back->getAttribute('objectclass')))->not->toContain('postfixbookmailaccount')
         ->and($mailbox->fresh()->status)->toBe(Mailbox::PENDING);
 })->with('account_manager_drivers');
+
+it('treats a user whose access type is standard as one who may be given an organization address', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    ldapEmailFixtures($driver);
+    $user = AccountManager::users()->find('testing1');
+
+    $user->update(['access_type' => 'standard']);
+    $user->save();
+
+    expect(AccountManager::users()->find('testing1')->isUserAccessType('standard'))->toBeTrue()
+        ->and(AccountManager::users()->find('testing1')->isUserAccessType('basic'))->toBeFalse();
+})->with('account_manager_drivers');
