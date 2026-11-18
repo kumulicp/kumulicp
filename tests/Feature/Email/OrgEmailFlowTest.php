@@ -225,4 +225,63 @@ class OrgEmailFlowTest extends TestCase
         $this->assertDatabaseHas('mailboxes', ['address' => 'jdoe@corp.org', 'status' => Mailbox::PENDING]);
     }
 
+    public function test_the_users_list_shows_the_organization_address_and_flags_a_missing_recovery_email()
+    {
+        OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com']);
+        $this->post('/profile/org-email', $this->payload([
+            'domain' => OrgDomain::where('name', 'example.com')->value('id'),
+            'local_part' => 'demo',
+            'acknowledge' => false,
+        ]));
+
+        $this->get('/users')->assertInertia(fn ($page) => $page
+            ->where('users.0.id', 'demo')
+            ->where('users.0.org_email', 'demo@example.com')
+            ->where('users.0.recovery_missing', true));
+    }
+
+    public function test_an_administrator_offering_an_address_changes_nothing_for_the_user_yet()
+    {
+        $response = $this->get('/users/demo/create/accountemail/'.$this->corp->id);
+
+        $response->assertRedirect('/users/demo');
+        $response->assertSessionHas('success');
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseHas('mailboxes', ['address' => 'demo@corp.org', 'status' => Mailbox::PENDING]);
+    }
+
+    public function test_the_admin_user_page_shows_the_offer_and_the_organization_address()
+    {
+        $this->get('/users/demo/create/accountemail/'.$this->corp->id);
+
+        $this->get('/users/demo/edit')->assertInertia(fn ($page) => $page
+            ->where('user.offered_email', 'demo@corp.org')
+            ->where('user.org_email', null)
+            ->where('user.can.add_email_account', false));
+    }
+
+    public function test_an_administrator_cannot_edit_the_email_of_someone_who_has_an_organization_address()
+    {
+        $this->post('/profile/org-email', $this->payload());
+
+        $response = $this->put('/users/demo', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'sneaky@gmail.com',
+            'organization' => $this->user->organization->id,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame('jdoe@corp.org', $this->email());
+    }
+
+    public function test_an_administrator_removing_the_address_puts_the_user_back()
+    {
+        $this->post('/profile/org-email', $this->payload());
+
+        $this->get('/users/demo/remove/accountemail/jdoe@corp.org')->assertRedirect('/users/demo');
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseCount('mailboxes', 0);
+    }
 }

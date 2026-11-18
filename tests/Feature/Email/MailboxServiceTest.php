@@ -15,6 +15,7 @@ use App\Services\Email\RecoveryEmailDirectory;
 use App\Services\Email\RecoveryEmailRequired;
 use App\Services\Email\RecoveryEmailService;
 use App\Support\AccountManager\UserManager;
+use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Domain;
 use App\User;
@@ -159,6 +160,19 @@ class MailboxServiceTest extends TestCase
         Event::assertDispatched(MailboxActivated::class);
         Event::assertDispatched(UserUpdated::class);
         Notification::assertSentOnDemand(PrimaryEmailChanged::class, fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === 'demo@example.com');
+    }
+
+    public function test_the_recovery_email_that_was_moved_is_trusted_but_the_panel_copy_of_the_email_follows()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->assertNotNull(\App\UserRecoveryEmail::where('username', 'demo')->first()->verified_at);
+        $this->assertSame(
+            ['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org', 'recovery_missing' => false],
+            UserEmails::for(AccountManager::users()->find('demo')),
+        );
     }
 
     public function test_accepting_the_address_the_user_already_has_only_records_the_mailbox()
@@ -342,6 +356,20 @@ class MailboxServiceTest extends TestCase
         $this->manager->delete();
 
         $this->assertDatabaseCount('mailboxes', 0);
+    }
+
+    public function test_users_with_an_organization_address_and_no_usable_recovery_email_are_flagged()
+    {
+        $this->assertFalse(UserEmails::for($this->manager)['recovery_missing'], 'no organization address, nothing to flag');
+
+        $mailbox = $this->service->offer($this->manager, $this->domain('example.com'), 'demo');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->assertTrue(UserEmails::for(AccountManager::users()->find('demo'))['recovery_missing']);
+
+        $this->recovery->set('demo', 'backup@gmail.com');
+
+        $this->assertFalse(UserEmails::for(AccountManager::users()->find('demo'))['recovery_missing']);
     }
 
     // --- who may have one

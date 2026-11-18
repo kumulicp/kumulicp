@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Services\UserPermissionsService;
+use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
@@ -25,6 +26,8 @@ class Permissions extends Controller
 
         $user_access_types = Subscription::base()->availableAccessTypesForUser($user);
 
+        $user_emails = UserEmails::for($user);
+
         return inertia('Organization/Users/UserPermissions', [
             'permissions' => $user->permissions()->get(),
             'user' => [
@@ -33,8 +36,8 @@ class Permissions extends Controller
                 'first_name' => $user->attribute('first_name'),
                 'last_name' => $user->attribute('last_name'),
                 'phone_number' => $user->attribute('phone_number'),
-                'personal_email' => $user->attribute('email'),
-                'org_email' => $user->attribute('org_email'),
+                'personal_email' => $user_emails['personal_email'],
+                'org_email' => $user_emails['org_email'],
                 'access_type' => $user->userAccessType(),
                 'url' => [
                     'show' => '/users/'.$user->attribute('username'),

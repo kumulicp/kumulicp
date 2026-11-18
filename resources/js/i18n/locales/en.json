@@ -1600,8 +1600,9 @@
       "phoneNumber": "Phone Number",
       "language": "Language",
       "organizationalEmail": "Organizational Email",
+      "offeredEmail": "Offered. It takes effect once the user accepts it from their profile.",
       "deleteEmail": "Delete Email",
-      "addEmailAccount": "Add email account @{domain}",
+      "addEmailAccount": "Offer an organization email @{domain}",
       "appStorage": "Storage for {app}",
       "storageLabel": "Storage",
       "storageError": "Error setting storage",
@@ -1717,6 +1718,7 @@
   },
   "recoveryEmail": {
     "reminder": "Add a recovery email. If you forget your password, the reset link can only reach you at an address other than your organization one.",
+    "missingBadge": "No recovery email",
     "reminderAction": "Add a recovery email",
     "label": "Recovery Email",
     "hint": "Only used to send a password reset link. It can't be an address hosted here.",
