@@ -2,11 +2,17 @@
 
 namespace App\Services\Email;
 
+use App\Events\Mailboxes\MailboxActivated;
+use App\Events\Users\UserUpdated;
 use App\Mailbox;
+use App\Notifications\PrimaryEmailChanged;
 use App\OrgDomain;
 use App\Support\AccountManager\UserManager;
 use App\Support\Email\HostedDomains;
+use App\Support\Facades\Domain;
+use App\User as DatabaseUser;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
@@ -97,4 +103,121 @@ class MailboxService
         return ['changes_email' => true, 'current' => $current, 'recovery' => $recovery];
     }
 
+    /**
+     * The user accepts their mailbox. Writes happen in an order that never loses the old
+     * address, and if the directory can't be written everything is put back.
+     *
+     * @throws MailboxException
+     */
+    public function accept(UserManager $user, Mailbox $mailbox, ?string $recovery_email = null): Mailbox
+    {
+        $username = (string) $user->attribute('username');
+
+        if ($mailbox->username !== $username || $mailbox->status !== Mailbox::PENDING) {
+            throw new MailboxException(__('organization.email.mailbox.not_pending'));
+        }
+
+        $plan = $this->plan($user, $mailbox);
+        $current = $plan['current'];
+        $address = $mailbox->address;
+        $previous_recovery = $this->recovery_emails->get($username);
+        $recovery_after = $previous_recovery;
+        $now_recovery = false;
+
+        if ($plan['changes_email']) {
+            if ($plan['recovery'] === 'move') {
+                $recovery_after = $current;
+                $now_recovery = true;
+            } elseif ($plan['recovery'] === 'required') {
+                $given = $recovery_email === null ? '' : Str::lower(trim($recovery_email));
+
+                if ($given === '' || $given === $address || $given === $current || HostedDomains::isHosted($given)) {
+                    throw new RecoveryEmailRequired(__('organization.email.mailbox.recovery_required'));
+                }
+
+                $recovery_after = $given;
+            }
+        }
+
+        try {
+            if ($recovery_after !== $previous_recovery) {
+                $this->recovery_emails->set($username, $recovery_after, verified: $now_recovery);
+            }
+
+            if ($plan['changes_email']) {
+                $this->changeEmail($user, $username, $address);
+            }
+
+            $this->provision($user, $mailbox);
+        } catch (\Throwable $e) {
+            report($e);
+            $this->putBack($user, $username, $plan['changes_email'] ? $current : null, $previous_recovery);
+
+            throw new MailboxException(__('organization.email.mailbox.failed'), 0, $e);
+        }
+
+        $mailbox->forceFill([
+            'status' => Mailbox::ACTIVE,
+            'activated_at' => now(),
+            'swapped_at' => $plan['changes_email'] ? now() : null,
+            'previous_mail' => $plan['changes_email'] ? $current : null,
+            'previous_recovery_email' => $plan['changes_email'] ? $previous_recovery : null,
+        ])->save();
+
+        event(new UserUpdated($user));
+        event(new MailboxActivated($mailbox));
+
+        if ($plan['changes_email']) {
+            $this->tell($current, new PrimaryEmailChanged($username, $current, $address, $now_recovery, $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))));
+        }
+
+        return $mailbox;
+    }
+
+    private function changeEmail(UserManager $user, string $username, string $address): void
+    {
+        $user->update(['email' => $address]);
+        $user->save();
+
+        // The control panel's own copy of the user (the directory's is re-imported at the next sign in)
+        DatabaseUser::where('username', $username)->first()?->forceFill(['email' => $address])->save();
+    }
+
+    private function provision(UserManager $user, Mailbox $mailbox): void
+    {
+        $domain = $mailbox->domain;
+
+        if ($domain) {
+            $server = Domain::connect($domain, 'email');
+
+            if (method_exists($server, 'createUserEmail')) {
+                $server->createUserEmail($user, $domain);
+            }
+        }
+    }
+
+    /**
+     * Best effort after a failure part way: the email the user had, and the recovery email they had.
+     */
+    private function putBack(UserManager $user, string $username, ?string $email, ?string $recovery): void
+    {
+        try {
+            if ($email !== null) {
+                $this->changeEmail($user, $username, $email);
+            }
+
+            $this->recovery_emails->set($username, $recovery);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function tell(string $address, $notification): void
+    {
+        try {
+            Notification::route('mail', $address)->notify($notification);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
 }

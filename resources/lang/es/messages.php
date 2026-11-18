@@ -133,6 +133,12 @@ return [
             'changed_line' => 'El correo de recuperación de la cuenta :username en :panel_name cambió a :new.',
             'changed_delay' => 'Hasta el :date los restablecimientos de contraseña seguirán llegando a esta dirección. Si no fuiste tú, inicia sesión y cambia tu contraseña ahora.',
         ],
+        'primary_email' => [
+            'subject' => 'Cambió el correo de tu cuenta',
+            'line' => 'El correo con el que inicias sesión en la cuenta :username en :panel_name cambió de :old a :new.',
+            'recovery' => 'Esta dirección es ahora tu correo de recuperación y solo se usa para enviar un enlace de restablecimiento de contraseña.',
+            'undo' => 'Si no fuiste tú, o quieres volver atrás, puedes hacerlo hasta el :date desde tu perfil.',
+        ],
         'app_unavailable_warning' => [
             'title' => ':app no responde',
             'message' => 'No pudimos conectarnos con :app. Volveremos a comprobarlo en :minutes minutos. Si sigue sin responder, pausaremos nuestra conexión con la aplicación y te avisaremos.',

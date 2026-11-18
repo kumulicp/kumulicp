@@ -4,8 +4,10 @@ use App\Integrations\ServerManagers\DockerMailServer\Interfaces\LdapEmailInterfa
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Email;
 use App\Ldap\Models\User as LdapUser;
+use App\Mailbox;
 use App\OrgDomain;
 use App\Support\Facades\AccountManager;
+use App\Services\Email\MailboxService;
 use App\Support\Facades\Settings;
 use Illuminate\Support\Facades\DB;
 use App\User;
@@ -109,4 +111,21 @@ it('refuses to make a mailbox of a user that is not in the directory', function 
     LdapUser::find(Dn::create($organization, 'users', 'testing1'))->delete();
 
     expect(fn () => $interface->createUserEmail($user, $domain))->toThrow(RuntimeException::class);
+})->with('account_manager_drivers');
+
+it('hosts the address a user already signs in with without changing their email', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    [, $organization, $domain] = ldapEmailFixtures($driver);
+    $user = AccountManager::users()->find('testing1');
+    $dn = Dn::create($organization, 'users', 'testing1');
+    $mailboxes = app(MailboxService::class);
+
+    $mailbox = $mailboxes->offer($user, $domain, 'testing1');
+    $mailboxes->accept($user, $mailbox);
+
+    $entry = LdapUser::find($dn);
+    expect($mailbox->fresh()->status)->toBe(Mailbox::ACTIVE)
+        ->and($mailbox->fresh()->swapped_at)->toBeNull()
+        ->and($entry->getFirstAttribute('mail'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $entry->getAttribute('objectclass')))->toContain('postfixbookmailaccount');
 })->with('account_manager_drivers');

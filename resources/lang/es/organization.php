@@ -151,6 +151,9 @@ return [
         'mailbox' => [
             'has_one' => 'Este usuario ya tiene un correo de la organización, o uno pendiente de aceptar. Elimínalo antes de elegir otro.',
             'taken' => ':email ya está en uso. Elige otro nombre.',
+            'not_pending' => 'No hay ningún correo de la organización pendiente de aceptar.',
+            'recovery_required' => 'Tu correo actual está en un dominio alojado aquí, así que no puede recuperar tu cuenta. Indica antes un correo de recuperación en otro proveedor.',
+            'failed' => 'No se pudo configurar el correo de la organización. No se cambió nada. Inténtalo de nuevo y avisa a soporte si sigue ocurriendo.',
         ],
     ],
     'suborganization' => [
