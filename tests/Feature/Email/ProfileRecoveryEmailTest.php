@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Email;
 
+use App\Mailbox;
 use App\Notifications\RecoveryEmailConfirmation;
 use App\OrgDomain;
 use App\Services\Email\RecoveryEmailDirectory;
@@ -31,6 +32,17 @@ class ProfileRecoveryEmailTest extends TestCase
         $this->actingAs($this->user);
         $this->app->instance(RecoveryEmailDirectory::class, new FakeRecoveryEmailDirectory);
         $this->service = $this->app->make(RecoveryEmailService::class);
+    }
+
+    private function giveMailbox(): void
+    {
+        Mailbox::create([
+            'organization_id' => $this->user->organization->id,
+            'local_part' => 'demo',
+            'address' => $this->user->email,
+            'username' => 'demo',
+            'status' => Mailbox::ACTIVE,
+        ]);
     }
 
     public function test_the_profile_page_shows_the_recovery_email_and_whether_it_works()
@@ -134,4 +146,16 @@ class ProfileRecoveryEmailTest extends TestCase
         $this->get($url)->assertRedirect('/profile')->assertSessionHas('error');
     }
 
+    public function test_the_reminder_is_shown_to_someone_with_an_organization_address_and_no_recovery_email()
+    {
+        $this->get('/profile')->assertInertia(fn ($page) => $page->where('recovery_reminder', false));
+
+        $this->giveMailbox();
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page->where('recovery_reminder', true));
+
+        $this->service->set('demo', 'backup@gmail.com');
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page->where('recovery_reminder', false));
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Email\RecoveryEmailService;
 use App\Support\Billing\BillingSyncState;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Menu;
@@ -138,6 +139,8 @@ class HandleInertiaRequests extends Middleware
                 'status' => $request->user()?->organization?->status,
             ],
             'step' => $request->user()?->organization->setting('step') ?? 0,
+            // Whether to remind the user to add a recovery email (they have an organization address and no usable one)
+            'recovery_reminder' => fn () => $request->user() ? app(RecoveryEmailService::class)->needsReminder($request->user()->username) : false,
             // Set on every page of a shared app, whichever controller draws it, for the shared app layout
             'shared_app' => fn () => $request->user() ? SharedAppContext::fromRequest($request) : null,
             /*'ziggy' => function () use ($request) {

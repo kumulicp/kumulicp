@@ -189,6 +189,25 @@ class RecoveryEmailRulesTest extends TestCase
         $this->assertFalse($this->service->confirm('demo', sha1('new@gmail.com'), 'demo@example.org'));
     }
 
+    public function test_the_reminder_is_for_users_with_an_active_mailbox_and_no_usable_recovery_email()
+    {
+        $this->assertFalse($this->service->needsReminder('demo'), 'no mailbox');
+
+        $this->mailbox('demo@example.org', Mailbox::PENDING);
+        $this->assertFalse($this->service->needsReminder('demo'), 'only offered');
+
+        Mailbox::where('username', 'demo')->update(['status' => Mailbox::ACTIVE]);
+        $this->assertTrue($this->service->needsReminder('demo'), 'active and no recovery email');
+        $this->assertSame(1, $this->service->countNeedingReminder());
+
+        $this->service->set('demo', 'demo@example.org');
+        $this->assertTrue($this->service->needsReminder('demo'), 'recovery equal to the mailbox address');
+
+        $this->service->set('demo', 'backup@gmail.com');
+        $this->assertFalse($this->service->needsReminder('demo'));
+        $this->assertSame(0, $this->service->countNeedingReminder());
+    }
+
     public function test_the_database_user_gets_resets_and_invites_at_the_recovery_email_and_everything_else_at_mail()
     {
         $this->service->set('demo', 'backup@gmail.com');

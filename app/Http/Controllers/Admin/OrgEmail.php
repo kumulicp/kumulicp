@@ -21,6 +21,7 @@ class OrgEmail extends Controller
                 'attribute' => LdapEmailAttributes::recoveryAttribute(),
                 'sync_enabled' => LdapEmailAttributes::recoverySyncEnabled(),
                 'count' => UserRecoveryEmail::count(),
+                'missing' => app(RecoveryEmailService::class)->countNeedingReminder(),
             ],
             'sync_result' => session('sync_result'),
             'breadcrumbs' => [

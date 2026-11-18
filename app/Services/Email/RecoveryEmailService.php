@@ -2,6 +2,7 @@
 
 namespace App\Services\Email;
 
+use App\Mailbox;
 use App\Notifications\RecoveryEmailChanged;
 use App\Notifications\RecoveryEmailConfirmation;
 use App\Notifications\ResetPassword;
@@ -187,6 +188,36 @@ class RecoveryEmailService
         $expires = $row->pending_requested_at?->copy()->addHours((int) config('email.recovery_confirm_hours', 24));
 
         return $expires && $expires->isFuture() ? $row->pending_email : null;
+    }
+
+    /**
+     * Whether to remind this user to add a recovery email: they have an organization
+     * address (their `mail` is then that address) and no usable recovery email.
+     */
+    public function needsReminder(string $username): bool
+    {
+        $mailbox = Mailbox::where('username', $username)->where('status', Mailbox::ACTIVE)->first();
+
+        return $mailbox !== null && $this->usable($username, $mailbox->address) === null;
+    }
+
+    /**
+     * How many users with an organization address have no usable recovery email.
+     */
+    public function countNeedingReminder(): int
+    {
+        $count = 0;
+
+        Mailbox::where('status', Mailbox::ACTIVE)->whereNotNull('username')->orderBy('id')
+            ->chunkById(200, function ($mailboxes) use (&$count) {
+                foreach ($mailboxes as $mailbox) {
+                    if ($this->usable($mailbox->username, $mailbox->address) === null) {
+                        $count++;
+                    }
+                }
+            });
+
+        return $count;
     }
 
     /**
