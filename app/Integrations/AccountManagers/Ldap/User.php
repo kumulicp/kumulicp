@@ -9,6 +9,7 @@ use App\Ldap\LdapSupport;
 use App\Ldap\Models\EmailUser;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\User as LdapUser;
+use App\Mailbox;
 use App\Organization;
 use App\SuborgUser;
 use App\Support\AccountManager\UserManager;
@@ -255,6 +256,7 @@ class User extends UserManager
         }
 
         UserRecoveryEmail::where('username', $this->attribute('username'))->delete();
+        Mailbox::where('username', $this->attribute('username'))->delete();
 
         $this->removeFromAllGroups();
         $this->user->delete();

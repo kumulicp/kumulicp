@@ -3,6 +3,7 @@
 namespace App\Services\Email;
 
 use App\Events\Mailboxes\MailboxActivated;
+use App\Events\Mailboxes\MailboxDeactivated;
 use App\Events\Users\UserUpdated;
 use App\Mailbox;
 use App\Notifications\PrimaryEmailChanged;
@@ -174,6 +175,88 @@ class MailboxService
         return $mailbox;
     }
 
+    /**
+     * Puts the user back on the email they had, for as long as the undo window lasts. The
+     * mailbox goes back to pending. Accounts an app has already made for the new address
+     * are not touched.
+     *
+     * @throws MailboxException
+     */
+    public function undo(UserManager $user, Mailbox $mailbox): Mailbox
+    {
+        $username = (string) $user->attribute('username');
+
+        if ($mailbox->username !== $username || ! $mailbox->canBeUndone() || ! $mailbox->previous_mail) {
+            throw new MailboxException(__('organization.email.mailbox.undo_expired'));
+        }
+
+        try {
+            $this->changeEmail($user, $username, $mailbox->previous_mail);
+
+            $this->recovery_emails->set($username, $mailbox->previous_recovery_email);
+
+            $this->deprovision($user, $mailbox);
+        } catch (\Throwable $e) {
+            report($e);
+
+            throw new MailboxException(__('organization.email.mailbox.failed'), 0, $e);
+        }
+
+        $mailbox->forceFill([
+            'status' => Mailbox::PENDING,
+            'activated_at' => null,
+            'swapped_at' => null,
+            'previous_mail' => null,
+            'previous_recovery_email' => null,
+        ])->save();
+
+        event(new UserUpdated($user));
+        event(new MailboxDeactivated($mailbox));
+
+        return $mailbox;
+    }
+
+    /**
+     * Takes the mailbox away. A user who was switched to it goes back to their recovery
+     * email as their email, but only if that one is usable; otherwise they stay on the
+     * address they have, and are reminded to add a recovery email.
+     */
+    public function remove(UserManager $user, Mailbox $mailbox): void
+    {
+        $username = (string) $user->attribute('username');
+
+        if ($mailbox->isActive()) {
+            $restore = $mailbox->swapped_at !== null ? $this->recovery_emails->usable($username, $mailbox->address) : null;
+
+            try {
+                if ($restore !== null) {
+                    $this->changeEmail($user, $username, $restore);
+                    $this->recovery_emails->forget($username);
+                }
+
+                $this->deprovision($user, $mailbox);
+            } catch (\Throwable $e) {
+                report($e);
+
+                throw new MailboxException(__('organization.email.mailbox.failed'), 0, $e);
+            }
+
+            event(new UserUpdated($user));
+        }
+
+        $mailbox->delete();
+        event(new MailboxDeactivated($mailbox));
+    }
+
+    /**
+     * Forgets the user's mailboxes when the user is deleted (their directory entry or row
+     * goes with them, so there is nothing to restore).
+     */
+    public function forgetUser(string $username): void
+    {
+        Mailbox::where('username', $username)->delete();
+    }
+
     private function changeEmail(UserManager $user, string $username, string $address): void
     {
         $user->update(['email' => $address]);
@@ -192,6 +275,19 @@ class MailboxService
 
             if (method_exists($server, 'createUserEmail')) {
                 $server->createUserEmail($user, $domain);
+            }
+        }
+    }
+
+    private function deprovision(UserManager $user, Mailbox $mailbox): void
+    {
+        $domain = $mailbox->domain;
+
+        if ($domain) {
+            $server = Domain::connect($domain, 'email');
+
+            if (method_exists($server, 'deleteUserEmail')) {
+                $server->deleteUserEmail($user, $mailbox->address);
             }
         }
     }

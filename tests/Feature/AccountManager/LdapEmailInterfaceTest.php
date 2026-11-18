@@ -6,6 +6,7 @@ use App\Ldap\Models\Email;
 use App\Ldap\Models\User as LdapUser;
 use App\Mailbox;
 use App\OrgDomain;
+use App\Services\Email\RecoveryEmailService;
 use App\Support\Facades\AccountManager;
 use App\Services\Email\MailboxService;
 use App\Support\Facades\Settings;
@@ -128,4 +129,30 @@ it('hosts the address a user already signs in with without changing their email'
         ->and($mailbox->fresh()->swapped_at)->toBeNull()
         ->and($entry->getFirstAttribute('mail'))->toBe('testing1@example.com')
         ->and(array_map('strtolower', $entry->getAttribute('objectclass')))->toContain('postfixbookmailaccount');
+})->with('account_manager_drivers');
+
+it('switches a user to an organization address, moving their email to the recovery email, and switches back', function (string $driver) {
+    skipUnlessDriver('ldap', $driver);
+    [, $organization, , $other_domain] = ldapEmailFixtures($driver);
+    $user = AccountManager::users()->find('testing1');
+    $dn = Dn::create($organization, 'users', 'testing1');
+    $mailboxes = app(MailboxService::class);
+    $recovery = app(RecoveryEmailService::class);
+
+    $mailbox = $mailboxes->offer($user, $other_domain, 'testing1');
+    $mailboxes->accept($user, $mailbox);
+
+    $entry = LdapUser::find($dn);
+    expect($entry->getFirstAttribute('mail'))->toBe('testing1@myexample.com')
+        ->and($recovery->get('testing1'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $entry->getAttribute('objectclass')))->toContain('postfixbookmailaccount')
+        ->and($mailbox->fresh()->previous_mail)->toBe('testing1@example.com')
+        ->and($mailbox->fresh()->canBeUndone())->toBeTrue();
+
+    $mailboxes->undo(AccountManager::users()->find('testing1'), $mailbox->fresh());
+
+    $back = LdapUser::find($dn);
+    expect($back->getFirstAttribute('mail'))->toBe('testing1@example.com')
+        ->and(array_map('strtolower', $back->getAttribute('objectclass')))->not->toContain('postfixbookmailaccount')
+        ->and($mailbox->fresh()->status)->toBe(Mailbox::PENDING);
 })->with('account_manager_drivers');
