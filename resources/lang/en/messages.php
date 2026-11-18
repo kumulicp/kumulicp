@@ -97,6 +97,8 @@ return [
         'domain_available' => 'Your domain format is incorrect. (Example: example.com)',
         'domain_name' => 'Must be standard domain (example.com). If you believe your domain should work, click the question mark at the top',
         'domain_name_required' => 'Domain name required',
+        'recovery_email_same' => 'The recovery email has to be different from the email you sign in with.',
+        'recovery_email_hosted' => 'The recovery email can\'t be an address hosted here: you would not be able to read it when you need it most.',
         'email_local_part' => 'Use lowercase letters and numbers, with single dots, hyphens or underscores between them (for example jane.doe). Up to 64 characters.',
         'email_address_exists' => 'This email is already being used by another user',
         'group_name_not_used' => 'Group name already exists',
@@ -126,6 +128,15 @@ return [
         'failed' => 'failed',
     ],
     'notification' => [
+        'recovery' => [
+            'confirm_subject' => 'Confirm your recovery email',
+            'confirm_line' => 'This address was given as the recovery email for the account :username on :panel_name. It is only used to send a password reset link.',
+            'confirm_action' => 'Confirm this address',
+            'confirm_ignore' => 'If this was not you, ignore this email and nothing changes. The link works for :hours hours.',
+            'changed_subject' => 'The recovery email on your account changed',
+            'changed_line' => 'The recovery email for the account :username on :panel_name was changed to :new.',
+            'changed_delay' => 'Until :date password resets keep coming to this address. If you did not do this, sign in and change your password now.',
+        ],
         'app_unavailable_warning' => [
             'title' => ':app is not responding',
             'message' => "We couldn't reach :app. We'll check again in :minutes minutes. If it still isn't responding, we'll pause our connection to it and let you know.",

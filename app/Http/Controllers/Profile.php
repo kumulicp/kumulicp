@@ -6,6 +6,8 @@ use App\Rules\AccountEmailChecks;
 use App\Rules\ConfirmOldPassword;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
+use App\Rules\RecoveryEmail;
+use App\Services\Email\RecoveryEmailService;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -15,6 +17,7 @@ class Profile extends Controller
     public function index()
     {
         $profile = auth()->user();
+        $recovery_emails = app(RecoveryEmailService::class);
 
         return inertia('Organization/Profile/ProfileEdit', [
             'profile' => [
@@ -24,6 +27,11 @@ class Profile extends Controller
                 'personal_email' => $profile->email,
                 'phone_number' => $profile->phone_number,
                 'locale' => $profile->locale,
+            ],
+            'recovery' => [
+                'email' => $recovery_emails->get($profile->username),
+                'usable' => $recovery_emails->usable($profile->username, $profile->email) !== null,
+                'pending' => $recovery_emails->pending($profile->username),
             ],
             'locales' => config('locales.available'),
         ]);
@@ -58,6 +66,36 @@ class Profile extends Controller
         }
 
         return redirect('/profile')->with('success', __('profile.updated'));
+    }
+
+    /**
+     * Starts a change of the recovery email: a link is sent to the new address, and nothing
+     * changes until it is opened. Asks for the password, since this decides where a reset goes.
+     */
+    public function requestRecoveryEmail(Request $request)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'recovery_email' => ['required', 'email:rfc,filter', 'max:255', new RecoveryEmail($user->email)],
+            'current_password' => ['required', 'string', new ConfirmOldPassword($user->email)],
+        ]);
+
+        app(RecoveryEmailService::class)->request($user->username, $validated['recovery_email'], $user->email);
+
+        return redirect('/profile')->with('success', __('profile.recovery.requested', ['email' => $validated['recovery_email']]));
+    }
+
+    public function confirmRecoveryEmail(string $hash)
+    {
+        $user = auth()->user();
+
+        $confirmed = app(RecoveryEmailService::class)->confirm($user->username, $hash, $user->email);
+
+        return redirect('/profile')->with(
+            $confirmed ? 'success' : 'error',
+            __($confirmed ? 'profile.recovery.confirmed' : 'profile.recovery.invalid'),
+        );
     }
 
     public function updatePassword(Request $request)
