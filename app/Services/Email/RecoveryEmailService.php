@@ -2,7 +2,12 @@
 
 namespace App\Services\Email;
 
+use App\Notifications\ResetPassword;
+use App\Notifications\UserCreated;
+use App\Support\Email\HostedDomains;
 use App\UserRecoveryEmail;
+use Illuminate\Auth\Notifications\ResetPassword as LaravelResetPassword;
+use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Str;
 
 /**
@@ -12,6 +17,11 @@ use Illuminate\Support\Str;
  * The database is the source of truth. With LDAP and an attribute mapped for it, the
  * value is also written to the directory so other systems can read it, and sync()
  * puts it right again if the two ever drift apart.
+ *
+ * A recovery email is only any use when it is *usable*: it exists, it is not the same
+ * address as `mail` (a reset to the address you can't open helps nobody), and it is not
+ * on a domain this server hosts (the mail would come from the server you are locked
+ * out of). Anything else falls back to `mail`.
  */
 class RecoveryEmailService
 {
@@ -23,11 +33,13 @@ class RecoveryEmailService
     }
 
     /**
-     * Saves the recovery email (null or blank removes it) and mirrors it to the
-     * directory. A directory that can't be reached doesn't undo the save: the database
-     * is the truth, and sync() copies it over later.
+     * Saves the recovery email as given, without asking the person to confirm it (null
+     * or blank removes it), and mirrors it to the directory. For the panel's own changes:
+     * the address an account was created with, or the one a switch to an organization
+     * address moves out of `mail`. A directory that can't be reached doesn't undo the
+     * save: the database is the truth, and sync() copies it over later.
      */
-    public function set(string $username, ?string $email): void
+    public function set(string $username, ?string $email, bool $verified = false): void
     {
         $email = $email === null ? '' : Str::lower(trim($email));
 
@@ -37,7 +49,14 @@ class RecoveryEmailService
             return;
         }
 
-        UserRecoveryEmail::updateOrCreate(['username' => $username], ['email' => $email]);
+        UserRecoveryEmail::updateOrCreate(['username' => $username], [
+            'email' => $email,
+            'verified_at' => $verified ? now() : null,
+            'pending_email' => null,
+            'pending_requested_at' => null,
+            'previous_email' => null,
+            'active_from' => null,
+        ]);
 
         $this->mirror($username, $email);
     }
@@ -47,6 +66,50 @@ class RecoveryEmailService
         UserRecoveryEmail::where('username', $username)->delete();
 
         $this->mirror($username, null);
+    }
+
+    /**
+     * The recovery email, if it is of any use next to the address the account signs in with.
+     */
+    public function usable(string $username, string $mail): ?string
+    {
+        return $this->check($this->get($username), $mail);
+    }
+
+    /**
+     * Where a password reset or an invite goes: the recovery email when it is usable,
+     * otherwise `mail`. A recovery email that only just replaced another one is not used
+     * until the delay has passed; the one it replaced is used meanwhile.
+     */
+    public function destination(string $username, string $mail): string
+    {
+        $row = UserRecoveryEmail::where('username', $username)->first();
+
+        if (! $row) {
+            return $mail;
+        }
+
+        $address = $row->email;
+
+        if ($row->previous_email && $row->active_from?->isFuture()) {
+            $address = $row->previous_email;
+        }
+
+        return $this->check($address, $mail) ?? $mail;
+    }
+
+    /**
+     * Where a notification to this account is sent. Password resets and invites (the ones a
+     * person uses to get back into the account) go to the recovery email; everything else
+     * goes to `mail`.
+     */
+    public function routeFor(BaseNotification $notification, string $username, string $mail): string
+    {
+        $recovers_access = $notification instanceof ResetPassword
+            || $notification instanceof UserCreated
+            || $notification instanceof LaravelResetPassword;
+
+        return $recovers_access ? $this->destination($username, $mail) : $mail;
     }
 
     /**
@@ -103,6 +166,15 @@ class RecoveryEmailService
         }
 
         return $summary;
+    }
+
+    private function check(?string $address, string $mail): ?string
+    {
+        if ($address === null || $address === '' || strcasecmp($address, $mail) === 0 || HostedDomains::isHosted($address)) {
+            return null;
+        }
+
+        return $address;
     }
 
     private function mirror(string $username, ?string $email): void

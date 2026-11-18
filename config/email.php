@@ -15,4 +15,16 @@ return [
 
     'undo_days' => (int) env('EMAIL_UNDO_DAYS', 7),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Recovery email takeover delay
+    |--------------------------------------------------------------------------
+    |
+    | Hours before a new recovery email replaces a working one for password
+    | resets. Until then resets keep going to the old one, which is also told.
+    |
+    */
+
+    'recovery_delay_hours' => (int) env('EMAIL_RECOVERY_DELAY_HOURS', 24),
+
 ];

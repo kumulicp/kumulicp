@@ -6,6 +6,7 @@ use App\AppInstance;
 use App\AppRole;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Actions\PasswordHash;
+use App\Services\Email\RecoveryEmailService;
 use App\SuborgUser;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization;
@@ -91,8 +92,15 @@ class User extends Entry implements Authenticatable
      */
     public function routeNotificationForMail($notification)
     {
+        // Password resets and invites go to the recovery email when there is a usable one
+        $address = app(RecoveryEmailService::class)->routeFor(
+            $notification,
+            (string) $this->getFirstAttribute('cn'),
+            (string) $this->getFirstAttribute('mail'),
+        );
+
         // Return name and email address...
-        return [$this->getFirstAttribute('mail') => $this->getFirstAttribute('displayName')];
+        return [$address => $this->getFirstAttribute('displayName')];
     }
 
     public function groups()
