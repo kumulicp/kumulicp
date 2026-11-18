@@ -14,6 +14,9 @@ class DnsHosts
 
     public $with_email;
 
+    // The constructor adds the email records, and DomainsDns::setHosts() asks for them again.
+    private bool $email_records_added = false;
+
     public function __construct(OrgDomain $domain)
     {
         $this->domain = $domain;
@@ -35,10 +38,24 @@ class DnsHosts
         $this->addEmailRecords();
     }
 
+    public function hasRecords(): bool
+    {
+        return count($this->dns_records) > 0;
+    }
+
+    /**
+     * Safe to call more than once: the first call turns $dns_records from a collection into an array, so a
+     * second one used to fail on ->all(), and would have listed every email record twice.
+     */
     public function addEmailRecords()
     {
+        if ($this->email_records_added) {
+            return $this;
+        }
+
         $domain_email = $this->domain->email_server()->with('server')->first();
         if ($domain_email) {
+            $this->email_records_added = true;
             $this->with_email = true;
             $email_server = $domain_email->server;
             $records = [];

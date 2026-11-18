@@ -54,6 +54,13 @@ class FakeDomainInterface extends DomainManager implements RegistrarDomainContra
 
     public function updateDNS(): void {}
 
+    // Like the real registrars: there is something to publish when the domain has email or a subdomain with a value
+    public function hasDnsRecords(): bool
+    {
+        return $this->domain->email_server_id !== null
+            || $this->domain->subdomains()->whereNotNull('value')->where('value', '!=', '')->exists();
+    }
+
     public function pricing(): FakePricingInterface
     {
         return new FakePricingInterface(str_contains($this->domain->name, 'premium'));

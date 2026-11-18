@@ -18,7 +18,19 @@ class RegistrarInterface implements RegistrarContract
 
         $domain_response = $domain->create($org_domain, $years, $extended_attributes);
 
-        if ($domain_response && Arr::get($domain_response, 'Registered', 'false') == 'true') {
+        // Namecheap refused the registration (a bad phone number, no funds, a taken name...). The caller goes
+        // on to invoice the organization and set DNS, so this has to stop it, not hand back a domain that
+        // does not exist in the account.
+        if ($domain->hasError() || ! $domain_response) {
+            throw new \Exception($domain->error() ?: __('organization.domain.denied.registration_failed', ['domain' => $org_domain->name]));
+        }
+
+        // Accepted but not registered yet. Namecheap finishes non-real-time TLDs later, so that is not a failure.
+        if (! Arr::get($domain_response, 'Registered') && ! Arr::get($domain_response, 'NonRealTimeDomain')) {
+            throw new \Exception(__('organization.domain.denied.registration_failed', ['domain' => $org_domain->name]));
+        }
+
+        if (Arr::get($domain_response, 'Registered')) {
             $org_domain->domain_id = $domain_response['DomainID'];
             $org_domain->name = $domain_response['Domain'];
             $org_domain->charged_amount = $domain_response['ChargedAmount'];

@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Registrars\Namecheap\API;
 
+use App\Integrations\Registrars\Namecheap\Helpers\PhoneNumber;
 use App\Integrations\Registrars\Namecheap\Namecheap;
 use App\OrgDomain;
 use App\Support\Facades\Domain;
@@ -73,7 +74,7 @@ class Domains extends Namecheap
 
         $whois_guard = Domain::getTld($domain->name) !== 'ca' ? 'yes' : 'no';
 
-        $phone = str_replace(' ', '', $domain->country_phone_code).'.'.str_replace('-', '', $domain->phone);
+        $phone = PhoneNumber::format($domain->country_phone_code, $domain->phone);
 
         $this->command = 'namecheap.domains.create';
         $this->parameters = [
@@ -209,7 +210,7 @@ class Domains extends Namecheap
     {
         $organization = $domain->organization;
 
-        $phone = str_replace(' ', '', $domain->country_phone_code).'.'.str_replace('-', '', $domain->phone);
+        $phone = PhoneNumber::format($domain->country_phone_code, $domain->phone);
 
         $this->command = 'namecheap.domains.SetContacts';
         $this->parameters = [

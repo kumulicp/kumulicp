@@ -6,6 +6,7 @@ use App\Contracts\Registrar\RegistrarDomainContract;
 use App\Integrations\Registrars\Namecheap\API\Domains;
 use App\Integrations\Registrars\Namecheap\API\DomainsDns;
 use App\Integrations\Registrars\Namecheap\API\DomainsTransfer;
+use App\Integrations\Registrars\Namecheap\Helpers\DnsHosts;
 use App\Support\Domains\DomainManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -101,6 +102,11 @@ class DomainInterface extends DomainManager implements RegistrarDomainContract
         if ($dns->hasError() || ! Arr::get($dns_response, 'IsSuccess', false)) {
             throw new \Exception($dns->error());
         }
+    }
+
+    public function hasDnsRecords(): bool
+    {
+        return (new DnsHosts($this->domain))->hasRecords();
     }
 
     public function pricing()

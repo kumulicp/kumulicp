@@ -16,6 +16,12 @@ interface RegistrarDomainContract
 
     public function updateDNS(): void;
 
+    /**
+     * Whether there is anything to publish. The registrar replaces the whole record list, so a domain with
+     * nothing to publish should be left as the registrar made it, not sent an empty one.
+     */
+    public function hasDnsRecords(): bool;
+
     public function pricing();
 
     public function extendedAttributes(array $attributes): ?array;

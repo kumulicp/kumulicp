@@ -49,7 +49,10 @@ class RegisterDomainName extends Action
         $domain = Domain::registrar($org_domain->tld)->register($org_domain, $years, $extended_attributes);
 
         ActionFacade::execute(new InvoiceOrganization($organization, __('actions.domain_registration_fee', ['domain' => $org_domain->name]), $price), $task);
-        ActionFacade::execute(new UpdateDnsRecords($organization, $org_domain), $task);
+        // The registrar replaces the whole record list, so with nothing to publish leave what it made alone
+        if ($domain->hasDnsRecords()) {
+            ActionFacade::execute(new UpdateDnsRecords($organization, $org_domain), $task);
+        }
     }
 
     public static function retry(Task $task)
