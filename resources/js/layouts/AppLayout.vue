@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 import Navbar from '@/components/navbar/NavBar.vue'
 import Sidebar from '@/components/sidebar/SideBar.vue'
+import RecoveryReminder from '@/components/RecoveryReminder.vue'
 import { useBreakpoint, useToast, useColors } from 'vuestic-ui'
 import { router, usePage } from '@inertiajs/vue3'
 import { errorToasts, noticeToasts, showToasts } from '@/services/toasts'
@@ -79,6 +80,7 @@ onResize()
     </template>
     <template #content>
       <div class="layout fluid va-gutter-5">
+        <recovery-reminder />
         <va-alert
           color="warning"
           border="top"

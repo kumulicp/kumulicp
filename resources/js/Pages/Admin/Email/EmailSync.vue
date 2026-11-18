@@ -5,7 +5,7 @@ import { Link, useForm } from '@inertiajs/vue3'
 defineProps<{
   ldap_enabled: boolean
   aliases: { enabled: boolean, attribute: string | null }
-  recovery: { attribute: string | null, sync_enabled: boolean, count: number }
+  recovery: { attribute: string | null, sync_enabled: boolean, count: number, missing: number }
   sync_result?: {
     checked: number
     updated: number
@@ -36,6 +36,7 @@ const sync_form = useForm({})
 
       <h6 class="va-h6 mb-2">{{ $t('orgEmail.recoveryTitle') }}</h6>
       <p class="mb-2">{{ $t('orgEmail.recoveryCount', { count: recovery.count }) }}</p>
+      <p v-if="recovery.missing > 0" id="recoveryMissing" class="mb-2 va-text-danger">{{ $t('orgEmail.recoveryMissing', { count: recovery.missing }) }}</p>
       <p id="recoveryStatus" class="mb-3">
         <template v-if="!ldap_enabled">{{ $t('orgEmail.recoveryNoLdap') }}</template>
         <template v-else-if="!recovery.sync_enabled">{{ $t('orgEmail.recoveryNoAttribute') }}</template>
