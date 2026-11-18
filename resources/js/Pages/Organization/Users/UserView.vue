@@ -38,7 +38,7 @@ import UserLayout from './UserLayout.vue'
           <va-list-item class="py-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ $t('organization.users.personalEmail') }}:</h5>
+                <h5>{{ user.org_email ? $t('recoveryEmail.label') : $t('organization.users.loginRecoveryEmail') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
@@ -54,7 +54,7 @@ import UserLayout from './UserLayout.vue'
             <va-list-item class="py-3">
               <va-list-item-section label>
                 <va-list-item-label>
-                  <h5>{{ $t('organization.users.organizationalEmail') }}:</h5>
+                  <h5>{{ $t('organization.users.loginEmail') }}:</h5>
                 </va-list-item-label>
               </va-list-item-section>
               <va-list-item-section>
