@@ -6,6 +6,8 @@ use App\Events\Users\UserCreated;
 use App\Ldap\Models\User as LdapUser;
 use App\Listeners\StoreRecoveryEmail;
 use App\Mailbox;
+use App\Notifications\RecoveryEmailChanged;
+use App\Notifications\RecoveryEmailConfirmation;
 use App\OrgDomain;
 use App\Services\Email\RecoveryEmailDirectory;
 use App\Services\Email\RecoveryEmailService;
@@ -15,6 +17,7 @@ use App\UserRecoveryEmail;
 use Illuminate\Auth\Notifications\ResetPassword as LaravelResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\Notification as BaseNotification;
+use Illuminate\Support\Facades\Notification;
 use Mockery;
 use Tests\Support\Email\FakeRecoveryEmailDirectory;
 use Tests\Support\TestSupports;
@@ -111,6 +114,79 @@ class RecoveryEmailRulesTest extends TestCase
 
         $this->service->set('demo', 'demo@example.org');
         $this->assertSame('demo@example.org', $this->service->destination('demo', 'demo@example.org'));
+    }
+
+    public function test_a_new_recovery_email_replacing_a_working_one_is_not_used_until_the_delay_has_passed()
+    {
+        Notification::fake();
+        $this->service->set('demo', 'old@gmail.com');
+        $this->service->request('demo', 'new@gmail.com', 'demo@example.org');
+        $hash = sha1('new@gmail.com');
+
+        $this->assertTrue($this->service->confirm('demo', $hash, 'demo@example.org'));
+
+        $this->assertSame('new@gmail.com', $this->service->get('demo'));
+        $this->assertSame('old@gmail.com', $this->service->destination('demo', 'demo@example.org'));
+
+        $this->travel(25)->hours();
+
+        $this->assertSame('new@gmail.com', $this->service->destination('demo', 'demo@example.org'));
+    }
+
+    public function test_the_old_recovery_email_is_told_when_it_is_replaced()
+    {
+        Notification::fake();
+        $this->service->set('demo', 'old@gmail.com');
+        $this->service->request('demo', 'new@gmail.com', 'demo@example.org');
+
+        $this->service->confirm('demo', sha1('new@gmail.com'), 'demo@example.org');
+
+        Notification::assertSentOnDemand(RecoveryEmailChanged::class, fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'old@gmail.com');
+    }
+
+    public function test_the_first_recovery_email_takes_over_straight_away_and_nobody_is_told()
+    {
+        Notification::fake();
+        $this->service->request('demo', 'first@gmail.com', 'demo@example.org');
+
+        $this->assertTrue($this->service->confirm('demo', sha1('first@gmail.com'), 'demo@example.org'));
+
+        $this->assertSame('first@gmail.com', $this->service->destination('demo', 'demo@example.org'));
+        Notification::assertSentOnDemandTimes(RecoveryEmailChanged::class, 0);
+    }
+
+    public function test_asking_for_a_change_sends_a_link_to_the_new_address_and_changes_nothing_yet()
+    {
+        Notification::fake();
+        $this->service->set('demo', 'old@gmail.com');
+
+        $this->service->request('demo', 'New@Gmail.com', 'demo@example.org');
+
+        Notification::assertSentOnDemand(RecoveryEmailConfirmation::class, fn ($notification, $channels, $notifiable) => $notifiable->routes['mail'] === 'new@gmail.com');
+        $this->assertSame('old@gmail.com', $this->service->get('demo'));
+        $this->assertSame('new@gmail.com', $this->service->pending('demo'));
+    }
+
+    public function test_a_confirmation_link_for_another_address_or_a_late_one_is_refused()
+    {
+        Notification::fake();
+        $this->service->request('demo', 'new@gmail.com', 'demo@example.org');
+
+        $this->assertFalse($this->service->confirm('demo', sha1('someone-else@gmail.com'), 'demo@example.org'));
+
+        $this->travel(25)->hours();
+
+        $this->assertFalse($this->service->confirm('demo', sha1('new@gmail.com'), 'demo@example.org'));
+        $this->assertNull($this->service->pending('demo'));
+    }
+
+    public function test_a_link_cannot_be_used_twice()
+    {
+        Notification::fake();
+        $this->service->request('demo', 'new@gmail.com', 'demo@example.org');
+
+        $this->assertTrue($this->service->confirm('demo', sha1('new@gmail.com'), 'demo@example.org'));
+        $this->assertFalse($this->service->confirm('demo', sha1('new@gmail.com'), 'demo@example.org'));
     }
 
     public function test_the_database_user_gets_resets_and_invites_at_the_recovery_email_and_everything_else_at_mail()

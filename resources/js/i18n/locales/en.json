@@ -1682,6 +1682,17 @@
     "passed": "Passed",
     "failed": "Failed"
   },
+  "recoveryEmail": {
+    "label": "Recovery Email",
+    "hint": "Only used to send a password reset link. It can't be an address hosted here.",
+    "none": "Not set",
+    "notUsable": "This one can't be used for a reset, so the link goes to your sign-in email.",
+    "pending": "Waiting for you to open the link sent to {email}",
+    "add": "Add",
+    "change": "Change",
+    "newAddress": "New recovery email",
+    "save": "Send confirmation link"
+  },
   "orgEmail": {
     "title": "Email",
     "description": "The control panel's database is the source of truth for email data. Use this page to copy it back to the directory if the two ever drift apart.",

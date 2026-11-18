@@ -27,4 +27,12 @@ return [
 
     'recovery_delay_hours' => (int) env('EMAIL_RECOVERY_DELAY_HOURS', 24),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Confirmation link lifetime
+    |--------------------------------------------------------------------------
+    */
+
+    'recovery_confirm_hours' => (int) env('EMAIL_RECOVERY_CONFIRM_HOURS', 24),
+
 ];

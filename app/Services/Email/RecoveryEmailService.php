@@ -2,12 +2,16 @@
 
 namespace App\Services\Email;
 
+use App\Notifications\RecoveryEmailChanged;
+use App\Notifications\RecoveryEmailConfirmation;
 use App\Notifications\ResetPassword;
 use App\Notifications\UserCreated;
 use App\Support\Email\HostedDomains;
 use App\UserRecoveryEmail;
 use Illuminate\Auth\Notifications\ResetPassword as LaravelResetPassword;
 use Illuminate\Notifications\Notification as BaseNotification;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /**
@@ -110,6 +114,79 @@ class RecoveryEmailService
             || $notification instanceof LaravelResetPassword;
 
         return $recovers_access ? $this->destination($username, $mail) : $mail;
+    }
+
+    /**
+     * Asks to change the recovery email: nothing changes until the person opens the link
+     * sent to the new address. Whoever calls this has already checked the new address
+     * (a real address, not on a hosted domain, and who is asking).
+     */
+    public function request(string $username, string $email, string $mail): void
+    {
+        $email = Str::lower(trim($email));
+
+        $row = UserRecoveryEmail::firstOrCreate(['username' => $username], ['email' => Str::lower($mail)]);
+        $row->forceFill(['pending_email' => $email, 'pending_requested_at' => now()])->save();
+
+        Notification::route('mail', $email)->notify(new RecoveryEmailConfirmation(
+            $username,
+            URL::temporarySignedRoute(
+                'profile.recovery.confirm',
+                now()->addHours((int) config('email.recovery_confirm_hours', 24)),
+                ['hash' => sha1($email)],
+            ),
+        ));
+    }
+
+    /**
+     * Makes the requested address the recovery email, if this is the link that was sent
+     * for it and it has not expired. Replacing a recovery email that works takes a day to
+     * take over, and the old one is told.
+     */
+    public function confirm(string $username, string $hash, string $mail): bool
+    {
+        $row = UserRecoveryEmail::where('username', $username)->first();
+
+        if (! $row || ! $row->pending_email || ! hash_equals(sha1($row->pending_email), $hash)) {
+            return false;
+        }
+
+        $expires = $row->pending_requested_at?->copy()->addHours((int) config('email.recovery_confirm_hours', 24));
+        if (! $expires || $expires->isPast()) {
+            return false;
+        }
+
+        $old = $this->check($row->email, $mail);
+
+        $row->forceFill([
+            'email' => $row->pending_email,
+            'verified_at' => now(),
+            'pending_email' => null,
+            'pending_requested_at' => null,
+            'previous_email' => $old,
+            'active_from' => $old ? now()->addHours((int) config('email.recovery_delay_hours', 24)) : null,
+        ])->save();
+
+        $this->mirror($username, $row->email);
+
+        if ($old) {
+            Notification::route('mail', $old)->notify(new RecoveryEmailChanged($username, $row->email, $row->active_from));
+        }
+
+        return true;
+    }
+
+    public function pending(string $username): ?string
+    {
+        $row = UserRecoveryEmail::where('username', $username)->first();
+
+        if (! $row?->pending_email) {
+            return null;
+        }
+
+        $expires = $row->pending_requested_at?->copy()->addHours((int) config('email.recovery_confirm_hours', 24));
+
+        return $expires && $expires->isFuture() ? $row->pending_email : null;
     }
 
     /**
