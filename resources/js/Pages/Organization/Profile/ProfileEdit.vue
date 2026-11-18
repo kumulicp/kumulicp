@@ -201,22 +201,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             </va-list-item-section>
           </va-list-item>
 
-          <template v-if="profile.org_emails">
-            <va-list-separator class="my-1" fit />
-            <va-list-item class="pb-3">
-              <va-list-item-section label>
-                <va-list-item-label>
-                  <h5>{{ $t('organization.users.organizationalEmail') }}:</h5>
-                </va-list-item-label>
-              </va-list-item-section>
-              <va-list-item-section>
-                <template v-for="(org_email, index) in user.org_emails" :key="index">
-                  {{ org_email }}
-                  <va-list-separator class="my-1" fit />
-                </template>
-              </va-list-item-section>
-            </va-list-item>
-          </template>
           <va-list-separator class="my-1" fit />
           <va-list-item class="pb-3">
             <va-list-item-section label>

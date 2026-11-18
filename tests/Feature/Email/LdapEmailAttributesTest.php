@@ -94,11 +94,11 @@ class LdapEmailAttributesTest extends TestCase
     public function test_an_attribute_set_by_the_admin_conflicts_with_the_new_ones()
     {
         $conflicts = LdapEmailAttributes::conflicts([
-            'org_email' => 'organizationMail',
+            'phone_number' => 'organizationMail',
             'aliases' => 'organizationMail',
         ]);
 
-        $this->assertSame(['aliases' => 'org_email'], $conflicts);
+        $this->assertSame(['aliases' => 'phone_number'], $conflicts);
     }
 
     public function test_aliases_and_the_recovery_email_cannot_share_an_attribute()
