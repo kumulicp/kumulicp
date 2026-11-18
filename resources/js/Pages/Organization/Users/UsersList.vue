@@ -52,7 +52,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
                         id="personalEmail"
                         required-mark
                         immediateValidation
-                        :label="$t('organization.users.personalEmail')"
+                        :label="$t('organization.users.loginRecoveryEmail')"
                         class="mb-3"
                         :error="$page.props.errors.personal_email"
                         :error-messages="$page.props.errors.personal_email" />
