@@ -28,7 +28,35 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             readonly
             />
         </div>
-        <div v-if="organizations.length > 1" class="flex flex-col xs12 lg6 mb-2">
+        <div class="flex flex-col xs12 lg6 mb-2">
+          <va-input v-if="user.org_email"
+            :model-value="user.org_email"
+            :label="$t('organization.users.loginEmail')"
+            id="loginEmail"
+            readonly
+            >
+            <template #appendInner>
+              <a href="#" id="deleteLoginEmail" role="button" @click.prevent="confirmDeleteEmail(true)">
+                <va-icon name="entypo-cancel"
+                  :title="$t('organization.users.deleteEmail')"
+                  color="danger"
+                  />
+              </a>
+            </template>
+          </va-input>
+          <va-input v-else
+            v-model="form.personal_email"
+            :label="$t('organization.users.loginRecoveryEmail')"
+            id="personalEmail"
+            required-mark
+            immediateValidation
+            :error="$page.props.errors.personal_email"
+            :error-messages="$page.props.errors.personal_email"
+            />
+        </div>
+      </div>
+      <div v-if="organizations.length > 1" class="row">
+        <div class="flex flex-col xs12 lg6 mb-2">
           <va-select
             v-model="form.organization"
             :label="$t('organization.organization')"
@@ -66,17 +94,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <div class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
-          <va-input v-model="form.personal_email"
-            :label="user.org_email ? $t('recoveryEmail.label') : $t('organization.users.personalEmail')"
-            id="personalEmail"
-            :disabled="!!user.org_email"
-            :required-mark="!user.org_email"
-            immediateValidation
-            :error="$page.props.errors.personal_email"
-            :error-messages="$page.props.errors.personal_email"
-            />
-        </div>
-        <div class="flex flex-col xs12 lg6 mb-2">
           <va-input v-model="form.phone_number"
             :label="$t('organization.users.phoneNumber')"
             id="phoneNumber"
@@ -87,42 +104,48 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             :error-messages="$page.props.errors.phone_number"
             />
         </div>
-      </div>
-      <div v-if="user.org_email || user.offered_email || user.can.add_email_account" class="row">
-        <div class="flex flex-col xs12 lg6 mb-2">
-          <h5>{{ $t('organization.users.organizationalEmail') }}</h5>
-        </div>
-        <div class="flex flex-col xs12 lg6 mb-2">
-            <div class="row">
-              <div class="flex flex-col xs11">
-                <a v-if="user.org_email" :href="'mailto:'+user.org_email" class="mr-3">
-                  <div class="py-1">{{ user.org_email }}</div>
-                </a>
-                <div v-else-if="user.offered_email" id="offeredEmail" class="py-1">
-                  {{ user.offered_email }}
-                  <small class="va-text-secondary d-block">{{ $t('organization.users.offeredEmail') }}</small>
-                </div>
-              </div>
-              <div v-if="user.org_email || user.offered_email" class="flex flex-col xs1">
-                <a :href="'/users/'+user.id+'/remove/accountemail/'+(user.org_email || user.offered_email)" class="ml-3">
-                  <va-icon name="entypo-cancel"
-                    :title="$t('organization.users.deleteEmail')"
-                    color="danger"
-                    />
-                </a>
-              </div>
-            </div>
-          <template v-if="user.can.add_email_account">
-            <template v-for="(domain, index) in email_domains" :key="index">
-              <a :href="'/users/'+user.id+'/create/accountemail/'+domain.id">
-                <div class="py-5">
-                  {{ $t('organization.users.addEmailAccount', { domain: domain.name }) }}
-                </div>
-              </a>
-            </template>
-          </template>
+        <div v-if="user.org_email" class="flex flex-col xs12 lg6 mb-2">
+          <va-input v-model="form.personal_email"
+            :label="$t('recoveryEmail.label')"
+            id="personalEmail"
+            disabled
+            />
         </div>
       </div>
+      <va-alert v-if="user.offered_email"
+        id="offeredEmail"
+        color="info"
+        outline
+        icon="fa-envelope"
+        class="mb-4"
+        >
+        <div class="org-email-message">
+          <div>
+            <b>{{ user.offered_email }}</b>
+            <div class="va-text-secondary">{{ $t('organization.users.offeredEmail') }}</div>
+          </div>
+          <a href="#" id="removeOfferedEmail" role="button" @click.prevent="confirmDeleteEmail(false)">
+            <va-icon name="entypo-cancel" color="danger" class="mr-1" />{{ $t('organization.users.deleteEmail') }}
+          </a>
+        </div>
+      </va-alert>
+      <va-alert v-else-if="canCreateOrgEmail"
+        id="orgEmailPrompt"
+        color="info"
+        outline
+        icon="fa-envelope"
+        class="mb-4"
+        >
+        <div class="org-email-message">
+          <div>
+            <b>{{ $t('organization.users.orgEmailsEnabled') }}</b>
+            <div>{{ $t('organization.users.usingOtherEmail', { name: user.name, email: user.personal_email }) }}</div>
+          </div>
+          <va-button type="button" size="small" id="createOrgEmail" @click="showCreateOrgEmail = true">
+            {{ $t('organization.users.createOrgEmail') }}
+          </va-button>
+        </div>
+      </va-alert>
       <div v-for="(storage, index) in user.additional_storage" :key="index" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <h5>{{ $t('organization.users.appStorage', { app: storage.app_name }) }}</h5>
@@ -141,6 +164,52 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
       </div>
       <va-button type="submit" id="submit" class="mr-2 mb-2" :disabled="form.processing">{{ $t('common.submit') }}</va-button>
     </form>
+
+    <va-modal v-model="showCreateOrgEmail" no-padding size="small" class="p-0">
+      <template #content="{ ok }">
+        <va-card-title class="m-0">{{ $t('organization.users.createOrgEmail') }}</va-card-title>
+        <va-card-content class="m-0">
+          <p class="mb-3">{{ $t('organization.users.createOrgEmailIntro', { name: user.name, email: user.personal_email }) }}</p>
+          <va-alert color="warning" outline icon="warning" class="mb-3">
+            {{ $t('organization.users.orgEmailAppsWarning', { name: user.name }) }}
+          </va-alert>
+          <p class="mb-3">{{ $t('organization.users.createOrgEmailAccept', { name: user.name }) }}</p>
+          <h6 class="va-h6 mb-2">{{ $t('organization.users.createOrgEmailChoose') }}</h6>
+          <div class="org-email-options">
+            <va-button v-for="domain in domainList"
+              :key="domain.id"
+              preset="secondary"
+              :href="'/users/'+user.id+'/create/accountemail/'+domain.id"
+              class="createOrgEmailOption"
+              >
+              {{ user.id.toLowerCase() }}@{{ domain.name }}
+            </va-button>
+          </div>
+        </va-card-content>
+        <va-card-actions align="right">
+          <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+        </va-card-actions>
+      </template>
+    </va-modal>
+
+    <va-modal v-model="showDeleteEmail" no-padding size="small" class="p-0">
+      <template #content="{ ok }">
+        <va-card-title class="m-0">{{ $t('organization.users.deleteOrgEmailTitle') }}</va-card-title>
+        <va-card-content class="m-0">
+          <p v-if="deleteIsActive" id="deleteOrgEmailActive" class="mb-3">{{ $t('organization.users.deleteOrgEmailIntro', { name: user.name, email: deleteAddress }) }}</p>
+          <p v-else id="deleteOrgEmailOffered" class="mb-3">{{ $t('organization.users.deleteOfferedEmailIntro', { name: user.name, email: deleteAddress }) }}</p>
+          <va-alert v-if="deleteIsActive" color="warning" outline icon="warning" class="mb-3">
+            {{ $t('organization.users.orgEmailAppsWarning', { name: user.name }) }}
+          </va-alert>
+        </va-card-content>
+        <va-card-actions align="right">
+          <va-button color="textInverted" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button color="danger" id="confirmDeleteEmail" :href="'/users/'+user.id+'/remove/accountemail/'+deleteAddress" class="mr-2 mb-2">
+            {{ $t('common.delete') }}
+          </va-button>
+        </va-card-actions>
+      </template>
+    </va-modal>
   </div>
 </template>
 
@@ -162,6 +231,9 @@ export default {
     })
 
     return {
+      showCreateOrgEmail: false,
+      showDeleteEmail: false,
+      deleteIsActive: false,
       form: useForm({
         id: this.user.id,
         first_name: this.user.first_name,
@@ -172,6 +244,25 @@ export default {
         organization: this.user.organization
       })
     }
+  },
+  computed: {
+    domainList () {
+      return Object.values(this.email_domains ?? {})
+    },
+    // The address the delete confirmation is about: the login email, or the one still waiting to be accepted
+    deleteAddress () {
+      return this.deleteIsActive ? this.user.org_email : this.user.offered_email
+    },
+    // Org emails are on and this person signs in with something else: nothing created yet and nothing waiting
+    canCreateOrgEmail () {
+      return !!this.user.can.add_email_account && !this.user.org_email && !this.user.offered_email && this.domainList.length > 0
+    }
+  },
+  methods: {
+    confirmDeleteEmail (active) {
+      this.deleteIsActive = active
+      this.showDeleteEmail = true
+    }
   }
 }
 </script>
@@ -179,5 +270,20 @@ export default {
 <style lang="scss">
 .subscription_warning {
  color: var(--va-red-800)
+}
+
+.org-email-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.org-email-options {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
 }
 </style>
