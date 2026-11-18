@@ -24,6 +24,14 @@ abstract class UserManager
 
     abstract public function allUserApps();
 
+    /**
+     * Sets attributes on the user, by the names the panel uses (first_name, email, ...). Call
+     * save() to keep them.
+     */
+    abstract public function update(array $data);
+
+    abstract public function save();
+
     public function appStorage(AppInstance $app_instance)
     {
         $subscription = Subscription::app_instance($app_instance);

@@ -137,6 +137,12 @@ return [
             'changed_line' => 'The recovery email for the account :username on :panel_name was changed to :new.',
             'changed_delay' => 'Until :date password resets keep coming to this address. If you did not do this, sign in and change your password now.',
         ],
+        'primary_email' => [
+            'subject' => 'The email on your account changed',
+            'line' => 'The email you sign in with for the account :username on :panel_name changed from :old to :new.',
+            'recovery' => 'This address is now your recovery email, and is only used to send a password reset link.',
+            'undo' => 'If this was not you, or you want it back, you can switch back until :date from your profile.',
+        ],
         'app_unavailable_warning' => [
             'title' => ':app is not responding',
             'message' => "We couldn't reach :app. We'll check again in :minutes minutes. If it still isn't responding, we'll pause our connection to it and let you know.",

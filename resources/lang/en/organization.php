@@ -154,6 +154,9 @@ return [
         'mailbox' => [
             'has_one' => 'This user already has an organization email, or one waiting to be accepted. Remove it before choosing another.',
             'taken' => ':email is already taken. Choose another name.',
+            'not_pending' => 'There is no organization email waiting to be accepted.',
+            'recovery_required' => "Your current email is on a domain hosted here, so it can't recover your account. Give a recovery email at another provider first.",
+            'failed' => 'The organization email could not be set up. Nothing was changed. Try again, and tell support if it keeps happening.',
         ],
     ],
     'suborganization' => [
