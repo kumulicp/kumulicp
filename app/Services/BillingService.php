@@ -2,9 +2,15 @@
 
 namespace App\Services;
 
+use App\Contracts\Billing\PaymentMethodGateway;
+use App\Contracts\Billing\SubscriptionGateway;
 use App\Integrations\Billing\Fake\FakeBillingGateway;
 use App\Integrations\Billing\Stripe\StripeGateway;
+use App\Notifications\NewOrganizationSubscription;
+use App\Notifications\OrganizationCancelledSubscription;
 use App\Organization;
+use App\Services\Billing\SubscriptionRequestBuilder;
+use App\Support\Facades\Organization as OrganizationFacade;
 use Illuminate\Support\Arr;
 
 class BillingService
@@ -12,6 +18,21 @@ class BillingService
     private $organization;
 
     private $current_driver;
+
+    /**
+     * What the app does when the driver does not take payment methods in the
+     * app (it does not implement PaymentMethodGateway): there is nothing to
+     * collect, so a payment method is never missing.
+     */
+    private const NO_PAYMENT_METHOD_SUPPORT = [
+        'intent' => [],
+        'hasDefaultPaymentMethod' => true,
+        'updateDefaultPaymentMethod' => null,
+        'deleteDefaultPaymentMethod' => null,
+        'defaultPaymentMethodBrand' => '',
+        'defaultPaymentMethod' => [],
+        'defaultPaymentMethodBrandImage' => null,
+    ];
 
     private array $drivers = [
         'stripe' => StripeGateway::class,
@@ -49,7 +70,62 @@ class BillingService
 
     public function component(): string
     {
-        return $this->driver()?->component() ?? '';
+        $driver = $this->driver();
+
+        return $driver instanceof PaymentMethodGateway ? $driver->component() : '';
+    }
+
+    /**
+     * Whether the driver has the customer save a payment method in the app.
+     */
+    public function supportsPaymentMethods(): bool
+    {
+        return $this->driver() instanceof PaymentMethodGateway;
+    }
+
+    /**
+     * Bring the organization's subscription in line with its plans.
+     *
+     * The same for every driver: work out the billable lines once, then hand
+     * them to the driver to apply.
+     */
+    public function update(): void
+    {
+        $driver = $this->driver();
+        if (! $driver instanceof SubscriptionGateway) {
+            return;
+        }
+
+        $request = app(SubscriptionRequestBuilder::class)
+            ->build($this->organization ?? OrganizationFacade::account());
+
+        if ($request->organization->status === 'deactivated' || $request->lines->isEmpty()) {
+            return;
+        }
+
+        $created = $driver->syncSubscription($request);
+
+        if ($created && $request->firstSubscription) {
+            Organization::where('type', 'superaccount')->first()?->notifyAdmins(new NewOrganizationSubscription);
+        }
+    }
+
+    /**
+     * Cancel the organization's subscription, and tell the superaccount admins
+     * when there was one to cancel.
+     */
+    public function cancel(): void
+    {
+        $driver = $this->driver();
+        if (! $driver instanceof SubscriptionGateway) {
+            return;
+        }
+
+        if ($driver->cancel()) {
+            Organization::where('type', 'superaccount')->first()?->notifyAdmins(
+                new OrganizationCancelledSubscription($this->organization ?? OrganizationFacade::account())
+            );
+        }
     }
 
     public function register(string $driver, $class)
@@ -78,10 +154,16 @@ class BillingService
 
     public function __call($method, $args = null)
     {
-        if ($method === 'isBillable' && ! $this->driver()) {
+        $driver = $this->driver();
+
+        if ($method === 'isBillable' && ! $driver) {
             return false;
         }
 
-        return $this->driver()?->$method(...$args);
+        if ($driver && ! $driver instanceof PaymentMethodGateway && array_key_exists($method, self::NO_PAYMENT_METHOD_SUPPORT)) {
+            return self::NO_PAYMENT_METHOD_SUPPORT[$method];
+        }
+
+        return $driver?->$method(...$args);
     }
 }

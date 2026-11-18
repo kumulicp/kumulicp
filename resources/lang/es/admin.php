@@ -55,6 +55,7 @@ return [
         'sources' => [
             'profile' => 'Registrada',
             'generic' => 'Genérica',
+            'helmforge' => 'HelmForge',
         ],
         'added' => ':app agregada',
         'updated' => ':app actualizada',
@@ -230,6 +231,9 @@ return [
                 'domain_registrar' => [
                     'label' => 'Registrador de dominios',
                     'description' => 'Permite que las organizaciones registren, transfieran y renueven nombres de dominio a través de su registrador. Agrega las páginas de administración de Dominios y TLD, las opciones de registrar y transferir al agregar un dominio, y las opciones de plan correspondientes. Conectar un dominio que ya posee siempre está disponible.',
+                'helmforge' => [
+                    'label' => 'HelmForge',
+                    'description' => 'Importa aplicaciones del repositorio de charts de HelmForge y las muestra junto a las aplicaciones integradas. Mientras está desactivado, las aplicaciones de HelmForge se ocultan de la lista de aplicaciones y de lo que las organizaciones pueden instalar, y la sincronización diaria del catálogo no se ejecuta. Las aplicaciones ya desplegadas siguen funcionando.',
                 ],
                 'tickets' => [
                     'label' => 'Tickets de soporte',
@@ -455,6 +459,8 @@ return [
         'error_module_delete_failed' => "No se pudo eliminar por completo el módulo ':module'. Es posible que algunos archivos aún estén en uso; inténtalo de nuevo.",
     ],
     'version_updates' => [
+        'digest_unavailable' => 'La etiqueta :tag no tiene digest en el registro, así que no se puede ofrecer para una imagen fijada por digest.',
+        'invalid_tag_pattern' => 'El patrón de etiquetas :pattern no es una expresión regular válida.',
         'chart_version_missing' => 'El chart :chart no tiene publicada la versión :version.',
         'chart_unreadable' => 'No se pudo leer el paquete del chart: :error',
         'chart_download_failed' => 'No se pudo descargar el chart :version: :error',

@@ -59,6 +59,37 @@ class VersionComparator
         return $this->newer($current, $tags)[0] ?? null;
     }
 
+    /**
+     * Like newer(), for an image's update policy: `track` takes any newer tag,
+     * `minor` only those of the same major version and `patch` only those of the
+     * same major and minor version. `pinned` and `ignore` never offer one. A tag
+     * that isn't a dotted version (a date) has only the one part, so `minor` and
+     * `patch` only ever see its own.
+     *
+     * @param  array<int, string>  $tags
+     * @return array<int, string>
+     */
+    public function newerFor(string $current, array $tags, string $policy = 'track'): array
+    {
+        if (in_array($policy, ['pinned', 'ignore'], true)) {
+            return [];
+        }
+
+        $current_parts = $this->versionParts($current);
+        $same = fn (array $parts, int $count) => array_slice($parts, 0, $count) === array_slice($current_parts, 0, $count);
+
+        return array_values(array_filter($this->newer($current, $tags), fn (string $tag) => match ($policy) {
+            'patch' => $same($this->versionParts($tag), 2),
+            'minor' => $same($this->versionParts($tag), 1),
+            default => true,
+        }));
+    }
+
+    public function newestFor(string $current, array $tags, string $policy = 'track'): ?string
+    {
+        return $this->newerFor($current, $tags, $policy)[0] ?? null;
+    }
+
     public function isNewer(?string $candidate, ?string $current): bool
     {
         if (! $candidate || ! $current) {
@@ -105,6 +136,20 @@ class VersionComparator
         $suffix = preg_replace('/\d+/', '#', $matches[3]);
 
         return $matches[1].$parts.'|'.$suffix;
+    }
+
+    /**
+     * The leading dotted version of a tag: 8.0.1-debian-12-r1 is 8, 0, 1.
+     *
+     * @return array<int, int>
+     */
+    private function versionParts(string $tag): array
+    {
+        if (! preg_match('/^v?(\d+(?:\.\d+)*)/', $tag, $matches)) {
+            return [];
+        }
+
+        return array_map('intval', explode('.', $matches[1]));
     }
 
     /**

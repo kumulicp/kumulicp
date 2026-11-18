@@ -6,6 +6,8 @@ use App\AppPlan;
 use App\Organization;
 use App\Support\Facades\Settings;
 use App\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 
@@ -92,11 +94,11 @@ it('updates base, standard, basic, and storage prices for a single enabled curre
 
     $this->appPlan->refresh();
 
-    expect($this->appPlan->setting('base.prices.USD.amount'))->toEqual(12);
-    expect($this->appPlan->setting('base.prices.USD.price_id'))->toBe('usd_base');
-    expect($this->appPlan->setting('standard.prices.USD.amount'))->toEqual(8);
-    expect($this->appPlan->setting('basic.prices.USD.amount'))->toEqual(4);
-    expect($this->appPlan->setting('storage.prices.USD.amount'))->toEqual(2);
+    expect(storedPrice($this->appPlan, 'base', 'USD'))->toEqual(12);
+    expect(storedPrice($this->appPlan, 'base', 'USD', 'price_id'))->toBe('usd_base');
+    expect(storedPrice($this->appPlan, 'standard', 'USD'))->toEqual(8);
+    expect(storedPrice($this->appPlan, 'basic', 'USD'))->toEqual(4);
+    expect(storedPrice($this->appPlan, 'storage', 'USD'))->toEqual(2);
 });
 
 // ---------------------------------------------------------------------------
@@ -132,19 +134,19 @@ it('saves distinct prices per enabled currency for the app plan', function () {
 
     $this->appPlan->refresh();
 
-    expect($this->appPlan->setting('base.prices.USD.amount'))->toEqual(10);
-    expect($this->appPlan->setting('base.prices.CAD.amount'))->toEqual(14);
-    expect($this->appPlan->setting('base.prices.USD.price_id'))->toBe('usd_base');
-    expect($this->appPlan->setting('base.prices.CAD.price_id'))->toBe('cad_base');
+    expect(storedPrice($this->appPlan, 'base', 'USD'))->toEqual(10);
+    expect(storedPrice($this->appPlan, 'base', 'CAD'))->toEqual(14);
+    expect(storedPrice($this->appPlan, 'base', 'USD', 'price_id'))->toBe('usd_base');
+    expect(storedPrice($this->appPlan, 'base', 'CAD', 'price_id'))->toBe('cad_base');
 
-    expect($this->appPlan->setting('standard.prices.USD.amount'))->toEqual(5);
-    expect($this->appPlan->setting('standard.prices.CAD.amount'))->toEqual(7);
+    expect(storedPrice($this->appPlan, 'standard', 'USD'))->toEqual(5);
+    expect(storedPrice($this->appPlan, 'standard', 'CAD'))->toEqual(7);
 
-    expect($this->appPlan->setting('basic.prices.USD.amount'))->toEqual(3);
-    expect($this->appPlan->setting('basic.prices.CAD.amount'))->toEqual(4);
+    expect(storedPrice($this->appPlan, 'basic', 'USD'))->toEqual(3);
+    expect(storedPrice($this->appPlan, 'basic', 'CAD'))->toEqual(4);
 
-    expect($this->appPlan->setting('storage.prices.USD.amount'))->toEqual(1);
-    expect($this->appPlan->setting('storage.prices.CAD.amount'))->toEqual(2);
+    expect(storedPrice($this->appPlan, 'storage', 'USD'))->toEqual(1);
+    expect(storedPrice($this->appPlan, 'storage', 'CAD'))->toEqual(2);
 });
 
 it('gives the edit page pricing components and a feature list, even for a plan that lacks them', function () {
@@ -461,4 +463,204 @@ it('does not clone a hidden shared app plan', function () {
     )->assertNotFound();
 
     expect(AppPlan::count())->toBe($count);
+});
+
+it('saves where the app can be reached and which app it is an addon to on the plan', function () {
+    $parent = Application::factory()->create();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload([
+            'can_update_domain' => true,
+            'domain_option' => ['base', 'subdomains'],
+            'parent_app' => $parent->id,
+        ])
+    )->assertSessionHasNoErrors();
+
+    $plan = $this->appPlan->fresh();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base', 'subdomains'])
+        ->and($plan->hasDomainOption('base'))->toBeTrue()
+        ->and($plan->hasDomainOption('parent'))->toBeFalse()
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('clears the parent app of a plan', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSetting('parent_app_id', $parent->id);
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload(['domain_option' => [], 'parent_app' => null])
+    )->assertSessionHasNoErrors();
+
+    expect($this->appPlan->fresh()->parentApplication())->toBeNull();
+});
+
+it('leaves the domain settings of a plan alone when an update does not send them', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['base'], 'parent_app_id' => $parent->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->post(
+        "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}",
+        appPlanUpdatePayload()
+    )->assertSessionHasNoErrors();
+
+    $plan = $this->appPlan->fresh();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base'])
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('rejects an unknown domain option, a missing parent app and an app that is its own parent on a plan', function () {
+    $url = "/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}";
+
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['domain_option' => ['everywhere']]))
+        ->assertSessionHasErrors('domain_option.0');
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['parent_app' => 999999]))
+        ->assertSessionHasErrors('parent_app');
+    $this->actingAs($this->user)->post($url, appPlanUpdatePayload(['parent_app' => $this->demoApp->id]))
+        ->assertSessionHasErrors('parent_app');
+});
+
+it('gives the plan edit page its domain settings and the other apps to pick a parent from', function () {
+    $other = Application::factory()->create(['name' => 'Another App']);
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['primary'], 'parent_app_id' => $other->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->get("/admin/apps/{$this->demoApp->slug}/plans/{$this->appPlan->id}/edit")
+        ->assertInertia(fn ($page) => $page
+            ->where('plan.can_update_domain', true)
+            ->where('plan.domain_option', ['primary'])
+            ->where('plan.parent_app', $other->id)
+            ->where('apps', fn ($apps) => collect($apps)->pluck('value')->contains($other->id)
+                && ! collect($apps)->pluck('value')->contains($this->demoApp->id))
+        );
+});
+
+it('starts a new plan with the domain settings the app already has', function () {
+    $parent = Application::factory()->create();
+    $this->appPlan->updateSettings(['can_update_domain' => true, 'domain_option' => ['base'], 'parent_app_id' => $parent->id]);
+    $this->appPlan->save();
+
+    $this->actingAs($this->user)->post("/admin/apps/{$this->demoApp->slug}/plans", [
+        'name' => 'Another plan',
+        'description' => 'Another description',
+    ])->assertRedirect();
+
+    $plan = AppPlan::where('name', 'Another plan')->firstOrFail();
+
+    expect($plan->canUpdateDomain())->toBeTrue()
+        ->and($plan->domainOptions())->toBe(['base'])
+        ->and($plan->parentApplication()?->id)->toBe($parent->id);
+});
+
+it('takes the domain settings an app had onto each of its plans, and drops them from the app', function () {
+    $migration = require database_path('migrations/2026_11_17_100000_move_domain_and_parent_app_settings_to_app_plans.php');
+    $migration->down();
+
+    $parent = Application::factory()->create();
+    DB::table('applications')->where('id', $this->demoApp->id)->update([
+        'can_update_domain' => true,
+        'domain_option' => json_encode(['base', 'parent']),
+        'parent_app_id' => $parent->id,
+    ]);
+
+    $migration->up();
+
+    foreach ($this->demoApp->plans as $plan) {
+        expect($plan->canUpdateDomain())->toBeTrue()
+            ->and($plan->domainOptions())->toBe(['base', 'parent'])
+            ->and($plan->parentApplication()?->id)->toBe($parent->id)
+            ->and($plan->setting('base'))->toBeArray();
+    }
+
+    foreach (['access_type', 'can_update_domain', 'domain_option', 'parent_app_id'] as $column) {
+        expect(Schema::hasColumn('applications', $column))->toBeFalse();
+    }
+});
+
+function featuresUrl(): string
+{
+    return '/admin/apps/'.test()->demoApp->slug.'/plans/'.test()->appPlan->id.'/features';
+}
+
+it('shows the features page the enabled currencies and the price of each feature in them', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+    $this->appPlan->updateSetting('features', ['optional-feature' => ['status' => 'optional', 'price' => 2, 'price_id' => 'usd_feat']]);
+    $this->appPlan->setPrice('feature.optional-feature', 'CAD', 3, 'cad_feat');
+
+    $this->actingAs($this->user)->get(featuresUrl())->assertInertia(fn ($page) => $page
+        ->where('enabled_currencies', ['USD', 'CAD'])
+        ->where('plan.settings.features.optional-feature.price_id', 'usd_feat')
+        ->where('plan.settings.features.optional-feature.prices.CAD.price_id', 'cad_feat'));
+});
+
+it('saves the price of a feature in each enabled currency', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'CAD' => ['amount' => 3, 'price_id' => 'cad_feat'],
+        ]],
+    ]])->assertRedirect();
+
+    $plan = $this->appPlan->fresh();
+    expect(storedPrice($plan, 'feature.optional-feature', 'USD'))->toEqual(2);
+    expect(storedPrice($plan, 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+    expect(storedPrice($plan, 'feature.optional-feature', 'CAD'))->toEqual(3);
+    expect(storedPrice($plan, 'feature.optional-feature', 'CAD', 'price_id'))->toBe('cad_feat');
+    // Billing reads the price in the organization's currency
+    expect($plan->featurePriceId('optional-feature', 'CAD'))->toBe('cad_feat');
+    // The flat price older code reads is the default currency's
+    expect($plan->setting('features.optional-feature.price_id'))->toBe('usd_feat');
+});
+
+it('clears a currency of a feature price that was emptied', function () {
+    Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+    $this->appPlan->setPrice('feature.optional-feature', 'CAD', 3, 'cad_feat');
+
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'CAD' => ['amount' => '', 'price_id' => ''],
+        ]],
+    ]])->assertRedirect();
+
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBeNull();
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+});
+
+it('does not save a feature price in a currency that is not enabled', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => [
+            'USD' => ['amount' => 2, 'price_id' => 'usd_feat'],
+            'EUR' => ['amount' => 5, 'price_id' => 'eur_feat'],
+        ]],
+    ]])->assertRedirect();
+
+    expect(storedPrice($this->appPlan->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_feat');
+    expect($this->appPlan->prices()->where('currency', 'EUR')->count())->toBe(0);
+});
+
+it('rejects a feature price that is not a number', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'prices' => ['USD' => ['amount' => 'not-a-number', 'price_id' => 'usd_feat']]],
+    ]])->assertSessionHasErrors('features.optional-feature.prices.USD.amount');
+
+    expect($this->appPlan->prices()->count())->toBe(0);
+});
+
+it('still saves the single price older forms send', function () {
+    $this->actingAs($this->user)->put(featuresUrl(), ['features' => [
+        'optional-feature' => ['status' => 'optional', 'price' => 4, 'price_id' => 'flat_feat'],
+    ]])->assertRedirect();
+
+    $plan = $this->appPlan->fresh();
+    expect($plan->featurePriceId('optional-feature', 'USD'))->toBe('flat_feat');
+    expect($plan->featurePriceAmount('optional-feature', 'USD'))->toEqual(4);
 });

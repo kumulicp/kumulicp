@@ -55,6 +55,15 @@ import TicketPreferences from '@/components/tickets/TicketPreferences.vue'
         <va-select v-model="status" :label="$t('tickets.statusTab')" :options="statusOptions" value-by="value" text-by="text" @update:model-value="apply" />
         <va-select v-model="priority" :label="$t('tickets.priorityLabel')" :options="priorities" value-by="value" text-by="text" clearable @update:model-value="apply" />
         <va-select v-model="category" :label="$t('tickets.category')" :options="categories" value-by="value" text-by="text" clearable @update:model-value="apply" />
+        <va-select
+          v-model="app"
+          :label="$t('tickets.relatedApp')"
+          :options="appOptions"
+          value-by="value"
+          text-by="text"
+          searchable
+          @update:model-value="apply"
+        />
         <template #search>
           <va-input v-model="q" :label="$t('common.search')" clearable @keyup.enter="apply" @clear="apply" />
         </template>
@@ -113,6 +122,7 @@ export default {
     counts: Object,
     staff: Array,
     categories: Array,
+    apps: Array,
     priorities: Array,
     me: Number,
     version: String,
@@ -124,6 +134,7 @@ export default {
       status: this.filters.status,
       priority: this.filters.priority,
       category: this.filters.category,
+      app: this.filters.app === null || this.filters.app === undefined ? 'all' : (this.filters.app === 'none' ? 'none' : Number(this.filters.app)),
       q: this.filters.q,
       showCategories: false,
       categoryForm: useForm({ name: '' }),
@@ -132,7 +143,7 @@ export default {
   computed: {
     // Filters beyond the quick view the list opened on
     activeFilters () {
-      return (this.priority ? 1 : 0) + (this.category ? 1 : 0) + (this.status !== 'open' ? 1 : 0) + (!['me', 'all', 'unassigned'].includes(this.assigned) ? 1 : 0)
+      return (this.app !== 'all' ? 1 : 0) + (this.priority ? 1 : 0) + (this.category ? 1 : 0) + (this.status !== 'open' ? 1 : 0) + (!['me', 'all', 'unassigned'].includes(this.assigned) ? 1 : 0)
     },
     view () {
       if (this.filters.assigned === 'me' && this.filters.status === 'open') return 'mine'
@@ -146,6 +157,13 @@ export default {
         { value: 'all', text: this.$t('tickets.allTickets') },
         { value: 'unassigned', text: this.$t('tickets.noOneAssigned') },
         ...this.staff.filter(member => member.id !== this.me).map(member => ({ value: `user:${member.id}`, text: member.name })),
+      ]
+    },
+    appOptions () {
+      return [
+        { value: 'all', text: this.$t('tickets.list.allApps') },
+        { value: 'none', text: this.$t('tickets.list.noApp') },
+        ...this.apps,
       ]
     },
     statusOptions () {
@@ -186,6 +204,7 @@ export default {
         sla: this.filters.sla || undefined,
         priority: this.priority || undefined,
         category: this.category || undefined,
+        app: this.app === 'all' ? undefined : this.app,
         q: this.q || undefined,
         ...extra,
       }

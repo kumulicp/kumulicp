@@ -21,11 +21,8 @@ class DemoSeeder extends Seeder
                 'slug' => 'nextcloud',
                 'short_description' => 'Nextcloud',
                 'description' => 'Nextcloud',
-                'domain_option' => ['base'],
-                'parent_app_id' => 0,
                 'enabled' => 1,
                 'category' => 'File Sharing & Collaboration',
-                'access_type' => 'standard',
             ],
             [
                 'id' => 2,
@@ -33,11 +30,8 @@ class DemoSeeder extends Seeder
                 'slug' => 'wordpress',
                 'short_description' => 'Wordpress',
                 'description' => 'Wordpress',
-                'domain_option' => ['base'],
-                'parent_app_id' => 0,
                 'enabled' => 1,
                 'category' => 'Website Builder',
-                'access_type' => 'basic',
             ],
         ]);
 
@@ -80,6 +74,29 @@ class DemoSeeder extends Seeder
                 'roles' => '{"order": [1, 2, 3, 4, 5, 6], "default_user_groups": [5], "default_admin_groups": [1]}',
                 'settings' => '{"helm_repo_name": "bitnami", "image_repo_name": "bitnami/wordpress", "image_registry": "docker.io", "chart_name": "wordpress", "chart_version": "20.1.2"}',
             ],
+        ]);
+
+        // Inserted as rows, so the versions' images are too (the primary image is the one in their settings)
+        $image = fn (int $version_id, string $key, string $repository, string $tag, bool $primary, string $path = 'image') => [
+            'app_version_id' => $version_id,
+            'key' => $key,
+            'role' => $primary ? 'primary' : 'component',
+            'source' => 'override',
+            'registry' => 'docker.io',
+            'repository' => $repository,
+            'tag' => $tag,
+            'values_path' => $path,
+            'tag_from_version_name' => $primary,
+            'update_policy' => 'track',
+            'position' => $primary ? 0 : 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        DB::table('app_version_images')->insert([
+            $image(1, 'primary', 'nextcloud', '33.0.1', true),
+            $image(1, 'imaginary', 'nextcloud/aio-imaginary', '20261109_101109', false, 'imaginary.image'),
+            $image(2, 'primary', 'bitnami/wordpress', '6.8.2-debian-12-r5', true),
         ]);
 
         DB::table('app_roles')->insert([
@@ -254,6 +271,13 @@ class DemoSeeder extends Seeder
                 'is_default' => 0,
             ],
         ]);
+
+        // The domains an app can be reached at are set on each of its plans
+        foreach (DB::table('app_plans')->get() as $plan) {
+            DB::table('app_plans')->where('id', $plan->id)->update([
+                'settings' => json_encode([...json_decode($plan->settings, true), 'domain_option' => ['base'], 'parent_app_id' => null]),
+            ]);
+        }
 
         DB::table('organizations')->insert([
             [

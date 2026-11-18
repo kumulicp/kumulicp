@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Cashier\Billable;
@@ -69,6 +70,12 @@ use function Illuminate\Events\queueable;
 class Organization extends Model
 {
     use Billable, HasFactory;
+
+    /**
+     * The organization that owns the example instances apps show Helm values
+     * from before they have an instance of their own.
+     */
+    public const TYPE_EXAMPLE = 'example';
 
     protected $table = 'organizations';
 
@@ -154,7 +161,10 @@ class Organization extends Model
         return $this->belongsToMany('App\Application', 'app_instances', 'organization_id', 'application_id');
     }
 
-    public function app_instances()
+    /**
+     * @return HasMany<AppInstance, $this>
+     */
+    public function app_instances(): HasMany
     {
         return $this->hasMany('App\AppInstance', 'organization_id');
     }
@@ -418,20 +428,23 @@ class Organization extends Model
     }
 
     /**
-     * Leave out the throwaway organizations created for tests.
+     * Leave out the throwaway organizations created for tests, and the one
+     * that owns an app's example instance (see ExampleAppInstance).
      */
     public function scopeNotTest(Builder $query)
     {
-        return $query->where(function (Builder $query) {
-            $query->whereNull('organizations.account_test_id')->orWhere('organizations.account_test_id', 0);
-        });
+        return $query->where('organizations.type', '!=', self::TYPE_EXAMPLE)
+            ->where(function (Builder $query) {
+                $query->whereNull('organizations.account_test_id')->orWhere('organizations.account_test_id', 0);
+            });
     }
 
     /**
-     * Whether this is a throwaway organization created for a test.
+     * Whether this is a throwaway organization created for a test, or the one
+     * that owns example instances.
      */
     public function isTest(): bool
     {
-        return ! empty($this->account_test_id);
+        return ! empty($this->account_test_id) || $this->type === self::TYPE_EXAMPLE;
     }
 }

@@ -19,7 +19,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
       <TicketBadge :value="ticket.priority.value" :label="ticket.priority.label" />
       <va-chip v-for="tag in ticket.tags" :key="tag" size="small" outline>{{ tag }}</va-chip>
       <span class="t-muted">
-        <template v-if="context.organization">{{ context.organization.name }} · </template>{{ $t('tickets.supportAssignee') }}: {{ ticket.support_assignee?.name || $t('tickets.unassigned') }}
+        <template v-if="context.organization">{{ context.organization.name }} · </template>
+        <template v-if="ticket.app_instance"><Link :href="ticket.app_instance.url" class="t-app-link">{{ ticket.app_instance.label }}</Link> · </template>
+        {{ $t('tickets.supportAssignee') }}: {{ ticket.support_assignee?.name || $t('tickets.unassigned') }}
       </span>
     </template>
     <template v-if="ticket.support_assignee?.id !== me && !ticket.merged_into" #actions>
@@ -81,6 +83,18 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
           <va-select v-model="form.status" :label="$t('tickets.statusColumn')" :options="statuses" value-by="value" text-by="text" :error="!!form.errors.status" :error-messages="form.errors.status" />
           <va-select v-model="form.priority" :label="$t('tickets.priorityLabel')" :options="priorities" value-by="value" text-by="text" />
           <va-select v-model="form.category_id" :label="$t('tickets.category')" :options="categories" value-by="value" text-by="text" clearable />
+          <va-select
+            v-model="form.app_instance_id"
+            id="appInstance"
+            :label="$t('tickets.relatedApp')"
+            :options="app_options"
+            value-by="value"
+            text-by="text"
+            clearable
+            searchable
+            :error="!!form.errors.app_instance_id"
+            :error-messages="form.errors.app_instance_id"
+          />
           <va-select
             v-model="form.support_assignee_id"
             id="supportAssignee"
@@ -156,8 +170,9 @@ import TicketTimeline from '@/components/tickets/TicketTimeline.vue'
             <div class="t-subtitle">{{ $t('tickets.admin.apps') }}</div>
             <ul class="t-list-plain">
               <li v-for="app in context.apps" :key="app.id">
-                {{ app.label }} <span class="t-muted">({{ app.status }})</span>
-                <strong v-if="ticket.app === app.label"> ← {{ $t('tickets.admin.relatedToTicket') }}</strong>
+                <Link :href="app.url" class="t-app-link">{{ app.label }}</Link> <span class="t-muted">({{ app.status }})</span>
+                <strong v-if="ticket.app_instance?.id === app.id"> ← {{ $t('tickets.admin.relatedToTicket') }}</strong>
+                <div><Link :href="app.tickets_url" class="t-muted">{{ $t('tickets.admin.ticketsForApp') }}</Link></div>
               </li>
             </ul>
           </div>
@@ -305,6 +320,7 @@ export default {
     statuses: Array,
     priorities: Array,
     categories: Array,
+    app_options: { type: Array, default: () => [] },
     me: Number,
     attachment_limits: Object,
     version: String,
@@ -434,6 +450,7 @@ export default {
         status: this.ticket.status.value,
         priority: this.ticket.priority.value,
         category_id: this.ticket.category_id,
+        app_instance_id: this.ticket.app_instance?.id ?? null,
         support_assignee_id: this.ticket.support_assignee?.id ?? null,
         customer_assignee_id: this.ticket.customer_assignee?.id ?? null,
         tags: [...this.ticket.tags],

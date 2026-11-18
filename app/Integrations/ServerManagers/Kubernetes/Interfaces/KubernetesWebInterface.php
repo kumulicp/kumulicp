@@ -76,17 +76,19 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
         return new DomainMiddlewareService($this->organization, $this->server, $this->app_instance);
     }
 
-    // Make sure the image registry credentials required by the app instance's version
-    // exists in the organization's namespace before the app is deployed
+    // Make sure the image registry credentials required by the app instance's version,
+    // for each of its images, exist in the organization's namespace before the app is deployed
     public function ensureImageRegistryAuth()
     {
         $version = $this->app_instance->version;
 
-        if (! $version || ! $version->requiresImageRegistryAuth()) {
+        if (! $version) {
             return true;
         }
 
-        $this->secret->ensure($this->organization->slug, $version->imageRegistry);
+        foreach ($version->imageRegistrySecrets() as $registry_secret) {
+            $this->secret->ensure($this->organization->slug, $registry_secret);
+        }
 
         return true;
     }

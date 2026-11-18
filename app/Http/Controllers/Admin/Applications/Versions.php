@@ -14,6 +14,7 @@ use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Versions extends Controller
@@ -72,6 +73,8 @@ class Versions extends Controller
             'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
         ]);
         $image_registry_id = null;
+        $copy_version = null;
+        $recommendations = [];
         if (in_array($validatedData['copy_from'], ['previous_version', 'update']) && is_numeric($validatedData['copy_version'])) {
             $copy_version = AppVersion::find($validatedData['copy_version']);
             $settings = $copy_version->settings;
@@ -109,6 +112,13 @@ class Versions extends Controller
         $app_version->admin_path = $admin_path;
         $app_version->image_registry_id = $image_registry_id;
         $app_version->save();
+
+        // The images besides the primary one, which follows the settings
+        if ($copy_version) {
+            $app_version->copyImagesFrom($copy_version);
+        } elseif ($recommendations) {
+            $app_version->addRecommendedImages($recommendations);
+        }
 
         return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
     }
@@ -163,12 +173,7 @@ class Versions extends Controller
                     'registry' => $helm_repo_secret->registry,
                 ];
             }),
-            'recommendations' => collect(ApplicationFacade::profile($app)->recommendations())->map(function (string $value, string $key) {
-                return [
-                    'name' => Str::headline($key),
-                    'value' => $value,
-                ];
-            })->values(),
+            'recommendations' => $this->recommendationSummary(ApplicationFacade::profile($app)->recommendations()),
             'announcements' => $announcements->count() > 0 ? $announcements->map(function ($announcement) {
                 return [
                     'value' => $announcement->id,
@@ -202,6 +207,39 @@ class Versions extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * The profile's recommendations as name/value rows. The 'images' entry holds
+     * a list of component images, shown one row per image.
+     *
+     * @param  array<string, mixed>  $recommendations
+     */
+    private function recommendationSummary(array $recommendations): Collection
+    {
+        $images = Arr::pull($recommendations, 'images', []);
+
+        $rows = collect($recommendations)
+            ->filter(fn ($value) => is_scalar($value))
+            ->map(fn ($value, $key) => [
+                'name' => Str::headline($key),
+                'value' => (string) $value,
+            ]);
+
+        foreach ((array) $images as $image) {
+            $reference = trim(Arr::get($image, 'registry', '').'/'.Arr::get($image, 'repository', ''), '/');
+
+            if ($tag = Arr::get($image, 'tag')) {
+                $reference .= ':'.$tag;
+            }
+
+            $rows->push([
+                'name' => Arr::get($image, 'label') ?? Str::headline(Arr::get($image, 'key', 'image')),
+                'value' => $reference,
+            ]);
+        }
+
+        return $rows->values();
     }
 
     public function update(Request $request, Application $app, AppVersion $version)

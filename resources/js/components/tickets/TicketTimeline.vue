@@ -28,6 +28,14 @@ defineProps({
         <template v-else-if="event.type === 'priority_changed'">
           {{ $t('tickets.timeline.priority_changed', { actor: event.actor || $t('tickets.system'), to: $t(`tickets.priority.${event.context.to}`) }) }}
         </template>
+        <template v-else-if="event.type === 'app_changed'">
+          <template v-if="event.context.to_label">
+            {{ $t('tickets.timeline.app_changed', { actor: event.actor || $t('tickets.system'), name: event.context.to_label }) }}
+          </template>
+          <template v-else>
+            {{ $t('tickets.timeline.app_removed', { actor: event.actor || $t('tickets.system') }) }}
+          </template>
+        </template>
         <template v-else-if="event.type === 'tags_changed'">
           {{ $t('tickets.timeline.tags_changed', { actor: event.actor || $t('tickets.system'), tags: (event.context.tags || []).join(', ') || '-' }) }}
         </template>

@@ -7,8 +7,8 @@ use App\Services\Organization\BasePlanService;
 use App\Support\Facades\FastCache;
 use App\Support\Facades\Organization as OrganizationFacade;
 
-// Plans save their prices per currency (settings.{component}.prices.{currency}.amount), so the
-// subscription summaries have to read those, not the flat legacy settings.price.
+// Plans keep their prices per currency in the plan_prices table, so the subscription summaries
+// have to read those, not the flat legacy settings.price.
 // The Feature/Subscription beforeEach in Pest.php already seeds and activates the demo app.
 
 it('builds the base plan summary from per-currency prices', function () {
@@ -20,11 +20,12 @@ it('builds the base plan summary from per-currency prices', function () {
         'type' => 'package',
         'payment_enabled' => true,
         'settings' => [
-            'standard' => ['max' => 10, 'storage' => 1, 'prices' => [$currency => ['amount' => 50, 'price_id' => 'pkg_std']]],
+            'standard' => ['max' => 10, 'storage' => 1],
         ],
     ]);
+    $plan->setPrice('standard', $currency, 50, 'pkg_std');
 
-    $service = new BasePlanService($organization, $plan);
+    $service = new BasePlanService($organization, $plan->fresh());
     $users = $service->standardStats()['quantity'];
 
     expect($service->stats())->toHaveKey('standard');
@@ -39,10 +40,11 @@ it('builds an app instance summary from per-currency app plan prices', function 
 
     $app_plan = $this->support->demo_app_2;
     $app_plan->settings = array_merge($app_plan->settings ?? [], [
-        'base' => ['prices' => [$currency => ['amount' => 7, 'price_id' => 'app_base']]],
-        'standard' => ['max' => 10, 'storage' => 1, 'prices' => [$currency => ['amount' => 3, 'price_id' => 'app_std']]],
+        'standard' => ['max' => 10, 'storage' => 1],
     ]);
     $app_plan->save();
+    $app_plan->setPrice('base', $currency, 7, 'app_base');
+    $app_plan->setPrice('standard', $currency, 3, 'app_std');
 
     // Pay per App base plan, so the app plan is what gets billed
     OrganizationFacade::account()->forceFill(['plan_id' => $this->support->base_1->id])->save();
@@ -60,9 +62,10 @@ it('keeps the summaries of two instances on the same app plan apart', function (
 
     $app_plan = $this->support->demo_app_2;
     $app_plan->settings = array_merge($app_plan->settings ?? [], [
-        'standard' => ['max' => 10, 'storage' => 1, 'prices' => [$currency => ['amount' => 3, 'price_id' => 'app_std']]],
+        'standard' => ['max' => 10, 'storage' => 1],
     ]);
     $app_plan->save();
+    $app_plan->setPrice('standard', $currency, 3, 'app_std');
     OrganizationFacade::account()->forceFill(['plan_id' => $this->support->base_1->id])->save();
 
     $second = $this->demoApp->replicate();

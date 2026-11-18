@@ -7,6 +7,10 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 
 ## Features
 
+### Version
+
+The core version (currently 0.5.0) is set in the `VERSION` file and can be read by plugins with `App\Support\CoreVersion` to handle version compatibility (see docs/versioning.md)
+
 ### Admin
 
 - Built on Kubernetes: Direct API calls to K8s or through the Rancher API
@@ -22,7 +26,7 @@ KumuliCP wants to simplify app hosting with the power and flexibility of Kuberne
 
 ### End-users
 
-- Multi-tenancy: Self-registration
+- Multi-tenancy: Self-registration (or run it for one organization, see [Installation mode](#installation-mode))
 - Apps: Choose only the apps you want activated
 - Users: Manage users
 - Centralized Permissions: With LDAP enabled, apps can be connected to LDAP so clients can control app permissions from one place!
@@ -97,6 +101,27 @@ sail npm run watch
 Assuming no errors, go to http://localhost in your browser
 
 To view the database with phpmyadmin go to http://localhost:8080
+
+### Installation mode
+
+KumuliCP runs either for one organization or for many. You choose when you install it:
+
+- **Single organization**: one organization runs its own apps. Every app is available with no limits, and there are no plans, subscriptions, billing or sign-up. Admins and members share one sidebar, with an Administration section for admins, and Discover lists every app with what it still needs, linking to where it is fixed. An app plan is called a profile. Only admins install apps.
+- **Multi-tenant**: a hosting provider serves many organizations, each subscribed to a plan, with billing and self-registration.
+
+Choose on the setup screen, or set `TENANCY_MODE=single` or `TENANCY_MODE=multi` in `.env` before installing (it wins over the setup screen). An install that predates this setting is multi-tenant.
+
+The mode is fixed once installed and can't be changed from the control panel. To see it, or to change it:
+
+```
+php artisan kumulicp:tenancy          # show the current mode
+php artisan kumulicp:tenancy single   # switch to single organization
+php artisan kumulicp:tenancy multi    # switch to multi-tenant
+```
+
+Switching to single needs exactly one organization, the administrator account made at install, and no shared apps running. The command says what is in the way. It asks for confirmation (`--force` skips it), clears the caches built for the old mode and tells the queue workers to restart. If you run Octane, reload it too (`php artisan octane:reload`).
+
+See [docs/single-tenant-mode.md](docs/single-tenant-mode.md) for how single mode works.
 
 ### Rancher
 

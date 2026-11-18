@@ -5,6 +5,7 @@ namespace App\Integrations\AccountManagers\Ldap;
 use App\AppInstance;
 use App\AppRole;
 use App\Contracts\AccountManager\PermissionsContract;
+use App\Enums\AccessType;
 use App\Integrations\AccountManagers\Ldap\User as LdapAccountUser;
 use App\Integrations\Applications\Nextcloud\API\GroupFolders as NextcloudGroupFolders;
 use App\Integrations\Applications\Nextcloud\API\Groups as NextcloudGroups;
@@ -261,9 +262,10 @@ class Permissions extends PermissionsManager implements PermissionsContract
     public function hasAppStandardAccess(AppInstance $app_instance)
     {
         $app_name = LdapSupport::getAppInstanceID($app_instance);
-        $app_role_count = $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->count();
 
-        return $app_instance->application->access_type->value === 'standard' && $app_role_count > 0;
+        // The access type of the app is whatever its roles give: standard when the user has one that does
+        return $this->ldapUser->groups()->in(Dn::create($app_instance->organization, 'applications', $app_name))->get()
+            ->contains(fn (LdapGroup $group) => $group->appRoleAccessType() === AccessType::STANDARD);
     }
 
     /*

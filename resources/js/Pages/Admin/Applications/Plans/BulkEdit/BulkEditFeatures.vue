@@ -2,6 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import BulkEditLayout from './BulkEditLayout.vue'
 import { useForm } from '@inertiajs/vue3'
+import { buildCurrencyPrices, currencyByCode } from '@/constants/currencies'
 
 </script>
 <template>
@@ -71,32 +72,32 @@ import { useForm } from '@inertiajs/vue3'
               </template>
             </template>
 
-            <!-- Price -->
-            <tr>
-              <td class="setting-label">{{ $t('admin.plans.price') }}</td>
-              <td v-for="plan in plans" :key="plan.id">
-                <va-input
-                  v-model="form.plans[plan.id].features[feature.value].price"
-                  type="number"
-                  min="0"
-                  step=".01"
-                  immediateValidation
-                >
-                  <template #prependInner>{{ $t('admin.plans.currencySymbol') }}</template>
-                </va-input>
-              </td>
-            </tr>
-
-            <!-- Product ID -->
-            <tr>
-              <td class="setting-label">{{ $t('admin.plans.productID') }}</td>
-              <td v-for="plan in plans" :key="plan.id">
-                <va-input
-                  v-model="form.plans[plan.id].features[feature.value].price_id"
-                  immediateValidation
-                />
-              </td>
-            </tr>
+            <!-- Price and product ID, for each currency -->
+            <template v-for="currency in enabled_currencies" :key="currency">
+              <tr>
+                <td class="setting-label">{{ $t('admin.plans.price') }} ({{ currency }})</td>
+                <td v-for="plan in plans" :key="plan.id">
+                  <va-input
+                    v-model="form.plans[plan.id].features[feature.value].prices[currency].amount"
+                    type="number"
+                    min="0"
+                    step=".01"
+                    immediateValidation
+                  >
+                    <template #prependInner>{{ currencySymbol(currency) }}</template>
+                  </va-input>
+                </td>
+              </tr>
+              <tr>
+                <td class="setting-label">{{ $t('admin.plans.productID') }} ({{ currency }})</td>
+                <td v-for="plan in plans" :key="plan.id">
+                  <va-input
+                    v-model="form.plans[plan.id].features[feature.value].prices[currency].price_id"
+                    immediateValidation
+                  />
+                </td>
+              </tr>
+            </template>
 
             <!-- Payment Type -->
             <tr>
@@ -130,7 +131,11 @@ export default {
     plans: Array,
     plan_ids: Array,
     features: Array,
-    errors: Object
+    errors: Object,
+    enabled_currencies: {
+      type: Array,
+      default: () => ['USD']
+    }
   },
   data () {
     const plansMap: Record<number, any> = {}
@@ -146,8 +151,7 @@ export default {
         }
         planFeatures[feature.value] = {
           status: existing.status ?? 'disabled',
-          price: existing.price ?? 0,
-          price_id: existing.price_id ?? '',
+          prices: buildCurrencyPrices(plan.settings?.features, feature.value, this.enabled_currencies),
           payment_type: existing.payment_type ?? null,
           settings: settingsMap
         }
@@ -172,6 +176,9 @@ export default {
     }
   },
   methods: {
+    currencySymbol (code: string) {
+      return currencyByCode(code)?.symbol ?? code
+    },
     submit () {
       this.form.put('/admin/apps/' + this.app.slug + '/plans/bulk-edit/features')
     }

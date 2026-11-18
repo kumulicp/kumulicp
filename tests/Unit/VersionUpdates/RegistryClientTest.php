@@ -45,3 +45,20 @@ it('uses the repo secret to get a token for private images', function () {
     Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://ghcr.io/token')
         && $request->hasHeader('Authorization', 'Basic '.base64_encode('robot:secret')));
 });
+
+it('reads the digest a tag points at, asking for the index of a multi-platform image', function () {
+    Http::fake([
+        'ghcr.io/v2/org/app/manifests/1.2.3' => Http::response('{}', 200, ['Docker-Content-Digest' => 'sha256:abc123']),
+    ]);
+
+    expect((new RegistryClient)->digest('ghcr.io', 'org/app', '1.2.3'))->toBe('sha256:abc123');
+
+    Http::assertSent(fn ($request) => str_contains(implode(',', $request->header('Accept')), 'application/vnd.oci.image.index.v1+json')
+        && str_contains(implode(',', $request->header('Accept')), 'application/vnd.docker.distribution.manifest.v2+json'));
+});
+
+it('has no digest for a registry that does not send one', function () {
+    Http::fake(['ghcr.io/v2/org/app/manifests/1.2.3' => Http::response('{}')]);
+
+    expect((new RegistryClient)->digest('ghcr.io', 'org/app', '1.2.3'))->toBeNull();
+});

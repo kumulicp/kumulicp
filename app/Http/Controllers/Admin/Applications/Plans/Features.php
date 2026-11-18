@@ -6,6 +6,7 @@ use App\Application;
 use App\AppPlan;
 use App\Http\Controllers\Controller;
 use App\Support\Facades\Application as ApplicationFacade;
+use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\PlanBreadcrumbs;
 use Illuminate\Http\Request;
 
@@ -22,6 +23,7 @@ class Features extends Controller
         $settings['features'] = $plan_features;
 
         return inertia()->render('Admin/Applications/Plans/PlanFeatures', [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'app' => [
                 'id' => $app->id,
                 'name' => $app->name,
@@ -55,6 +57,9 @@ class Features extends Controller
 
         $validated = $request->validate([
             'features' => 'array|nullable',
+            'features.*.prices' => 'array|nullable',
+            'features.*.prices.*.amount' => 'numeric|nullable',
+            'features.*.prices.*.price_id' => 'string|max:50|nullable',
         ]);
 
         ApplicationFacade::plan($plan)->updateFeatures($request->features ?? []);

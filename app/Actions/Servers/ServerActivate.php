@@ -40,7 +40,7 @@ class ServerActivate extends Action
 
         $activate_parent_app = null;
 
-        if ($parent = $task->application->parent_app) {
+        if ($parent = $plan->parentApplication()) {
             // TODO: Set plan properly
             $activate_parent_app = ActionFacade::execute(new ApplicationActivate($task->organization, $parent, $parent->plans->first(), [], null, label: $task->getValue('name').' '.$parent->name));
         }

@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Core Version
+    |--------------------------------------------------------------------------
+    |
+    | The Kumuli CP core version. This is read from the VERSION file in the
+    | project root, which is the only place the version is set. Do not override
+    | it here or in ".env". Plugins should use App\Support\CoreVersion to read
+    | it and to check version compatibility.
+    |
+    */
+
+    'version' => trim((string) @file_get_contents(dirname(__DIR__).'/VERSION')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

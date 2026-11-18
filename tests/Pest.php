@@ -37,6 +37,7 @@ uses(TestCase::class, RefreshDatabase::class)->in('Browser');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/AccountManager');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Billing');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Applications');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature/Catalog');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Auth');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Domains');
 uses(TestCase::class, RefreshDatabase::class)->in('Feature/Organization');
@@ -269,6 +270,19 @@ function setupBillingDriver(string $driver): void
         Billing::register('fake', FakeBillingGateway::class);
         config(['billing.default' => 'fake']);
     }
+}
+
+/**
+ * The price stored for a plan component and currency: its amount, or the active
+ * billing driver's id for it ('price_id'). Reads the database row itself, so it
+ * does not fall back to another currency or to the flat settings the way
+ * Plan::priceFor() does.
+ */
+function storedPrice(\Illuminate\Database\Eloquent\Model $plan, string $component, string $currency, string $field = 'amount'): mixed
+{
+    $price = $plan->prices()->where('component', $component)->where('currency', $currency)->first();
+
+    return $field === 'price_id' ? $price?->externalId() : $price?->amount;
 }
 
 function setupRegistrarDriver(string $driver): void

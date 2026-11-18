@@ -230,15 +230,19 @@ class BulkEdit extends Controller
                 'trial_for' => (int) Arr::get($d, 'trial_for'),
             ];
 
-            foreach ($enabledCurrencies as $currency) {
-                foreach ($components as $component) {
-                    $planSettings["{$component}.prices.{$currency}.amount"] = Arr::get($d, "prices.{$component}.{$currency}.amount");
-                    $planSettings["{$component}.prices.{$currency}.price_id"] = Arr::get($d, "prices.{$component}.{$currency}.price_id");
-                }
-            }
-
             $plan->updateSettings($planSettings);
             $plan->save();
+
+            $prices = [];
+            foreach ($enabledCurrencies as $currency) {
+                foreach ($components as $component) {
+                    $prices[$component][$currency] = [
+                        'amount' => Arr::get($d, "prices.{$component}.{$currency}.amount"),
+                        'price_id' => Arr::get($d, "prices.{$component}.{$currency}.price_id"),
+                    ];
+                }
+            }
+            $plan->syncPrices($prices);
 
             if (Arr::get($d, 'default', false)) {
                 ApplicationFacade::plan($plan)->setDefault();
@@ -275,6 +279,7 @@ class BulkEdit extends Controller
         })->values();
 
         return inertia()->render('Admin/Applications/Plans/BulkEdit/BulkEditFeatures', [
+            'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
             'app' => $this->getAppData($app),
             'plans' => $formatted_plans,
             'plan_ids' => $plan_ids,
@@ -300,6 +305,9 @@ class BulkEdit extends Controller
         $request->validate([
             'plan_ids' => 'array',
             'plans.*.features' => 'array|nullable',
+            'plans.*.features.*.prices' => 'array|nullable',
+            'plans.*.features.*.prices.*.amount' => 'numeric|nullable',
+            'plans.*.features.*.prices.*.price_id' => 'string|max:50|nullable',
         ]);
 
         foreach ($plans as $plan) {

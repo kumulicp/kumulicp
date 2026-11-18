@@ -136,7 +136,7 @@ class Dashboard extends Controller
         ]);
     }
 
-    // Enabled app versions with a newer image tag or a compatible newer chart
+    // Enabled app versions with a newer tag for an image or a compatible newer chart
     private function appUpdates()
     {
         return AppVersion::where('status', 'active')
@@ -144,7 +144,7 @@ class Dashboard extends Controller
             ->with('application')
             ->get()
             ->map(fn (AppVersion $version) => ['version' => $version, 'updates' => $version->updateSummary()])
-            ->filter(fn (array $row) => $row['updates'] && ($row['updates']['image'] || $row['updates']['chart']))
+            ->filter(fn (array $row) => $row['updates'] && ($row['updates']['image'] || $row['updates']['images'] || $row['updates']['chart']))
             ->sortBy(fn (array $row) => $row['version']->application->name)
             ->map(fn (array $row) => [
                 'id' => $row['version']->id,
@@ -152,6 +152,7 @@ class Dashboard extends Controller
                 'name' => $row['version']->application->name,
                 'version' => $row['version']->name,
                 'image' => $row['updates']['image'],
+                'images' => $row['updates']['images'],
                 'chart_current' => $row['updates']['chart_current'],
                 'chart' => $row['updates']['chart'],
             ])

@@ -120,8 +120,8 @@ it('updates base price independently per plan', function () {
     $this->plan1->refresh();
     $this->plan2->refresh();
 
-    expect($this->plan1->settings['base']['prices']['USD']['amount'])->toBe(25);
-    expect($this->plan2->settings['base']['prices']['USD']['amount'])->toBe(75);
+    expect(storedPrice($this->plan1, 'base', 'USD'))->toEqual(25);
+    expect(storedPrice($this->plan2, 'base', 'USD'))->toEqual(75);
 });
 
 it('updates standard user settings per plan', function () {
@@ -149,8 +149,8 @@ it('updates standard user settings per plan', function () {
 
     expect($this->plan1->settings['standard']['max'])->toBe(20);
     expect($this->plan2->settings['standard']['max'])->toBe(50);
-    expect($this->plan1->settings['standard']['prices']['USD']['amount'])->toBe(8);
-    expect($this->plan2->settings['standard']['prices']['USD']['amount'])->toBe(15);
+    expect(storedPrice($this->plan1, 'standard', 'USD'))->toEqual(8);
+    expect(storedPrice($this->plan2, 'standard', 'USD'))->toEqual(15);
 });
 
 it('updates basic user settings per plan', function () {
@@ -542,4 +542,30 @@ it('redirects with plan ids after configurations update', function () {
     $response->assertRedirectContains('/plans/bulk-edit/configurations');
     $response->assertRedirectContains('plans[]='.$this->plan1->id);
     $response->assertRedirectContains('plans[]='.$this->plan2->id);
+});
+
+it('saves feature prices per currency, independently per plan', function () {
+    \App\Support\Facades\Settings::update('enabled_currencies', json_encode(['USD', 'CAD']));
+
+    $this->actingAs($this->user)->put(
+        "/admin/apps/{$this->demoApp->slug}/plans/bulk-edit/features",
+        [
+            'plan_ids' => [$this->plan1->id, $this->plan2->id],
+            'plans' => [
+                $this->plan1->id => ['features' => ['optional-feature' => ['status' => 'optional', 'prices' => [
+                    'USD' => ['amount' => 2, 'price_id' => 'usd_one'],
+                    'CAD' => ['amount' => 3, 'price_id' => 'cad_one'],
+                ]]]],
+                $this->plan2->id => ['features' => ['optional-feature' => ['status' => 'optional', 'prices' => [
+                    'USD' => ['amount' => 7, 'price_id' => 'usd_two'],
+                    'CAD' => ['amount' => '', 'price_id' => ''],
+                ]]]],
+            ],
+        ]
+    )->assertRedirect();
+
+    expect(storedPrice($this->plan1->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBe('cad_one');
+    expect(storedPrice($this->plan1->fresh(), 'feature.optional-feature', 'USD'))->toEqual(2);
+    expect(storedPrice($this->plan2->fresh(), 'feature.optional-feature', 'USD', 'price_id'))->toBe('usd_two');
+    expect(storedPrice($this->plan2->fresh(), 'feature.optional-feature', 'CAD', 'price_id'))->toBeNull();
 });

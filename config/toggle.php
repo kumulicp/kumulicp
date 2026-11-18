@@ -74,6 +74,8 @@ return [
         'app-backups' => env('TOGGLE_APP_BACKUPS', false),
         'domain-registrar' => env('TOGGLE_DOMAIN_REGISTRAR', false),
         'tickets' => env('TOGGLE_TICKETS', false),
+        'app-catalog' => env('TOGGLE_APP_CATALOG', false),
+        'helmforge' => env('TOGGLE_HELMFORGE', false),
     ],
 
     'database_flags' => [

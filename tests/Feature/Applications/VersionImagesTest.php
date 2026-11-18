@@ -231,3 +231,176 @@ it('backfills a primary image for versions that existed before the table', funct
         ->and(AppVersionImage::where('app_version_id', $blank_image)->exists())->toBeFalse()
         ->and(AppVersionImage::where('app_version_id', $no_settings)->exists())->toBeFalse();
 });
+
+// ─── What a chart is given ───────────────────────────────────────────────────
+
+it('writes only the components the version overrides, not its primary image, the chart\'s own or jobs\'', function () {
+    $version = imageVersion($this->application);
+
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'component']);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'shipped', 'source' => 'chart']);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'migrate', 'role' => 'job']);
+
+    expect($version->fresh()->extraImages()->pluck('key')->all())->toBe(['component']);
+});
+
+it('lists each registry login the version needs once, with its own first', function () {
+    $own = RepoSecret::factory()->create(['registry' => 'ghcr.io', 'username' => 'bot', 'password' => 'pw']);
+    $other = RepoSecret::factory()->create(['registry' => 'quay.io', 'username' => 'bot', 'password' => 'pw']);
+    $anonymous = RepoSecret::factory()->create(['registry' => 'docker.io']);
+
+    $version = imageVersion($this->application, [], ['image_registry_id' => $own->id]);
+
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'one', 'registry_secret_id' => $other->id, 'position' => 1]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'two', 'registry_secret_id' => $own->id, 'position' => 2]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'three', 'registry_secret_id' => $anonymous->id, 'position' => 3]);
+
+    expect($version->fresh()->imageRegistrySecrets()->pluck('id')->all())->toBe([$own->id, $other->id]);
+});
+
+it('gives a copy of a version its images, apart from the primary one', function () {
+    $source = imageVersion($this->application);
+    AppVersionImage::factory()->create(['app_version_id' => $source->id, 'key' => 'redis', 'repository' => 'library/redis', 'tag' => '8.0.1', 'position' => 1]);
+
+    $copy = AppVersion::factory()->create(['application_id' => $this->application->id, 'name' => '33.0.2']);
+    $copy->copyImagesFrom($source);
+
+    $images = $copy->fresh()->images;
+
+    expect($images->pluck('key')->all())->toBe(['redis'])
+        ->and($images->first()->repository)->toBe('library/redis')
+        ->and($images->first()->tag)->toBe('8.0.1')
+        ->and($images->first()->app_version_id)->toBe($copy->id)
+        // The source keeps its own
+        ->and($source->fresh()->images->pluck('key')->all())->toBe(['primary', 'redis']);
+});
+
+it('adds the images a profile recommends, once', function () {
+    $version = AppVersion::factory()->create(['application_id' => $this->application->id]);
+    $recommendations = ['images' => [
+        ['key' => 'imaginary', 'repository' => 'nextcloud/aio-imaginary', 'registry' => 'docker.io', 'tag' => '20261109_101109', 'values_path' => 'imaginary.image'],
+        ['key' => 'redis', 'repository' => 'library/redis', 'tag' => '8.0.1', 'values_path' => 'redis.image'],
+    ]];
+
+    $version->addRecommendedImages($recommendations);
+    $version->addRecommendedImages($recommendations);
+
+    $images = $version->fresh()->images;
+
+    expect($images->pluck('key')->all())->toBe(['imaginary', 'redis'])
+        ->and($images->first()->role)->toBe('component')
+        ->and($images->first()->source)->toBe('override')
+        ->and($images->pluck('position')->all())->toBe([1, 2]);
+});
+
+it('adds nothing when a profile recommends no other images', function () {
+    $version = AppVersion::factory()->create(['application_id' => $this->application->id]);
+
+    $version->addRecommendedImages(['image_repo' => 'library/nextcloud']);
+
+    expect($version->fresh()->images)->toHaveCount(0);
+});
+
+// ─── Registry secrets ────────────────────────────────────────────────────────
+
+it('counts the versions that use a registry secret through one of their images', function () {
+    $secret = RepoSecret::factory()->create();
+    $used = imageVersion($this->application);
+    imageVersion($this->application, [], ['name' => '33.0.2']);
+
+    AppVersionImage::factory()->create(['app_version_id' => $used->id, 'key' => 'redis', 'registry_secret_id' => $secret->id]);
+
+    expect($secret->versions()->pluck('id')->all())->toBe([$used->id]);
+});
+
+// ─── Nextcloud's imaginary image ─────────────────────────────────────────────
+
+it('gives every existing Nextcloud version its imaginary image, once, and no other app', function () {
+    $nextcloud = Application::factory()->create(['slug' => 'nextcloud']);
+    $first = AppVersion::factory()->create(['application_id' => $nextcloud->id, 'name' => '33.0.1']);
+    $second = AppVersion::factory()->create(['application_id' => $nextcloud->id, 'name' => '33.0.2']);
+    $other = AppVersion::factory()->create(['application_id' => $this->application->id]);
+
+    $migration = require base_path('database/migrations/2026_11_16_000001_add_imaginary_image_to_nextcloud_versions.php');
+    $migration->up();
+    $migration->up();
+
+    $image = $first->fresh()->images->firstWhere('key', 'imaginary');
+
+    expect($image->role)->toBe('component')
+        ->and($image->source)->toBe('override')
+        ->and($image->registry)->toBe('docker.io')
+        ->and($image->repository)->toBe('nextcloud/aio-imaginary')
+        ->and($image->tag)->toBe('20261109_101109')
+        ->and($image->values_path)->toBe('imaginary.image')
+        ->and($image->tag_from_version_name)->toBeFalse()
+        ->and($second->fresh()->images->where('key', 'imaginary'))->toHaveCount(1)
+        ->and($other->fresh()->images)->toHaveCount(0)
+        ->and(AppVersionImage::where('key', 'imaginary')->count())->toBe(2);
+});
+
+it('recommends the imaginary image the migration gave existing versions', function () {
+    $recommended = (new App\Integrations\Applications\Nextcloud\NextcloudProfile)->recommendations()['images'][0];
+
+    expect($recommended)->toMatchArray([
+        'key' => 'imaginary',
+        'registry' => 'docker.io',
+        'repository' => 'nextcloud/aio-imaginary',
+        'tag' => '20261109_101109',
+        'values_path' => 'imaginary.image',
+    ]);
+});
+
+// ─── Update check results ────────────────────────────────────────────────────
+
+function checkedImageVersion(Application $application): AppVersion
+{
+    $version = imageVersion($application, [], ['update_check' => [
+        'checked_at' => '2026-10-14T03:00:00+00:00',
+        'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+        'images' => [
+            'primary' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+            'imaginary' => ['current' => '20261109_101109', 'latest' => '20270101_000000', 'error' => null],
+        ],
+        'chart' => null,
+    ]]);
+
+    AppVersionImage::factory()->create([
+        'app_version_id' => $version->id,
+        'key' => 'imaginary',
+        'tag' => '20261109_101109',
+    ]);
+
+    return $version->fresh();
+}
+
+it('lists the other images with a newer tag than they run with, never the primary one', function () {
+    $version = checkedImageVersion($this->application);
+
+    expect($version->newerImageTags())->toBe([
+        ['key' => 'imaginary', 'label' => 'imaginary', 'current' => '20261109_101109', 'latest' => '20270101_000000'],
+    ])->and($version->newerImageTag())->toBe('33.0.2');
+});
+
+it('stops listing an image once it runs the tag that was found', function () {
+    $version = checkedImageVersion($this->application);
+
+    $version->images()->where('key', 'imaginary')->update(['tag' => '20270101_000000']);
+
+    expect($version->fresh()->newerImageTags())->toBe([]);
+});
+
+it('has nothing to list from a check made before images were checked', function () {
+    $version = imageVersion($this->application, [], ['update_check' => [
+        'checked_at' => '2026-10-14T03:00:00+00:00',
+        'image' => ['current' => '33.0.1', 'latest' => '33.0.2', 'error' => null],
+        'chart' => null,
+    ]]);
+    AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => 'imaginary']);
+
+    $summary = $version->fresh()->updateSummary();
+
+    expect($summary['images'])->toBe([])
+        ->and($summary['images_errors'])->toBe([])
+        ->and($summary['image'])->toBe('33.0.2');
+});

@@ -106,7 +106,7 @@ class Plans extends Controller
                 'id' => $plan->id,
                 'name' => $plan->name,
                 'description' => $plan->description,
-                'features' => $plan->displayFeatures(),
+                'features' => $plan->displayFeatures($organization->billingCurrency()),
                 'payment_enabled' => $plan->payment_enabled,
             ],
             'customizations' => collect($customizations)->map(function ($customization) {

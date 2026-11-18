@@ -127,6 +127,51 @@ import { currencyByCode } from '@/constants/currencies'
     <va-list-separator class="my-1" fit />
     </template>
     <AdminSettings>
+      <template #name>{{ $t('admin.plans.domainSettings') }}</template>
+      <template #settings>
+        <va-checkbox v-model="form.can_update_domain"
+          class="my-2"
+          id="canUpdateDomain"
+          :label="$t('admin.plans.canUpdateDomain')"
+          :messages="$t('admin.plans.canUpdateDomainMessage')"
+          immediateValidation
+          :error="$page.props.errors.can_update_domain"
+          :error-messages="$page.props.errors.can_update_domain"
+        />
+        <va-select v-model="form.domain_option"
+          :label="$t('admin.plans.domainTypeAllowed')"
+          :messages="$t('admin.plans.domainTypeAllowedMessage')"
+          class="my-2"
+          id="domainOption"
+          multiple
+          immediateValidation
+          :options="domain_options"
+          value-by="value"
+          text-by="text"
+          :error="$page.props.errors.domain_option"
+          :error-messages="$page.props.errors.domain_option"
+        />
+        <!-- A shared app's plan is never an addon to another app -->
+        <va-select
+          v-if="!plan.hidden"
+          v-model="form.parent_app"
+          :label="$t('admin.plans.parentApp')"
+          :messages="$t('admin.plans.parentAppMessage')"
+          immediateValidation
+          id="parentApp"
+          class="my-2"
+          :options="apps"
+          text-by="text"
+          value-by="value"
+          :placeholder="$t('admin.versions.none')"
+          clearable
+          :error="$page.props.errors.parent_app"
+          :error-messages="$page.props.errors.parent_app"
+        />
+      </template>
+    </AdminSettings>
+    <va-list-separator class="my-1" fit />
+    <AdminSettings>
       <template #name>{{ $t('admin.plans.serverSettings') }}</template>
       <template #settings>
         <p v-if="!plan.full_settings" class="my-2">
@@ -508,6 +553,7 @@ export default {
     database_servers: Object,
     sso_servers: Object,
     shared_apps: Object,
+    apps: Object,
     enabled_currencies: {
       type: Array,
       default: () => ['USD']
@@ -543,6 +589,12 @@ export default {
         { text: this.$t('admin.plans.perUser'), value: 'user' },
         { text: this.$t('admin.plans.addToBill'), value: 'addon' }
       ],
+      domain_options: [
+        { value: 'subdomains', text: this.$t('admin.plans.domainOptionSubdomains') },
+        { value: 'primary', text: this.$t('admin.plans.domainOptionPrimary') },
+        { value: 'base', text: this.$t('admin.plans.domainOptionBase') },
+        { value: 'parent', text: this.$t('admin.plans.domainOptionParent') }
+      ],
       serverTypes: [
         { text: this.$t('admin.plans.serverTypeSeparate'), value: 'separate' },
         { text: this.$t('admin.plans.serverTypeShared'), value: 'shared' }
@@ -557,6 +609,9 @@ export default {
         default: this.plan.is_default,
         domain_enabled: this.plan.domain_enabled,
         domain_max: this.plan.domain_max,
+        can_update_domain: this.plan.can_update_domain,
+        domain_option: this.plan.domain_option ?? [],
+        parent_app: this.plan.parent_app,
         base: {
           storage: this.plan.settings.base.storage,
           max: this.plan.settings.base.max

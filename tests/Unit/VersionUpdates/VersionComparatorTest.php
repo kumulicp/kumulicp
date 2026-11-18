@@ -37,3 +37,41 @@ it('only counts a stored candidate as newer when it still is', function () {
     expect($comparator->isNewer('9.0.6', '9.0.6'))->toBeFalse();
     expect($comparator->isNewer(null, '9.0.6'))->toBeFalse();
 });
+
+it('offers any newer tag when an image tracks', function () {
+    $tags = ['1.2.4', '1.3.0', '2.0.0'];
+
+    expect((new VersionComparator)->newerFor('1.2.3', $tags))->toBe(['2.0.0', '1.3.0', '1.2.4'])
+        ->and((new VersionComparator)->newestFor('1.2.3', $tags, 'track'))->toBe('2.0.0');
+});
+
+it('keeps to the same major and minor version for a patch policy', function () {
+    $tags = ['1.2.4', '1.2.9', '1.3.0', '2.0.0'];
+
+    expect((new VersionComparator)->newerFor('1.2.3', $tags, 'patch'))->toBe(['1.2.9', '1.2.4']);
+});
+
+it('keeps to the same major version for a minor policy', function () {
+    $tags = ['1.2.4', '1.3.0', '2.0.0'];
+
+    expect((new VersionComparator)->newerFor('1.2.3', $tags, 'minor'))->toBe(['1.3.0', '1.2.4']);
+});
+
+it('never offers a tag for a pinned or ignored image', function () {
+    $comparator = new VersionComparator;
+
+    expect($comparator->newerFor('1.2.3', ['1.2.4'], 'pinned'))->toBe([])
+        ->and($comparator->newestFor('1.2.3', ['1.2.4'], 'ignore'))->toBeNull();
+});
+
+it('compares dated tags and takes the newest of them', function () {
+    $tags = ['20261109_101109', '20270101_000000', '20261201_090000', 'latest'];
+
+    expect((new VersionComparator)->newestFor('20261109_101109', $tags))->toBe('20270101_000000');
+});
+
+it('keeps the suffix shape under a patch policy', function () {
+    $tags = ['8.0.2-debian-12-r0', '8.0.3-debian-12-r0', '8.1.0-debian-12-r0', '8.0.3'];
+
+    expect((new VersionComparator)->newerFor('8.0.1-debian-12-r1', $tags, 'patch'))->toBe(['8.0.3-debian-12-r0', '8.0.2-debian-12-r0']);
+});

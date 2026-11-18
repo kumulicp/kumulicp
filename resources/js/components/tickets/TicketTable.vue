@@ -43,7 +43,11 @@ function slaOf (ticket) {
           </td>
           <td>
             <Link :href="ticket.url">{{ ticket.subject }}</Link>
-            <div v-if="staff && ticket.organization" class="t-muted">{{ ticket.organization.name }}</div>
+            <div v-if="(staff && ticket.organization) || ticket.app_instance" class="t-muted">
+              <template v-if="staff && ticket.organization">{{ ticket.organization.name }}</template>
+              <template v-if="staff && ticket.organization && ticket.app_instance"> · </template>
+              <Link v-if="ticket.app_instance" :href="ticket.app_instance.url" class="t-app-link">{{ ticket.app_instance.label }}</Link>
+            </div>
           </td>
           <td>
             <div class="t-table__stack">
@@ -86,6 +90,7 @@ function slaOf (ticket) {
         </Link>
         <div class="t-ticket__meta t-muted">
           <span v-if="staff && ticket.organization"><b>{{ ticket.organization.name }}</b></span>
+          <Link v-if="ticket.app_instance" :href="ticket.app_instance.url" class="t-app-link">{{ ticket.app_instance.label }}</Link>
           <span>{{ $t('tickets.list.support') }}: {{ ticket.support_assignee?.name || $t('tickets.unassigned') }}</span>
           <span>{{ $t('tickets.list.assignedTo') }}: {{ ticket.customer_assignee?.name || '-' }}</span>
           <span>{{ formatDate(ticket.last_activity_at) }}</span>

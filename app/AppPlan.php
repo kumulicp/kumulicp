@@ -5,6 +5,7 @@ namespace App;
 use App\Enums\AccessType;
 use App\Enums\ApplicationSource;
 use App\Services\Application\PlanSecretsService;
+use App\Support\Billing\HasPlanPrices;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\Facades\Subscription;
@@ -41,6 +42,7 @@ use Illuminate\Support\Str;
 class AppPlan extends Model
 {
     use HasFactory;
+    use HasPlanPrices;
 
     private $app_instance;
 
@@ -139,7 +141,10 @@ class AppPlan extends Model
         ];
     }
 
-    public function displayFeatures()
+    /**
+     * @param  string|null  $currency  the currency the prices are shown in; the default currency when none is given
+     */
+    public function displayFeatures(?string $currency = null)
     {
         $basic_label = Subscription::base()->accessTypeLabel(AccessType::BASIC);
 
@@ -147,23 +152,23 @@ class AppPlan extends Model
             'prices' => collect([
                 [
                     'name' => 'Base Price',
-                    'description' => '$'.$this->setting('base.price'),
-                    'price' => $this->setting('base.price'),
+                    'description' => '$'.$this->amountFor('base', $currency),
+                    'price' => $this->amountFor('base', $currency),
                 ],
                 [
                     'name' => 'Users',
-                    'description' => '$'.$this->setting('standard.price').' per user',
-                    'price' => $this->setting('standard.price'),
+                    'description' => '$'.$this->amountFor('standard', $currency).' per user',
+                    'price' => $this->amountFor('standard', $currency),
                 ],
                 [
                     'name' => Str::plural(strtolower($basic_label)),
-                    'description' => '$'.$this->setting('basic.price').' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
-                    'price' => $this->setting('basic.price'),
+                    'description' => '$'.$this->amountFor('basic', $currency).' for every '.$this->setting('basic.amount').' '.Str::plural(strtolower($basic_label)),
+                    'price' => $this->amountFor('basic', $currency),
                 ],
                 [
                     'name' => 'Additional Storage',
-                    'description' => '$'.$this->setting('storage.price').' for every '.$this->setting('storage.amount').'GB',
-                    'price' => $this->setting('storage.price'),
+                    'description' => '$'.$this->amountFor('storage', $currency).' for every '.$this->setting('storage.amount').'GB',
+                    'price' => $this->amountFor('storage', $currency),
                 ],
             ])->filter(function ($feature) {
                 return ! empty($feature['description']) && ! empty($feature['price']);
@@ -210,81 +215,6 @@ class AppPlan extends Model
         return Arr::get($this->settings, "features.$name", null);
     }
 
-    /**
-     * Returns ['amount' => ..., 'price_id' => ...] for the given component and currency,
-     * falling back to the default currency then to the legacy flat price/price_id keys.
-     */
-    public function priceFor(string $component, string $currency): array
-    {
-        $amount = $this->setting("{$component}.prices.{$currency}.amount");
-        $priceId = $this->setting("{$component}.prices.{$currency}.price_id");
-
-        if ($priceId) {
-            return ['amount' => $amount, 'price_id' => $priceId];
-        }
-
-        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
-        if ($currency !== $defaultCurrency) {
-            $amount = $this->setting("{$component}.prices.{$defaultCurrency}.amount");
-            $priceId = $this->setting("{$component}.prices.{$defaultCurrency}.price_id");
-            if ($priceId) {
-                return ['amount' => $amount, 'price_id' => $priceId];
-            }
-        }
-
-        // Legacy flat format (pre-currency migration)
-        return [
-            'amount' => $this->setting("{$component}.price"),
-            'price_id' => $this->setting("{$component}.price_id"),
-        ];
-    }
-
-    /**
-     * Returns the Stripe price_id for an optional feature in the given currency,
-     * falling back to default currency then legacy flat price_id.
-     */
-    public function featurePriceId(string $featureName, string $currency): ?string
-    {
-        $priceId = Arr::get($this->settings, "features.{$featureName}.prices.{$currency}.price_id");
-        if ($priceId) {
-            return $priceId;
-        }
-
-        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
-        if ($currency !== $defaultCurrency) {
-            $priceId = Arr::get($this->settings, "features.{$featureName}.prices.{$defaultCurrency}.price_id");
-            if ($priceId) {
-                return $priceId;
-            }
-        }
-
-        // Legacy flat format
-        return Arr::get($this->settings, "features.{$featureName}.price_id");
-    }
-
-    /**
-     * Returns the amount for an optional feature in the given currency,
-     * falling back to default currency then legacy flat price.
-     */
-    public function featurePriceAmount(string $featureName, string $currency): mixed
-    {
-        $amount = Arr::get($this->settings, "features.{$featureName}.prices.{$currency}.amount");
-        if ($amount !== null) {
-            return $amount;
-        }
-
-        $defaultCurrency = SettingsFacade::get('default_currency', 'USD');
-        if ($currency !== $defaultCurrency) {
-            $amount = Arr::get($this->settings, "features.{$featureName}.prices.{$defaultCurrency}.amount");
-            if ($amount !== null) {
-                return $amount;
-            }
-        }
-
-        // Legacy flat format
-        return Arr::get($this->settings, "features.{$featureName}.price");
-    }
-
     public function setting($setting, $default = null)
     {
         return is_array($this->settings) ? Arr::get($this->settings, $setting, $default) : $default;
@@ -295,12 +225,55 @@ class AppPlan extends Model
         return (bool) $this->setting('self_registration_enabled');
     }
 
+    /**
+     * The kinds of domain an app on this plan can be reached at: subdomains, primary,
+     * base or parent.
+     *
+     * @return array<int, string>
+     */
+    public function domainOptions(): array
+    {
+        $options = $this->setting('domain_option', []);
+
+        return is_array($options) ? array_values($options) : [];
+    }
+
+    /**
+     * Determine whether the given domain type(s) are allowed for an app on this plan.
+     *
+     * @param  string|array<int, string>  $types
+     */
+    public function hasDomainOption($types): bool
+    {
+        return count(array_intersect((array) $types, $this->domainOptions())) > 0;
+    }
+
+    /**
+     * Whether the domain of an app on this plan can be changed once it is activated.
+     */
+    public function canUpdateDomain(): bool
+    {
+        return (bool) $this->setting('can_update_domain');
+    }
+
+    /**
+     * The app an app on this plan is an addon to (a CiviCRM in a WordPress), which has to be
+     * activated first.
+     */
+    public function parentApplication(): ?Application
+    {
+        $id = $this->setting('parent_app_id');
+
+        return $id ? Application::find($id) : null;
+    }
+
     // The settings that are safe to send to the browser: everything except the
     // plan's custom secrets (see PlanSecretsService), which only the server uses.
     /**
      * What the admin pages are shown. A plan not made through the admin form
      * (or one that was reset) can lack the pricing components, which the pages
-     * read directly, so each one is always present.
+     * read directly, so each one is always present. Prices live in plan_prices,
+     * so they are laid back over the settings in the shape the admin forms expect.
      *
      * @return array<string, mixed>
      */
@@ -312,7 +285,7 @@ class AppPlan extends Model
             $settings[$component] ??= [];
         }
 
-        return $settings;
+        return $this->overlayPrices($settings);
     }
 
     public function updateSetting($setting, $value)

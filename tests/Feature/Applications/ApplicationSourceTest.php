@@ -13,7 +13,7 @@ it('backfills the source of existing applications', function () {
     $migration->down();
 
     foreach (['nextcloud', 'added-in-ui'] as $slug) {
-        DB::table('applications')->insert(['name' => $slug, 'slug' => $slug, 'short_description' => '', 'description' => '', 'enabled' => 0, 'domain_option' => '[]']);
+        DB::table('applications')->insert(['name' => $slug, 'slug' => $slug, 'short_description' => '', 'description' => '', 'enabled' => 0]);
     }
 
     $migration->up();

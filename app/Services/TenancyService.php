@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\TenancyMode;
 use App\Organization;
+use App\Support\Facades\FastCache;
 use App\Support\Facades\Settings;
 
 class TenancyService
@@ -41,6 +42,44 @@ class TenancyService
     public function set(TenancyMode $mode): void
     {
         Settings::update(self::SETTING, $mode->value);
+    }
+
+    /**
+     * Change the mode of an installed control panel. What is cached per organization was
+     * built for the old mode (the menus, the plans), so it is cleared with the change.
+     */
+    public function switchTo(TenancyMode $mode): void
+    {
+        $this->set($mode);
+
+        FastCache::clearAll();
+    }
+
+    /**
+     * What stands in the way of this install being a single-organization one, in words an
+     * admin can act on. Empty when nothing does.
+     *
+     * @return list<string>
+     */
+    public function whySingleIsNotPossible(): array
+    {
+        $reasons = [];
+
+        // Version tests make organizations of their own, and the shared organization only hosts shared apps
+        $organizations = Organization::notTest()->where('type', '!=', 'shared')->get();
+
+        if ($organizations->count() !== 1) {
+            $reasons[] = "There must be exactly one organization, and there are {$organizations->count()}"
+                .($organizations->isEmpty() ? '.' : ': '.$organizations->pluck('name')->implode(', ').'. Delete the others first.');
+        } elseif ($organizations->first()->type !== 'superaccount') {
+            $reasons[] = "The organization \"{$organizations->first()->name}\" is not the administrator account made at install, so it can't be the one organization.";
+        }
+
+        if (Organization::where('type', 'shared')->whereHas('app_instances')->exists()) {
+            $reasons[] = 'Shared apps are running, and a single-organization install has none. Remove them first.';
+        }
+
+        return $reasons;
     }
 
     /**

@@ -7,6 +7,7 @@ use App\AppPlan;
 use App\Integrations\Applications\AppFeature;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application;
+use App\Support\Facades\Settings as SettingsFacade;
 use App\Support\SecretValue;
 use Illuminate\Support\Arr;
 
@@ -73,6 +74,7 @@ class AppPlanService
 
         $plan_settings = [];
         $app_features = Application::profile($this->plan->application->slug)->features();
+        $default_currency = SettingsFacade::get('default_currency', 'USD');
 
         foreach ($features as $name => $feature) {
             if (is_string($feature)) {
@@ -81,11 +83,13 @@ class AppPlanService
                 $status = $feature['status'];
             }
 
+            // The flat price is the default currency's: older plans, and anything that
+            // only knows one currency, read it
             $plan_settings[$name] = [
                 'name' => $name,
                 'status' => $status,
-                'price' => Arr::get($feature, 'price'),
-                'price_id' => Arr::get($feature, 'price_id'),
+                'price' => Arr::get($feature, "prices.{$default_currency}.amount", Arr::get($feature, 'price')),
+                'price_id' => Arr::get($feature, "prices.{$default_currency}.price_id", Arr::get($feature, 'price_id')),
                 'payment_type' => Arr::get($feature, 'payment_type'),
                 'settings' => $this->featureSettingsToStore($name, Arr::get($feature, 'settings') ?? [], $app_features[$name] ?? null),
             ];
@@ -94,6 +98,9 @@ class AppPlanService
                 $plan_changed = true;
             }
         }
+
+        // Prices are rows of their own, so a change to them is not in the settings compared above
+        $plan_changed = $this->plan->syncFeaturePrices($features) || $plan_changed;
 
         $this->plan->updateSetting('features', $plan_settings);
 
@@ -121,7 +128,7 @@ class AppPlanService
 
     public function basePrice()
     {
-        return $this->plan->setting('base.price');
+        return $this->plan->amountFor('base');
     }
 
     public function baseStorage()

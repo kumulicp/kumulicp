@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isMulti()
  * @method static bool isSingleOrganization(Organization $organization)
  * @method static void set(TenancyMode $mode)
+ * @method static void switchTo(TenancyMode $mode)
+ * @method static list<string> whySingleIsNotPossible()
  * @method static TenancyMode installerDefault()
  * @method static TenancyMode|null installerMode()
  * @method static Organization|null organization()

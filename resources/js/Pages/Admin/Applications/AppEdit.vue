@@ -42,6 +42,19 @@ import { Link, useForm } from '@inertiajs/vue3'
           :error="$page.props.errors.category"
           :error-messages="$page.props.errors.category"
           />
+        <va-select
+          v-model="form.tags"
+          :label="$t('admin.apps.tags')"
+          :messages="$t('admin.apps.tagsMessage')"
+          :options="tag_options"
+          id="tags"
+          class="my-2"
+          multiple
+          searchable
+          allow-create="unique"
+          :error="!!$page.props.errors.tags"
+          :error-messages="$page.props.errors.tags"
+          />
         <VaFileUpload
           v-model="form.image"
           :label="$t('admin.apps.image')"
@@ -68,60 +81,6 @@ import { Link, useForm } from '@inertiajs/vue3'
           :error="$page.props.errors.short_description"
           :error-messages="$page.props.errors.short_description"
           />
-      </template>
-    </AdminSettings>
-    <va-list-separator class="my-1" fit />
-    <AdminSettings>
-      <template #name>{{ $t('admin.apps.settings') }}</template>
-      <template #settings>
-        <va-checkbox v-model="form.can_update_domain"
-          :label="$t('admin.apps.canUpdateDomain')"
-          :messages="$t('admin.apps.canUpdateDomainMessage')"
-          immediateValidation
-          :error="$page.props.errors.can_update_domain"
-          :error-messages="$page.props.errors.can_update_domain"
-          />
-        <va-select v-model="form.domain_option"
-          :label="$t('admin.apps.domainTypeAllowed')"
-          :messages="$t('admin.apps.domainTypeAllowedMessage')"
-          class="my-2"
-          id="domainOption"
-          multiple
-          immediateValidation
-          :options="domain_options"
-          value-by="value"
-          text-by="text"
-          :error="$page.props.errors.domain_option"
-          :error-messages="$page.props.errors.domain_option"
-          />
-        <va-select
-          v-model="form.parent_app"
-          :label="$t('admin.apps.parentApp')"
-          :messages="$t('admin.apps.parentAppMessage')"
-          immediateValidation
-          id="parentApp"
-          class="my-2"
-          :options="apps"
-          text-by="text"
-          value-by="value"
-          :placeholder="$t('admin.versions.none')"
-          clearable
-          :error="$page.props.errors.parent_app"
-          :error-messages="$page.props.errors.parent_app"
-        />
-        <va-select
-          v-model="form.access_type"
-          :label="$t('admin.apps.accessType')"
-          :messages="$t('admin.apps.accessTypeMessage')"
-          immediateValidation
-          id="accessType"
-          class="my-2"
-          :options="access_types"
-          text-by="text"
-          value-by="value"
-          :error="$page.props.errors.access_type"
-          :error-messages="$page.props.errors.access_type"
-        />
       </template>
     </AdminSettings>
     <h4 class="va-h4">{{ $t('admin.apps.description') }}</h4>
@@ -160,9 +119,9 @@ export default {
   },
   props: {
     app: Object,
-    apps: Object,
     discover_url: String,
     readiness: Object,
+    tag_options: Array,
     errors: Object
   },
   data () {
@@ -171,27 +130,13 @@ export default {
         id: this.app.id,
         name: this.app.name,
         category: this.app.category,
+        tags: this.app.tags ?? [],
         image: this.app.image,
-        parent_app: this.app.parent_app.id,
-        access_type: this.app.access_type,
         short_description: this.app.short_description,
         description: this.app.description,
-        domain_option: this.app.domain_option ?? [],
-        can_update_domain: this.app.can_update_domain,
         screenshots: [],
         remove_screenshots: []
-      }),
-      access_types: [
-          { value: 'minimal', text: this.$t('admin.apps.accessTypeMinimal') },
-          { value: 'basic', text: this.$t('admin.apps.accessTypeBasic') },
-          { value: 'standard', text: this.$t('admin.apps.accessTypeStandard') }
-      ],
-      domain_options: [
-          { value: 'subdomains', text: this.$t('admin.apps.domainOptionSubdomains') },
-          { value: 'primary', text: this.$t('admin.apps.domainOptionPrimary') },
-          { value: 'base', text: this.$t('admin.apps.domainOptionBase') },
-          { value: 'parent', text: this.$t('admin.apps.domainOptionParent') }
-        ]
+      })
     }
   },
   computed: {

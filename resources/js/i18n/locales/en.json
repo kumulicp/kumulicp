@@ -430,6 +430,17 @@
       "transferDomains": "Transfer Domains",
       "transferDomainsMessage": "Organizations can transfer new domains",
       "maxDomains": "Max Domains",
+      "domainSettings": "Domain & Parent App",
+      "canUpdateDomain": "Can Update Domain",
+      "canUpdateDomainMessage": "Once app is activated, can domain name be changed?",
+      "domainTypeAllowed": "Domain Type Allowed",
+      "domainTypeAllowedMessage": "What kind of domain names are allowed",
+      "parentApp": "Parent App",
+      "parentAppMessage": "Some apps require another app to be active first",
+      "domainOptionSubdomains": "Subdomains",
+      "domainOptionPrimary": "Primary Domains",
+      "domainOptionBase": "System Provided Domain",
+      "domainOptionParent": "Parent Domain (Only use if this has a parent app set)",
       "maxEmails": "Max Email Accounts",
       "serverSettings": "Server Settings",
       "independentlyInstalled": "This app is independently installed and isn't managed by Kumuli CP.",
@@ -480,6 +491,16 @@
       "configurations": "Configurations",
       "persistentSetting": "Persistent Setting",
       "persistentSettingsNotice": "*Persistent settings will not change once a organization activates this app without manual intervention",
+      "showValuesPreview": "Show values preview",
+      "hideValuesPreview": "Hide values preview",
+      "valuesPreview": "Values preview",
+      "valuesPreviewSource": "Example rendered from {app} ({organization}).",
+      "valuesPreviewNotice": "Shows the Helm values with the settings as currently entered, including unsaved changes. Nothing is saved until you press Update.",
+      "valuesPreviewNoInstance": "There is no active instance of this app to render an example from yet.",
+      "generatePreview": "Generate preview",
+      "valuesPreviewNoVersion": "This app has no versions yet, so there is nothing to generate an example from.",
+      "valuesPreviewExampleSource": "Example rendered from a placeholder instance of the latest version (not deployed). It is removed when the first instance of this app is activated.",
+      "valuesPreviewFailed": "The example could not be generated with the current settings.",
       "persistentSettingMessage": "If true, this value will permenantly be applied to the activated app",
       "perUser": "Per User",
       "addToBill": "Add to Bill",
@@ -591,6 +612,9 @@
       "imageCheckFailed": "The image update check failed: {error}",
       "chartCheckFailed": "The chart update check failed: {error}",
       "imageBadge": "Image {latest}",
+      "otherImageBadge": "{image} {latest}",
+      "newerOtherImage": "A newer image is available for {image}: {latest} (currently {current}).",
+      "otherImageCheckFailed": "The update check for the {image} image failed: {error}",
       "chartBadge": "Chart {latest}",
       "chartBlockedBadge": "Chart {latest} incompatible",
       "lastChecked": "Checked {date}",
@@ -668,26 +692,11 @@
       "categoryMessage": "Broad category description to users know what the primary function of this app is",
       "image": "App Image",
       "imageMessage": "Will appear in the Discovery page with the app",
-      "canUpdateDomain": "Can Update Domain",
-      "canUpdateDomainMessage": "Once app is activated, can domain name be changed?",
-      "domainTypeAllowed": "Domain Type Allowed",
-      "domainTypeAllowedMessage": "What kind of domain names are allowed",
-      "parentApp": "Parent App",
-      "parentAppMessage": "Some apps require another app to be active first",
-      "accessType": "User Access Type",
-      "accessTypeMessage": "Standard: full price & full access > Basic: minimal pricing & limited access > Minimal: free users for cases where they need zero admin access",
-      "accessTypeMinimal": "Minimal - free users",
-      "accessTypeBasic": "Basic - minimal charge",
-      "accessTypeStandard": "Standard",
       "domainName": "Domain name",
-      "domainOptionSubdomains": "Subdomains",
-      "domainOptionPrimary": "Primary Domains",
-      "domainOptionBase": "System Provided Domain",
-      "domainOptionParent": "Parent Domain (Only use if this has a parent app set)",
       "aboutApp": "About App",
-      "settings": "Settings",
       "appWord": "App",
       "appsTitle": "Apps",
+      "capability": "Capability",
       "version": "Version",
       "chartVersion": "Helm Chart",
       "updatesAvailable": "Updates",
@@ -699,7 +708,16 @@
       "description": "Page Description",
       "screenshots": "Screenshots",
       "screenshotsMessage": "Shown on the app view and Discover pages",
-      "source": "Source"
+      "source": "Source",
+      "tags": "Tags",
+      "tagsMessage": "Keywords used to find and filter apps. Type a tag and press enter to add it.",
+      "search": "Search by name",
+      "filterStatusEnabled": "Enabled",
+      "filterStatusDisabled": "Disabled",
+      "filterStatusAll": "All",
+      "filterTags": "Filter by tags",
+      "resetFilters": "Reset filters",
+      "noApps": "No apps match these filters"
     },
     "backups": {
       "action": "Action",
@@ -2019,7 +2037,9 @@
       "merged_into": "{actor} merged this ticket into another",
       "reminder_sent": "A reminder was sent",
       "rated": "{actor} rated the support",
-      "message_redacted": "{actor} removed the content of a message"
+      "message_redacted": "{actor} removed the content of a message",
+      "app_changed": "{actor} set the related app to {name}",
+      "app_removed": "{actor} removed the related app"
     },
     "admin": {
       "title": "Tickets",
@@ -2051,7 +2071,8 @@
       "relatedToTicket": "this ticket",
       "recentTasks": "Recent tasks",
       "watchersHelp": "Customer colleagues and support staff who follow this ticket",
-      "manage": "Manage"
+      "manage": "Manage",
+      "ticketsForApp": "All tickets for this app"
     },
     "attachments": {
       "title": "Attachments",
@@ -2322,13 +2343,26 @@
       "retentionDays": "Delete closed tickets after (days)",
       "retentionHelp": "Permanently deletes closed tickets and their attachments.",
       "zeroOff": "0 turns it off.",
-      "more": "More"
+      "more": "More",
+      "appRules": {
+        "title": "By app",
+        "help": "Tickets about an app go to these people, in turn (or by fewest open tickets, as chosen above). Apps without a rule use the people listed above.",
+        "app": "App",
+        "people": "Who takes this app",
+        "add": "Add an app"
+      }
     },
     "list": {
       "people": "People",
       "support": "Support",
       "assignedTo": "Assigned to",
-      "filters": "Filters"
-    }
+      "filters": "Filters",
+      "allApps": "All apps",
+      "noApp": "No app"
+    },
+    "relatedAppHelp": "Which of your apps this is about, if any.",
+    "openApp": "Open {name}",
+    "getHelp": "Get help with this app",
+    "viewAppTickets": "Tickets for this app"
   }
 }

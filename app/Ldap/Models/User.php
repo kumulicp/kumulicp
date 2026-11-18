@@ -140,7 +140,7 @@ class User extends Entry implements Authenticatable
         if (count($roles) > 0) {
             foreach ($roles as $role) {
                 if ($group = AppRole::where('slug', $role['name'])->first()) {
-                    $has_parent = $group->application->parent_app_id;
+                    $has_parent = $group->application->hasParentApp();
                     if ($has_parent) {
                         $app = AppInstance::where('name', $role['app'])->first()?->children()->whereNotIn('name', $apps)->first();
                     } else {

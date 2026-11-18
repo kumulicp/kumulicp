@@ -230,16 +230,19 @@ class Chart
         );
     }
 
-    // The names of any imagePullSecrets required to pull the application's container image
+    // The names of any imagePullSecrets required to pull the application's container
+    // images: the version's own, and those of its other images
     public function imagePullSecrets(): array
     {
         $version = $this->app_instance->version;
 
-        if ($version && $version->requiresImageRegistryAuth()) {
-            return [$version->imageRegistry->k8sSecretName()];
+        if (! $version) {
+            return [];
         }
 
-        return [];
+        return $version->imageRegistrySecrets()
+            ->map(fn ($secret) => $secret->k8sSecretName())
+            ->all();
     }
 
     // The registry to pull the application's container image from

@@ -155,7 +155,7 @@ class Applications extends Controller
                 'id' => $app->primary_domain_id ?? 0,
                 'name' => $app->domain(),
                 // Whether the app is built to have its domain changed
-                'editable' => (bool) $app->application->can_update_domain,
+                'editable' => $app->plan->canUpdateDomain(),
                 // Whether changing it changes a running app, which restarts it
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),

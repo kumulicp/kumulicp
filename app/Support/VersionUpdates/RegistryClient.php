@@ -79,6 +79,25 @@ class RegistryClient
         return (array) $response->json();
     }
 
+    /**
+     * The digest a tag points at, as `docker pull` would pin it: for a
+     * multi-platform image that is the digest of its index.
+     */
+    public function digest(string $host, string $repository, string $reference): ?string
+    {
+        $response = $this->get("https://{$host}/v2/{$repository}/manifests/{$reference}", $repository, [
+            'Accept' => implode(', ', [
+                'application/vnd.oci.image.index.v1+json',
+                'application/vnd.docker.distribution.manifest.list.v2+json',
+                'application/vnd.oci.image.manifest.v1+json',
+                'application/vnd.docker.distribution.manifest.v2+json',
+            ]),
+        ]);
+        $response->throw();
+
+        return $response->header('Docker-Content-Digest') ?: null;
+    }
+
     public function blob(string $host, string $repository, string $digest): string
     {
         $response = $this->get("https://{$host}/v2/{$repository}/blobs/{$digest}", $repository);
