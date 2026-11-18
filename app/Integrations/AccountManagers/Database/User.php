@@ -5,6 +5,7 @@ namespace App\Integrations\AccountManagers\Database;
 use App\AppInstance;
 use App\AppRole;
 use App\Group as GroupModel;
+use App\Mailbox;
 use App\Organization;
 use App\Support\AccountManager\UserManager;
 use App\User as UserModel;
@@ -163,6 +164,7 @@ class User extends UserManager
     public function delete()
     {
         UserRecoveryEmail::where('username', $this->user->username)->delete();
+        Mailbox::where('username', $this->user->username)->delete();
 
         $this->user->delete();
     }

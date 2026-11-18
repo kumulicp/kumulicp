@@ -260,4 +260,87 @@ class MailboxServiceTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    // --- undoing
+
+    public function test_the_switch_can_be_undone_for_a_while()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->service->undo(AccountManager::users()->find('demo'), $mailbox->fresh());
+
+        $mailbox->refresh();
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertNull($this->recovery->get('demo'));
+        $this->assertSame(Mailbox::PENDING, $mailbox->status);
+        $this->assertNull($mailbox->previous_mail);
+        $this->assertSame(['demo'], $this->server->deleted);
+        Event::assertDispatched(MailboxDeactivated::class);
+    }
+
+    public function test_the_switch_cannot_be_undone_after_the_window()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+        $this->travel((int) config('email.undo_days') + 1)->days();
+
+        $this->assertFalse($mailbox->fresh()->canBeUndone());
+        $this->expectException(MailboxException::class);
+
+        $this->service->undo($this->manager, $mailbox->fresh());
+    }
+
+    public function test_hosting_the_address_a_user_already_had_has_nothing_to_undo()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->domain('example.com'), 'demo');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->assertFalse($mailbox->fresh()->canBeUndone());
+    }
+
+    // --- removing
+
+    public function test_removing_a_switched_mailbox_puts_the_user_back_on_their_recovery_email()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->service->remove(AccountManager::users()->find('demo'), $mailbox->fresh());
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertNull($this->recovery->get('demo'));
+        $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
+    }
+
+    public function test_removing_the_mailbox_of_someone_with_no_usable_recovery_email_leaves_their_email()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->domain('example.com'), 'demo');
+        $this->service->accept($this->manager, $mailbox);
+
+        $this->service->remove($this->manager, $mailbox->fresh());
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
+    }
+
+    public function test_removing_an_offer_only_deletes_it()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+
+        $this->service->remove($this->manager, $mailbox);
+
+        $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertSame([], $this->server->deleted);
+    }
+
+    public function test_a_users_mailboxes_go_when_the_user_does()
+    {
+        $this->service->offer($this->manager, $this->corp, 'jdoe');
+
+        $this->manager->delete();
+
+        $this->assertDatabaseCount('mailboxes', 0);
+    }
+
 }
