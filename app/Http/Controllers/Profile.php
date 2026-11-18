@@ -7,6 +7,12 @@ use App\Rules\ConfirmOldPassword;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
 use App\Rules\RecoveryEmail;
+use App\Mailbox;
+use App\Services\Email\MailboxService;
+use App\Support\Email\AppIdentity;
+use App\Support\Email\HostedDomains;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use App\Services\Email\RecoveryEmailService;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
@@ -18,6 +24,7 @@ class Profile extends Controller
     {
         $profile = auth()->user();
         $recovery_emails = app(RecoveryEmailService::class);
+        $mailbox = Mailbox::where('username', $profile->username)->where('status', Mailbox::ACTIVE)->first();
 
         return inertia('Organization/Profile/ProfileEdit', [
             'profile' => [
@@ -27,7 +34,10 @@ class Profile extends Controller
                 'personal_email' => $profile->email,
                 'phone_number' => $profile->phone_number,
                 'locale' => $profile->locale,
+                // With an organization address the email is that address, and only the recovery email is the person's to change
+                'has_mailbox' => $mailbox !== null,
             ],
+            'org_email' => $this->orgEmail($profile, $mailbox),
             'recovery' => [
                 'email' => $recovery_emails->get($profile->username),
                 'usable' => $recovery_emails->usable($profile->username, $profile->email) !== null,
@@ -37,20 +47,63 @@ class Profile extends Controller
         ]);
     }
 
+    /**
+     * What the profile needs to offer, show, accept or undo an organization address.
+     *
+     * @return array<string, mixed>
+     */
+    private function orgEmail($profile, ?Mailbox $active): array
+    {
+        $mailboxes = app(MailboxService::class);
+        $user = AccountManager::users()->find($profile->username);
+        $mailbox = $active ?? $mailboxes->forUser($profile->username);
+        $domains = $mailbox ? collect() : $profile->organization->domains()->emailEnabled()->get();
+
+        return [
+            'mailbox' => $mailbox ? [
+                'address' => $mailbox->address,
+                'status' => $mailbox->status,
+                'can_undo' => $mailbox->canBeUndone(),
+                'previous_mail' => $mailbox->canBeUndone() ? $mailbox->previous_mail : null,
+                'undo_until' => $mailbox->canBeUndone() ? $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))->toDayDateTimeString() : null,
+                // Whether accepting an offer changes the email, and what the person has to give
+                'plan' => $mailbox->status === Mailbox::PENDING && $user ? $mailboxes->plan($user, $mailbox) : null,
+            ] : null,
+            'can_get' => ! $mailbox && $domains->isNotEmpty() && Gate::allows('add-user-email-account', $profile->username),
+            'domains' => $domains->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
+            'default_name' => Str::lower($profile->username),
+            // When the email now is on a domain hosted here it can't become the recovery email
+            'current_hosted' => HostedDomains::isHosted($profile->email),
+            'apps' => collect($user ? $user->allUserApps() : [])
+                ->map(fn ($app) => ['name' => $app->label, 'identity' => AppIdentity::for($app)])
+                ->values(),
+        ];
+    }
+
     public function update(Request $request)
     {
         $user = auth()->user();
         $organization = $user->organization;
+        $has_mailbox = Mailbox::where('username', $user->username)->where('status', Mailbox::ACTIVE)->exists();
+
         /* Validate */
-        $validatedData = $request->validate([
+        $rules = [
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
-            'personal_email' => ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($user->username)],
             'phone_number' => [new MainContact($user, $organization)],
             'locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
-        ]);
+        ];
 
-        $user->email = $request->personal_email;
+        // The email of someone with an organization address is that address: it isn't edited here
+        if (! $has_mailbox) {
+            $rules['personal_email'] = ['email:rfc,filter', 'required', new AccountEmailChecks, new EmailAddressExists($user->username)];
+        }
+
+        $validatedData = $request->validate($rules);
+
+        if (! $has_mailbox) {
+            $user->email = $request->personal_email;
+        }
         $user->phone_number = $request->phone_number;
         $user->first_name = $request->first_name;
         $user->last_name = $request->last_name;

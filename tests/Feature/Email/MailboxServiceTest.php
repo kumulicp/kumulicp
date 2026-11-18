@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Email;
 
+use App\Enums\AccessType;
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
 use App\Events\Users\UserUpdated;
@@ -343,4 +344,18 @@ class MailboxServiceTest extends TestCase
         $this->assertDatabaseCount('mailboxes', 0);
     }
 
+    // --- who may have one
+
+    public function test_only_standard_users_count_as_standard()
+    {
+        $user = User::where('username', 'demo')->first();
+        $user->forceFill(['access_type' => AccessType::STANDARD])->save();
+
+        $this->assertTrue(AccountManager::users()->find('demo')->isUserAccessType('standard'));
+        $this->assertFalse(AccountManager::users()->find('demo')->isUserAccessType('basic'));
+
+        $user->forceFill(['access_type' => AccessType::NONE])->save();
+
+        $this->assertFalse(AccountManager::users()->find('demo')->isUserAccessType('standard'));
+    }
 }

@@ -83,7 +83,8 @@ class User extends UserManager
 
     public function isUserAccessType(string $type)
     {
-        return $this->userAccessType() === $type;
+        // userAccessType() is an AccessType, never the string: compare what it stands for
+        return $this->userAccessType()?->value === $type;
     }
 
     public function update(array $data)

@@ -53,7 +53,8 @@ class ProfileRecoveryEmailTest extends TestCase
             ->component('Organization/Profile/ProfileEdit')
             ->where('recovery.email', 'backup@gmail.com')
             ->where('recovery.usable', true)
-            ->where('recovery.pending', null));
+            ->where('recovery.pending', null)
+            ->where('profile.has_mailbox', false));
     }
 
     public function test_asking_for_a_recovery_email_sends_a_confirmation_and_needs_the_password()
@@ -144,6 +145,32 @@ class ProfileRecoveryEmailTest extends TestCase
         $url = URL::temporarySignedRoute('profile.recovery.confirm', now()->addHour(), ['hash' => sha1('nobody@gmail.com')]);
 
         $this->get($url)->assertRedirect('/profile')->assertSessionHas('error');
+    }
+
+    public function test_someone_with_an_organization_address_cannot_change_it_from_the_profile()
+    {
+        $this->giveMailbox();
+        $before = $this->user->email;
+
+        $response = $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'sneaky@gmail.com',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame($before, $this->user->fresh()->email);
+    }
+
+    public function test_someone_without_an_organization_address_still_edits_their_email_there()
+    {
+        $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'changed@example.com',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('changed@example.com', $this->user->fresh()->email);
     }
 
     public function test_the_reminder_is_shown_to_someone_with_an_organization_address_and_no_recovery_email()
