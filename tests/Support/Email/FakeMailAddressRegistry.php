@@ -15,10 +15,18 @@ class FakeMailAddressRegistry implements MailAddressRegistry
     /** @var array<int, string> Every address that was asked about */
     public array $asked = [];
 
-    public function inUse(string $address): bool
+    /** @var array<string, string> The user an address belongs to, by address, for the ones that do */
+    public array $owners = [];
+
+    public function inUse(string $address, ?string $except_username = null): bool
     {
         $this->asked[] = $address;
+        $address = strtolower($address);
 
-        return in_array(strtolower($address), $this->taken, true);
+        if ($except_username !== null && ($this->owners[$address] ?? null) === $except_username) {
+            return false;
+        }
+
+        return in_array($address, $this->taken, true);
     }
 }
