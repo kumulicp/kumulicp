@@ -148,6 +148,7 @@ return [
             'exists' => ":email doesn't exist.",
             'glitch' => ':email failed to be created due to a glitch with our server. We will work to resolve the issue immediately.',
             'delete' => "You don't have permission to delete this email account",
+            'forwarders' => "Forwarding isn't available on this mail server.",
         ],
     ],
     'suborganization' => [

@@ -145,6 +145,7 @@ return [
             'exists' => ':email no existe.',
             'glitch' => ':email no pudo ser creado debido a un fallo con nuestro servidor. Trabajaremos para resolver el problema de inmediato.',
             'delete' => 'No tienes permiso para eliminar esta cuenta de correo',
+            'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
         ],
     ],
     'suborganization' => [

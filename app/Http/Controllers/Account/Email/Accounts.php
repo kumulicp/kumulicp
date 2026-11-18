@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Account\Email;
 use App\Http\Controllers\Controller;
 use App\Ldap\Models\Email;
 use App\OrgDomain;
-use App\Rules\LdapEmailNotExists;
+use App\Rules\EmailLocalPart;
+use App\Rules\MailAddressAvailable;
 use App\Rules\OrgDomainName;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
@@ -53,7 +54,7 @@ class Accounts extends Controller
         /* Validate */
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'email' => ['required', 'alpha_num', new LdapEmailNotExists],
+            'email' => ['required', 'string', new EmailLocalPart, new MailAddressAvailable],
             'domain' => ['required', 'integer', new OrgDomainName],
             'password' => 'required|confirmed',
         ]);
@@ -93,9 +94,7 @@ class Accounts extends Controller
         Gate::authorize('edit-email-settings');
 
         $organization = Organization::account();
-        $email_parts = explode('@', $email_address);
-        $domain_name = $email_parts[1];
-        $domain = $organization->domains()->where('name', $domain_name)->first();
+        $domain = $this->ownDomain($organization, $email_address);
 
         if (! $domain) {
             return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.exists', ['email' => $email_address]));
@@ -113,7 +112,7 @@ class Accounts extends Controller
                 domain: $domain,
                 name: $validated['name'],
                 address: $email_address,
-                password: $validated['password'],
+                password: $validated['password'] ?? null,
             );
         }
 
@@ -126,18 +125,33 @@ class Accounts extends Controller
             return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.delete'));
         }
 
-        $email_address = explode('@', $email)[1];
+        $email_domain = $this->ownDomain(Organization::account(), $email);
 
-        $organization = Organization::account();
-        $email_domain = $organization->domains()->where('name', $email_address)->first();
+        // Not one of this organization's domains, or not an address at all: there is nothing to connect to
+        if (! $email_domain) {
+            return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.exists', ['email' => $email]));
+        }
+
         $email_server = Domain::connect($email_domain, 'email');
 
-        if ($email_domain) {
-            if ($email_server->existsEmail($email_domain, $email)) {
-                $email_server->deleteEmail($email_domain, $email);
-            }
+        if ($email_server->existsEmail($email_domain, $email)) {
+            $email_server->deleteEmail($email_domain, $email);
         }
 
         return redirect('/settings/email/accounts')->with('success', __('organization.email.deleted', ['email' => $email]));
+    }
+
+    /**
+     * The organization's domain an address belongs to, if it has one.
+     */
+    private function ownDomain($organization, string $email_address): ?OrgDomain
+    {
+        $parts = explode('@', $email_address);
+
+        if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '') {
+            return null;
+        }
+
+        return $organization->domains()->where('name', $parts[1])->first();
     }
 }

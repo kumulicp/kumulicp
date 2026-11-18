@@ -93,6 +93,7 @@ return [
         'domain_available' => 'El formato de tu dominio es incorrecto. (Ejemplo: example.com)',
         'domain_name' => 'Debe ser un dominio estándar (example.com). Si crees que tu dominio debería funcionar, haz clic en el signo de interrogación en la parte superior',
         'domain_name_required' => 'Se requiere el nombre de dominio',
+        'email_local_part' => 'Usa letras minúsculas y números, con puntos, guiones o guiones bajos sueltos entre ellos (por ejemplo jane.doe). Hasta 64 caracteres.',
         'email_address_exists' => 'Este correo ya está siendo usado por otro usuario',
         'group_name_not_used' => 'El nombre del grupo ya existe',
         'main_contact' => 'Se requiere número de teléfono para los contactos principales',

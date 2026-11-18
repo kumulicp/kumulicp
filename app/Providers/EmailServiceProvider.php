@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\EmailForwarder;
+use App\Ldap\LdapMailAddressRegistry;
 use App\Ldap\LdapRecoveryEmailDirectory;
 use App\OrgDomain;
+use App\Services\Email\MailAddressRegistry;
 use App\Services\Email\RecoveryEmailDirectory;
 use App\Services\EmailService;
 use App\Support\Facades\AccountManager;
@@ -34,6 +36,9 @@ class EmailServiceProvider extends ServiceProvider
 
         // Where a recovery email is mirrored to when LDAP is in use. Tests replace it with a fake.
         $this->app->bind(RecoveryEmailDirectory::class, LdapRecoveryEmailDirectory::class);
+
+        // Who holds a mail address already. The directory answers until the mailbox tables exist.
+        $this->app->bind(MailAddressRegistry::class, LdapMailAddressRegistry::class);
     }
 
     /**
