@@ -1679,6 +1679,39 @@
     "passed": "Aprobado",
     "failed": "Fallido"
   },
+  "orgEmailFlow": {
+    "title": "Correo de la organización",
+    "none": "Inicias sesión con {email}.",
+    "get": "Obtener un correo de la organización",
+    "offered": "Se te ha ofrecido {address}.",
+    "review": "Revisar y aceptar",
+    "active": "Inicias sesión con {address}.",
+    "activeSince": "Tu correo de recuperación se encarga de los restablecimientos de contraseña desde aquí.",
+    "undoUntil": "Puedes volver a {email} hasta el {date}.",
+    "undo": "Volver atrás",
+    "undoWarning": "Las cuentas que tus aplicaciones ya hayan creado para tu nueva dirección no se revierten.",
+    "domain": "Dominio",
+    "name": "Nombre",
+    "address": "Tu nueva dirección: {address}",
+    "sameAddress": "Es el correo con el que ya inicias sesión. No cambia nada de tu inicio de sesión: solo pasa a estar alojado aquí.",
+    "willChange": "A partir de ahora inicias sesión en este panel y en tus aplicaciones con {address}. {current} dejará de funcionar para iniciar sesión.",
+    "becomesRecovery": "{current} pasa a ser tu correo de recuperación. Solo se usa para enviar un enlace de restablecimiento de contraseña.",
+    "keepsRecovery": "Tu correo de recuperación, {recovery}, se queda como está y {current} dejará de usarse.",
+    "needsRecovery": "{current} está en un dominio alojado aquí, así que no puede recuperar tu cuenta. Indica un correo de recuperación en otro proveedor:",
+    "recoveryEmail": "Correo de recuperación",
+    "appsTitle": "Tus aplicaciones",
+    "appsIntro": "Algunas aplicaciones usan tu correo como identidad de tu cuenta. Si es así, en tu próximo inicio de sesión pueden crear una cuenta nueva y vacía en lugar de encontrar la tuya. Cambia tu correo dentro de esas aplicaciones primero, o prepárate para hacerlo.",
+    "noApps": "Todavía no tienes aplicaciones, así que no se afecta nada más.",
+    "identity": {
+      "stable": "Te reconoce por un identificador estable. No hay nada que hacer.",
+      "email": "Te identifica por tu correo. Cambia el correo de tu cuenta allí en cuanto cambies.",
+      "unknown": "No sabemos cómo te identifica. Compruébalo antes de continuar."
+    },
+    "acknowledge": "Lo entiendo y revisaré mis aplicaciones.",
+    "confirm": "Cambiar mi correo",
+    "confirmSame": "Alojar esta dirección aquí",
+    "accept": "Aceptar"
+  },
   "recoveryEmail": {
     "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de la de tu organización.",
     "reminderAction": "Añadir un correo de recuperación",
@@ -1690,7 +1723,9 @@
     "add": "Añadir",
     "change": "Cambiar",
     "newAddress": "Nuevo correo de recuperación",
-    "save": "Enviar enlace de confirmación"
+    "save": "Enviar enlace de confirmación",
+    "signInEmail": "Correo electrónico",
+    "signInEmailHint": "Es el correo con el que inicias sesión. Viene con tu dirección de la organización y se cambia desde allí."
   },
   "orgEmail": {
     "title": "Correo electrónico",
