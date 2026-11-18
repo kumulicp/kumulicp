@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import PasswordChecker from '@/components/FormInputs/PasswordChecker.vue'
+import OrgEmailCard from '@/components/OrgEmailCard.vue'
 import i18n from '@/i18n'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
@@ -14,6 +15,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
   <Head>
     <title>{{ $t('organization.profile.profile') }} - Control Panel</title>
   </Head>
+  <org-email-card :org-email="org_email" :current-email="profile.personal_email" :recovery="recovery" />
   <va-card class="mb-4">
     <va-card-title>{{ $t('organization.profile.editProfile') }}</va-card-title>
     <va-card-content>
@@ -97,11 +99,15 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           <va-list-item class="pb-3">
             <va-list-item-section label>
               <va-list-item-label>
-                <h5>{{ $t('organization.users.personalEmail') }}:</h5>
+                <h5>{{ profile.has_mailbox ? $t('recoveryEmail.signInEmail') : $t('organization.users.personalEmail') }}:</h5>
               </va-list-item-label>
             </va-list-item-section>
             <va-list-item-section>
-              <va-list-item-label>
+              <va-list-item-label v-if="profile.has_mailbox">
+                <div id="signInEmail">{{ profile.personal_email }}</div>
+                <small class="va-text-secondary">{{ $t('recoveryEmail.signInEmailHint') }}</small>
+              </va-list-item-label>
+              <va-list-item-label v-else>
                 <va-input v-model="form.personal_email"
                   id="personalEmail"
                   immediateValidation
@@ -292,6 +298,7 @@ export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
     profile: Object,
+    org_email: Object,
     recovery: Object,
     locales: Object,
     errors: Object
