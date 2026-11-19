@@ -27,11 +27,20 @@ class ProfileRecoveryEmailTest extends TestCase
     {
         parent::setUp();
 
+        // The directory outlives the database rollback: clear what an earlier run left so the demo user is seeded as it should be
+        (new TestSupports)->cleanLdap();
         (new TestSupports)->seed();
         $this->user = User::where('username', 'demo')->firstOrFail();
         $this->actingAs($this->user);
         $this->app->instance(RecoveryEmailDirectory::class, new FakeRecoveryEmailDirectory);
         $this->service = $this->app->make(RecoveryEmailService::class);
+    }
+
+    protected function tearDown(): void
+    {
+        (new TestSupports)->cleanLdap();
+
+        parent::tearDown();
     }
 
     private function giveMailbox(): void

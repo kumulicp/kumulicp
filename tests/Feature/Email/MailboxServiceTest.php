@@ -19,6 +19,7 @@ use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Domain;
 use App\User;
+use App\UserRecoveryEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -168,7 +169,7 @@ class MailboxServiceTest extends TestCase
 
         $this->service->accept($this->manager, $mailbox);
 
-        $this->assertNotNull(\App\UserRecoveryEmail::where('username', 'demo')->first()->verified_at);
+        $this->assertNotNull(UserRecoveryEmail::where('username', 'demo')->first()->verified_at);
         $this->assertSame(
             ['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org', 'recovery_missing' => false],
             UserEmails::for(AccountManager::users()->find('demo')),
@@ -224,14 +225,19 @@ class MailboxServiceTest extends TestCase
         $this->domain('example.com', 'active');
         $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
 
-        foreach (['someone@corp.org', 'jdoe@corp.org', 'demo@example.com', ''] as $bad) {
+        $bad_addresses = ['someone@corp.org', 'jdoe@corp.org', 'demo@example.com', ''];
+        $refused = 0;
+
+        foreach ($bad_addresses as $bad) {
             try {
                 $this->service->accept($this->manager, $mailbox, $bad);
                 $this->fail("$bad should have been refused");
             } catch (RecoveryEmailRequired) {
-                // expected
+                $refused++;
             }
         }
+
+        $this->assertSame(count($bad_addresses), $refused);
     }
 
     public function test_a_recovery_email_given_at_another_provider_is_used()
