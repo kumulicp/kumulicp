@@ -1727,6 +1727,20 @@
     "confirmSame": "Host this address here",
     "accept": "Accept"
   },
+  "domainReadiness": {
+    "title": "Before you switch this domain's DNS",
+    "intro": "Switching the DNS of {domain} to this server moves every address on it at once. Check this first.",
+    "ready": "Everyone whose email is on this domain has a mailbox waiting.",
+    "notReady": "{count} users with an email on this domain have no mailbox here yet. Their mail would bounce after the switch.",
+    "withoutMailbox": "No mailbox yet",
+    "cannotHave": "cannot be given a mailbox",
+    "andMore": "and {count} more",
+    "offerAll": "Offer them the address they already have",
+    "recoveryTitle": "Recovery emails on this domain",
+    "recoveryText": "These users reset their password at an address on this domain. It stops being a place to receive one once the mail moves, so ask them to change it.",
+    "offersWaiting": "{count} offers are waiting. They can be accepted once the domain is live.",
+    "history": "Existing mail is not copied from the old provider. Copy it across before you switch."
+  },
   "recoveryEmail": {
     "reminder": "Add a recovery email. If you forget your password, the reset link can only reach you at an address other than your login email.",
     "missingBadge": "No recovery email",

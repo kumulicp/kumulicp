@@ -90,6 +90,7 @@ return [
         'reactivated' => ':domain ha sido reactivado',
         'self_managed' => ':domain se ha configurado para ser autogestionado por ti. Ten en cuenta: no podrás usar este nombre de dominio hasta que confirmemos que este dominio apunta al servidor correcto',
         'enable_email' => 'El correo ha sido habilitado para :domain',
+        'mailboxes_offered' => ':count usuarios recibieron la dirección que ya tienen. No cambia nada para ellos hasta que este dominio esté activo y la acepten.',
         'request_transfer' => 'Tu solicitud de transferencia ha sido enviada. Nos pondremos en contacto contigo de inmediato con tu código Auth/EPP',
         'transferring' => ':domain está siendo transferido',
         'registered' => ':domain ha sido agregado',

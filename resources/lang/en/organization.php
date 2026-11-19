@@ -91,6 +91,7 @@ return [
         'removed' => ':domain has been removed',
         'self_managed' => ":domain has been set to be self managed by you. Please note: you cannot use this domain name until we've confirmed this domain is going to the correct server",
         'enable_email' => 'Email has been enabled for :domain',
+        'mailboxes_offered' => ':count users were offered the address they already have. Nothing changes for them until this domain is live and they accept.',
         'request_transfer' => "You're transfer request has been submitted. We'll get back to you right away with you Auth/EPP code",
         'transferring' => ':domain is being transfered',
         'registered' => ':domain has been added',

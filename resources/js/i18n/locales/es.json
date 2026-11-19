@@ -1724,6 +1724,20 @@
     "confirmSame": "Alojar esta dirección aquí",
     "accept": "Aceptar"
   },
+  "domainReadiness": {
+    "title": "Antes de cambiar el DNS de este dominio",
+    "intro": "Cambiar el DNS de {domain} a este servidor mueve todas sus direcciones a la vez. Compruebe esto primero.",
+    "ready": "Todos los usuarios con correo en este dominio tienen un buzón esperando.",
+    "notReady": "{count} usuarios con correo en este dominio aún no tienen un buzón aquí. Su correo rebotaría tras el cambio.",
+    "withoutMailbox": "Aún sin buzón",
+    "cannotHave": "no puede tener un buzón",
+    "andMore": "y {count} más",
+    "offerAll": "Ofrecerles la dirección que ya tienen",
+    "recoveryTitle": "Correos de recuperación en este dominio",
+    "recoveryText": "Estos usuarios restablecen su contraseña en una dirección de este dominio. Deja de servir para recibir uno cuando el correo se mueva, así que pídales que lo cambien.",
+    "offersWaiting": "{count} ofertas están esperando. Podrán aceptarse cuando el dominio esté activo.",
+    "history": "El correo existente no se copia del proveedor anterior. Cópielo antes de cambiar."
+  },
   "recoveryEmail": {
     "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de tu correo de inicio de sesión.",
     "missingBadge": "Sin correo de recuperación",

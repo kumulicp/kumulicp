@@ -452,6 +452,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::post('self_manage', 'Account\Web\Domains@self_manage')->name('organization.settings.web.domains.self_manage');
                 Route::post('transfer_in', 'Account\Web\Domains@transfer_in')->name('organization.settings.web.domains.transfer_in');
                 Route::post('enable_email', 'Account\Web\Domains@enable_email')->name('organization.settings.web.domains.enable_email');
+                Route::post('offer_mailboxes', 'Account\Web\Domains@offer_mailboxes')->name('organization.settings.web.domains.offer_mailboxes');
             });
         });
         Route::prefix('email')->middleware('toggle:emails')->group(function () {
