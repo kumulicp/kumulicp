@@ -14,7 +14,7 @@ jobs:
     env:
       TELESCOPE_ENABLED: false
     steps:
-    - uses: shivammathur/setup-php@9a96576163ad88ed6f6f2cbf381c5229baf95677
+    - uses: shivammathur/setup-php@fe5270568102475220b7dc4b1735ec3432a1944f
       with:
         php-version: '8.4'
         ini-values: memory_limit=1G
@@ -74,7 +74,7 @@ jobs:
       run: php artisan test --testsuite=Browser
     - name: Upload failure screenshots
       if: failure()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
         name: browser-test-screenshots
         path: tests/Browser/Screenshots
