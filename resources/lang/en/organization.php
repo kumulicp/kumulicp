@@ -155,6 +155,7 @@ return [
             'has_one' => 'This user already has a login email, or one waiting to be accepted. Remove it before choosing another.',
             'taken' => ':email is already taken. Choose another name.',
             'not_pending' => 'There is no login email waiting to be accepted.',
+            'domain_not_ready' => 'Email on :domain is still being set up. You can accept once it is ready.',
             'recovery_required' => "Your current email is on a domain hosted here, so it can't recover your account. Give a recovery email at another provider first.",
             'undo_expired' => "It is too late to switch back, or there is nothing to switch back from.",
             'failed' => 'The login email could not be set up. Nothing was changed. Try again, and tell support if it keeps happening.',

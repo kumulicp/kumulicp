@@ -36,6 +36,9 @@ class OrgDomain extends Model
 {
     use HasFactory;
 
+    /** The email_status values of a domain whose email is being set up and does not receive mail here yet */
+    public const EMAIL_ACTIVATING = ['activating', 'waiting_dns'];
+
     protected $table = 'org_domains';
 
     protected $casts = [
@@ -147,5 +150,24 @@ class OrgDomain extends Model
     public function scopeEmailActive($query)
     {
         return $query->where('email_status', 'active');
+    }
+
+    /**
+     * Domains an administrator can offer mailboxes on: the ones with email on, and the ones
+     * whose email is still being set up (the offers wait until the domain is live).
+     */
+    public function scopeEmailOfferable($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('email_enabled', 1)->orWhereIn('email_status', self::EMAIL_ACTIVATING);
+        });
+    }
+
+    /**
+     * Whether email is being set up but the domain does not receive mail here yet.
+     */
+    public function emailIsBeingActivated(): bool
+    {
+        return in_array($this->email_status, self::EMAIL_ACTIVATING, true);
     }
 }

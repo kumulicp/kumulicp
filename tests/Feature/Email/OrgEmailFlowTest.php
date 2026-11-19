@@ -260,6 +260,32 @@ class OrgEmailFlowTest extends TestCase
             ->where('user.can.add_email_account', false));
     }
 
+    public function test_an_administrator_can_offer_on_a_domain_being_activated_and_the_user_waits_for_it()
+    {
+        $soon = OrgDomain::factory()->create([
+            'organization_id' => $this->user->organization->id,
+            'name' => 'soon.org',
+            'status' => 'active',
+            'email_enabled' => false,
+            'email_status' => 'activating',
+        ]);
+
+        $this->get('/users/demo/edit')->assertInertia(fn ($page) => $page
+            ->where('email_domains.0.activating', false)
+            ->where('email_domains.1.name', 'soon.org')
+            ->where('email_domains.1.activating', true));
+
+        $this->get('/users/demo/create/accountemail/'.$soon->id)->assertSessionHas('success');
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page
+            ->where('org_email.mailbox.address', 'demo@soon.org')
+            ->where('org_email.mailbox.domain_ready', false));
+
+        $this->post('/profile/org-email/accept', ['current_password' => 'demouser', 'acknowledge' => true])
+            ->assertSessionHas('error');
+        $this->assertSame('demo@example.com', $this->email());
+    }
+
     public function test_an_administrator_cannot_edit_the_email_of_someone_who_has_an_organization_address()
     {
         $this->post('/profile/org-email', $this->payload());
