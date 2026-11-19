@@ -69,7 +69,7 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - uses: shivammathur/setup-php@9a96576163ad88ed6f6f2cbf381c5229baf95677
+      - uses: shivammathur/setup-php@fe5270568102475220b7dc4b1735ec3432a1944f
         with:
           php-version: '8.4'
           ini-values: memory_limit=512M
