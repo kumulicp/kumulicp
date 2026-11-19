@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Account;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Services\UserPermissionsService;
-use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Subscription;
 use Illuminate\Http\Request;
@@ -20,35 +19,20 @@ class Permissions extends Controller
 
         Gate::authorize('edit-user', $user);
 
-        $organization = Organization::account();
-
-        $organizations = collect([$organization])->merge($organization->suborganizations);
-
-        $user_access_types = Subscription::base()->availableAccessTypesForUser($user);
-
-        $user_emails = UserEmails::for($user);
+        $username = $user->attribute('username');
+        $name = $user->attribute('name');
 
         return inertia('Organization/Users/UserPermissions', [
             'permissions' => $user->permissions()->get(),
             'user' => [
-                'id' => $user->attribute('username'),
-                'name' => $user->attribute('name'),
-                'first_name' => $user->attribute('first_name'),
-                'last_name' => $user->attribute('last_name'),
-                'phone_number' => $user->attribute('phone_number'),
-                'personal_email' => $user_emails['personal_email'],
-                'org_email' => $user_emails['org_email'],
+                'id' => $username,
+                'name' => $name,
                 'access_type' => $user->userAccessType(),
-                'url' => [
-                    'show' => '/users/'.$user->attribute('username'),
-                    'edit' => '/users/'.$user->attribute('username').'/edit',
-                    'permissions' => '/users/'.$user->attribute('username').'/permissions',
-                ],
                 'can' => [
-                    'change_access_type' => Auth::user()->username !== $user->attribute('username'),
+                    'change_access_type' => Auth::user()->username !== $username,
                 ],
             ],
-            'access_types' => $user_access_types,
+            'access_types' => Subscription::base()->availableAccessTypesForUser($user),
             'plan' => [
                 'type' => Subscription::base()->type,
                 'payment_enabled' => (bool) Subscription::base()->payment_enabled,
@@ -59,7 +43,7 @@ class Permissions extends Controller
                     'url' => '/users',
                 ],
                 [
-                    'label' => $user->attribute('name'),
+                    'label' => $name,
                 ],
             ],
         ]);
