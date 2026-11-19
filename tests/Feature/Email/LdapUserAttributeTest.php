@@ -21,7 +21,7 @@ class LdapUserAttributeTest extends TestCase
     {
         parent::setUp();
 
-        config(['ldap.connections.default.base_dn' => 'dc=example,dc=com']);
+        (new TestSupports)->cleanLdap();
         (new TestSupports)->seed();
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
@@ -33,6 +33,13 @@ class LdapUserAttributeTest extends TestCase
         $entry->setAttribute('telephoneNumber', ['111', '222']);
 
         $this->user = new LdapAccountUser($entry);
+    }
+
+    protected function tearDown(): void
+    {
+        (new TestSupports)->cleanLdap();
+
+        parent::tearDown();
     }
 
     public function test_the_array_type_returns_every_value_of_the_mapped_attribute()
