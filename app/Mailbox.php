@@ -4,7 +4,9 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -21,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $previous_recovery_email
  * @property-read Organization $organization
  * @property-read OrgDomain|null $domain
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, MailboxAddress> $addresses
  */
 class Mailbox extends Model
 {
@@ -38,6 +41,36 @@ class Mailbox extends Model
             'activated_at' => 'datetime',
             'swapped_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The `address` column is the primary address, and the primary row of mailbox_addresses
+     * follows it. If the address row can't be made (an alias somewhere already has the address)
+     * the mailbox is taken back out, so a failed create leaves nothing behind. Removing a mailbox
+     * removes its rows (the foreign key cascades).
+     */
+    protected static function booted(): void
+    {
+        static::created(function (Mailbox $mailbox) {
+            try {
+                $mailbox->addresses()->create(['address' => $mailbox->address, 'is_primary' => true]);
+            } catch (\Throwable $e) {
+                $mailbox->delete();
+
+                throw $e;
+            }
+        });
+
+        static::updated(function (Mailbox $mailbox) {
+            if ($mailbox->wasChanged('address')) {
+                $mailbox->addresses()->where('is_primary', true)->update(['address' => Str::lower($mailbox->address)]);
+            }
+        });
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(MailboxAddress::class);
     }
 
     public function organization(): BelongsTo

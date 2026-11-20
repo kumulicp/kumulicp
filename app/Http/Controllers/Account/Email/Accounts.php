@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account\Email;
 
 use App\Http\Controllers\Controller;
+use App\Mailbox;
 use App\Ldap\Models\Email;
 use App\OrgDomain;
 use App\Rules\EmailLocalPart;
@@ -86,6 +87,16 @@ class Accounts extends Controller
             }
         }
 
+        // The panel's own record of the mailbox, which is what counts it and what keeps its address taken
+        Mailbox::firstOrCreate(['address' => strtolower($email_address)], [
+            'organization_id' => $domain->organization_id,
+            'org_domain_id' => $domain->id,
+            'local_part' => strtolower($validated['email']),
+            'display_name' => $validated['name'],
+            'status' => Mailbox::ACTIVE,
+            'activated_at' => now(),
+        ]);
+
         return redirect('/settings/email/accounts')->with('success', __('organization.email.created', ['email' => $email_address]));
     }
 
@@ -114,6 +125,8 @@ class Accounts extends Controller
                 address: $email_address,
                 password: $validated['password'] ?? null,
             );
+
+            Mailbox::where('address', strtolower($email_address))->whereNull('username')->update(['display_name' => $validated['name']]);
         }
 
         return redirect('/settings/email/accounts')->with('success', __('organization.email.password_updated', ['email' => $email_address]));
@@ -137,6 +150,9 @@ class Accounts extends Controller
         if ($email_server->existsEmail($email_domain, $email)) {
             $email_server->deleteEmail($email_domain, $email);
         }
+
+        // Only a standalone mailbox: one that belongs to a user is removed from that user's page
+        Mailbox::where('address', strtolower($email))->whereNull('username')->delete();
 
         return redirect('/settings/email/accounts')->with('success', __('organization.email.deleted', ['email' => $email]));
     }

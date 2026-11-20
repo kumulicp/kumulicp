@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\AppPlan;
 use App\Application;
+use App\Mailbox;
 use App\Organization;
 use App\Server;
 use App\Support\Facades\AccountManager;
-use App\Support\Facades\ServerInterface;
 use App\Support\Facades\Subscription;
 use Illuminate\Support\Facades\Auth;
 
@@ -155,16 +155,16 @@ class OrganizationService
         return $this->organization->additional_storage()->sum('quantity');
     }
 
+    /**
+     * The organization's mailboxes: its users' organization addresses and its standalone ones,
+     * counted from the table. Asking the mail server on every page load was slow, and left out
+     * the mailboxes that belong to users. An offer nobody has accepted is not a mailbox yet.
+     */
     public function countEmail()
     {
-        $count = 0;
-        foreach ($this->organization->domains()->emailEnabled()->get() as $domain) {
-            if ($domain->email_server && $server = ServerInterface::connect($domain->email_server)) {
-                $count += count($server->emailList($domain));
-            }
-        }
-
-        return $count;
+        return Mailbox::where('organization_id', $this->organization->id)
+            ->where('status', Mailbox::ACTIVE)
+            ->count();
     }
 
     public function getThis()
