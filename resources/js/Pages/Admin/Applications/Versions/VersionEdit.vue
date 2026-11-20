@@ -105,7 +105,8 @@ import { Link, useForm } from '@inertiajs/vue3'
                   />
                 <va-input v-model="form.chart_name"
                   :label="$t('admin.versions.helmChartName')"
-                  id="chartVersion"
+                  id="chartName"
+                  :messages="$t('admin.versions.chartSharedNote')"
                   class="my-2"
                   immediateValidation
                   :error="$page.props.errors.chart_name"

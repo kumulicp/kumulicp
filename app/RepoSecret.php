@@ -47,7 +47,8 @@ class RepoSecret extends Model
                     ->orWhereHas('images', fn ($images) => $images->where('registry_secret_id', $this->id));
             }
             if ($this->type !== self::TYPE_IMAGE) {
-                $query->orWhere('helm_repo_secret_id', $this->id);
+                $query->orWhere('helm_repo_secret_id', $this->id)
+                    ->orWhereHas('versionGroup.chart', fn ($charts) => $charts->where('helm_repo_secret_id', $this->id));
             }
         });
     }
@@ -91,6 +92,7 @@ class RepoSecret extends Model
         return AppInstance::whereHas('version', function ($query) {
             $query->where('image_registry_id', $this->id)
                 ->orWhere('helm_repo_secret_id', $this->id)
+                ->orWhereHas('versionGroup.chart', fn ($charts) => $charts->where('helm_repo_secret_id', $this->id))
                 ->orWhereHas('images', fn ($images) => $images->where('registry_secret_id', $this->id));
         })->exists();
     }

@@ -44,9 +44,9 @@ class ReleaseAspect extends Aspect
                 'id' => $version->id,
                 'name' => $version->name,
                 // update_check changes daily and says nothing about the version itself
-                'settings' => Arr::except($version->settings ?? [], ['update_check']),
+                'settings' => $version->deploymentSettings(),
                 'image_registry_id' => $version->image_registry_id,
-                'helm_repo_secret_id' => $version->helm_repo_secret_id,
+                'helm_repo_secret_id' => $version->chartRepoSecretId(),
             ] : null,
             'plan' => $plan ? [
                 'id' => $plan->id,

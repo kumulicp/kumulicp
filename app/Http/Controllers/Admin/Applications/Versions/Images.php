@@ -185,7 +185,7 @@ class Images extends Controller
             'version' => [
                 'id' => $version->id,
                 'version' => $version->name,
-                'chart' => $version->setting('chart_name') ? $version->setting('chart_name').' '.$version->setting('chart_version') : null,
+                'chart' => $version->chartName() ? $version->chartName().' '.$version->setting('chart_version') : null,
             ],
             'images' => $version->images()->with('registrySecret')->get()->map(fn (AppVersionImage $image) => [
                 'id' => $image->id,

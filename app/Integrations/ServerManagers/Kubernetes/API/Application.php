@@ -153,7 +153,7 @@ class Application extends Kubernetes
         }
     }
 
-    // AppVersion::setting('helm_repo_name') holds the chart repository
+    // AppVersion::helmRepo() (the chart's repository) holds the chart repository
     // location for this driver — a plain https URL, or an oci:// reference.
     // (For Rancher it instead holds a pre-registered ClusterRepo name; both
     // interpretations are compatible since it's a per-version, admin-set field.)

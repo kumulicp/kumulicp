@@ -578,6 +578,7 @@
       "version": "Version",
       "helmChartVersion": "Helm Chart Version",
       "helmChartName": "Helm Chart Name",
+      "chartSharedNote": "The chart, its repository and its login are shared by every version of this chart: changing them here changes them for all of its versions.",
       "helmChartRepo": "Helm Chart Repository",
       "containerImageRepo": "Container Image Repository Name",
       "containerImageRegistry": "Container Image Registry",
