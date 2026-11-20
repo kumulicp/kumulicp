@@ -48,6 +48,24 @@ import UserLayout from './UserLayout.vue'
             </va-list-item-section>
           </va-list-item>
 
+          <template v-if="!user.org_email">
+            <va-list-separator class="my-1" fit />
+
+            <va-list-item class="py-3">
+              <va-list-item-section label>
+                <va-list-item-label>
+                  <h5>{{ $t('recoveryEmail.secondaryLabel') }}:</h5>
+                </va-list-item-label>
+              </va-list-item-section>
+              <va-list-item-section>
+                <va-list-item-label id="secondaryRecovery">
+                  <a v-if="user.secondary_recovery" :href="'mailto:'+user.secondary_recovery">{{ user.secondary_recovery }}</a>
+                  <span v-else class="va-text-secondary">{{ $t('recoveryEmail.none') }}</span>
+                </va-list-item-label>
+              </va-list-item-section>
+            </va-list-item>
+          </template>
+
           <template v-if="user.org_email && user.org_email.length > 0">
             <va-list-separator class="my-1" fit />
 

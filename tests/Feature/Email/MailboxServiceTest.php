@@ -171,7 +171,7 @@ class MailboxServiceTest extends TestCase
 
         $this->assertNotNull(UserRecoveryEmail::where('username', 'demo')->first()->verified_at);
         $this->assertSame(
-            ['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org', 'recovery_missing' => false],
+            ['personal_email' => 'demo@example.com', 'org_email' => 'jdoe@corp.org', 'recovery_missing' => false, 'secondary_recovery' => null],
             UserEmails::for(AccountManager::users()->find('demo')),
         );
     }

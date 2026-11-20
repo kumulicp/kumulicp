@@ -10,13 +10,13 @@ use App\Events\Users\UserCreated;
 use App\Events\Users\UserDeleted;
 use App\Events\Users\UserUpdated;
 use App\Http\Controllers\Controller;
+use App\Mailbox;
 use App\NewUserCode;
 use App\Notifications\ResetPassword;
 use App\OrgDomain;
-use App\Mailbox;
 use App\Rules\AccountEmailChecks;
-use App\Rules\EmailLocalPart;
 use App\Rules\EmailAddressExists;
+use App\Rules\EmailLocalPart;
 use App\Rules\MainContact;
 use App\Rules\UserNotExists;
 use App\Services\AdditionalStorageService;
@@ -34,10 +34,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Throwable;
 
 class Users extends Controller
 {
@@ -170,6 +168,7 @@ class Users extends Controller
                 'phone_number' => $user->attribute('phone_number'),
                 'personal_email' => $user_emails['personal_email'],
                 'org_email' => $user_emails['org_email'],
+                'secondary_recovery' => $user_emails['secondary_recovery'],
                 'type' => Subscription::base()->accessTypeName($user->userAccessType()),
                 'storage' => $user_storage,
                 'url' => [

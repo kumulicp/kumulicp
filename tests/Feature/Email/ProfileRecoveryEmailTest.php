@@ -66,6 +66,33 @@ class ProfileRecoveryEmailTest extends TestCase
             ->where('profile.has_mailbox', false));
     }
 
+    public function test_without_an_organization_address_the_login_email_is_not_shown_as_the_secondary_recovery_email()
+    {
+        // Creating a user keeps the address they were created with, which is their login email
+        $this->service->set('demo', $this->user->email);
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page
+            ->where('profile.has_mailbox', false)
+            ->where('recovery.email', null));
+
+        $this->service->set('demo', 'backup@gmail.com');
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page
+            ->where('recovery.email', 'backup@gmail.com')
+            ->where('recovery.usable', true));
+    }
+
+    public function test_the_admin_sees_who_has_a_secondary_recovery_email()
+    {
+        $this->get('/users/demo')->assertInertia(fn ($page) => $page
+            ->where('user.org_email', null)
+            ->where('user.secondary_recovery', null));
+
+        $this->service->set('demo', 'backup@gmail.com');
+
+        $this->get('/users/demo')->assertInertia(fn ($page) => $page->where('user.secondary_recovery', 'backup@gmail.com'));
+    }
+
     public function test_asking_for_a_recovery_email_sends_a_confirmation_and_needs_the_password()
     {
         Notification::fake();
