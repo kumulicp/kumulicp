@@ -19,9 +19,7 @@ class VersionFingerprint
      */
     public function for(AppVersion $version, bool $with_images = true): string
     {
-        $plans = AppPlan::where('application_id', $version->application_id)
-            ->where('archive', 0)
-            ->visible()
+        $plans = $version->testPlansQuery()
             ->orderBy('id')
             ->get()
             ->map(fn (AppPlan $plan) => $this->planPayload($plan))

@@ -296,6 +296,13 @@ class Applications extends Controller
             return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.version_exists'));
         }
 
+        // An install is only upgraded within the group its plan picked
+        $group = $app->plan?->versionGroup() ?? $app->application->defaultVersionGroup();
+
+        if ($version->version_group_id !== $group->id) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.version_group'));
+        }
+
         $notify = true;
 
         if ($app->version_id === $version->id || $version->announcement_location === 'none') {
