@@ -183,6 +183,7 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
               class="createOrgEmailOption"
               >
               {{ user.id.toLowerCase() }}@{{ domain.name }}
+              <small v-if="domain.activating" class="ml-1">({{ $t('organization.users.domainActivating') }})</small>
             </va-button>
           </div>
         </va-card-content>

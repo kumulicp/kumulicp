@@ -119,6 +119,12 @@ class MailboxService
             throw new MailboxException(__('organization.email.mailbox.not_pending'));
         }
 
+        // An offer can be made while the domain's email is still being set up, but nothing is
+        // written until the domain receives mail here
+        if ($mailbox->domain?->emailIsBeingActivated()) {
+            throw new MailboxException(__('organization.email.mailbox.domain_not_ready', ['domain' => $mailbox->domain->name]));
+        }
+
         $plan = $this->plan($user, $mailbox);
         $current = $plan['current'];
         $address = $mailbox->address;

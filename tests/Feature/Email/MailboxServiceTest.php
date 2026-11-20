@@ -286,6 +286,28 @@ class MailboxServiceTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_an_offer_can_be_made_while_the_domain_is_being_activated_but_not_accepted_yet()
+    {
+        $soon = $this->domain('soon.org', 'waiting_dns');
+        $mailbox = $this->service->offer($this->manager, $soon, 'jdoe');
+
+        try {
+            $this->service->accept($this->manager, $mailbox);
+            $this->fail('An offer on a domain that does not receive mail yet was accepted');
+        } catch (MailboxException $e) {
+            $this->assertSame(__('organization.email.mailbox.domain_not_ready', ['domain' => 'soon.org']), $e->getMessage());
+        }
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertSame(Mailbox::PENDING, $mailbox->fresh()->status);
+        $this->assertSame([], $this->server->created);
+
+        $soon->forceFill(['email_status' => 'active', 'email_enabled' => true])->save();
+        $this->service->accept($this->manager, $mailbox->fresh());
+
+        $this->assertSame('jdoe@soon.org', $this->email());
+    }
+
     // --- undoing
 
     public function test_the_switch_can_be_undone_for_a_while()

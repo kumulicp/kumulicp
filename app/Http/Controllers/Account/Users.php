@@ -323,10 +323,12 @@ class Users extends Controller
         if (! $mailbox && auth()->user()->can('add-user-email-account', $user->attribute('username'))) {
             $add_email_account = true;
 
-            $email_domains = $organization->domains()->emailEnabled()->get()->map(function ($email_domain) {
+            $email_domains = $organization->domains()->emailOfferable()->get()->map(function ($email_domain) {
                 return [
                     'id' => $email_domain->id,
                     'name' => $email_domain->name,
+                    // Offers can be made now; the user accepts once the domain receives mail here
+                    'activating' => $email_domain->emailIsBeingActivated(),
                 ];
             })->values();
         }
