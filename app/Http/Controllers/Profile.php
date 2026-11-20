@@ -2,18 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mailbox;
 use App\Rules\AccountEmailChecks;
 use App\Rules\ConfirmOldPassword;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
 use App\Rules\RecoveryEmail;
-use App\Mailbox;
 use App\Services\Email\MailboxService;
-use App\Support\Email\AppIdentity;
-use App\Support\Email\HostedDomains;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use App\Services\Email\RecoveryEmailService;
+use App\Support\Email\AppIdentity;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -57,7 +54,6 @@ class Profile extends Controller
         $mailboxes = app(MailboxService::class);
         $user = AccountManager::users()->find($profile->username);
         $mailbox = $active ?? $mailboxes->forUser($profile->username);
-        $domains = $mailbox ? collect() : $profile->organization->domains()->emailEnabled()->get();
 
         return [
             'mailbox' => $mailbox ? [
@@ -69,11 +65,6 @@ class Profile extends Controller
                 // Whether accepting an offer changes the email, and what the person has to give
                 'plan' => $mailbox->status === Mailbox::PENDING && $user ? $mailboxes->plan($user, $mailbox) : null,
             ] : null,
-            'can_get' => ! $mailbox && $domains->isNotEmpty() && Gate::allows('add-user-email-account', $profile->username),
-            'domains' => $domains->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
-            'default_name' => Str::lower($profile->username),
-            // When the email now is on a domain hosted here it can't become the recovery email
-            'current_hosted' => HostedDomains::isHosted($profile->email),
             'apps' => collect($user ? $user->allUserApps() : [])
                 ->map(fn ($app) => ['name' => $app->label, 'identity' => AppIdentity::for($app)])
                 ->values(),
