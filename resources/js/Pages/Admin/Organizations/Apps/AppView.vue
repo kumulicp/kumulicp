@@ -163,6 +163,9 @@ export default {
       this.updates.forEach(update => seen.set(update.change ? update.change.id : 'none', update.change))
 
       return [...seen.values()]
+    },
+    collectedAt () {
+      return this.pod_security?.collected_at ? new Date(this.pod_security.collected_at).toLocaleString() : ''
     }
   },
   data () {
@@ -175,11 +178,6 @@ export default {
         settings
       }),
       isPasswordVisible: false
-    }
-  },
-  computed: {
-    collectedAt () {
-      return this.pod_security?.collected_at ? new Date(this.pod_security.collected_at).toLocaleString() : ''
     }
   }
 }

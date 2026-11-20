@@ -3,7 +3,7 @@
 use App\AppInstance;
 use App\Application;
 use App\AppVersion;
-use App\Integrations\ServerManagers\Rancher\Charts\Job\WordpressJobChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\Job\WordpressJobChart;
 use App\Organization;
 
 function makeWordpressJob(array $command = ['/entrypoint.sh', '/update-domain.sh'], array $env = []): array
