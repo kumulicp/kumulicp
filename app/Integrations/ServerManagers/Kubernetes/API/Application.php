@@ -153,7 +153,7 @@ class Application extends Kubernetes
         }
     }
 
-    // AppVersion::setting('helm_repo_name') holds the chart repository
+    // AppVersion::helmRepo() (the chart's repository) holds the chart repository
     // location for this driver — a plain https URL, or an oci:// reference.
     // (For Rancher it instead holds a pre-registered ClusterRepo name; both
     // interpretations are compatible since it's a per-version, admin-set field.)
@@ -168,9 +168,9 @@ class Application extends Kubernetes
     // append --username/--password for classic repos.
     protected function chartReference(AppInstance $app_instance): array
     {
-        $chart_name = $app_instance->version->setting('chart_name');
-        $repo = $app_instance->version->setting('helm_repo_name');
-        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->helmRepoSecret : null;
+        $chart_name = $app_instance->version->chartName();
+        $repo = $app_instance->version->helmRepo();
+        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->chartRepoSecret() : null;
 
         if ($repo && str_starts_with($repo, 'oci://')) {
             $chart_ref = rtrim($repo, '/').'/'.$chart_name;

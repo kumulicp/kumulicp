@@ -30,6 +30,7 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property-read Collection<int, AppVersionImage> $images
  * @property-read RepoSecret|null $imageRegistry
  * @property-read RepoSecret|null $helmRepoSecret
+ * @property-read AppVersionGroup|null $versionGroup
  */
 class AppVersion extends Model
 {
@@ -372,9 +373,75 @@ class AppVersion extends Model
         return $this->belongsTo('App\RepoSecret', 'helm_repo_secret_id');
     }
 
+    /**
+     * The chart the version is deployed from: its group's. A version has no chart
+     * of its own to change, only the chart version.
+     */
+    public function chart(): ?AppChart
+    {
+        return $this->versionGroup?->chart;
+    }
+
+    /**
+     * The chart's name in its repository. Falls back to the version's own
+     * settings, which is where it was kept before charts had their own.
+     */
+    public function chartName(): ?string
+    {
+        return $this->chart()?->chart_name ?: $this->setting('chart_name');
+    }
+
+    /**
+     * Where the chart is published: a repository URL, an oci:// reference or the
+     * name of a Rancher ClusterRepo.
+     */
+    public function helmRepo(): ?string
+    {
+        return $this->chart()?->helm_repo ?: $this->setting('helm_repo_name');
+    }
+
+    /**
+     * The login the chart's repository needs. A chart decides this for all of
+     * its versions, so a version only has its own when it has no chart.
+     */
+    public function chartRepoSecret(): ?RepoSecret
+    {
+        $chart = $this->chart();
+
+        return $chart ? $chart->helmRepoSecret : $this->helmRepoSecret;
+    }
+
+    public function chartRepoSecretId(): ?int
+    {
+        $chart = $this->chart();
+
+        return $chart ? $chart->helm_repo_secret_id : $this->helm_repo_secret_id;
+    }
+
     public function requiresHelmRepoAuth(): bool
     {
-        return $this->helm_repo_secret_id !== null && $this->helmRepoSecret && $this->helmRepoSecret->requiresAuth();
+        return (bool) $this->chartRepoSecret()?->requiresAuth();
+    }
+
+    /**
+     * The settings that decide how the version is deployed, with the chart's
+     * identity as the chart has it. For fingerprints, which must change when the
+     * chart does, whichever of its versions are looked at.
+     *
+     * @return array<string, mixed>
+     */
+    public function deploymentSettings(): array
+    {
+        $settings = Arr::except($this->settings ?? [], ['update_check']);
+        $chart = $this->chart();
+
+        foreach (['chart_name' => $chart?->chart_name, 'helm_repo_name' => $chart?->helm_repo] as $key => $value) {
+            if ($value) {
+                $settings[$key] = $value;
+            }
+        }
+
+        return $settings;
     }
 
     public function roles(string|array|null $type = null, $all = true): Collection

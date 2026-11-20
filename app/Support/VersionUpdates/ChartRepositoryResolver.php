@@ -22,9 +22,9 @@ class ChartRepositoryResolver
      */
     public function resolve(AppVersion $version, array $servers): array
     {
-        $chart_name = (string) $version->setting('chart_name');
-        $repo = (string) $version->setting('helm_repo_name');
-        $secret = $version->requiresHelmRepoAuth() ? $version->helmRepoSecret : null;
+        $chart_name = (string) $version->chartName();
+        $repo = (string) $version->helmRepo();
+        $secret = $version->requiresHelmRepoAuth() ? $version->chartRepoSecret() : null;
 
         if (preg_match('#^https?://#', $repo)) {
             return ['repository' => new HttpChartRepository($repo, $chart_name, $secret), 'rancher' => []];

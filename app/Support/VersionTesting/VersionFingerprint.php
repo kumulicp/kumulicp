@@ -5,7 +5,6 @@ namespace App\Support\VersionTesting;
 use App\AppPlan;
 use App\AppVersion;
 use App\Updates\Fingerprint;
-use Illuminate\Support\Arr;
 
 /**
  * A hash of everything a version test exercises: the version's own
@@ -66,11 +65,11 @@ class VersionFingerprint
                 'id' => $version->id,
                 'name' => $version->name,
                 // update_check changes daily and says nothing about the version itself
-                'settings' => Arr::except($version->settings ?? [], ['update_check']),
+                'settings' => $version->deploymentSettings(),
                 'roles' => $version->roles,
                 'admin_path' => $version->admin_path,
                 'image_registry_id' => $version->image_registry_id,
-                'helm_repo_secret_id' => $version->helm_repo_secret_id,
+                'helm_repo_secret_id' => $version->chartRepoSecretId(),
             ],
             'plans' => $plans,
         ];

@@ -140,13 +140,13 @@ class Versions extends Controller
             'version' => [
                 'id' => $version->id,
                 'version' => $version->name,
-                'helm_repo_name' => $version->setting('helm_repo_name'),
+                'helm_repo_name' => $version->helmRepo(),
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
                 'image_registry_id' => $version->image_registry_id,
-                'helm_repo_secret_id' => $version->helm_repo_secret_id,
+                'helm_repo_secret_id' => $version->chartRepoSecretId(),
                 'chart_version' => $version->setting('chart_version'),
-                'chart_name' => $version->setting('chart_name'),
+                'chart_name' => $version->chartName(),
                 // The images besides the one these settings describe
                 'extra_images' => $version->images()->where('role', '!=', 'primary')->count(),
                 'port' => $version->setting('port'),
@@ -261,6 +261,7 @@ class Versions extends Controller
             'default_user_roles' => 'array|nullable',
             'admin_path' => 'string|nullable',
             'chart_version' => 'string|nullable',
+            'chart_name' => 'string|nullable',
             'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
@@ -281,6 +282,15 @@ class Versions extends Controller
         $version->admin_path = $request->admin_path;
         $version->image_registry_id = $validatedData['image_registry_id'];
         $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
+
+        // Where the chart comes from belongs to the chart, so it changes for all of its versions.
+        // The version keeps a copy until nothing reads it from there.
+        $version->chart()?->update([
+            'chart_name' => $request->input('chart_name') ?: null,
+            'helm_repo' => $request->input('helm_repo_name') ?: null,
+            'helm_repo_secret_id' => $version->helm_repo_secret_id,
+        ]);
+
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
             'helm_repo_name' => $request->input('helm_repo_name'),

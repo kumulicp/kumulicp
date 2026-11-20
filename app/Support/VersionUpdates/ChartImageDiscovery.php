@@ -32,10 +32,10 @@ class ChartImageDiscovery
      */
     public function discover(AppVersion $version): array
     {
-        $chart_name = $version->setting('chart_name');
+        $chart_name = $version->chartName();
         $chart_version = $version->setting('chart_version');
 
-        if (! $chart_name || ! $chart_version || ! $version->setting('helm_repo_name')) {
+        if (! $chart_name || ! $chart_version || ! $version->helmRepo()) {
             throw new RuntimeException(__('admin.version_updates.discover_without_chart'));
         }
 
