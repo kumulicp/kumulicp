@@ -81,7 +81,7 @@ class MailboxService
     /**
      * Whether accepting this mailbox changes the user's email, and what has to be given.
      *
-     * @return array{changes_email: bool, current: string, recovery: string}  recovery is 'keep' (a working one exists), 'move' (the current email becomes it) or 'required' (one must be given)
+     * @return array{changes_email: bool, current: string, recovery: string} recovery is 'keep' (a working one exists), 'move' (the current email becomes it) or 'required' (one must be given)
      */
     public function plan(UserManager $user, Mailbox $mailbox): array
     {
@@ -181,6 +181,32 @@ class MailboxService
         }
 
         return $mailbox;
+    }
+
+    /**
+     * Accepts the mailbox for the user when doing so changes nothing about them: it is the
+     * address they already have, so there is no switch to consent to. Anything else is left
+     * for the user to accept. Nothing happens until the domain receives mail here.
+     *
+     * @return bool Whether the mailbox is active now
+     *
+     * @throws MailboxException
+     */
+    public function acceptIfUnchanged(UserManager $user, Mailbox $mailbox): bool
+    {
+        if ($mailbox->isActive()) {
+            return true;
+        }
+
+        if ($mailbox->username !== (string) $user->attribute('username')
+            || $mailbox->domain?->emailIsBeingActivated()
+            || $this->plan($user, $mailbox)['changes_email']) {
+            return false;
+        }
+
+        $this->accept($user, $mailbox);
+
+        return true;
     }
 
     /**

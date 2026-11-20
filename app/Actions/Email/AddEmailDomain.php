@@ -6,6 +6,7 @@ use App\Actions\Action;
 use App\Actions\Domains\UpdateDnsRecords;
 use App\Organization;
 use App\OrgDomain;
+use App\Services\Email\DomainReadiness;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Email;
@@ -104,6 +105,13 @@ class AddEmailDomain extends Action
             $domain->email_status = 'active';
             $domain->email_enabled = true;
             $domain->save();
+
+            // Everyone whose email is on the domain gets the mailbox for the address they already have
+            try {
+                app(DomainReadiness::class)->switchOver($domain);
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             $task->complete();
             $task->groupNotified();
