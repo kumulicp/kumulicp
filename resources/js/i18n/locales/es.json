@@ -1724,6 +1724,29 @@
     "confirmSame": "Alojar esta dirección aquí",
     "accept": "Aceptar"
   },
+  "domainReadiness": {
+    "title": "Antes de cambiar el DNS de este dominio",
+    "intro": "Cambiar el DNS de {domain} a este servidor mueve todas sus direcciones a la vez. Todos los usuarios con correo en este dominio reciben un buzón automáticamente cuando esté activo. Compruebe esto primero.",
+    "enableTitle": "A quién afecta",
+    "enableIntro": "Todos los usuarios con correo en este dominio se pasan automáticamente cuando esté activo, para que su correo siga llegando. Es la dirección que ya tienen, así que no cambia nada para ellos. Su dirección de inicio de sesión dejará de ser un lugar donde puedan recibir un restablecimiento de contraseña, por lo que un correo de recuperación secundario es importante. Puede cancelar ahora y volver cuando más personas hayan añadido uno.",
+    "loading": "Comprobando quién está en este dominio...",
+    "nobody": "Nadie tiene correo en este dominio todavía, así que no hay a quién pasar.",
+    "switching": "{count} usuarios con correo en este dominio se pasarán automáticamente.",
+    "secondaryCounts": "{with_count} de ellos tienen un correo de recuperación secundario. {without_count} no.",
+    "withoutSecondary": "Aún sin correo de recuperación secundario",
+    "withoutSecondaryHelp": "Pídales que añadan uno desde su perfil. No puede ser una dirección de este dominio.",
+    "andMore": "y {count} más",
+    "cannotSwitch": "{count} usuarios con correo en este dominio no se pueden pasar automáticamente. Su correo rebotaría cuando el DNS cambie.",
+    "reason": {
+      "not_standard": "no tiene una cuenta de usuario estándar, que un buzón necesita",
+      "name_not_allowed": "el nombre antes de la @ no se puede usar para un buzón",
+      "other_offer": "recibió una dirección distinta y tiene que aceptarla personalmente"
+    },
+    "recoveryTitle": "Correos de recuperación en este dominio",
+    "recoveryText": "Estos usuarios restablecen su contraseña en una dirección de este dominio. Deja de servir para recibir uno cuando el correo se mueva, así que pídales que lo cambien.",
+    "offersWaiting": "{count} ofertas están esperando. Podrán aceptarse cuando el dominio esté activo.",
+    "history": "El correo existente no se copia del proveedor anterior. Cópielo antes de cambiar."
+  },
   "recoveryEmail": {
     "reminder": "Añade un correo de recuperación. Si olvidas tu contraseña, el enlace de restablecimiento solo puede llegarte a una dirección distinta de tu correo de inicio de sesión.",
     "missingBadge": "Sin correo de recuperación",
