@@ -27,6 +27,7 @@ use Illuminate\Support\Arr;
  * @property-read int|null $active_instances
  * @property-read Collection<int, AppVersion> $versions
  * @property-read Collection<int, AppPlan> $plans
+ * @property-read Collection<int, AppChart> $charts
  * @property-read Collection<int, AppRole> $roles
  * @property-read Collection<int, AppScreenshot> $screenshots
  * @property-read Collection<int, Tag> $tags
@@ -96,6 +97,26 @@ class Application extends Model
     public function chartSource()
     {
         return $this->belongsTo(ChartSource::class, 'chart_source_id');
+    }
+
+    /**
+     * @return HasMany<AppChart, $this>
+     */
+    public function charts(): HasMany
+    {
+        return $this->hasMany(AppChart::class, 'application_id');
+    }
+
+    /**
+     * The group a new version goes in when none is chosen: the default group of
+     * the default chart. An app that has no chart yet gets one, taken from the
+     * version being added.
+     */
+    public function defaultVersionGroup(?AppVersion $version = null): AppVersionGroup
+    {
+        $chart = $this->charts()->where('is_default', true)->first() ?? AppChart::createDefaultFor($this, $version);
+
+        return $chart->defaultVersionGroup();
     }
 
     /**

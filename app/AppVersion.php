@@ -20,6 +20,7 @@ use Illuminate\Support\Collection as SupportCollection;
 /**
  * @property int $id
  * @property int $application_id
+ * @property int|null $version_group_id
  * @property string|null $name
  * @property string|null $admin_path
  * @property array $roles
@@ -44,6 +45,14 @@ class AppVersion extends Model
 
     protected static function booted(): void
     {
+        // Every version belongs to a group, so one made without choosing joins the
+        // default group of its app
+        static::creating(function (AppVersion $version) {
+            if ($version->version_group_id === null && $version->application_id) {
+                $version->version_group_id = Application::find($version->application_id)?->defaultVersionGroup($version)->id;
+            }
+        });
+
         // Update checks only describe enabled versions: once a version is no
         // longer enabled, its last result must not keep being shown
         static::saving(function (AppVersion $version) {
@@ -243,6 +252,14 @@ class AppVersion extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
+    }
+
+    /**
+     * @return BelongsTo<AppVersionGroup, $this>
+     */
+    public function versionGroup(): BelongsTo
+    {
+        return $this->belongsTo(AppVersionGroup::class, 'version_group_id');
     }
 
     /**
