@@ -9,17 +9,17 @@ import { Link, router, useForm } from '@inertiajs/vue3'
     <title>{{ $t('admin.versions.images') }} - Control Panel</title>
   </Head>
   <div class="row">
-    <div class="flex xs12">
+    <div class="flex flex-col xs12">
       <h5 class="mb-2">{{ $t('admin.versions.imagesOfVersion', { version: version.version }) }}</h5>
       <p v-if="!images.length" id="noImages" class="va-text-secondary">{{ $t('admin.versions.noImages') }}</p>
-      <table v-else id="versionImages" class="va-table va-table--hoverable mt-2">
+      <table v-else id="versionImages" class="va-table va-table--hoverable images-table mt-2">
         <thead>
           <tr>
             <th>{{ $t('admin.versions.imageName') }}</th>
             <th>{{ $t('admin.versions.image') }}</th>
             <th>{{ $t('admin.versions.imagePath') }}</th>
             <th>{{ $t('admin.versions.imageSource') }}</th>
-            <th></th>
+            <th class="images-actions"></th>
           </tr>
         </thead>
         <tbody>
@@ -36,7 +36,7 @@ import { Link, router, useForm } from '@inertiajs/vue3'
                 :text="image.source === 'override' ? $t('admin.versions.imageSourceOverride') : $t('admin.versions.imageSourceChart')"
               />
             </td>
-            <td>
+            <td class="images-actions">
               <va-button
                 v-if="!image.follows_settings"
                 :id="'removeImage-' + image.key"
@@ -50,9 +50,11 @@ import { Link, router, useForm } from '@inertiajs/vue3'
         </tbody>
       </table>
 
-      <div class="mt-4">
+      <va-separator class="my-2" />
+
+      <div>
         <Link v-if="version.chart" :href="basePath + '/images/discover'" id="discoverImages">
-          <va-button>{{ $t('admin.versions.discoverImages', { chart: version.chart }) }}</va-button>
+          <va-button class="mb-2">{{ $t('admin.versions.discoverImages', { chart: version.chart }) }}</va-button>
         </Link>
         <p v-else class="va-text-secondary">{{ $t('admin.versions.discoverNeedsChart') }}</p>
       </div>
@@ -61,15 +63,15 @@ import { Link, router, useForm } from '@inertiajs/vue3'
         {{ $t('admin.versions.discoverFailed', { error: discover_error }) }}
       </va-alert>
 
-      <div v-if="discovered" id="discoveredImages" class="mt-4">
+      <div v-if="discovered" id="discoveredImages" class="mt-6">
         <h5 class="mb-1">{{ $t('admin.versions.discoveredImages', { chart: version.chart }) }}</h5>
         <p class="va-text-secondary mb-2">{{ $t('admin.versions.discoveredHelp') }}</p>
         <p v-if="!discovered.length" id="noDiscoveredImages">{{ $t('admin.versions.noDiscoveredImages') }}</p>
         <form v-else @submit.prevent="add">
-          <table class="va-table va-table--hoverable">
+          <table class="va-table va-table--hoverable images-table">
             <thead>
               <tr>
-                <th></th>
+                <th class="images-select"></th>
                 <th>{{ $t('admin.versions.imageName') }}</th>
                 <th>{{ $t('admin.versions.image') }}</th>
                 <th>{{ $t('admin.versions.imagePath') }}</th>
@@ -78,7 +80,7 @@ import { Link, router, useForm } from '@inertiajs/vue3'
             </thead>
             <tbody>
               <tr v-for="(row, index) in rows" :key="row.key + index" :id="'discovered-' + row.key">
-                <td>
+                <td class="images-select">
                   <va-checkbox v-model="row.selected" :disabled="row.exists" :id="'select-' + row.key" />
                 </td>
                 <td>
@@ -193,5 +195,22 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss" scoped>
+.images-table {
+  width: 100%;
+
+  code {
+    overflow-wrap: anywhere;
+    font-size: 0.85rem;
+  }
+
+  .images-actions {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .images-select {
+    width: 1%;
+  }
+}
 </style>
