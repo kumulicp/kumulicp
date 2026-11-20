@@ -177,4 +177,56 @@ class MailboxAliasServiceTest extends TestCase
         $this->assertSame([], $this->directory->entries['jane@corp.org']);
         $this->assertDatabaseHas('mailbox_addresses', ['address' => 'jane@corp.org', 'is_primary' => true]);
     }
+
+    public function test_the_sync_copies_the_database_to_the_directory()
+    {
+        $this->service->add($this->mailbox, 'sales', $this->domain);
+        $this->directory->entries['jane@corp.org'] = ['stale@corp.org'];
+
+        $summary = $this->service->sync();
+
+        $this->assertSame(1, $summary['checked']);
+        $this->assertSame(1, $summary['updated']);
+        $this->assertSame(['sales@corp.org'], $this->directory->entries['jane@corp.org']);
+    }
+
+    public function test_the_sync_leaves_alone_what_already_matches_whatever_the_order_or_case()
+    {
+        $this->service->add($this->mailbox, 'sales', $this->domain);
+        $this->service->add($this->mailbox, 'info', $this->domain);
+        $this->directory->entries['jane@corp.org'] = ['INFO@corp.org', 'sales@corp.org'];
+        $this->directory->writes = [];
+
+        $summary = $this->service->sync();
+
+        $this->assertSame(1, $summary['unchanged']);
+        $this->assertSame([], $this->directory->writes);
+    }
+
+    public function test_the_sync_reports_a_mailbox_the_directory_does_not_have_and_one_it_fails_for()
+    {
+        $this->service->add($this->mailbox, 'sales', $this->domain);
+        $other = Mailbox::create(['organization_id' => $this->mailbox->organization_id, 'org_domain_id' => $this->domain->id, 'local_part' => 'bob', 'address' => 'bob@corp.org', 'status' => Mailbox::ACTIVE]);
+        $this->service->add($other, 'bobby', $this->domain);
+        $this->directory->entries = [];
+        $this->directory->failing = ['bob@corp.org'];
+
+        $summary = $this->service->sync();
+
+        $this->assertSame(['jane@corp.org'], $summary['missing']);
+        $this->assertSame(['bob@corp.org'], array_keys($summary['failed']));
+    }
+
+    public function test_the_sync_only_looks_at_mailboxes_that_have_aliases_and_only_when_the_directory_is_in_use()
+    {
+        $this->assertSame(0, $this->service->sync()['checked']);
+
+        $this->service->add($this->mailbox, 'sales', $this->domain);
+        $this->directory->enabled = false;
+
+        $summary = $this->service->sync();
+
+        $this->assertFalse($summary['enabled']);
+        $this->assertSame(0, $summary['checked']);
+    }
 }

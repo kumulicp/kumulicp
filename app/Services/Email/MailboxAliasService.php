@@ -108,6 +108,74 @@ class MailboxAliasService
         $this->mirror($mailbox);
     }
 
+    /**
+     * Makes the directory match the database for every active mailbox that has aliases. Mailboxes
+     * without any are not looked at, so an alias left in the directory for one of them is not
+     * found: it only goes when the mailbox's aliases next change.
+     *
+     * @return array{enabled: bool, checked: int, updated: int, unchanged: int, missing: array<int, string>, failed: array<string, string>, orphans: array<int, string>}
+     */
+    public function sync(): array
+    {
+        $summary = [
+            'enabled' => $this->directory->enabled(),
+            'checked' => 0,
+            'updated' => 0,
+            'unchanged' => 0,
+            'missing' => [],
+            'failed' => [],
+            'orphans' => [],
+        ];
+
+        if (! $summary['enabled']) {
+            return $summary;
+        }
+
+        Mailbox::query()
+            ->where('status', Mailbox::ACTIVE)
+            ->whereHas('addresses', fn ($query) => $query->where('is_primary', false))
+            ->orderBy('id')
+            ->chunkById(200, function ($mailboxes) use (&$summary) {
+                foreach ($mailboxes as $mailbox) {
+                    $summary['checked']++;
+                    $wanted = $this->forMailbox($mailbox);
+
+                    try {
+                        $current = $this->directory->read($mailbox);
+
+                        if ($current === null) {
+                            $summary['missing'][] = $mailbox->address;
+                        } elseif ($this->sameAddresses($current, $wanted)) {
+                            $summary['unchanged']++;
+                        } elseif ($this->directory->write($mailbox, $wanted)) {
+                            $summary['updated']++;
+                        } else {
+                            $summary['missing'][] = $mailbox->address;
+                        }
+                    } catch (\Throwable $e) {
+                        report($e);
+                        $summary['failed'][$mailbox->address] = $e->getMessage();
+                    }
+                }
+            });
+
+        return $summary;
+    }
+
+    /**
+     * @param  array<int, string>  $a
+     * @param  array<int, string>  $b
+     */
+    private function sameAddresses(array $a, array $b): bool
+    {
+        $a = array_map('strtolower', $a);
+        $b = array_map('strtolower', $b);
+        sort($a);
+        sort($b);
+
+        return $a === $b;
+    }
+
     private function changed(Mailbox $mailbox): void
     {
         $this->mirror($mailbox);

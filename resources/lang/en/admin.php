@@ -573,7 +573,7 @@ return [
         'server_missing_address' => 'Server :server has no address.',
     ],
     'email' => [
-        'sync_unavailable' => 'There is nothing to sync: LDAP is not in use, or no LDAP attribute is set for the recovery email.',
+        'sync_unavailable' => 'There is nothing to sync: LDAP is not in use, or no LDAP attribute is set for the recovery email or for aliases.',
         'sync_finished' => 'Sync finished: :updated updated, :unchanged already in sync, :problems with problems.',
     ],
 ];

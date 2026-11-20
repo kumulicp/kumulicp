@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\MailboxAddress;
+use App\Services\Email\AliasDirectory;
+use App\Services\Email\MailboxAliasService;
 use App\Services\Email\RecoveryEmailService;
 use App\Support\Email\LdapEmailAttributes;
 use App\UserRecoveryEmail;
@@ -16,6 +19,8 @@ class OrgEmail extends Controller
             'aliases' => [
                 'enabled' => LdapEmailAttributes::aliasesEnabled(),
                 'attribute' => LdapEmailAttributes::aliasAttribute(),
+                'sync_enabled' => app(AliasDirectory::class)->enabled(),
+                'count' => MailboxAddress::where('is_primary', false)->count(),
             ],
             'recovery' => [
                 'attribute' => LdapEmailAttributes::recoveryAttribute(),
@@ -24,6 +29,7 @@ class OrgEmail extends Controller
                 'missing' => app(RecoveryEmailService::class)->countNeedingReminder(),
             ],
             'sync_result' => session('sync_result'),
+            'alias_sync_result' => session('alias_sync_result'),
             'breadcrumbs' => [
                 ['label' => __('labels.email')],
             ],
@@ -32,24 +38,28 @@ class OrgEmail extends Controller
 
     /**
      * Copies what the database holds over to the directory, for when the two have
-     * drifted apart. Runs in the request: it only touches accounts with a recovery email.
+     * drifted apart. Runs in the request: it only touches accounts with a recovery email
+     * and mailboxes with aliases.
      */
-    public function sync(RecoveryEmailService $recovery_emails)
+    public function sync(RecoveryEmailService $recovery_emails, MailboxAliasService $aliases)
     {
-        $result = $recovery_emails->sync();
+        $recovery = $recovery_emails->sync();
+        $alias = $aliases->sync();
 
-        if (! $result['enabled']) {
+        if (! $recovery['enabled'] && ! $alias['enabled']) {
             return redirect('/admin/email')->with('error', __('admin.email.sync_unavailable'));
         }
 
-        $flash = count($result['failed']) > 0 || count($result['missing']) > 0 ? 'error' : 'success';
+        $results = array_filter([$recovery, $alias], fn (array $result) => $result['enabled']);
+        $problems = array_sum(array_map(fn (array $result) => count($result['failed']) + count($result['missing']), $results));
 
         return redirect('/admin/email')
-            ->with($flash, __('admin.email.sync_finished', [
-                'updated' => $result['updated'],
-                'unchanged' => $result['unchanged'],
-                'problems' => count($result['failed']) + count($result['missing']),
+            ->with($problems > 0 ? 'error' : 'success', __('admin.email.sync_finished', [
+                'updated' => array_sum(array_column($results, 'updated')),
+                'unchanged' => array_sum(array_column($results, 'unchanged')),
+                'problems' => $problems,
             ]))
-            ->with('sync_result', $result);
+            ->with('sync_result', $recovery['enabled'] ? $recovery : null)
+            ->with('alias_sync_result', $alias['enabled'] ? $alias : null);
     }
 }
