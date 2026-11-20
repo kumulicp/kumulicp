@@ -56,7 +56,7 @@ class AppChart extends Model
     {
         return self::create([
             'application_id' => $application->id,
-            'name' => $application->chartSource?->name ?? 'Default',
+            'name' => $application->chartSource->name ?? 'Default',
             'slug' => 'default',
             'chart_name' => self::text($version?->setting('chart_name')),
             'helm_repo' => self::text($version?->setting('helm_repo_name')),
