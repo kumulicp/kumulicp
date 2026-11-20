@@ -102,7 +102,7 @@ class StandaloneMailboxBackfillTest extends TestCase
         $this->assertDatabaseCount('mailboxes', 0);
     }
 
-    public function test_an_address_recorded_for_another_organization_or_a_user_is_reported()
+    public function test_an_address_recorded_for_another_organization_is_reported_and_a_users_own_mailbox_is_not()
     {
         Mailbox::create(['organization_id' => $this->user->organization->id + 1000, 'local_part' => 'theirs', 'address' => 'theirs@corp.org', 'status' => Mailbox::ACTIVE]);
         Mailbox::create(['organization_id' => $this->user->organization->id, 'local_part' => 'jane', 'address' => 'jane@corp.org', 'username' => 'jane', 'status' => Mailbox::ACTIVE]);
@@ -110,7 +110,7 @@ class StandaloneMailboxBackfillTest extends TestCase
 
         $rows = $this->run_backfill();
 
-        $this->assertSame(['theirs@corp.org' => 'collision', 'jane@corp.org' => 'collision'], $this->actions($rows));
+        $this->assertSame(['theirs@corp.org' => 'collision'], $this->actions($rows));
         $this->assertDatabaseCount('mailboxes', 2);
     }
 

@@ -16,7 +16,8 @@ use Illuminate\Support\Str;
  *
  * It only adds rows, never changes the mail server, and is safe to run again: an address that
  * is recorded already is left alone. An address it cannot record is reported, not forced:
- * one a user signs in with, one that belongs to another organization or to a user's mailbox.
+ * one a user signs in with, or one that is recorded for another organization. A user's own
+ * mailbox is recorded already and is not reported.
  * A recorded mailbox that is no longer on the server is reported too and left in place.
  */
 class StandaloneMailboxBackfill
@@ -73,11 +74,11 @@ class StandaloneMailboxBackfill
             $on_server[] = $address;
             $recorded = MailboxAddress::where('address', $address)->first()?->mailbox;
 
+            // Recorded already: nothing to do, including a user's own mailbox, which is recorded
+            // when the user is. Only an address recorded for another organization needs a person
             if ($recorded) {
                 if ((int) $recorded->organization_id !== (int) $organization->id) {
                     $rows[] = $row($address, 'collision', 'it is recorded for another organization');
-                } elseif ($recorded->username !== null) {
-                    $rows[] = $row($address, 'collision', "it is the mailbox of the user {$recorded->username}");
                 }
 
                 continue;
