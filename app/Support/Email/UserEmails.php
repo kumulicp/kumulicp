@@ -7,14 +7,15 @@ use App\Support\AccountManager\UserManager;
 use App\UserRecoveryEmail;
 
 /**
- * The two emails shown for a user in the panel. Without an organization address the user's
- * `mail` is their email and there is no second one. With one, `mail` is that address, and
- * what the person gave before is their recovery email.
+ * The emails shown for a user in the panel. Without an organization address the user's `mail`
+ * is their email (it signs them in and is where a reset goes), and they can add a secondary
+ * recovery email next to it. With one, `mail` is that address, and what the person gave before
+ * is their recovery email.
  */
 class UserEmails
 {
     /**
-     * @return array{personal_email: string|null, org_email: string|null, recovery_missing: bool}
+     * @return array{personal_email: string|null, org_email: string|null, recovery_missing: bool, secondary_recovery: string|null}
      */
     public static function for(UserManager $user): array
     {
@@ -28,14 +29,12 @@ class UserEmails
      *
      * @param  array<int, string>  $usernames
      * @param  array<string, string>  $mail  Each user's `mail`, by username
-     * @return array<string, array{personal_email: string|null, org_email: string|null, recovery_missing: bool}>
+     * @return array<string, array{personal_email: string|null, org_email: string|null, recovery_missing: bool, secondary_recovery: string|null}>
      */
     public static function lookup(array $usernames, array $mail): array
     {
         $mailboxes = Mailbox::whereIn('username', $usernames)->where('status', Mailbox::ACTIVE)->get()->keyBy('username');
-        $recovery = $mailboxes->isEmpty()
-            ? collect()
-            : UserRecoveryEmail::whereIn('username', $mailboxes->keys())->pluck('email', 'username');
+        $recovery = UserRecoveryEmail::whereIn('username', $usernames)->pluck('email', 'username');
 
         $emails = [];
 
@@ -48,8 +47,15 @@ class UserEmails
                     'personal_email' => $recovery->get($username),
                     'org_email' => $mailbox->address,
                     'recovery_missing' => self::unusable($recovery->get($username), $mailbox->address),
+                    'secondary_recovery' => null,
                 ]
-                : ['personal_email' => $mail[$username] ?? null, 'org_email' => null, 'recovery_missing' => false];
+                : [
+                    'personal_email' => $mail[$username] ?? null,
+                    'org_email' => null,
+                    'recovery_missing' => false,
+                    // Only one that is of any use next to the sign-in email: not the same address and not hosted here
+                    'secondary_recovery' => self::unusable($recovery->get($username), $mail[$username] ?? '') ? null : $recovery->get($username),
+                ];
         }
 
         return $emails;

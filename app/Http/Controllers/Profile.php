@@ -37,12 +37,18 @@ class Profile extends Controller
             ],
             'org_email' => $this->orgEmail($profile, $mailbox),
             'recovery' => [
-                'email' => $recovery_emails->get($profile->username),
+                // Without an organization address the login email is kept here too (it is where the account was created), which is not a second address
+                'email' => $this->secondaryOrRecovery($recovery_emails->get($profile->username), $profile->email),
                 'usable' => $recovery_emails->usable($profile->username, $profile->email) !== null,
                 'pending' => $recovery_emails->pending($profile->username),
             ],
             'locales' => config('locales.available'),
         ]);
+    }
+
+    private function secondaryOrRecovery(?string $recovery, string $mail): ?string
+    {
+        return $recovery !== null && strcasecmp($recovery, $mail) !== 0 ? $recovery : null;
     }
 
     /**
