@@ -93,7 +93,7 @@ class ChartImageScanner
     }
 
     /**
-     * @param  array<string, mixed>  $node
+     * @param  array<array-key, mixed>  $node
      * @param  array<int, array<string, mixed>>  $images
      */
     private function walk(array $node, string $path, int $depth, array &$images): void
@@ -136,7 +136,7 @@ class ChartImageScanner
     }
 
     /**
-     * @param  array<string, mixed>  $node
+     * @param  array<array-key, mixed>  $node
      */
     private function isImageBlock(array $node): bool
     {
@@ -249,6 +249,11 @@ class ChartImageScanner
             $reference = substr($reference, 0, $colon);
         }
 
+        // Nothing left once the tag and digest are taken off (":1.2", "@sha256:...")
+        if ($reference === '') {
+            return null;
+        }
+
         $parts = explode('/', $reference);
         $registry = null;
         if (count($parts) > 1 && (str_contains($parts[0], '.') || str_contains($parts[0], ':') || $parts[0] === 'localhost')) {
@@ -257,7 +262,8 @@ class ChartImageScanner
 
         $repository = implode('/', $parts);
 
-        if ($repository === '') {
+        // A registry with nothing after it ("ghcr.io/")
+        if (trim($repository, '/') === '') {
             return null;
         }
 

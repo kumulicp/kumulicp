@@ -103,7 +103,7 @@ class ChartImageDiscovery
             $match = $existing->first(fn (AppVersionImage $own) => ($image['path'] !== '' && $own->values_path === $image['path'])
                 || ($image['path'] === '' && $own->repository === $image['repository']));
 
-            $key = $match?->key ?? $this->key($image, $taken);
+            $key = $match->key ?? $this->key($image, $taken);
             $taken[] = $key;
 
             $proposals[] = [
