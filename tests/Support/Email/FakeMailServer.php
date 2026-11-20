@@ -39,6 +39,10 @@ class FakeMailServer
 
     public function emailList(OrgDomain $domain): array
     {
+        if ($this->failing) {
+            throw new \RuntimeException('The mail server is unavailable');
+        }
+
         $rows = [];
 
         foreach ($this->emails as $address => $name) {
