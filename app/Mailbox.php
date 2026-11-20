@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $swapped_at
  * @property string|null $previous_mail
  * @property string|null $previous_recovery_email
- * @property-read Organization $organization
+ * @property-read Organization|null $organization
  * @property-read OrgDomain|null $domain
  * @property-read \Illuminate\Database\Eloquent\Collection<int, MailboxAddress> $addresses
  */

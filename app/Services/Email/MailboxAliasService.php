@@ -77,6 +77,7 @@ class MailboxAliasService
         }
 
         try {
+            /** @var MailboxAddress $alias */
             $alias = $mailbox->addresses()->create(['address' => $address, 'is_primary' => false]);
         } catch (UniqueConstraintViolationException) {
             throw new MailboxException(__('organization.email.mailbox.taken', ['email' => $address]));
