@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\EmailForwarder;
 use App\Ldap\LdapLegacyOrgMailSource;
+use App\Ldap\LdapAliasDirectory;
 use App\Ldap\LdapMailAddressRegistry;
 use App\Ldap\LdapRecoveryEmailDirectory;
 use App\OrgDomain;
+use App\Services\Email\AliasDirectory;
 use App\Services\Email\CompositeMailAddressRegistry;
 use App\Services\Email\DatabaseMailAddressRegistry;
 use App\Services\Email\LegacyOrgMailSource;
@@ -41,6 +43,9 @@ class EmailServiceProvider extends ServiceProvider
 
         // Where a recovery email is mirrored to when LDAP is in use. Tests replace it with a fake.
         $this->app->bind(RecoveryEmailDirectory::class, LdapRecoveryEmailDirectory::class);
+
+        // Where a mailbox's aliases are mirrored to when LDAP is in use. Tests replace it with a fake.
+        $this->app->bind(AliasDirectory::class, LdapAliasDirectory::class);
 
         // Where the old orgMail values are read from, until they have all been migrated
         $this->app->bind(LegacyOrgMailSource::class, LdapLegacyOrgMailSource::class);

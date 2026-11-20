@@ -148,6 +148,15 @@ return [
             'delete' => 'No tienes permiso para eliminar esta cuenta de correo',
             'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
         ],
+        'alias' => [
+            'disabled' => 'Los alias están desactivados. Con LDAP, un administrador debe añadir un atributo LDAP para ellos y asignarlo en la página de ajustes de LDAP.',
+            'mailbox_not_active' => 'Solo un buzón en uso puede tener alias.',
+            'domain_not_allowed' => 'Los alias solo pueden estar en un dominio de esta organización que tenga el correo activado, y :domain no lo es.',
+            'limit' => 'Un buzón puede tener como máximo :count alias.',
+            'not_found' => ':email no es un alias de este buzón.',
+            'added' => 'Se añadió :email.',
+            'removed' => 'Se eliminó :email.',
+        ],
         'mailbox' => [
             'has_one' => 'Este usuario ya tiene un correo de inicio de sesión, o uno pendiente de aceptar. Elimínalo antes de elegir otro.',
             'taken' => ':email ya está en uso. Elige otro nombre.',

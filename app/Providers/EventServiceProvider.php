@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Events\AppInstanceSubscriptionChanged;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\Events\Domains\DomainDeleted;
+use App\Events\Mailboxes\MailboxDeactivated;
 use App\Events\OrganizationCreated;
 use App\Events\OrganizationRegistered;
 use App\Events\Users\DeletingUser;
@@ -22,6 +23,7 @@ use App\Listeners\NotifyCpAdminOfNewOrganization;
 use App\Listeners\SendEmailVerificationNotification;
 use App\Listeners\SweepTicketAssignees;
 use Illuminate\Support\Facades\Event;
+use App\Listeners\ClearMailboxAliases;
 use App\Listeners\StoreRecoveryEmail;
 use Illuminate\Support\ServiceProvider;
 
@@ -38,6 +40,7 @@ class EventServiceProvider extends ServiceProvider
         Event::listen(DeletingUser::class, SyncLDAP::class);
         Event::listen(UserCreated::class, SyncLDAP::class);
         Event::listen(UserCreated::class, StoreRecoveryEmail::class);
+        Event::listen(MailboxDeactivated::class, ClearMailboxAliases::class);
         Event::listen(UserUpdated::class, SyncLDAP::class);
         Event::listen(UserDeleted::class, SyncLDAP::class);
         Event::listen(UserStorageUpdated::class, UpdateUserStorage::class);
