@@ -31,7 +31,7 @@ return [
             'api_secret' => 'Usa la clave secreta que viene con la clave de API creada anteriormente',
             'ip' => 'Dirección IP del dominio usado en la dirección',
             'internal_address' => 'Se usa para aplicaciones que necesitan agregar un servidor proxy como IP de confianza',
-            'settings' => 'Requiere crear un nuevo proyecto para que se almacenen las organizaciones. Agrega la configuración: project_id',
+            'settings' => 'Requiere crear un nuevo proyecto para que se almacenen las organizaciones. Agrega la configuración: project_id. Opcional: security_mode ("off" por defecto, "managed" u "observe") — con "managed", KumuliCP aplica etiquetas de Pod Security Admission a los namespaces de las organizaciones según el nivel de seguridad de cada plan.',
         ],
         'app_database' => [
             'host' => 'IP o dominio usado por el Panel de Control para conectarse a esta base de datos',
@@ -231,6 +231,7 @@ return [
                 'domain_registrar' => [
                     'label' => 'Registrador de dominios',
                     'description' => 'Permite que las organizaciones registren, transfieran y renueven nombres de dominio a través de su registrador. Agrega las páginas de administración de Dominios y TLD, las opciones de registrar y transferir al agregar un dominio, y las opciones de plan correspondientes. Conectar un dominio que ya posee siempre está disponible.',
+                ],
                 'helmforge' => [
                     'label' => 'HelmForge',
                     'description' => 'Importa aplicaciones del repositorio de charts de HelmForge y las muestra junto a las aplicaciones integradas. Mientras está desactivado, las aplicaciones de HelmForge se ocultan de la lista de aplicaciones y de lo que las organizaciones pueden instalar, y la sincronización diaria del catálogo no se ejecuta. Las aplicaciones ya desplegadas siguen funcionando.',
@@ -313,6 +314,13 @@ return [
     'logs' => [
         'logs' => 'Registros',
     ],
+    'namespace_security' => [
+        'title' => 'Seguridad del namespace',
+        'updated' => 'Niveles de seguridad del namespace actualizados.',
+        'preflight_blocked' => 'Aplicar :level bloquearía cargas de trabajo existentes en :count namespace(s): :details. Elija "Aplicar de todos modos" para continuar igualmente.',
+        'tier_in_use' => 'El nivel ":tier" aún lo usa el plan ":plan". Mueva ese plan a otro nivel antes de quitarlo.',
+    ],
+
     'security' => [
         'tool_descriptions' => [
             'kube-hunter' => 'Busca debilidades de seguridad sondeando el clúster desde dentro de un pod, tal como lo haría un atacante que ya tiene acceso a la red. Útil para encontrar APIs expuestas, puertos abiertos y otros problemas de superficie de ataque.',

@@ -89,16 +89,33 @@ class RancherApiClient extends KubernetesApiClient
 
     // Rancher takes the whole object back, so start from what it returned and
     // lay the manifest over it: metadata is merged (to keep resourceVersion
-    // and anything Rancher added), everything else is replaced.
+    // and anything Rancher added), everything else is replaced. As in a merge
+    // patch, a null value in the manifest removes that key.
     protected function updateObject(PendingRequest $http, array $resource, ?string $namespace, string $name, array $manifest, array $current): Response
     {
         $object = $current;
 
         foreach ($manifest as $key => $value) {
-            $object[$key] = $key === 'metadata' ? array_replace_recursive($current['metadata'] ?? [], $value) : $value;
+            $object[$key] = $key === 'metadata' ? $this->mergeMetadata($current['metadata'] ?? [], $value) : $value;
         }
 
         return $http->put($this->path($resource, $namespace, $name), $object);
+    }
+
+    private function mergeMetadata(array $current, array $patch): array
+    {
+        foreach ($patch as $key => $value) {
+            if ($value === null) {
+                unset($current[$key]);
+            } elseif (is_array($value) && ! array_is_list($value) && is_array($current[$key] ?? null)) {
+                // An empty PHP array would encode as a JSON list, not a map
+                $current[$key] = $this->mergeMetadata($current[$key], $value) ?: (object) [];
+            } else {
+                $current[$key] = $value;
+            }
+        }
+
+        return $current;
     }
 
     // Rancher deletes without options.
