@@ -3,6 +3,7 @@
 namespace Tests\Feature\Email;
 
 use App\Enums\AccessType;
+use App\Events\Users\UserEmailChanged;
 use App\Mailbox;
 use App\OrgDomain;
 use App\Services\Email\MailboxService;
@@ -216,6 +217,66 @@ class OrgEmailFlowTest extends TestCase
             ->where('user.offered_email', 'demo@corp.org')
             ->where('user.org_email', null)
             ->where('user.can.add_email_account', false));
+    }
+
+    public function test_an_administrator_can_offer_on_a_domain_being_activated_and_the_user_waits_for_it()
+    {
+        $soon = OrgDomain::factory()->create([
+            'organization_id' => $this->user->organization->id,
+            'name' => 'soon.org',
+            'status' => 'active',
+            'email_enabled' => false,
+            'email_status' => 'activating',
+        ]);
+
+        $this->get('/users/demo/edit')->assertInertia(fn ($page) => $page
+            ->where('email_domains.0.activating', false)
+            ->where('email_domains.1.name', 'soon.org')
+            ->where('email_domains.1.activating', true));
+
+        $this->get('/users/demo/create/accountemail/'.$soon->id)->assertSessionHas('success');
+
+        $this->get('/profile')->assertInertia(fn ($page) => $page
+            ->where('org_email.mailbox.address', 'demo@soon.org')
+            ->where('org_email.mailbox.domain_ready', false));
+
+        $this->post('/profile/org-email/accept', ['current_password' => 'demouser', 'acknowledge' => true])
+            ->assertSessionHas('error');
+        $this->assertSame('demo@example.com', $this->email());
+    }
+
+    public function test_changing_the_email_someone_signs_in_with_tells_the_apps_what_it_was()
+    {
+        $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'new-address@example.org',
+        ])->assertSessionHasNoErrors();
+
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'new-address@example.org');
+    }
+
+    public function test_saving_the_profile_without_changing_the_email_tells_no_one()
+    {
+        $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'Renamed',
+            'personal_email' => 'demo@example.com',
+        ])->assertSessionHasNoErrors();
+
+        Event::assertNotDispatched(UserEmailChanged::class);
+    }
+
+    public function test_an_administrator_changing_the_email_of_a_user_tells_the_apps_what_it_was()
+    {
+        $this->put('/users/demo', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'moved@example.org',
+            'organization' => $this->user->organization->id,
+        ])->assertSessionHasNoErrors();
+
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'moved@example.org');
     }
 
     public function test_an_administrator_cannot_edit_the_email_of_someone_who_has_an_organization_address()

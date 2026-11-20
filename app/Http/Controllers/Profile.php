@@ -72,6 +72,9 @@ class Profile extends Controller
                 'undo_until' => $mailbox->canBeUndone() ? $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))->toDayDateTimeString() : null,
                 // Whether accepting an offer changes the email, and what the person has to give
                 'plan' => $mailbox->status === Mailbox::PENDING && $user ? $mailboxes->plan($user, $mailbox) : null,
+                // An offer on a domain whose email is still being set up can't be accepted yet
+                'domain_ready' => ! $mailbox->domain?->emailIsBeingActivated(),
+                'domain_name' => $mailbox->domain?->name,
             ] : null,
             'apps' => collect($user ? $user->allUserApps() : [])
                 ->map(fn ($app) => ['name' => $app->label, 'identity' => AppIdentity::for($app)])

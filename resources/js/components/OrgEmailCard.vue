@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 
 interface Plan { changes_email: boolean, current: string, recovery: 'keep' | 'move' | 'required' }
-interface Mailbox { address: string, status: 'pending' | 'active', can_undo: boolean, previous_mail: string | null, undo_until: string | null, plan: Plan | null }
+interface Mailbox { address: string, status: 'pending' | 'active', can_undo: boolean, previous_mail: string | null, undo_until: string | null, plan: Plan | null, domain_ready: boolean, domain_name: string | null }
 interface App { name: string, identity: 'stable' | 'email' | 'unknown' }
 interface OrgEmail { mailbox: Mailbox | null, apps: App[] }
 interface Recovery { email: string | null, usable: boolean, pending: string | null }
@@ -65,7 +65,10 @@ function undo () {
 
       <template v-else-if="pending">
         <p id="orgEmailOffered" class="mb-2">{{ $t('orgEmailFlow.offered', { address: pending.address }) }}</p>
-        <va-button id="reviewOrgEmail" @click="show_modal = true">{{ $t('orgEmailFlow.review') }}</va-button>
+        <va-alert v-if="!pending.domain_ready" id="orgEmailDomainNotReady" color="info" outline class="mb-2">
+          {{ $t('orgEmailFlow.domainNotReady', { domain: pending.domain_name }) }}
+        </va-alert>
+        <va-button id="reviewOrgEmail" :disabled="!pending.domain_ready" @click="show_modal = true">{{ $t('orgEmailFlow.review') }}</va-button>
       </template>
 
       <p v-else id="orgEmailNone">{{ $t('orgEmailFlow.none', { email: currentEmail }) }}</p>
