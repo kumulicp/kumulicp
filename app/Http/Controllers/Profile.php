@@ -131,7 +131,7 @@ class Profile extends Controller
 
         $validated = $request->validate([
             'recovery_email' => ['required', 'email:rfc,filter', 'max:255', new RecoveryEmail($user->email)],
-            'current_password' => ['required', 'string', new ConfirmOldPassword($user->email)],
+            'current_password' => ['required', 'string', new ConfirmOldPassword($user->email, $user->username)],
         ]);
 
         app(RecoveryEmailService::class)->request($user->username, $validated['recovery_email'], $user->email);
@@ -157,7 +157,7 @@ class Profile extends Controller
 
         /* Validate */
         $validatedData = $request->validate([
-            'current_password' => ['required', 'string', 'min:8', new ConfirmOldPassword($user->email)],
+            'current_password' => ['required', 'string', 'min:8', new ConfirmOldPassword($user->email, $user->username)],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()->uncompromised()],
         ]);
 

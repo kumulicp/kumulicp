@@ -69,7 +69,7 @@ class OrgEmail extends Controller
 
         $validated = $request->validate([
             'recovery_email' => ['nullable', 'email:rfc,filter', 'max:255'],
-            'current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email)],
+            'current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email, auth()->user()->username)],
             'acknowledge' => $mailbox && $mailboxes->plan($user, $mailbox)['changes_email'] ? ['required', 'accepted'] : ['nullable'],
         ]);
 
@@ -82,7 +82,7 @@ class OrgEmail extends Controller
 
     public function undo(Request $request, MailboxService $mailboxes)
     {
-        $request->validate(['current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email)]]);
+        $request->validate(['current_password' => ['required', 'string', new ConfirmOldPassword(auth()->user()->email, auth()->user()->username)]]);
 
         $user = AccountManager::users()->find(auth()->user()->username);
         $mailbox = $mailboxes->active((string) $user->attribute('username'));
