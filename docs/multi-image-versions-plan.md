@@ -186,8 +186,17 @@ Each phase ships on its own and leaves existing apps unchanged.
    its version (`VersionImageObserver`), apart from what only concerns display or update
    checks. Documented in `docs/updates.md`. Tests: `VersionImageFingerprintTest`, extend
    `UpdateDriftDetectionTest`.
-5. **Discovery and chart diff.** Chart scanner, `source = chart` rows, diff in
-   `ChartCompatibilityChecker`, discovery button.
+5. **Discovery and chart diff.** `ChartImageScanner` reads a packaged chart's default values for
+   image blocks (`registry`/`repository`/`tag`/`digest` at any depth, which Kumulicp can write
+   to), whole references under a key named image (recorded only) and the `artifacthub.io/images`
+   annotation (recorded only, no path). An **Images** tab on the version finds them in the
+   version's chart (`ChartImageDiscovery`) and adds the ones picked, as `override` or the
+   chart's own (`chart`, which is not checked for updates by default). `ChartCompatibilityChecker`
+   reports how the images change in a newer chart (`image_changes`, shown with the chart that
+   is on offer) and warns about an override whose path the chart no longer has, or that is older
+   than the chart's own. Subcharts' values are not read. Removing an image is on the tab;
+   editing one (and the rest of the images UI) is phase 7. Tests: `ChartImageScannerTest`,
+   `VersionImagesPageTest`, extend `VersionUpdateCheckerTest`, `VersionImagesTest`.
 6. **Test-run safety.** `image_snapshot`, preflight, conformance check, optional Trivy.
 7. **Adopt-update flow and UI polish.** Per-image selection when creating the next
    version; images table in `VersionEdit.vue` (browser test next to

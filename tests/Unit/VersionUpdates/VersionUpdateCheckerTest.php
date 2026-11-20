@@ -8,6 +8,7 @@ use App\OrgServer;
 use App\RepoSecret;
 use App\Server;
 use App\Support\VersionUpdates\ChartCompatibilityChecker;
+use App\Support\VersionUpdates\HttpChartRepository;
 use App\Support\VersionUpdates\ValuesContract;
 use App\Support\VersionUpdates\VersionUpdateChecker;
 use Illuminate\Support\Facades\Http;
@@ -411,4 +412,121 @@ it('follows the version\'s settings when they were changed without the version n
     $result = checkerWith(null)->check($version->fresh());
 
     expect($result['image']['latest'])->toBe('1.0.1');
+});
+
+// ─── The images a chart runs, between its versions ───────────────────────────
+
+function chartVersionWithImages(Application $application, array $images = []): AppVersion
+{
+    $version = AppVersion::factory()->create([
+        'application_id' => $application->id,
+        'settings' => ['helm_repo_name' => 'https://charts.example.com', 'chart_name' => 'demo', 'chart_version' => '1.0.0'],
+    ]);
+
+    foreach ($images as $image) {
+        AppVersionImage::factory()->create($image + ['app_version_id' => $version->id]);
+    }
+
+    return $version;
+}
+
+// What compatibility says about moving from chart 1.0.0 to 1.1.0, which have the values given
+function compatibilityBetween(AppVersion $version, array $current_values, array $candidate_values): array
+{
+    Http::fake([
+        'charts.example.com/index.yaml' => Http::response(ChartArchive::index('demo', ['1.0.0', '1.1.0'])),
+        'charts.example.com/demo-1.0.0.tgz' => Http::response(ChartArchive::make('demo', '1.0.0', $current_values)),
+        'charts.example.com/demo-1.1.0.tgz' => Http::response(ChartArchive::make('demo', '1.1.0', $candidate_values)),
+    ]);
+
+    $contract = renderingContract(null);
+
+    return (new ChartCompatibilityChecker($contract))->check($version, new HttpChartRepository('https://charts.example.com', 'demo'), '1.1.0');
+}
+
+it('says how the images a chart runs change in a newer version of it', function () {
+    $version = chartVersionWithImages($this->application);
+
+    $result = compatibilityBetween($version, [
+        'image' => ['registry' => 'ghcr.io', 'repository' => 'org/app', 'tag' => '1.0'],
+        'proxy' => ['image' => ['repository' => 'org/proxy', 'tag' => '2.0']],
+        'kept' => ['image' => ['repository' => 'org/kept', 'tag' => '5.0']],
+    ], [
+        'image' => ['registry' => 'ghcr.io', 'repository' => 'org/app', 'tag' => '1.1'],
+        'worker' => ['image' => ['repository' => 'org/worker', 'tag' => '3.0']],
+        'kept' => ['image' => ['repository' => 'org/kept', 'tag' => '5.0']],
+    ]);
+
+    expect($result['image_changes'])->toBe([
+        'Adds the image worker.image (org/worker:3.0).',
+        'No longer has the image proxy.image (org/proxy:2.0).',
+        'The image image goes from ghcr.io/org/app:1.0 to ghcr.io/org/app:1.1.',
+    ]);
+});
+
+it('has no image changes for a chart that runs the same images', function () {
+    $values = ['image' => ['repository' => 'org/app', 'tag' => '1.0']];
+
+    expect(compatibilityBetween(chartVersionWithImages($this->application), $values, $values)['image_changes'])->toBe([]);
+});
+
+it('has no image changes for a chart that runs none', function () {
+    expect(compatibilityBetween(chartVersionWithImages($this->application), ['replicaCount' => 1], ['replicaCount' => 2])['image_changes'])->toBe([]);
+});
+
+it('warns about an image the version sets that the chart no longer has a place for', function () {
+    $version = chartVersionWithImages($this->application, [
+        ['key' => 'proxy', 'label' => 'Proxy', 'values_path' => 'proxy.image', 'repository' => 'org/proxy', 'tag' => '2.0'],
+    ]);
+
+    $result = compatibilityBetween($version, ['proxy' => ['image' => ['repository' => 'org/proxy', 'tag' => '2.0']]], ['replicaCount' => 1]);
+
+    expect(implode(' ', $result['warnings']))->toContain('Proxy')->toContain('proxy.image');
+});
+
+it('does not warn about an image the version sets at a place the chart never had', function () {
+    $version = chartVersionWithImages($this->application, [
+        ['key' => 'extra', 'values_path' => 'extra.image', 'repository' => 'org/extra', 'tag' => '1.0'],
+    ]);
+
+    $result = compatibilityBetween($version, ['replicaCount' => 1], ['replicaCount' => 2]);
+
+    expect(implode(' ', $result['warnings']))->not->toContain('extra.image');
+});
+
+it('warns about an image the version sets that is older than the one the chart ships', function () {
+    $version = chartVersionWithImages($this->application, [
+        ['key' => 'worker', 'label' => 'Worker', 'values_path' => 'worker.image', 'repository' => 'org/worker', 'tag' => '2.0.0'],
+        ['key' => 'same', 'label' => 'Gamma', 'values_path' => 'same.image', 'repository' => 'org/same', 'tag' => '4.0.0'],
+        ['key' => 'ahead', 'label' => 'Delta', 'values_path' => 'ahead.image', 'repository' => 'org/ahead', 'tag' => '9.0.0'],
+    ]);
+
+    $chart = fn (string $worker) => [
+        'worker' => ['image' => ['repository' => 'org/worker', 'tag' => $worker]],
+        'same' => ['image' => ['repository' => 'org/same', 'tag' => '4.0.0']],
+        'ahead' => ['image' => ['repository' => 'org/ahead', 'tag' => '5.0.0']],
+    ];
+
+    $warnings = implode("\n", compatibilityBetween($version, $chart('2.0.0'), $chart('3.0.0'))['warnings']);
+
+    expect($warnings)->toContain('Worker')->toContain('2.0.0')->toContain('3.0.0')
+        ->and($warnings)->not->toContain('Gamma')
+        ->and($warnings)->not->toContain('Delta');
+});
+
+it('does not read images in the chart for a chart it cannot compare with', function () {
+    $version = chartVersionWithImages($this->application, [
+        ['key' => 'worker', 'values_path' => 'worker.image', 'repository' => 'org/worker', 'tag' => '2.0.0'],
+    ]);
+
+    Http::fake([
+        'charts.example.com/index.yaml' => Http::response(ChartArchive::index('demo', ['1.0.0', '1.1.0'])),
+        'charts.example.com/demo-1.0.0.tgz' => Http::response('', 404),
+        'charts.example.com/demo-1.1.0.tgz' => Http::response(ChartArchive::make('demo', '1.1.0', ['worker' => ['image' => ['repository' => 'org/worker', 'tag' => '3.0.0']]])),
+    ]);
+
+    $result = (new ChartCompatibilityChecker(renderingContract(null)))->check($version, new HttpChartRepository('https://charts.example.com', 'demo'), '1.1.0');
+
+    expect($result['image_changes'])->toBe([])
+        ->and(implode(' ', $result['warnings']))->not->toContain('by this version');
 });

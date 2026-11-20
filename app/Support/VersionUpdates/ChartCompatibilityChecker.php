@@ -16,6 +16,10 @@ use Throwable;
  *  - each kubernetes cluster's Kubernetes version satisfies kubeVersion;
  *  - each Rancher server still lists the version once Rancher applies its
  *    own rancher-version / kube-version filtering.
+ *
+ * It also reports how the images the chart runs change, and warns about the
+ * images the version sets itself that the chart no longer has a place for or
+ * has moved past.
  */
 class ChartCompatibilityChecker
 {
@@ -30,6 +34,9 @@ class ChartCompatibilityChecker
     public function __construct(
         private ValuesContract $contract = new ValuesContract,
         private ClusterVersion $cluster_version = new ClusterVersion,
+        private ChartImageDiff $image_diff = new ChartImageDiff,
+        private ChartImageScanner $image_scanner = new ChartImageScanner,
+        private VersionComparator $comparator = new VersionComparator,
     ) {}
 
     /**
@@ -46,6 +53,7 @@ class ChartCompatibilityChecker
     ): array {
         $issues = [];
         $warnings = [];
+        $image_changes = [];
 
         try {
             $package = $this->package($repository, $candidate);
@@ -75,6 +83,10 @@ class ChartCompatibilityChecker
                     $warnings[] = __('admin.version_updates.default_removed', ['key' => $key]);
                 }
             }
+
+            // The images the chart runs, and the ones this version sets itself
+            $image_changes = $this->image_diff->lines($this->image_diff->compare($current_package, $package));
+            array_push($warnings, ...$this->imageWarnings($version, $current_package, $package));
         } else {
             $warnings[] = __('admin.version_updates.current_chart_unavailable', ['version' => (string) $current]);
         }
@@ -105,7 +117,44 @@ class ChartCompatibilityChecker
             }
         }
 
-        return $this->result($candidate, $issues ? self::INCOMPATIBLE : self::COMPATIBLE, $issues, $warnings, $targets);
+        return $this->result($candidate, $issues ? self::INCOMPATIBLE : self::COMPATIBLE, $issues, $warnings, $targets, $image_changes);
+    }
+
+    /**
+     * What is wrong with the images the version sets itself (see
+     * AppVersion::extraImages()) against the chart it would move to: one the
+     * chart no longer has a place for, and one older than the chart's own.
+     * The first only counts for what the chart did have.
+     *
+     * @return array<int, string>
+     */
+    private function imageWarnings(AppVersion $version, ChartPackage $current, ChartPackage $candidate): array
+    {
+        $before = ChartImageScanner::byPath($this->image_scanner->scan($current));
+        $after = ChartImageScanner::byPath($this->image_scanner->scan($candidate));
+        $warnings = [];
+
+        foreach ($version->extraImages() as $image) {
+            $name = $image->label ?: $image->key;
+
+            if (! isset($after[$image->values_path])) {
+                if (isset($before[$image->values_path])) {
+                    $warnings[] = __('admin.version_updates.image_path_missing', ['image' => $name, 'path' => $image->values_path]);
+                }
+
+                continue;
+            }
+
+            if ($this->comparator->isNewer($after[$image->values_path]['tag'], $image->effectiveTag())) {
+                $warnings[] = __('admin.version_updates.image_older_than_chart', [
+                    'image' => $name,
+                    'tag' => (string) $image->effectiveTag(),
+                    'chart_tag' => (string) $after[$image->values_path]['tag'],
+                ]);
+            }
+        }
+
+        return $warnings;
     }
 
     private function checkServer(Server $server, ChartPackage $package, string $candidate, ?RancherChartRepository $rancher_repository): array
@@ -162,7 +211,7 @@ class ChartCompatibilityChecker
         return $this->packages[$key] ??= ChartPackage::fromArchive($repository->package($version));
     }
 
-    private function result(string $version, string $status, array $issues = [], array $warnings = [], array $targets = []): array
+    private function result(string $version, string $status, array $issues = [], array $warnings = [], array $targets = [], array $image_changes = []): array
     {
         return [
             'version' => $version,
@@ -170,6 +219,7 @@ class ChartCompatibilityChecker
             'issues' => array_values($issues),
             'warnings' => array_values(array_unique($warnings)),
             'targets' => $targets,
+            'image_changes' => array_values($image_changes),
         ];
     }
 }

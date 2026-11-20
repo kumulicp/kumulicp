@@ -2,10 +2,8 @@
 
 namespace App\Support\VersionUpdates;
 
-use App\AppInstance;
 use App\AppVersion;
 use App\AppVersionImage;
-use App\Server;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 use Throwable;
@@ -29,6 +27,7 @@ class VersionUpdateChecker
         private ImageTagResolver $images = new ImageTagResolver,
         private ChartCompatibilityChecker $compatibility = new ChartCompatibilityChecker,
         private ValuesContract $contract = new ValuesContract,
+        private ChartRepositoryResolver $repositories = new ChartRepositoryResolver,
     ) {}
 
     public function check(AppVersion $version): array
@@ -132,27 +131,12 @@ class VersionUpdateChecker
         $current = (string) $current;
         $result = ['current' => $current, 'latest' => null, 'latest_compatible' => null, 'compatibility' => null, 'error' => null];
 
-        $servers = $this->servers($version);
-        $rancher_repositories = [];
-        $secret = $version->requiresHelmRepoAuth() ? $version->helmRepoSecret : null;
+        $servers = $this->repositories->servers($version);
 
-        if (preg_match('#^https?://#', $repo)) {
-            $repository = new HttpChartRepository($repo, $chart_name, $secret);
-        } elseif (str_starts_with($repo, 'oci://')) {
-            $repository = new OciChartRepository($repo, $chart_name, $secret);
-        } else {
-            // A Rancher ClusterRepo name: only reachable through Rancher
-            foreach ($servers as $server) {
-                if ($server->interface === 'rancher') {
-                    $rancher_repositories[] = new RancherChartRepository($server, $repo, $chart_name);
-                }
-            }
-
-            if (! $rancher_repositories) {
-                return [...$result, 'error' => __('admin.version_updates.cluster_repo_without_rancher', ['repo' => $repo])];
-            }
-
-            $repository = $rancher_repositories[0];
+        try {
+            ['repository' => $repository, 'rancher' => $rancher_repositories] = $this->repositories->resolve($version, $servers);
+        } catch (RuntimeException $exception) {
+            return [...$result, 'error' => $this->message($exception)];
         }
 
         try {
@@ -182,25 +166,6 @@ class VersionUpdateChecker
         }
 
         return $result;
-    }
-
-    /**
-     * The distinct servers running instances of this version's app.
-     *
-     * @return array<int, Server>
-     */
-    private function servers(AppVersion $version): array
-    {
-        return AppInstance::where('application_id', $version->application_id)
-            ->notDeactivated()
-            ->whereNotNull('web_server_id')
-            ->with('web_server.server')
-            ->get()
-            ->map(fn (AppInstance $app_instance) => $app_instance->web_server?->server)
-            ->filter()
-            ->unique('id')
-            ->values()
-            ->all();
     }
 
     private function message(Throwable $exception): string
