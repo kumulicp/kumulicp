@@ -26,6 +26,9 @@ class MailboxAliasPagesTest extends TestCase
 
     private Mailbox $standalone;
 
+    /** @var array<int, string> Abilities the test takes away; every other one is allowed */
+    private array $denied = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -39,7 +42,7 @@ class MailboxAliasPagesTest extends TestCase
         $directory->enabled = false;
         $this->app->instance(AliasDirectory::class, $directory);
         // What the plan and the feature allow is not what is being tested here
-        Gate::before(fn () => true);
+        Gate::before(fn ($user, $ability) => in_array($ability, $this->denied, true) ? false : true);
 
         $organization_id = $this->user->organization->id;
         $this->domain = OrgDomain::factory()->create([
@@ -140,7 +143,7 @@ class MailboxAliasPagesTest extends TestCase
 
     public function test_someone_who_may_not_edit_the_user_cannot_change_their_aliases()
     {
-        Gate::before(fn ($user, $ability) => $ability === 'edit-user' ? false : true);
+        $this->denied = ['edit-user'];
 
         $this->post("/mailboxes/{$this->personal->id}/aliases", ['local_part' => 'info', 'domain' => $this->domain->id])->assertForbidden();
 
