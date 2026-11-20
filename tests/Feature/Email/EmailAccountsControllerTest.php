@@ -65,6 +65,15 @@ class EmailAccountsControllerTest extends TestCase
     }
 
     /**
+     * Switching driver forgets the guards, which signs the user out: sign them back in afterwards.
+     */
+    private function useDatabaseAccountManager(): void
+    {
+        setupAccountManagerDriver('db');
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
+    }
+
+    /**
      * A mail server that has no mailboxes and cannot forward, standing in for the LDAP driver
      * (whose gates would otherwise count mailboxes in a real directory).
      */
@@ -139,7 +148,7 @@ class EmailAccountsControllerTest extends TestCase
     {
         // What the plan and the feature allow is not what is being tested
         Gate::before(fn () => true);
-        setupAccountManagerDriver('db');
+        $this->useDatabaseAccountManager();
         $server = new FakeMailServer;
         Domain::shouldReceive('connect')->andReturn($server);
 
@@ -169,7 +178,7 @@ class EmailAccountsControllerTest extends TestCase
     public function test_a_mailbox_the_server_could_not_make_is_not_recorded()
     {
         Gate::before(fn () => true);
-        setupAccountManagerDriver('db');
+        $this->useDatabaseAccountManager();
         $server = new FakeMailServer;
         $server->failing = true;
         Domain::shouldReceive('connect')->andReturn($server);
