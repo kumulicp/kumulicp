@@ -198,9 +198,18 @@ Each phase ships on its own and leaves existing apps unchanged.
    editing one (and the rest of the images UI) is phase 7. Tests: `ChartImageScannerTest`,
    `VersionImagesPageTest`, extend `VersionUpdateCheckerTest`, `VersionImagesTest`.
 6. **Test-run safety.** `image_snapshot`, preflight, conformance check, optional Trivy.
-7. **Adopt-update flow and UI polish.** Per-image selection when creating the next
-   version; images table in `VersionEdit.vue` (browser test next to
-   `tests/Browser/Admin/VersionsTest.php`).
+7. **Adopt-update flow and UI polish.** An image can be edited on the Images tab (what it runs,
+   its registry login, and how it is checked: policy, tag pattern, group); the one the version's
+   name and settings describe only has the checks, as where it comes from is the version's.
+   Adding a version from an update lists the other images that have a newer tag, all picked, to
+   untick; images in the same group move together (`AppVersion::adoptImageUpdates()`), and an
+   update can be adopted when only those images have a newer tag. An instance that sets, by
+   itself, a part of an image its version sets (`imaginary-image-tag`) is warned that the
+   version's image is used instead (`ShadowedImages`, on the app's page). The version form points
+   to the Images tab. Not done: a browser test of the tab (the Inertia props and the actions are
+   covered by feature tests), and the version form's own image fields are still the primary
+   image's. Tests: extend `VersionImagesPageTest`, `VersionsTest`, `VersionImagesTest`,
+   `UpdatesTest`.
 8. **Pilot and cleanup.** New Matrix ESS profile and chart as the acceptance case, with
    Nextcloud as the migration case. Remove the deprecated configuration keys. Write
    `docs/updates.md` section "What a version contains".

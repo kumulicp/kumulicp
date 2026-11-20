@@ -2,6 +2,7 @@
 
 use App\AppInstance;
 use App\AppRole;
+use App\AppVersionImage;
 use App\DefinitionChange;
 use App\Organization;
 use App\Updates\AspectRegistry;
@@ -276,4 +277,34 @@ it('tells the admin who edits a role how many instances use it', function () {
             'implied_roles' => [],
         ])
         ->assertSessionHas('warning', __('admin.updates.edit_impact', ['subject' => DefinitionChange::latest('id')->first()->subject_label, 'count' => 1]));
+});
+
+it('warns when an app has settings for an image its version sets itself', function () {
+    $instance = updatesInstance();
+    AppVersionImage::factory()->create([
+        'app_version_id' => $instance->version_id,
+        'key' => 'imaginary',
+        'label' => 'Imaginary',
+        'registry' => 'docker.io',
+        'repository' => 'nextcloud/aio-imaginary',
+        'tag' => '20270101_000000',
+        'values_path' => 'imaginary.image',
+    ]);
+    $instance->updateSetting('override.imaginary-image-tag', '20261109_101109');
+
+    $this->actingAs(updatesAdmin())
+        ->get("/admin/organizations/{$instance->organization_id}/apps/{$instance->id}/edit")
+        ->assertInertia(fn ($page) => $page
+            ->component('Admin/Organizations/Apps/AppEdit')
+            ->where('ignored_image_settings', [
+                ['image' => 'Imaginary', 'setting' => 'imaginary-image-tag', 'value' => '20261109_101109', 'used' => '20270101_000000'],
+            ]));
+});
+
+it('has nothing to warn about for an app whose settings agree with its version', function () {
+    $instance = updatesInstance();
+
+    $this->actingAs(updatesAdmin())
+        ->get("/admin/organizations/{$instance->organization_id}/apps/{$instance->id}/edit")
+        ->assertInertia(fn ($page) => $page->where('ignored_image_settings', []));
 });

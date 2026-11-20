@@ -97,6 +97,7 @@ return [
             'order_updated' => 'Orden de roles actualizado',
             'images' => 'Imágenes',
             'images_added' => 'Se agregaron :count imágenes a la versión',
+            'image_updated' => 'Se actualizó la imagen :image',
             'image_removed' => 'Se quitó la imagen :image',
             'image_follows_settings' => 'La imagen que describen el nombre y los ajustes de la versión se cambia cambiándolos',
             'image_key_taken' => 'La versión ya tiene una imagen con la clave :key',

@@ -19,6 +19,7 @@ use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\SharedAppContext;
 use App\Updates\PendingUpdates;
+use App\Updates\ShadowedImages;
 use App\Updates\UpdateSteps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,6 +169,8 @@ class Applications extends Controller
             }),
             'updates' => $external ? [] : app(PendingUpdates::class)->forInstance($app),
             'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
+            // Settings of the instance for an image its version sets itself, which are not used
+            'ignored_image_settings' => $external ? [] : app(ShadowedImages::class)->for($app),
             'database_servers' => $external ? [] : ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
                 'value' => $server->id,
                 'text' => $server->name,

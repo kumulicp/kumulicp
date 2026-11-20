@@ -1,9 +1,11 @@
 <?php
 
+use App\AppInstance;
 use App\Application;
 use App\AppVersion;
 use App\AppVersionImage;
 use App\RepoSecret;
+use App\Updates\ShadowedImages;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
@@ -378,7 +380,7 @@ it('lists the other images with a newer tag than they run with, never the primar
     $version = checkedImageVersion($this->application);
 
     expect($version->newerImageTags())->toBe([
-        ['key' => 'imaginary', 'label' => 'imaginary', 'current' => '20261109_101109', 'latest' => '20270101_000000'],
+        ['key' => 'imaginary', 'label' => 'imaginary', 'current' => '20261109_101109', 'latest' => '20270101_000000', 'group' => null],
     ])->and($version->newerImageTag())->toBe('33.0.2');
 });
 
@@ -462,3 +464,162 @@ it('has no image changes to say for a check made before they were looked for', f
 
     expect($version->fresh()->updateSummary()['chart_image_changes'])->toBe([]);
 });
+
+// ─── Adopting an update for the picked images ────────────────────────────────
+
+// A version whose update check found newer tags for the images given (key => [current, latest, group, digest])
+function versionWithUpdates(Application $application, array $images): AppVersion
+{
+    $results = [];
+
+    foreach ($images as $key => $image) {
+        $results[$key] = ['current' => $image['current'], 'latest' => $image['latest'], 'policy' => 'track', 'error' => null] + (isset($image['latest_digest']) ? ['digest' => $image['latest_digest']] : []);
+    }
+
+    $version = imageVersion($application, [], ['update_check' => ['checked_at' => '2026-10-14T03:00:00+00:00', 'image' => null, 'images' => $results, 'chart' => null]]);
+
+    foreach ($images as $key => $image) {
+        AppVersionImage::factory()->create([
+            'app_version_id' => $version->id,
+            'key' => $key,
+            'tag' => $image['current'],
+            'digest' => $image['digest'] ?? null,
+            'group' => $image['group'] ?? null,
+        ]);
+    }
+
+    return $version->fresh();
+}
+
+function copyOf(AppVersion $source): AppVersion
+{
+    $copy = AppVersion::factory()->create(['application_id' => $source->application_id, 'name' => '41.0.0']);
+    $copy->copyImagesFrom($source);
+
+    return $copy->fresh();
+}
+
+it('moves only the picked images of a copy to their newer tag', function () {
+    $source = versionWithUpdates($this->application, [
+        'imaginary' => ['current' => '1.0.0', 'latest' => '1.1.0'],
+        'redis' => ['current' => '8.0.1', 'latest' => '8.0.2'],
+    ]);
+    $copy = copyOf($source);
+
+    expect($copy->adoptImageUpdates($source, ['redis']))->toBe(['redis']);
+
+    $tags = $copy->fresh()->images->pluck('tag', 'key');
+
+    expect($tags['redis'])->toBe('8.0.2')
+        ->and($tags['imaginary'])->toBe('1.0.0')
+        // The version it was copied from is left as it was
+        ->and($source->fresh()->images->pluck('tag', 'key')['redis'])->toBe('8.0.1');
+});
+
+it('moves the images in the same group as a picked one with it', function () {
+    $source = versionWithUpdates($this->application, [
+        'synapse' => ['current' => '1.0.0', 'latest' => '1.1.0', 'group' => 'matrix'],
+        'admin' => ['current' => '2.0.0', 'latest' => '2.1.0', 'group' => 'matrix'],
+        'redis' => ['current' => '8.0.1', 'latest' => '8.0.2'],
+    ]);
+    $copy = copyOf($source);
+
+    expect($copy->adoptImageUpdates($source, ['admin']))->toBe(['synapse', 'admin']);
+
+    $tags = $copy->fresh()->images->pluck('tag', 'key');
+
+    expect($tags['synapse'])->toBe('1.1.0')
+        ->and($tags['admin'])->toBe('2.1.0')
+        ->and($tags['redis'])->toBe('8.0.1');
+});
+
+it('moves an image kept by digest to the digest of its new tag', function () {
+    $source = versionWithUpdates($this->application, [
+        'synapse' => ['current' => '1.0.0', 'latest' => '1.1.0', 'digest' => 'sha256:old', 'latest_digest' => 'sha256:new'],
+    ]);
+    $copy = copyOf($source);
+
+    $copy->adoptImageUpdates($source, ['synapse']);
+
+    $image = $copy->fresh()->images->first();
+
+    expect($image->tag)->toBe('1.1.0')
+        ->and($image->digest)->toBe('sha256:new');
+});
+
+it('does not move what was not picked, what has no newer tag, or what is not there', function () {
+    $source = versionWithUpdates($this->application, [
+        'imaginary' => ['current' => '1.0.0', 'latest' => '1.1.0'],
+        'current' => ['current' => '2.0.0', 'latest' => '2.0.0'],
+    ]);
+    $copy = copyOf($source);
+
+    expect($copy->adoptImageUpdates($source, []))->toBe([])
+        ->and($copy->adoptImageUpdates($source, ['current', 'unknown']))->toBe([]);
+
+    expect($copy->fresh()->images->pluck('tag', 'key')->all())->toBe(['imaginary' => '1.0.0', 'current' => '2.0.0']);
+});
+
+// ─── Settings of an instance that the version's images take the place of ─────
+
+function instanceWithSettings(AppVersion $version, array $settings): AppInstance
+{
+    return (new AppInstance)->forceFill(['version_id' => $version->id, 'settings' => $settings]);
+}
+
+function shadowedBy(AppVersion $version, array $settings): array
+{
+    return (new ShadowedImages)->for(instanceWithSettings($version->fresh(), $settings));
+}
+
+it('lists the settings of an instance for an image its version sets that say something else', function () {
+    $version = imageVersion($this->application);
+    addPathImage($version, 'imaginary', 'Imaginary', 'imaginary.image', 'nextcloud/aio-imaginary', '20270101_000000');
+
+    $shadowed = shadowedBy($version, ['override' => ['imaginary-image-tag' => '20261109_101109'], 'configurations' => ['imaginary-image-repository' => 'someone/else']]);
+
+    expect($shadowed)->toBe([
+        ['image' => 'Imaginary', 'setting' => 'imaginary-image-repository', 'value' => 'someone/else', 'used' => 'nextcloud/aio-imaginary'],
+        ['image' => 'Imaginary', 'setting' => 'imaginary-image-tag', 'value' => '20261109_101109', 'used' => '20270101_000000'],
+    ]);
+});
+
+it('does not list a setting that says what the version does, or that is not about its images', function () {
+    $version = imageVersion($this->application);
+    addPathImage($version, 'imaginary', 'Imaginary', 'imaginary.image', 'nextcloud/aio-imaginary', '20270101_000000');
+
+    expect(shadowedBy($version, ['override' => ['imaginary-image-tag' => '20270101_000000', 'imaginary-image-registry' => '', 'imaginary-replicaCount' => 2]]))->toBe([])
+        ->and(shadowedBy($version, ['override' => ['imaginary-image-tag' => ['not' => 'a tag']]]))->toBe([])
+        ->and(shadowedBy($version, []))->toBe([])
+        ->and(shadowedBy($version, ['configurations' => null]))->toBe([]);
+});
+
+it('lists nothing for images the version does not set itself', function () {
+    $version = imageVersion($this->application);
+    addPathImage($version, 'shipped', 'Shipped', 'shipped.image', 'org/shipped', '1.0.0', ['source' => 'chart']);
+    addPathImage($version, 'migrate', 'Migrate', 'migrate.image', 'org/migrate', '1.0.0', ['role' => 'job']);
+
+    expect(shadowedBy($version, ['override' => ['shipped-image-tag' => '0.1', 'migrate-image-tag' => '0.1', 'image-tag' => '0.1']]))->toBe([]);
+});
+
+it('names a part of an image after the place it is set at, whatever that place is called', function () {
+    $version = imageVersion($this->application);
+    addPathImage($version, 'worker', '', 'matrix.worker.image', 'org/worker', '2.0.0');
+
+    expect(shadowedBy($version, ['configurations' => ['matrix-worker-image-tag' => '1.0.0']]))->toBe([
+        ['image' => 'worker', 'setting' => 'matrix-worker-image-tag', 'value' => '1.0.0', 'used' => '2.0.0'],
+    ]);
+});
+
+function addPathImage(AppVersion $version, string $key, string $label, string $path, string $repository, string $tag, array $attributes = []): AppVersionImage
+{
+    return AppVersionImage::factory()->create($attributes + [
+        'app_version_id' => $version->id,
+        'key' => $key,
+        'label' => $label ?: null,
+        'registry' => 'docker.io',
+        'repository' => $repository,
+        'tag' => $tag,
+        'values_path' => $path,
+    ]);
+}

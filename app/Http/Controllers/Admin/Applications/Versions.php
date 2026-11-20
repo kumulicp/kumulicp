@@ -71,6 +71,9 @@ class Versions extends Controller
             'version' => 'required|not_regex:/\//',
             'copy_from' => 'required|in:recommendations,previous_version,update,none',
             'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
+            // The other images an update is adopted for
+            'images' => 'exclude_unless:copy_from,update|nullable|array',
+            'images.*' => 'string|max:64',
         ]);
         $image_registry_id = null;
         $copy_version = null;
@@ -116,6 +119,11 @@ class Versions extends Controller
         // The images besides the primary one, which follows the settings
         if ($copy_version) {
             $app_version->copyImagesFrom($copy_version);
+
+            // Only the ones that were picked are moved to their newer tag
+            if ($validatedData['copy_from'] === 'update') {
+                $app_version->adoptImageUpdates($copy_version, $validatedData['images'] ?? []);
+            }
         } elseif ($recommendations) {
             $app_version->addRecommendedImages($recommendations);
         }
@@ -139,6 +147,8 @@ class Versions extends Controller
                 'helm_repo_secret_id' => $version->helm_repo_secret_id,
                 'chart_version' => $version->setting('chart_version'),
                 'chart_name' => $version->setting('chart_name'),
+                // The images besides the one these settings describe
+                'extra_images' => $version->images()->where('role', '!=', 'primary')->count(),
                 'port' => $version->setting('port'),
                 'admin_path' => $version->admin_path,
                 'announcement_location' => $version->announcement_location,
