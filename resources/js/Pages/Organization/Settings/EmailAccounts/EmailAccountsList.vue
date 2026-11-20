@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import EmailAccountsLayout from './EmailAccountsMain.vue'
+import MailboxAliases from '@/components/MailboxAliases.vue'
 import { useForm } from '@inertiajs/vue3'
 
 </script>
@@ -170,6 +171,15 @@ import { useForm } from '@inertiajs/vue3'
             <va-button type="submit" color="primary" :disabled="add.processing">{{ $t('common.update') }}</va-button>
           </va-card-actions>
         </form>
+        <va-card-content v-if="editEmailAccount.mailbox_id">
+          <mailbox-aliases
+            :key="editEmailAccount.mailbox_id"
+            :mailbox-id="editEmailAccount.mailbox_id"
+            :aliases="currentAliases"
+            :domains="alias_domains"
+            :enabled="aliases_enabled"
+          />
+        </va-card-content>
     </template>
   </va-modal>
 </template>
@@ -182,6 +192,8 @@ export default {
   props: {
     accounts: Object,
     domains: Object,
+    alias_domains: Array,
+    aliases_enabled: Boolean,
     default_domain: Object,
     can: Object,
     errors: Object
@@ -208,6 +220,12 @@ export default {
         password: '',
         password_confirmation: ''
       })
+    }
+  },
+  computed: {
+    // From the page's own data, so an alias added or removed shows without closing the dialog
+    currentAliases () {
+      return this.accounts.find(account => account.email === this.editEmailAccount.email)?.aliases ?? []
     }
   },
   methods: {

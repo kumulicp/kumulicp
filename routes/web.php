@@ -513,6 +513,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::delete('', 'Account\Notifications@destroy')->name('notifications.destroy');
     });
 
+    Route::prefix('mailboxes/{mailbox}/aliases')->group(function () {
+        Route::post('', 'Account\Email\Aliases@store')->name('mailbox.aliases.store');
+        Route::delete('{address}', 'Account\Email\Aliases@destroy')->name('mailbox.aliases.destroy');
+    });
+
     Route::prefix('profile')->group(function () {
         Route::get('', 'Profile@index')->name('profile');
         Route::post('update/passwd', 'Profile@updatePassword')->name('profile.update.password');

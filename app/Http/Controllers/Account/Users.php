@@ -21,9 +21,11 @@ use App\Rules\EmailLocalPart;
 use App\Rules\MainContact;
 use App\Rules\UserNotExists;
 use App\Services\AdditionalStorageService;
+use App\Services\Email\MailboxAliasService;
 use App\Services\Email\MailboxException;
 use App\Services\Email\MailboxService;
 use App\SuborgUser;
+use App\Support\Email\LdapEmailAttributes;
 use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
@@ -333,6 +335,9 @@ class Users extends Controller
             })->values();
         }
 
+        // Aliases belong to the address they sign in with, so only someone who has accepted one has any
+        $active_mailbox = $mailbox?->status === Mailbox::ACTIVE ? $mailbox : null;
+
         return inertia('Organization/Users/UserEdit', [
             'user' => [
                 'id' => $user->attribute('username'),
@@ -362,6 +367,12 @@ class Users extends Controller
                 ];
             }),
             'email_domains' => $email_domains,
+            'aliases' => $active_mailbox ? [
+                'enabled' => LdapEmailAttributes::aliasesEnabled(),
+                'mailbox_id' => $active_mailbox->id,
+                'list' => app(MailboxAliasService::class)->forMailbox($active_mailbox),
+                'domains' => $organization->domains()->emailEnabled()->get()->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
+            ] : null,
             'breadcrumbs' => [
                 [
                     'label' => 'Users',

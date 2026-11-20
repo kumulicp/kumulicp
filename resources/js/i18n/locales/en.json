@@ -1789,6 +1789,15 @@
     "signInEmail": "Login Email",
     "signInEmailHint": "This is the email you sign in with. Change it from the Login email section above."
   },
+  "mailboxAliases": {
+    "title": "Aliases",
+    "disabled": "Aliases are turned off. With LDAP, an administrator has to add an LDAP attribute for them and set it on the LDAP settings page.",
+    "none": "No aliases yet. Mail sent to an alias arrives in this mailbox.",
+    "name": "Name",
+    "domain": "Domain",
+    "add": "Add alias",
+    "remove": "Remove"
+  },
   "orgEmail": {
     "title": "Email",
     "description": "The control panel's database is the source of truth for email data. Use this page to copy it back to the directory if the two ever drift apart.",
