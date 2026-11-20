@@ -8,6 +8,7 @@ use App\Enums\AccessType;
 use App\Events\Users\DeletingUser;
 use App\Events\Users\UserCreated;
 use App\Events\Users\UserDeleted;
+use App\Events\Users\UserEmailChanged;
 use App\Events\Users\UserUpdated;
 use App\Http\Controllers\Controller;
 use App\Mailbox;
@@ -432,6 +433,7 @@ class Users extends Controller
             Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::all()), background: true);
         }
 
+        $old_email = (string) $user->attribute('email');
         $name = $request->first_name.' '.$request->last_name;
         $attributes = [
             'phone_number' => str_replace('_', '', $request->phone_number),
@@ -449,6 +451,10 @@ class Users extends Controller
         $user->save();
 
         event(new UserUpdated($user));
+
+        if (! $has_mailbox && strcasecmp($old_email, (string) $request->personal_email) !== 0) {
+            event(new UserEmailChanged($new_organization, (string) $user->attribute('username'), $old_email, (string) $request->personal_email));
+        }
 
         return to_route('users.show', ['user' => $user->attribute('username')])->with('success', __('organization.user.updated', ['name' => $name]));
     }
