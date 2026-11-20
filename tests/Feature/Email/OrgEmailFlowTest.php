@@ -269,6 +269,7 @@ class OrgEmailFlowTest extends TestCase
             'first_name' => 'Demo',
             'last_name' => 'User',
             'personal_email' => 'new-address@example.org',
+            'locale' => 'en',
         ])->assertSessionHasNoErrors();
 
         Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'new-address@example.org');
@@ -280,6 +281,7 @@ class OrgEmailFlowTest extends TestCase
             'first_name' => 'Demo',
             'last_name' => 'Renamed',
             'personal_email' => 'demo@example.com',
+            'locale' => 'en',
         ])->assertSessionHasNoErrors();
 
         Event::assertNotDispatched(UserEmailChanged::class);
