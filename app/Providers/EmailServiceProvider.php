@@ -124,8 +124,9 @@ class EmailServiceProvider extends ServiceProvider
             $organization = $user->organization;
             $domains = $organization->domains()->emailEnabled()->active()->get();
 
+            // all() loads the plans: asked on its own, as when an email account is saved, the service has none yet and says no
             return $organization->status !== 'deactivated'
-                && Subscription::emailEnabled()
+                && Subscription::all()->emailEnabled()
                 && $domains->count() != 0
                 && (! $forwarder || $forwarder->organization_id === $organization->id)
                 ? Response::allow()
