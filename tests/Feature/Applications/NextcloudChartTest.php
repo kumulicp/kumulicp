@@ -71,7 +71,7 @@ it('gives the app its own database password rather than the organization secret'
 });
 
 // The chart for a new Nextcloud instance. Images are given to the version before it is activated.
-function nextcloudChart(array $configurations = [], array $images = []): NextcloudChart
+function nextcloudChart(array $configurations = [], array $images = [], array $additional_configs = []): NextcloudChart
 {
     $organization = Organization::factory()->create();
 
@@ -101,6 +101,7 @@ function nextcloudChart(array $configurations = [], array $images = []): Nextclo
             'storage' => ['max' => 1, 'price' => 0, 'amount' => 1, 'price_id' => null],
             'standard' => ['max' => 1, 'price' => 0, 'storage' => 1, 'price_id' => null],
             'configurations' => $configurations,
+            'additionalConfigs' => $additional_configs,
         ],
     ]);
 
@@ -181,19 +182,30 @@ it('runs imaginary from the image the version has for it', function () {
     ]);
 });
 
-it('does not let the imaginary configurations put back an image other than the version\'s', function () {
+it('does not let a setting of the plan for the same place in the values put back another image', function () {
+    // A setting added to the plan is written to the values by its name: imaginary-image-tag is imaginary.image.tag
     $values = nextcloudChart(
         ['imaginary-enabled' => true, 'imaginary-image-tag' => 'from-the-plan'],
-        [imaginaryImage()]
+        [imaginaryImage()],
+        ['imaginary-image-tag' => ['name' => 'imaginary-image-tag']]
     )->valuesWithAdditionalConfigs();
 
     expect($values['imaginary']['image']['tag'])->toBe('20270101_000000');
 });
 
-it('falls back to the imaginary configurations for a version without an image for it', function () {
+it('runs the image the profile recommends for a version without its own imaginary image', function () {
     $values = nextcloudChart(['imaginary-enabled' => true])->valuesWithAdditionalConfigs();
 
-    expect($values['imaginary']['image'])->toMatchArray(['registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary']);
+    expect($values['imaginary']['image'])->toMatchArray(['registry' => 'docker.io', 'repository' => 'nextcloud/aio-imaginary'])
+        ->and($values['imaginary']['image']['tag'])->not->toBeEmpty()->not->toBe('latest');
+});
+
+it('no longer has configurations for the imaginary image', function () {
+    $profile = new App\Integrations\Applications\Nextcloud\NextcloudProfile;
+
+    foreach (['imaginary-image-registry', 'imaginary-image-repository', 'imaginary-image-tag'] as $name) {
+        expect($profile->configuration($name))->toBeNull();
+    }
 });
 
 it('writes other images beside what the chart keeps under their path', function () {
