@@ -157,6 +157,7 @@ return [
             'undo_expired' => 'Es demasiado tarde para volver atrás, o no hay nada de lo que volver.',
             'failed' => 'No se pudo configurar el correo de inicio de sesión. No se cambió nada. Inténtalo de nuevo y avisa a soporte si sigue ocurriendo.',
             'offered' => 'Se creó el correo de la organización :email para :name. Entra en vigor cuando lo acepte desde su perfil.',
+            'hosted' => ':email ahora está alojado aquí para :name. Es la dirección que ya tenía, así que no cambia nada para esa persona.',
             'accepted' => 'Ahora inicias sesión con :email.',
             'undone' => 'Has vuelto a :email.',
             'removed' => 'Se eliminó :email.',

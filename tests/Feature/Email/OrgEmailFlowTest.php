@@ -209,6 +209,24 @@ class OrgEmailFlowTest extends TestCase
         $this->assertDatabaseHas('mailboxes', ['address' => 'demo@corp.org', 'status' => Mailbox::PENDING]);
     }
 
+    public function test_an_administrator_offering_the_address_the_user_already_has_hosts_it_straight_away()
+    {
+        OrgDomain::factory()->create([
+            'organization_id' => $this->user->organization->id,
+            'name' => 'example.com',
+            'status' => 'active',
+            'email_enabled' => true,
+            'email_status' => 'active',
+        ]);
+
+        $response = $this->get('/users/demo/create/accountemail/'.OrgDomain::where('name', 'example.com')->value('id'));
+
+        $response->assertRedirect('/users/demo');
+        $response->assertSessionHas('success');
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseHas('mailboxes', ['address' => 'demo@example.com', 'status' => Mailbox::ACTIVE, 'swapped_at' => null]);
+    }
+
     public function test_the_admin_user_page_shows_the_offer_and_the_organization_address()
     {
         $this->get('/users/demo/create/accountemail/'.$this->corp->id);

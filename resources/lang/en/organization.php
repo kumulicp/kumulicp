@@ -160,6 +160,7 @@ return [
             'undo_expired' => 'It is too late to switch back, or there is nothing to switch back from.',
             'failed' => 'The login email could not be set up. Nothing was changed. Try again, and tell support if it keeps happening.',
             'offered' => 'The org email :email was created for :name. It takes effect once they accept it from their profile.',
+            'hosted' => ':email is now hosted here for :name. It is the address they already had, so nothing changes for them.',
             'accepted' => 'You now sign in with :email.',
             'undone' => 'You are back on :email.',
             'removed' => ':email was removed.',

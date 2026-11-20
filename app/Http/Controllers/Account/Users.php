@@ -481,7 +481,8 @@ class Users extends Controller
     /**
      * An administrator offers the user an organization address (their username at the domain).
      * Nothing about the user changes until they accept it from their profile: switching what
-     * someone signs in with can orphan their accounts in apps, so it is theirs to decide.
+     * someone signs in with can orphan their accounts in apps, so it is theirs to decide. The
+     * exception is the address they already have, which changes nothing and is hosted straight away.
      */
     public function createAccountEmail(string $username, OrgDomain $domain, MailboxService $mailboxes)
     {
@@ -498,6 +499,15 @@ class Users extends Controller
 
         try {
             $mailbox = $mailboxes->offer($user, $domain, $local_part, $user->attribute('name'));
+        } catch (MailboxException $e) {
+            return redirect('/users/'.$username)->with('error', $e->getMessage());
+        }
+
+        // The address they already have changes nothing for them, so there is nothing for them to accept
+        try {
+            if ($mailboxes->acceptIfUnchanged($user, $mailbox)) {
+                return redirect('/users/'.$username)->with('success', __('organization.email.mailbox.hosted', ['name' => $user->attribute('name'), 'email' => $mailbox->address]));
+            }
         } catch (MailboxException $e) {
             return redirect('/users/'.$username)->with('error', $e->getMessage());
         }
