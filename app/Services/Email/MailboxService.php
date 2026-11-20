@@ -4,6 +4,7 @@ namespace App\Services\Email;
 
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
+use App\Events\Users\UserEmailChanged;
 use App\Events\Users\UserUpdated;
 use App\Mailbox;
 use App\Notifications\PrimaryEmailChanged;
@@ -169,6 +170,7 @@ class MailboxService
         event(new MailboxActivated($mailbox));
 
         if ($plan['changes_email']) {
+            event(new UserEmailChanged($user->organization(), $username, $current, $address));
             $this->tell($current, new PrimaryEmailChanged($username, $current, $address, $now_recovery, $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))));
         }
 
@@ -189,6 +191,9 @@ class MailboxService
         if ($mailbox->username !== $username || ! $mailbox->canBeUndone() || ! $mailbox->previous_mail) {
             throw new MailboxException(__('organization.email.mailbox.undo_expired'));
         }
+
+        $switched_to = $mailbox->address;
+        $restored = $mailbox->previous_mail;
 
         try {
             $this->changeEmail($user, $username, $mailbox->previous_mail);
@@ -211,6 +216,7 @@ class MailboxService
         ])->save();
 
         event(new UserUpdated($user));
+        event(new UserEmailChanged($user->organization(), $username, $switched_to, $restored));
         event(new MailboxDeactivated($mailbox));
 
         return $mailbox;
@@ -242,6 +248,10 @@ class MailboxService
             }
 
             event(new UserUpdated($user));
+
+            if ($restore !== null) {
+                event(new UserEmailChanged($user->organization(), $username, $mailbox->address, $restore));
+            }
         }
 
         $mailbox->delete();

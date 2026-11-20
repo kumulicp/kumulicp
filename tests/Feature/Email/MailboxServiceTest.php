@@ -5,6 +5,7 @@ namespace Tests\Feature\Email;
 use App\Enums\AccessType;
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
+use App\Events\Users\UserEmailChanged;
 use App\Events\Users\UserUpdated;
 use App\Mailbox;
 use App\Notifications\PrimaryEmailChanged;
@@ -50,7 +51,7 @@ class MailboxServiceTest extends TestCase
         (new TestSupports)->seed();
         $this->actingAs(User::where('username', 'demo')->firstOrFail());
 
-        Event::fake([UserUpdated::class, MailboxActivated::class, MailboxDeactivated::class]);
+        Event::fake([UserUpdated::class, UserEmailChanged::class, MailboxActivated::class, MailboxDeactivated::class]);
         Notification::fake();
 
         $this->server = new FakeMailServer;
@@ -160,6 +161,8 @@ class MailboxServiceTest extends TestCase
         $this->assertSame(['demo'], $this->server->created);
         Event::assertDispatched(MailboxActivated::class);
         Event::assertDispatched(UserUpdated::class);
+        // Apps that know people by their email (ERPNext) need the old one to find them
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'jdoe@corp.org');
         Notification::assertSentOnDemand(PrimaryEmailChanged::class, fn ($n, $channels, $notifiable) => $notifiable->routes['mail'] === 'demo@example.com');
     }
 
@@ -190,6 +193,8 @@ class MailboxServiceTest extends TestCase
         $this->assertNull($this->recovery->get('demo'));
         $this->assertSame(['demo'], $this->server->created);
         Notification::assertNothingSent();
+        // The address is the same one, so there is nothing for apps to follow
+        Event::assertNotDispatched(UserEmailChanged::class);
     }
 
     public function test_a_recovery_email_that_works_stays_and_the_current_email_is_dropped()
@@ -297,6 +302,7 @@ class MailboxServiceTest extends TestCase
         $this->assertNull($mailbox->previous_mail);
         $this->assertSame(['demo'], $this->server->deleted);
         Event::assertDispatched(MailboxDeactivated::class);
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->old_email === 'jdoe@corp.org' && $event->new_email === 'demo@example.com');
     }
 
     public function test_the_switch_cannot_be_undone_after_the_window()
@@ -331,6 +337,7 @@ class MailboxServiceTest extends TestCase
         $this->assertSame('demo@example.com', $this->email());
         $this->assertNull($this->recovery->get('demo'));
         $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->old_email === 'jdoe@corp.org' && $event->new_email === 'demo@example.com');
     }
 
     public function test_removing_the_mailbox_of_someone_with_no_usable_recovery_email_leaves_their_email()

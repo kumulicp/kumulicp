@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Users\UserEmailChanged;
 use App\Mailbox;
 use App\Rules\AccountEmailChecks;
 use App\Rules\ConfirmOldPassword;
@@ -99,6 +100,10 @@ class Profile extends Controller
 
         $validatedData = $request->validate($rules);
 
+        // The address the person had until now. The directory's, when there is one: the panel's own copy is only refreshed at sign in
+        $directory_user = AccountManager::driver() != 'direct' ? AccountManager::users()->find($user->username) : null;
+        $old_email = (string) ($directory_user?->attribute('email') ?? $user->email);
+
         if (! $has_mailbox) {
             $user->email = $request->personal_email;
         }
@@ -112,8 +117,12 @@ class Profile extends Controller
         $validatedData['name'] = $validatedData['first_name'].' '.$validatedData['last_name'];
         unset($validatedData['locale']);
 
-        if (AccountManager::driver() != 'direct') {
-            AccountManager::users()->find($user->username)->update($validatedData);
+        if ($directory_user) {
+            $directory_user->update($validatedData);
+        }
+
+        if (! $has_mailbox && strcasecmp($old_email, (string) $request->personal_email) !== 0) {
+            event(new UserEmailChanged($organization, $user->username, $old_email, (string) $request->personal_email));
         }
 
         return redirect('/profile')->with('success', __('profile.updated'));
