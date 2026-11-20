@@ -172,9 +172,70 @@ Exit: the same contract tests pass in `ldap` and `db` modes for add, update, del
 
 ### Phase 3 - Domains, DNS and deliverability
 
-- Replace `EmailService::checkEmailDNSSettings`: it requires exactly one TXT record, an exact SPF string and `p=reject`, and `dns_get_record` returning `false` throws. Parse SPF, DKIM and MX instead; make the DMARC policy configurable, starting at `quarantine`.
-- Add PTR/rDNS, MTA-STS, TLS-RPT and autoconfig/autodiscover SRV records.
-- Have Stalwart generate the DKIM key through its API. Keep the `/api/dkim` route as a deprecated no-op (running jobs may still call it).
+**What is wrong today** (all in `EmailService` and `AddEmailDomain`, checked in the code):
+- `checkEmailDNSSettings` returns `true` outside production, so staging and every test pass whatever the DNS says, and "waiting for DNS" can never be exercised.
+- In production it needs *exactly one* TXT record at the apex, at `_dmarc` and at the DKIM selector. A domain with any other apex TXT (a Google or Microsoft site verification, a leftover SPF) never passes. It compares the SPF and DMARC strings for equality, `dns_get_record` returning `false` throws, and it uses the server's own resolver, so a cached answer reads as "propagated".
+- The records are derived, not stored: `requiredDNSRecords()` builds MX, SPF, DKIM and DMARC from the server on every call, and for a managed domain Namecheap's `setHosts` is told the *whole* record set each time. There is nowhere to keep a change someone made to one of them.
+- SPF is `v=spf1 ip4:<server ip> ~all`: no way to add another sender, and it breaks when the server's IP changes. DMARC is `p=reject` with `rua` set to the *administrator's* `error_email` setting for every tenant, so reports go to the wrong person and `reject` is the strictest place to start. The MX value has no priority. Nothing checks PTR, TLS, MTA-STS, TLS-RPT, autoconfig or blocklists.
+
+**3a. Email gets its own tab on the domain page.** `WebDomainsSettings.vue` becomes tabs, with the tab kept in the URL (`?tab=email`) so redirects can land on it:
+- *Overview* (what is there now: primary app, redirect, ownership actions), *DNS* (subdomains and records), and **Email**.
+- Email holds everything now spread over the page: the status chip and the "being set up" alerts, the enable email action, the readiness panel and its enable preview from 2b, the required records, and the checklist and the edit dialog below. The `enable_email` redirect and the readiness offer flows send people to the Email tab.
+- A domain without email shows the Email tab with a single "Enable email" call to action and the preview, as the dialog does today.
+
+**3b. Checks that look at the real DNS, not at what was saved.** A `DnsResolver` seam (a fake in tests, so it works in every environment) replaces `dns_get_record`:
+- It asks the domain's **authoritative nameservers directly** (found from the domain's NS records) and **public resolvers** (Cloudflare, Google and Quad9, over DNS-over-HTTPS or a resolver library; the system resolver cannot be chosen or flushed).
+- Every check reports three layers, because "I added it" is not "it works": *saved* (a managed domain only: what Namecheap's `getHosts` returns), *served* (every authoritative nameserver answers with it), and *visible* (the public resolvers agree). A managed domain whose nameservers are not the registrar's is called out, because what is saved at the registrar will never be seen. A connected domain only has *served* and *visible*, which is why the scan matters most there.
+- A check is `pass`, `warn`, `fail`, `pending` (served but not visible yet: "propagating", with the TTL as an estimate of how long), `unknown` (a lookup timed out; never reported as a failure) or `not applicable`. Each result keeps what was found and what was expected, so the page can show the difference.
+- Results are stored (`domain_email_checks`: check, status, found, expected, scanned at) and shown with when they were scanned and a **Rescan** button. While anything is `pending` a queued job rescans with a back-off (1, 2, 5, 15 minutes, then hourly for 48 hours). A domain moves from `waiting_dns` to `active` when every required check has passed on two scans in a row, which replaces `checkEmailDNSSettings`.
+- Two other things the scan notices: a Cloudflare-style *proxied* record (orange cloud), which breaks mail and autoconfig hosts, and a domain still pointing at its old provider (leftover MX or SPF), which is the Fastmail case from 2b.
+
+**3c. The checklist.** Required items must pass for the domain to go live; the rest raise the score and are warnings only. Each item says what it is for, what to do, and links to the record that fixes it.
+
+*Required*
+| Item | Passes when |
+|---|---|
+| Nameservers | Every NS answers, and (managed) they are the registrar's. |
+| MX | At least one MX, pointing at the mail host, with a priority; no MX left from another provider; the host resolves to an A or AAAA and is not a CNAME. |
+| SPF | Exactly one `v=spf1` TXT at the apex; it authorizes the mail server; at most 10 DNS lookups; ends in `~all` or `-all`; no `+all`, `?all` or `ptr`. Other TXT records at the apex are fine. |
+| DKIM | The selector record exists, is valid, is at least 2048 bits (1024 is a warning) and its `p=` matches the key the mail server signs with; long keys split into 255-character strings are joined before comparing. |
+| DMARC | Exactly one `v=DMARC1` at `_dmarc`, with a policy, and a `rua` mailbox that exists and belongs to the tenant (or an authorized external destination). |
+| Autoconfig and autodiscover | The records and hosts from 3d answer, with a valid certificate for the host. |
+| SMTP and IMAP reachable | Port 25 accepts STARTTLS with a certificate that matches the MX host; submission (465 or 587) and IMAPS (993) answer with a valid, unexpired certificate. |
+
+*Boosts deliverability (warnings)*
+| Item | Passes when |
+|---|---|
+| Reverse DNS | The sending IP's PTR resolves back to the same IP and matches the server's EHLO name (forward-confirmed). One result for the mail server, shown to administrators (a tenant cannot fix it). |
+| DMARC policy | `p=none` warns; `quarantine` is the default; `reject` is a goal once reports are clean. `pct`, subdomain policy and alignment are shown. |
+| MTA-STS | `_mta-sts` TXT and a policy that is served over HTTPS, in `testing` first and `enforce` later. |
+| TLS-RPT | `_smtp._tls` TXT with a `rua`. |
+| Blocklists | The sending IP and the domain are not on the major lists. Spamhaus refuses queries from the big public resolvers, so this asks through our own resolver (or a DQS key). |
+| Clean records | No second SPF or DMARC record, no stale DKIM selectors, no wildcard that answers for the mail hosts. |
+| TTLs | Low (300 s) while a domain is being moved, and a reminder to raise them after. |
+| DNSSEC, DANE (TLSA), BIMI | Shown as advanced and optional: DNSSEC only informs, DANE needs DNSSEC, BIMI needs a DMARC policy of quarantine or reject and a verified logo certificate. |
+| Postmaster tools | Not scanned. A note with how to register the domain with Google Postmaster Tools and Microsoft SNDS, and the DMARC reports we collect. |
+
+A score and a "what to fix next" list sit at the top of the Email tab. An optional **send a test message** (to an address the person gives) reads back the `Authentication-Results` of what arrived once there is somewhere that can receive it.
+
+**3d. Autoconfig, autodiscover and the other client records.** Added to the required set (`requiredDNSRecords()` stops being hard-coded; see 3e):
+- `autoconfig.<domain>` CNAME to the mail host (Thunderbird and others read `/mail/config-v1.1.xml`), `autodiscover.<domain>` CNAME and `_autodiscover._tcp` SRV on 443 (Outlook), and the RFC 6186 SRVs `_imaps._tcp`, `_submission._tcp` and `_submissions._tcp` for clients that read those.
+- Stalwart already serves the autoconfig and autodiscover documents; the plugin has to answer for those hostnames for every tenant domain. The checklist verifies the answer, not just the record.
+- MTA-STS (`_mta-sts` TXT and the `mta-sts.<domain>` host) and TLS-RPT (`_smtp._tls`) go in the same place, optional at first.
+
+**3e. Records stored, and one dialog to edit them.** A `domain_email_records` table: the record kind (MX, SPF, DKIM, DMARC, autoconfig, autodiscover, SRV, MTA-STS, TLS-RPT), a `mode` (`auto` or `manual`), the builder's options as JSON and the rendered value. `requiredDNSRecords()` reads it, with today's values as the defaults, so existing domains keep working. A managed domain saves through `UpdateDnsRecords` (the whole set to Namecheap); a connected domain shows exactly what to add and checks it.
+- Each record has an **Edit** button that opens a dialog written in plain words, not record syntax:
+  - *SPF*: "Also send mail from" with a list of services to add (their `include:` values, with the lookup count shown), and a choice of "soft fail" (`~all`, default) or "reject" (`-all`). The value is shown live under the controls.
+  - *DMARC*: policy (none, quarantine, reject; starts at quarantine), percentage, where reports go (a mailbox of the domain, the default), strict or relaxed alignment, and a subdomain policy.
+  - *DKIM*: read-only, with the selector and a **Generate a new key** action (the key comes from Stalwart; rotation publishes the new selector before using it).
+  - *MX, autoconfig, autodiscover, MTA-STS, TLS-RPT*: switches and a mode where there is a choice; nothing to type.
+  - Each ends in "this is what will be published", the same rows as the table, and **Save**.
+- **Edit manually** on the same dialog turns the controls into the raw value. It validates with the same parser the checks use, warns that a wrong value can stop mail, and marks the record `manual` so a later change of the mail server's IP or key does not overwrite it. **Reset to recommended** goes back to `auto`.
+- Connected domains: each row has the host as the provider wants it (relative and fully qualified), the value, a suggested TTL and a copy button, plus a note when the nameservers show Cloudflare (turn the proxy off for the mail hosts). After "I have added them" the scan from 3b follows the result.
+
+**3f. DKIM from Stalwart.** Have Stalwart generate the DKIM key through its API, and fix `RetrieveDkimKey`'s dependence on the `/api/dkim` callback. Keep the `/api/dkim` route as a deprecated no-op (running jobs may still call it).
+
+**Suggested slices** (each about 500 lines or less, in this order, each leaving the page working): 3a the tab move alone; 3b `DnsResolver`, the check result table and the scan job, replacing `checkEmailDNSSettings` behind the existing statuses; 3c the checklist items in groups (records, then transport, then reputation) with their tab section; 3e the records table, the generated defaults and the edit dialog (SPF and DMARC first); 3d the new records, then MTA-STS and TLS-RPT; 3f DKIM from Stalwart.
 
 ### Phase 4 - Security and operations
 
@@ -194,9 +255,15 @@ Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and t
 - A new domain goes from "enable email" to a delivered and received test message in staging.
 - Quota, password-change and delete round trips are verified in Stalwart for each mode.
 - The Phase 1 checklist is closed and the verification debt above is cleared.
+- A new domain, on a connected and on a managed setup, shows every required item of the Phase 3 checklist as passed from a scan that looked at the real DNS (authoritative and public), and a message from it passes SPF, DKIM and DMARC at a third-party mailbox.
 
 ## Open questions
 
+- Phase 3 resolver: DNS-over-HTTPS to a few public resolvers, or a DNS library talking to them and to the authoritative servers directly? (Port 53 outbound may be blocked from the cluster; DoH always works but cannot ask an authoritative server.)
+- Where do DMARC aggregate reports go? A mailbox per domain (`dmarc@<domain>`, which needs a mailbox), the administrator's address as today, or a service that parses them? Reports to the wrong person are worse than none.
+- Autoconfig and autodiscover need a certificate for `autoconfig.<domain>` and `autodiscover.<domain>` for every tenant domain, and MTA-STS one for `mta-sts.<domain>` plus a web server answering it. Does the plugin issue those per host (HTTP-01 against a CNAME), or is a wildcard on our own hostname used with CNAMEs only?
+- Is MTA-STS built in the first slice or left optional until the rest is stable? (It is only useful once it is `enforce`, and a mistake there blocks inbound mail.)
+- Blocklist checks: our own resolver, or a Spamhaus DQS key?
 - Existing `orgMail` users: run the migration command per organization once the audit (2d) is done, or per user an admin picks? (It can already do either: `--organization`, `--user`.)
 - Orphans on the sync page: keep them report-only, or let DB-wins clear them after a confirmation?
 - Alias cap per mailbox: a plan setting, default unlimited and not billed?
