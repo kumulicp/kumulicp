@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
+import DomainReadinessSummary from '@/components/DomainReadinessSummary.vue'
+import { router, useForm } from '@inertiajs/vue3'
 
 </script>
 <template>
@@ -13,7 +14,11 @@ import { useForm } from '@inertiajs/vue3'
     <template #content="{ ok }">
       <va-card-title class="m-0"> {{ $t('organization.webDomains.enableEmailAccounts') }} </va-card-title>
       <va-card-content class="m-0">
-        {{ $t('organization.webDomains.enableEmailConfirm', { name: domain.name }) }}
+        <p class="mb-3">{{ $t('organization.webDomains.enableEmailConfirm', { name: domain.name }) }}</p>
+        <h6 class="va-h6 mb-2">{{ $t('domainReadiness.enableTitle') }}</h6>
+        <p class="va-text-secondary mb-3">{{ $t('domainReadiness.enableIntro') }}</p>
+        <div v-if="preview === undefined" id="enablePreviewLoading" class="va-text-secondary">{{ $t('domainReadiness.loading') }}</div>
+        <domain-readiness-summary v-else-if="preview" :readiness="preview" />
       </va-card-content>
       <va-card-actions align="right">
         <va-button
@@ -39,7 +44,9 @@ import { useForm } from '@inertiajs/vue3'
 export default {
   props: {
     showModal: Boolean,
-    domain: Object
+    domain: Object,
+    // Who is on the domain, asked for when the dialog opens (undefined until it arrives)
+    preview: Object
   },
   emits: ['update:showModal'],
   computed: {
@@ -49,6 +56,14 @@ export default {
       },
       set (value) {
         this.$emit('update:showModal', value)
+      }
+    }
+  },
+  watch: {
+    showModal (value) {
+      // Fresh each time it opens: people may have added their secondary recovery email since it was last open
+      if (value) {
+        router.reload({ only: ['enable_preview'], preserveScroll: true, preserveState: true })
       }
     }
   },

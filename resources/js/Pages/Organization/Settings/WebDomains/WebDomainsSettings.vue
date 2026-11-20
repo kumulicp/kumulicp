@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
+import DomainReadinessPanel from '@/components/DomainReadinessPanel.vue'
 import WebDomainsLayout from './WebDomainsLayout.vue'
 import EnableEmailDomainModal from './modals/EnableEmailDomainModal.vue'
 import RenewDomainModal from './modals/RenewDomainModal.vue'
@@ -65,6 +66,7 @@ import { useToast } from 'vuestic-ui'
     <span v-if="domain.type == 'connection'">{{ $t('organization.webDomains.beforeEmailAccounts') }}</span>
     <span v-else>{{ $t('organization.webDomains.waitingDns') }}</span>
   </va-alert>
+  <domain-readiness-panel v-if="domain.email.readiness" :domain-name="domain.name" :readiness="domain.email.readiness" />
   <form v-if="organizations.length > 1" @submit.prevent="form.post('/settings/domains/'+domain.name)">
     <div class="row my-3">
       <div class="flex flex-col xs12 lg6">
@@ -343,7 +345,7 @@ import { useToast } from 'vuestic-ui'
     </template>
   </va-modal>
 
-  <enable-email-domain-modal :showModal="actions.enable_email" @update:showModal="actions.enable_email = $event" :domain="domain" />
+  <enable-email-domain-modal :showModal="actions.enable_email" @update:showModal="actions.enable_email = $event" :domain="domain" :preview="enable_preview" />
   <reactivate-domain-modal :showModal="actions.reactivate" @update:showModal="actions.reactivate = $event" :domain="domain" />
   <request-transfer-modal :showModal="actions.requeset_transfer" @update:showModal="actions.requeset_transfer = $event" :domain="domain" />
   <renew-domain-modal :showModal="actions.renew" @update:showModal="actions.renew = $event" :domain="domain" />
@@ -359,6 +361,7 @@ export default {
   },
   props: {
     domain: Object,
+    enable_preview: Object,
     subdomains: Object,
     all_app_instance_options: Object,
     organizations: Object,
