@@ -110,13 +110,6 @@ class Organization extends Model
             $organization->default_locale = $organization->default_locale ?: static::systemDefaultLocale();
         });
 
-        // When the organization default changes it replaces every user's language.
-        static::updated(function ($organization) {
-            if ($organization->wasChanged('default_locale') && $organization->default_locale) {
-                $organization->users()->update(['locale' => $organization->default_locale]);
-            }
-        });
-
         static::updated(queueable(function ($organization) {
             if ($organization->stripe_id) {
                 $organization->syncStripeCustomerDetails();

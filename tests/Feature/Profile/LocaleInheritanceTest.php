@@ -36,23 +36,13 @@ it('gives new users their organization default language', function () {
     expect($user->fresh()->locale)->toBe('es');
 });
 
-it('replaces user languages when the organization default changes', function () {
+it('does not change existing user languages when the organization default changes', function () {
     $this->user->update(['locale' => 'en']);
 
     $this->organization->default_locale = 'es';
     $this->organization->save();
 
-    expect($this->user->fresh()->locale)->toBe('es');
-});
-
-it('does not touch user languages when the organization default is unchanged', function () {
-    $this->organization->update(['default_locale' => 'en']);
-    $this->user->update(['locale' => 'es']);
-
-    $this->organization->name = 'Renamed';
-    $this->organization->save();
-
-    expect($this->user->fresh()->locale)->toBe('es');
+    expect($this->user->fresh()->locale)->toBe('en');
 });
 
 it('requires a language on profile update', function () {
