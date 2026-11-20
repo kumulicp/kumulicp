@@ -65,7 +65,6 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
             :options="localeOptions"
             value-by="code"
             text-by="name"
-            clearable
             immediateValidation
             :error="$page.props.errors.default_locale"
             :error-messages="$page.props.errors.default_locale"

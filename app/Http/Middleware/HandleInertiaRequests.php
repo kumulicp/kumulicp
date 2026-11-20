@@ -46,9 +46,9 @@ class HandleInertiaRequests extends Middleware
 
         App::setLocale(
             $user->locale
-            ?? $user->organization->default_locale
-            ?? Settings::get('default_locale', null)
-            ?? config('app.locale')
+            ?: $user->organization->default_locale
+            ?: Settings::get('default_locale', null)
+            ?: config('app.locale')
         );
 
         // An app plan is a profile in a single-organization install
