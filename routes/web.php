@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Webhooks\TicketInbound;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use UniSharp\LaravelFilemanager\Lfm;
 
 /*
@@ -511,7 +513,6 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
         Route::post('org-email/accept', 'Account\User\OrgEmail@accept')->name('profile.org_email.accept');
         Route::post('org-email/undo', 'Account\User\OrgEmail@undo')->name('profile.org_email.undo');
         Route::post('recovery-email', 'Profile@requestRecoveryEmail')->name('profile.recovery.request');
-        Route::get('recovery-email/{hash}', 'Profile@confirmRecoveryEmail')->middleware('signed')->name('profile.recovery.confirm');
         Route::post('', 'Profile@update')->name('profile.update');
     });
 
@@ -573,6 +574,14 @@ Route::prefix('public')->namespace('App\Http\Controllers')->group(function () {
 Route::group(['prefix' => 'laravel-filemanager', 'middleware' => ['auth']], function () {
     Lfm::routes();
 });
+
+// Opened from an email, which the browser treats as arriving from another site: the session cookie is
+// SameSite=strict, so it isn't sent, and starting a session here would replace the one the person has.
+// The signed link is what identifies them, and the page it shows has a link back into the panel.
+Route::get('profile/recovery-email/{username}/{hash}', 'App\Http\Controllers\Profile@confirmRecoveryEmail')
+    ->middleware('signed')
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('profile.recovery.confirm');
 
 Route::get('setup', 'App\Http\Controllers\Setup@settings')->name('initial.setup');
 Route::post('install', 'App\Http\Controllers\Setup@build')->name('initial.build');
