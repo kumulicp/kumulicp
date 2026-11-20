@@ -12,6 +12,7 @@ use App\Services\Email\MailboxService;
 use App\Services\Email\RecoveryEmailService;
 use App\Support\Email\AppIdentity;
 use App\Support\Facades\AccountManager;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 
@@ -130,16 +131,26 @@ class Profile extends Controller
         return redirect('/profile')->with('success', __('profile.recovery.requested', ['email' => $validated['recovery_email']]));
     }
 
-    public function confirmRecoveryEmail(string $hash)
+    /**
+     * Opened from the link in the email, with no session (see the route): the signed link says
+     * whose it is, and the page says whether it worked.
+     */
+    public function confirmRecoveryEmail(string $username, string $hash)
     {
-        $user = auth()->user();
+        $user = User::where('username', $username)->first();
+        $confirmed = false;
 
-        $confirmed = app(RecoveryEmailService::class)->confirm($user->username, $hash, $user->email);
+        if ($user) {
+            // The directory's email when there is one: the panel's copy is only refreshed at sign in
+            $mail = AccountManager::users($user->organization)->find($username)?->attribute('email') ?? $user->email;
 
-        return redirect('/profile')->with(
-            $confirmed ? 'success' : 'error',
-            __($confirmed ? 'profile.recovery.confirmed' : 'profile.recovery.invalid'),
-        );
+            $confirmed = app(RecoveryEmailService::class)->confirm($username, $hash, (string) $mail);
+        }
+
+        return response()
+            ->view('profile.recovery-confirmed', ['confirmed' => $confirmed])
+            ->header('Cache-Control', 'no-store')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 
     public function updatePassword(Request $request)

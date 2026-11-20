@@ -127,16 +127,32 @@ class ProfileRecoveryEmailTest extends TestCase
             ->assertSessionHasErrors('recovery_email');
     }
 
-    public function test_opening_the_signed_link_confirms_the_address()
+    private function confirmUrl(string $address, string $username = 'demo'): string
+    {
+        return URL::temporarySignedRoute('profile.recovery.confirm', now()->addHour(), ['username' => $username, 'hash' => sha1($address)]);
+    }
+
+    public function test_the_link_in_the_email_carries_the_username()
     {
         Notification::fake();
         $this->service->request('demo', 'backup@gmail.com', $this->user->email);
-        $url = URL::temporarySignedRoute('profile.recovery.confirm', now()->addHour(), ['hash' => sha1('backup@gmail.com')]);
 
-        $response = $this->get($url);
+        Notification::assertSentOnDemand(RecoveryEmailConfirmation::class, fn ($notification) => str_contains($notification->url, '/profile/recovery-email/demo/'.sha1('backup@gmail.com')));
+    }
 
-        $response->assertRedirect('/profile');
-        $response->assertSessionHas('success');
+    public function test_opening_the_signed_link_confirms_the_address_without_needing_or_touching_the_session()
+    {
+        Notification::fake();
+        $this->service->request('demo', 'backup@gmail.com', $this->user->email);
+
+        // The session cookie is SameSite=strict, so a link opened from an email arrives without it
+        $response = $this->get($this->confirmUrl('backup@gmail.com'));
+
+        $response->assertOk();
+        $response->assertSee('data-confirmed="true"', false);
+        $response->assertSee(__('profile.recovery.confirmed'));
+        $response->assertSee('href="'.url('/profile').'"', false);
+        $response->assertCookieMissing(config('session.cookie'));
         $this->assertSame('backup@gmail.com', $this->service->get('demo'));
     }
 
@@ -144,16 +160,37 @@ class ProfileRecoveryEmailTest extends TestCase
     {
         $this->service->request('demo', 'backup@gmail.com', $this->user->email);
 
-        $this->get('/profile/recovery-email/'.sha1('backup@gmail.com'))->assertForbidden();
+        $this->get('/profile/recovery-email/demo/'.sha1('backup@gmail.com'))->assertForbidden();
 
+        $this->assertNotSame('backup@gmail.com', $this->service->get('demo'));
+    }
+
+    public function test_a_signed_link_cannot_be_pointed_at_someone_else()
+    {
+        $this->service->request('demo', 'backup@gmail.com', $this->user->email);
+
+        // Changing the username breaks the signature
+        $url = str_replace('/recovery-email/demo/', '/recovery-email/other/', $this->confirmUrl('backup@gmail.com'));
+
+        $this->get($url)->assertForbidden();
         $this->assertNotSame('backup@gmail.com', $this->service->get('demo'));
     }
 
     public function test_a_link_for_an_address_that_was_not_asked_for_says_so()
     {
-        $url = URL::temporarySignedRoute('profile.recovery.confirm', now()->addHour(), ['hash' => sha1('nobody@gmail.com')]);
+        $response = $this->get($this->confirmUrl('nobody@gmail.com'));
 
-        $this->get($url)->assertRedirect('/profile')->assertSessionHas('error');
+        $response->assertOk();
+        $response->assertSee('data-confirmed="false"', false);
+        $response->assertSee(__('profile.recovery.invalid'));
+    }
+
+    public function test_a_link_for_someone_who_does_not_exist_says_so()
+    {
+        $response = $this->get($this->confirmUrl('backup@gmail.com', 'nobody'));
+
+        $response->assertOk();
+        $response->assertSee('data-confirmed="false"', false);
     }
 
     public function test_someone_with_an_organization_address_cannot_change_it_from_the_profile()
