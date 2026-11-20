@@ -134,7 +134,7 @@ class RecoveryEmailService
             URL::temporarySignedRoute(
                 'profile.recovery.confirm',
                 now()->addHours((int) config('email.recovery_confirm_hours', 24)),
-                ['hash' => sha1($email)],
+                ['username' => $username, 'hash' => sha1($email)],
             ),
         ));
     }

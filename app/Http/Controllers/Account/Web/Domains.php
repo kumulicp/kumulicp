@@ -10,16 +10,17 @@ use App\Http\Controllers\Controller;
 use App\Mail\DomainTransferRequest;
 use App\Organization;
 use App\OrgDomain;
+use App\Services\Email\DomainReadiness;
 use App\Support\Facades\Action;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Email;
 use App\Support\Facades\Settings;
-use App\Services\Email\DomainReadiness;
 use App\Tld;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use OffloadProject\Toggle\Facades\Toggle;
 
 class Domains extends Controller
@@ -147,7 +148,7 @@ class Domains extends Controller
                 'redirect_to' => $domain->app_instance ? $domain->app_instance->id : null,
                 'email' => [
                     'status' => $domain->email_status,
-                    // Before its DNS is switched here: who still needs a mailbox, and whose recovery email is on it
+                    // While it is being set up, before its DNS is switched here: who gets switched over and who has a secondary recovery email
                     'readiness' => $domain->emailIsBeingActivated() ? app(DomainReadiness::class)->for($domain) : null,
                 ],
                 'organization' => [
@@ -186,6 +187,8 @@ class Domains extends Controller
                 'can' => [
                 ],
             ],
+            // Asked for when the enable email dialog opens: the same report, before anything is turned on
+            'enable_preview' => Inertia::optional(fn () => Gate::allows('enable-email-domain', $domain) ? app(DomainReadiness::class)->for($domain) : null),
             'subdomains' => $domain->subdomains->map(function ($subdomain) {
                 return [
                     'id' => $subdomain->id,
@@ -321,25 +324,7 @@ class Domains extends Controller
 
         $task = Action::execute(new AddEmailDomain($organization, $domain));
 
-        return redirect('/settings/domains')->with('success', __('organization.domain.enable_email', ['domain' => $domain->name]))->with('reset_menu', true);
-    }
-
-    /**
-     * Offers the address they already have to everyone whose email is on a domain that is being
-     * set up here, so the domain can be switched over without anyone's mail bouncing.
-     */
-    public function offer_mailboxes(OrgDomain $domain, DomainReadiness $readiness)
-    {
-        Gate::authorize('edit-domain', $domain);
-
-        if (! $domain->emailIsBeingActivated()) {
-            return redirect('/settings/domains/'.$domain->name);
-        }
-
-        $result = $readiness->offerExisting($domain);
-
-        return redirect('/settings/domains/'.$domain->name)
-            ->with('success', __('organization.domain.mailboxes_offered', ['count' => $result['offered']]));
+        return redirect('/settings/domains/'.$domain->name)->with('success', __('organization.domain.enable_email', ['domain' => $domain->name]))->with('reset_menu', true);
     }
 
     public function request_transfer(OrgDomain $domain)

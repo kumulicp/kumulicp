@@ -3,6 +3,7 @@
 namespace Tests\Feature\Email;
 
 use App\Enums\AccessType;
+use App\Events\Users\UserEmailChanged;
 use App\Mailbox;
 use App\OrgDomain;
 use App\Services\Email\MailboxService;
@@ -58,75 +59,49 @@ class OrgEmailFlowTest extends TestCase
         return $this->user->fresh()->email;
     }
 
-    private function payload(array $overrides = []): array
+    /**
+     * An administrator gives the user jdoe@corp.org and the user accepts it, which is the only way
+     * anyone gets an organization address.
+     */
+    private function switchEmail(array $accept = []): void
     {
-        return array_merge([
-            'domain' => $this->corp->id,
-            'local_part' => 'jdoe',
-            'current_password' => 'demouser',
-            'acknowledge' => true,
-        ], $overrides);
+        app(MailboxService::class)->offer(AccountManager::users()->find('demo'), $this->corp, 'jdoe');
+
+        $this->post('/profile/org-email/accept', array_merge(['current_password' => 'demouser', 'acknowledge' => true], $accept));
     }
 
-    public function test_the_profile_offers_an_organization_email_to_someone_who_can_have_one()
+    public function test_the_profile_does_not_offer_to_get_an_organization_email_by_itself()
     {
+        // Email is on for corp.org and the user could have an address there, but only an administrator gives one
         $this->get('/profile')->assertInertia(fn ($page) => $page
-            ->where('org_email.can_get', true)
             ->where('org_email.mailbox', null)
-            ->where('org_email.default_name', 'demo')
-            ->where('org_email.domains.0.name', 'corp.org')
-            ->where('org_email.current_hosted', false));
-    }
+            ->missing('org_email.can_get')
+            ->missing('org_email.domains'));
 
-    public function test_someone_who_may_not_have_one_is_not_offered_it()
-    {
-        $this->user->forceFill(['access_type' => AccessType::BASIC])->save();
-
-        $this->get('/profile')->assertInertia(fn ($page) => $page->where('org_email.can_get', false));
-    }
-
-    public function test_choosing_an_address_switches_the_email_in_one_step()
-    {
-        $response = $this->post('/profile/org-email', $this->payload());
-
-        $response->assertRedirect('/profile');
-        $response->assertSessionHas('success');
-        $this->assertSame('jdoe@corp.org', $this->email());
-        $this->assertSame('demo@example.com', app(RecoveryEmailService::class)->get('demo'));
-        $this->assertDatabaseHas('mailboxes', ['address' => 'jdoe@corp.org', 'status' => Mailbox::ACTIVE, 'username' => 'demo']);
+        $this->post('/profile/org-email', ['domain' => $this->corp->id, 'local_part' => 'jdoe', 'current_password' => 'demouser', 'acknowledge' => true])
+            ->assertNotFound();
+        $this->assertDatabaseCount('mailboxes', 0);
+        $this->assertSame('demo@example.com', $this->email());
     }
 
     public function test_the_page_afterwards_shows_the_address_and_how_long_it_can_be_undone()
     {
-        $this->post('/profile/org-email', $this->payload());
+        $this->switchEmail();
 
         $this->get('/profile')->assertInertia(fn ($page) => $page
             ->where('org_email.mailbox.address', 'jdoe@corp.org')
             ->where('org_email.mailbox.status', 'active')
             ->where('org_email.mailbox.can_undo', true)
             ->where('org_email.mailbox.previous_mail', 'demo@example.com')
-            ->where('org_email.can_get', false)
             ->where('profile.has_mailbox', true));
     }
 
-    public function test_the_warning_has_to_be_acknowledged_when_the_email_changes()
+    public function test_accepting_the_address_already_used_needs_no_acknowledgement()
     {
-        $response = $this->post('/profile/org-email', $this->payload(['acknowledge' => false]));
+        $example = OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com']);
+        app(MailboxService::class)->offer(AccountManager::users()->find('demo'), $example, 'demo');
 
-        $response->assertSessionHasErrors('acknowledge');
-        $this->assertSame('demo@example.com', $this->email());
-        $this->assertDatabaseCount('mailboxes', 0);
-    }
-
-    public function test_hosting_the_address_already_used_needs_no_acknowledgement()
-    {
-        OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com']);
-
-        $response = $this->post('/profile/org-email', $this->payload([
-            'domain' => OrgDomain::where('name', 'example.com')->value('id'),
-            'local_part' => 'demo',
-            'acknowledge' => false,
-        ]));
+        $response = $this->post('/profile/org-email/accept', ['current_password' => 'demouser']);
 
         $response->assertSessionHasNoErrors();
         $this->assertSame('demo@example.com', $this->email());
@@ -135,40 +110,27 @@ class OrgEmailFlowTest extends TestCase
 
     public function test_a_wrong_password_changes_nothing()
     {
-        $response = $this->post('/profile/org-email', $this->payload(['current_password' => 'wrong-password']));
+        app(MailboxService::class)->offer(AccountManager::users()->find('demo'), $this->corp, 'jdoe');
+
+        $response = $this->post('/profile/org-email/accept', ['current_password' => 'wrong-password', 'acknowledge' => true]);
 
         $response->assertSessionHasErrors('current_password');
         $this->assertSame('demo@example.com', $this->email());
-        $this->assertDatabaseCount('mailboxes', 0);
+        $this->assertDatabaseHas('mailboxes', ['address' => 'jdoe@corp.org', 'status' => Mailbox::PENDING]);
     }
 
-    public function test_a_name_that_is_not_allowed_or_is_taken_is_refused()
-    {
-        Mailbox::create(['organization_id' => 1, 'local_part' => 'jdoe', 'address' => 'jdoe@corp.org', 'username' => 'someone']);
-
-        $this->post('/profile/org-email', $this->payload())->assertSessionHasErrors('local_part');
-        $this->post('/profile/org-email', $this->payload(['local_part' => 'J Doe']))->assertSessionHasErrors('local_part');
-        $this->assertSame('demo@example.com', $this->email());
-    }
-
-    public function test_a_domain_of_another_organization_is_refused()
-    {
-        $other = OrgDomain::factory()->create(['organization_id' => 999999, 'name' => 'foreign.org']);
-
-        $this->post('/profile/org-email', $this->payload(['domain' => $other->id]))->assertSessionHasErrors('domain');
-        $this->assertDatabaseCount('mailboxes', 0);
-    }
-
-    public function test_a_hosted_current_email_asks_for_a_recovery_email_and_leaves_nothing_behind()
+    public function test_a_hosted_current_email_asks_for_a_recovery_email_and_keeps_the_offer_waiting()
     {
         OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com', 'email_status' => 'active']);
+        app(MailboxService::class)->offer(AccountManager::users()->find('demo'), $this->corp, 'jdoe');
+        $accept = ['current_password' => 'demouser', 'acknowledge' => true];
 
-        $this->post('/profile/org-email', $this->payload())->assertSessionHasErrors('recovery_email');
+        $this->post('/profile/org-email/accept', $accept)->assertSessionHasErrors('recovery_email');
 
         $this->assertSame('demo@example.com', $this->email());
-        $this->assertDatabaseCount('mailboxes', 0);
+        $this->assertDatabaseHas('mailboxes', ['address' => 'jdoe@corp.org', 'status' => Mailbox::PENDING]);
 
-        $this->post('/profile/org-email', $this->payload(['recovery_email' => 'me@gmail.com']))->assertSessionHasNoErrors();
+        $this->post('/profile/org-email/accept', $accept + ['recovery_email' => 'me@gmail.com'])->assertSessionHasNoErrors();
 
         $this->assertSame('jdoe@corp.org', $this->email());
         $this->assertSame('me@gmail.com', app(RecoveryEmailService::class)->get('demo'));
@@ -210,7 +172,7 @@ class OrgEmailFlowTest extends TestCase
 
     public function test_the_switch_can_be_undone_from_the_profile_with_the_password()
     {
-        $this->post('/profile/org-email', $this->payload());
+        $this->switchEmail();
         // The next request loads the user again, with the email they sign in with now
         $this->actingAs($this->user->fresh());
 
@@ -228,11 +190,8 @@ class OrgEmailFlowTest extends TestCase
     public function test_the_users_list_shows_the_organization_address_and_flags_a_missing_recovery_email()
     {
         OrgDomain::factory()->create(['organization_id' => $this->user->organization->id, 'name' => 'example.com']);
-        $this->post('/profile/org-email', $this->payload([
-            'domain' => OrgDomain::where('name', 'example.com')->value('id'),
-            'local_part' => 'demo',
-            'acknowledge' => false,
-        ]));
+        app(MailboxService::class)->offer(AccountManager::users()->find('demo'), OrgDomain::where('name', 'example.com')->first(), 'demo');
+        $this->post('/profile/org-email/accept', ['current_password' => 'demouser']);
 
         $this->get('/users')->assertInertia(fn ($page) => $page
             ->where('users.0.id', 'demo')
@@ -248,6 +207,24 @@ class OrgEmailFlowTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertSame('demo@example.com', $this->email());
         $this->assertDatabaseHas('mailboxes', ['address' => 'demo@corp.org', 'status' => Mailbox::PENDING]);
+    }
+
+    public function test_an_administrator_offering_the_address_the_user_already_has_hosts_it_straight_away()
+    {
+        OrgDomain::factory()->create([
+            'organization_id' => $this->user->organization->id,
+            'name' => 'example.com',
+            'status' => 'active',
+            'email_enabled' => true,
+            'email_status' => 'active',
+        ]);
+
+        $response = $this->get('/users/demo/create/accountemail/'.OrgDomain::where('name', 'example.com')->value('id'));
+
+        $response->assertRedirect('/users/demo');
+        $response->assertSessionHas('success');
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseHas('mailboxes', ['address' => 'demo@example.com', 'status' => Mailbox::ACTIVE, 'swapped_at' => null]);
     }
 
     public function test_the_admin_user_page_shows_the_offer_and_the_organization_address()
@@ -286,9 +263,43 @@ class OrgEmailFlowTest extends TestCase
         $this->assertSame('demo@example.com', $this->email());
     }
 
+    public function test_changing_the_email_someone_signs_in_with_tells_the_apps_what_it_was()
+    {
+        $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'new-address@example.org',
+        ])->assertSessionHasNoErrors();
+
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'new-address@example.org');
+    }
+
+    public function test_saving_the_profile_without_changing_the_email_tells_no_one()
+    {
+        $this->post('/profile', [
+            'first_name' => 'Demo',
+            'last_name' => 'Renamed',
+            'personal_email' => 'demo@example.com',
+        ])->assertSessionHasNoErrors();
+
+        Event::assertNotDispatched(UserEmailChanged::class);
+    }
+
+    public function test_an_administrator_changing_the_email_of_a_user_tells_the_apps_what_it_was()
+    {
+        $this->put('/users/demo', [
+            'first_name' => 'Demo',
+            'last_name' => 'User',
+            'personal_email' => 'moved@example.org',
+            'organization' => $this->user->organization->id,
+        ])->assertSessionHasNoErrors();
+
+        Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'moved@example.org');
+    }
+
     public function test_an_administrator_cannot_edit_the_email_of_someone_who_has_an_organization_address()
     {
-        $this->post('/profile/org-email', $this->payload());
+        $this->switchEmail();
 
         $response = $this->put('/users/demo', [
             'first_name' => 'Demo',
@@ -303,7 +314,7 @@ class OrgEmailFlowTest extends TestCase
 
     public function test_an_administrator_removing_the_address_puts_the_user_back()
     {
-        $this->post('/profile/org-email', $this->payload());
+        $this->switchEmail();
 
         $this->get('/users/demo/remove/accountemail/jdoe@corp.org')->assertRedirect('/users/demo');
 

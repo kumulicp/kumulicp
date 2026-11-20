@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Users\UserEmailChanged;
+use App\Mailbox;
 use App\Rules\AccountEmailChecks;
 use App\Rules\ConfirmOldPassword;
 use App\Rules\EmailAddressExists;
 use App\Rules\MainContact;
 use App\Rules\RecoveryEmail;
-use App\Mailbox;
 use App\Services\Email\MailboxService;
-use App\Support\Email\AppIdentity;
-use App\Support\Email\HostedDomains;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Str;
 use App\Services\Email\RecoveryEmailService;
+use App\Support\Email\AppIdentity;
 use App\Support\Facades\AccountManager;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 
@@ -39,12 +38,18 @@ class Profile extends Controller
             ],
             'org_email' => $this->orgEmail($profile, $mailbox),
             'recovery' => [
-                'email' => $recovery_emails->get($profile->username),
+                // Without an organization address the login email is kept here too (it is where the account was created), which is not a second address
+                'email' => $this->secondaryOrRecovery($recovery_emails->get($profile->username), $profile->email),
                 'usable' => $recovery_emails->usable($profile->username, $profile->email) !== null,
                 'pending' => $recovery_emails->pending($profile->username),
             ],
             'locales' => config('locales.available'),
         ]);
+    }
+
+    private function secondaryOrRecovery(?string $recovery, string $mail): ?string
+    {
+        return $recovery !== null && strcasecmp($recovery, $mail) !== 0 ? $recovery : null;
     }
 
     /**
@@ -57,7 +62,6 @@ class Profile extends Controller
         $mailboxes = app(MailboxService::class);
         $user = AccountManager::users()->find($profile->username);
         $mailbox = $active ?? $mailboxes->forUser($profile->username);
-        $domains = $mailbox ? collect() : $profile->organization->domains()->emailEnabled()->get();
 
         return [
             'mailbox' => $mailbox ? [
@@ -72,11 +76,6 @@ class Profile extends Controller
                 'domain_ready' => ! $mailbox->domain?->emailIsBeingActivated(),
                 'domain_name' => $mailbox->domain?->name,
             ] : null,
-            'can_get' => ! $mailbox && $domains->isNotEmpty() && Gate::allows('add-user-email-account', $profile->username),
-            'domains' => $domains->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
-            'default_name' => Str::lower($profile->username),
-            // When the email now is on a domain hosted here it can't become the recovery email
-            'current_hosted' => HostedDomains::isHosted($profile->email),
             'apps' => collect($user ? $user->allUserApps() : [])
                 ->map(fn ($app) => ['name' => $app->label, 'identity' => AppIdentity::for($app)])
                 ->values(),
@@ -104,6 +103,10 @@ class Profile extends Controller
 
         $validatedData = $request->validate($rules);
 
+        // The address the person had until now. The directory's, when there is one: the panel's own copy is only refreshed at sign in
+        $directory_user = AccountManager::driver() != 'direct' ? AccountManager::users()->find($user->username) : null;
+        $old_email = (string) ($directory_user?->attribute('email') ?? $user->email);
+
         if (! $has_mailbox) {
             $user->email = $request->personal_email;
         }
@@ -117,8 +120,12 @@ class Profile extends Controller
         $validatedData['name'] = $validatedData['first_name'].' '.$validatedData['last_name'];
         unset($validatedData['locale']);
 
-        if (AccountManager::driver() != 'direct') {
-            AccountManager::users()->find($user->username)->update($validatedData);
+        if ($directory_user) {
+            $directory_user->update($validatedData);
+        }
+
+        if (! $has_mailbox && strcasecmp($old_email, (string) $request->personal_email) !== 0) {
+            event(new UserEmailChanged($organization, $user->username, $old_email, (string) $request->personal_email));
         }
 
         return redirect('/profile')->with('success', __('profile.updated'));
@@ -142,16 +149,26 @@ class Profile extends Controller
         return redirect('/profile')->with('success', __('profile.recovery.requested', ['email' => $validated['recovery_email']]));
     }
 
-    public function confirmRecoveryEmail(string $hash)
+    /**
+     * Opened from the link in the email, with no session (see the route): the signed link says
+     * whose it is, and the page says whether it worked.
+     */
+    public function confirmRecoveryEmail(string $username, string $hash)
     {
-        $user = auth()->user();
+        $user = User::where('username', $username)->first();
+        $confirmed = false;
 
-        $confirmed = app(RecoveryEmailService::class)->confirm($user->username, $hash, $user->email);
+        if ($user) {
+            // The directory's email when there is one: the panel's copy is only refreshed at sign in
+            $mail = AccountManager::users($user->organization)->find($username)?->attribute('email') ?? $user->email;
 
-        return redirect('/profile')->with(
-            $confirmed ? 'success' : 'error',
-            __($confirmed ? 'profile.recovery.confirmed' : 'profile.recovery.invalid'),
-        );
+            $confirmed = app(RecoveryEmailService::class)->confirm($username, $hash, (string) $mail);
+        }
+
+        return response()
+            ->view('profile.recovery-confirmed', ['confirmed' => $confirmed])
+            ->header('Cache-Control', 'no-store')
+            ->header('Referrer-Policy', 'no-referrer');
     }
 
     public function updatePassword(Request $request)

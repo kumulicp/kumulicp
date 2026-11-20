@@ -8,15 +8,16 @@ use App\Enums\AccessType;
 use App\Events\Users\DeletingUser;
 use App\Events\Users\UserCreated;
 use App\Events\Users\UserDeleted;
+use App\Events\Users\UserEmailChanged;
 use App\Events\Users\UserUpdated;
 use App\Http\Controllers\Controller;
+use App\Mailbox;
 use App\NewUserCode;
 use App\Notifications\ResetPassword;
 use App\OrgDomain;
-use App\Mailbox;
 use App\Rules\AccountEmailChecks;
-use App\Rules\EmailLocalPart;
 use App\Rules\EmailAddressExists;
+use App\Rules\EmailLocalPart;
 use App\Rules\MainContact;
 use App\Rules\UserNotExists;
 use App\Services\AdditionalStorageService;
@@ -34,10 +35,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Throwable;
 
 class Users extends Controller
 {
@@ -170,6 +169,7 @@ class Users extends Controller
                 'phone_number' => $user->attribute('phone_number'),
                 'personal_email' => $user_emails['personal_email'],
                 'org_email' => $user_emails['org_email'],
+                'secondary_recovery' => $user_emails['secondary_recovery'],
                 'type' => Subscription::base()->accessTypeName($user->userAccessType()),
                 'storage' => $user_storage,
                 'url' => [
@@ -435,6 +435,7 @@ class Users extends Controller
             Action::execute(new SubscriptionUpdate($organization->parent ?? $organization, Subscription::all()), background: true);
         }
 
+        $old_email = (string) $user->attribute('email');
         $name = $request->first_name.' '.$request->last_name;
         $attributes = [
             'phone_number' => str_replace('_', '', $request->phone_number),
@@ -452,6 +453,10 @@ class Users extends Controller
         $user->save();
 
         event(new UserUpdated($user));
+
+        if (! $has_mailbox && strcasecmp($old_email, (string) $request->personal_email) !== 0) {
+            event(new UserEmailChanged($new_organization, (string) $user->attribute('username'), $old_email, (string) $request->personal_email));
+        }
 
         return to_route('users.show', ['user' => $user->attribute('username')])->with('success', __('organization.user.updated', ['name' => $name]));
     }
@@ -476,7 +481,8 @@ class Users extends Controller
     /**
      * An administrator offers the user an organization address (their username at the domain).
      * Nothing about the user changes until they accept it from their profile: switching what
-     * someone signs in with can orphan their accounts in apps, so it is theirs to decide.
+     * someone signs in with can orphan their accounts in apps, so it is theirs to decide. The
+     * exception is the address they already have, which changes nothing and is hosted straight away.
      */
     public function createAccountEmail(string $username, OrgDomain $domain, MailboxService $mailboxes)
     {
@@ -493,6 +499,15 @@ class Users extends Controller
 
         try {
             $mailbox = $mailboxes->offer($user, $domain, $local_part, $user->attribute('name'));
+        } catch (MailboxException $e) {
+            return redirect('/users/'.$username)->with('error', $e->getMessage());
+        }
+
+        // The address they already have changes nothing for them, so there is nothing for them to accept
+        try {
+            if ($mailboxes->acceptIfUnchanged($user, $mailbox)) {
+                return redirect('/users/'.$username)->with('success', __('organization.email.mailbox.hosted', ['name' => $user->attribute('name'), 'email' => $mailbox->address]));
+            }
         } catch (MailboxException $e) {
             return redirect('/users/'.$username)->with('error', $e->getMessage());
         }

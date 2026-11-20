@@ -4,6 +4,7 @@ namespace App\Services\Email;
 
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
+use App\Events\Users\UserEmailChanged;
 use App\Events\Users\UserUpdated;
 use App\Mailbox;
 use App\Notifications\PrimaryEmailChanged;
@@ -80,7 +81,7 @@ class MailboxService
     /**
      * Whether accepting this mailbox changes the user's email, and what has to be given.
      *
-     * @return array{changes_email: bool, current: string, recovery: string}  recovery is 'keep' (a working one exists), 'move' (the current email becomes it) or 'required' (one must be given)
+     * @return array{changes_email: bool, current: string, recovery: string} recovery is 'keep' (a working one exists), 'move' (the current email becomes it) or 'required' (one must be given)
      */
     public function plan(UserManager $user, Mailbox $mailbox): array
     {
@@ -175,10 +176,37 @@ class MailboxService
         event(new MailboxActivated($mailbox));
 
         if ($plan['changes_email']) {
+            event(new UserEmailChanged($user->organization(), $username, $current, $address));
             $this->tell($current, new PrimaryEmailChanged($username, $current, $address, $now_recovery, $mailbox->swapped_at->copy()->addDays((int) config('email.undo_days', 7))));
         }
 
         return $mailbox;
+    }
+
+    /**
+     * Accepts the mailbox for the user when doing so changes nothing about them: it is the
+     * address they already have, so there is no switch to consent to. Anything else is left
+     * for the user to accept. Nothing happens until the domain receives mail here.
+     *
+     * @return bool Whether the mailbox is active now
+     *
+     * @throws MailboxException
+     */
+    public function acceptIfUnchanged(UserManager $user, Mailbox $mailbox): bool
+    {
+        if ($mailbox->isActive()) {
+            return true;
+        }
+
+        if ($mailbox->username !== (string) $user->attribute('username')
+            || $mailbox->domain?->emailIsBeingActivated()
+            || $this->plan($user, $mailbox)['changes_email']) {
+            return false;
+        }
+
+        $this->accept($user, $mailbox);
+
+        return true;
     }
 
     /**
@@ -195,6 +223,9 @@ class MailboxService
         if ($mailbox->username !== $username || ! $mailbox->canBeUndone() || ! $mailbox->previous_mail) {
             throw new MailboxException(__('organization.email.mailbox.undo_expired'));
         }
+
+        $switched_to = $mailbox->address;
+        $restored = $mailbox->previous_mail;
 
         try {
             $this->changeEmail($user, $username, $mailbox->previous_mail);
@@ -217,6 +248,7 @@ class MailboxService
         ])->save();
 
         event(new UserUpdated($user));
+        event(new UserEmailChanged($user->organization(), $username, $switched_to, $restored));
         event(new MailboxDeactivated($mailbox));
 
         return $mailbox;
@@ -248,6 +280,10 @@ class MailboxService
             }
 
             event(new UserUpdated($user));
+
+            if ($restore !== null) {
+                event(new UserEmailChanged($user->organization(), $username, $mailbox->address, $restore));
+            }
         }
 
         $mailbox->delete();

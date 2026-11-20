@@ -345,7 +345,7 @@ import { useToast } from 'vuestic-ui'
     </template>
   </va-modal>
 
-  <enable-email-domain-modal :showModal="actions.enable_email" @update:showModal="actions.enable_email = $event" :domain="domain" />
+  <enable-email-domain-modal :showModal="actions.enable_email" @update:showModal="actions.enable_email = $event" :domain="domain" :preview="enable_preview" />
   <reactivate-domain-modal :showModal="actions.reactivate" @update:showModal="actions.reactivate = $event" :domain="domain" />
   <request-transfer-modal :showModal="actions.requeset_transfer" @update:showModal="actions.requeset_transfer = $event" :domain="domain" />
   <renew-domain-modal :showModal="actions.renew" @update:showModal="actions.renew = $event" :domain="domain" />
@@ -361,6 +361,7 @@ export default {
   },
   props: {
     domain: Object,
+    enable_preview: Object,
     subdomains: Object,
     all_app_instance_options: Object,
     organizations: Object,
