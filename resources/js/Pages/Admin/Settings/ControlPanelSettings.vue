@@ -62,7 +62,6 @@ import { CURRENCIES } from '@/constants/currencies'
           :options="localeOptions"
           value-by="code"
           text-by="name"
-          clearable
           class="mb-3"
           immediateValidation
           :error="$page.props.errors.default_locale"

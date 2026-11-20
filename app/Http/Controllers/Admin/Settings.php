@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Organization;
 use App\Support\Facades\Settings as SettingsFacade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -24,7 +25,7 @@ class Settings extends Controller
                 'error_email' => SettingsFacade::get('error_email'),
                 'default_currency' => SettingsFacade::get('default_currency', 'USD'),
                 'enabled_currencies' => json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'],
-                'default_locale' => SettingsFacade::get('default_locale'),
+                'default_locale' => Organization::systemDefaultLocale(),
             ],
             'locales' => config('locales.available'),
             'breadcrumbs' => [
@@ -51,7 +52,7 @@ class Settings extends Controller
             'default_currency' => 'required|string|size:3',
             'enabled_currencies' => 'required|array|min:1',
             'enabled_currencies.*' => 'string|size:3',
-            'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
+            'default_locale' => 'required|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
 
         $enabledCurrencies = $validated['enabled_currencies'];

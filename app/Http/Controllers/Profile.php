@@ -93,7 +93,7 @@ class Profile extends Controller
             'first_name' => 'required|max:100',
             'last_name' => 'required|max:100',
             'phone_number' => [new MainContact($user, $organization)],
-            'locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
+            'locale' => 'required|string|in:'.implode(',', array_keys(config('locales.available'))),
         ];
 
         // The email of someone with an organization address is that address: it isn't edited here
@@ -114,7 +114,7 @@ class Profile extends Controller
         $user->first_name = $request->first_name;
         $user->last_name = $request->last_name;
         $user->name = $request->first_name.' '.$request->last_name;
-        $user->locale = $request->locale;
+        $user->locale = $validatedData['locale'];
         $user->save();
 
         $validatedData['name'] = $validatedData['first_name'].' '.$validatedData['last_name'];

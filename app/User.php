@@ -87,6 +87,19 @@ class User extends Authenticatable implements LdapAuthenticatable, MustVerifyEma
         return app(RecoveryEmailService::class)->routeFor($notification, (string) $this->username, (string) $this->email);
     }
 
+    /**
+     * A user always has a language: unless one is chosen it is the organization's default.
+     */
+    protected static function booted()
+    {
+        static::creating(function ($user) {
+            if (! $user->locale) {
+                $user->locale = ($user->organization_id ? $user->organization?->default_locale : null)
+                    ?: Organization::systemDefaultLocale();
+            }
+        });
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');

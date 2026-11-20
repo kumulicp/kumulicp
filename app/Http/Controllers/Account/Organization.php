@@ -65,7 +65,7 @@ class Organization extends Controller
             'city' => 'required|string|max:100',
             'state' => 'required|string|max:100',
             'country' => 'required|string|max:100',
-            'default_locale' => 'nullable|string|in:'.implode(',', array_keys(config('locales.available'))),
+            'default_locale' => 'required|string|in:'.implode(',', array_keys(config('locales.available'))),
         ]);
         $organization = auth()->user()->organization;
 
@@ -94,7 +94,7 @@ class Organization extends Controller
         $organization->city = $city;
         $organization->state = $state;
         $organization->country = $country;
-        $organization->default_locale = $request->default_locale;
+        $organization->default_locale = $validatedData['default_locale'];
         $organization->save();
 
         UpdateOrganization::dispatch($organization);
