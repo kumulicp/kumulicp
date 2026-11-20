@@ -229,6 +229,7 @@ class ProfileRecoveryEmailTest extends TestCase
             'first_name' => 'Demo',
             'last_name' => 'User',
             'personal_email' => 'sneaky@gmail.com',
+            'locale' => 'en',
         ]);
 
         $response->assertSessionHasNoErrors();
@@ -241,6 +242,7 @@ class ProfileRecoveryEmailTest extends TestCase
             'first_name' => 'Demo',
             'last_name' => 'User',
             'personal_email' => 'changed@example.com',
+            'locale' => 'en',
         ])->assertSessionHasNoErrors();
 
         $this->assertSame('changed@example.com', $this->user->fresh()->email);
