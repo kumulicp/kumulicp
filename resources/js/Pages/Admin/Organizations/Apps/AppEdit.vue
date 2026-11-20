@@ -44,6 +44,12 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
       </div>
       <div>{{ $t('admin.updates.appOutOfDateHelp') }}</div>
     </va-alert>
+    <va-alert v-if="ignored_image_settings.length > 0" id="ignoredImageSettings" color="warning" icon="warning" class="mb-3">
+      <div>{{ $t('admin.apps.ignoredImageSettings') }}</div>
+      <ul class="ml-4" style="list-style: disc">
+        <li v-for="item in ignored_image_settings" :key="item.setting">{{ $t('admin.apps.ignoredImageSetting', { setting: item.setting, value: item.value, image: item.image, used: item.used }) }}</li>
+      </ul>
+    </va-alert>
     <div class="row justify-center">
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
@@ -284,6 +290,10 @@ export default {
       default: () => []
     },
     updates: {
+      type: Array,
+      default: () => []
+    },
+    ignored_image_settings: {
       type: Array,
       default: () => []
     },
