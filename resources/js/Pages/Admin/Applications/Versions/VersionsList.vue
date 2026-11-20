@@ -21,6 +21,12 @@ import { Link, useForm } from '@inertiajs/vue3'
       <div v-for="image in version.updates.images" :key="image.key">{{ $t('admin.versions.newerOtherImage', { image: image.label, current: image.current, latest: image.latest }) }}</div>
       <div v-if="version.updates.chart">{{ $t('admin.versions.newerChart', { current: version.updates.chart_current, latest: version.updates.chart }) }}</div>
       <div v-for="(warning, index) in (version.updates.chart ? version.updates.chart_warnings : [])" :key="index" class="va-text-secondary" style="font-size: 0.85rem">{{ warning }}</div>
+      <template v-if="version.updates.chart && version.updates.chart_image_changes.length">
+        <div class="mt-1">{{ $t('admin.versions.chartImageChanges', { latest: version.updates.chart }) }}</div>
+        <ul class="ml-4" style="list-style: disc">
+          <li v-for="(change, index) in version.updates.chart_image_changes" :key="index">{{ change }}</li>
+        </ul>
+      </template>
       <div class="mt-1">{{ $t('admin.versions.adoptUpdate') }}</div>
     </va-alert>
     <va-alert

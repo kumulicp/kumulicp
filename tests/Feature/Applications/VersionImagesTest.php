@@ -404,3 +404,61 @@ it('has nothing to list from a check made before images were checked', function 
         ->and($summary['images_errors'])->toBe([])
         ->and($summary['image'])->toBe('33.0.2');
 });
+
+// ─── The images of the newer chart ───────────────────────────────────────────
+
+function chartCheckedVersion(Application $application, string $chart_version, array $chart): AppVersion
+{
+    return imageVersion($application, ['chart_version' => $chart_version], ['update_check' => [
+        'checked_at' => '2026-10-14T03:00:00+00:00',
+        'image' => null,
+        'images' => [],
+        'chart' => $chart + ['current' => $chart_version, 'error' => null],
+    ]]);
+}
+
+function chartCompatibility(string $version, string $status, array $image_changes): array
+{
+    return ['version' => $version, 'status' => $status, 'issues' => [], 'warnings' => [], 'targets' => [], 'image_changes' => $image_changes];
+}
+
+it('says how the images change in the newer chart that is on offer', function () {
+    $version = chartCheckedVersion($this->application, '9.0.0', [
+        'latest' => '9.1.0',
+        'latest_compatible' => '9.1.0',
+        'compatibility' => chartCompatibility('9.1.0', 'compatible', ['Adds the image worker.image (org/worker:3.0).']),
+    ]);
+
+    expect($version->fresh()->updateSummary()['chart_image_changes'])->toBe(['Adds the image worker.image (org/worker:3.0).']);
+});
+
+it('does not say how the images change in a chart that is not the one on offer', function () {
+    // The newest chart failed its checks; the one before it is offered instead
+    $version = chartCheckedVersion($this->application, '9.0.0', [
+        'latest' => '9.1.0',
+        'latest_compatible' => '9.0.1',
+        'compatibility' => chartCompatibility('9.1.0', 'incompatible', ['Adds the image worker.image (org/worker:3.0).']),
+    ]);
+
+    expect($version->fresh()->updateSummary()['chart_image_changes'])->toBe([]);
+});
+
+it('does not say how the images change in a chart the version has caught up with', function () {
+    $version = chartCheckedVersion($this->application, '9.1.0', [
+        'latest' => '9.1.0',
+        'latest_compatible' => '9.1.0',
+        'compatibility' => chartCompatibility('9.1.0', 'compatible', ['Adds the image worker.image (org/worker:3.0).']),
+    ]);
+
+    expect($version->fresh()->updateSummary()['chart_image_changes'])->toBe([]);
+});
+
+it('has no image changes to say for a check made before they were looked for', function () {
+    $version = chartCheckedVersion($this->application, '9.0.0', [
+        'latest' => '9.1.0',
+        'latest_compatible' => '9.1.0',
+        'compatibility' => ['version' => '9.1.0', 'status' => 'compatible', 'issues' => [], 'warnings' => [], 'targets' => []],
+    ]);
+
+    expect($version->fresh()->updateSummary()['chart_image_changes'])->toBe([]);
+});

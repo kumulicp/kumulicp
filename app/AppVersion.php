@@ -629,6 +629,19 @@ class AppVersion extends Model
         return $compatibility;
     }
 
+    // How the images the chart runs change in the newer chart on offer. Only said of the
+    // one that passed the compatibility check, as that is the one that is offered.
+    private function chartImageChanges(): array
+    {
+        $compatibility = Arr::get($this->update_check ?? [], 'chart.compatibility');
+
+        if (! $compatibility || ($compatibility['status'] ?? null) !== ChartCompatibilityChecker::COMPATIBLE || ($compatibility['version'] ?? null) !== $this->newerChartVersion()) {
+            return [];
+        }
+
+        return (array) ($compatibility['image_changes'] ?? []);
+    }
+
     // What the last update check found, for display. Only enabled versions are checked.
     public function updateSummary(): ?array
     {
@@ -655,6 +668,7 @@ class AppVersion extends Model
                 'issues' => $incompatible['issues'],
             ] : null,
             'chart_warnings' => Arr::get($check, 'chart.compatibility.warnings', []),
+            'chart_image_changes' => $this->chartImageChanges(),
         ];
     }
 }

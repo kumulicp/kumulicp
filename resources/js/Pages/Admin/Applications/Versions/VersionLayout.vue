@@ -36,6 +36,10 @@ export default {
           url: this.basePath + '/roles'
         },
         {
+          title: this.$t('admin.versions.images'),
+          url: this.basePath + '/images'
+        },
+        {
           title: this.$t('admin.versionTests.tests'),
           url: this.basePath + '/tests'
         }

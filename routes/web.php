@@ -109,6 +109,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                                 Route::post('steps/{step}/abandon', 'Admin\Applications\Versions\Tests@abandon')->name('app.versions.tests.abandon');
                             });
                         });
+                        Route::prefix('images')->group(function () {
+                            Route::get('', 'Admin\Applications\Versions\Images@index')->name('app.versions.images');
+                            Route::get('discover', 'Admin\Applications\Versions\Images@discover')->name('app.versions.images.discover');
+                            Route::post('', 'Admin\Applications\Versions\Images@store')->name('app.versions.images.store');
+                            Route::delete('{image}', 'Admin\Applications\Versions\Images@destroy')->name('app.versions.images.destroy');
+                        });
                         Route::get('roles', 'Admin\Applications\Versions@roles')->name('discover.apps.versions.roles');
                         Route::post('roles', 'Admin\Applications\Versions@updateRoles')->name('discover.apps.versions.roles.update');
                     });
