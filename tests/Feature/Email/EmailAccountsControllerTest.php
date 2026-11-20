@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\Email;
 
+use App\Mailbox;
 use App\OrgDomain;
+use App\Support\Facades\Domain;
 use App\Support\Facades\ServerInterface;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Tests\Support\Email\FakeMailServer;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -58,6 +62,15 @@ class EmailAccountsControllerTest extends TestCase
             'email_status' => 'active',
             'email_server_id' => 2,
         ]);
+    }
+
+    /**
+     * Switching driver forgets the guards, which signs the user out: sign them back in afterwards.
+     */
+    private function useDatabaseAccountManager(): void
+    {
+        setupAccountManagerDriver('db');
+        $this->actingAs(User::where('username', 'demo')->firstOrFail());
     }
 
     /**
@@ -129,5 +142,55 @@ class EmailAccountsControllerTest extends TestCase
 
         $response->assertRedirect('/settings/email/accounts');
         $response->assertSessionHas('error', __('organization.email.denied.forwarders'));
+    }
+
+    public function test_a_standalone_mailbox_is_recorded_when_it_is_added_and_forgotten_when_it_is_deleted()
+    {
+        // What the plan and the feature allow is not what is being tested
+        Gate::before(fn () => true);
+        $this->useDatabaseAccountManager();
+        $server = new FakeMailServer;
+        Domain::shouldReceive('connect')->andReturn($server);
+
+        $this->post('/settings/email/accounts', [
+            'name' => 'Sales',
+            'email' => 'sales',
+            'domain' => $this->domain->id,
+            'password' => 'Passw0rd!',
+            'password_confirmation' => 'Passw0rd!',
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('mailboxes', [
+            'address' => 'sales@example.com',
+            'username' => null,
+            'status' => Mailbox::ACTIVE,
+            'org_domain_id' => $this->domain->id,
+            'display_name' => 'Sales',
+        ]);
+        $this->assertDatabaseHas('mailbox_addresses', ['address' => 'sales@example.com', 'is_primary' => true]);
+
+        $this->delete('/settings/email/accounts/sales@example.com')->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('mailboxes', ['address' => 'sales@example.com']);
+        $this->assertDatabaseCount('mailbox_addresses', 0);
+    }
+
+    public function test_a_mailbox_the_server_could_not_make_is_not_recorded()
+    {
+        Gate::before(fn () => true);
+        $this->useDatabaseAccountManager();
+        $server = new FakeMailServer;
+        $server->failing = true;
+        Domain::shouldReceive('connect')->andReturn($server);
+
+        $this->post('/settings/email/accounts', [
+            'name' => 'Sales',
+            'email' => 'sales',
+            'domain' => $this->domain->id,
+            'password' => 'Passw0rd!',
+            'password_confirmation' => 'Passw0rd!',
+        ])->assertSessionHas('error');
+
+        $this->assertDatabaseCount('mailboxes', 0);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Services\Email;
 
-use App\Mailbox;
+use App\MailboxAddress;
 use App\User;
 use Illuminate\Support\Str;
 
@@ -15,7 +15,8 @@ class DatabaseMailAddressRegistry implements MailAddressRegistry
     {
         $address = Str::lower($address);
 
-        if (Mailbox::where('address', $address)->exists()) {
+        // Every address of every mailbox, aliases included, in every organization
+        if (MailboxAddress::where('address', $address)->exists()) {
             return true;
         }
 
