@@ -40,6 +40,7 @@ const results = computed(() => [
       <h6 class="va-h6 mb-2">{{ $t('orgEmail.aliasesTitle') }}</h6>
       <va-alert id="aliasesStatus" :color="aliases.enabled ? 'success' : 'warning'" class="mb-4">
         <template v-if="!ldap_enabled">{{ $t('orgEmail.aliasesNoLdap') }}</template>
+        <template v-else-if="aliases.server_managed && !aliases.attribute">{{ $t('orgEmail.aliasesServer') }}</template>
         <template v-else-if="aliases.enabled">{{ $t('orgEmail.aliasesLdap', { attribute: aliases.attribute }) }}</template>
         <template v-else>{{ $t('orgEmail.aliasesDisabled') }}</template>
       </va-alert>

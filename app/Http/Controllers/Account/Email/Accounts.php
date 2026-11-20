@@ -9,7 +9,7 @@ use App\OrgDomain;
 use App\Rules\EmailLocalPart;
 use App\Rules\MailAddressAvailable;
 use App\Rules\OrgDomainName;
-use App\Support\Email\LdapEmailAttributes;
+use App\Services\Email\MailboxAliasService;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use Illuminate\Http\Request;
@@ -38,18 +38,20 @@ class Accounts extends Controller
         $mailboxes = Mailbox::where('organization_id', $organization->id)->whereNull('username')
             ->whereIn('address', array_map(fn ($email) => strtolower($email['email'] ?? ''), $emails))
             ->with('addresses')->get()->keyBy('address');
-        $emails = array_map(function ($email) use ($mailboxes) {
+        $alias_service = app(MailboxAliasService::class);
+        $emails = array_map(function ($email) use ($mailboxes, $alias_service) {
             $mailbox = $mailboxes->get(strtolower($email['email'] ?? ''));
 
             return $email + [
                 'mailbox_id' => $mailbox?->id,
+                // Whether this mailbox's mail server keeps aliases, or LDAP has an attribute for them
+                'aliases_enabled' => $mailbox ? $alias_service->enabledFor($mailbox) : false,
                 'aliases' => $mailbox ? $mailbox->addresses->where('is_primary', false)->pluck('address')->values()->all() : [],
             ];
         }, $emails);
 
         return inertia('Organization/Settings/EmailAccounts/EmailAccountsList', [
             'accounts' => $emails,
-            'aliases_enabled' => LdapEmailAttributes::aliasesEnabled(),
             'can' => [
                 'add_email_accounts' => Gate::allows('add-email-accounts'),
             ],

@@ -8,6 +8,7 @@ use App\MailboxAddress;
 use App\OrgDomain;
 use App\Rules\EmailLocalPart;
 use App\Support\Email\LdapEmailAttributes;
+use App\Support\Facades\ServerInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -31,11 +32,20 @@ class MailboxAliasService
     }
 
     /**
+     * Whether this mailbox can have aliases: its mail server keeps them itself (Stalwart does, from the table), or
+     * else the rule for LDAP, which needs an attribute mapped for them.
+     */
+    public function enabledFor(Mailbox $mailbox): bool
+    {
+        return ServerInterface::supportsAliases($mailbox->domain?->email_server) || LdapEmailAttributes::aliasesEnabled();
+    }
+
+    /**
      * @throws MailboxException
      */
     public function add(Mailbox $mailbox, string $local_part, OrgDomain $domain): MailboxAddress
     {
-        if (! LdapEmailAttributes::aliasesEnabled()) {
+        if (! $this->enabledFor($mailbox)) {
             throw new MailboxException(__('organization.email.alias.disabled'));
         }
 

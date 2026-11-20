@@ -6,12 +6,15 @@ use App\Events\Mailboxes\MailboxAliasesChanged;
 use App\Events\Mailboxes\MailboxDeactivated;
 use App\Mailbox;
 use App\OrgDomain;
+use App\OrgServer;
+use App\Server;
 use App\Services\Email\AliasDirectory;
 use App\Services\Email\MailboxAliasService;
 use App\Services\Email\MailboxException;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Tests\Support\Email\AliasCapableMailServer;
 use Tests\Support\Email\FakeAliasDirectory;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -122,6 +125,32 @@ class MailboxAliasServiceTest extends TestCase
     {
         config(['account_manager.driver' => 'ldap']);
 
+        $this->refused(fn () => $this->service->add($this->mailbox, 'sales', $this->domain), __('organization.email.alias.disabled'));
+    }
+
+    public function test_a_mail_server_that_keeps_aliases_itself_needs_no_ldap_attribute()
+    {
+        config(['account_manager.driver' => 'ldap']);
+        $this->directory->enabled = false;
+        AliasCapableMailServer::useFor($this->domain);
+        Event::fake([MailboxAliasesChanged::class]);
+
+        $this->assertTrue($this->service->enabledFor($this->mailbox->refresh()));
+        $alias = $this->service->add($this->mailbox, 'sales', $this->domain);
+
+        $this->assertSame('sales@corp.org', $alias->address);
+        $this->assertSame([], $this->directory->writes);
+        Event::assertDispatched(MailboxAliasesChanged::class);
+    }
+
+    public function test_a_mail_server_without_the_capability_leaves_the_ldap_rule_as_it_was()
+    {
+        config(['account_manager.driver' => 'ldap']);
+        $server = Server::factory()->create(['type' => 'email', 'interface' => 'ldap']);
+        $org_server = OrgServer::create(['organization_id' => $this->domain->organization_id, 'server_id' => $server->id]);
+        $this->domain->forceFill(['email_server_id' => $org_server->id])->save();
+
+        $this->assertFalse($this->service->enabledFor($this->mailbox->refresh()));
         $this->refused(fn () => $this->service->add($this->mailbox, 'sales', $this->domain), __('organization.email.alias.disabled'));
     }
 

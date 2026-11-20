@@ -177,7 +177,7 @@ import { useForm } from '@inertiajs/vue3'
             :mailbox-id="editEmailAccount.mailbox_id"
             :aliases="currentAliases"
             :domains="alias_domains"
-            :enabled="aliases_enabled"
+            :enabled="!!editEmailAccount.aliases_enabled"
           />
         </va-card-content>
     </template>
@@ -193,7 +193,6 @@ export default {
     accounts: Object,
     domains: Object,
     alias_domains: Array,
-    aliases_enabled: Boolean,
     default_domain: Object,
     can: Object,
     errors: Object

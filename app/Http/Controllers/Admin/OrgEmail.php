@@ -7,17 +7,23 @@ use App\MailboxAddress;
 use App\Services\Email\AliasDirectory;
 use App\Services\Email\MailboxAliasService;
 use App\Services\Email\RecoveryEmailService;
+use App\Server;
 use App\Support\Email\LdapEmailAttributes;
+use App\Support\Facades\ServerInterface;
 use App\UserRecoveryEmail;
 
 class OrgEmail extends Controller
 {
     public function index()
     {
+        // A mail server that keeps aliases itself needs no LDAP attribute for them
+        $server_managed = Server::where('type', 'email')->get()->contains(fn (Server $server) => ServerInterface::supportsAliases($server));
+
         return inertia()->render('Admin/Email/EmailSync', [
             'ldap_enabled' => LdapEmailAttributes::usingLdap(),
             'aliases' => [
-                'enabled' => LdapEmailAttributes::aliasesEnabled(),
+                'enabled' => LdapEmailAttributes::aliasesEnabled() || $server_managed,
+                'server_managed' => $server_managed,
                 'attribute' => LdapEmailAttributes::aliasAttribute(),
                 'sync_enabled' => app(AliasDirectory::class)->enabled(),
                 'count' => MailboxAddress::where('is_primary', false)->count(),

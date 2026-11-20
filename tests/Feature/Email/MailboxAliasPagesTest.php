@@ -9,6 +9,7 @@ use App\Services\Email\AliasDirectory;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Tests\Support\Email\AliasCapableMailServer;
 use Tests\Support\Email\FakeAliasDirectory;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -114,6 +115,19 @@ class MailboxAliasPagesTest extends TestCase
 
         $this->post("/mailboxes/{$this->standalone->id}/aliases", ['local_part' => 'info', 'domain' => $this->domain->id])
             ->assertSessionHas('error', __('organization.email.alias.disabled'));
+    }
+
+    public function test_a_mail_server_that_keeps_aliases_turns_them_on_with_ldap_and_no_attribute()
+    {
+        config(['account_manager.driver' => 'ldap']);
+        $this->get('/users/demo/edit')->assertInertia(fn ($page) => $page->where('aliases.enabled', false));
+
+        AliasCapableMailServer::useFor($this->domain);
+
+        $this->get('/users/demo/edit')->assertInertia(fn ($page) => $page->where('aliases.enabled', true));
+        $this->post("/mailboxes/{$this->standalone->id}/aliases", ['local_part' => 'info', 'domain' => $this->domain->id])
+            ->assertSessionHas('success');
+        $this->assertDatabaseHas('mailbox_addresses', ['mailbox_id' => $this->standalone->id, 'address' => 'info@corp.org']);
     }
 
     public function test_another_organizations_mailbox_is_not_found()

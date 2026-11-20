@@ -25,7 +25,6 @@ use App\Services\Email\MailboxAliasService;
 use App\Services\Email\MailboxException;
 use App\Services\Email\MailboxService;
 use App\SuborgUser;
-use App\Support\Email\LdapEmailAttributes;
 use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
@@ -368,7 +367,7 @@ class Users extends Controller
             }),
             'email_domains' => $email_domains,
             'aliases' => $active_mailbox ? [
-                'enabled' => LdapEmailAttributes::aliasesEnabled(),
+                'enabled' => app(MailboxAliasService::class)->enabledFor($active_mailbox),
                 'mailbox_id' => $active_mailbox->id,
                 'list' => app(MailboxAliasService::class)->forMailbox($active_mailbox),
                 'domains' => $organization->domains()->emailEnabled()->get()->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
