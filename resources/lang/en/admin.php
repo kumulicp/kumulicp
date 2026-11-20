@@ -122,6 +122,7 @@ return [
         'updated' => ':app updated',
         'plans' => [
             'plans' => 'Plans',
+            'group_chart_locked' => 'A plan with subscribers keeps the chart it was deployed from: pick a version group of the same chart.',
             'added' => 'Plan added',
             'updated' => ':plan plan updated',
             'deleted' => ':plan plan deleted',
@@ -148,6 +149,14 @@ return [
             'enabled' => ':role role enabled',
             'disabled' => ':role role disabled',
         ],
+        'version_groups' => [
+            'added' => 'Version group :group was added',
+            'renamed' => 'Version group renamed to :group',
+            'deleted' => 'Version group :group was deleted',
+            'default' => 'The default group cannot be deleted.',
+            'in_use' => 'A group with versions or plans cannot be deleted: move them to another group first.',
+            'no_chart' => 'Add a version first: groups belong to the chart the app is deployed from.',
+        ],
         'versions' => [
             'versions' => 'Versions',
             'added' => 'Version :version was added',
@@ -166,6 +175,7 @@ return [
             'updates_checked' => 'Checked for newer images and charts',
             'mass_upgrade_not_enabled' => 'Only the enabled version can be rolled out to existing apps.',
             'mass_upgrade_none' => 'Every app is already on this version.',
+            'group_move_enabled' => 'An enabled version cannot change group: disable it first.',
             'mass_upgrade_started' => 'Upgrading every app that runs an older version to :version',
         ],
         'denied' => [
@@ -248,6 +258,7 @@ return [
             'confirmed' => 'Thanks: :app will carry on shortly',
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
+                'version_group' => 'That version is not in the version group of this app\'s plan',
                 'migration_running' => 'A database migration to that server is already running or needs attention -- check the Tasks page',
                 'sso_move_running' => 'A sign-in move to that server is already running or needs attention -- check the Tasks page',
                 'web_move_running' => 'A move of that app is already running or needs attention -- check the Tasks page',

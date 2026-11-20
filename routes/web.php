@@ -83,6 +83,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::post('secrets/reveal', 'Admin\Applications\Plans\Secrets@reveal')->name('app.plans.secrets.reveal');
                     });
                 });
+                Route::prefix('version-groups')->group(function () {
+                    Route::post('', 'Admin\Applications\VersionGroups@store')->name('app.version-groups.store');
+                    Route::put('{group}', 'Admin\Applications\VersionGroups@update')->name('app.version-groups.update');
+                    Route::delete('{group}', 'Admin\Applications\VersionGroups@destroy')->name('app.version-groups.destroy');
+                });
                 Route::prefix('versions')->group(function () {
                     Route::get('', 'Admin\Applications\Versions@index');
                     Route::get('create', 'Admin\Applications\Versions@create')->name('app.new.version');

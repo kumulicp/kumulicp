@@ -95,6 +95,20 @@ import { Link, useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.version"
                   :error-messages="$page.props.errors.version"
                   />
+                <va-select
+                  v-if="groups.length > 1"
+                  v-model="form.version_group_id"
+                  id="versionGroup"
+                  :label="$t('admin.versions.group')"
+                  :messages="$t('admin.versions.groupMoveCaption')"
+                  class="my-2"
+                  :disabled="version.is_active"
+                  :options="groups"
+                  value-by="id"
+                  text-by="name"
+                  :error="$page.props.errors.version_group_id"
+                  :error-messages="$page.props.errors.version_group_id"
+                  />
                 <va-input v-model="form.chart_version"
                   :label="$t('admin.versions.helmChartVersion')"
                   id="chartVersion"
@@ -368,6 +382,10 @@ export default {
   },
   props: {
     version: Object,
+    groups: {
+      type: Array,
+      default: () => []
+    },
     errors: Object,
     announcements: Object,
     roles: Object,
@@ -411,6 +429,7 @@ export default {
         id: this.version.id,
         version: this.version.version,
         admin_path: this.version.admin_path,
+        version_group_id: this.version.version_group_id,
         chart_version: this.version.chart_version,
         chart_name: this.version.chart_name,
         helm_repo_name: this.version.helm_repo_name,

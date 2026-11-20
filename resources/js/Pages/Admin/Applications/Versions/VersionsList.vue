@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import AppsLayout from '../AppsLayout.vue'
-import { Link, useForm } from '@inertiajs/vue3'
+import { Link, router, useForm } from '@inertiajs/vue3'
 
 </script>
 <template>
@@ -56,6 +56,47 @@ import { Link, useForm } from '@inertiajs/vue3'
       <div v-if="version.updates.chart_error">{{ $t('admin.versions.chartCheckFailed', { error: version.updates.chart_error }) }}</div>
     </va-alert>
   </div>
+  <div v-if="groups.length" id="versionGroups" class="row align-center justify-center mb-3">
+    <va-select
+      :model-value="group_id"
+      id="versionGroup"
+      class="mr-2"
+      style="min-width: 16rem"
+      :label="$t('admin.versions.group')"
+      :options="groupOptions"
+      value-by="id"
+      text-by="text"
+      @update:modelValue="changeGroup"
+    />
+    <span v-if="currentGroup" class="va-text-secondary mr-3">{{ $t('admin.versions.groupSummary', { versions: currentGroup.versions, plans: currentGroup.plans }) }}</span>
+    <va-button id="newGroup" preset="secondary" size="small" class="mr-1" @click="openGroupModal('add')">{{ $t('admin.versions.newGroup') }}</va-button>
+    <va-button v-if="currentGroup" id="renameGroup" preset="secondary" size="small" class="mr-1" @click="openGroupModal('rename')">{{ $t('admin.versions.renameGroup') }}</va-button>
+    <va-button v-if="currentGroup && !currentGroup.is_default" id="deleteGroup" preset="secondary" color="danger" size="small" @click="openGroupModal('delete')">{{ $t('admin.versions.deleteGroup') }}</va-button>
+    <va-modal v-model="showGroupModal" no-outside-dismiss no-padding size="small" class="p-0">
+      <template #content="{ ok }">
+        <form @submit.prevent="submitGroup">
+          <va-card-title class="m-0">{{ groupMode === 'add' ? $t('admin.versions.newGroup') : (groupMode === 'rename' ? $t('admin.versions.renameGroup') : $t('admin.versions.deleteGroup')) }}</va-card-title>
+          <va-card-content class="m-0">
+            <va-input
+              v-if="groupMode !== 'delete'"
+              v-model="groupForm.name"
+              id="groupName"
+              :label="$t('admin.versions.groupName')"
+              required-mark
+              immediateValidation
+              :error="$page.props.errors.name"
+              :error-messages="$page.props.errors.name"
+            />
+            <span v-else>{{ currentGroup && currentGroup.name }}</span>
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="groupForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" id="submitGroup" :disabled="groupForm.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
+  </div>
   <div class="row justify-center">
     <va-button id="addVersion" @click="showAddVersion = !showAddVersion">{{ $t('admin.versions.addVersion') }}</va-button>
     <va-button v-if="mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: mass_upgrade.version }) }}</va-button>
@@ -79,6 +120,18 @@ import { Link, useForm } from '@inertiajs/vue3'
         <form @submit.prevent="submit">
           <va-card-title class="m-0">{{ $t('admin.versions.addVersion') }}</va-card-title>
           <va-card-content class="m-0">
+            <va-select
+              v-if="groups.length > 1"
+              v-model="form.version_group_id"
+              id="addVersionGroup"
+              :label="$t('admin.versions.group')"
+              class="mb-3"
+              :options="groupOptions"
+              value-by="id"
+              text-by="text"
+              :error="$page.props.errors.version_group_id"
+              :error-messages="$page.props.errors.version_group_id"
+            />
             <va-input v-model="form.version"
               id="name"
               :label="$t('admin.versions.name')"
@@ -178,11 +231,22 @@ export default {
   },
   props: {
     app: Object,
+    group_id: Number,
+    groups: {
+      type: Array,
+      default: () => []
+    },
     versions: Object,
     mass_upgrade: Object,
     errors: Object
   },
   computed: {
+    groupOptions () {
+      return this.groups.map((group) => ({ id: group.id, text: group.name + (group.is_default ? ' (' + this.$t('admin.versions.groupDefault') + ')' : '') }))
+    },
+    currentGroup () {
+      return this.groups.find((group) => group.id === this.group_id)
+    },
     versionsWithUpdates () {
       return this.versions.filter((version) => version.updates)
     },
@@ -213,6 +277,26 @@ export default {
     }
   },
   methods: {
+    changeGroup (id) {
+      router.get('/admin/apps/' + this.app.slug + '/versions', { group: id })
+    },
+    openGroupModal (mode) {
+      this.groupMode = mode
+      this.groupForm.name = mode === 'rename' && this.currentGroup ? this.currentGroup.name : ''
+      this.showGroupModal = true
+    },
+    submitGroup () {
+      const base = '/admin/apps/' + this.app.slug + '/version-groups'
+      const done = { onSuccess: () => { this.showGroupModal = false } }
+
+      if (this.groupMode === 'add') {
+        this.groupForm.post(base, done)
+      } else if (this.groupMode === 'rename') {
+        this.groupForm.put(base + '/' + this.group_id, done)
+      } else {
+        this.groupForm.delete(base + '/' + this.group_id, done)
+      }
+    },
     gateColor (gate) {
       return { passed: 'success', bypassed: 'warning', running: 'info', failed: 'danger', stale: 'warning', untested: 'secondary' }[gate] || 'secondary'
     },
@@ -267,6 +351,9 @@ export default {
         }
       ],
       showAddVersion: false,
+      showGroupModal: false,
+      groupMode: 'add',
+      groupForm: useForm({ name: '' }),
       showMassUpgrade: false,
       massUpgradeForm: useForm({}),
       checkForm: useForm({}),
@@ -274,6 +361,7 @@ export default {
       pageSize: 10,
       form: useForm({
         version: '',
+        version_group_id: this.group_id,
         copy_from: 'previous_version',
         copy_version: '',
         images: []

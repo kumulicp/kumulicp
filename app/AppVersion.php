@@ -256,6 +256,27 @@ class AppVersion extends Model
     }
 
     /**
+     * The plans a test of this version covers: the ones customers can pick that
+     * use its group. A group no plan uses yet is tested with all of them.
+     *
+     * @return Builder<AppPlan>
+     */
+    public function testPlansQuery(): Builder
+    {
+        $all = fn () => AppPlan::where('application_id', $this->application_id)->where('archive', 0)->visible();
+
+        if ($this->versionGroup) {
+            $in_group = $all()->whereIn('id', $this->versionGroup->planIds());
+
+            if ($in_group->exists()) {
+                return $in_group;
+            }
+        }
+
+        return $all();
+    }
+
+    /**
      * @return BelongsTo<AppVersionGroup, $this>
      */
     public function versionGroup(): BelongsTo

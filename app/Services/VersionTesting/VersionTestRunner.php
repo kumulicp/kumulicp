@@ -56,9 +56,7 @@ class VersionTestRunner
     {
         $plans = $plan
             ? new Collection([$plan])
-            : AppPlan::where('application_id', $version->application_id)
-                ->where('archive', 0)
-                ->visible()
+            : $version->testPlansQuery()
                 ->orderBy('display_order')
                 ->orderBy('id')
                 ->get();
@@ -75,7 +73,7 @@ class VersionTestRunner
         $run = DB::transaction(function () use ($version, $user, $plans, $plan) {
             $this->assertSlotFree();
 
-            $baseline = $plan ? null : $version->application->active_version();
+            $baseline = $plan ? null : ($version->versionGroup?->activeVersion ?? $version->application->active_version());
             if ($baseline && $baseline->is($version)) {
                 $baseline = null;
             }

@@ -84,6 +84,15 @@ class AppPlan extends Model
         return $this->selectedVersionGroup ?? $this->application->defaultVersionGroup();
     }
 
+    /**
+     * The version new installs of this plan get, and that its installs are
+     * upgraded to: the enabled one of its group.
+     */
+    public function activeVersion(): ?AppVersion
+    {
+        return $this->versionGroup()->activeVersion;
+    }
+
     public function subscribers()
     {
         return $this->hasMany('App\AppInstance', 'plan_id');
