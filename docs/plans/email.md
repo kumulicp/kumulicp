@@ -148,7 +148,7 @@ Found along the way, and fixed: `createUserEmail` and `deleteUserEmail` could ne
 Found, not fixed (belongs to later items):
 - The address registry is bound to LDAP for every driver. With the `db` driver and a standalone Stalwart the rule would query a directory that is not there; 2c swaps the binding to the mailbox tables.
 - `ProfileEdit.vue` has a branch for `profile.org_emails` that the controller never fills, so it never shows. Remove or replace it in 2d.
-- `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f).
+- `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f; the whole feature is finished in 2g).
 
 Exit: the LDAP email suite passes against a live directory in CI (checked: it does).
 
@@ -167,8 +167,32 @@ Exit: the LDAP email suite passes against a live directory in CI (checked: it do
 - [ ] **2d. Rollout safety for the swap.** Audit WordPress and CiviCRM for the claim that identifies a user (and Nextcloud's `oidc-mapping-user-id` on existing installs). Show an impact preview with the user's apps before the swap. The migration command from 2b only runs on existing accounts after the audit.
 - [ ] **2e. Aliases.** Store aliases as non-primary rows in `mailbox_addresses`. With LDAP, write them to the mapped aliases attribute and add them to the sync page; without LDAP, push them to Stalwart. Gate the UI on `LdapEmailAttributes::aliasesEnabled()`. Decide the per-plan alias cap (see open questions).
 - [ ] **2f. Contract cleanup.** Fix the `EmailContract` drift (the forwarder call passes an array where a password is expected), remove the blocking `checkConnection()` retry loop from request paths, and retire the LDAP `Domain` entries Stalwart does not need (once docker-mailserver, which still reads them, is gone).
+- [ ] **2g. Forwarders, finished.** A forwarder is an address (it need not be a mailbox) that delivers to one or more destinations, inside or outside the organization. An alias (2e) is another name for one mailbox; the UI says which is which.
 
-Exit: the same contract tests pass in `ldap` and `db` modes for add, update, delete, quota, duplicate address, aliases on and off, cross-tenant isolation and limit enforcement.
+  **What is wrong today** (checked in `Forwarders`, `EmailForwarder` and `EmailForwarders.vue`): the feature has no working driver. The only code that ever implemented it was a mail server API that is no longer in the repository, and the LDAP driver answers `supportsForwarders(): false`, so every forwarders page redirects away. Under that:
+  - The `email_forwarders` table keeps `server_email_id` (an integer from that old API, `NOT NULL`) and no destinations (the model's `@property string $destination` is not a column): what a forwarder delivers to lives only on the mail server, so listing asks the server once per forwarder on every page load.
+  - `store` calls `addEmail()` with an array where a password goes, reads `hasEmailError()` and `emailError()` that no contract has, and for an existing forwarder uses the *id* from the select as the email address and never finds a domain (a null dereference). With more than one domain the select sends a domain *name* where the controller validates an id.
+  - Removing a destination is a `GET` link (`forwarders/remove/{forwarder}/{destination}`), so a prefetch can delete it, while the page's remove button sends a `DELETE` to `/settings/email/forwarder/{address}`, a route that does not exist. `forwarders/create` points at a method that does not exist. The success message says the forwarder was deleted when one destination was.
+  - The list's pagination slices overlapping rows (`slice(page - 1, page - 1 + pageSize % 10)`), there is no empty state, destinations are bare lines of text, and nothing says whether the mail server applied a change.
+
+  **Design.** The database is the source of truth, as for aliases and mailboxes; the Stalwart plugin applies it from events. Nothing in the directory (there is no attribute for it), and docker-mailserver stays "not supported".
+  - *Data.* `email_forwarders` loses `server_email_id` (nullable, then dropped) and gains `status` (`pending`, `active`, `failed`), `applied_at` and `last_error`. A new `email_forwarder_destinations` table: forwarder, destination address, `internal` or `external`, `confirmed_at`, a confirmation token hash. The forwarder's own address goes in `mailbox_addresses` (its `mailbox_id` becomes nullable and a `forwarder_id` is added, exactly one of the two set), so the one unique index and the registry keep answering "is this address taken" across mailboxes, aliases and forwarders.
+  - *Rules* (`ForwarderService`, with a `ForwarderChanged` event for the plugin, like `MailboxAliasesChanged`): the address is on a domain of the organization that has email on and is not taken; at most `EMAIL_MAX_FORWARDER_DESTINATIONS` destinations per forwarder (default 10) and a count of forwarders per organization from the plan; a destination is not the forwarder itself and does not make a loop (follow the chain through other forwarders and aliases; refuse beyond a depth of 5); an *internal* destination is an address that exists (a mailbox or alias of the organization), not a guess that will bounce.
+  - *External destinations are confirmed.* Forwarding to an address outside the organization sends a signed link to it (the pattern of the recovery email link: opened from an email, no session) and delivers nothing until it is opened; unconfirmed destinations show as "waiting for confirmation" with a resend. This is what stops the feature being used to flood someone or to read someone else's mail.
+  - *Deliverability.* Forwarding breaks SPF at the destination. The plugin has to rewrite the envelope sender (SRS) or the forwarded mail fails DMARC at Gmail and Microsoft, so this is part of the plugin's contract and of the Phase 3 checklist (a forwarder test, then the headers read back).
+  - *Contract.* `supportsForwarders()` goes on the contract (2f) and answers per server; the controllers stop calling `addEmail`, `emailForwarders` and `deleteEmailForwarders` and write the tables. Nothing asks the mail server on a page load.
+  - *Status.* The plugin acknowledges what it applied (`applied_at`, or `failed` with the error), through a small authenticated callback; until then a forwarder shows "applying". The same callback gives aliases a status (open question).
+
+  **UI.** The forwarders page is rebuilt (`/settings/email/forwarders`, still under Email):
+  - One row per forwarder with its destinations as chips: each chip has a state (active, waiting for confirmation, failed), a remove button and, while unconfirmed, "resend". "Add destination" is inline on the row, with suggestions from the organization's mailboxes and people and free typing for an external address.
+  - *New forwarder* is one small dialog: the name, a domain select that sends the id, and the first destination. Errors sit next to the field they are about (loop, limit, taken, not allowed), and an explanation of how it differs from an alias.
+  - Real pagination with a search box, an empty state, a status badge per forwarder with a retry, confirmations that name what is removed ("Stop forwarding sales@ to bob@gmail.com?"), and a layout that works on a phone. Removing is `DELETE`, never `GET`.
+
+  **Slices** (about 500 lines or less each): 2g-i the migrations, the address-table change, the registry and the model; 2g-ii `ForwarderService`, the event, the confirmation notification and link, with their tests; 2g-iii the controllers and routes (REST, gates, no `GET` deletes) and the contract change; 2g-iv the page and its strings; 2g-v the plugin callback, status and the Phase 3 forwarder check. A command lists any existing `email_forwarders` rows with no destinations (their destinations were on the old server and cannot be recovered) so they can be recreated.
+
+  Exit: a forwarder with an internal and a confirmed external destination delivers in staging (with SRS, and DMARC passing at a third-party mailbox); a loop, a taken address, a destination past the limit and an unconfirmed destination are all refused or held back with a message; removing a destination, and removing the forwarder, stop delivery.
+
+Exit: the same contract tests pass in `ldap` and `db` modes for add, update, delete, quota, duplicate address, aliases on and off, forwarders (add, destinations, confirmation, loops, limits, remove), cross-tenant isolation and limit enforcement.
 
 ### Phase 3 - Domains, DNS and deliverability
 
@@ -268,6 +292,8 @@ Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and t
 - Orphans on the sync page: keep them report-only, or let DB-wins clear them after a confirmation?
 - Alias cap per mailbox: a plan setting, default unlimited and not billed?
 - Do user-linked addresses stay available in `db` mode? Assumed yes, through the `mailboxes` record (the `db` account manager has never had a second address).
-- Forwarders: keep as a feature (built on Stalwart aliases) or drop?
+- Forwarders: **kept** (decided), finished as 2g and built on the tables and plugin events, not on a driver. Still open: does a forwarder count against the plan's email limit, and is the per-organization cap a plan setting?
+- Does the plugin tell the panel what it applied (a callback that sets `applied_at` or `failed`)? Forwarders need it to show "applying" honestly, and aliases and mailboxes have the same gap.
+- Does Stalwart rewrite the envelope sender (SRS) for forwarded mail, or does that need configuring? Without it forwarded mail fails DMARC at the destination.
 - Which Stalwart version does the plugin target, and does tenancy there need the Enterprise edition?
 - Passwords for user-linked mailboxes: authenticate against the user entry (one password) or give each mailbox its own? Either way the identity address stays on the user entry.
