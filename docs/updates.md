@@ -38,7 +38,7 @@ fields (a plan's name, description or order) belong outside every fingerprint.
 
 ### A version's images
 
-A version carries its images (`app_version_images`, see `docs/multi-image-versions-plan.md`).
+A version carries its images (`app_version_images`, see `docs/version-images.md`).
 What each image runs (its role, source, registry, repository, tag, digest, registry login
 and where it goes in the chart's values) is part of two fingerprints:
 

@@ -11,9 +11,14 @@ use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 
 class NextcloudProfile extends AppProfile
 {
-    // Nextcloud's maintained imaginary build. The tag is exact (dated), never `latest`.
-    // Versions carry it as an image of their own; these are what a configuration
-    // defaults to and what a new version is recommended.
+    // The chart's own imaginary image (h2non/imaginary 1.2.4) is years old. Nextcloud's
+    // maintained build runs with the chart's template unchanged: it reads PORT (9000),
+    // serves /health, and works as uid 1000 with a read-only root filesystem and all
+    // capabilities dropped. The tag is exact (dated), never `latest`.
+    //
+    // Versions carry it as an image of their own, which is tested and checked for updates
+    // with the version. This is what a new version is recommended, and what runs for one
+    // that doesn't have it.
     private const IMAGINARY_REGISTRY = 'docker.io';
 
     private const IMAGINARY_REPOSITORY = 'nextcloud/aio-imaginary';
@@ -545,32 +550,6 @@ class NextcloudProfile extends AppProfile
             'default' => 1,
             'persistent' => false,
             'validations' => 'nullable|integer',
-        ],
-        // The chart's own imaginary image (h2non/imaginary 1.2.4) is years old.
-        // Nextcloud's maintained build runs with the chart's template unchanged:
-        // it reads PORT (9000), serves /health, and works as uid 1000 with a
-        // read-only root filesystem and all capabilities dropped. The tag is
-        // exact (dated), never `latest`.
-        'imaginary-image-registry' => [
-            'name' => 'imaginary-image-registry',
-            'type' => 'string',
-            'default' => self::IMAGINARY_REGISTRY,
-            'persistent' => false,
-            'validations' => 'required|string',
-        ],
-        'imaginary-image-repository' => [
-            'name' => 'imaginary-image-repository',
-            'type' => 'string',
-            'default' => self::IMAGINARY_REPOSITORY,
-            'persistent' => false,
-            'validations' => 'required|string',
-        ],
-        'imaginary-image-tag' => [
-            'name' => 'imaginary-image-tag',
-            'type' => 'string',
-            'default' => self::IMAGINARY_TAG,
-            'persistent' => false,
-            'validations' => 'required|string',
         ],
         'nextcloud-php-memory-limit' => [
             'name' => 'nextcloud-php-memory-limit',
