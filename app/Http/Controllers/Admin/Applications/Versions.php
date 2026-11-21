@@ -503,7 +503,7 @@ class Versions extends Controller
      * The groups of the app for the pickers of the version pages, those of the
      * given chart only when one is.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return Collection<int, array{id: int, name: string, is_default: bool, versions: int, plans: int}>
      */
     private function groupOptions(Application $app, ?AppChart $chart = null): Collection
     {
