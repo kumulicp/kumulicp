@@ -371,7 +371,7 @@ class SharedAppsTest extends TestCase
             ->where('shared_app.setup.gate', 'bypassed')
             ->where('shared_app.setup.can_activate', true)
             ->where('shared_app.setup.current_step', 5)
-            ->where('shared_app.setup.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}"));
+            ->where('shared_app.setup.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->id}/tests/{$run->id}"));
     }
 
     public function test_the_steps_start_at_the_servers_and_point_to_each_page()
@@ -415,7 +415,7 @@ class SharedAppsTest extends TestCase
             "{$plan_url}/secrets",
             "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}",
             "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values",
-            "/admin/apps/{$app->slug}/versions/{$version->name}/tests/{$run->id}",
+            "/admin/apps/{$app->slug}/versions/{$version->id}/tests/{$run->id}",
         ];
 
         foreach ($pages as $page) {
@@ -701,7 +701,7 @@ class SharedAppsTest extends TestCase
         [$admin, $shared, $version, $plan] = $this->readyToTest();
         $run = $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan);
 
-        $this->actingAs($admin)->get("/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}")
+        $this->actingAs($admin)->get("/admin/apps/{$shared->application->slug}/versions/{$version->id}/tests/{$run->id}")
             ->assertInertia(fn ($inertia) => $inertia
                 ->where('breadcrumbs.1.url', "/admin/service/shared-apps/{$shared->id}")
                 ->where('shared_app.id', $shared->id));

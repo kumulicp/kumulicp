@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class Versions extends Controller
 {
@@ -78,7 +79,7 @@ class Versions extends Controller
     {
         /* Validate */
         $validatedData = $request->validate([
-            'version' => ['required', 'not_regex:/\//', Rule::unique('app_versions', 'name')->where('application_id', $app->id)],
+            'version' => ['required', 'not_regex:/\//', $this->uniqueInGroup($app, $request->input('version_group_id') ?: $app->findDefaultVersionGroup()?->id)],
             'copy_from' => 'required|in:recommendations,previous_version,update,none',
             'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
             // The other images an update is adopted for
@@ -141,7 +142,7 @@ class Versions extends Controller
             $app_version->addRecommendedImages($recommendations);
         }
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$app_version->id)->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
     }
 
     public function edit(Application $app, AppVersion $version)
@@ -271,7 +272,7 @@ class Versions extends Controller
     {
         /* Validate */
         $validatedData = $request->validate([
-            'version' => 'required',
+            'version' => ['required', $this->uniqueInGroup($app, $request->input('version_group_id') ?: $version->version_group_id, $version)],
             'default_admin_roles' => 'array|nullable',
             'default_user_roles' => 'array|nullable',
             'admin_path' => 'string|nullable',
@@ -328,13 +329,13 @@ class Versions extends Controller
         $version->announcement_url = $request->input('announcement_url');
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$request->input('version'))->with('success', __('admin.applications.versions.updated', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.updated', ['version' => $version->name]));
     }
 
     public function enable(Application $app, AppVersion $version)
     {
         if (! $version->canBeEnabled()) {
-            return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
+            return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
         }
 
         // One version is enabled per group, so the others of its group make way for it
@@ -350,7 +351,7 @@ class Versions extends Controller
         $version->status = 'active';
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
     }
 
     /**
@@ -358,7 +359,7 @@ class Versions extends Controller
      */
     public function massUpgrade(Application $app, AppVersion $version)
     {
-        $redirect = redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name);
+        $redirect = redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id);
 
         if ($version->status !== 'active') {
             return $redirect->with('error', __('admin.applications.versions.mass_upgrade_not_enabled'));
@@ -384,7 +385,7 @@ class Versions extends Controller
             $app->save();
         }
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.disabled', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.disabled', ['version' => $version->name]));
     }
 
     public function roles(Application $app, AppVersion $version)
@@ -467,7 +468,7 @@ class Versions extends Controller
         $version->roles = $roles;
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name.'/roles')->with('success', __('admin.applications.versions.order_updated'));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id.'/roles')->with('success', __('admin.applications.versions.order_updated'));
     }
 
     /**
@@ -499,9 +500,21 @@ class Versions extends Controller
         $active = $group ? $group->activeVersion : $app->active_version();
 
         return [
+            'id' => $active?->id,
             'version' => $active?->name,
             'count' => $active ? $app->instancesBehind($active)->count() : 0,
         ];
+    }
+
+    /**
+     * A version name only has to be free within its own group: the same version of
+     * another chart is another version.
+     */
+    private function uniqueInGroup(Application $app, mixed $group_id, ?AppVersion $ignore = null): Unique
+    {
+        $rule = Rule::unique('app_versions', 'name')->where('application_id', $app->id)->where('version_group_id', $group_id);
+
+        return $ignore ? $rule->ignore($ignore->id) : $rule;
     }
 
     /**

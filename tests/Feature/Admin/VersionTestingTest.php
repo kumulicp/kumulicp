@@ -109,9 +109,9 @@ class VersionTestingTest extends TestCase
     {
         $this->assertSame('untested', $this->candidate->testGate());
 
-        $response = $this->actingAs($this->admin)->get("/admin/apps/{$this->application->slug}/versions/2.0/enable");
+        $response = $this->actingAs($this->admin)->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/enable");
 
-        $response->assertRedirect("/admin/apps/{$this->application->slug}/versions/2.0");
+        $response->assertRedirect("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}");
         $response->assertSessionHas('error');
         $this->assertSame('deactivated', $this->candidate->refresh()->status);
         $this->assertSame('active', $this->enabled->refresh()->status);
@@ -121,7 +121,7 @@ class VersionTestingTest extends TestCase
     {
         $this->approve($this->candidate);
 
-        $response = $this->actingAs($this->admin)->get("/admin/apps/{$this->application->slug}/versions/2.0/enable");
+        $response = $this->actingAs($this->admin)->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/enable");
 
         $response->assertSessionHas('success');
         $this->assertSame('active', $this->candidate->refresh()->status);
@@ -426,7 +426,7 @@ class VersionTestingTest extends TestCase
         $step = $run->steps->first();
         $this->runner()->provisioningFailed($step->id, 'Boom');
         Task::whereKey($step->refresh()->task_id)->update(['status' => TaskStatus::FAILED->value]);
-        $base = "/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}";
+        $base = "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}";
 
         $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page
             ->where('failing_step.id', $step->id)
@@ -459,7 +459,7 @@ class VersionTestingTest extends TestCase
         $step = $run->steps->first();
         $this->runner()->provisioningFailed($step->id, 'Helm release timed out', fixable: false);
         $this->runner()->cleared($step->id, 'failed');
-        $base = "/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}";
+        $base = "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}";
 
         $this->actingAs($this->admin)->get($base)->assertInertia(fn ($page) => $page->where('can.retry_step_id', $step->id));
 
@@ -473,7 +473,7 @@ class VersionTestingTest extends TestCase
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
-        $base = "/admin/apps/{$this->application->slug}/versions/2.0";
+        $base = "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}";
 
         // The test org is still being built, so the run can't be cancelled to make way
         $this->assertFalse($this->candidate->canBypassTests());
@@ -528,7 +528,7 @@ class VersionTestingTest extends TestCase
 
     public function test_bypassing_requires_a_reason_and_an_acknowledgement()
     {
-        $url = "/admin/apps/{$this->application->slug}/versions/2.0/tests/bypass";
+        $url = "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/bypass";
 
         $this->actingAs($this->admin)->post($url, ['reason' => '', 'acknowledge' => true])->assertSessionHasErrors('reason');
         $this->actingAs($this->admin)->post($url, ['reason' => 'Hotfix for a security issue', 'acknowledge' => false])->assertSessionHasErrors('acknowledge');
@@ -537,7 +537,7 @@ class VersionTestingTest extends TestCase
 
     public function test_bypassing_is_recorded_and_lets_the_version_be_enabled()
     {
-        $response = $this->actingAs($this->admin)->post("/admin/apps/{$this->application->slug}/versions/2.0/tests/bypass", [
+        $response = $this->actingAs($this->admin)->post("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/bypass", [
             'reason' => 'Hotfix for a security issue',
             'acknowledge' => true,
         ]);
@@ -557,7 +557,7 @@ class VersionTestingTest extends TestCase
     {
         $run = $this->runner()->start($this->candidate, $this->admin);
         $step = $run->steps->first();
-        $url = "/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}";
+        $url = "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}";
 
         $this->actingAs($this->admin)->get($url)->assertInertia(fn ($page) => $page
             ->component('Admin/Applications/Versions/VersionTestRun')
@@ -588,7 +588,7 @@ class VersionTestingTest extends TestCase
         $this->runner()->provisioned($step->id);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}")
             ->assertInertia(fn ($page) => $page
                 ->where('current_step.admin_account.username', 'support')
                 ->where('current_step.admin_account.password', 'local-admin-pw')
@@ -614,7 +614,7 @@ class VersionTestingTest extends TestCase
         $this->runner()->provisioned($step->id);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}")
             ->assertInertia(fn ($page) => $page->where('current_step.admin_account.username', 'Administrator'));
     }
 
@@ -624,7 +624,7 @@ class VersionTestingTest extends TestCase
         $this->passActiveStep($run);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}")
             ->assertInertia(fn ($page) => $page->where('can.start_next', true));
     }
 
@@ -633,7 +633,7 @@ class VersionTestingTest extends TestCase
         $run = $this->runner()->start($this->candidate, $this->admin);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/1.0/tests/{$run->id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->enabled->id}/tests/{$run->id}")
             ->assertNotFound();
     }
 
@@ -679,7 +679,7 @@ class VersionTestingTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('mass_upgrade.count', 0));
 
         $this->actingAs($this->admin)
-            ->post("/admin/apps/{$this->application->slug}/versions/1.0/mass-upgrade")
+            ->post("/admin/apps/{$this->application->slug}/versions/{$this->enabled->id}/mass-upgrade")
             ->assertSessionHas('error');
     }
 
@@ -699,7 +699,7 @@ class VersionTestingTest extends TestCase
     public function test_a_version_that_is_not_enabled_cannot_be_rolled_out()
     {
         $this->actingAs($this->admin)
-            ->post("/admin/apps/{$this->application->slug}/versions/2.0/mass-upgrade")
+            ->post("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/mass-upgrade")
             ->assertSessionHas('error');
     }
 
@@ -753,7 +753,7 @@ class VersionTestingTest extends TestCase
             ->where('stats.passed', 0)
             ->where('runs.0.id', $run->id)
             ->where('runs.0.version', $this->candidate->name)
-            ->where('runs.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->name}/tests/{$run->id}")
+            ->where('runs.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}")
             ->where('runs.0.progress.total', $run->steps()->count())
             ->where('runs.0.current_step.status', 'awaiting_confirmation')
         );
@@ -779,7 +779,7 @@ class VersionTestingTest extends TestCase
             ->where('stats.untested', 1)
             ->where('untested_versions.0.id', $this->candidate->id)
             ->where('untested_versions.0.gate', 'untested')
-            ->where('untested_versions.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->name}/tests")
+            ->where('untested_versions.0.url', "/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests")
         );
 
         $this->runner()->bypass($this->candidate, $this->admin, 'Hotfix for a security issue');
@@ -838,7 +838,7 @@ class VersionTestingTest extends TestCase
         $this->assertNull($step->app_url);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$step->version_test_run_id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$step->version_test_run_id}")
             ->assertInertia(fn ($page) => $page
                 ->where('current_step.stage', 'core')
                 ->where('current_step.app_url', null)
@@ -883,7 +883,7 @@ class VersionTestingTest extends TestCase
         $this->assertSame(VersionTestStepStage::SITE, $step->stage);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$step->version_test_run_id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$step->version_test_run_id}")
             ->assertInertia(fn ($page) => $page
                 ->where('current_step.stage', 'site')
                 ->where('current_step.admin_account.password', 'site-admin-pw')
@@ -924,7 +924,7 @@ class VersionTestingTest extends TestCase
         $this->assertNotNull($step->app_url);
 
         $this->actingAs($this->admin)
-            ->get("/admin/apps/{$this->application->slug}/versions/2.0/tests/{$run->id}")
+            ->get("/admin/apps/{$this->application->slug}/versions/{$this->candidate->id}/tests/{$run->id}")
             ->assertInertia(fn ($page) => $page->where('current_step.stage', 'core')->where('current_step.password', $step->test_password));
     }
 

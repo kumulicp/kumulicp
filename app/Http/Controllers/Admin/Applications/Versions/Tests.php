@@ -277,7 +277,7 @@ class Tests extends Controller
 
     private function versionUrl(Application $app, AppVersion $version): string
     {
-        return '/admin/apps/'.$app->slug.'/versions/'.$version->name;
+        return '/admin/apps/'.$app->slug.'/versions/'.$version->id;
     }
 
     private function runUrl(Application $app, AppVersion $version, VersionTestRun $run): string
@@ -343,7 +343,7 @@ class Tests extends Controller
 
         return [
             ...$this->breadcrumbs($app, $version, null),
-            ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->name.'/tests', 'label' => __('admin.version_tests.tests')],
+            ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->id.'/tests', 'label' => __('admin.version_tests.tests')],
             ['label' => __('admin.version_tests.run_number', ['id' => $run->id])],
         ];
     }

@@ -25,7 +25,7 @@ const show = computed({
 })
 
 const submit = () => {
-  form.post(props.action ?? '/admin/apps/' + props.app?.slug + '/versions/' + props.version?.version + '/tests/bypass', {
+  form.post(props.action ?? '/admin/apps/' + props.app?.slug + '/versions/' + props.version?.id + '/tests/bypass', {
     preserveScroll: true,
     onSuccess: () => {
       form.reset()

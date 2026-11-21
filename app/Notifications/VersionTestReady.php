@@ -54,7 +54,7 @@ class VersionTestReady extends Notification implements ShouldQueue
     {
         $run = $this->step->run;
 
-        return '/admin/apps/'.$run->application->slug.'/versions/'.$run->version->name.'/tests/'.$run->id;
+        return '/admin/apps/'.$run->application->slug.'/versions/'.$run->version->id.'/tests/'.$run->id;
     }
 
     /**

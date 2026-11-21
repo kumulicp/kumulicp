@@ -39,7 +39,7 @@ function imagesVersion(array $settings = [], string $name = '40.0.1'): AppVersio
 
 function imagesUrl(AppVersion $version, string $path = ''): string
 {
-    return "/admin/apps/{$version->application->slug}/versions/{$version->name}/images".$path;
+    return "/admin/apps/{$version->application->slug}/versions/{$version->id}/images".$path;
 }
 
 // A version that runs the chart "demo" 1.0.0, which is published with the values given

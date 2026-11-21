@@ -64,7 +64,7 @@ it('enables a version without touching the enabled version of another group', fu
     $b1 = trackVersion($this->track_b, '2.0');
     approvedTest($b1);
 
-    $this->get("/admin/apps/{$this->application->slug}/versions/2.0/enable")->assertSessionHas('success');
+    $this->get("/admin/apps/{$this->application->slug}/versions/{$b1->id}/enable")->assertSessionHas('success');
 
     expect($b1->fresh()->status)->toBe('active')
         ->and($a1->fresh()->status)->toBe('active');
@@ -75,7 +75,7 @@ it('still makes the enabled version of its own group give way', function () {
     $a2 = trackVersion($this->track_a, '1.1');
     approvedTest($a2);
 
-    $this->get("/admin/apps/{$this->application->slug}/versions/1.1/enable")->assertSessionHas('success');
+    $this->get("/admin/apps/{$this->application->slug}/versions/{$a2->id}/enable")->assertSessionHas('success');
 
     expect($a2->fresh()->status)->toBe('active')
         ->and($a1->fresh()->status)->toBe('deactivated');
@@ -83,13 +83,13 @@ it('still makes the enabled version of its own group give way', function () {
 
 it('switches the app off only when no group has an enabled version left', function () {
     $this->application->update(['enabled' => true]);
-    trackVersion($this->track_a, '1.0', 'active');
-    trackVersion($this->track_b, '2.0', 'active');
+    $a1 = trackVersion($this->track_a, '1.0', 'active');
+    $b1 = trackVersion($this->track_b, '2.0', 'active');
 
-    $this->get("/admin/apps/{$this->application->slug}/versions/2.0/disable");
+    $this->get("/admin/apps/{$this->application->slug}/versions/{$b1->id}/disable");
     expect($this->application->fresh()->enabled)->toBeTrue();
 
-    $this->get("/admin/apps/{$this->application->slug}/versions/1.0/disable");
+    $this->get("/admin/apps/{$this->application->slug}/versions/{$a1->id}/disable");
     expect($this->application->fresh()->enabled)->toBeFalse();
 });
 
@@ -207,14 +207,22 @@ describe('groups', function () {
         $this->put("/admin/apps/{$this->application->slug}/version-groups/{$foreign->id}", ['name' => 'Hijacked'])->assertNotFound();
     });
 
-    it('adds a version to the group chosen, and refuses a name the app already has', function () {
+    it('adds a version to the group chosen, and refuses a name the group already has', function () {
         $this->post("/admin/apps/{$this->application->slug}/versions", ['version' => '5.0', 'copy_from' => 'none', 'version_group_id' => $this->track_b->id])
             ->assertSessionDoesntHaveErrors();
 
         expect(AppVersion::where('name', '5.0')->first()->version_group_id)->toBe($this->track_b->id);
 
-        $this->post("/admin/apps/{$this->application->slug}/versions", ['version' => '5.0', 'copy_from' => 'none'])
+        $this->post("/admin/apps/{$this->application->slug}/versions", ['version' => '5.0', 'copy_from' => 'none', 'version_group_id' => $this->track_b->id])
             ->assertSessionHasErrors('version');
+
+        // The same version in another group is another version
+        $this->post("/admin/apps/{$this->application->slug}/versions", ['version' => '5.0', 'copy_from' => 'none', 'version_group_id' => $this->track_a->id])
+            ->assertSessionDoesntHaveErrors();
+        $version = AppVersion::where('name', '5.0')->where('version_group_id', $this->track_a->id)->firstOrFail();
+
+        $this->get("/admin/apps/{$this->application->slug}/versions/{$version->id}")
+            ->assertInertia(fn ($page) => $page->where('version.id', $version->id));
     });
 
     it('moves a version that is not enabled to another group of its chart', function () {
@@ -222,11 +230,11 @@ describe('groups', function () {
         $version = trackVersion($this->track_a, '1.0');
         $payload = ['version' => '1.0', 'image_registry_id' => $registry->id, 'announcement_location' => 'none', 'version_group_id' => $this->track_b->id];
 
-        $this->post("/admin/apps/{$this->application->slug}/versions/1.0", $payload)->assertSessionDoesntHaveErrors();
+        $this->post("/admin/apps/{$this->application->slug}/versions/{$version->id}", $payload)->assertSessionDoesntHaveErrors();
         expect($version->fresh()->version_group_id)->toBe($this->track_b->id);
 
         $version->update(['status' => 'active', 'version_group_id' => $this->track_a->id]);
-        $this->post("/admin/apps/{$this->application->slug}/versions/1.0", $payload)->assertSessionHasErrors('version_group_id');
+        $this->post("/admin/apps/{$this->application->slug}/versions/{$version->id}", $payload)->assertSessionHasErrors('version_group_id');
         expect($version->fresh()->version_group_id)->toBe($this->track_a->id);
     });
 

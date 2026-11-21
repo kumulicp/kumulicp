@@ -15,7 +15,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       id="runTests"
       :loading="startForm.processing"
       :disabled="startForm.processing"
-      @click="startForm.post('/admin/apps/' + app.slug + '/versions/' + version.version + '/tests')"
+      @click="startForm.post('/admin/apps/' + app.slug + '/versions/' +version.id + '/tests')"
     >{{ $t('admin.versions.runTests') }}</va-button>
     <va-button v-if="version.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
     <BypassTestsModal v-model="showBypass" :app="app" :version="version" />
@@ -40,7 +40,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       </thead>
       <tbody>
         <tr v-for="run in runs" :key="run.id">
-          <td><Link :href="'/admin/apps/' + app.slug + '/versions/' + version.version + '/tests/' + run.id">#{{ run.id }}</Link></td>
+          <td><Link :href="'/admin/apps/' + app.slug + '/versions/' +version.id + '/tests/' + run.id">#{{ run.id }}</Link></td>
           <td><va-badge :color="statusColor(run.status)" :text="$t('admin.versionTests.status.' + run.status)" /></td>
           <td>{{ run.steps }}</td>
           <td>{{ run.started_by }}</td>
