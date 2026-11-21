@@ -8,7 +8,6 @@ use App\AppInstance;
 use App\AppPlan;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
-use App\Organization;
 use App\OrgSubdomain;
 use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\AppInstance\AppStorageService;
@@ -25,16 +24,6 @@ use Illuminate\Support\Str;
 class AppInstanceService
 {
     private $features;
-
-    private $standard_users;
-
-    private $basic_users;
-
-    private $application;
-
-    private array $role_groups = [];
-
-    private $storage;
 
     private $cache = [];
 
@@ -249,11 +238,6 @@ class AppInstanceService
         return $this;
     }
 
-    public function hasParent()
-    {
-        return $this->app_instance->parent ? true : false;
-    }
-
     public function hasCustomizations()
     {
         return count($this->customizations()) > 0;
@@ -300,46 +284,6 @@ class AppInstanceService
         }
 
         return $domains;
-    }
-
-    public function orgSubdomains(Organization $organization)
-    {
-        $plan = $this->app_instance->plan;
-        $allowsPrimary = (bool) $plan?->hasDomainOption('primary');
-        $allowsSubdomains = (bool) $plan?->hasDomainOption('subdomains');
-
-        if (! $allowsPrimary && ! $allowsSubdomains) {
-            return collect();
-        }
-
-        $domains = $organization->subdomains();
-
-        if ($allowsPrimary && ! $allowsSubdomains) {
-            $domains->where('host', '@');
-        } elseif ($allowsSubdomains && ! $allowsPrimary) {
-            $domains->whereNot('host', '@');
-        }
-
-        $domains->where(function ($query) {
-            return $query->where('app_instance_id', $this->app_instance->id)
-                ->orWhere('app_instance_id', 0)
-                ->orWhere('app_instance_id', null);
-        })
-            ->where('type', 'app');
-
-        return $domains->get();
-    }
-
-    public function isSubdomainAvailable(OrgSubdomain $domain)
-    {
-        $plan = $this->app_instance->plan;
-        $allowsPrimary = (bool) $plan?->hasDomainOption('primary');
-        $allowsSubdomains = (bool) $plan?->hasDomainOption('subdomains');
-
-        return in_array($domain->app_instance_id, [$this->app_instance->id, 0, null])
-            && $domain->type === 'app'
-            && (($allowsPrimary && $domain->host === '@')
-                || ($allowsSubdomains && $domain->host !== '@'));
     }
 
     public function personalized_settings()
@@ -398,23 +342,12 @@ class AppInstanceService
 
     public function countStorage()
     {
-        $additional_storage = 0;
-
-        foreach ($this->app_instance->additional_storage()->get() as $storage) {
-            $additional_storage += $storage->quantity ?? 0;
-        }
-
-        return $additional_storage;
+        return $this->app_instance->countStorage();
     }
 
     public function storage()
     {
         return new AppStorageService($this->app_instance);
-    }
-
-    public function roles(bool $all = true)
-    {
-        return $this->app_instance->version->roles(all: $all);
     }
 
     public function enabledGroups()
@@ -464,38 +397,6 @@ class AppInstanceService
         }
 
         return $roles;
-    }
-
-    public function standardRoles()
-    {
-        return $this->rolesOfAccessType('standard');
-    }
-
-    public function basicRoles()
-    {
-        return $this->rolesOfAccessType('basic');
-    }
-
-    /**
-     * Roles of one access type, cached per type so that asking for one type
-     * never returns the roles of another.
-     */
-    private function rolesOfAccessType(string $access_type)
-    {
-        if (! isset($this->role_groups[$access_type])) {
-            $this->role_groups[$access_type] = $this->app_instance->version->roles($access_type);
-        }
-
-        return $this->role_groups[$access_type];
-    }
-
-    public function application()
-    {
-        if (! $this->application) {
-            $this->application = $this->app_instance->application;
-        }
-
-        return $this->application;
     }
 
     public function __get($property)
