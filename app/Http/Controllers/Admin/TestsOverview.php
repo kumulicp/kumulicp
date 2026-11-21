@@ -51,7 +51,7 @@ class TestsOverview extends Controller
                 'version' => $version->name,
                 'gate' => $version->testGate(),
                 'created_at' => $version->created_at?->format('Y-m-d H:i:s'),
-                'url' => '/admin/apps/'.$version->application->slug.'/versions/'.$version->name.'/tests',
+                'url' => '/admin/apps/'.$version->application->slug.'/versions/'.$version->id.'/tests',
             ])->values(),
             'breadcrumbs' => [
                 ['label' => __('admin.tests.tests')],
@@ -94,7 +94,7 @@ class TestsOverview extends Controller
             'version' => $run->version->name,
             'started_by' => $run->started_by?->name,
             'created_at' => $run->created_at->format('Y-m-d H:i:s'),
-            'url' => '/admin/apps/'.$run->application->slug.'/versions/'.$run->version->name.'/tests/'.$run->id,
+            'url' => '/admin/apps/'.$run->application->slug.'/versions/'.$run->version->id.'/tests/'.$run->id,
             'progress' => [
                 'total' => $steps->count(),
                 'passed' => $steps->where('status', VersionTestStepStatus::PASSED)->count(),

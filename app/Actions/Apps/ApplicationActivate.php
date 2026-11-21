@@ -70,7 +70,7 @@ class ApplicationActivate extends NativeAction
         $this->organization = $organization;
         $this->application = $app;
         $this->plan = $plan;
-        $this->version = $version ?? $app->active_version();
+        $this->version = $version ?? $plan->activeVersion();
         $this->label = $label;
         $this->domain = $domain;
         $this->configurations = $configurations;

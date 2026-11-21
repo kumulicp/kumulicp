@@ -94,7 +94,7 @@ class SharedApps extends Controller
 
                     if (! $this->isShareable($app)) {
                         $fail(__('admin.shared_apps.errors.not_shareable', ['app' => $app->name]));
-                    } elseif (! $app->versions()->where('status', 'active')->exists()) {
+                    } elseif (! $app->active_version()) {
                         $fail(__('admin.shared_apps.errors.no_version'));
                     }
                 },
@@ -105,7 +105,7 @@ class SharedApps extends Controller
 
         $organization = Organization::where('type', 'shared')->first();
         $application = Application::find($validated['app']);
-        $version = $application->versions()->where('status', 'active')->first();
+        $version = $application->active_version();
 
         // Every shared app gets its own dedicated, hidden plan -- it's not
         // meant to be picked by organizations subscribing to the app, just

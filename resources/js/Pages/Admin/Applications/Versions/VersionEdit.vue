@@ -14,15 +14,15 @@ import { Link, useForm } from '@inertiajs/vue3'
     <div class="row justify-center">
       <va-button v-if="version.toggle.state == 'disable' || version.test.can_enable" id="showEnableDisable" @click="showEnableDisable = !showEnableDisable">{{ version.toggle.label }}</va-button>
       <template v-else>
-        <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
-        <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
+        <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.id+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
+        <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.id+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
         <va-button v-if="version.test.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
       </template>
       <va-button v-if="version.is_active && mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: version.version }) }}</va-button>
-      <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
+      <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.id+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
       <va-modal v-model="showEnableDisable" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
-          <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.version+'/'+version.toggle.state)">
+          <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.id+'/'+version.toggle.state)">
             <va-card-title class="m-0"> {{ version.toggle.label }} {{ $t('admin.versions.version') }} </va-card-title>
             <va-card-content class="m-0">
               <div v-if="version.toggle.state == 'disable'">
@@ -41,7 +41,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       </va-modal>
       <va-modal v-model="showMassUpgrade" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
-          <form @submit.prevent="massUpgradeForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
+          <form @submit.prevent="massUpgradeForm.post('/admin/apps/'+app.slug+'/versions/'+version.id+'/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
             <va-card-title class="m-0">{{ $t('admin.versions.massUpgradeTitle') }}</va-card-title>
             <va-card-content class="m-0">
               {{ $t('admin.versions.massUpgradeWarning', { count: mass_upgrade.count, version: version.version }) }}
@@ -82,7 +82,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     </va-alert>
     <div class="row">
       <div class="flex xs12 lg12">
-      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.version)">
+      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.id)">
         <AdminSettings v-if="can.helm_chart">
           <template #name>{{ $t('admin.versions.helmChart') }}</template>
           <template #settings>
@@ -95,6 +95,20 @@ import { Link, useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.version"
                   :error-messages="$page.props.errors.version"
                   />
+                <va-select
+                  v-if="groups.length > 1"
+                  v-model="form.version_group_id"
+                  id="versionGroup"
+                  :label="$t('admin.versions.group')"
+                  :messages="$t('admin.versions.groupMoveCaption')"
+                  class="my-2"
+                  :disabled="version.is_active"
+                  :options="groups"
+                  value-by="id"
+                  text-by="name"
+                  :error="$page.props.errors.version_group_id"
+                  :error-messages="$page.props.errors.version_group_id"
+                  />
                 <va-input v-model="form.chart_version"
                   :label="$t('admin.versions.helmChartVersion')"
                   id="chartVersion"
@@ -105,7 +119,8 @@ import { Link, useForm } from '@inertiajs/vue3'
                   />
                 <va-input v-model="form.chart_name"
                   :label="$t('admin.versions.helmChartName')"
-                  id="chartVersion"
+                  id="chartName"
+                  :messages="$t('admin.versions.chartSharedNote')"
                   class="my-2"
                   immediateValidation
                   :error="$page.props.errors.chart_name"
@@ -254,7 +269,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   />
                 <div v-if="version.extra_images" id="extraImages" class="va-text-secondary mb-2" style="font-size: 0.85rem">
                   {{ $t('admin.versions.extraImages', { count: version.extra_images }) }}
-                  <Link :href="'/admin/apps/' + app.slug + '/versions/' + version.version + '/images'">{{ $t('admin.versions.manageImages') }}</Link>
+                  <Link :href="'/admin/apps/' + app.slug + '/versions/' +version.id + '/images'">{{ $t('admin.versions.manageImages') }}</Link>
                 </div>
                 <va-input v-model="form.port"
                   type="number"
@@ -367,6 +382,10 @@ export default {
   },
   props: {
     version: Object,
+    groups: {
+      type: Array,
+      default: () => []
+    },
     errors: Object,
     announcements: Object,
     roles: Object,
@@ -410,6 +429,7 @@ export default {
         id: this.version.id,
         version: this.version.version,
         admin_path: this.version.admin_path,
+        version_group_id: this.version.version_group_id,
         chart_version: this.version.chart_version,
         chart_name: this.version.chart_name,
         helm_repo_name: this.version.helm_repo_name,

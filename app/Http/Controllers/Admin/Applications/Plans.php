@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Applications;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\AppVersionGroup;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
@@ -303,7 +304,13 @@ class Plans extends Controller
                 'can_update_domain' => $plan->canUpdateDomain(),
                 'domain_option' => $plan->domainOptions(),
                 'parent_app' => $plan->setting('parent_app_id'),
+                'version_group_id' => $plan->version_group_id,
+                'version_group' => $plan->versionGroup()->id,
             ],
+            'version_groups' => $app->versionGroups()->with('chart')->orderBy('app_charts.id')->orderBy('app_version_groups.id')->get()->map(fn ($group) => [
+                'value' => $group->id,
+                'text' => $group->chart->name.' / '.$group->name,
+            ])->values(),
             'apps' => Application::where('id', '!=', $app->id)->orderBy('name')->get()->map(fn (Application $other) => [
                 'value' => $other->id,
                 'text' => $other->name,
@@ -378,7 +385,15 @@ class Plans extends Controller
             'domain_option' => 'nullable|array',
             'domain_option.*' => 'in:subdomains,primary,base,parent',
             'parent_app' => ['nullable', 'numeric', Rule::exists('applications', 'id'), Rule::notIn([$app->id])],
+            'version_group_id' => ['nullable', 'integer', Rule::in($app->versionGroups()->pluck('app_version_groups.id'))],
         ], $currencyRules));
+
+        // Installs of a plan keep the chart they were deployed from, so the plan can only change group within it
+        $group = $request->filled('version_group_id') ? AppVersionGroup::find($request->input('version_group_id')) : null;
+
+        if ($group && $plan->subscribers()->exists() && $group->app_chart_id !== $plan->versionGroup()->app_chart_id) {
+            return back()->withErrors(['version_group_id' => __('admin.applications.plans.group_chart_locked')]);
+        }
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
@@ -406,6 +421,11 @@ class Plans extends Controller
         $plan->shared_app_id = $request->shared_app;
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;
+
+        if ($request->has('version_group_id')) {
+            $plan->version_group_id = $group?->id;
+        }
+
         $settingsToUpdate = [
             'admin_access' => $request->input('admin_access'),
             'base.storage' => (int) $request->input('base.storage'),

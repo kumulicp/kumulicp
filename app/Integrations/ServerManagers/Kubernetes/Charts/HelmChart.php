@@ -124,7 +124,7 @@ abstract class HelmChart extends Chart
         $chart = [
             'charts' => [
                 [
-                    'chartName' => $app_instance->version->setting('chart_name'), // The generic chart name in the repo
+                    'chartName' => $app_instance->version->chartName(), // The generic chart name in the repo
                     'version' => $app_instance->version->setting('chart_version'),
                     'releaseName' => $this->chartName(), // The chart name of this specific instance
                     'values' => $values,

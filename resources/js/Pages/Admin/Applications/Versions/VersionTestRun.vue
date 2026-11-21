@@ -40,7 +40,7 @@ watch(() => props.polling, (polling) => polling ? start() : stop(), { immediate:
 
   <va-alert v-if="run.status === 'passed'" id="runPassed" color="success" border="top" border-color="success" class="mb-3">
     {{ $t('admin.versionTests.runPassed') }}
-    <Link :href="'/admin/apps/' + app.slug + '/versions/' + version.version">{{ $t('admin.versions.version') }} {{ version.version }}</Link>
+    <Link :href="'/admin/apps/' + app.slug + '/versions/' +version.id">{{ $t('admin.versions.version') }} {{ version.version }}</Link>
   </va-alert>
   <va-alert v-if="run.status === 'failed'" id="runFailed" color="danger" border="top" border-color="danger" class="mb-3">
     {{ $t('admin.versionTests.runFailed') }}
@@ -215,7 +215,7 @@ export default {
       })
     },
     runUrl () {
-      return '/admin/apps/' + this.app.slug + '/versions/' + this.version.version + '/tests/' + this.run.id
+      return '/admin/apps/' + this.app.slug + '/versions/' +this.version.id + '/tests/' + this.run.id
     }
   },
   methods: {

@@ -234,7 +234,7 @@ export default {
   },
   computed: {
     basePath () {
-      return '/admin/apps/' + this.app.slug + '/versions/' + this.version.version
+      return '/admin/apps/' + this.app.slug + '/versions/' +this.version.id
     },
     selectedRows () {
       return this.rows.filter((row) => row.selected && !row.exists)

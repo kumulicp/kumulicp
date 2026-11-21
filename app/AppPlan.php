@@ -31,6 +31,7 @@ use Illuminate\Support\Str;
  * @property int|null $database_server_id
  * @property int|null $sso_server_id
  * @property int|null $shared_app_id
+ * @property int|null $version_group_id
  * @property-read Application|null $application
  * @property-read Collection<int, AppInstance> $subscribers
  * @property-read Server|null $web_server
@@ -62,6 +63,34 @@ class AppPlan extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo('App\Application', 'application_id');
+    }
+
+    /**
+     * The group of versions this plan is upgraded within. A plan that picks none
+     * follows the default group of its app (see versionGroup()).
+     *
+     * @return BelongsTo<AppVersionGroup, $this>
+     */
+    public function selectedVersionGroup(): BelongsTo
+    {
+        return $this->belongsTo(AppVersionGroup::class, 'version_group_id');
+    }
+
+    /**
+     * The group of versions this plan is upgraded within.
+     */
+    public function versionGroup(): AppVersionGroup
+    {
+        return $this->selectedVersionGroup ?? $this->application->defaultVersionGroup();
+    }
+
+    /**
+     * The version new installs of this plan get, and that its installs are
+     * upgraded to: the enabled one of its group.
+     */
+    public function activeVersion(): ?AppVersion
+    {
+        return $this->versionGroup()->activeVersion;
     }
 
     public function subscribers()

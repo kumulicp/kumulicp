@@ -12,7 +12,7 @@ import draggable from 'vuedraggable'
   <div class="app-profile">
     <div class="row">
       <div class="flex xs12 lg8">
-      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/roles')">
+      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.id+'/roles')">
         <va-list>
           <va-list-item>
             <va-list-item-section>
