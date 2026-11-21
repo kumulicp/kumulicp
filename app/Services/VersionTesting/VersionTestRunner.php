@@ -73,7 +73,7 @@ class VersionTestRunner
         $run = DB::transaction(function () use ($version, $user, $plans, $plan) {
             $this->assertSlotFree();
 
-            $baseline = $plan ? null : ($version->versionGroup?->activeVersion ?? $version->application->active_version());
+            $baseline = $plan ? null : ($version->versionGroup->activeVersion ?? $version->application->active_version());
             if ($baseline && $baseline->is($version)) {
                 $baseline = null;
             }
