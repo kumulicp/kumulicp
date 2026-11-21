@@ -497,7 +497,7 @@ return [
         'server_missing_address' => 'El servidor :server no tiene dirección.',
     ],
     'email' => [
-        'sync_unavailable' => 'No hay nada que sincronizar: LDAP no está en uso, o no hay un atributo LDAP definido para el correo de recuperación.',
+        'sync_unavailable' => 'No hay nada que sincronizar: LDAP no está en uso, o no hay un atributo LDAP definido para el correo de recuperación ni para los alias.',
         'sync_finished' => 'Sincronización terminada: :updated actualizados, :unchanged ya estaban sincronizados, :problems con problemas.',
     ],
 ];

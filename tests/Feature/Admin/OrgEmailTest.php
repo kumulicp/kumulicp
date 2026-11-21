@@ -2,11 +2,16 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Mailbox;
+use App\OrgDomain;
+use App\Services\Email\AliasDirectory;
+use App\Services\Email\MailboxAliasService;
 use App\Services\Email\RecoveryEmailDirectory;
 use App\Support\Facades\Settings;
 use App\User;
 use App\UserRecoveryEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Email\FakeAliasDirectory;
 use Tests\Support\Email\FakeRecoveryEmailDirectory;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -106,5 +111,42 @@ class OrgEmailTest extends TestCase
         $response->assertRedirect('/admin/email');
         $response->assertSessionHas('error');
         $this->assertSame([], $this->directory->writes);
+    }
+
+    public function test_the_page_says_how_many_aliases_there_are_and_whether_they_can_be_synced()
+    {
+        $this->app->instance(AliasDirectory::class, $aliases = new FakeAliasDirectory);
+        $aliases->enabled = false;
+        $domain = OrgDomain::factory()->create(['organization_id' => User::where('username', 'demo')->first()->organization->id, 'name' => 'corp.org', 'email_enabled' => true, 'email_status' => 'active']);
+        $mailbox = Mailbox::create(['organization_id' => $domain->organization_id, 'org_domain_id' => $domain->id, 'local_part' => 'jane', 'address' => 'jane@corp.org', 'status' => Mailbox::ACTIVE]);
+        config(['account_manager.driver' => 'db']);
+        app(MailboxAliasService::class)->add($mailbox, 'sales', $domain);
+
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page
+            ->where('aliases.count', 1)
+            ->where('aliases.sync_enabled', false));
+
+        $aliases->enabled = true;
+
+        $this->get('/admin/email')->assertInertia(fn ($page) => $page->where('aliases.sync_enabled', true));
+    }
+
+    public function test_sync_also_copies_aliases_when_only_they_have_a_directory()
+    {
+        config(['account_manager.driver' => 'db']);
+        $this->directory->enabled = false;
+        $this->app->instance(AliasDirectory::class, $aliases = new FakeAliasDirectory);
+        $domain = OrgDomain::factory()->create(['organization_id' => User::where('username', 'demo')->first()->organization->id, 'name' => 'corp.org', 'email_enabled' => true, 'email_status' => 'active']);
+        $mailbox = Mailbox::create(['organization_id' => $domain->organization_id, 'org_domain_id' => $domain->id, 'local_part' => 'jane', 'address' => 'jane@corp.org', 'status' => Mailbox::ACTIVE]);
+        $aliases->enabled = false;
+        app(MailboxAliasService::class)->add($mailbox, 'sales', $domain);
+        $aliases->enabled = true;
+        $aliases->entries['jane@corp.org'] = [];
+
+        $this->post('/admin/email/sync')->assertRedirect('/admin/email')->assertSessionHas('success');
+
+        $this->assertSame(['sales@corp.org'], $aliases->entries['jane@corp.org']);
+        $this->assertNull(session('sync_result'));
+        $this->assertSame(1, session('alias_sync_result')['updated']);
     }
 }

@@ -1813,13 +1813,23 @@
     "signInEmail": "Login Email",
     "signInEmailHint": "This is the email you sign in with. Change it from the Login email section above."
   },
+  "mailboxAliases": {
+    "title": "Aliases",
+    "none": "No aliases yet. Mail sent to an alias arrives in this mailbox.",
+    "name": "Name",
+    "domain": "Domain",
+    "add": "Add alias",
+    "remove": "Remove"
+  },
   "orgEmail": {
     "title": "Email",
     "description": "The control panel's database is the source of truth for email data. Use this page to copy it back to the directory if the two ever drift apart.",
     "aliasesTitle": "Aliases",
     "aliasesNoLdap": "Aliases are available. Without LDAP the mail server is managed directly.",
+    "aliasesServer": "Aliases are available: the mail server keeps them, so no LDAP attribute is needed.",
     "aliasesLdap": "Aliases are available, stored in the LDAP attribute {attribute}.",
-    "aliasesDisabled": "Aliases are turned off. With LDAP they need an attribute of their own that you add to your directory and then set on the LDAP settings page.",
+    "aliasesDisabled": "Aliases are turned off, and your organizations do not see them. With LDAP they need an attribute of their own that you add to your directory and then set on the LDAP settings page, unless the mail server keeps aliases itself.",
+    "aliasesCount": "{count} aliases are saved in the control panel.",
     "recoveryTitle": "Recovery emails",
     "recoveryCount": "{count} recovery emails are saved in the control panel.",
     "recoveryNoLdap": "Recovery emails are kept in the control panel's database only. There is no directory to sync with.",
@@ -1829,6 +1839,8 @@
     "syncButton": "Sync to LDAP",
     "ldapSettingsLink": "LDAP settings",
     "resultTitle": "Last sync",
+    "resultRecovery": "Recovery emails",
+    "resultAliases": "Aliases",
     "resultUpdated": "{count} updated",
     "resultUnchanged": "{count} already in sync",
     "resultMissing": "Not found in LDAP",

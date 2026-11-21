@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MailboxAliases from '@/components/MailboxAliases.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import UserLayout from './UserLayout.vue'
 import { useForm } from '@inertiajs/vue3'
@@ -146,6 +147,12 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           </va-button>
         </div>
       </va-alert>
+      <mailbox-aliases v-if="aliases"
+        :mailbox-id="aliases.mailbox_id"
+        :aliases="aliases.list"
+        :domains="aliases.domains"
+        :enabled="aliases.enabled"
+      />
       <div v-for="(storage, index) in user.additional_storage" :key="index" class="row">
         <div class="flex flex-col xs12 lg6 mb-2">
           <h5>{{ $t('organization.users.appStorage', { app: storage.app_name }) }}</h5>
@@ -223,7 +230,8 @@ export default {
     user: Object,
     errors: Object,
     organizations: Object,
-    email_domains: Object
+    email_domains: Object,
+    aliases: Object
   },
   data () {
     const additionalStorage = {}

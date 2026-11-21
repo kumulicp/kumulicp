@@ -84,6 +84,28 @@ class ServerInterfaceService
         throw new \Exception(__('messages.exception.no_server_interface', ['server' => $org_server->server->name]));
     }
 
+    /**
+     * Whether the mail server keeps a mailbox's aliases itself: its interface has a static `supportsAliases()` that
+     * says yes. It is asked of the class, so there is no connection to the server and a page can ask it freely.
+     */
+    public function supportsAliases(OrgServer|Server|null $server): bool
+    {
+        $server = $server instanceof OrgServer ? $server->server : $server;
+
+        if (! $server) {
+            return false;
+        }
+
+        try {
+            $interface = $this->profile($server)->interface($server->type);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return is_string($interface) && class_exists($interface)
+            && method_exists($interface, 'supportsAliases') && $interface::supportsAliases() === true;
+    }
+
     public function checkConnection($connection)
     {
         for ($n = 0; $n < 5; $n++) {

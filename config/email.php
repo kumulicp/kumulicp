@@ -35,4 +35,15 @@ return [
 
     'recovery_confirm_hours' => (int) env('EMAIL_RECOVERY_CONFIRM_HOURS', 24),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Aliases per mailbox
+    |--------------------------------------------------------------------------
+    |
+    | The most aliases one mailbox can have. Empty means no limit.
+    |
+    */
+
+    'max_aliases' => env('EMAIL_MAX_ALIASES') === null || env('EMAIL_MAX_ALIASES') === '' ? null : (int) env('EMAIL_MAX_ALIASES'),
+
 ];
