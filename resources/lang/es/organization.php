@@ -149,7 +149,7 @@ return [
             'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
         ],
         'alias' => [
-            'disabled' => 'Los alias están desactivados. Con LDAP, un administrador debe añadir un atributo LDAP para ellos y asignarlo en la página de ajustes de LDAP.',
+            'disabled' => 'Los alias no están disponibles para este buzón.',
             'mailbox_not_active' => 'Solo un buzón en uso puede tener alias.',
             'domain_not_allowed' => 'Los alias solo pueden estar en un dominio de esta organización que tenga el correo activado, y :domain no lo es.',
             'limit' => 'Un buzón puede tener como máximo :count alias.',

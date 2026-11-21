@@ -1791,7 +1791,6 @@
   },
   "mailboxAliases": {
     "title": "Aliases",
-    "disabled": "Aliases are turned off. This mail server does not keep them itself, so with LDAP an administrator has to add an LDAP attribute for them and set it on the LDAP settings page.",
     "none": "No aliases yet. Mail sent to an alias arrives in this mailbox.",
     "name": "Name",
     "domain": "Domain",
@@ -1805,7 +1804,7 @@
     "aliasesNoLdap": "Aliases are available. Without LDAP the mail server is managed directly.",
     "aliasesServer": "Aliases are available: the mail server keeps them, so no LDAP attribute is needed.",
     "aliasesLdap": "Aliases are available, stored in the LDAP attribute {attribute}.",
-    "aliasesDisabled": "Aliases are turned off. With LDAP they need an attribute of their own that you add to your directory and then set on the LDAP settings page, unless the mail server keeps aliases itself.",
+    "aliasesDisabled": "Aliases are turned off, and your organizations do not see them. With LDAP they need an attribute of their own that you add to your directory and then set on the LDAP settings page, unless the mail server keeps aliases itself.",
     "aliasesCount": "{count} aliases are saved in the control panel.",
     "recoveryTitle": "Recovery emails",
     "recoveryCount": "{count} recovery emails are saved in the control panel.",

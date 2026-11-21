@@ -152,7 +152,7 @@ return [
             'forwarders' => "Forwarding isn't available on this mail server.",
         ],
         'alias' => [
-            'disabled' => 'Aliases are off. With LDAP, an administrator has to add an LDAP attribute for them and map it on the LDAP settings page.',
+            'disabled' => 'Aliases are not available for this mailbox.',
             'mailbox_not_active' => 'Only a mailbox that is in use can have aliases.',
             'domain_not_allowed' => 'Aliases can only be on a domain of this organization that has email on, and :domain is not one.',
             'limit' => 'A mailbox can have at most :count aliases.',

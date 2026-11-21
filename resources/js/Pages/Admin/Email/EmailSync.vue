@@ -42,7 +42,10 @@ const results = computed(() => [
         <template v-if="!ldap_enabled">{{ $t('orgEmail.aliasesNoLdap') }}</template>
         <template v-else-if="aliases.server_managed && !aliases.attribute">{{ $t('orgEmail.aliasesServer') }}</template>
         <template v-else-if="aliases.enabled">{{ $t('orgEmail.aliasesLdap', { attribute: aliases.attribute }) }}</template>
-        <template v-else>{{ $t('orgEmail.aliasesDisabled') }}</template>
+        <template v-else>
+          {{ $t('orgEmail.aliasesDisabled') }}
+          <Link href="/admin/settings/ldap" class="ml-1">{{ $t('orgEmail.ldapSettingsLink') }}</Link>
+        </template>
       </va-alert>
       <p v-if="aliases.enabled" id="aliasesCount" class="mb-4">{{ $t('orgEmail.aliasesCount', { count: aliases.count }) }}</p>
 

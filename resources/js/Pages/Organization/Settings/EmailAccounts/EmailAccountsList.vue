@@ -171,7 +171,7 @@ import { useForm } from '@inertiajs/vue3'
             <va-button type="submit" color="primary" :disabled="add.processing">{{ $t('common.update') }}</va-button>
           </va-card-actions>
         </form>
-        <va-card-content v-if="editEmailAccount.mailbox_id">
+        <va-card-content v-if="editEmailAccount.mailbox_id && editEmailAccount.aliases_enabled">
           <mailbox-aliases
             :key="editEmailAccount.mailbox_id"
             :mailbox-id="editEmailAccount.mailbox_id"
