@@ -102,7 +102,7 @@ import { Link, router, useForm } from '@inertiajs/vue3'
     <va-button v-if="mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: mass_upgrade.version }) }}</va-button>
     <va-modal v-model="showMassUpgrade" no-outside-dismiss no-padding size="small" class="p-0">
       <template #content="{ ok }">
-        <form @submit.prevent="massUpgradeForm.post('/admin/apps/' + app.slug + '/versions/' + mass_upgrade.version + '/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
+        <form @submit.prevent="massUpgradeForm.post('/admin/apps/' + app.slug + '/versions/' +mass_upgrade.id + '/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
           <va-card-title class="m-0">{{ $t('admin.versions.massUpgradeTitle') }}</va-card-title>
           <va-card-content class="m-0">
             {{ $t('admin.versions.massUpgradeWarning', { count: mass_upgrade.count, version: mass_upgrade.version }) }}
@@ -205,9 +205,9 @@ import { Link, router, useForm } from '@inertiajs/vue3'
             <tbody>
               <tr v-for="version in versions.slice((curPageValue - 1), (curPageValue - 1 + pageSize))" :key="version.name">
                 <td style="text-align: center"><va-icon name="fa-circle" :color="version.status == 'active' ? 'success' : 'backgroundElement'" /></td>
-                <td><Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version">{{ version.version }}</Link></td>
+                <td><Link :href="'/admin/apps/'+app.slug+'/versions/'+version.id">{{ version.version }}</Link></td>
                 <td>
-                  <Link :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests' + (version.test.run_id ? '/' + version.test.run_id : '')">
+                  <Link :href="'/admin/apps/'+app.slug+'/versions/'+version.id+'/tests' + (version.test.run_id ? '/' + version.test.run_id : '')">
                     <va-badge :color="gateColor(version.test.gate)" :text="$t('admin.versions.testGate.' + version.test.gate)" />
                   </Link>
                 </td>

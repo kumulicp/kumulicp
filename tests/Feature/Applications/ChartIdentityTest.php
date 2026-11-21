@@ -90,7 +90,7 @@ describe('editing a version', function () {
         $edited = versionOfChart($this->chart, ['name' => '1.0', 'roles' => []]);
         $sibling = versionOfChart($this->chart, ['name' => '2.0']);
 
-        $this->post("/admin/apps/{$this->application->slug}/versions/1.0", [
+        $this->post("/admin/apps/{$this->application->slug}/versions/{$edited->id}", [
             'version' => '1.0',
             'chart_version' => '3.0.0',
             'chart_name' => 'renamed',
@@ -110,7 +110,7 @@ describe('editing a version', function () {
     it('shows the chart as it is on the chart', function () {
         $version = versionOfChart($this->chart, ['name' => '1.0', 'settings' => ['chart_name' => 'stale', 'helm_repo_name' => 'https://stale.test']]);
 
-        $this->get("/admin/apps/{$this->application->slug}/versions/1.0")
+        $this->get("/admin/apps/{$this->application->slug}/versions/{$version->id}")
             ->assertInertia(fn ($page) => $page
                 ->where('version.chart_name', 'demo')
                 ->where('version.helm_repo_name', 'https://old.test'));

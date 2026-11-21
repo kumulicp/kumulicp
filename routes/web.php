@@ -93,7 +93,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                     Route::get('create', 'Admin\Applications\Versions@create')->name('app.new.version');
                     Route::post('', 'Admin\Applications\Versions@store')->name('app.store.version');
                     Route::post('check-updates', 'Admin\Applications\Versions@checkUpdates')->name('app.versions.check-updates');
-                    Route::prefix('{version:name}')->group(function () {
+                    Route::prefix('{version:id}')->group(function () {
                         Route::get('', 'Admin\Applications\Versions@edit');
                         Route::post('', 'Admin\Applications\Versions@update');
                         Route::get('enable', 'Admin\Applications\Versions@enable');

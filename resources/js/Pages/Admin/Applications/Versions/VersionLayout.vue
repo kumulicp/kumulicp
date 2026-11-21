@@ -23,7 +23,7 @@ export default {
     basePath () {
       const app = this.$page.props.app
       const version = this.$page.props.version
-      return '/admin/apps/' + app.slug + '/versions/' + version.version
+      return '/admin/apps/' + app.slug + '/versions/' +version.id
     },
     tabs () {
       return [

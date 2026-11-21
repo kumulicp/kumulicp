@@ -31,11 +31,11 @@ it('creates a version with none — stores null settings', function () {
         'copy_from' => 'none',
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/2.0");
-
     $version = AppVersion::where('application_id', $this->demoApp->id)
         ->where('name', '2.0')
         ->firstOrFail();
+
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     expect($version->settings)->toBeNull();
     expect($version->admin_path)->toBeNull();
@@ -49,11 +49,11 @@ it('creates a version with recommendations — copies settings from app profile'
         'copy_from' => 'recommendations',
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/2.0");
-
     $version = AppVersion::where('application_id', $this->demoApp->id)
         ->where('name', '2.0')
         ->firstOrFail();
+
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     // The chart is the profile's chart, found in the repository it names
     expect($version->setting('chart_name'))->toBe('demo-chart');
@@ -98,11 +98,11 @@ it('creates a version with previous_version — copies settings, roles and admin
         'copy_version' => $source->id,
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/2.0");
-
     $version = AppVersion::where('application_id', $this->demoApp->id)
         ->where('name', '2.0')
         ->firstOrFail();
+
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     expect($version->setting('chart_version'))->toBe('1.2.3');
     expect($version->setting('helm_repo_name'))->toBe('source-chart');
@@ -120,13 +120,14 @@ it('creates a version with previous_version — copies its other images', functi
     ]);
     AppVersionImage::factory()->create(['app_version_id' => $source->id, 'key' => 'redis', 'repository' => 'library/redis', 'tag' => '8.0.1', 'position' => 1]);
 
-    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
         'version' => '2.0',
         'copy_from' => 'previous_version',
         'copy_version' => $source->id,
-    ])->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/2.0");
+    ]);
 
     $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '2.0')->firstOrFail();
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     // The primary image is made from the settings it was given, the rest are copied
     expect($version->images->pluck('key')->all())->toBe(['primary', 'redis'])
@@ -271,7 +272,7 @@ it('updates version settings and default roles', function () {
         'roles' => ['order' => $roles],
     ]);
 
-    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}", [
         'version' => '1.1',
         'admin_path' => '/new-admin',
         'chart_version' => '3.0.0',
@@ -283,7 +284,7 @@ it('updates version settings and default roles', function () {
         'default_user_roles' => [$roles[1]],
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/1.1");
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     $version->refresh();
 
@@ -304,7 +305,7 @@ it('requires an image registry when updating a version', function () {
         'name' => '1.0',
     ]);
 
-    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}", [
         'version' => '1.0',
         'announcement_location' => 'none',
     ]);
@@ -323,11 +324,11 @@ it('saves role order — adds roles to selected list', function () {
         'roles' => null,
     ]);
 
-    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles", [
         'order' => $roles,
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
 
     $version->refresh();
     expect($version->roles['order'])->toBe($roles);
@@ -344,11 +345,11 @@ it('saves role order — removes roles by submitting a subset', function () {
 
     $kept = [$roles[0]];
 
-    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles", [
         'order' => $kept,
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
 
     $version->refresh();
     expect($version->roles['order'])->toBe($kept);
@@ -363,11 +364,11 @@ it('saves role order — clears all roles when order is empty', function () {
         'roles' => ['order' => $roles],
     ]);
 
-    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles", [
         'order' => [],
     ]);
 
-    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
 
     $version->refresh();
     expect($version->roles['order'])->toBe([]);
@@ -556,13 +557,14 @@ it('clears results left on versions that are not enabled when checking for updat
 it('adds a new version from an update, copying the checked version and its newest compatible chart', function () {
     $source = checkedVersion(['admin_path' => '/source-admin', 'settings' => ['chart_version' => '9.0.0', 'helm_repo_name' => 'source-chart']]);
 
-    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+    $response = $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
         'version' => '33.0.2',
         'copy_from' => 'update',
         'copy_version' => $source->id,
-    ])->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/33.0.2");
+    ]);
 
     $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '33.0.2')->firstOrFail();
+    $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     expect($version->setting('chart_version'))->toBe('9.0.1')
         ->and($version->setting('helm_repo_name'))->toBe('source-chart')
