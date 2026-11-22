@@ -195,6 +195,7 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - The `delete-organization` gate then has no caller for suborgs. Leave it, or remove it if nothing else uses it.
   - Deactivation lives in `Subscription@cancel` and `resubscribe`. Both need work first (next item).
 - **Deactivation and reactivation are not safe for suborgs (verify).**
+  - **Status:** `cancel` now authorizes with the `unsubscribe` gate, and `resubscribe` takes the `{organization}` from the route and authorizes with the `resubscribe` gate. Both build the subscription for the target org. Tests: `tests/Feature/Subscription/SuborgDeactivationTest.php`. Still open: cancel uses the viewer's `Billing` facade for `isBillable()` and `periodEnds()`, and the apps of a cancelled parent's suborgs are not marked `deactivating`.
   - `Subscription@cancel(Organization $organization)` has no `Gate::authorize('unsubscribe', ...)`. The gate exists and is used only to decide whether to show the button. If nothing else guards the route, any authenticated user can cancel any organization by id. Write a test for this first.
   - `Subscription@resubscribe()` takes no organization argument and uses `auth()->user()->organization`, although the route is `/subscription/{organization}/resubscribe`. Resubscribing a suborg from the parent resubscribes the parent and all its children instead.
   - `cancel` passes the viewer's `SubscriptionFacade::all()` to `SubscriptionUpdate` for the suborg. `run()` rebuilds from the DB, so it works but is misleading.
