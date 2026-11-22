@@ -498,11 +498,13 @@ it('leaves no half-made user and keeps the link when creating the account fails'
         ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeTrue();
 })->skip('Finding 6: the user is created before the steps that can fail, and nothing is undone.');
 
-it('says the link expired and offers a new one for the same address')
-    ->todo(note: 'Finding 7: needs the page and the resend route from phase 1.');
+// Finding 7: needs the page and the resend route from phase 1.
+it('says the link expired and offers a new one for the same address (finding 7)')
+    ->todo();
 
-it('removes expired registrations')
-    ->todo(note: 'Finding 7: needs the prune command from phase 1.');
+// Finding 7: needs the prune command from phase 1.
+it('removes expired registrations (finding 7)')
+    ->todo();
 
 it('does not send the captcha secret key to the browser', function () {
     Settings::update('captcha_provider', 'turnstile');
