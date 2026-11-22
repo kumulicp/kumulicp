@@ -163,8 +163,8 @@ via an unlabeled `organization` select on the review page. It only appears when 
    - A separately billed suborg can be activated into only by its own admins, using the suborg's own payment method. Parent admins do not see it in the selector, and `activate` rejects it server-side.
    - Check payment with `Billing::organization($payer)->hasDefaultPaymentMethod()` for the payer, not the viewer.
    - A jointly billed suborg is paid by the parent: the parent's payment method, and the parent's invoice.
-   - **Parent setting (decided): "Let suborganizations activate apps".** It is a parent-org setting stored with `updateSetting`, off by default, and editable on the Organization settings page by parent admins.
-     - Off: only parent admins can activate apps into a jointly billed suborg, as today.
+   - **Per-suborg setting (decided): "Let this suborganization activate apps".** It is stored on each suborg with `updateSetting` (next to `include_in_parent_invoice`), off by default, and set by parent admins on the suborg edit page (`SuborganizationEdit.vue`). Suborg admins cannot change it.
+     - Off: only parent admins can activate apps into that jointly billed suborg, as today.
      - On, and the suborg is jointly billed: suborg admins can activate apps themselves, billed to the parent, and the payment-method requirement is hidden for them. The review page and the `activate` check do not ask a suborg user for a payment method.
      - On, but the suborg is separately billed: the setting has no effect. That suborg always pays with its own method.
      - The suborg's own plan limits and the family ceiling still apply.
@@ -260,9 +260,9 @@ via an unlabeled `organization` select on the review page. It only appears when 
 9. Suborg groups live inside the parent's LDAP tree, under `ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent>` (option B). A separate `o=` per suborg was rejected because it conflicts with the ACLs and Nextcloud's bind account.
 10. A parent group may contain suborg users.
 
-11. For a jointly billed suborg, suborg admins can activate apps only when the parent turns on a "Let suborganizations activate apps" setting (off by default). When it is on, the payment requirement is hidden from the suborg user (3.3).
+11. For a jointly billed suborg, suborg admins can activate apps only when the parent turns on a per-suborg "Let this suborganization activate apps" setting (off by default). When it is on, the payment requirement is hidden from the suborg user (3.3).
 12. Nobody uses suborg groups in production yet, so no backfill of existing groups is needed.
 13. Sibling domains are not allowed for suborg apps. Only the suborg's own and the parent's domains are.
 
 ### Still open
-14. Should the activation setting in decision 11 be one switch on the parent, or a per-suborg override as well? I assumed one switch on the parent.
+14. Should the parent also get a default for new suborgs? (Not needed for the first release; each suborg starts with the setting off.)
