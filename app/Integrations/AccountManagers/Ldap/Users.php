@@ -10,7 +10,6 @@ use App\Ldap\Models\OrganizationalUnit;
 use App\Ldap\Models\User as LdapUser;
 use App\Mail\CustomInvoice;
 use App\Mail\SubscriptionBilling;
-use App\Services\AppInstanceService;
 use App\Support\Facades\Organization;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Mail;
@@ -156,7 +155,7 @@ class Users
         $organization = $app_instance->organization;
         $members = collect();
 
-        $roles = (new AppInstanceService($app_instance))->standardRoles();
+        $roles = $app_instance->standardRoles();
         $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
@@ -186,7 +185,7 @@ class Users
         $members = [];
 
         $group_members = collect();
-        $roles = (new AppInstanceService($app_instance))->standardRoles();
+        $roles = $app_instance->standardRoles();
         $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
@@ -216,7 +215,7 @@ class Users
         $members = [];
         $group_members = [];
 
-        $roles = (new AppInstanceService($app_instance))->basicRoles();
+        $roles = $app_instance->basicRoles();
         $app_instance = LdapSupport::roleGroupApp($app_instance);
 
         foreach ($roles as $role) {
