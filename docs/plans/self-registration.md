@@ -53,6 +53,8 @@ Add `tests/Feature/Organization/SelfRegistrationTest.php` (Pest, with the fake a
 
 Exit: green suite that describes the current flow, with each finding above represented by a test.
 
+**Status: written, not yet run.** `tests/Feature/Organization/SelfRegistrationTest.php` has the tests for today's flow and a skipped test for each of findings 1 to 6 and 8 (finding 7 is two `todo`s, because it needs pages and a command that do not exist yet). The session it was written in had PHP 8.3 and no way to install 8.4, which the project requires, so nothing has run: expect to fix small mistakes in the first CI run. Role membership of the new user is not covered, because the database account manager does not keep app roles; it needs a test in the LDAP suite.
+
 ### Phase 1: close the holes (findings 1 to 8)
 
 1. **Captcha and CSP.** Confirm in a browser. Then allow the configured provider's hosts for scripts, frames and connections on the registration routes only (not globally), and load its script with the page nonce. Reset the widget after any failed submit (tokens are single use) and clear the token on its expiry callback.
