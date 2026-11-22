@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\AppPlan;
 use App\Application;
+use App\EmailForwarder;
 use App\Mailbox;
 use App\Organization;
 use App\Server;
@@ -165,6 +166,15 @@ class OrganizationService
         return Mailbox::where('organization_id', $this->organization->id)
             ->where('status', Mailbox::ACTIVE)
             ->count();
+    }
+
+    /**
+     * The organization's forwarders, counted from the table. Not the destinations: a forwarder
+     * counts once however many it has.
+     */
+    public function countForwarder()
+    {
+        return EmailForwarder::where('organization_id', $this->organization->id)->count();
     }
 
     public function getThis()

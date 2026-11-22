@@ -46,4 +46,18 @@ return [
 
     'max_aliases' => env('EMAIL_MAX_ALIASES') === null || env('EMAIL_MAX_ALIASES') === '' ? null : (int) env('EMAIL_MAX_ALIASES'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Forwarders
+    |--------------------------------------------------------------------------
+    |
+    | The most destinations one forwarder can have, and how many hours the link
+    | sent to an outside destination works before it has to be sent again.
+    |
+    */
+
+    'max_forwarder_destinations' => (int) env('EMAIL_MAX_FORWARDER_DESTINATIONS', 10),
+
+    'forwarder_confirm_hours' => (int) env('EMAIL_FORWARDER_CONFIRM_HOURS', 72),
+
 ];

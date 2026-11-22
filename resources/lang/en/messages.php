@@ -137,6 +137,14 @@ return [
             'changed_line' => 'The recovery email for the account :username on :panel_name was changed to :new.',
             'changed_delay' => 'Until :date password resets keep coming to this address. If you did not do this, sign in and change your password now.',
         ],
+        'forwarder' => [
+            'subject' => 'Confirm forwarding from :address',
+            'line' => 'Someone using :panel_name asked for mail sent to :address to be forwarded to this address. Nothing is forwarded until you confirm it.',
+            'action' => 'Confirm forwarding',
+            'ignore' => 'If you do not want these emails, ignore this message and nothing will be forwarded. The link works for :hours hours.',
+            'confirmed' => 'Done. Mail sent to that address will now be forwarded to you.',
+            'invalid' => 'This confirmation link is not valid any more. Ask for a new one.',
+        ],
         'primary_email' => [
             'subject' => 'The email on your account changed',
             'line' => 'The email you sign in with for the account :username on :panel_name changed from :old to :new.',
