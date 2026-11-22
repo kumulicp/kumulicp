@@ -15,20 +15,18 @@ use App\Updates\UpdateDrift;
 use App\Updates\UpdatePolicy;
 use App\UpdateState;
 use App\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
-use Tests\TestCase;
 
 /**
  * Bringing app instances up to date for what changed, and nothing else: a few
  * first and then the rest in batches, each once the one before has gone well, and
  * on their own for what an admin has said so for.
  */
-uses(TestCase::class, RefreshDatabase::class, TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 beforeEach(function () {
     // Activating an app makes its groups in the directory, as the other app tests do
