@@ -277,10 +277,10 @@ class AppInstanceService
         $domains = collect();
 
         $organization = auth()->user()->organization;
-        $domains = $domains->merge($this->orgSubdomains($organization));
+        $domains = $domains->merge($this->app_instance->orgSubdomains($organization));
 
         foreach ($organization->suborganizations as $suborg) {
-            $domains = $domains->merge($this->orgSubdomains($suborg));
+            $domains = $domains->merge($this->app_instance->orgSubdomains($suborg));
         }
 
         return $domains;
@@ -353,7 +353,7 @@ class AppInstanceService
     public function enabledGroups()
     {
         $roles = [];
-        foreach ($this->roles() as $role) {
+        foreach ($this->app_instance->roles() as $role) {
             $role_enabled = true;
             if ($role->required_features && count($role->required_features) > 0) {
                 foreach ($role->required_features as $feature) {
@@ -384,7 +384,7 @@ class AppInstanceService
 
     public function allRoles()
     {
-        $roles = $this->roles();
+        $roles = $this->app_instance->roles();
         $children_groups = $this->childrenGroups();
 
         foreach ($roles as $role) {
