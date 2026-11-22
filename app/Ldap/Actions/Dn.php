@@ -54,6 +54,48 @@ class Dn
         return $fullDn;
     }
 
+    /**
+     * The DN of an organization's groups, or of one group in it.
+     *
+     * A parent organization keeps its groups at `ou=<category>,ou=groups,o=<parent>`. A suborganization has no
+     * `o=` entry of its own, so its groups sit inside the parent's tree, in a container of their own:
+     * `ou=<category>,ou=<slug>,ou=suborgs,ou=groups,o=<parent>`. That keeps the ACLs and the apps' bind accounts,
+     * which are per `o=`, working, and keeps a suborg's groups out of the parent's category containers.
+     */
+    public static function group(Organization $organization, ?string $category = null, ?string $cn = null): string
+    {
+        $ou = $organization->parent_organization_id
+            ? [$organization->slug, 'suborgs', 'groups']
+            : ['groups'];
+
+        if ($category) {
+            array_unshift($ou, $category);
+        }
+
+        return self::create($organization, count($ou) > 1 ? $ou : $ou[0], $cn);
+    }
+
+    /**
+     * The containers a group needs, outermost first, as [ou, dn] pairs.
+     *
+     * @return array<int, array{0: string, 1: string}>
+     */
+    public static function groupContainers(Organization $organization, ?string $category = null): array
+    {
+        $containers = [['groups', self::create($organization, 'groups')]];
+
+        if ($organization->parent_organization_id) {
+            $containers[] = ['suborgs', self::create($organization, ['suborgs', 'groups'])];
+            $containers[] = [$organization->slug, self::create($organization, [$organization->slug, 'suborgs', 'groups'])];
+        }
+
+        if ($category) {
+            $containers[] = [$category, self::group($organization, $category)];
+        }
+
+        return $containers;
+    }
+
     public static function escape($value): string
     {
         return (new DistinguishedName)->escape((string) $value)->forDn()->get();

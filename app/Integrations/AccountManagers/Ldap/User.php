@@ -162,9 +162,27 @@ class User extends UserManager
         });
     }
 
+    /**
+     * The group with this name the user may belong to: one of their own organization's or, for a user of a
+     * suborganization, one of the parent's. The same name can exist in several organizations, so the tree
+     * is not searched by name.
+     */
+    private function groupFor($groupid): ?LdapGroup
+    {
+        $organizations = array_filter([$this->organization, $this->organization?->parent_organization]);
+
+        foreach ($organizations as $organization) {
+            if ($group = (new Groups($organization))->findModel($groupid)) {
+                return $group;
+            }
+        }
+
+        return null;
+    }
+
     public function addToGroup($groupid)
     {
-        $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
+        $group = $this->groupFor($groupid);
 
         if ($group instanceof LdapGroup) {
             if (! $this->user->groups()->exists($group)) {
@@ -179,7 +197,7 @@ class User extends UserManager
 
     public function removeFromGroup($groupid)
     {
-        $group = LdapGroup::in(Dn::create($this->organization, 'groups'))->where('cn', $groupid)->first();
+        $group = $this->groupFor($groupid);
 
         if ($group instanceof LdapGroup) {
             if ($this->user->groups()->exists($group)) {

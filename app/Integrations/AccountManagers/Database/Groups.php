@@ -3,15 +3,19 @@
 namespace App\Integrations\AccountManagers\Database;
 
 use App\Group as GroupModel;
+use App\Organization as OrganizationModel;
 use App\Support\Facades\Organization;
 
 class Groups
 {
-    private $organization;
+    private OrganizationModel $organization;
 
-    public function __construct()
+    /**
+     * The groups of the given organization, or of the active one.
+     */
+    public function __construct(?OrganizationModel $organization = null)
     {
-        $this->organization = Organization::account();
+        $this->organization = $organization ?? Organization::account();
     }
 
     public function add(array $data)
@@ -27,14 +31,14 @@ class Groups
             $group->save();
         }
 
-        return new Group($group);
+        return new Group($group, $this->organization);
     }
 
     public function find(string $group_name, ?string $category = null)
     {
         $group = $this->organization->groups()->where('slug', $group_name)->first();
 
-        return $group ? new Group($group) : null;
+        return $group ? new Group($group, $this->organization) : null;
     }
 
     public function all()
@@ -93,6 +97,6 @@ class Groups
 
     public function get(GroupModel $group)
     {
-        return new Group($group);
+        return new Group($group, $this->organization);
     }
 }

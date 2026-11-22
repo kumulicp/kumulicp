@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
 use App\Rules\GroupNameNotUsed;
+use App\Support\AccountManager\GroupCatalog;
+use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
 use App\Support\Facades\Organization;
@@ -18,16 +20,73 @@ class Groups extends Controller
         Gate::authorize('active');
 
         $organization = Organization::account();
-        $categories = AccountManager::groups()->all();
+
+        // A parent sees, and manages, its suborganizations' groups along with its own
+        $categories = GroupCatalog::tag(AccountManager::groups()->all(), $organization);
+        foreach ($organization->suborganizations as $suborganization) {
+            $categories = GroupCatalog::merge(
+                $categories,
+                GroupCatalog::tag(AccountManager::account($suborganization)->groups()->all(), $suborganization)
+            );
+        }
 
         return inertia('Organization/Groups/GroupsList', [
             'categories' => $categories,
+            'multiple_orgs' => $organization->suborganizations->isNotEmpty(),
         ]);
     }
 
-    public function show($group)
+    public function show(Request $request, $group)
     {
-        return redirect("/groups/$group/edit");
+        return to_route('groups.edit', ['group' => $group] + $request->only('organization'));
+    }
+
+    /**
+     * The group a request is about and the organization it belongs to.
+     *
+     * A group is found in the active organization first. A parent can also reach its suborganizations'
+     * groups: one with the same name in the parent wins, and `organization` picks a suborg's explicitly.
+     * Only the organization itself or one of its suborganizations can be picked.
+     *
+     * @return array{0: \App\Organization, 1: GroupManager}|null
+     */
+    private function resolve(Request $request, string $slug): ?array
+    {
+        $organization = Organization::account();
+
+        if ($request->filled('organization')) {
+            $target = \App\Organization::find($request->input('organization'));
+
+            if (! $target || ! ($target->is($organization) || $target->parent_organization_id === $organization->id)) {
+                return null;
+            }
+
+            $group = AccountManager::account($target)->groups()->find($slug);
+
+            return $group ? [$target, $group] : null;
+        }
+
+        if ($group = AccountManager::groups()->find($slug)) {
+            return [$organization, $group];
+        }
+
+        $matches = [];
+        foreach ($organization->suborganizations as $suborganization) {
+            if ($group = AccountManager::account($suborganization)->groups()->find($slug)) {
+                $matches[] = [$suborganization, $group];
+            }
+        }
+
+        // The same name in several suborganizations needs the organization to be named
+        return count($matches) === 1 ? $matches[0] : null;
+    }
+
+    /** What a redirect to a group needs to find it again. */
+    private function parameters(\App\Organization $group_organization, string $slug): array
+    {
+        return $group_organization->is(Organization::account())
+            ? ['group' => $slug]
+            : ['group' => $slug, 'organization' => $group_organization->id];
     }
 
     public function store(Request $request)
@@ -57,21 +116,21 @@ class Groups extends Controller
         return to_route('groups.edit', ['group' => $validatedData['name']]);
     }
 
-    public function edit($group)
+    public function edit(Request $request, $group)
     {
         Gate::authorize('active');
-        $organization = Organization::account();
 
-        $group = AccountManager::groups()->find($group);
-        if (! $group) {
+        $resolved = $this->resolve($request, $group);
+        if (! $resolved) {
             return redirect('/groups')->with('error', 'Group not found');
         }
+        [$organization, $group] = $resolved;
 
         $managers = $group->managerNames();
         $members = $group->members();
         $category = $group->categoryName($group);
 
-        $users = AccountManager::users()->collect()->map(function ($user) {
+        $users = AccountManager::account($organization)->users()->collect()->map(function ($user) {
             return [
                 'text' => $user->attribute('name'),
                 'value' => $user->attribute('username'),
@@ -91,6 +150,8 @@ class Groups extends Controller
             'group' => [
                 'slug' => $group->attribute('slug'),
                 'name' => $group->attribute('name'),
+                'organization_id' => $organization->id,
+                'organization' => $organization->name,
             ],
             'managers' => $managers,
             'members' => $members,
@@ -103,6 +164,14 @@ class Groups extends Controller
     public function update(Request $request, $group_name)
     {
         Gate::authorize('active');
+
+        $resolved = $this->resolve($request, $group_name);
+        if (! $resolved) {
+            return redirect('/groups')->with('error', 'Group not found');
+        }
+        [$organization, $group] = $resolved;
+        $groups = AccountManager::account($organization)->groups();
+
         /* Validate */
         $validator = Validator::make($request->all(), [
             'original_name' => 'required', // TODO: Check if original name exists
@@ -113,11 +182,9 @@ class Groups extends Controller
             'extensions' => 'array|nullable',
         ]);
 
-        $organization = Organization::account();
-
-        $validator->after(function ($validator) {
+        $validator->after(function ($validator) use ($groups) {
             $validatedData = $validator->validated();
-            if ($validatedData['original_name'] != $validatedData['name'] && AccountManager::groups()->find($validatedData['name'])) {
+            if ($validatedData['original_name'] != $validatedData['name'] && $groups->find($validatedData['name'])) {
                 $validator->errors()->add(
                     'name', $validatedData['name'].' already exists!'
                 );
@@ -126,7 +193,6 @@ class Groups extends Controller
         $validatedData = $validator->validate();
 
         // Update Group settings
-        $group = AccountManager::groups()->find($group_name);
         $group->disableAutoSave();
         $group->updateManagers($validatedData['managers']);
         $group->updateMembers($validatedData['members']);
@@ -141,20 +207,19 @@ class Groups extends Controller
             Action::dispatch($app->application->slug, 'process_group_options', [$app, $group, $request->all()]);
         }
 
-        return to_route('groups.edit', ['group' => $group->attribute('slug')])->with('success', __('organization.group.updated', ['group' => $validatedData['name']]));
+        return to_route('groups.edit', $this->parameters($organization, $group->attribute('slug')))->with('success', __('organization.group.updated', ['group' => $validatedData['name']]));
     }
 
-    public function destroy($group_name)
+    public function destroy(Request $request, $group_name)
     {
         Gate::authorize('active');
-        $organization = Organization::account();
 
-        $active_apps = $organization->active_apps();
+        $resolved = $this->resolve($request, $group_name);
 
-        $group = AccountManager::groups()->find($group_name);
+        if ($resolved) {
+            [$organization, $group] = $resolved;
 
-        if ($group) {
-            foreach ($active_apps as $app) {
+            foreach ($organization->active_apps() as $app) {
                 Action::dispatch($app->application->slug, 'process_group_options', [$app, $group, ['original_name' => $group_name, 'group_name' => $group_name, 'action' => 'remove']]);
             }
             $group->delete();

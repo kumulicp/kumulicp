@@ -60,6 +60,14 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
 
 ### 2.3 Group work items
 
+**Status (branch `claude/suborg-ldap-group-scoping`, not yet run):**
+- **Done:** the group DN builder (`Dn::group`, `Dn::groupContainers`); LDAP `Groups` and `Group` scoped to one organization (no searches over the whole `ou=groups` tree); suborg membership checked against `SuborgUser` for LDAP; `Account::groups()` passes its organization on both drivers; parent can list, edit and delete suborg groups (`Groups` controller resolves a group by organization and slug, `?organization=<id>` picks one when two suborgs share a name); DB driver groups take an organization; user-side group add/remove looks only in the user's organization and, for a suborg user, the parent's.
+- **Not done yet:**
+  - The Nextcloud group base is still `ou=groups,o=<parent>` for a suborg's app, which includes every other org's groups. Narrow it to the suborg's container (item 7 below).
+  - Creating the suborg's group containers when the suborg is created (they are created on first group).
+  - The DB-driver fixes in item 5 (member removal, orphaned rows, slug on rename).
+  - A test that the directory-reader and per-org admin ACLs still see suborg groups.
+
 0. **Baseline: confirm the LDAP tests run (correction to an earlier draft).** CI already starts an OpenLDAP container with the memberof overlay and the per-org ACLs (`.github/ldap/*.ldif`) and runs the `AccountManagerLdap` suite in both `laravel.yml` and `laravel-frankenphp.yml`. An earlier version of this plan said CI had no LDAP. That was wrong.
    - `GroupsTest` calls `skipUnlessDriver('ldap', $driver)`, so only its `ldap` dataset row runs. The `db` row is skipped by design.
    - `GroupCrossTenantTest` forces the `db` driver and runs inside the same suite.

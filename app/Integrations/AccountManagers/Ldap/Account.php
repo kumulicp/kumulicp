@@ -25,7 +25,7 @@ class Account implements AccountContract
 
     public function groups()
     {
-        return new Groups;
+        return new Groups($this->organization);
     }
 
     public function destroy()

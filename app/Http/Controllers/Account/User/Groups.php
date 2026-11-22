@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account\User;
 
 use App\Http\Controllers\Controller;
+use App\Support\AccountManager\GroupCatalog;
 use App\Support\Facades\AccountManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -14,7 +15,12 @@ class Groups extends Controller
         $user = AccountManager::users()->find($userid);
         Gate::authorize('edit-user', $user);
 
-        $categories = AccountManager::groups()->all();
+        // The groups a user can be in: their organization's and, for a suborganization's user, the parent's
+        $user_organization = $user->organization();
+        $categories = GroupCatalog::tag(AccountManager::account($user_organization)->groups()->all(), $user_organization);
+        if ($parent = $user_organization->parent_organization) {
+            $categories = GroupCatalog::merge($categories, GroupCatalog::tag(AccountManager::account($parent)->groups()->all(), $parent));
+        }
         $groups = [];
 
         foreach ($categories as $category) {
