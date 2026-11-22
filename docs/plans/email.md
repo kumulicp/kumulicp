@@ -66,7 +66,7 @@ Every change names the item below it belongs to, and a slice is only finished wh
 | Moving mail from another provider | Not built (a separate project). The readiness list only warns. |
 | Reminder | A dismissible banner, not blocking. |
 | Who can switch a user's `mail` | The user, from the modal below. An admin can provision a mailbox for them, but it stays `pending` and `mail` does not change until the user accepts. |
-| Mail-server attributes on users | docker-mailserver stays supported, so the Dovecot attributes (`mailQuota`, `mailHomeDirectory`, `mailStorageDirectory`, the mail object class) are still written for a user with an active mailbox. Stalwart does not use them. |
+| Mail-server attributes on users | **Changed (2h):** docker-mailserver never worked properly and is removed, not migrated. The Dovecot attributes (`mailQuota`, `mailHomeDirectory`, `mailStorageDirectory`, the `PostfixBookMailAccount` object class) stop being written. The driver becomes a generic LDAP driver; a server that wants attributes of its own (a quota attribute, say) says so in its `LdapMailSchema`. Until 2h ships they are still written. |
 
 ## Which apps a changed `mail` can affect
 
@@ -121,7 +121,7 @@ An admin who wants a user to have an address creates the mailbox as `pending` an
 | 11 | The swap changes the account's identity and its reset address, which makes a hijacked session worth more. | Password confirmation, and a notice to the old address. |
 | 12 | There is no single safe order for the user's apps: for some, change the email in the app first; for others, after. Existing app sessions also keep the old email until they sign in again. | Per-app guidance from the audit (2d), declared on each app profile (how it identifies a user). Unknown means a cautionary note. |
 | 13 | A user created with an org address from the start would get the invite at a mailbox they cannot open yet. | The invite goes to the personal address (now the recovery email). |
-| 14 | docker-mailserver stays, but `pending` must not write the mail object class or `mail`, or Postfix would accept mail for an address that is not live. | Those are written only when the mailbox becomes `active`. |
+| 14 | (Goes away with 2h, which removes the docker-mailserver attributes) docker-mailserver stays, but `pending` must not write the mail object class or `mail`, or Postfix would accept mail for an address that is not live. | Those are written only when the mailbox becomes `active`. |
 | 15 | Moving off another provider needs the old mail history copied (IMAP sync) before the DNS switch, and nothing here does that. | Not built. The readiness list says so. Open question below. |
 | 16 | Deleting a mailbox for a user whose recovery email is missing or unusable would leave `mail` pointing at an address we no longer host. | `mail` is restored only from a usable recovery email; otherwise it is left and the reminder shows. |
 
@@ -148,7 +148,7 @@ Found along the way, and fixed: `createUserEmail` and `deleteUserEmail` could ne
 Found, not fixed (belongs to later items):
 - The address registry is bound to LDAP for every driver. With the `db` driver and a standalone Stalwart the rule would query a directory that is not there; 2c swaps the binding to the mailbox tables.
 - `ProfileEdit.vue` has a branch for `profile.org_emails` that the controller never fills, so it never shows. Remove or replace it in 2d.
-- `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f).
+- `Forwarders::store` still calls `addEmail()` with an array where the contract expects a password (2f; the whole feature is finished in 2g).
 
 Exit: the LDAP email suite passes against a live directory in CI (checked: it does).
 
@@ -166,19 +166,110 @@ Exit: the LDAP email suite passes against a live directory in CI (checked: it do
   - [x] *2c-ii `email:backfill-mailboxes`* (`--dry-run`, `--organization=`) records the standalone mailboxes that exist on the mail server but not in the table. It only adds rows and is safe to run again. It reports, and does not force, an address a user signs in with, one recorded for another organization, a mail server it could not ask, and recorded mailboxes the server no longer has. **Run it once per install after upgrading** (`--dry-run` first), because counts and limits come from the table now. Until the LDAP registry is no longer asked about mailboxes, it stays in the composite; with the backfill done it only needs to answer for users' `mail`.
 - [ ] **2d. Rollout safety for the swap.** Audit WordPress and CiviCRM for the claim that identifies a user (and Nextcloud's `oidc-mapping-user-id` on existing installs). Show an impact preview with the user's apps before the swap. The migration command from 2b only runs on existing accounts after the audit.
 - [ ] **2e. Aliases.** Store aliases as non-primary rows in `mailbox_addresses`. With LDAP, write them to the mapped aliases attribute and add them to the sync page; without LDAP, push them to Stalwart. Gate the UI on `LdapEmailAttributes::aliasesEnabled()`. Decide the per-plan alias cap (see open questions).
-  - [x] *2e-i The service.* `MailboxAliasService` adds and removes aliases of an active mailbox (the user's, or a standalone one). An alias is a domain of the mailbox's own organization with email on, a name allowed in an address, an address nobody has (the registry, which now sees aliases), and within `EMAIL_MAX_ALIASES` (empty: no limit; the plan setting stays an open question). With LDAP it is off until an aliases attribute is mapped, and each change is also written to the user's entry (or the standalone mailbox's entry) through `AliasDirectory`; a directory that fails doesn't undo the change. `MailboxAliasesChanged` is the hook for the Stalwart plugin, which reads the addresses from the table. A mailbox that stops being active (undo, removal) loses its aliases.
-  - [x] *2e-ii The sync.* The **Sync to LDAP** button on `/admin/email` now also makes the directory match the database for every active mailbox that has aliases (`MailboxAliasService::sync()`), and shows the result for recovery emails and aliases separately. It does not look for aliases left in the directory on a mailbox that has none in the database (there is no cheap way to ask the directory for them): those go the next time that mailbox's aliases change.
-  - [x] *2e-iii The pages.* A card on the administrator's page for a user who has an organization address, and in the edit dialog of a standalone mailbox on the email accounts page: list, add (name and domain) and remove. Off, with the reason, while `aliasesEnabled()` is false. The routes are `mailboxes/{mailbox}/aliases` (the mailbox must be the organization's, and the person must be allowed to edit that user, or the email settings). **Not done:** the user cannot add aliases to their own address from their profile (an administrator does it), the per-plan cap (only `EMAIL_MAX_ALIASES`), and nothing resyncs Stalwart if a push fails (see below).
-  - [x] *2e-iv Stalwart.* The Stalwart plugin's queued listener `PushMailboxAliases` handles `MailboxAliasesChanged`: it reads `mailbox_addresses` and sets the Stalwart account's `aliases` to exactly that list (replace, idempotent; checked against Stalwart 0.16.27). A failure is retried three times, then stays in the failed jobs. Aliases no longer need an LDAP attribute when the mailbox's mail server keeps them itself: an email interface says so with a static `supportsAliases()` (asked of the class through `ServerInterface::supportsAliases()`, no connection), and `MailboxAliasService::enabledFor()` is that or the old `aliasesEnabled()` rule. The Stalwart plugin says yes; the LDAP mirror still only runs when an attribute is mapped. **Not done:** a resync for Stalwart like the LDAP sync, and removing aliases from an account whose mailbox row is already gone.
-- [ ] **2f. Contract cleanup.** Fix the `EmailContract` drift (the forwarder call passes an array where a password is expected), remove the blocking `checkConnection()` retry loop from request paths, and retire the LDAP `Domain` entries Stalwart does not need (once docker-mailserver, which still reads them, is gone).
+- [ ] **2f. Contract cleanup.** Fix the `EmailContract` drift (the forwarder call passes an array where a password is expected), remove the blocking `checkConnection()` retry loop from request paths, and retire the LDAP `Domain` entries Stalwart does not need (done by 2h, which removes docker-mailserver, the only reader of them).
+- [ ] **2g. Forwarders, finished.** A forwarder is an address (it need not be a mailbox) that delivers to one or more destinations, inside or outside the organization. An alias (2e) is another name for one mailbox; the UI says which is which.
 
-Exit: the same contract tests pass in `ldap` and `db` modes for add, update, delete, quota, duplicate address, aliases on and off, cross-tenant isolation and limit enforcement.
+  **What is wrong today** (checked in `Forwarders`, `EmailForwarder` and `EmailForwarders.vue`): the feature has no working driver. The only code that ever implemented it was a mail server API that is no longer in the repository, and the LDAP driver answers `supportsForwarders(): false`, so every forwarders page redirects away. Under that:
+  - The `email_forwarders` table keeps `server_email_id` (an integer from that old API, `NOT NULL`) and no destinations (the model's `@property string $destination` is not a column): what a forwarder delivers to lives only on the mail server, so listing asks the server once per forwarder on every page load.
+  - `store` calls `addEmail()` with an array where a password goes, reads `hasEmailError()` and `emailError()` that no contract has, and for an existing forwarder uses the *id* from the select as the email address and never finds a domain (a null dereference). With more than one domain the select sends a domain *name* where the controller validates an id.
+  - Removing a destination is a `GET` link (`forwarders/remove/{forwarder}/{destination}`), so a prefetch can delete it, while the page's remove button sends a `DELETE` to `/settings/email/forwarder/{address}`, a route that does not exist. `forwarders/create` points at a method that does not exist. The success message says the forwarder was deleted when one destination was.
+  - The list's pagination slices overlapping rows (`slice(page - 1, page - 1 + pageSize % 10)`), there is no empty state, destinations are bare lines of text, and nothing says whether the mail server applied a change.
+
+  **Design.** The database is the source of truth, as for aliases and mailboxes; the Stalwart plugin applies it from events. Nothing in the directory (there is no attribute for it), and docker-mailserver stays "not supported".
+  - *Data.* `email_forwarders` loses `server_email_id` (nullable, then dropped) and gains `status` (`pending`, `active`, `failed`), `applied_at` and `last_error`. A new `email_forwarder_destinations` table: forwarder, destination address, `internal` or `external`, `confirmed_at`, a confirmation token hash. The forwarder's own address goes in `mailbox_addresses` (its `mailbox_id` becomes nullable and a `forwarder_id` is added, exactly one of the two set), so the one unique index and the registry keep answering "is this address taken" across mailboxes, aliases and forwarders.
+  - *Rules* (`ForwarderService`, with a `ForwarderChanged` event for the plugin, like `MailboxAliasesChanged`): the address is on a domain of the organization that has email on and is not taken; at most `EMAIL_MAX_FORWARDER_DESTINATIONS` destinations per forwarder (default 10) and its own plan limit, `forwarder.max`, counted from the table (`countForwarder()`) and checked with `isMax('forwarder')` next to the `email.max` one, so mailboxes and forwarders are limited separately (it is a limit only for now: no price component until someone asks for one); a destination is not the forwarder itself and does not make a loop (follow the chain through other forwarders and aliases; refuse beyond a depth of 5); an *internal* destination is an address that exists (a mailbox or alias of the organization), not a guess that will bounce.
+  - *External destinations are confirmed.* Forwarding to an address outside the organization sends a signed link to it (the pattern of the recovery email link: opened from an email, no session) and delivers nothing until it is opened; unconfirmed destinations show as "waiting for confirmation" with a resend. This is what stops the feature being used to flood someone or to read someone else's mail.
+  - *Deliverability.* Forwarding breaks SPF at the destination. The plugin has to rewrite the envelope sender (SRS) or the forwarded mail fails DMARC at Gmail and Microsoft, so this is part of the plugin's contract and of the Phase 3 checklist (a forwarder test, then the headers read back).
+  - *Plan limit.* `forwarder.max` joins the plan form beside `email.max` (`Admin\Plans` validation and the plan page), `OrganizationService::countForwarder()` counts the organization's forwarders, and the add action and its gate refuse at the limit with a message that names it. Destinations per forwarder are limited separately (the config value above); the plan's forwarder count is forwarders, not destinations.
+  - *Contract.* `supportsForwarders()` goes on the contract (2f) and answers per server; the controllers stop calling `addEmail`, `emailForwarders` and `deleteEmailForwarders` and write the tables. Nothing asks the mail server on a page load.
+  - *Status.* The plugin acknowledges what it applied (`applied_at`, or `failed` with the error), through a small authenticated callback; until then a forwarder shows "applying". The same callback gives aliases a status (open question).
+
+  **UI.** The forwarders page is rebuilt (`/settings/email/forwarders`, still under Email):
+  - One row per forwarder with its destinations as chips: each chip has a state (active, waiting for confirmation, failed), a remove button and, while unconfirmed, "resend". "Add destination" is inline on the row, with suggestions from the organization's mailboxes and people and free typing for an external address.
+  - *New forwarder* is one small dialog: the name, a domain select that sends the id, and the first destination. Errors sit next to the field they are about (loop, limit, taken, not allowed), and an explanation of how it differs from an alias.
+  - Real pagination with a search box, an empty state, a status badge per forwarder with a retry, confirmations that name what is removed ("Stop forwarding sales@ to bob@gmail.com?"), and a layout that works on a phone. Removing is `DELETE`, never `GET`.
+
+  **Slices** (about 500 lines or less each): 2g-i the migrations, the address-table change, the registry and the model; 2g-ii `ForwarderService`, the event, the confirmation notification and link, with their tests; 2g-iii the controllers and routes (REST, gates, no `GET` deletes) and the contract change; 2g-iv the page and its strings; 2g-v the plugin callback, status and the Phase 3 forwarder check. A command lists any existing `email_forwarders` rows with no destinations (their destinations were on the old server and cannot be recovered) so they can be recreated.
+
+  Exit: a forwarder with an internal and a confirmed external destination delivers in staging (with SRS, and DMARC passing at a third-party mailbox); a loop, a taken address, a destination past the limit and an unconfirmed destination are all refused or held back with a message; removing a destination, and removing the forwarder, stop delivery.
+
+- [ ] **2h. A generic LDAP mail driver for any plugin, with the docker-mailserver parts removed.** A plugin whose backend authenticates against LDAP should not have to write its own LDAP code, and administrators must still be able to add mailboxes on an LDAP-only setup. Today that code is `LdapEmailInterface`, which sits under `Integrations/ServerManagers/DockerMailServer/Interfaces/` and mixes two jobs: writing mail accounts to the directory (generic) and being the docker-mailserver driver (the `PostfixBookMailAccount` object class, `/var/mail/...` home and storage paths, the quota attribute, `createDkimKey` through an OpenDKIM Kubernetes job, `MailserverProfile`, `MailserverJobs`, `MailserverJobChart`). **Decision: docker-mailserver never worked properly, so it is not kept or migrated. The driver is converted into a generic LDAP driver and everything specific to docker-mailserver is deleted.**
+  - *The driver keeps its name* (`ldap` in `servers.interface`) and moves to `App\Ldap\Mail\LdapMailAccounts`, behind a small contract (`MailAccountDirectory`) the container resolves, so existing server rows keep working and an administrator can still add, edit and delete mailboxes in the directory. A plugin asks the container for it instead of building LDAP entries. It writes a standalone mailbox entry (the organization's `emails` OU), turns a user's own entry into a mailbox and back, lists a domain's mailboxes, checks an address, mirrors aliases (the `AliasDirectory` of 2e), and adds and removes the domain entries only where a server still wants them.
+  - *What a server needs is data, not code.* An `LdapMailSchema` value object holds the object classes, the attribute names (mail, name, uid, password, aliases, and an optional quota attribute) and the password hash scheme. `LdapMailSchema::standard()` is plain `inetOrgPerson` with `mail`, so a directory with no extra schema works (today a mailbox needs `PostfixBookMailAccount` installed in the directory). A plugin that needs more passes its own schema when it registers.
+  - *Easy to adopt.* The plugin's `EmailContract` driver uses a trait (`DelegatesToLdapMailAccounts`) that implements the account half of the contract (`existsEmail`, `emailList`, `email`, `addEmail`, `updateEmail`, `deleteEmail`, `createUserEmail`, `deleteUserEmail`) by calling the service, so the plugin only writes what is truly its own (its server API, DKIM, quota, domains). A page of documentation says where accounts live in the directory (one subtree per organization, which is also what tenant isolation in Phase 4 depends on), which attribute holds what, and the filter and attributes to give the mail server's LDAP directory settings. The existing live-directory tests become `LdapMailAccountsTest`, which runs against `standard()` and a custom schema, and stays the contract a plugin's own tests can copy.
+  - *Deleted:* `DockerMailServer/*` as a driver (the profile becomes the built-in "LDAP directory" server: accounts only, no DKIM and no domain registration, which are the plugin's), the OpenDKIM job and its chart, the Postfix object class, the Dovecot quota, home and storage attributes and the `/var/mail` paths, the LDAP `Domain` entries that only docker-mailserver read, the `/api/dkim` callback (kept as a no-op, see 3f), and the `RunJobTest` cases that exist for the mail job. Existing mailbox entries that carry the old attributes are left alone: they are harmless to everything that reads the directory now.
+  - *No cutover gate.* Nothing waits on Phase 5 and nothing is migrated. The decision table's "docker-mailserver stays supported" is reversed, and `pending` no longer has to avoid writing the mail object class (hole 14 goes away).
+
+  **Slices:** 2h-i `LdapMailSchema`, the contract and `LdapMailAccounts` extracted from the interface with the same behaviour and tests; 2h-ii point the built-in `ldap` interface at it and delete everything docker-mailserver, with the standard-schema tests; 2h-iii the trait and the plugin documentation. Exit: the LDAP email suite passes against a live directory with `standard()` and with a schema that adds a quota attribute; a mailbox is created in a directory that has no Postfix schema; an administrator can add, edit and delete a mailbox from the email accounts page on an LDAP-only setup; a minimal driver written only with the trait passes the account half of the contract suite.
+
+Exit: the same contract tests pass in `ldap` and `db` modes for add, update, delete, quota, duplicate address, aliases on and off, forwarders (add, destinations, confirmation, loops, limits, remove), cross-tenant isolation and limit enforcement.
 
 ### Phase 3 - Domains, DNS and deliverability
 
-- Replace `EmailService::checkEmailDNSSettings`: it requires exactly one TXT record, an exact SPF string and `p=reject`, and `dns_get_record` returning `false` throws. Parse SPF, DKIM and MX instead; make the DMARC policy configurable, starting at `quarantine`.
-- Add PTR/rDNS, MTA-STS, TLS-RPT and autoconfig/autodiscover SRV records.
-- Have Stalwart generate the DKIM key through its API. Keep the `/api/dkim` route as a deprecated no-op (running jobs may still call it).
+**What is wrong today** (all in `EmailService` and `AddEmailDomain`, checked in the code):
+- `checkEmailDNSSettings` returns `true` outside production, so staging and every test pass whatever the DNS says, and "waiting for DNS" can never be exercised.
+- In production it needs *exactly one* TXT record at the apex, at `_dmarc` and at the DKIM selector. A domain with any other apex TXT (a Google or Microsoft site verification, a leftover SPF) never passes. It compares the SPF and DMARC strings for equality, `dns_get_record` returning `false` throws, and it uses the server's own resolver, so a cached answer reads as "propagated".
+- The records are derived, not stored: `requiredDNSRecords()` builds MX, SPF, DKIM and DMARC from the server on every call, and for a managed domain Namecheap's `setHosts` is told the *whole* record set each time. There is nowhere to keep a change someone made to one of them.
+- SPF is `v=spf1 ip4:<server ip> ~all`: no way to add another sender, and it breaks when the server's IP changes. DMARC is `p=reject` with `rua` set to the *administrator's* `error_email` setting for every tenant, so reports go to the wrong person and `reject` is the strictest place to start. The MX value has no priority. Nothing checks PTR, TLS, MTA-STS, TLS-RPT, autoconfig or blocklists.
+
+**3a. Email gets its own tab on the domain page.** `WebDomainsSettings.vue` becomes tabs, with the tab kept in the URL (`?tab=email`) so redirects can land on it:
+- *Overview* (what is there now: primary app, redirect, ownership actions), *DNS* (subdomains and records), and **Email**.
+- Email holds everything now spread over the page: the status chip and the "being set up" alerts, the enable email action, the readiness panel and its enable preview from 2b, the required records, and the checklist and the edit dialog below. The `enable_email` redirect and the readiness offer flows send people to the Email tab.
+- A domain without email shows the Email tab with a single "Enable email" call to action and the preview, as the dialog does today.
+
+**3b. Checks that look at the real DNS, not at what was saved.** A `DnsResolver` seam (a fake in tests, so it works in every environment) replaces `dns_get_record`:
+- It asks the domain's **authoritative nameservers directly** (found from the domain's NS records) and **public resolvers** (Cloudflare, Google and Quad9, over DNS-over-HTTPS or a resolver library; the system resolver cannot be chosen or flushed).
+- Every check reports three layers, because "I added it" is not "it works": *saved* (a managed domain only: what Namecheap's `getHosts` returns), *served* (every authoritative nameserver answers with it), and *visible* (the public resolvers agree). A managed domain whose nameservers are not the registrar's is called out, because what is saved at the registrar will never be seen. A connected domain only has *served* and *visible*, which is why the scan matters most there.
+- A check is `pass`, `warn`, `fail`, `pending` (served but not visible yet: "propagating", with the TTL as an estimate of how long), `unknown` (a lookup timed out; never reported as a failure) or `not applicable`. Each result keeps what was found and what was expected, so the page can show the difference.
+- Results are stored (`domain_email_checks`: check, status, found, expected, scanned at) and shown with when they were scanned and a **Rescan** button. While anything is `pending` a queued job rescans with a back-off (1, 2, 5, 15 minutes, then hourly for 48 hours). A domain moves from `waiting_dns` to `active` when every required check has passed on two scans in a row, which replaces `checkEmailDNSSettings`.
+- Two other things the scan notices: a Cloudflare-style *proxied* record (orange cloud), which breaks mail and autoconfig hosts, and a domain still pointing at its old provider (leftover MX or SPF), which is the Fastmail case from 2b.
+
+**3c. The checklist.** Required items must pass for the domain to go live; the rest raise the score and are warnings only. Each item says what it is for, what to do, and links to the record that fixes it.
+
+*Required*
+| Item | Passes when |
+|---|---|
+| Nameservers | Every NS answers, and (managed) they are the registrar's. |
+| MX | At least one MX, pointing at the mail host, with a priority; no MX left from another provider; the host resolves to an A or AAAA and is not a CNAME. |
+| SPF | Exactly one `v=spf1` TXT at the apex; it authorizes the mail server; at most 10 DNS lookups; ends in `~all` or `-all`; no `+all`, `?all` or `ptr`. Other TXT records at the apex are fine. |
+| DKIM | The selector record exists, is valid, is at least 2048 bits (1024 is a warning) and its `p=` matches the key the mail server signs with; long keys split into 255-character strings are joined before comparing. |
+| DMARC | Exactly one `v=DMARC1` at `_dmarc`, with a policy, and a `rua` mailbox that exists and belongs to the tenant (or an authorized external destination). |
+| Autoconfig and autodiscover | The records and hosts from 3d answer, with a valid certificate for the host. |
+| SMTP and IMAP reachable | Port 25 accepts STARTTLS with a certificate that matches the MX host; submission (465 or 587) and IMAPS (993) answer with a valid, unexpired certificate. |
+
+*Boosts deliverability (warnings)*
+| Item | Passes when |
+|---|---|
+| Reverse DNS | The sending IP's PTR resolves back to the same IP and matches the server's EHLO name (forward-confirmed). One result for the mail server, shown to administrators (a tenant cannot fix it). |
+| DMARC policy | `p=none` warns; `quarantine` is the default; `reject` is a goal once reports are clean. `pct`, subdomain policy and alignment are shown. |
+| MTA-STS | `_mta-sts` TXT and a policy that is served over HTTPS, in `testing` first and `enforce` later. |
+| TLS-RPT | `_smtp._tls` TXT with a `rua`. |
+| Blocklists | The sending IP and the domain are not on the major lists. Spamhaus refuses queries from the big public resolvers, so this asks through our own resolver (or a DQS key). |
+| Clean records | No second SPF or DMARC record, no stale DKIM selectors, no wildcard that answers for the mail hosts. |
+| TTLs | Low (300 s) while a domain is being moved, and a reminder to raise them after. |
+| DNSSEC, DANE (TLSA), BIMI | Shown as advanced and optional: DNSSEC only informs, DANE needs DNSSEC, BIMI needs a DMARC policy of quarantine or reject and a verified logo certificate. |
+| Postmaster tools | Not scanned. A note with how to register the domain with Google Postmaster Tools and Microsoft SNDS, and the DMARC reports we collect. |
+
+A score and a "what to fix next" list sit at the top of the Email tab. An optional **send a test message** (to an address the person gives) reads back the `Authentication-Results` of what arrived once there is somewhere that can receive it.
+
+**3d. Autoconfig, autodiscover and the other client records.** Added to the required set (`requiredDNSRecords()` stops being hard-coded; see 3e):
+- `autoconfig.<domain>` CNAME to the mail host (Thunderbird and others read `/mail/config-v1.1.xml`), `autodiscover.<domain>` CNAME and `_autodiscover._tcp` SRV on 443 (Outlook), and the RFC 6186 SRVs `_imaps._tcp`, `_submission._tcp` and `_submissions._tcp` for clients that read those.
+- Stalwart already serves the autoconfig and autodiscover documents; the plugin has to answer for those hostnames for every tenant domain. The checklist verifies the answer, not just the record.
+- MTA-STS (`_mta-sts` TXT and the `mta-sts.<domain>` host) and TLS-RPT (`_smtp._tls`) go in the same place, optional at first.
+
+**3e. Records stored, and one dialog to edit them.** A `domain_email_records` table: the record kind (MX, SPF, DKIM, DMARC, autoconfig, autodiscover, SRV, MTA-STS, TLS-RPT), a `mode` (`auto` or `manual`), the builder's options as JSON and the rendered value. `requiredDNSRecords()` reads it, with today's values as the defaults, so existing domains keep working. A managed domain saves through `UpdateDnsRecords` (the whole set to Namecheap); a connected domain shows exactly what to add and checks it.
+- Each record has an **Edit** button that opens a dialog written in plain words, not record syntax:
+  - *SPF*: "Also send mail from" with a list of services to add (their `include:` values, with the lookup count shown), and a choice of "soft fail" (`~all`, default) or "reject" (`-all`). The value is shown live under the controls.
+  - *DMARC*: policy (none, quarantine, reject; starts at quarantine), percentage, where reports go (a mailbox of the domain, the default), strict or relaxed alignment, and a subdomain policy.
+  - *DKIM*: read-only, with the selector and a **Generate a new key** action (the key comes from Stalwart; rotation publishes the new selector before using it).
+  - *MX, autoconfig, autodiscover, MTA-STS, TLS-RPT*: switches and a mode where there is a choice; nothing to type.
+  - Each ends in "this is what will be published", the same rows as the table, and **Save**.
+- **Edit manually** on the same dialog turns the controls into the raw value. It validates with the same parser the checks use, warns that a wrong value can stop mail, and marks the record `manual` so a later change of the mail server's IP or key does not overwrite it. **Reset to recommended** goes back to `auto`.
+- Connected domains: each row has the host as the provider wants it (relative and fully qualified), the value, a suggested TTL and a copy button, plus a note when the nameservers show Cloudflare (turn the proxy off for the mail hosts). After "I have added them" the scan from 3b follows the result.
+
+**3f. DKIM from Stalwart.** Have Stalwart generate the DKIM key through its API, and fix `RetrieveDkimKey`'s dependence on the `/api/dkim` callback. Keep the `/api/dkim` route as a deprecated no-op (running jobs may still call it).
+
+**Suggested slices** (each about 500 lines or less, in this order, each leaving the page working): 3a the tab move alone; 3b `DnsResolver`, the check result table and the scan job, replacing `checkEmailDNSSettings` behind the existing statuses; 3c the checklist items in groups (records, then transport, then reputation) with their tab section; 3e the records table, the generated defaults and the edit dialog (SPF and DMARC first); 3d the new records, then MTA-STS and TLS-RPT; 3f DKIM from Stalwart.
 
 ### Phase 4 - Security and operations
 
@@ -190,7 +281,7 @@ Exit: the same contract tests pass in `ldap` and `db` modes for add, update, del
 
 ### Phase 5 - Cutover from docker-mailserver
 
-Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and the DKIM selector, watch bounces, keep docker-mailserver read-only for a rollback window, then remove `DockerMailServer/*`.
+Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and the DKIM selector, watch bounces, keep docker-mailserver read-only for a rollback window. The panel's docker-mailserver code is removed by 2h and does not wait for this phase: it is a data cutover only, with nothing in the panel to remove.
 
 ## Exit criteria for production
 
@@ -198,13 +289,22 @@ Run Stalwart in parallel, IMAP-sync each domain, lower DNS TTLs, switch MX and t
 - A new domain goes from "enable email" to a delivered and received test message in staging.
 - Quota, password-change and delete round trips are verified in Stalwart for each mode.
 - The Phase 1 checklist is closed and the verification debt above is cleared.
+- A new domain, on a connected and on a managed setup, shows every required item of the Phase 3 checklist as passed from a scan that looked at the real DNS (authoritative and public), and a message from it passes SPF, DKIM and DMARC at a third-party mailbox.
 
 ## Open questions
 
+- Phase 3 resolver: DNS-over-HTTPS to a few public resolvers, or a DNS library talking to them and to the authoritative servers directly? (Port 53 outbound may be blocked from the cluster; DoH always works but cannot ask an authoritative server.)
+- Where do DMARC aggregate reports go? A mailbox per domain (`dmarc@<domain>`, which needs a mailbox), the administrator's address as today, or a service that parses them? Reports to the wrong person are worse than none.
+- Autoconfig and autodiscover need a certificate for `autoconfig.<domain>` and `autodiscover.<domain>` for every tenant domain, and MTA-STS one for `mta-sts.<domain>` plus a web server answering it. Does the plugin issue those per host (HTTP-01 against a CNAME), or is a wildcard on our own hostname used with CNAMEs only?
+- Is MTA-STS built in the first slice or left optional until the rest is stable? (It is only useful once it is `enforce`, and a mistake there blocks inbound mail.)
+- Blocklist checks: our own resolver, or a Spamhaus DQS key?
 - Existing `orgMail` users: run the migration command per organization once the audit (2d) is done, or per user an admin picks? (It can already do either: `--organization`, `--user`.)
 - Orphans on the sync page: keep them report-only, or let DB-wins clear them after a confirmation?
 - Alias cap per mailbox: a plan setting, default unlimited and not billed?
 - Do user-linked addresses stay available in `db` mode? Assumed yes, through the `mailboxes` record (the `db` account manager has never had a second address).
-- Forwarders: keep as a feature (built on Stalwart aliases) or drop?
+- Forwarders: **kept** (decided), finished as 2g and built on the tables and plugin events, not on a driver. Counted separately from mailboxes, as its own plan limit (`forwarder.max`), decided.
+- Which password hash does Stalwart accept from an LDAP directory (so `LdapMailSchema` defaults to the right one), and does it read a quota attribute or take quotas through its own API?
+- Does the plugin tell the panel what it applied (a callback that sets `applied_at` or `failed`)? Forwarders need it to show "applying" honestly, and aliases and mailboxes have the same gap.
+- Does Stalwart rewrite the envelope sender (SRS) for forwarded mail, or does that need configuring? Without it forwarded mail fails DMARC at the destination.
 - Which Stalwart version does the plugin target, and does tenancy there need the Enterprise edition?
 - Passwords for user-linked mailboxes: authenticate against the user entry (one password) or give each mailbox its own? Either way the identity address stays on the user entry.
