@@ -66,6 +66,14 @@ Exit: green suite that describes the current flow, with each finding above repre
 7. **Keep the person's place and clean up.** An expired or used link goes to a page that says so, with the email prefilled and a one-click "send me a new link" (counted by the same throttle). Hash the token at rest. Prune expired rows with a scheduled command in `routes/console.php`.
 8. **Captcha settings.** Never send the secret to the browser (show "set" and keep it unless a new one is typed). Require site key and secret whenever a provider is chosen. If a provider is set but the secret is missing at runtime, log it and tell administrators on the settings page instead of failing silently.
 
+**Slices.** Phase 1 goes in as separate pull requests of about 500 changed lines or fewer, each turning on the skipped tests of its findings:
+1. Captcha: findings 1 and 8 (policy for the widget, widget reset, secret key stays on the server).
+2. Set-password expiry: finding 3.
+3. Plan limit and deactivated organizations: finding 2.
+4. Same answer for every address and the throttle: findings 4 and 5.
+5. Atomic completion: finding 6.
+6. Expired links, token hashing and pruning: finding 7.
+
 Exit: the Phase 0 tests for findings 1 to 8 pass; an organization at its user maximum gets a clear "registration is full" message and no new user; the same input produces the same page for a known and an unknown address.
 
 ### Phase 2: a smoother path for the registrant (findings 9, 10, 13, 14, 15)

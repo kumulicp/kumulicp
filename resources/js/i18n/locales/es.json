@@ -1956,6 +1956,7 @@
     "captchaHcaptcha": "hCaptcha",
     "captchaSiteKey": "Clave del Sitio",
     "captchaSecretKey": "Clave Secreta",
+    "captchaSecretKeySet": "Guardada. Déjala en blanco para conservarla",
     "selfRegistrationEnabled": "Habilitar Autorregistro",
     "selfRegistrationDescription": "Cuando está habilitado, los administradores de la organización pueden compartir un enlace de registro que permite a los nuevos usuarios registrarse y unirse a su organización directamente, sin necesidad de que un administrador cree su cuenta manualmente.",
     "securityTools": "Herramientas de Escaneo de Seguridad",

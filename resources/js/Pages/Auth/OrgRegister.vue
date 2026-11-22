@@ -7,7 +7,7 @@ import { Head, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('auth.orgUserRegisterTitle', { org: organization.name }) }} - Control Panel</title>
   </Head>
-  <form @submit.prevent="form.post('/public/org/' + organization.slug + '/register')">
+  <form @submit.prevent="submit">
     <h5 class="mb-3">{{ $t('auth.orgUserRegisterHeading', { org: organization.name }) }}</h5>
     <p class="mb-4">{{ $t('auth.orgUserRegisterSubheading') }}</p>
 
@@ -23,8 +23,8 @@ import { Head, useForm } from '@inertiajs/vue3'
       autofocus
     />
 
-    <div v-if="captchaProvider === 'turnstile'" ref="captchaContainer" class="cf-turnstile mb-3" :data-sitekey="captchaSiteKey" data-callback="captchaWidgetCallback"></div>
-    <div v-else-if="captchaProvider === 'hcaptcha'" ref="captchaContainer" class="h-captcha mb-3" :data-sitekey="captchaSiteKey" data-callback="captchaWidgetCallback"></div>
+    <div v-if="captchaProvider === 'turnstile'" class="cf-turnstile mb-3" :data-sitekey="captchaSiteKey" data-callback="captchaWidgetCallback" data-expired-callback="captchaWidgetExpired"></div>
+    <div v-else-if="captchaProvider === 'hcaptcha'" class="h-captcha mb-3" :data-sitekey="captchaSiteKey" data-callback="captchaWidgetCallback" data-expired-callback="captchaWidgetExpired"></div>
 
     <div class="d-flex justify-center mt-3">
       <va-button
@@ -56,10 +56,32 @@ export default {
       }),
     }
   },
+  methods: {
+    submit () {
+      this.form.post('/public/org/' + this.organization.slug + '/register', {
+        // A token works once, whatever the answer was: a mistyped address needs a fresh one
+        onFinish: () => this.resetCaptcha(),
+      })
+    },
+    resetCaptcha () {
+      if (!this.captchaProvider) {
+        return
+      }
+      this.form.captcha_token = ''
+      const w = window as any
+      const widget = this.captchaProvider === 'turnstile' ? w.turnstile : w.hcaptcha
+      widget?.reset()
+    },
+  },
   mounted () {
     if (this.captchaProvider) {
-      window.captchaWidgetCallback = (token) => {
+      const w = window as any
+      w.captchaWidgetCallback = (token: string) => {
         this.form.captcha_token = token
+      }
+      // The provider calls this when an unused token runs out
+      w.captchaWidgetExpired = () => {
+        this.form.captcha_token = ''
       }
       const script = document.createElement('script')
       script.src = this.captchaProvider === 'turnstile'
