@@ -53,8 +53,8 @@ rollback, started from a button that says what it will do.
    should clear the pending update (`Action::clear('application_update', ...)`) before it
    runs its own, as `CutOver` does.
 5. **The plan's server is not the instance's server.** Once an instance has a server, changing
-   the plan's server does nothing for it (`AppInstanceService::server()`). A "move everything
-   on this plan" action has to loop over instances; it can't be a plan edit.
+   the plan's server does nothing for it (`AppInstanceService::server()`). Each instance is
+   moved on its own; there is no bulk move for now, and a plan edit can't stand in for one.
 6. **Leave the old copy alone.** Do not delete the old database, release, provider or volume as
    part of the move. Offer "clean up the old server" as a separate, later action.
 
@@ -231,7 +231,9 @@ server itself (`OrgServerService::addBackupServer`).
 
 **Phase 0 - what this branch ships.** Pointer editing on the app edit page and the Servers tab,
 with validation (same organization, right type, backup servers of the same type), no
-accidental clearing, no change while the app is not `active`, and tests.
+accidental clearing, no change while the app is not `active`, a note on the edit page that
+the app server fields only reassign (nothing is moved; use Migrate Database for the
+database), and tests.
 
 **Phase 1 - shared groundwork.**
 
@@ -250,9 +252,8 @@ steps, wiring for apps that do not read the SSO values. Runbook in Appendix A.
 **Phase 3 - web move.** Claim handover mapping, `AwaitVolume` gate, `ApplicationWebMove`, DNS
 refresh, `blocker()`. Runbook in Appendix B. Add the old-copy cleanup action last.
 
-**Phase 4 - bulk and polish.** "Move every app on this server" (loops over instances, one task
-each), backup copy between servers, optional volume backup driver, `sub_mode` guidance in the
-server form.
+**Phase 4 - polish.** Backup copy between servers, optional volume backup driver, `sub_mode`
+guidance in the server form. No bulk move for now: each app is moved on its own.
 
 Tests for each phase follow the existing pattern: action tests with a fake driver, feature
 tests for the controllers and their validation, and a rollback test for each step.

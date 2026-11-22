@@ -94,6 +94,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 
       <AdminSettings>
         <template #name></template>
+        <template #description>{{ $t('admin.apps.serversNote') }}</template>
         <template #settings>
           <va-select
             v-model="form.database_server_id"

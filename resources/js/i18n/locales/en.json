@@ -716,6 +716,7 @@
       "databaseServer": "Database Server",
       "appServer": "App Server",
       "ssoServer": "SSO Server",
+      "serversNote": "Changes which servers this app points at. It does not move any data or redeploy the app. To move the database, use Migrate Database.",
       "jsonSettings": "JSON Settings",
       "update": "Update App Settings",
       "upgrade": "Upgrade App Server",
