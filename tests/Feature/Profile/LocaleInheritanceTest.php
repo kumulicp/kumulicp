@@ -15,23 +15,16 @@ it('gives new organizations the system default language', function () {
 
     expect(Organization::systemDefaultLocale())->toBe('es');
 
-    $organization = new Organization;
-    $organization->name = 'Locale Org';
-    $organization->save();
+    $organization = Organization::factory()->create(['default_locale' => null]);
 
     expect($organization->fresh()->default_locale)->toBe('es');
 });
 
 it('gives new users their organization default language', function () {
-    $this->organization->update(['default_locale' => 'es']);
+    $this->organization->default_locale = 'es';
+    $this->organization->save();
 
-    $user = new User;
-    $user->username = 'localeuser';
-    $user->name = 'Locale User';
-    $user->email = 'locale@example.com';
-    $user->password = 'secret';
-    $user->organization_id = $this->organization->id;
-    $user->save();
+    $user = User::factory()->create(['organization_id' => $this->organization->id, 'locale' => null]);
 
     expect($user->fresh()->locale)->toBe('es');
 });
