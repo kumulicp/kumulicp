@@ -20,7 +20,7 @@ import axios from 'axios'
             <span class="secondary"> · {{ $t('admin.updates.organizations', { count: summary.organizations }) }}</span>
             <span v-if="summary.since" class="secondary"> · {{ $t('admin.updates.since', { date: formatDate(summary.since) }) }}</span>
           </template>
-          <p v-else id="noUpdates">{{ $t('admin.updates.none') }}</p>
+          <p v-else-if="subscriptions.total === 0" id="noUpdates">{{ $t('admin.updates.none') }}</p>
         </div>
         <va-button id="scan" preset="secondary" icon="refresh" :disabled="scanning" @click="scan">
           {{ $t('admin.updates.checkAgain') }}
@@ -56,6 +56,57 @@ import axios from 'axios'
           </va-button>
         </div>
       </div>
+    </va-card-content>
+  </va-card>
+
+  <va-card v-if="!reviewing && subscriptions.total > 0" id="subscriptions" class="mb-4">
+    <va-card-title>{{ $t('admin.updates.subscriptionsTitle') }}</va-card-title>
+    <va-card-content>
+      <p class="secondary mb-3">{{ $t('admin.updates.subscriptionsHelp') }}</p>
+      <div class="mb-2">
+        <strong id="subscriptionsTotal">{{ $t('admin.updates.organizations', { count: subscriptions.total }) }}</strong>
+        <va-button id="updateAllSubscriptions" class="ml-4" size="small" @click="applySubscriptions({ all: true })">
+          {{ $t('admin.updates.updateAll') }}
+        </va-button>
+        <va-button
+          id="dismissAllSubscriptions"
+          class="ml-2"
+          preset="secondary"
+          size="small"
+          color="warning"
+          @click="askToDismiss({ all: true }, '/admin/server/updates/subscriptions/dismiss')"
+        >{{ $t('admin.updates.dismissAll') }}</va-button>
+      </div>
+      <VaScrollContainer color="primary" horizontal>
+        <table class="va-table va-table--hoverable mt-3">
+          <tbody>
+            <tr v-for="organization in subscriptions.items" :key="organization.id">
+              <td><Link :href="'/admin/organizations/' + organization.id">{{ organization.name }}</Link></td>
+              <td>
+                <div v-for="aspect in organization.aspects" :key="aspect.key">
+                  <va-badge class="mr-1" color="warning" :text="aspect.label" />
+                  <span class="secondary"><ChangeSummary :change="aspect.change" /></span>
+                </div>
+              </td>
+              <td class="text-right">
+                <va-button size="small" class="mr-1" :class="'update-subscription-' + organization.id" @click="applySubscriptions({ organization_ids: [organization.id] })">
+                  {{ $t('admin.updates.update') }}
+                </va-button>
+                <va-button
+                  preset="secondary"
+                  size="small"
+                  color="warning"
+                  :class="'dismiss-subscription-' + organization.id"
+                  @click="askToDismiss({ organization_ids: [organization.id] }, '/admin/server/updates/subscriptions/dismiss')"
+                >{{ $t('admin.updates.dismiss') }}</va-button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </VaScrollContainer>
+      <p v-if="subscriptions.total > subscriptions.items.length" class="secondary mt-2">
+        {{ $t('admin.updates.andMore', { count: subscriptions.total - subscriptions.items.length }) }}
+      </p>
     </va-card-content>
   </va-card>
 
@@ -308,7 +359,8 @@ export default {
     filters: Object,
     instances: Array,
     pagination: Object,
-    policy: Object
+    policy: Object,
+    subscriptions: Object
   },
   data () {
     return {
@@ -318,6 +370,7 @@ export default {
       showDismissModal: false,
       dismissing: false,
       dismissTarget: null,
+      dismissUrl: '/admin/server/updates/dismiss',
       showApplyModal: false,
       applying: false,
       applyTarget: null,
@@ -433,13 +486,17 @@ export default {
     setAspectMode (aspect, auto) {
       router.post('/admin/server/updates/policy', { aspect: aspect.key, mode: auto ? 'auto' : 'manual' }, { preserveScroll: true, preserveState: true })
     },
-    askToDismiss (target) {
+    applySubscriptions (target) {
+      router.post('/admin/server/updates/subscriptions/apply', target, { preserveScroll: true })
+    },
+    askToDismiss (target, url = '/admin/server/updates/dismiss') {
+      this.dismissUrl = url
       this.dismissTarget = target
       this.showDismissModal = true
     },
     dismiss (close) {
       this.dismissing = true
-      router.post('/admin/server/updates/dismiss', this.dismissTarget, {
+      router.post(this.dismissUrl, this.dismissTarget, {
         preserveScroll: true,
         onSuccess: () => {
           this.selected = []

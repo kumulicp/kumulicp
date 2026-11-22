@@ -34,6 +34,9 @@ import { Link } from '@inertiajs/vue3'
                 <Link v-if="organization.out_of_date > 0" :href="'/admin/organizations/'+organization.id" :id="'outOfDate-'+organization.id">
                   <va-badge color="warning" :text="$t('admin.updates.appInstances', { count: organization.out_of_date })" />
                 </Link>
+                <Link v-if="organization.subscription_out_of_date" :href="'/admin/organizations/'+organization.id" :id="'subscriptionOutOfDate-'+organization.id">
+                  <va-badge class="ml-1" color="warning" :text="$t('admin.updates.subscription')" />
+                </Link>
               </td>
             </tr>
           </tbody>

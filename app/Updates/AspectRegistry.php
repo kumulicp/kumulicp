@@ -45,6 +45,11 @@ class AspectRegistry
             return $this->aspects[$key]->label();
         }
 
+        // An organization's subscription has aspects of its own (see OrganizationDrift)
+        if (in_array($key, OrganizationDrift::ASPECTS, true)) {
+            return (new OrganizationDrift)->label($key);
+        }
+
         return Str::headline(Str::after($key, 'feature.'));
     }
 

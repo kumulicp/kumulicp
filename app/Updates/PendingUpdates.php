@@ -3,7 +3,9 @@
 namespace App\Updates;
 
 use App\AppInstance;
+use App\DefinitionChange;
 use App\Organization;
+use App\OrganizationUpdateState;
 use App\UpdateState;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -52,16 +54,33 @@ class PendingUpdates
             ->when($filters['aspect'] ?? null, fn (Builder $query, string $aspect) => $query->where('aspect', $aspect));
     }
 
-    /** How many app instances are out of date for something */
+    /**
+     * The aspects of organizations' subscriptions that were out of date the last
+     * time they were looked at.
+     *
+     * @return Builder<OrganizationUpdateState>
+     */
+    public function organizationQuery(): Builder
+    {
+        return OrganizationUpdateState::drifted()->whereIn(
+            'organization_id',
+            app(OrganizationDrift::class)->scannable()->select('organizations.id')
+        );
+    }
+
+    /** How many app instances, and organizations, are out of date for something */
     public function count(): int
     {
-        return $this->query()->distinct()->count('app_instance_id');
+        return $this->query()->distinct()->count('app_instance_id')
+            + $this->organizationQuery()->distinct()->count('organization_id');
     }
 
     /**
      * How much is out of date, and for what.
      *
-     * @return array{instances: int, organizations: int, since: string|null, aspects: array<int, array{key: string, label: string, instances: int}>}
+     * `subscriptions` is the same for the organizations' subscriptions.
+     *
+     * @return array{instances: int, organizations: int, since: string|null, aspects: array<int, array{key: string, label: string, instances: int}>, subscriptions: array{organizations: int, aspects: array<int, array{key: string, label: string, organizations: int}>}}
      */
     public function summary(): array
     {
@@ -87,7 +106,73 @@ class PendingUpdates
             'organizations' => $instance_ids->isEmpty() ? 0 : AppInstance::whereIn('id', $instance_ids)->distinct()->count('organization_id'),
             'since' => $this->query()->whereNotNull('drift_detected_at')->orderBy('drift_detected_at')->value('drift_detected_at')?->toIso8601String(),
             'aspects' => $aspects,
+            'subscriptions' => [
+                'organizations' => $this->organizationQuery()->distinct()->count('organization_id'),
+                'aspects' => $this->organizationQuery()
+                    ->select('aspect')
+                    ->selectRaw('count(distinct organization_id) as organizations')
+                    ->groupBy('aspect')
+                    ->orderBy('aspect')
+                    ->toBase()
+                    ->get()
+                    ->map(fn ($row) => [
+                        'key' => $row->aspect,
+                        'label' => $this->aspects->label($row->aspect),
+                        'organizations' => (int) $row->organizations,
+                    ])
+                    ->all(),
+            ],
         ];
+    }
+
+    /**
+     * The organizations whose subscription is out of date, the first of them, with
+     * what for and why.
+     *
+     * @return array{total: int, items: array<int, array{id: int, name: string|null, aspects: array<int, array{key: string, label: string, since: string|null, change: array<string, mixed>|null}>}>}
+     */
+    public function subscriptions(int $limit = 25): array
+    {
+        $ids = $this->organizationQuery()->distinct()->orderBy('organization_id')->pluck('organization_id');
+        $shown = $ids->take($limit)->values();
+        $names = Organization::whereIn('id', $shown)->pluck('name', 'id');
+        $aspects = $this->subscriptionsOf($shown->map(fn ($id) => (int) $id)->all());
+
+        return [
+            'total' => $ids->count(),
+            'items' => $shown->map(fn ($id) => [
+                'id' => (int) $id,
+                'name' => $names[$id] ?? null,
+                'aspects' => $aspects[$id] ?? [],
+            ])->all(),
+        ];
+    }
+
+    /**
+     * What each of the organizations' subscriptions is out of date for.
+     *
+     * @param  array<int, int>  $organization_ids
+     * @return array<int, array<int, array{key: string, label: string, since: string|null, change: array<string, mixed>|null}>>
+     */
+    public function subscriptionsOf(array $organization_ids): array
+    {
+        if ($organization_ids === []) {
+            return [];
+        }
+
+        return $this->organizationQuery()
+            ->whereIn('organization_id', $organization_ids)
+            ->with('change.user')
+            ->orderBy('aspect')
+            ->get()
+            ->groupBy('organization_id')
+            ->map(fn (Collection $states) => $states->map(fn (OrganizationUpdateState $state) => [
+                'key' => $state->aspect,
+                'label' => $this->aspects->label($state->aspect),
+                'since' => $state->drift_detected_at?->toIso8601String(),
+                'change' => $this->changeOf($state->change),
+            ])->values()->all())
+            ->all();
     }
 
     /**
@@ -238,8 +323,12 @@ class PendingUpdates
      */
     private function change(?UpdateState $state): ?array
     {
-        $change = $state?->change;
+        return $this->changeOf($state?->change);
+    }
 
+    /** @return array<string, mixed>|null */
+    private function changeOf(?DefinitionChange $change): ?array
+    {
         return $change ? [
             'id' => $change->id,
             'subject' => $change->subject_label,

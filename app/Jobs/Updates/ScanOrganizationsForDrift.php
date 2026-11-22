@@ -3,6 +3,7 @@
 namespace App\Jobs\Updates;
 
 use App\Organization;
+use App\Updates\AutoUpdates;
 use App\Updates\OrganizationDrift;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,7 +13,8 @@ use Throwable;
 
 /**
  * Compares what the subscription aspects of some organizations work out now with
- * what was applied (OrganizationDrift::refresh()). Changes nothing on the
+ * what was applied (OrganizationDrift::refresh()), and has what an admin said is
+ * updated on its own started (see AutoUpdates). Changes nothing on the
  * organizations itself.
  */
 class ScanOrganizationsForDrift implements ShouldQueue
@@ -28,12 +30,16 @@ class ScanOrganizationsForDrift implements ShouldQueue
      */
     public function __construct(public array $organization_ids, public ?int $change_id = null) {}
 
-    public function handle(OrganizationDrift $drift): void
+    public function handle(OrganizationDrift $drift, AutoUpdates $auto_updates): void
     {
         foreach (Organization::whereIn('id', $this->organization_ids)->get() as $organization) {
             // One organization that can't be worked out mustn't stop the others being looked at
             try {
-                $drift->refresh($organization, $this->change_id);
+                $drifted = $drift->refresh($organization, $this->change_id);
+
+                if ($drifted !== []) {
+                    $auto_updates->runForOrganization($organization, $drifted);
+                }
             } catch (Throwable $e) {
                 report($e);
             }

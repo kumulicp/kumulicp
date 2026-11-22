@@ -362,8 +362,10 @@ return [
         'nothing_to_update' => 'No hay nada que actualizar para lo elegido: las instancias de aplicaciones ya se están actualizando o no están activas.',
         'updating' => 'Actualizando :count instancias de aplicaciones, unas pocas primero. Sígalo en Servidor > Tareas.',
         'policy_saved' => 'Guardado.',
-        'edit_impact_organizations' => ':subject fue editado. :count organizaciones lo usan y se están revisando para ver qué hay que actualizar.',
         'subscription' => 'Suscripción',
+        'edit_impact_organizations' => ':subject fue editado. :count organizaciones lo usan y se están revisando para ver qué hay que actualizar.',
+        'updating_subscriptions' => 'Actualizando la suscripción de :count organizaciones.',
+        'dismissed_subscriptions' => 'Se marcó la suscripción de :count organizaciones como actualizada.',
     ],
     'update_organization_aspects' => [
         'billing' => 'Facturación',

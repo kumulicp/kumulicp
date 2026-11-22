@@ -155,6 +155,18 @@ subscription was on, to tell admins which it moved to another from.
   (a plan's name, description, order, whether it is offered...) looks at the organizations
   on it (`ScanOrganizationsForDrift`, ten at a time: working out a subscription is more than
   looking at an instance), and the nightly scan looks at all of them.
+- **Seeing.** *Server → Updates* has a *Subscriptions* card, the organization list and page
+  say when a subscription is out of date, and the dashboard and the menu count them.
+- **Bringing up to date.** *Update* runs a `SubscriptionUpdate` for the organizations picked
+  (or all of them), which tells the billing provider and refreshes the groups only for what
+  changed. *Nothing to do* takes what is listed as up to date without running anything, so
+  the billing provider isn't told. With automatic updates on, all three are automatic by
+  default and are updated on their own (a failing update is tried three times, six hours apart,
+  as for instances).
+
+An edit to an app's plan that changes prices puts the instances out of date for their
+`subscription` aspect and the organization out of date for `billing`: either way, running the
+organization's `SubscriptionUpdate` brings both up to date.
 
 ## After an upgrade
 

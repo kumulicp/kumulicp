@@ -4,6 +4,7 @@ use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppPlan;
 use App\Console\Calls\ScanUpdateDrift;
 use App\DefinitionChange;
+use App\Jobs\Updates\ScanOrganizationsForDrift;
 use App\Organization;
 use App\OrganizationUpdateState;
 use App\Plan;
@@ -11,8 +12,13 @@ use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
 use App\Support\Facades\Billing;
 use App\Support\SubscriptionSnapshot;
+use App\Task;
+use App\Updates\AutoUpdates;
 use App\Updates\Detection\ImpactResolver;
 use App\Updates\OrganizationDrift;
+use App\Updates\PendingUpdates;
+use App\Updates\UpdatePolicy;
+use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -206,6 +212,129 @@ it('takes what is out of date as up to date, for the aspects picked, and notes w
     expect(outOfDateSubscription($organization))->toBe([])
         ->and($state->dismissed_by_id)->toBe(1)
         ->and($state->dismissed_at)->not->toBeNull();
+});
+
+// On its own
+
+it('is automatic like the quiet aspects of an app, once automatic updates are on', function () {
+    $policy = app(UpdatePolicy::class);
+
+    expect($policy->defaultMode('billing'))->toBe(UpdatePolicy::AUTO)
+        ->and($policy->defaultMode('capabilities'))->toBe(UpdatePolicy::AUTO)
+        ->and(collect($policy->all())->firstWhere('key', 'access'))->toMatchArray(['label' => __('admin.update_organization_aspects.access'), 'apps' => []]);
+});
+
+it('updates the subscription on its own only once automatic updates are on', function () {
+    $organization = subscribedOrganization();
+    // So that what the scan starts isn't run, and the scan is run here
+    Queue::fake();
+    flipDomains($organization);
+    $scan = fn () => (new ScanOrganizationsForDrift([$organization->id]))->handle(app(OrganizationDrift::class), app(AutoUpdates::class));
+
+    $scan();
+    expect(Task::where('action_slug', 'subscription_update')->exists())->toBeFalse();
+
+    app(UpdatePolicy::class)->enable(true);
+    $scan();
+
+    expect(Task::where('action_slug', 'subscription_update')->count())->toBe(1)
+        ->and(OrganizationUpdateState::where('organization_id', $organization->id)->where('aspect', 'capabilities')->first()->apply_attempts)->toBe(1);
+
+    // Too soon to try again
+    $scan();
+    expect(Task::where('action_slug', 'subscription_update')->count())->toBe(1);
+});
+
+// Seen
+
+it('lists the organizations that are out of date, with what for and why', function () {
+    $organization = subscribedOrganization();
+    flipDomains($organization);
+    $change = DefinitionChange::sole();
+
+    $this->actingAs(User::find(1));
+
+    $this->get('/admin/server/updates')->assertInertia(fn ($page) => $page
+        ->where('subscriptions.total', 1)
+        ->where('subscriptions.items.0.id', $organization->id)
+        ->where('subscriptions.items.0.aspects.0.key', 'capabilities')
+        ->where('subscriptions.items.0.aspects.0.change.id', $change->id)
+        ->where('summary.subscriptions.organizations', 1)
+        ->where('pending_updates_count', 1));
+
+    expect(app(PendingUpdates::class)->count())->toBe(1)
+        ->and(app(PendingUpdates::class)->subscriptionsOf([$organization->id])[$organization->id][0]['label'])
+        ->toBe(__('admin.update_organization_aspects.capabilities'));
+});
+
+it('shows it on the dashboard, the list of organizations and the organization', function () {
+    $organization = subscribedOrganization();
+    flipDomains($organization);
+
+    $this->actingAs(User::find(1));
+
+    $this->get('/admin')->assertInertia(fn ($page) => $page->where('pending_updates.subscriptions.organizations', 1));
+
+    $this->get('/admin/organizations')->assertInertia(fn ($page) => $page
+        ->where('organizations', fn ($organizations) => collect($organizations)->firstWhere('id', $organization->id)['subscription_out_of_date'] === true));
+
+    $this->get("/admin/organizations/{$organization->id}")->assertInertia(fn ($page) => $page
+        ->where('subscription_updates.0.key', 'capabilities'));
+});
+
+it('says nothing about an organization that is up to date', function () {
+    $organization = subscribedOrganization();
+
+    $this->actingAs(User::find(1))
+        ->get("/admin/organizations/{$organization->id}")
+        ->assertInertia(fn ($page) => $page->where('subscription_updates', []));
+});
+
+// Bringing them up to date
+
+it('starts a subscription update for the organizations picked', function () {
+    $organization = subscribedOrganization();
+    flipDomains($organization);
+    Queue::fake();
+
+    $this->followingRedirects();
+    $this->from('/admin/server/updates')->actingAs(User::find(1))
+        ->post('/admin/server/updates/subscriptions/apply', ['organization_ids' => [$organization->id]]);
+
+    expect(Task::where('action_slug', 'subscription_update')->where('organization_id', $organization->id)->count())->toBe(1);
+});
+
+it('starts one for every organization that is out of date when asked for all', function () {
+    $organization = subscribedOrganization();
+    flipDomains($organization);
+    Queue::fake();
+
+    $this->followingRedirects();
+    $this->from('/admin/server/updates')->actingAs(User::find(1))
+        ->post('/admin/server/updates/subscriptions/apply', ['all' => true]);
+
+    expect(Task::where('action_slug', 'subscription_update')->count())->toBe(1);
+});
+
+it('takes the subscriptions picked as up to date without updating them', function () {
+    $organization = subscribedOrganization();
+    flipDomains($organization);
+    Queue::fake();
+
+    $this->followingRedirects();
+    $this->from('/admin/server/updates')->actingAs(User::find(1))
+        ->post('/admin/server/updates/subscriptions/dismiss', ['all' => true]);
+
+    expect(outOfDateSubscription($organization))->toBe([])
+        ->and(Task::where('action_slug', 'subscription_update')->exists())->toBeFalse();
+});
+
+it('asks for which organizations', function () {
+    subscribedOrganization();
+
+    $this->actingAs(User::find(1))
+        ->post('/admin/server/updates/subscriptions/apply', [])
+        ->assertSessionHasErrors(['organization_ids', 'all']);
 });
 
 it('lists them on the command line', function () {

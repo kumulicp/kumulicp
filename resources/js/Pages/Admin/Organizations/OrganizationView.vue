@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3'
+import { Link, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import OrganizationLayout from './OrganizationLayout.vue'
+import ChangeSummary from '@/components/updates/ChangeSummary.vue'
 
 </script>
 
@@ -9,6 +10,13 @@ import OrganizationLayout from './OrganizationLayout.vue'
   <Head>
     <title>{{ $t('admin.organizations.organizationOverview') }} - Control Panel</title>
   </Head>
+  <va-alert v-if="subscription_updates.length > 0" id="subscriptionOutOfDate" color="warning" icon="warning" class="mb-3">
+    <div>{{ $t('admin.updates.subscriptionOutOfDate', { aspects: subscription_updates.map(update => update.label).join(', ') }) }}</div>
+    <div v-for="change in subscriptionChanges" :key="change ? change.id : 'none'" class="secondary">
+      <ChangeSummary :change="change" />
+    </div>
+    <va-button id="updateSubscription" class="mt-2" size="small" @click="updateSubscription">{{ $t('admin.updates.update') }}</va-button>
+  </va-alert>
   <div class="organization-view">
     <div class="flex justify-between">
       <div class="justify-self-start">
@@ -303,7 +311,11 @@ export default {
     available_plans: Array,
     deactivation_reasons: Array,
     default_deactivation_reason: String,
-    subscription_stats: Object
+    subscription_stats: Object,
+    subscription_updates: {
+      type: Array,
+      default: () => []
+    }
   },
   data () {
     return {
@@ -332,7 +344,19 @@ export default {
       }
     }
   },
+  computed: {
+    // Each edit once, however many things it put out of date
+    subscriptionChanges () {
+      const seen = new Map()
+      this.subscription_updates.forEach(update => seen.set(update.change ? update.change.id : 'none', update.change))
+
+      return [...seen.values()]
+    }
+  },
   methods: {
+    updateSubscription () {
+      router.post('/admin/server/updates/subscriptions/apply', { organization_ids: [this.organization.id] }, { preserveScroll: true })
+    },
     openDiscountCode () {
       this.subscription.reset()
       this.subscription.clearErrors()
