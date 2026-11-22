@@ -21,8 +21,10 @@ use App\Support\SharedAppContext;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
 use App\Updates\UpdateSteps;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class Applications extends Controller
@@ -234,20 +236,56 @@ class Applications extends Controller
             return $redirect;
         }
 
+        abort_unless($app->organization_id === $organization->id, 404);
+
         $validated = $request->validate([
             'settings' => 'required|json',
-            'database_server_id' => 'nullable|exists:org_servers,id',
-            'web_server_id' => 'nullable|exists:org_servers,id',
-            'sso_server_id' => 'nullable|exists:org_servers,id',
+            'database_server_id' => $this->serverRules($organization, 'database'),
+            'web_server_id' => $this->serverRules($organization, 'web'),
+            'sso_server_id' => $this->serverRules($organization, 'sso'),
         ]);
 
+        // Only a server that was sent, and is a different one, changes. Leaving one out,
+        // or sending none, keeps the app where it is: an app with no database server
+        // would not be able to start.
+        $servers = collect(Arr::only($validated, ['database_server_id', 'web_server_id', 'sso_server_id']))
+            ->filter(fn ($id, $column) => $id !== null && (int) $app->$column !== (int) $id);
+
+        // An app that is being updated, migrated or deleted is already being moved by a task
+        // that expects the servers it started with
+        if ($servers->isNotEmpty() && $app->status !== 'active') {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}/edit")->with('error', __('admin.organizations.apps.denied.servers_not_active'));
+        }
+
         $app->settings = json_decode($validated['settings'], true);
-        $app->database_server_id = $validated['database_server_id'] ?? null;
-        $app->web_server_id = $validated['web_server_id'] ?? null;
-        $app->sso_server_id = $validated['sso_server_id'] ?? null;
+        $servers->each(fn ($id, $column) => $app->$column = (int) $id);
         $app->save();
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
+    }
+
+    /**
+     * Rules for a server of an app: one of the organization's own servers, of the
+     * type the app uses it as.
+     *
+     * @return array<int, mixed>
+     */
+    private function serverRules(Organization $organization, string $type): array
+    {
+        return [
+            'nullable',
+            'integer',
+            function (string $attribute, mixed $value, Closure $fail) use ($organization, $type) {
+                $belongs = $organization->servers()
+                    ->whereKey($value)
+                    ->whereHas('server', fn ($query) => $query->where('type', $type))
+                    ->exists();
+
+                if (! $belongs) {
+                    $fail(__('validation.exists', ['attribute' => $attribute]));
+                }
+            },
+        ];
     }
 
     public function update_settings(Request $request, Organization $organization, AppInstance $app)

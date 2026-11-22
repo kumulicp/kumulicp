@@ -237,6 +237,7 @@ return [
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
                 'migration_running' => 'A database migration to that server is already running or needs attention -- check the Tasks page',
+                'servers_not_active' => 'The app\'s servers can only be changed while the app is active. Nothing was saved.',
             ],
         ],
     ],

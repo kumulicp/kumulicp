@@ -40,7 +40,7 @@ import { useForm } from '@inertiajs/vue3'
         <va-select
           v-model="editForm.backup_server_id"
           :label="$t('admin.servers.backupServer')"
-          :options="backup_servers"
+          :options="backupOptions"
           text-by="name"
           value-by="id"
           clearable
@@ -68,7 +68,7 @@ export default {
   props: {
     organization: Object,
     org_servers: Array,
-    backup_servers: Array,
+    backup_servers: Array
   },
   data () {
     return {
@@ -77,6 +77,12 @@ export default {
       editForm: useForm({
         backup_server_id: null
       })
+    }
+  },
+  computed: {
+    // A server is backed up by a backup server of its own type
+    backupOptions () {
+      return this.backup_servers.filter(server => server.type === this.selectedServer?.type)
     }
   },
   methods: {

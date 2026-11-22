@@ -102,7 +102,6 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             :options="org_servers.database ?? []"
             text-by="name"
             value-by="id"
-            clearable
             :error="!!$page.props.errors.database_server_id"
             :error-messages="$page.props.errors.database_server_id"
           />
@@ -113,7 +112,6 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             :options="org_servers.web ?? []"
             text-by="name"
             value-by="id"
-            clearable
             :error="!!$page.props.errors.web_server_id"
             :error-messages="$page.props.errors.web_server_id"
           />
@@ -124,7 +122,6 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             :options="org_servers.sso ?? []"
             text-by="name"
             value-by="id"
-            clearable
             :error="!!$page.props.errors.sso_server_id"
             :error-messages="$page.props.errors.sso_server_id"
           />
@@ -339,7 +336,10 @@ export default {
       default: () => []
     },
     database_servers: Array,
-    org_servers: Array
+    org_servers: {
+      type: Object,
+      default: () => ({})
+    }
   },
   computed: {
     // Each edit once, however many things it put out of date
@@ -389,7 +389,7 @@ export default {
         settings,
         database_server_id: this.app.database_server_id ?? null,
         web_server_id: this.app.web_server_id ?? null,
-        sso_server_id: this.app.sso_server_id ?? null,
+        sso_server_id: this.app.sso_server_id ?? null
       }),
       isPasswordVisible: false,
       updateForm: useForm({
