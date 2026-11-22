@@ -82,6 +82,17 @@ class EmailForwarder extends Model
         return $this->hasMany(EmailForwarderDestination::class);
     }
 
+    /**
+     * The destinations mail is delivered to now: the organization's own, and the outside ones
+     * whose owner has confirmed them. What the mail server applies.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, EmailForwarderDestination>
+     */
+    public function liveDestinations()
+    {
+        return $this->destinations()->get()->filter(fn (EmailForwarderDestination $destination) => $destination->isLive())->values();
+    }
+
     public function address(): HasOne
     {
         return $this->hasOne(MailboxAddress::class, 'forwarder_id');

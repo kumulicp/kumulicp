@@ -621,6 +621,13 @@ Route::get('profile/recovery-email/{username}/{hash}', 'App\Http\Controllers\Pro
     ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
     ->name('profile.recovery.confirm');
 
+// The same for the link sent to an outside address that mail is to be forwarded to: whoever opens it has no
+// account here, so there is no session to start. The signed link says which destination it is for.
+Route::get('forwarders/confirm/{destination}/{token}', 'App\Http\Controllers\Account\Email\ForwarderConfirmation@show')
+    ->middleware('signed')
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('forwarder.destination.confirm');
+
 Route::get('setup', 'App\Http\Controllers\Setup@settings')->name('initial.setup');
 Route::post('install', 'App\Http\Controllers\Setup@build')->name('initial.build');
 
