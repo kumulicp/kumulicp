@@ -130,6 +130,28 @@ another registry login, say) isn't seen, and is found by the nightly scan.
 Not watched yet: servers, applications and the organization plans (`Plan`). None of
 the aspects depend on them.
 
+## Organizations
+
+An organization's subscription has aspects of its own, which `SubscriptionUpdate`
+brings up to date (`App\Updates\OrganizationDrift`; stored in
+`organization_update_states`, like `update_states`):
+
+| Aspect | What it works out from | What it is for |
+|---|---|---|
+| `billing` | pricing, plan selection, status, discount and trial of the organization and its apps | the billing provider |
+| `access` | what the plans give the users: storage, access types, which apps are active | the users' settings, and the groups of the apps |
+| `capabilities` | whether the plan has domains and email, and their limits | what the organization can add |
+
+`billing` and `access` are the two hashes `SubscriptionSnapshot::capture()` has always
+made; `OrganizationDrift` stores them where `SubscriptionUpdate` used to keep the snapshot in the
+organization's settings. A fourth row, `plans`, only remembers which plan each part of the
+subscription was on, to tell admins which it moved to another from.
+
+- **Settling.** When a `SubscriptionUpdate` has settled, it stores the three aspects and
+  the plans (`OrganizationDrift::record()`). The next compares with them to tell what
+  changed (`previous()`), as before. An organization that was updated before this has its
+  snapshot in its settings: that is read as where it stood, and replaced by the first update.
+
 ## Seeing what is out of date
 
 `App\Updates\PendingUpdates` reads what the scans stored (it works nothing out)

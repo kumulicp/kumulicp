@@ -363,6 +363,11 @@ return [
         'updating' => 'Actualizando :count instancias de aplicaciones, unas pocas primero. Sígalo en Servidor > Tareas.',
         'policy_saved' => 'Guardado.',
     ],
+    'update_organization_aspects' => [
+        'billing' => 'Facturación',
+        'access' => 'Usuarios y almacenamiento',
+        'capabilities' => 'Dominios y correo',
+    ],
     'update_aspects' => [
         'release' => 'Release',
         'settings' => 'Configuración',

@@ -467,6 +467,11 @@ return [
         'updating' => 'Updating :count app instances, a few first. Follow it under Server > Tasks.',
         'policy_saved' => 'Saved.',
     ],
+    'update_organization_aspects' => [
+        'billing' => 'Billing',
+        'access' => 'Users and storage',
+        'capabilities' => 'Domains and email',
+    ],
     'update_aspects' => [
         'release' => 'Release',
         'settings' => 'Settings',
