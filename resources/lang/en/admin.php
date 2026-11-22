@@ -466,6 +466,8 @@ return [
         'nothing_to_update' => 'There is nothing to update for what was picked: the app instances are being updated already, or aren\'t active.',
         'updating' => 'Updating :count app instances, a few first. Follow it under Server > Tasks.',
         'policy_saved' => 'Saved.',
+        'edit_impact_organizations' => ':subject was edited. :count organizations are on it and are being checked for what needs updating.',
+        'subscription' => 'Subscription',
     ],
     'update_organization_aspects' => [
         'billing' => 'Billing',

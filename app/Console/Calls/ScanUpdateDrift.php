@@ -4,10 +4,13 @@ namespace App\Console\Calls;
 
 use App\AppInstance;
 use App\Jobs\Updates\ScanInstancesForDrift;
+use App\Jobs\Updates\ScanOrganizationsForDrift;
 use App\Organization;
+use App\Updates\OrganizationDrift;
 
 /**
- * Looks at every app instance for what has gone out of date. Edits to
+ * Looks at every app instance, and every organization's subscription, for what
+ * has gone out of date. Edits to
  * definitions are looked at as they are made (see DefinitionChanges); this finds
  * what that missed, like changes made without going through the models.
  */
@@ -27,6 +30,21 @@ class ScanUpdateDrift
                 $this->now
                     ? ScanInstancesForDrift::dispatchSync($ids->values()->all())
                     : ScanInstancesForDrift::dispatch($ids->values()->all());
+            });
+
+        // An app's own instances are all that was asked for
+        if ($this->app_slug) {
+            return;
+        }
+
+        app(OrganizationDrift::class)->scannable()
+            ->orderBy('id')
+            ->pluck('id')
+            ->chunk(ScanOrganizationsForDrift::BATCH)
+            ->each(function ($ids) {
+                $this->now
+                    ? ScanOrganizationsForDrift::dispatchSync($ids->values()->all())
+                    : ScanOrganizationsForDrift::dispatch($ids->values()->all());
             });
     }
 }

@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 
-/** Looks at the instances an edit can affect, in batches, for what it put out of date */
+/** Looks at the instances and organizations an edit can affect, in batches, for what it put out of date */
 class ScanDriftForChange implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
@@ -20,10 +20,18 @@ class ScanDriftForChange implements ShouldQueue
     {
         $change = DefinitionChange::find($this->change_id);
 
-        $targets = $change ? $impact->targets($change->subject_type, $change->subject_id, $change->application_id) : null;
+        if (! $change) {
+            return;
+        }
 
-        $targets?->orderBy('id')->pluck('id')->chunk(ScanInstancesForDrift::BATCH)->each(
-            fn ($ids) => ScanInstancesForDrift::dispatch($ids->values()->all(), $change->id)
-        );
+        $impact->targets($change->subject_type, $change->subject_id, $change->application_id)
+            ?->orderBy('id')->pluck('id')->chunk(ScanInstancesForDrift::BATCH)->each(
+                fn ($ids) => ScanInstancesForDrift::dispatch($ids->values()->all(), $change->id)
+            );
+
+        $impact->organizations($change->subject_type, $change->subject_id)
+            ?->orderBy('id')->pluck('id')->chunk(ScanOrganizationsForDrift::BATCH)->each(
+                fn ($ids) => ScanOrganizationsForDrift::dispatch($ids->values()->all(), $change->id)
+            );
     }
 }

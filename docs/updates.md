@@ -127,8 +127,8 @@ for updates are not noted, nor are those to the primary image that follows the v
 settings: they are noted as the version's own. A bulk update of the images (moving them to
 another registry login, say) isn't seen, and is found by the nightly scan.
 
-Not watched yet: servers, applications and the organization plans (`Plan`). None of
-the aspects depend on them.
+Servers and applications aren't watched: none of the aspects depend on them. An
+organization plan (`Plan`) is, for the organizations on it: see *Organizations*.
 
 ## Organizations
 
@@ -151,6 +151,20 @@ subscription was on, to tell admins which it moved to another from.
   the plans (`OrganizationDrift::record()`). The next compares with them to tell what
   changed (`previous()`), as before. An organization that was updated before this has its
   snapshot in its settings: that is read as where it stood, and replaced by the first update.
+- **Noticing.** `DefinitionObserver` also watches `Plan`. An edit that wasn't only cosmetic
+  (a plan's name, description, order, whether it is offered...) looks at the organizations
+  on it (`ScanOrganizationsForDrift`, ten at a time: working out a subscription is more than
+  looking at an instance), and the nightly scan looks at all of them.
+
+## After an upgrade
+
+A new version can need steps run that nothing a fingerprint covers has changed for: the
+groups for a role the new version adds, say. A step says so with `afterUpgrade()`. Before an
+upgrade starts, what nothing is stored for yet is taken as it stands (`UpdateDrift::baseline()`);
+when it is done, the aspects of those steps are stored as needing to be brought up to date
+again (`UpdateDrift::invalidate()`), so they show as out of date and are ticked in the
+app's *Update* list. (This replaces the `update.recommended` setting; what it still holds on
+an app is ignored.)
 
 ## Seeing what is out of date
 

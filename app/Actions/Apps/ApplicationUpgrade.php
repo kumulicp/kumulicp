@@ -13,9 +13,11 @@ use App\Services\AppInstance\AppStorageService;
 use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Application;
 use App\Task;
+use App\Updates\UpdateDrift;
 use App\Updates\UpdateSteps;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 class ApplicationUpgrade extends NativeAction
 {
@@ -56,6 +58,9 @@ class ApplicationUpgrade extends NativeAction
             $task->custom_values = array_merge($task->customValues(), ['previous_version_id' => $app_instance->version_id]);
             $task->save();
         }
+
+        // Where it stands before the version changes, so what the new version puts out of date shows
+        self::rememberWhatIsAppliedBeforeUpgrade($app_instance->get());
 
         $app_instance->version_id = $task->version_id;
         $app_instance->status = 'updating';
@@ -176,7 +181,7 @@ class ApplicationUpgrade extends NativeAction
             $app_instance->status = 'active';
             $app_instance->save();
 
-            app(UpdateSteps::class)->recommendAfterUpgrade($app_instance->get());
+            self::flagWhatTheNewVersionMayNeed($app_instance->get());
 
             return ActionResult::done()->then(function (Task $task) use ($app_instance) {
                 if ($task->getValue('notify') && in_array($app_instance->version->announcement_location, ['local', 'remote'])) {
@@ -259,5 +264,30 @@ class ApplicationUpgrade extends NativeAction
         unset($custom_values['helm_pending_since']);
         $task->custom_values = $custom_values;
         $task->save();
+    }
+
+    /** Takes the aspects nothing was stored for as they are now, before the version changes */
+    private static function rememberWhatIsAppliedBeforeUpgrade(AppInstance $app_instance): void
+    {
+        try {
+            app(UpdateDrift::class)->baseline($app_instance);
+        } catch (Throwable $e) {
+            // Not knowing where it stood mustn't stop it being upgraded
+            report($e);
+        }
+    }
+
+    /**
+     * What a new version may need (its roles' groups, single sign-on, the features'
+     * actions) shows as out of date, ticked in the app's update list. Not done
+     * here: running them is for an update.
+     */
+    private static function flagWhatTheNewVersionMayNeed(AppInstance $app_instance): void
+    {
+        try {
+            app(UpdateDrift::class)->invalidate($app_instance, app(UpdateSteps::class)->aspectsAfterUpgrade($app_instance));
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 }

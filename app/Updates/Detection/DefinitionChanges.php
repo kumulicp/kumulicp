@@ -30,9 +30,10 @@ class DefinitionChanges
         }
 
         $application_id = $subject->application_id ?? null;
-        $targets = $this->impact->targets($subject::class, $subject->getKey(), $application_id);
+        $instances = $this->impact->targets($subject::class, $subject->getKey(), $application_id)?->count() ?? 0;
+        $organizations = $this->impact->organizations($subject::class, $subject->getKey())?->count() ?? 0;
 
-        if (! $targets || ! $targets->exists()) {
+        if ($instances === 0 && $organizations === 0) {
             return null;
         }
 
@@ -48,22 +49,25 @@ class DefinitionChanges
 
         ScanDriftForChange::dispatch($change->id)->afterCommit();
 
-        $this->tellAdmin($change, $targets->count());
+        $this->tellAdmin($change, $instances, $organizations);
 
         return $change;
     }
 
     /**
-     * When an admin made the edit in the control panel, says how many instances
-     * use what was edited, so it isn't a surprise that they are being looked at.
+     * When an admin made the edit in the control panel, says how many instances or
+     * organizations use what was edited, so it isn't a surprise that they are being
+     * looked at.
      */
-    private function tellAdmin(DefinitionChange $change, int $instances): void
+    private function tellAdmin(DefinitionChange $change, int $instances, int $organizations): void
     {
         if (! request()->hasSession() || ! Gate::allows('admin')) {
             return;
         }
 
-        session()->flash('warning', __('admin.updates.edit_impact', ['subject' => $change->subject_label, 'count' => $instances]));
+        session()->flash('warning', $organizations > 0
+            ? __('admin.updates.edit_impact_organizations', ['subject' => $change->subject_label, 'count' => $organizations])
+            : __('admin.updates.edit_impact', ['subject' => $change->subject_label, 'count' => $instances]));
     }
 
     private function label(Model $subject): string

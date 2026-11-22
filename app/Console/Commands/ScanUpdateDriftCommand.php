@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Calls\ScanUpdateDrift;
+use App\OrganizationUpdateState;
 use App\UpdateState;
 use Illuminate\Console\Command;
 
@@ -28,6 +29,20 @@ class ScanUpdateDriftCommand extends Command
                 $state->aspect,
                 $state->drift_detected_at?->toDateTimeString(),
             ]);
+
+        // The subscriptions of organizations are part of what is looked at, unless it was just one app
+        if (! $this->option('app')) {
+            $rows = $rows->concat(OrganizationUpdateState::drifted()
+                ->with('organization')
+                ->orderBy('organization_id')
+                ->get()
+                ->map(fn (OrganizationUpdateState $state) => [
+                    $state->organization->name,
+                    __('admin.updates.subscription'),
+                    $state->aspect,
+                    $state->drift_detected_at?->toDateTimeString(),
+                ]));
+        }
 
         $rows->isEmpty()
             ? $this->info('Everything is up to date.')
