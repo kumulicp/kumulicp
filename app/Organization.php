@@ -104,11 +104,26 @@ class Organization extends Model
      */
     protected static function booted()
     {
+        // Every organization always has a default language, inherited from the
+        // control panel setting (which itself falls back to APP_LOCALE).
+        static::creating(function ($organization) {
+            $organization->default_locale = $organization->default_locale ?: static::systemDefaultLocale();
+        });
+
         static::updated(queueable(function ($organization) {
             if ($organization->stripe_id) {
                 $organization->syncStripeCustomerDetails();
             }
         }));
+    }
+
+    /**
+     * The language new organizations start with: the control panel setting,
+     * falling back to the APP_LOCALE environment value.
+     */
+    public static function systemDefaultLocale(): string
+    {
+        return SettingsFacade::get('default_locale') ?: (config('app.locale') ?: 'en');
     }
 
     public function domains()
