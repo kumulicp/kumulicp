@@ -54,6 +54,7 @@ class SettingsTest extends TestCase
             'text_secondary_color' => '#654321',
             'default_currency' => 'USD',
             'enabled_currencies' => ['USD'],
+            'default_locale' => 'en',
         ]);
 
         $response->assertRedirect('admin/settings');

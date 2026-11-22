@@ -153,6 +153,7 @@ return [
             'order_updated' => 'Role order updated',
             'images' => 'Images',
             'images_added' => 'Added :count images to the version',
+            'image_updated' => 'Updated the image :image',
             'image_removed' => 'Removed the image :image',
             'image_follows_settings' => 'The image the version\'s name and settings describe is changed by changing them',
             'image_key_taken' => 'The version already has an image with the key :key',
@@ -573,7 +574,7 @@ return [
         'server_missing_address' => 'Server :server has no address.',
     ],
     'email' => [
-        'sync_unavailable' => 'There is nothing to sync: LDAP is not in use, or no LDAP attribute is set for the recovery email.',
+        'sync_unavailable' => 'There is nothing to sync: LDAP is not in use, or no LDAP attribute is set for the recovery email or for aliases.',
         'sync_finished' => 'Sync finished: :updated updated, :unchanged already in sync, :problems with problems.',
     ],
 ];

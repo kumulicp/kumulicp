@@ -151,6 +151,15 @@ return [
             'delete' => "You don't have permission to delete this email account",
             'forwarders' => "Forwarding isn't available on this mail server.",
         ],
+        'alias' => [
+            'disabled' => 'Aliases are not available for this mailbox.',
+            'mailbox_not_active' => 'Only a mailbox that is in use can have aliases.',
+            'domain_not_allowed' => 'Aliases can only be on a domain of this organization that has email on, and :domain is not one.',
+            'limit' => 'A mailbox can have at most :count aliases.',
+            'not_found' => ':email is not an alias of this mailbox.',
+            'added' => ':email was added.',
+            'removed' => ':email was removed.',
+        ],
         'mailbox' => [
             'has_one' => 'This user already has a login email, or one waiting to be accepted. Remove it before choosing another.',
             'taken' => ':email is already taken. Choose another name.',

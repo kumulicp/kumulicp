@@ -149,6 +149,26 @@ class AppProfile
         return $this->recommendations;
     }
 
+    /**
+     * The settings of a version made from what the profile recommends: its chart (name,
+     * version and the repository it is published in) and its image. What the profile
+     * doesn't recommend is left out.
+     *
+     * @return array<string, string>
+     */
+    public function recommendedVersionSettings(): array
+    {
+        $recommendations = $this->recommendations();
+
+        return array_filter([
+            'chart_name' => Arr::get($recommendations, 'helm_chart_name'),
+            'chart_version' => Arr::get($recommendations, 'helm_chart_version'),
+            'helm_repo_name' => Arr::get($recommendations, 'helm_chart_repo'),
+            'image_repo_name' => Arr::get($recommendations, 'image_repo'),
+            'image_registry' => Arr::get($recommendations, 'image_registry'),
+        ], fn ($value) => $value !== null);
+    }
+
     public function activationType(?AppInstance $app_instance = null)
     {
         return $this->activation_type;

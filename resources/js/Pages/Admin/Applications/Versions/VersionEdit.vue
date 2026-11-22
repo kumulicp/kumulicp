@@ -252,6 +252,10 @@ import { Link, useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.image_repo_name"
                   :error-messages="$page.props.errors.image_repo_name"
                   />
+                <div v-if="version.extra_images" id="extraImages" class="va-text-secondary mb-2" style="font-size: 0.85rem">
+                  {{ $t('admin.versions.extraImages', { count: version.extra_images }) }}
+                  <Link :href="'/admin/apps/' + app.slug + '/versions/' + version.version + '/images'">{{ $t('admin.versions.manageImages') }}</Link>
+                </div>
                 <va-input v-model="form.port"
                   type="number"
                   :label="$t('admin.versions.servicePort')"

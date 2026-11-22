@@ -1,6 +1,7 @@
 # Plan: several images per app version
 
-Status: proposal. Nothing here is implemented.
+Status: implemented, apart from phase 6 (see below). This is the design and how it was
+built; how it works now is in `docs/version-images.md`.
 
 ## Problem
 
@@ -83,11 +84,11 @@ Backfill migration: one `primary` image row per existing version from
   `imaginary.image.tag`) and a plan seeds every default: run earlier, a seeded default
   would put back an image other than the one that was tested. Charts keep their explicit
   primary block until they are migrated, so nothing changes for them at first.
-- Precedence: version image > plan/instance configuration > profile default. The old
-  `imaginary-image-*` configurations stay as the fallback for a version without an image
-  for it. An instance that explicitly overrides one should show a "shadows version image"
-  warning in the instance's Update list instead of silently losing; that needs UI, so it
-  comes with phase 7.
+- Precedence: version image > plan/instance configuration > profile default. An instance
+  that explicitly sets a part of an image its version sets is warned on its page instead of
+  silently losing (phase 7). The old `imaginary-image-*` configurations were a fallback for a
+  version without an image for it, and are gone (phase 8): that version runs the image its
+  profile recommends.
 - Rendering the images into the values means `ValuesContract::removedKeys()` and
   `schemaErrors()` check every image path against a candidate chart automatically.
 
@@ -198,12 +199,35 @@ Each phase ships on its own and leaves existing apps unchanged.
    editing one (and the rest of the images UI) is phase 7. Tests: `ChartImageScannerTest`,
    `VersionImagesPageTest`, extend `VersionUpdateCheckerTest`, `VersionImagesTest`.
 6. **Test-run safety.** `image_snapshot`, preflight, conformance check, optional Trivy.
-7. **Adopt-update flow and UI polish.** Per-image selection when creating the next
-   version; images table in `VersionEdit.vue` (browser test next to
-   `tests/Browser/Admin/VersionsTest.php`).
-8. **Pilot and cleanup.** New Matrix ESS profile and chart as the acceptance case, with
-   Nextcloud as the migration case. Remove the deprecated configuration keys. Write
-   `docs/updates.md` section "What a version contains".
+   **Not done.** It is independent of the rest, and nothing built depends on it. What it would
+   add: the exact images a run covered, recorded on the run; a check, before a test org is
+   created, that every image resolves with its login (and for the target cluster's
+   architecture, which the deployer has no way to read yet: its RBAC has no `nodes`); and,
+   after an install or upgrade, a check that the pods run the images the version says
+   (`KubernetesApiClient::list()` of the instance's pods by its labels), which is the one that
+   catches a chart ignoring an override. Open: whether a mismatch fails the step or only warns,
+   and whether findings of a per-image vulnerability scan ever block the gate.
+7. **Adopt-update flow and UI polish.** An image can be edited on the Images tab (what it runs,
+   its registry login, and how it is checked: policy, tag pattern, group); the one the version's
+   name and settings describe only has the checks, as where it comes from is the version's.
+   Adding a version from an update lists the other images that have a newer tag, all picked, to
+   untick; images in the same group move together (`AppVersion::adoptImageUpdates()`), and an
+   update can be adopted when only those images have a newer tag. An instance that sets, by
+   itself, a part of an image its version sets (`imaginary-image-tag`) is warned that the
+   version's image is used instead (`ShadowedImages`, on the app's page). The version form points
+   to the Images tab. Not done: a browser test of the tab (the Inertia props and the actions are
+   covered by feature tests), and the version form's own image fields are still the primary
+   image's. Tests: extend `VersionImagesPageTest`, `VersionsTest`, `VersionImagesTest`,
+   `UpdatesTest`.
+8. **Pilot and cleanup.** The Matrix ESS profile (the acceptance case) was done separately.
+   Cleanup: the `imaginary-image-registry|repository|tag` configurations are removed from the
+   Nextcloud profile and the chart, which gives a version without its own imaginary image the
+   profile's recommended one (`NextcloudChart::recommendedImaginaryImage()`). Stored values
+   for them in plans and instances are left alone: a stored configuration is part of the
+   release fingerprint whether or not the profile still defines it, so deleting them would
+   flag every instance as out of date. They are not read, and an instance's own is reported
+   by the ignored-settings warning. Redis stays a configuration (see the note under phase 2).
+   `docs/version-images.md` describes how it all works now. Tests: `NextcloudChartTest`.
 
 Phases 1-4 deliver the stated goal (update checks and test gating for every image).
 5-8 make it pleasant for chart-owned image sets.
@@ -223,10 +247,12 @@ Phases 1-4 deliver the stated goal (update checks and test gating for every imag
 
 ## Open questions
 
-1. Table (recommended) or `settings.images` JSON?
+1. Table (recommended) or `settings.images` JSON? **A table.**
 2. Is `chart`-sourced inventory (the chart owns the images) in the first cut, or only
-   explicit overrides? Matrix ESS leans on the former.
+   explicit overrides? **In** (phase 5).
 3. Should `name` keep being the tag for single-image apps forever, or get a separate
-   `tag` and become a pure label everywhere?
-4. Should Trivy findings block the test gate or only warn?
-5. Non-Helm drivers (the Docker mail server chart): in scope, or Helm only?
+   `tag` and become a pure label everywhere? **It stays the tag**: the primary image follows
+   the version's name and settings, and a version that carries more images is named as the
+   admin likes.
+4. Should Trivy findings block the test gate or only warn? Open, with phase 6.
+5. Non-Helm drivers (the Docker mail server chart): in scope, or Helm only? **Helm only.**

@@ -113,6 +113,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                             Route::get('', 'Admin\Applications\Versions\Images@index')->name('app.versions.images');
                             Route::get('discover', 'Admin\Applications\Versions\Images@discover')->name('app.versions.images.discover');
                             Route::post('', 'Admin\Applications\Versions\Images@store')->name('app.versions.images.store');
+                            Route::put('{image}', 'Admin\Applications\Versions\Images@update')->name('app.versions.images.update');
                             Route::delete('{image}', 'Admin\Applications\Versions\Images@destroy')->name('app.versions.images.destroy');
                         });
                         Route::get('roles', 'Admin\Applications\Versions@roles')->name('discover.apps.versions.roles');
@@ -511,6 +512,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
     Route::prefix('notifications')->group(function () {
         Route::get('', 'Account\Notifications@index')->name('notifications.index');
         Route::delete('', 'Account\Notifications@destroy')->name('notifications.destroy');
+    });
+
+    Route::prefix('mailboxes/{mailbox}/aliases')->group(function () {
+        Route::post('', 'Account\Email\Aliases@store')->name('mailbox.aliases.store');
+        Route::delete('{address}', 'Account\Email\Aliases@destroy')->name('mailbox.aliases.destroy');
     });
 
     Route::prefix('profile')->group(function () {

@@ -565,7 +565,7 @@ class AppVersion extends Model
      * The other images (not the primary one, see newerImageTag()) the update check
      * found a newer tag for, if still newer than the tag they run with.
      *
-     * @return array<int, array{key: string, label: string, current: string|null, latest: string}>
+     * @return array<int, array{key: string, label: string, current: string|null, latest: string, group: string|null}>
      */
     public function newerImageTags(): array
     {
@@ -577,11 +577,53 @@ class AppVersion extends Model
             $latest = $results[$image->key]['latest'] ?? null;
 
             if (! $image->isPrimary() && $comparator->isNewer($latest, $image->effectiveTag())) {
-                $found[] = ['key' => $image->key, 'label' => $image->label ?: $image->key, 'current' => $image->effectiveTag(), 'latest' => $latest];
+                $found[] = ['key' => $image->key, 'label' => $image->label ?: $image->key, 'current' => $image->effectiveTag(), 'latest' => $latest, 'group' => $image->group];
             }
         }
 
         return $found;
+    }
+
+    /**
+     * Moves the images of this version, a copy of $source, that the update check of
+     * $source found a newer tag for and that were picked, to that tag (and the digest
+     * of that tag, for an image kept by digest). Images in the same group as a picked
+     * one move with it, as they only work together.
+     *
+     * @param  array<int, string>  $keys  The picked images
+     * @return array<int, string> The keys of the images that moved
+     */
+    public function adoptImageUpdates(AppVersion $source, array $keys): array
+    {
+        $found = collect($source->newerImageTags());
+        $groups = $found->filter(fn (array $update) => $update['group'] && in_array($update['key'], $keys, true))->pluck('group')->all();
+        $results = Arr::get($source->update_check ?? [], 'images', []);
+        $moved = [];
+
+        foreach ($found as $update) {
+            if (! in_array($update['key'], $keys, true) && ! ($update['group'] && in_array($update['group'], $groups, true))) {
+                continue;
+            }
+
+            $image = $this->images()->where('key', $update['key'])->first();
+
+            if (! $image) {
+                continue;
+            }
+
+            $image->tag = $update['latest'];
+
+            if (! empty($results[$update['key']]['digest'])) {
+                $image->digest = $results[$update['key']]['digest'];
+            }
+
+            $image->save();
+            $moved[] = $update['key'];
+        }
+
+        $this->unsetRelation('images');
+
+        return $moved;
     }
 
     /**

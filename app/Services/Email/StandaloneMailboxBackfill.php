@@ -72,7 +72,16 @@ class StandaloneMailboxBackfill
             }
 
             $on_server[] = $address;
-            $recorded = MailboxAddress::where('address', $address)->first()?->mailbox;
+            $taken = MailboxAddress::where('address', $address)->first();
+
+            // A forwarder has this address: it is not a mailbox, so there is nothing to record and a person has to look
+            if ($taken?->forwarder_id !== null) {
+                $rows[] = $row($address, 'collision', 'it is a forwarder');
+
+                continue;
+            }
+
+            $recorded = $taken?->mailbox;
 
             // Recorded already: nothing to do, including a user's own mailbox, which is recorded
             // when the user is. Only an address recorded for another organization needs a person

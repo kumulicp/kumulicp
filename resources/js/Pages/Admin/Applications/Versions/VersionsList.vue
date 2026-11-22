@@ -98,6 +98,18 @@ import { Link, useForm } from '@inertiajs/vue3'
               @update:modelValue="copyChanged"
               />
             <div v-if="selectedUpdate" id="updateDetails" class="va-text-secondary mt-2" style="font-size: 0.85rem">{{ selectedUpdate.details }}</div>
+            <div v-if="selectedUpdate && selectedUpdate.images.length" id="updateImages" class="mt-2">
+              <div class="va-input-label">{{ $t('admin.versions.updateImagesPick') }}</div>
+              <div v-for="image in selectedUpdate.images" :key="image.key">
+                <va-checkbox
+                  :id="'updateImage-' + image.key"
+                  :model-value="form.images.includes(image.key)"
+                  :label="$t('admin.versions.updateImageLine', { image: image.label, current: image.current, latest: image.latest })"
+                  @update:modelValue="toggleImage(image, $event)"
+                />
+                <span v-if="image.group" class="va-text-secondary" style="font-size: 0.85rem">{{ $t('admin.versions.updateImageGroupNote') }}</span>
+              </div>
+            </div>
             <va-select v-model="form.copy_version"
               v-if="form.copy_from === 'previous_version'"
               id="copyVersion"
@@ -174,17 +186,23 @@ export default {
     versionsWithUpdates () {
       return this.versions.filter((version) => version.updates)
     },
-    // A new version can be added for each enabled version with a newer image tag that isn't already a version
+    // A new version can be added for each enabled version with a newer tag for its image that isn't already a
+    // version, or for one of its other images (which has no name of its own to offer)
     updateOptions () {
       return this.versions
-        .filter((version) => version.updates && version.updates.image && !this.versions.some((other) => other.version === version.updates.image))
+        .filter((version) => version.updates && (this.offeredName(version) || version.updates.images.length))
         .map((version) => ({
-          text: this.$t('admin.versions.updateOption', { latest: version.updates.image }),
+          text: this.offeredName(version)
+            ? this.$t('admin.versions.updateOption', { latest: version.updates.image })
+            : this.$t('admin.versions.updateOptionImages', { version: version.version }),
           details: version.updates.chart
             ? this.$t('admin.versions.updateDetailsChart', { current: version.version, chart: version.updates.chart })
-            : this.$t('admin.versions.updateDetails', { current: version.version }),
+            : (this.offeredName(version)
+                ? this.$t('admin.versions.updateDetails', { current: version.version })
+                : this.$t('admin.versions.updateDetailsImages', { version: version.version })),
           value: 'update:' + version.id,
-          latest: version.updates.image
+          latest: this.offeredName(version),
+          images: version.updates.images
         }))
     },
     selectedUpdate () {
@@ -198,12 +216,30 @@ export default {
     gateColor (gate) {
       return { passed: 'success', bypassed: 'warning', running: 'info', failed: 'danger', stale: 'warning', untested: 'secondary' }[gate] || 'secondary'
     },
-    // Choosing an update fills in the new version's name
+    // The newer tag of the version's image, as the name of the version that adopts it, unless that already is one
+    offeredName (version) {
+      const latest = version.updates && version.updates.image
+      return latest && !this.versions.some((other) => other.version === latest) ? latest : null
+    },
+    // Choosing an update fills in the new version's name, and has all its newer images picked
     copyChanged (value) {
       const update = this.updateOptions.find((option) => option.value === value)
       if (update) {
-        this.form.version = update.latest
+        if (update.latest) {
+          this.form.version = update.latest
+        }
+        this.form.images = update.images.map((image) => image.key)
+      } else {
+        this.form.images = []
       }
+    },
+    // Images in the same group are updated together
+    toggleImage (image, checked) {
+      const keys = this.selectedUpdate.images
+        .filter((other) => other.key === image.key || (image.group && other.group === image.group))
+        .map((other) => other.key)
+      const rest = this.form.images.filter((key) => !keys.includes(key))
+      this.form.images = checked ? [...rest, ...keys] : rest
     },
     submit () {
       this.form.transform((data) => {
@@ -239,7 +275,8 @@ export default {
       form: useForm({
         version: '',
         copy_from: 'previous_version',
-        copy_version: ''
+        copy_version: '',
+        images: []
       })
     }
   }

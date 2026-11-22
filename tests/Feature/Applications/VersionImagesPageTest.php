@@ -2,6 +2,7 @@
 
 use App\AppVersion;
 use App\AppVersionImage;
+use App\RepoSecret;
 use App\Support\Facades\Application;
 use App\User;
 use Illuminate\Support\Facades\Http;
@@ -326,4 +327,160 @@ it('does not remove the image of another version', function () {
     $this->delete(imagesUrl($version, '/'.$image->id))->assertNotFound();
 
     expect($other->fresh()->images)->toHaveCount(1);
+});
+
+// ─── Editing one ─────────────────────────────────────────────────────────────
+
+function editedImage(array $attributes = []): array
+{
+    return $attributes + [
+        'label' => 'Background worker',
+        'registry' => 'quay.io',
+        'repository' => 'org/worker',
+        'tag' => '4.0.0',
+        'digest' => null,
+        'registry_secret_id' => null,
+        'values_path' => 'worker.image',
+        'source' => 'override',
+        'update_policy' => 'minor',
+        'tag_pattern' => '^\d+\.\d+\.\d+$',
+        'group' => 'workers',
+    ];
+}
+
+function componentImage(AppVersion $version, array $attributes = []): AppVersionImage
+{
+    return AppVersionImage::factory()->create($attributes + ['app_version_id' => $version->id, 'key' => 'worker', 'values_path' => 'worker.image']);
+}
+
+it('shows what can be edited of each image, and what it can be given', function () {
+    $version = imagesVersion(['image_repo_name' => 'library/demo']);
+    $secret = RepoSecret::factory()->create(['name' => 'Quay', 'type' => RepoSecret::TYPE_IMAGE]);
+    RepoSecret::factory()->create(['type' => RepoSecret::TYPE_HELM]);
+    componentImage($version, ['registry_secret_id' => $secret->id, 'update_policy' => 'patch', 'tag_pattern' => '^1', 'group' => 'workers']);
+
+    $this->withoutVite()
+        ->get(imagesUrl($version))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('update_policies', ['track', 'minor', 'patch', 'pinned', 'ignore'])
+            ->where('image_registries', fn ($registries) => collect($registries)->pluck('name')->all() === ['Quay'])
+            ->where('images', fn ($images) => collect($images)->last()['registry_secret_id'] === $secret->id
+                && collect($images)->last()['update_policy'] === 'patch'
+                && collect($images)->last()['tag_pattern'] === '^1'
+                && collect($images)->last()['group'] === 'workers'
+                && collect($images)->last()['repository'] !== null)
+        );
+});
+
+it('changes an image of the version', function () {
+    $version = imagesVersion(['image_repo_name' => 'library/demo']);
+    $image = componentImage($version);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage())
+        ->assertSessionDoesntHaveErrors()
+        ->assertRedirect(imagesUrl($version))
+        ->assertSessionHas('success');
+
+    expect($image->fresh()->only(['label', 'registry', 'repository', 'tag', 'values_path', 'source', 'update_policy', 'tag_pattern', 'group']))->toBe([
+        'label' => 'Background worker', 'registry' => 'quay.io', 'repository' => 'org/worker', 'tag' => '4.0.0', 'values_path' => 'worker.image',
+        'source' => 'override', 'update_policy' => 'minor', 'tag_pattern' => '^\d+\.\d+\.\d+$', 'group' => 'workers',
+    ])->and($image->fresh()->key)->toBe('worker')->and($image->fresh()->role)->toBe('component');
+});
+
+it('gives an image a registry login of the right kind, or none', function () {
+    $version = imagesVersion();
+    $image = componentImage($version);
+    $login = RepoSecret::factory()->create(['type' => RepoSecret::TYPE_BOTH]);
+    $helm = RepoSecret::factory()->create(['type' => RepoSecret::TYPE_HELM]);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['registry_secret_id' => $helm->id]))->assertSessionHasErrors('registry_secret_id');
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['registry_secret_id' => $login->id]))->assertSessionDoesntHaveErrors();
+    expect($image->fresh()->registry_secret_id)->toBe($login->id);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['registry_secret_id' => null]))->assertSessionDoesntHaveErrors();
+    expect($image->fresh()->registry_secret_id)->toBeNull();
+});
+
+it('keeps an image the chart only lists without a place in the values', function () {
+    $version = imagesVersion();
+    $image = componentImage($version, ['source' => 'chart']);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['source' => 'chart', 'values_path' => null, 'tag' => null]))
+        ->assertSessionDoesntHaveErrors();
+
+    expect($image->fresh()->values_path)->toBe('')
+        ->and($image->fresh()->tag)->toBeNull();
+});
+
+it('only lets an image Kumulicp sets say where and with what', function (array $change) {
+    $version = imagesVersion();
+    $image = componentImage($version);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage($change))->assertSessionHasErrors('source');
+
+    expect($image->fresh()->repository)->not->toBe('org/worker');
+})->with([
+    'no place in the values' => [['values_path' => null]],
+    'no tag or digest' => [['tag' => null, 'digest' => null]],
+]);
+
+it('does not accept what is not a policy, a pattern or a group', function (array $change, string $field) {
+    $version = imagesVersion();
+    $image = componentImage($version);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage($change))->assertSessionHasErrors($field);
+})->with([
+    'a policy that does not exist' => [['update_policy' => 'sometimes'], 'update_policy'],
+    'a pattern that is not a regular expression' => [['tag_pattern' => '('], 'tag_pattern'],
+    'a group that is not a slug' => [['group' => 'Not A Slug'], 'group'],
+    'no repository' => [['repository' => ''], 'repository'],
+    'a source that does not exist' => [['source' => 'whatever'], 'source'],
+]);
+
+it('only changes how the image its settings describe is checked for updates', function () {
+    $version = imagesVersion(['image_registry' => 'docker.io', 'image_repo_name' => 'library/demo']);
+    $primary = $version->primaryImage();
+
+    $this->put(imagesUrl($version, '/'.$primary->id), [
+        'label' => 'The app',
+        'update_policy' => 'patch',
+        'tag_pattern' => '^\d+',
+        'group' => 'main',
+        // Where it comes from is the version's settings
+        'repository' => 'someone/else',
+        'tag' => '0.0.1',
+        'source' => 'chart',
+    ])->assertSessionDoesntHaveErrors();
+
+    $primary = $version->fresh()->primaryImage();
+
+    expect($primary->only(['label', 'update_policy', 'tag_pattern', 'group']))->toBe(['label' => 'The app', 'update_policy' => 'patch', 'tag_pattern' => '^\d+', 'group' => 'main'])
+        ->and($primary->repository)->toBe('library/demo')
+        ->and($primary->effectiveTag())->toBe('40.0.1')
+        ->and($primary->source)->toBe('override');
+});
+
+it('does not change the image of another version', function () {
+    $version = imagesVersion();
+    $other = imagesVersion([], '40.0.2');
+    $image = componentImage($other);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage())->assertNotFound();
+
+    expect($image->fresh()->repository)->not->toBe('org/worker');
+});
+
+it('makes the version\'s tests stale when what an image runs is edited, but not how it is checked', function () {
+    $version = imagesVersion();
+    $image = componentImage($version);
+    $fingerprint = fn () => (new App\Support\VersionTesting\VersionFingerprint)->for($version->fresh());
+    $before = $fingerprint();
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['repository' => $image->repository, 'registry' => $image->registry, 'tag' => $image->tag, 'values_path' => $image->values_path]))
+        ->assertSessionDoesntHaveErrors();
+    expect($fingerprint())->toBe($before);
+
+    $this->put(imagesUrl($version, '/'.$image->id), editedImage(['repository' => $image->repository, 'registry' => $image->registry, 'tag' => '9.9.9', 'values_path' => $image->values_path]))
+        ->assertSessionDoesntHaveErrors();
+    expect($fingerprint())->not->toBe($before);
 });

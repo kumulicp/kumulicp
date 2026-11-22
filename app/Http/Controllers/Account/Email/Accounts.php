@@ -9,6 +9,7 @@ use App\OrgDomain;
 use App\Rules\EmailLocalPart;
 use App\Rules\MailAddressAvailable;
 use App\Rules\OrgDomainName;
+use App\Services\Email\MailboxAliasService;
 use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use Illuminate\Http\Request;
@@ -33,6 +34,22 @@ class Accounts extends Controller
             $emails = array_merge($emails, Domain::connect($domain, 'email')->emailList($domain));
         }
 
+        // The panel's record of each standalone mailbox, for its aliases
+        $mailboxes = Mailbox::where('organization_id', $organization->id)->whereNull('username')
+            ->whereIn('address', array_map(fn ($email) => strtolower($email['email'] ?? ''), $emails))
+            ->with('addresses')->get()->keyBy('address');
+        $alias_service = app(MailboxAliasService::class);
+        $emails = array_map(function ($email) use ($mailboxes, $alias_service) {
+            $mailbox = $mailboxes->get(strtolower($email['email'] ?? ''));
+
+            return $email + [
+                'mailbox_id' => $mailbox?->id,
+                // Whether this mailbox's mail server keeps aliases, or LDAP has an attribute for them
+                'aliases_enabled' => $mailbox ? $alias_service->enabledFor($mailbox) : false,
+                'aliases' => $mailbox ? $mailbox->addresses->where('is_primary', false)->pluck('address')->values()->all() : [],
+            ];
+        }, $emails);
+
         return inertia('Organization/Settings/EmailAccounts/EmailAccountsList', [
             'accounts' => $emails,
             'can' => [
@@ -44,6 +61,7 @@ class Accounts extends Controller
                     'value' => $domain->id,
                 ];
             }),
+            'alias_domains' => $organization->domains()->emailEnabled()->get()->map(fn ($domain) => ['id' => $domain->id, 'name' => $domain->name])->values(),
             'default_domain' => $default_domain ? $default_domain->id : (count($domains) > 0 ? $domains->first()->id : 0),
         ]);
     }

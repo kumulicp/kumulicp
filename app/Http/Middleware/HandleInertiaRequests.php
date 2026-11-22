@@ -38,17 +38,18 @@ class HandleInertiaRequests extends Middleware
      * Resolves the active locale here (rather than in a service provider's boot())
      * because this middleware runs after StartSession, so the authenticated user
      * is actually available. User locale always wins; falls back through the
-     * organization, control panel setting, then app config.
+     * organization, control panel setting, then app config. Guests (login, webhooks)
+     * have no user or organization, so they skip straight to the control panel setting.
      */
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
 
         App::setLocale(
-            $user->locale
-            ?? $user->organization->default_locale
-            ?? Settings::get('default_locale', null)
-            ?? config('app.locale')
+            $user?->locale
+            ?: $user?->organization?->default_locale
+            ?: Settings::get('default_locale', null)
+            ?: config('app.locale')
         );
 
         // An app plan is a profile in a single-organization install

@@ -55,11 +55,27 @@ it('creates a version with recommendations — copies settings from app profile'
         ->where('name', '2.0')
         ->firstOrFail();
 
+    // The chart is the profile's chart, found in the repository it names
+    expect($version->setting('chart_name'))->toBe('demo-chart');
     expect($version->setting('chart_version'))->toBe('2.5.0');
-    expect($version->setting('helm_repo_name'))->toBe('demo-chart');
+    expect($version->setting('helm_repo_name'))->toBe('https://charts.example.com');
     expect($version->setting('image_repo_name'))->toBe('demo/app');
     expect($version->setting('image_registry'))->toBe('registry.example.com');
     expect($version->admin_path)->toBe('/admin');
+});
+
+it('creates a version with recommendations with the settings the app was first set up with', function () {
+    // Nextcloud is set up with a version when it is first loaded, from the same recommendations
+    $nextcloud = Application::initialize('nextcloud');
+    $first = AppVersion::where('application_id', $nextcloud->id)->firstOrFail();
+
+    $this->post("/admin/apps/{$nextcloud->slug}/versions", ['version' => '99.0.0', 'copy_from' => 'recommendations'])
+        ->assertSessionDoesntHaveErrors();
+
+    $added = AppVersion::where('application_id', $nextcloud->id)->where('name', '99.0.0')->firstOrFail();
+
+    expect($first->settings)->toMatchArray(['chart_name' => 'nextcloud', 'helm_repo_name' => 'https://nextcloud.github.io/helm/'])
+        ->and($added->settings)->toBe($first->settings);
 });
 
 it('creates a version with previous_version — copies settings, roles and admin_path', function () {
@@ -116,6 +132,101 @@ it('creates a version with previous_version — copies its other images', functi
     expect($version->images->pluck('key')->all())->toBe(['primary', 'redis'])
         ->and($version->primaryImage()->effectiveTag())->toBe('2.0')
         ->and($version->images->last()->tag)->toBe('8.0.1');
+});
+
+// A version the update check found newer tags for the other images of
+function updatableVersion(array $images): AppVersion
+{
+    $version = AppVersion::factory()->create([
+        'application_id' => test()->demoApp->id,
+        'name' => '33.0.1',
+        'settings' => ['image_repo_name' => 'library/demo', 'image_registry' => 'docker.io', 'chart_version' => '9.0.0'],
+        'update_check' => [
+            'checked_at' => '2026-10-14T03:00:00+00:00',
+            'image' => null,
+            'images' => collect($images)->map(fn ($image) => ['current' => $image['tag'], 'latest' => $image['latest'], 'policy' => 'track', 'error' => null])->all(),
+            'chart' => null,
+        ],
+    ]);
+
+    foreach ($images as $key => $image) {
+        AppVersionImage::factory()->create(['app_version_id' => $version->id, 'key' => $key, 'tag' => $image['tag'], 'group' => $image['group'] ?? null]);
+    }
+
+    return $version->fresh();
+}
+
+it('creates a version from an update with only the picked images at their newer tag', function () {
+    $source = updatableVersion([
+        'imaginary' => ['tag' => '1.0.0', 'latest' => '1.1.0'],
+        'redis' => ['tag' => '8.0.1', 'latest' => '8.0.2'],
+    ]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '34.0.0',
+        'copy_from' => 'update',
+        'copy_version' => $source->id,
+        'images' => ['redis'],
+    ])->assertSessionDoesntHaveErrors();
+
+    $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '34.0.0')->firstOrFail();
+
+    expect($version->images->pluck('tag', 'key')->only(['imaginary', 'redis'])->all())->toBe(['imaginary' => '1.0.0', 'redis' => '8.0.2'])
+        ->and($version->primaryImage()->effectiveTag())->toBe('34.0.0');
+});
+
+it('moves a group of images together when one of them is picked', function () {
+    $source = updatableVersion([
+        'synapse' => ['tag' => '1.0.0', 'latest' => '1.1.0', 'group' => 'matrix'],
+        'admin' => ['tag' => '2.0.0', 'latest' => '2.1.0', 'group' => 'matrix'],
+    ]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '34.0.0',
+        'copy_from' => 'update',
+        'copy_version' => $source->id,
+        'images' => ['synapse'],
+    ])->assertSessionDoesntHaveErrors();
+
+    $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', '34.0.0')->firstOrFail();
+
+    expect($version->images->pluck('tag', 'key')->only(['synapse', 'admin'])->all())->toBe(['synapse' => '1.1.0', 'admin' => '2.1.0']);
+});
+
+it('does not move any image when none are picked, or when the version is not made from an update', function () {
+    $source = updatableVersion(['imaginary' => ['tag' => '1.0.0', 'latest' => '1.1.0']]);
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '34.0.0',
+        'copy_from' => 'update',
+        'copy_version' => $source->id,
+    ])->assertSessionDoesntHaveErrors();
+
+    $this->post("/admin/apps/{$this->demoApp->slug}/versions", [
+        'version' => '35.0.0',
+        'copy_from' => 'previous_version',
+        'copy_version' => $source->id,
+        'images' => ['imaginary'],
+    ])->assertSessionDoesntHaveErrors();
+
+    foreach (['34.0.0', '35.0.0'] as $name) {
+        $version = AppVersion::where('application_id', $this->demoApp->id)->where('name', $name)->firstOrFail();
+
+        expect($version->images->firstWhere('key', 'imaginary')->tag)->toBe('1.0.0');
+    }
+});
+
+it('offers an update on the versions page when only another image has a newer tag', function () {
+    $source = updatableVersion(['imaginary' => ['tag' => '1.0.0', 'latest' => '1.1.0', 'group' => 'media']]);
+
+    $this->withoutVite()
+        ->get("/admin/apps/{$this->demoApp->slug}/versions")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('versions', fn ($versions) => collect($versions)->contains(fn ($row) => $row['id'] === $source->id
+                && $row['updates']['image'] === null
+                && $row['updates']['images'][0]['key'] === 'imaginary'
+                && $row['updates']['images'][0]['group'] === 'media'))
+        );
 });
 
 // ─── Store validation ─────────────────────────────────────────────────────────

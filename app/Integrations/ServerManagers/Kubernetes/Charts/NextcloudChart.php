@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 
 class NextcloudChart extends HelmChart
@@ -76,11 +77,7 @@ class NextcloudChart extends HelmChart
                 'enabled' => $app_instance->configuration('imaginary-enabled'),
                 'replicaCount' => $app_instance->configuration('imaginary-replicaCount'),
                 'resources' => self::IMAGINARY_RESOURCES,
-                'image' => [
-                    'registry' => $app_instance->configuration('imaginary-image-registry'),
-                    'repository' => $app_instance->configuration('imaginary-image-repository'),
-                    'tag' => $app_instance->configuration('imaginary-image-tag'),
-                ],
+                'image' => $this->recommendedImaginaryImage(),
             ],
             'ingress' => [
                 'annotations' => $app_instance->configuration('ingress-tls') ? [
@@ -184,6 +181,23 @@ class NextcloudChart extends HelmChart
         ];
 
         return $chart;
+    }
+
+    // Imaginary's image is one of the version's own (see HelmChart::applyImageOverrides()), which
+    // is written over this. A version without one runs the image the profile recommends: the
+    // chart's own (h2non/imaginary 1.2.4) is years old, and doesn't fit the chart's template
+    // the way Nextcloud's maintained build does (see NextcloudProfile).
+    private function recommendedImaginaryImage(): array
+    {
+        $recommendations = Application::profile($this->app_instance->application->slug)->recommendations();
+
+        foreach ($recommendations['images'] ?? [] as $image) {
+            if (($image['key'] ?? null) === 'imaginary') {
+                return Arr::only($image, ['registry', 'repository', 'tag']);
+            }
+        }
+
+        return [];
     }
 
     // The nextcloud chart has no `commonLabels`, so each resource kind it
