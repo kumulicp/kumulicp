@@ -43,11 +43,13 @@ class Organizations extends Controller
         // either, and their pages are closed to admins.
         $organizations = Organization::where('type', '!=', 'shared')->notTest()->paginate(20);
         $out_of_date = app(PendingUpdates::class)->byOrganization($organizations->pluck('id')->all());
+        $subscriptions = app(PendingUpdates::class)->subscriptionsOf($organizations->pluck('id')->all());
 
         return inertia()->render('Admin/Organizations/OrganizationsList', [
-            'organizations' => $organizations->map(function ($organization) use ($out_of_date) {
+            'organizations' => $organizations->map(function ($organization) use ($out_of_date, $subscriptions) {
                 return [
                     'out_of_date' => $out_of_date[$organization->id] ?? 0,
+                    'subscription_out_of_date' => isset($subscriptions[$organization->id]),
                     'id' => $organization->id,
                     'name' => $organization->name,
                     'is_suborg' => is_int($organization->parent_organization_id),
@@ -72,8 +74,10 @@ class Organizations extends Controller
 
         $subscription = (new SubscriptionService($organization))->all();
         $out_of_date = app(PendingUpdates::class)->byInstance($organization->app_instances->pluck('id')->all());
+        $subscription_updates = app(PendingUpdates::class)->subscriptionsOf([$organization->id])[$organization->id] ?? [];
 
         return inertia()->render('Admin/Organizations/OrganizationView', [
+            'subscription_updates' => $subscription_updates,
             'organization' => [
                 'id' => $organization->id,
                 'name' => $organization->name,

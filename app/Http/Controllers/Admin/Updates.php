@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Apps\MassReconcile;
+use App\Actions\Organizations\SubscriptionUpdate;
 use App\AppInstance;
 use App\Console\Calls\ScanUpdateDrift;
 use App\Http\Controllers\Controller;
+use App\Organization;
+use App\OrganizationUpdateState;
+use App\Services\SubscriptionService;
 use App\Support\Facades\Action;
+use App\Updates\OrganizationDrift;
 use App\Updates\PendingUpdates;
 use App\Updates\Reconcile;
 use App\Updates\UpdateDrift;
@@ -37,6 +42,7 @@ class Updates extends Controller
         return inertia()->render('Admin/Updates/UpdatesList', [
             'summary' => $this->pending->summary(),
             'groups' => $reviewing ? [] : $this->pending->groups(),
+            'subscriptions' => $this->pending->subscriptions(),
             'filters' => [
                 'change' => $filters['change'] ?? null,
                 'aspect' => $filters['aspect'] ?? null,
@@ -111,6 +117,42 @@ class Updates extends Controller
         return back()->with('success', __('admin.updates.updating', ['count' => $preview['instances']]));
     }
 
+    /**
+     * Brings the subscriptions of the organizations picked up to date: a
+     * SubscriptionUpdate for each, which does what changed and nothing else.
+     */
+    public function applySubscriptions(Request $request): RedirectResponse
+    {
+        $organizations = Organization::whereIn('id', $this->selectedSubscriptions($request)->distinct()->pluck('organization_id'))->get();
+
+        $organizations->each(fn (Organization $organization) => Action::execute(
+            new SubscriptionUpdate($organization, new SubscriptionService($organization)),
+            null,
+            true,
+        ));
+
+        return back()->with('success', __('admin.updates.updating_subscriptions', ['count' => $organizations->count()]));
+    }
+
+    /**
+     * Takes what is out of date in the subscriptions of the organizations picked as up
+     * to date, without bringing them up to date: the change needs nothing done.
+     */
+    public function dismissSubscriptions(Request $request, OrganizationDrift $drift): RedirectResponse
+    {
+        $by_organization = $this->selectedSubscriptions($request)->get(['organization_id', 'aspect'])->groupBy('organization_id');
+
+        Organization::whereIn('id', $by_organization->keys())->get()->each(
+            fn (Organization $organization) => $drift->dismiss(
+                $organization,
+                $by_organization[$organization->id]->pluck('aspect')->all(),
+                $request->user()->id,
+            )
+        );
+
+        return back()->with('success', __('admin.updates.dismissed_subscriptions', ['count' => $by_organization->count()]));
+    }
+
     /** Whether anything is updated on its own, and which aspects are */
     public function policy(Request $request, UpdatePolicy $policy): RedirectResponse
     {
@@ -173,6 +215,33 @@ class Updates extends Controller
         $states = isset($validated['instance_ids'])
             ? $this->pending->query()->whereIn('app_instance_id', $validated['instance_ids'])
             : $this->pending->filtered(['change' => $validated['change']]);
+
+        return $states->when(! empty($validated['aspects']), fn ($query) => $query->whereIn('aspect', $validated['aspects']));
+    }
+
+    /**
+     * The out of date aspects of the subscriptions that were picked: the organizations
+     * listed, or all of them, and optionally just some aspects.
+     *
+     * @return Builder<OrganizationUpdateState>
+     */
+    private function selectedSubscriptions(Request $request): Builder
+    {
+        $validated = $request->validate([
+            'organization_ids' => 'required_without:all|array|min:1',
+            'organization_ids.*' => 'integer|exists:organizations,id',
+            'all' => 'required_without:organization_ids|boolean',
+            'aspects' => 'nullable|array',
+            'aspects.*' => 'string|max:100',
+        ]);
+
+        $states = $this->pending->organizationQuery();
+
+        if (isset($validated['organization_ids'])) {
+            $states->whereIn('organization_id', $validated['organization_ids']);
+        } elseif (! $request->boolean('all')) {
+            $states->whereRaw('1 = 0');
+        }
 
         return $states->when(! empty($validated['aspects']), fn ($query) => $query->whereIn('aspect', $validated['aspects']));
     }

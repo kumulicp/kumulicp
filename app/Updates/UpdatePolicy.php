@@ -39,6 +39,11 @@ class UpdatePolicy
     /** What an aspect is without an admin having said */
     public function defaultMode(string $aspect): string
     {
+        // Bringing an organization's subscription up to date is what SubscriptionUpdate does whenever it is asked to
+        if (in_array($aspect, OrganizationDrift::ASPECTS, true)) {
+            return self::AUTO;
+        }
+
         $steps = collect($this->steps->registered())->filter(fn (UpdateStep $step) => in_array($aspect, $step->aspects(), true));
 
         return $steps->isNotEmpty() && $steps->doesntContain(fn (UpdateStep $step) => $step->disruptive())
@@ -89,6 +94,7 @@ class UpdatePolicy
 
         /** @var Collection<int, string> $keys */
         $keys = collect($registered)
+            ->merge(OrganizationDrift::ASPECTS)
             ->merge($apps->keys())
             ->unique()
             ->sort()

@@ -39,7 +39,11 @@ abstract class UpdateStep
         return false;
     }
 
-    /** Recommended once the app has been upgraded: the new version may need it */
+    /**
+     * Whether a new version may need the step run whatever the fingerprints of its
+     * aspects say (an upgrade changes what a version's roles or customizations
+     * make of the app): its aspects are then out of date once the app is upgraded.
+     */
     public function afterUpgrade(AppInstance $app_instance): bool
     {
         return false;

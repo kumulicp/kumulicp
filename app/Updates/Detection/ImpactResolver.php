@@ -7,11 +7,13 @@ use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
 use App\Organization;
+use App\Plan;
+use App\Updates\OrganizationDrift;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Which app instances an edit to a definition can affect, and whether the edit
- * can affect them at all.
+ * Which app instances, or organizations, an edit to a definition can affect, and
+ * whether the edit can affect them at all.
  *
  * This only narrows what is looked at. Whether an instance is out of date is
  * decided by comparing the fingerprints of its aspects (see UpdateDrift), so an
@@ -33,6 +35,8 @@ class ImpactResolver
         // status is whether customers can pick it, and the update checks and announcements are about the version, not the installs
         AppVersion::class => ['status', 'update_check', 'announcement_location', 'announcement_id', 'announcement_url', 'created_at', 'updated_at'],
         AppRole::class => ['label', 'description', 'category', 'created_at', 'updated_at'],
+        // An organization's plan: what it is called and shown as, and whether new customers can pick it, don't change what its subscribers are charged or given
+        Plan::class => ['name', 'description', 'display_order', 'archive', 'is_default', 'org_type', 'features', 'status', 'created_at', 'updated_at'],
     ];
 
     /**
@@ -92,5 +96,19 @@ class ImpactResolver
         };
 
         return $query?->whereIn('organization_id', Organization::notTest()->select('organizations.id'));
+    }
+
+    /**
+     * The organizations that depend on the definition: the ones on an organization
+     * plan. Null for a definition that only app instances depend on.
+     *
+     * @param  class-string  $subject_type
+     * @return Builder<Organization>|null
+     */
+    public function organizations(string $subject_type, int $subject_id): ?Builder
+    {
+        return $subject_type === Plan::class
+            ? app(OrganizationDrift::class)->scannable()->where('plan_id', $subject_id)
+            : null;
     }
 }
