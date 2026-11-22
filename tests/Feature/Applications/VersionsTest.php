@@ -55,11 +55,27 @@ it('creates a version with recommendations — copies settings from app profile'
         ->where('name', '2.0')
         ->firstOrFail();
 
+    // The chart is the profile's chart, found in the repository it names
+    expect($version->setting('chart_name'))->toBe('demo-chart');
     expect($version->setting('chart_version'))->toBe('2.5.0');
-    expect($version->setting('helm_repo_name'))->toBe('demo-chart');
+    expect($version->setting('helm_repo_name'))->toBe('https://charts.example.com');
     expect($version->setting('image_repo_name'))->toBe('demo/app');
     expect($version->setting('image_registry'))->toBe('registry.example.com');
     expect($version->admin_path)->toBe('/admin');
+});
+
+it('creates a version with recommendations with the settings the app was first set up with', function () {
+    // Nextcloud is set up with a version when it is first loaded, from the same recommendations
+    $nextcloud = Application::initialize('nextcloud');
+    $first = AppVersion::where('application_id', $nextcloud->id)->firstOrFail();
+
+    $this->post("/admin/apps/{$nextcloud->slug}/versions", ['version' => '99.0.0', 'copy_from' => 'recommendations'])
+        ->assertSessionDoesntHaveErrors();
+
+    $added = AppVersion::where('application_id', $nextcloud->id)->where('name', '99.0.0')->firstOrFail();
+
+    expect($first->settings)->toMatchArray(['chart_name' => 'nextcloud', 'helm_repo_name' => 'https://nextcloud.github.io/helm/'])
+        ->and($added->settings)->toBe($first->settings);
 });
 
 it('creates a version with previous_version — copies settings, roles and admin_path', function () {

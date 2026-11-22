@@ -90,14 +90,9 @@ class Versions extends Controller
             $roles = $copy_version->roles;
             $image_registry_id = $copy_version->image_registry_id;
         } elseif ($validatedData['copy_from'] === 'recommendations') {
-            $recommendations = ApplicationFacade::profile($app)->recommendations();
-            $settings = [
-                'chart_name' => Arr::get($recommendations, '', null),
-                'chart_version' => Arr::get($recommendations, 'helm_chart_version', null),
-                'helm_repo_name' => Arr::get($recommendations, 'helm_chart_name', null),
-                'image_repo_name' => Arr::get($recommendations, 'image_repo', null),
-                'image_registry' => Arr::get($recommendations, 'image_registry', null),
-            ];
+            $profile = ApplicationFacade::profile($app);
+            $recommendations = $profile->recommendations();
+            $settings = $profile->recommendedVersionSettings();
             $admin_path = Arr::get($recommendations, 'admin_path', null);
             $roles = Arr::get($recommendations, 'roles', null);
         } else {

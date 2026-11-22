@@ -387,13 +387,7 @@ class ApplicationService
         $version->status = 'active';
         $version->admin_path = Arr::get($recommendations, 'admin_path');
         $version->roles = [];
-        $version->settings = array_filter([
-            'chart_name' => Arr::get($recommendations, 'helm_chart_name'),
-            'chart_version' => Arr::get($recommendations, 'helm_chart_version'),
-            'helm_repo_name' => Arr::get($recommendations, 'helm_chart_repo'),
-            'image_repo_name' => Arr::get($recommendations, 'image_repo'),
-            'image_registry' => Arr::get($recommendations, 'image_registry'),
-        ], fn ($value) => $value !== null);
+        $version->settings = $this->profile($application->slug)->recommendedVersionSettings();
         $version->save();
         $version->addRecommendedImages($recommendations);
 
