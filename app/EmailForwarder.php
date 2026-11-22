@@ -77,6 +77,9 @@ class EmailForwarder extends Model
         return $this->belongsTo(OrgDomain::class, 'domain_id');
     }
 
+    /**
+     * @return HasMany<EmailForwarderDestination, $this>
+     */
     public function destinations(): HasMany
     {
         return $this->hasMany(EmailForwarderDestination::class);
