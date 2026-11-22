@@ -52,16 +52,21 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
   - A new group-DN builder uses the org's own slug. Do not change `Dn::create`, which users, apps and domains rely on.
   - A suborg needs an `o=<suborg-slug>` entry and an `ou=groups` OU. Create them lazily on first group, and also when the suborg is created (section 4), so both paths work.
   - The parent's group list has to query each suborg's path in turn, so labelling groups by org falls out for free.
-  - Check that nothing else depends on the directory layout. Look at `AddLdapGroups`, any LDAP ACL or config used by the app integrations (for example Nextcloud's LDAP group backend), and the `controlPanelAccess` groups. **(verify)**
-- **Existing groups.** Anything suborg users already created sits under the parent's `o=` and cannot be attributed to a suborg.
-  - Assumption: they stay with the parent. After the change, the parent sees them as its own and suborg users no longer see them.
-  - Confirm that nobody is using suborg groups in production yet, or the loss of visibility will be a surprise.
+  - **Risk found when checking the layout dependencies (needs your confirmation, open question 14).** Two things assume that a suborg's directory data lives under the parent's `o=`:
+    - **ACLs.** `.github/ldap/acl.ldif` lets `cn=admin,o=X` write only inside `o=X`. A parent org admin cannot read a separate `o=<suborg>` tree, and a new `o=<suborg>` would need its own admin entry or an extended rule.
+    - **Nextcloud.** `NextcloudEnvVars` binds as `cn=admin,<Dn::create(org)>` (the parent's admin for a suborg) and searches `ou=groups,<that o=>` for groups. Groups under `o=<suborg>` would therefore be invisible to the suborg's Nextcloud, and group-folder sync would stop working for suborg apps. Today the same setup lets a suborg's Nextcloud see all of the parent's groups, which is the same leak seen from the app side.
+    - A separate `o=` path would need: an admin entry per suborg, ACL changes, and the app integrations pointed at two bases (users in the parent's `ou=users`, groups in the suborg's `o=`). The shared-hub code path already uses the directory-reader account with a widened base, so it is a known pattern, but it is real work in each integration.
+    - **Alternative:** keep suborg groups inside the parent's tree, `ou=<category>,ou=<suborg-slug>,ou=groups,o=<parent>`. ACLs and app bind accounts keep working unchanged, and each suborg's app narrows its group base to `ou=<suborg-slug>,ou=groups,o=<parent>` while the parent's app keeps the wide base. The cost is that searches under the parent's `ou=groups` have to be one level (or filtered) so parent lookups don't return suborg groups.
+    - Also still to check: `UpdateLDAPGroups`, `AddLdapGroups`, `LdapSupport`, the Authentik group mapping, and the `controlPanelAccess` groups.
+- **Existing groups.** Nobody is using suborg groups yet (decided), so no backfill or migration is needed. Anything already there stays with the parent.
 
 ### 2.3 Group work items
 
-0. **Make the LDAP tests run.** `skipUnlessDriver('ldap')` skips every LDAP case unless the driver is configured. `docker-compose.yml.sample` has an `openldap` service, but I found no CI workflow that starts one.
-   - Add an LDAP service to CI (or a documented local command) before relying on any LDAP result.
-   - Without it, the production driver is the untested one.
+0. **Baseline: confirm the LDAP tests run (correction to an earlier draft).** CI already starts an OpenLDAP container with the memberof overlay and the per-org ACLs (`.github/ldap/*.ldif`) and runs the `AccountManagerLdap` suite in both `laravel.yml` and `laravel-frankenphp.yml`. An earlier version of this plan said CI had no LDAP. That was wrong.
+   - `GroupsTest` calls `skipUnlessDriver('ldap', $driver)`, so only its `ldap` dataset row runs. The `db` row is skipped by design.
+   - `GroupCrossTenantTest` forces the `db` driver and runs inside the same suite.
+   - Local runs need PHP 8.4, `ext-ldap`, `ext-bcmath`, and a slapd with memberof and the ACLs. The cloud sandbox has PHP 8.3 and no Docker daemon, so the first job is to get a reproducible local runner (for example a setup script on the `kumulicp` environment) before writing code against LDAP.
+   - Record the current pass/fail baseline of `AccountManagerLdap` before any change.
 1. **Write failing tests first**, LDAP first, using the existing `account_manager_drivers` dataset:
    - create, edit, delete as a suborg user;
    - a suborg cannot see, edit or delete the parent's or a sibling's groups;
@@ -70,7 +75,7 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
    - cross-org members are rejected on both drivers;
    - the same group name can exist in two suborgs;
    - existing parent groups still resolve after the DN change;
-   - a suborg's `o=` entry and `ou=groups` are created on suborg creation and lazily on first group.
+   - the suborg's group container is created on suborg creation and lazily on first group.
 2. **Fix LDAP scoping.** Add a group-specific DN builder that uses the org's own `o=` (see 2.2).
    - Use the same builder in `Groups` (add, find, collect, count) and `Group` (updateMembers, updateManagers, updateCategory, rename).
    - Check `AddLdapGroups` (a job that sets the organization) and any other code that builds group DNs.
@@ -159,7 +164,13 @@ via an unlabeled `organization` select on the review page. It only appears when 
 5. **Who can activate, and who pays (decided).**
    - A separately billed suborg can be activated into only by its own admins, using the suborg's own payment method. Parent admins do not see it in the selector, and `activate` rejects it server-side.
    - Check payment with `Billing::organization($payer)->hasDefaultPaymentMethod()` for the payer, not the viewer.
-   - A jointly billed suborg is paid by the parent: the parent's payment method, and the parent's invoice. Who may trigger activation there is open question 11.
+   - A jointly billed suborg is paid by the parent: the parent's payment method, and the parent's invoice.
+   - **Parent setting (decided): "Let suborganizations activate apps".** It is a parent-org setting stored with `updateSetting`, off by default, and editable on the Organization settings page by parent admins.
+     - Off: only parent admins can activate apps into a jointly billed suborg, as today.
+     - On, and the suborg is jointly billed: suborg admins can activate apps themselves, billed to the parent, and the payment-method requirement is hidden for them. The review page and the `activate` check do not ask a suborg user for a payment method.
+     - On, but the suborg is separately billed: the setting has no effect. That suborg always pays with its own method.
+     - The suborg's own plan limits and the family ceiling still apply.
+     - Assumption to confirm: hiding the requirement means not asking the suborg user for a card, but the server still checks that the parent has a default payment method when the plan is paid. If it doesn't, the suborg user sees a plain "ask your parent organization to add a payment method" message.
 6. **Domains and parent apps (decided: domains only).**
    - A suborg app may use the suborg's own domains and the parent's domains. It may not use a sibling's domains.
    - It may not be attached under a parent's or a sibling's app. Parent-app candidates come from the target org only.
@@ -228,7 +239,7 @@ via an unlabeled `organization` select on the review page. It only appears when 
 
 ## 6. Suggested order
 
-1. Get an LDAP service running in CI (2.3.0). Group scoping, delete scope and driver are already decided (section 7).
+1. Establish a local test baseline (2.3.0). CI already runs LDAP. Group scoping, delete scope and driver are already decided (section 7).
 2. Add failing tests (section 5), LDAP groups first, plus the cancel/resubscribe authorization test.
 3. Fix LDAP group scoping and membership (2.3.2 to 2.3.4), backfill existing groups, then the parent view (2.3.6 to 2.3.9). DB driver fixes (2.3.5) after that.
 4. Fix the creation provisioning and plan-flag enforcement.
@@ -248,10 +259,13 @@ via an unlabeled `organization` select on the review page. It only appears when 
 6. App limits come from the target suborg's own plan. `include_in_parent_invoice` only decides who pays. An optional family-wide ceiling plan setting covers free plans.
 7. A separately billed suborg can only be activated into by its own admins, with the suborg's payment method.
 8. A suborg app may use the parent's domains (domains only). It may not use a parent or sibling app as its parent app. Sibling domains are not allowed (assumed from "domain only").
-9. Suborg groups live under a separate `o=<suborg-slug>` path in LDAP.
+9. Suborg groups live under a separate `o=<suborg-slug>` path in LDAP. **Under review: see open question 14.**
 10. A parent group may contain suborg users.
 
+11. For a jointly billed suborg, suborg admins can activate apps only when the parent turns on a "Let suborganizations activate apps" setting (off by default). When it is on, the payment requirement is hidden from the suborg user (3.3).
+12. Nobody uses suborg groups in production yet, so no backfill of existing groups is needed.
+13. Sibling domains are not allowed for suborg apps. Only the suborg's own and the parent's domains are.
+
 ### Still open
-11. For a jointly billed suborg (paid by the parent): may only the parent admin activate apps, or can the suborg's admins too? Suborg admins currently hit the payment check against a suborg that has no payment method of its own. Recommendation: both may activate, billed to the parent, subject to the target plan's limits. A parent-set approval step could come later.
-12. Is anyone already using suborg groups in production? Existing suborg-created groups stay with the parent after the LDAP change (2.2).
-13. Does the sibling-domain rule in decision 8 match what you meant?
+14. Decision 9 (separate `o=<suborg>` path) conflicts with the ACLs and with how Nextcloud is configured (see 2.2). Do you want to keep it, and accept the ACL and integration work, or switch to groups nested inside the parent's tree?
+15. Should the activation setting in decision 11 be one switch on the parent, or a per-suborg override as well? I assumed one switch on the parent.
