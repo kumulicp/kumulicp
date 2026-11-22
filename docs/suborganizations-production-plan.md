@@ -45,19 +45,17 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
 - The parent admin gets a group list that includes suborg groups, labelled by org, and can create, edit and delete them.
 - A parent user cannot belong to a suborg group (decided). The DB driver already enforces this. LDAP must too.
 - A parent group may contain suborg users (decided). This is what the DB driver allows today (`belongsToGroupOrganization`).
-- **LDAP layout (decided): a separate `o=` path per suborg.** A suborg's groups live at
-  `cn=<group>,ou=<category>,ou=groups,o=<suborg-slug>,<base_dn>`. The parent's groups stay where they are, under `o=<parent-slug>`.
-  - This removes the need for one-level searches. The parent's `ou=groups` subtree no longer contains suborg groups, so existing queries are safe.
-  - Users stay where they are, in the parent's `ou=users`. Group `member` values point at those user DNs. A DN can reference an entry in another `o=` tree.
-  - A new group-DN builder uses the org's own slug. Do not change `Dn::create`, which users, apps and domains rely on.
-  - A suborg needs an `o=<suborg-slug>` entry and an `ou=groups` OU. Create them lazily on first group, and also when the suborg is created (section 4), so both paths work.
-  - The parent's group list has to query each suborg's path in turn, so labelling groups by org falls out for free.
-  - **Risk found when checking the layout dependencies (needs your confirmation, open question 14).** Two things assume that a suborg's directory data lives under the parent's `o=`:
-    - **ACLs.** `.github/ldap/acl.ldif` lets `cn=admin,o=X` write only inside `o=X`. A parent org admin cannot read a separate `o=<suborg>` tree, and a new `o=<suborg>` would need its own admin entry or an extended rule.
-    - **Nextcloud.** `NextcloudEnvVars` binds as `cn=admin,<Dn::create(org)>` (the parent's admin for a suborg) and searches `ou=groups,<that o=>` for groups. Groups under `o=<suborg>` would therefore be invisible to the suborg's Nextcloud, and group-folder sync would stop working for suborg apps. Today the same setup lets a suborg's Nextcloud see all of the parent's groups, which is the same leak seen from the app side.
-    - A separate `o=` path would need: an admin entry per suborg, ACL changes, and the app integrations pointed at two bases (users in the parent's `ou=users`, groups in the suborg's `o=`). The shared-hub code path already uses the directory-reader account with a widened base, so it is a known pattern, but it is real work in each integration.
-    - **Alternative:** keep suborg groups inside the parent's tree, `ou=<category>,ou=<suborg-slug>,ou=groups,o=<parent>`. ACLs and app bind accounts keep working unchanged, and each suborg's app narrows its group base to `ou=<suborg-slug>,ou=groups,o=<parent>` while the parent's app keeps the wide base. The cost is that searches under the parent's `ou=groups` have to be one level (or filtered) so parent lookups don't return suborg groups.
-    - Also still to check: `UpdateLDAPGroups`, `AddLdapGroups`, `LdapSupport`, the Authentik group mapping, and the `controlPanelAccess` groups.
+- **LDAP layout (decided, option B): suborg groups live inside the parent's tree.** A suborg's groups live at
+  `cn=<group>,ou=<category>,ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent-slug>,<base_dn>`. The parent's own groups stay where they are, at `cn=<group>,ou=<category>,ou=groups,o=<parent-slug>`.
+  - **Why this layout:** the ACLs in `.github/ldap/acl.ldif` and the app bind accounts (for example Nextcloud binds as the parent's `cn=admin,o=<parent>`) both assume everything for a tenant sits under the parent's `o=`. Keeping suborg groups there means no ACL change and no new bind accounts.
+  - **Why `ou=suborgs`:** it keeps a suborg slug from colliding with a category OU (`teams`, `projects` and so on), which are siblings under `ou=groups`.
+  - **Scoping each app:** a suborg's app narrows its group base to `ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent>`. The parent's app keeps the wide base. This also closes the leak where a suborg's Nextcloud can see every parent group today.
+  - **Searches must not bleed:** a subtree search under `ou=groups` also matches `ou=suborgs`. The parent's `Groups::find` (no category) and `collect` (no category) must search the category OUs only, or exclude `ou=suborgs`, and the suborg's must search only its own subtree.
+  - Users stay where they are, in the parent's `ou=users`. Group `member` values point at those user DNs.
+  - A new group-DN builder takes (org, category, name) and returns the right DN for a parent or a suborg. Do not change `Dn::create`, which users, apps and domains rely on.
+  - The suborg's `ou=<suborg-slug>,ou=suborgs,ou=groups` container is created on suborg creation (section 4) and lazily on first group.
+  - The parent's group list queries its own tree plus each suborg's container, labelled by org.
+  - Still to check: `UpdateLDAPGroups`, `AddLdapGroups`, `LdapSupport`, the Authentik group mapping, `Ldap\Models\User::groups()`, and the memberof overlay (`olcMemberOfRefint`) with the longer DNs. **(verify)**
 - **Existing groups.** Nobody is using suborg groups yet (decided), so no backfill or migration is needed. Anything already there stays with the parent.
 
 ### 2.3 Group work items
@@ -76,7 +74,7 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
    - the same group name can exist in two suborgs;
    - existing parent groups still resolve after the DN change;
    - the suborg's group container is created on suborg creation and lazily on first group.
-2. **Fix LDAP scoping.** Add a group-specific DN builder that uses the org's own `o=` (see 2.2).
+2. **Fix LDAP scoping.** Add a group-specific DN builder for the layout in 2.2.
    - Use the same builder in `Groups` (add, find, collect, count) and `Group` (updateMembers, updateManagers, updateCategory, rename).
    - Check `AddLdapGroups` (a job that sets the organization) and any other code that builds group DNs.
 3. **Fix LDAP membership validation.** Mirror `belongsToGroupOrganization` in `Ldap\Group::updateMembers` and `updateManagers`. Org membership must come from `SuborgUser`, because parent and suborg users share one `ou=users` tree and the DN says nothing about the org.
@@ -259,7 +257,7 @@ via an unlabeled `organization` select on the review page. It only appears when 
 6. App limits come from the target suborg's own plan. `include_in_parent_invoice` only decides who pays. An optional family-wide ceiling plan setting covers free plans.
 7. A separately billed suborg can only be activated into by its own admins, with the suborg's payment method.
 8. A suborg app may use the parent's domains (domains only). It may not use a parent or sibling app as its parent app. Sibling domains are not allowed (assumed from "domain only").
-9. Suborg groups live under a separate `o=<suborg-slug>` path in LDAP. **Under review: see open question 14.**
+9. Suborg groups live inside the parent's LDAP tree, under `ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent>` (option B). A separate `o=` per suborg was rejected because it conflicts with the ACLs and Nextcloud's bind account.
 10. A parent group may contain suborg users.
 
 11. For a jointly billed suborg, suborg admins can activate apps only when the parent turns on a "Let suborganizations activate apps" setting (off by default). When it is on, the payment requirement is hidden from the suborg user (3.3).
@@ -267,5 +265,4 @@ via an unlabeled `organization` select on the review page. It only appears when 
 13. Sibling domains are not allowed for suborg apps. Only the suborg's own and the parent's domains are.
 
 ### Still open
-14. Decision 9 (separate `o=<suborg>` path) conflicts with the ACLs and with how Nextcloud is configured (see 2.2). Do you want to keep it, and accept the ACL and integration work, or switch to groups nested inside the parent's tree?
-15. Should the activation setting in decision 11 be one switch on the parent, or a per-suborg override as well? I assumed one switch on the parent.
+14. Should the activation setting in decision 11 be one switch on the parent, or a per-suborg override as well? I assumed one switch on the parent.
