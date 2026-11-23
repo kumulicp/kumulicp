@@ -15,8 +15,8 @@ class NoBackupDriverException extends \RuntimeException
         $server = $org_server->server;
 
         return new self(__('messages.exception.no_backup_driver_for', [
-            'server' => $server?->name ?? '#'.$org_server->id,
-            'type' => $server?->type ?? '?',
+            'server' => $server->name,
+            'type' => $server->type,
         ]));
     }
 }

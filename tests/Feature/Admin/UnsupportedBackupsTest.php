@@ -18,11 +18,17 @@ use Tests\TestCase;
 uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
-    (new TestSupports)->seed();
+    $this->support = new TestSupports;
+    $this->support->seed();
+    $this->support->activateDemoApp();
     config(['toggle.flags.app-backups' => true]);
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
+});
+
+afterEach(function () {
+    $this->support->cleanLdap();
 });
 
 /**
@@ -64,7 +70,8 @@ function orgBackup($test, string $type, int $app)
 }
 
 it('says which backup types there are drivers for', function () {
-    expect(Backup::supportedTypes())->toBe(['database'])
+    // Plugins can register more types, so only the built-in one is pinned down
+    expect(Backup::supportedTypes())->toContain('database')
         ->and(Backup::supports('database'))->toBeTrue()
         ->and(Backup::supports('web'))->toBeFalse();
 });
