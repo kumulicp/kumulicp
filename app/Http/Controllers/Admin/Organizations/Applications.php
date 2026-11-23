@@ -216,12 +216,20 @@ class Applications extends Controller
                 'id' => $move->id,
                 'server' => ApplicationWebCleanup::previousServer($move)?->server?->name,
             ])->values(),
+            // The app servers it can be moved to, or could be once what it uses is moved to servers they can
+            // reach (requirements), which is what the page takes the admin through
             'web_servers' => $external ? [] : ServerChoices::for('web')
-                ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server))
-                ->map(fn (Server $server) => [
-                    'value' => $server->id,
-                    'text' => $server->name,
-                ])->values(),
+                ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server, with_reach: false))
+                ->map(function (Server $server) use ($app) {
+                    $requirements = ApplicationWebMove::requirements($app, $server);
+
+                    return [
+                        'value' => $server->id,
+                        'text' => $server->name,
+                        'ready' => collect($requirements)->every(fn (array $requirement) => $requirement['reachable']),
+                        'requirements' => $requirements,
+                    ];
+                })->values(),
             'sso_servers' => $external ? [] : ServerChoices::for('sso')
                 ->filter(fn (Server $server) => ! ApplicationSsoMove::blockers($app, $server))
                 ->map(fn (Server $server) => [

@@ -60,7 +60,8 @@ class MoveBlockers
 
     /**
      * The messages for everything in the way of moving the app's $type server to $target
-     * (none if nothing is).
+     * (none if nothing is). Without $with_reach, not the servers being unable to reach each other:
+     * that is the one thing that can be made right in steps before the move.
      *
      * @return array<int, string>
      */
@@ -70,11 +71,12 @@ class MoveBlockers
         Server $target,
         bool $require_active = true,
         ?Organization $organization = null,
+        bool $with_reach = true,
     ): array {
         return collect([
             ...self::app($app, $type, $require_active, $organization),
             ...self::target($type, $target),
-            ...self::reach($app, $type, $target),
+            ...($with_reach ? self::reach($app, $type, $target) : []),
             ...self::same($app, $type, $target),
         ])->map(fn (string $reason) => self::message($reason, $type, self::reachParams($app, $reason)))->unique()->values()->all();
     }
