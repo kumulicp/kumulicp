@@ -52,6 +52,10 @@ export default {
       {
         title: this.$t('admin.domains.domains'),
         url: basePath + '/domains'
+      },
+      {
+        title: this.$t('admin.servers.servers'),
+        url: basePath + '/servers'
       }
     ]
 

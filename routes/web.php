@@ -234,6 +234,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('upgrade/{version}', 'Admin\Organizations\Applications@upgrade')->name('organizations.app.upgrade');
                     });
                 });
+                Route::get('servers', 'Admin\Organizations\OrgServers@index')->name('organizations.servers.index');
+                Route::put('servers/{orgServer}', 'Admin\Organizations\OrgServers@update')->name('organizations.servers.update');
             });
         });
 
