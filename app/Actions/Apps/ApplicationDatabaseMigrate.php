@@ -70,42 +70,53 @@ class ApplicationDatabaseMigrate extends ApplicationServerMove
     }
 
     /**
-     * Why this app can't be migrated to $target_server, or null if it can.
+     * Everything that stops this app being migrated to $target_server (nothing if it can),
+     * all at once so none has to be fixed to find the next.
+     *
+     * @return array<int, string>
      */
-    public static function blocker(AppInstance $app_instance, Server $target_server, bool $require_active = true): ?string
+    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true): array
     {
         $current = $app_instance->database_server;
+        $messages = [];
 
         if (! $app_instance->databasename || ! $current) {
-            return __('messages.database_migration.no_database');
+            $messages[] = __('messages.database_migration.no_database');
         }
 
         // What every move of a server checks, in the words the database migration has always used
-        if ($reason = MoveBlockers::app($app_instance, 'database', $require_active)) {
-            return self::blockerMessage($reason);
-        }
-
-        if ($reason = MoveBlockers::target('database', $target_server)) {
-            return self::blockerMessage($reason);
-        }
-
-        if (! $target_server->host || ! $target_server->internal_address) {
-            return __('messages.database_migration.invalid_server');
+        foreach ([
+            ...MoveBlockers::app($app_instance, 'database', $require_active),
+            ...MoveBlockers::target('database', $target_server),
+        ] as $reason) {
+            $messages[] = self::blockerMessage($reason);
         }
 
         // Both ends need a backup driver that can work against a named server:
         // the old server is dumped, the new one restored into.
-        if (! Backup::supportsServerTargets($target_server) || ! Backup::supportsServerTargets($current->server)) {
-            return __('messages.database_migration.invalid_server');
+        if (! $target_server->host
+            || ! $target_server->internal_address
+            || ! Backup::supportsServerTargets($target_server)
+            || ($current && ! Backup::supportsServerTargets($current->server))) {
+            $messages[] = __('messages.database_migration.invalid_server');
         }
 
         // Restoring replaces the database it loads into, so a different server
         // record for the same host is just as much the app's live database.
-        if ($reason = MoveBlockers::same($app_instance, 'database', $target_server)) {
-            return self::blockerMessage($reason);
+        foreach (MoveBlockers::same($app_instance, 'database', $target_server) as $reason) {
+            $messages[] = self::blockerMessage($reason);
         }
 
-        return null;
+        return array_values(array_unique($messages));
+    }
+
+    /**
+     * The first thing in the way of migrating this app to $target_server, or null if
+     * nothing is.
+     */
+    public static function blocker(AppInstance $app_instance, Server $target_server, bool $require_active = true): ?string
+    {
+        return self::blockers($app_instance, $target_server, $require_active)[0] ?? null;
     }
 
     private static function blockerMessage(string $reason): string

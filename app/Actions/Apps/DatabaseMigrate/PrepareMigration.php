@@ -20,9 +20,9 @@ class PrepareMigration extends PrepareMove
         return 'database';
     }
 
-    protected function blocker(AppInstance $app_instance, Server $target_server): ?string
+    protected function blockers(AppInstance $app_instance, Server $target_server): array
     {
-        return ApplicationDatabaseMigrate::blocker($app_instance, $target_server, require_active: false);
+        return ApplicationDatabaseMigrate::blockers($app_instance, $target_server, require_active: false);
     }
 
     protected function rollbackNote(?OrgServer $target): ?string

@@ -20,7 +20,7 @@ use App\Task;
  * Its rollback is the move's: it comes first of the steps, so by the time it is undone
  * every later step has been, and it looks at where the app actually points.
  *
- * A move says which of the app's servers it moves and what else stops it (blocker()).
+ * A move says which of the app's servers it moves and everything else that stops it (blockers()).
  */
 abstract class PrepareMove extends Step
 {
@@ -30,9 +30,11 @@ abstract class PrepareMove extends Step
     abstract protected function type(): string;
 
     /**
-     * Why the move can't go ahead, or null.
+     * Everything that stops the move going ahead; nothing if it can.
+     *
+     * @return array<int, string>
      */
-    abstract protected function blocker(AppInstance $app_instance, Server $target_server): ?string;
+    abstract protected function blockers(AppInstance $app_instance, Server $target_server): array;
 
     /**
      * What the failure message says about the target server after the rollback, if anything.
@@ -47,8 +49,8 @@ abstract class PrepareMove extends Step
         $app_instance = $task->app_instance;
         $target_server = Server::findOrFail($task->getValue('target_server_id'));
 
-        if ($blocker = $this->blocker($app_instance, $target_server)) {
-            return ActionResult::fail($blocker);
+        if ($blockers = $this->blockers($app_instance, $target_server)) {
+            return ActionResult::fail(MoveBlockers::summary($blockers));
         }
 
         $previous = $app_instance->{"{$this->type()}_server"};

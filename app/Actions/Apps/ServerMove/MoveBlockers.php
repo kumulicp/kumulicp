@@ -19,9 +19,11 @@ use InvalidArgumentException;
  *  - target(): is the server one that can take the app
  *  - same(): is it not where the app already is
  *
- * Each returns a reason (one of the constants), or null. for() runs all three, in
- * that order, and gives the message. A move that already words its own refusals
- * maps the reasons to them, as ApplicationDatabaseMigrate does.
+ * Each returns every reason that applies (constants, in order), not just the first, so
+ * that an administrator sees everything in the way at once instead of fixing one thing
+ * to find the next. all() runs all three and gives the messages; for() is the first of
+ * them. A move that already words its own refusals maps the reasons to them, as
+ * ApplicationDatabaseMigrate does.
  */
 class MoveBlockers
 {
@@ -44,8 +46,27 @@ class MoveBlockers
     public const TYPES = ['database', 'web', 'sso'];
 
     /**
-     * The message for the first thing in the way of moving the app's $type server to
-     * $target, or null if nothing is.
+     * The messages for everything in the way of moving the app's $type server to $target
+     * (none if nothing is).
+     *
+     * @return array<int, string>
+     */
+    public static function all(
+        AppInstance $app,
+        string $type,
+        Server $target,
+        bool $require_active = true,
+        ?Organization $organization = null,
+    ): array {
+        return collect([
+            ...self::app($app, $type, $require_active, $organization),
+            ...self::target($type, $target),
+            ...self::same($app, $type, $target),
+        ])->map(fn (string $reason) => self::message($reason, $type))->unique()->values()->all();
+    }
+
+    /**
+     * The message for the first thing in the way, or null if nothing is.
      */
     public static function for(
         AppInstance $app,
@@ -54,65 +75,80 @@ class MoveBlockers
         bool $require_active = true,
         ?Organization $organization = null,
     ): ?string {
-        $reason = self::app($app, $type, $require_active, $organization)
-            ?? self::target($type, $target)
-            ?? self::same($app, $type, $target);
+        return self::all($app, $type, $target, $require_active, $organization)[0] ?? null;
+    }
 
-        return $reason ? self::message($reason, $type) : null;
+    /**
+     * Messages as one text, for where there is room for only one (a flash message, a
+     * task's error).
+     *
+     * @param  array<int, string>  $messages
+     */
+    public static function summary(array $messages): string
+    {
+        return implode('. ', $messages).'.';
     }
 
     /**
      * The app is in a state to be moved. $organization, when given, is the one the move
      * was asked for (the one in the URL), and the app has to be its own.
+     *
+     * @return array<int, string>
      */
-    public static function app(AppInstance $app, string $type, bool $require_active = true, ?Organization $organization = null): ?string
+    public static function app(AppInstance $app, string $type, bool $require_active = true, ?Organization $organization = null): array
     {
         self::guard($type);
 
+        $reasons = [];
+
         if ($organization && $app->organization_id !== $organization->id) {
-            return self::WRONG_ORGANIZATION;
+            $reasons[] = self::WRONG_ORGANIZATION;
         }
 
         if ($require_active && $app->status !== 'active') {
-            return self::APP_NOT_ACTIVE;
+            $reasons[] = self::APP_NOT_ACTIVE;
         }
 
         // A web move takes the release, and a shared app's children are part of it (their
         // own release is the parent's). Moving a child alone would move nothing.
         if ($type === 'web') {
             if ($app->children()->notDeactivated()->exists()) {
-                return self::HAS_CHILDREN;
+                $reasons[] = self::HAS_CHILDREN;
             }
 
             if (! $app->usesOwnResources()) {
-                return self::IS_CHILD;
+                $reasons[] = self::IS_CHILD;
             }
         }
 
-        return null;
+        return $reasons;
     }
 
     /**
      * The server is one that can be used as the app's $type server: of that type, turned
      * on, and not a server that only holds backups.
+     *
+     * @return array<int, string>
      */
-    public static function target(string $type, Server $target): ?string
+    public static function target(string $type, Server $target): array
     {
         self::guard($type);
 
+        $reasons = [];
+
         if ($target->type !== $type) {
-            return self::WRONG_TYPE;
+            $reasons[] = self::WRONG_TYPE;
         }
 
         if ($target->status !== 'active') {
-            return self::SERVER_INACTIVE;
+            $reasons[] = self::SERVER_INACTIVE;
         }
 
         if ($target->is_backup_server) {
-            return self::BACKUP_SERVER;
+            $reasons[] = self::BACKUP_SERVER;
         }
 
-        return null;
+        return $reasons;
     }
 
     /**
@@ -120,22 +156,24 @@ class MoveBlockers
      * the same host is just as much where the app is (restoring replaces what is there), so
      * the host is compared too. For the others it is not: a host is shared by, for example,
      * several clusters that one Rancher manages.
+     *
+     * @return array<int, string>
      */
-    public static function same(AppInstance $app, string $type, Server $target): ?string
+    public static function same(AppInstance $app, string $type, Server $target): array
     {
         self::guard($type);
 
         $current = $app->{"{$type}_server"}?->server;
 
         if (! $current) {
-            return null;
+            return [];
         }
 
         if ($current->id === $target->id || ($type === 'database' && $current->host && $current->host === $target->host)) {
-            return self::SAME_SERVER;
+            return [self::SAME_SERVER];
         }
 
-        return null;
+        return [];
     }
 
     public static function message(string $reason, string $type): string
