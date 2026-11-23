@@ -1,0 +1,237 @@
+<?php
+
+use App\Actions\Apps\ApplicationWebMove;
+use App\Actions\Apps\ServerMove\MoveBlockers;
+use App\Actions\Apps\WebMove\AwaitVolume;
+use App\AppInstance;
+use App\Enums\TaskStatus;
+use App\Integrations\Applications\Nextcloud\NextcloudProfile;
+use App\Organization;
+use App\OrgServer;
+use App\Server;
+use App\Support\Facades\Action;
+use App\Task;
+use App\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Applications\DemoAppProfile;
+use Tests\Support\TestSupports;
+use Tests\TestCase;
+
+/**
+ * The admin-facing side of moving an app to another web server: which servers the app page
+ * offers, the route that starts the move, and the form for the volume the move waits for. The
+ * sequencing and rollback of the move itself is covered by ApplicationWebMoveTest.
+ */
+uses(TestCase::class, RefreshDatabase::class);
+
+afterEach(function () {
+    DemoAppProfile::$storage_handover = null;
+});
+
+beforeEach(function () {
+    (new TestSupports)->seed();
+
+    $this->admin = User::find(1);
+    $this->organization = Organization::find(1);
+    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->old = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => moveWebServer('old-cluster')->id]);
+    $this->appInstance->status = 'active';
+    $this->appInstance->web_server_id = $this->old->id;
+    $this->appInstance->save();
+});
+
+function moveWebServer(string $name, array $attributes = []): Server
+{
+    return Server::factory()->create($attributes + [
+        'name' => $name,
+        'type' => 'web',
+        'interface' => 'rancher',
+        'host' => "{$name}.example.com",
+        'default_web_server' => 0,
+    ]);
+}
+
+function moveWebUrl($test): string
+{
+    return "/admin/organizations/{$test->organization->id}/apps/{$test->appInstance->id}";
+}
+
+/**
+ * The app's move, waiting for its volume to be restored on a cluster called "new-cluster".
+ */
+function moveWaitingForVolume($test): Task
+{
+    return Task::forceCreate([
+        'organization_id' => $test->organization->id,
+        'app_instance_id' => $test->appInstance->id,
+        'action_slug' => 'application_web_move',
+        'action_group' => 'system',
+        'task_group' => 1,
+        'description' => 'Moving',
+        'status' => TaskStatus::IN_PROGRESS,
+        'custom_values' => [
+            'target_server_id' => moveWebServer('new-cluster')->id,
+            'awaiting' => ['class' => AwaitVolume::class, 'message' => 'Restore the volume'],
+        ],
+    ]);
+}
+
+it('offers the other servers of the same kind on the edit page', function () {
+    $new = moveWebServer('new-cluster');
+    $other_kind = moveWebServer('direct-cluster', ['interface' => 'kubernetes']);
+    $inactive = moveWebServer('inactive-cluster', ['status' => 'inactive']);
+    $backup = moveWebServer('backup-cluster', ['is_backup_server' => true]);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page
+            ->component('Admin/Organizations/Apps/AppEdit')
+            ->where('web_servers', function ($servers) use ($new, $other_kind, $inactive, $backup) {
+                $ids = collect($servers)->pluck('value');
+
+                // Not the one it is on, another kind, one that is turned off, or one that only holds backups
+                return $ids->contains($new->id)
+                    && ! $ids->contains($this->old->server_id)
+                    && ! $ids->intersect([$other_kind->id, $inactive->id, $backup->id])->isNotEmpty();
+            })
+        );
+});
+
+it('offers no servers while the app is not active', function () {
+    moveWebServer('new-cluster');
+    $this->appInstance->status = 'updating';
+    $this->appInstance->save();
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->has('web_servers', 0));
+});
+
+it('starts the move', function () {
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')
+        ->once()
+        ->with(Mockery::type(ApplicationWebMove::class))
+        ->andReturn(new Task);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->assertRedirect(moveWebUrl($this))
+        ->assertSessionHas('success');
+});
+
+it('says everything that is in the way at once', function () {
+    $other_kind = moveWebServer('direct-cluster', ['interface' => 'kubernetes']);
+    $this->appInstance->status = 'updating';
+    $this->appInstance->save();
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $other_kind->id])
+        ->assertSessionHas('error', MoveBlockers::summary([
+            __('messages.server_move.app_not_active', ['type' => 'web']),
+            __('messages.web_move.other_driver', ['server' => 'old-cluster', 'driver' => 'rancher']),
+        ]));
+});
+
+it('refuses the server the app is already on', function () {
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $this->old->server_id])
+        ->assertSessionHas('error', MoveBlockers::summary([__('messages.server_move.same_server', ['type' => 'web'])]));
+});
+
+it('says so when a move of the app is already running', function () {
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')->once()->andReturn(null);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->assertSessionHas('error', __('admin.organizations.apps.denied.web_move_running'));
+});
+
+it('does not move an app through another organization, or to a server that is not there', function () {
+    $new = moveWebServer('new-cluster');
+    $other = Organization::factory()->create();
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/move-web", ['web_server_id' => $new->id])
+        ->assertNotFound();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => 999999])
+        ->assertSessionHasErrors('web_server_id');
+});
+
+it('shows the form for the volume, with what the chart can be given', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    moveWaitingForVolume($this);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page
+            ->where('awaiting.form.type', 'storage')
+            ->where('awaiting.form.fields', ['claim', 'access_mode', 'storage_class', 'size'])
+            ->where('awaiting.form.access_modes', ['ReadWriteOnce', 'ReadWriteMany', 'ReadWriteOncePod', 'ReadOnlyMany'])
+        );
+});
+
+it('shows no fields for a chart that cannot be given a volume', function () {
+    moveWaitingForVolume($this);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('awaiting.form.fields', []));
+});
+
+it('confirms the volume with what the chart is to be given', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $task = moveWaitingForVolume($this);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/confirm-step', [
+            'task_id' => $task->id,
+            'volume' => 'existing',
+            'claim' => 'restored-data',
+            'access_mode' => 'ReadWriteMany',
+            'storage_class' => null,
+            'size' => null,
+        ])
+        ->assertSessionHas('success');
+
+    expect(AwaitVolume::confirmation($task->fresh())['values'])->toBe([
+        'volume' => 'existing',
+        'claim' => 'restored-data',
+        'access_mode' => 'ReadWriteMany',
+        'storage_class' => null,
+        'size' => null,
+    ]);
+});
+
+it('does not confirm an existing volume without a name, or to a chart that cannot be given one', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $task = moveWaitingForVolume($this);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'existing'])
+        ->assertSessionHasErrors('claim');
+
+    DemoAppProfile::$storage_handover = null;
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'existing', 'claim' => 'restored-data'])
+        ->assertSessionHasErrors('volume');
+
+    expect(AwaitVolume::confirmation($task->fresh()))->toBeNull();
+
+    // A new volume is something it can always start with
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'new'])
+        ->assertSessionHas('success');
+});

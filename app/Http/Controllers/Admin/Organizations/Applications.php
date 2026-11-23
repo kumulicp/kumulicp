@@ -8,6 +8,7 @@ use App\Actions\Apps\ApplicationSsoCleanup;
 use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Steps\AwaitConfirmation;
 use App\AppInstance;
@@ -209,6 +210,12 @@ class Applications extends Controller
                 'id' => $move->id,
                 'server' => ApplicationSsoCleanup::previousServer($move)?->server?->name,
             ])->values(),
+            'web_servers' => $external ? [] : ServerChoices::for('web')
+                ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server))
+                ->map(fn (Server $server) => [
+                    'value' => $server->id,
+                    'text' => $server->name,
+                ])->values(),
             'sso_servers' => $external ? [] : ServerChoices::for('sso')
                 ->filter(fn (Server $server) => ! ApplicationSsoMove::blockers($app, $server))
                 ->map(fn (Server $server) => [
@@ -413,13 +420,23 @@ class Applications extends Controller
     }
 
     /**
-     * @return array{task_id: int, message: string}|null
+     * @return array{task_id: int, message: string, form: array<string, mixed>|null}|null
      */
     private function awaiting(AppInstance $app): ?array
     {
         $task = AwaitConfirmation::waiting($app);
 
-        return $task ? ['task_id' => $task->id, 'message' => (string) $task->getValue('awaiting.message')] : null;
+        if (! $task) {
+            return null;
+        }
+
+        $step = $task->getValue('awaiting.class');
+
+        return [
+            'task_id' => $task->id,
+            'message' => (string) $task->getValue('awaiting.message'),
+            'form' => $step::form($task),
+        ];
     }
 
     public function confirm_step(Request $request, Organization $organization, AppInstance $app)
@@ -438,6 +455,33 @@ class Applications extends Controller
         $step::confirm($task, $request->validate($step::rules($task)));
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.confirmed', ['app' => $app->label]));
+    }
+
+    public function move_web(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'web_server_id' => 'required|integer|exists:servers,id',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $server = Server::findOrFail($validated['web_server_id']);
+
+        if ($blockers = ApplicationWebMove::blockers($app, $server)) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
+        }
+
+        $task = Action::execute(new ApplicationWebMove($app, $server));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.web_move_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_web', ['app' => $app->label, 'server' => $server->name]));
     }
 
     public function remove_old_sso(Request $request, Organization $organization, AppInstance $app)

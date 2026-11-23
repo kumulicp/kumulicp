@@ -23,6 +23,16 @@ class AwaitVolume extends AwaitConfirmation
         ]);
     }
 
+    // What the chart can be given, and what the access mode can be
+    public static function form(Task $task): ?array
+    {
+        return [
+            'type' => 'storage',
+            'fields' => StorageHandover::fields($task->app_instance),
+            'access_modes' => StorageHandover::ACCESS_MODES,
+        ];
+    }
+
     public static function rules(Task $task): array
     {
         $rules = StorageHandover::rules();
