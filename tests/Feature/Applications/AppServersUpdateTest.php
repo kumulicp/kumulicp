@@ -2,10 +2,10 @@
 
 use App\AppInstance;
 use App\Organization;
+use App\OrgServer;
 use App\Server;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -21,19 +21,6 @@ beforeEach(function () {
     $this->appInstance->save();
 });
 
-/**
- * A server of $type, and the organization's binding to it.
- */
-function linkAppServer(Organization $organization, string $type): int
-{
-    $server = Server::factory()->create(['type' => $type, 'name' => ucfirst($type).' server']);
-
-    return DB::table('org_servers')->insertGetId([
-        'organization_id' => $organization->id,
-        'server_id' => $server->id,
-    ]);
-}
-
 function updateAppServers($test, array $data)
 {
     return $test->actingAs($test->user)->put(
@@ -42,21 +29,38 @@ function updateAppServers($test, array $data)
     );
 }
 
-it('changes the database, app and sso servers of an app', function () {
-    $database = linkAppServer($this->organization, 'database');
-    $web = linkAppServer($this->organization, 'web');
-    $sso = linkAppServer($this->organization, 'sso');
+function bindingFor(Organization $organization, Server $server): ?OrgServer
+{
+    return OrgServer::where('organization_id', $organization->id)->where('server_id', $server->id)->first();
+}
+
+it('changes the database, app and sso servers of an app, binding the organization to each', function () {
+    $database = Server::factory()->create(['type' => 'database']);
+    $web = Server::factory()->create(['type' => 'web']);
+    $sso = Server::factory()->create(['type' => 'sso']);
+
+    expect(bindingFor($this->organization, $database))->toBeNull();
 
     updateAppServers($this, [
-        'database_server_id' => $database,
-        'web_server_id' => $web,
-        'sso_server_id' => $sso,
+        'database_server_id' => $database->id,
+        'web_server_id' => $web->id,
+        'sso_server_id' => $sso->id,
     ])->assertRedirect("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}");
 
     $this->appInstance->refresh();
-    expect($this->appInstance->database_server_id)->toBe($database)
-        ->and($this->appInstance->web_server_id)->toBe($web)
-        ->and($this->appInstance->sso_server_id)->toBe($sso);
+    expect($this->appInstance->database_server_id)->toBe(bindingFor($this->organization, $database)->id)
+        ->and($this->appInstance->web_server_id)->toBe(bindingFor($this->organization, $web)->id)
+        ->and($this->appInstance->sso_server_id)->toBe(bindingFor($this->organization, $sso)->id);
+});
+
+it('uses the binding the organization already has to a server', function () {
+    $server = Server::factory()->create(['type' => 'database']);
+    $existing = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => $server->id]);
+
+    updateAppServers($this, ['database_server_id' => $server->id])->assertSessionHasNoErrors();
+
+    expect($this->appInstance->refresh()->database_server_id)->toBe($existing->id)
+        ->and(OrgServer::where('organization_id', $this->organization->id)->where('server_id', $server->id)->count())->toBe(1);
 });
 
 it('keeps the servers of an app when none are sent', function () {
@@ -75,31 +79,30 @@ it('keeps a server of an app that is sent empty', function () {
     expect($this->appInstance->refresh()->web_server_id)->toBe($before);
 });
 
-it('does not accept a server of another organization', function () {
-    $other = Organization::factory()->create();
-    $database = linkAppServer($other, 'database');
-    $before = $this->appInstance->database_server_id;
+it('does not accept a server of the wrong type', function () {
+    $sso = Server::factory()->create(['type' => 'sso']);
 
-    updateAppServers($this, ['database_server_id' => $database])->assertSessionHasErrors('database_server_id');
-
-    expect($this->appInstance->refresh()->database_server_id)->toBe($before);
+    updateAppServers($this, ['database_server_id' => $sso->id])->assertSessionHasErrors('database_server_id');
 });
 
-it('does not accept a server of the wrong type', function () {
-    $sso = linkAppServer($this->organization, 'sso');
+it('does not accept an inactive server or a backup server', function () {
+    $inactive = Server::factory()->create(['type' => 'database', 'status' => 'inactive']);
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
 
-    updateAppServers($this, ['database_server_id' => $sso])->assertSessionHasErrors('database_server_id');
+    updateAppServers($this, ['database_server_id' => $inactive->id])->assertSessionHasErrors('database_server_id');
+    updateAppServers($this, ['database_server_id' => $backup->id])->assertSessionHasErrors('database_server_id');
 });
 
 it('does not change the servers of an app that is not active', function () {
-    $database = linkAppServer($this->organization, 'database');
+    $database = Server::factory()->create(['type' => 'database']);
     $before = $this->appInstance->database_server_id;
     $this->appInstance->status = 'updating';
     $this->appInstance->save();
 
-    updateAppServers($this, ['database_server_id' => $database])->assertSessionHas('error');
+    updateAppServers($this, ['database_server_id' => $database->id])->assertSessionHas('error');
 
-    expect($this->appInstance->refresh()->database_server_id)->toBe($before);
+    expect($this->appInstance->refresh()->database_server_id)->toBe($before)
+        ->and(bindingFor($this->organization, $database))->toBeNull();
 });
 
 it('still saves the settings of an app that is not active when its servers do not change', function () {

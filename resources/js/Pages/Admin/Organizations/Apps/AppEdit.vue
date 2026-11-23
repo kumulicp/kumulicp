@@ -100,7 +100,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             v-model="form.database_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.databaseServer')"
-            :options="org_servers.database ?? []"
+            :options="server_options.database ?? []"
             text-by="name"
             value-by="id"
             :error="!!$page.props.errors.database_server_id"
@@ -110,7 +110,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             v-model="form.web_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.appServer')"
-            :options="org_servers.web ?? []"
+            :options="server_options.web ?? []"
             text-by="name"
             value-by="id"
             :error="!!$page.props.errors.web_server_id"
@@ -120,7 +120,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             v-model="form.sso_server_id"
             class="flex flex-col sm12 mb-3"
             :label="$t('admin.apps.ssoServer')"
-            :options="org_servers.sso ?? []"
+            :options="server_options.sso ?? []"
             text-by="name"
             value-by="id"
             :error="!!$page.props.errors.sso_server_id"
@@ -337,7 +337,7 @@ export default {
       default: () => []
     },
     database_servers: Array,
-    org_servers: {
+    server_options: {
       type: Object,
       default: () => ({})
     }

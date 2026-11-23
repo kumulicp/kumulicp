@@ -238,7 +238,8 @@ database), and tests.
 **Phase 1 - shared groundwork.**
 
 - Eligible-server lookup by `Server` type with `forServer()` on save (replaces org-row-only
-  dropdowns).
+  dropdowns). **Done** (`App\Support\ServerChoices`): the app edit page and the Servers tab
+  offer any active server of the right type, and bind the organization to it when picked.
 - A shared `MoveBlockers` and base class for the three moves.
 - Replace the raw selects with a **Move** button per server type (database -> existing
   Migrate Database; web and SSO -> the new actions), keeping "reassign without moving data"

@@ -12,23 +12,26 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
 use App\Services\AppInstanceService;
+use App\Services\OrgServerService;
 use App\Support\Facades\Action;
 use App\Support\AdminAppDomain;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
+use App\Support\ServerChoices;
 use App\Support\SharedAppContext;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
 use App\Updates\UpdateSteps;
-use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class Applications extends Controller
 {
+    // The servers an app can be pointed at, by the name the app calls them
+    private const SERVER_TYPES = ['database', 'web', 'sso'];
+
     public function index(Organization $organization)
     {
         return inertia()->render('Admin/Organizations/Apps/AppsList', [
@@ -132,12 +135,12 @@ class Applications extends Controller
             ->sort(fn ($a, $b) => version_compare($a->name, $b->name))
             ->values();
 
-        $orgServers = $organization->servers()->with('server')->get()
-            ->groupBy(fn ($orgServer) => $orgServer->server->type)
-            ->map(fn ($servers) => $servers->map(fn ($orgServer) => [
-                'id' => $orgServer->id,
-                'name' => $orgServer->server->name,
-            ])->values());
+        // Servers the app can be pointed at, per type: any active server, not only the ones
+        // the organization is already on. Its own is always listed.
+        $current = $this->currentServers($app);
+        $serverOptions = collect(self::SERVER_TYPES)->mapWithKeys(fn ($type) => [
+            $type => ServerChoices::options(ServerChoices::for($type, keep: $current[$type])),
+        ]);
 
         return inertia()->render('Admin/Organizations/Apps/AppEdit', [
             'organization' => [
@@ -160,9 +163,9 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
                 'managed_externally' => $external,
-                'database_server_id' => $app->database_server_id,
-                'web_server_id' => $app->web_server_id,
-                'sso_server_id' => $app->sso_server_id,
+                'database_server_id' => $current['database'],
+                'web_server_id' => $current['web'],
+                'sso_server_id' => $current['sso'],
             ],
             'domain' => [
                 'id' => $app->primary_domain_id ?? 0,
@@ -173,7 +176,7 @@ class Applications extends Controller
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),
             ],
-            'org_servers' => $orgServers,
+            'server_options' => $serverOptions,
             'versions' => $versions->map(function ($version) {
                 return [
                     'id' => $version->id,
@@ -238,18 +241,20 @@ class Applications extends Controller
 
         abort_unless($app->organization_id === $organization->id, 404);
 
+        $current = $this->currentServers($app);
+
         $validated = $request->validate([
             'settings' => 'required|json',
-            'database_server_id' => $this->serverRules($organization, 'database'),
-            'web_server_id' => $this->serverRules($organization, 'web'),
-            'sso_server_id' => $this->serverRules($organization, 'sso'),
+            ...collect(self::SERVER_TYPES)->mapWithKeys(fn ($type) => [
+                "{$type}_server_id" => ServerChoices::rules($type, keep: $current[$type]),
+            ])->all(),
         ]);
 
         // Only a server that was sent, and is a different one, changes. Leaving one out,
         // or sending none, keeps the app where it is: an app with no database server
         // would not be able to start.
-        $servers = collect(Arr::only($validated, ['database_server_id', 'web_server_id', 'sso_server_id']))
-            ->filter(fn ($id, $column) => $id !== null && (int) $app->$column !== (int) $id);
+        $servers = collect(self::SERVER_TYPES)->filter(fn ($type) => ($validated["{$type}_server_id"] ?? null) !== null
+            && (int) $validated["{$type}_server_id"] !== $current[$type]);
 
         // An app that is being updated, migrated or deleted is already being moved by a task
         // that expects the servers it started with
@@ -258,34 +263,26 @@ class Applications extends Controller
         }
 
         $app->settings = json_decode($validated['settings'], true);
-        $servers->each(fn ($id, $column) => $app->$column = (int) $id);
+        // The organization may not be on the server yet
+        $servers->each(fn ($type) => $app->{"{$type}_server_id"} = OrgServerService::forServer(
+            $organization,
+            Server::findOrFail($validated["{$type}_server_id"]),
+        )->get()->id);
         $app->save();
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
     }
 
     /**
-     * Rules for a server of an app: one of the organization's own servers, of the
-     * type the app uses it as.
+     * The `Server` the app uses for each type, or null where it has none.
      *
-     * @return array<int, mixed>
+     * @return array<string, int|null>
      */
-    private function serverRules(Organization $organization, string $type): array
+    private function currentServers(AppInstance $app): array
     {
-        return [
-            'nullable',
-            'integer',
-            function (string $attribute, mixed $value, Closure $fail) use ($organization, $type) {
-                $belongs = $organization->servers()
-                    ->whereKey($value)
-                    ->whereHas('server', fn ($query) => $query->where('type', $type))
-                    ->exists();
-
-                if (! $belongs) {
-                    $fail(__('validation.exists', ['attribute' => $attribute]));
-                }
-            },
-        ];
+        return collect(self::SERVER_TYPES)->mapWithKeys(fn ($type) => [
+            $type => $app->{"{$type}_server"}?->server_id,
+        ])->all();
     }
 
     public function update_settings(Request $request, Organization $organization, AppInstance $app)

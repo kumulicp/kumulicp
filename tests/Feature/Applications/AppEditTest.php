@@ -5,7 +5,6 @@ use App\Organization;
 use App\Server;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -15,44 +14,32 @@ beforeEach(function () {
     (new TestSupports)->seed();
 });
 
-it('returns org_servers grouped by server type on the edit page', function () {
-    $user = User::find(1);
+function editPage($test)
+{
     $organization = Organization::find(1);
     $app = AppInstance::where('organization_id', $organization->id)->first();
 
-    $dbServer = Server::factory()->create(['type' => 'database', 'name' => 'DB Server']);
-    $ssoServer = Server::factory()->create(['type' => 'sso', 'name' => 'SSO Server']);
+    return $test->actingAs(User::find(1))->get("/admin/organizations/{$organization->id}/apps/{$app->id}/edit");
+}
 
-    DB::table('org_servers')->insert(['organization_id' => $organization->id, 'server_id' => $dbServer->id]);
-    DB::table('org_servers')->insert(['organization_id' => $organization->id, 'server_id' => $ssoServer->id]);
+it('offers the active servers of each type on the edit page, including ones the organization is not on', function () {
+    $database = Server::factory()->create(['type' => 'database', 'name' => 'DB Server']);
+    $sso = Server::factory()->create(['type' => 'sso', 'name' => 'SSO Server']);
 
-    $response = $this->actingAs($user)->get("/admin/organizations/{$organization->id}/apps/{$app->id}/edit");
-
-    $response->assertInertia(fn ($page) => $page
+    editPage($this)->assertInertia(fn ($page) => $page
         ->component('Admin/Organizations/Apps/AppEdit')
-        ->has('org_servers.web')
-        ->has('org_servers.database', 1)
-        ->has('org_servers.sso', 1)
-        ->where('org_servers.database.0.name', 'DB Server')
-        ->where('org_servers.sso.0.name', 'SSO Server')
+        ->has('server_options.web')
+        ->where('server_options.database', fn ($servers) => collect($servers)->pluck('id')->contains($database->id))
+        ->where('server_options.sso', fn ($servers) => collect($servers)->pluck('id')->contains($sso->id))
+        ->where('server_options.sso', fn ($servers) => collect($servers)->pluck('type')->unique()->all() === ['sso'])
     );
 });
 
-it('does not include servers from other organizations', function () {
-    $user = User::find(1);
-    $organization = Organization::find(1);
-    $app = AppInstance::where('organization_id', $organization->id)->first();
+it('does not offer inactive servers or backup servers', function () {
+    $inactive = Server::factory()->create(['type' => 'database', 'status' => 'inactive']);
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
 
-    $orgServer = Server::factory()->create(['type' => 'database', 'name' => 'Org DB Server']);
-    $otherServer = Server::factory()->create(['type' => 'database', 'name' => 'Other DB Server']);
-
-    DB::table('org_servers')->insert(['organization_id' => $organization->id, 'server_id' => $orgServer->id]);
-    // $otherServer is not linked to this organization
-
-    $response = $this->actingAs($user)->get("/admin/organizations/{$organization->id}/apps/{$app->id}/edit");
-
-    $response->assertInertia(fn ($page) => $page
-        ->has('org_servers.database', 1)
-        ->where('org_servers.database.0.name', 'Org DB Server')
+    editPage($this)->assertInertia(fn ($page) => $page
+        ->where('server_options.database', fn ($servers) => ! collect($servers)->pluck('id')->intersect([$inactive->id, $backup->id])->isNotEmpty())
     );
 });
