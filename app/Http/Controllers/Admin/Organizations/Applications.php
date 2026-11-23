@@ -27,6 +27,7 @@ use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\ServerChoices;
 use App\Support\SharedAppContext;
+use App\Support\StorageHandover;
 use App\Task;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
@@ -479,6 +480,9 @@ class Applications extends Controller
 
         $validated = $request->validate([
             'web_server_id' => 'required|integer|exists:servers,id',
+            // What the chart is to be given for the app's volume, chosen now so that the move does not stop to ask
+            'storage' => 'nullable|array',
+            ...($request->has('storage') ? StorageHandover::rulesFor($app, 'storage.') : []),
         ]);
 
         abort_unless($app->organization_id === $organization->id, 404);
@@ -489,7 +493,7 @@ class Applications extends Controller
             return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
         }
 
-        $task = Action::execute(new ApplicationWebMove($app, $server));
+        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'] ?? null));
 
         if (! $task) {
             return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.web_move_running'));

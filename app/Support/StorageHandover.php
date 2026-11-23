@@ -49,11 +49,13 @@ class StorageHandover
     }
 
     /**
+     * The rules for the form, for the fields under $prefix when it is part of a bigger one ('storage.').
+     *
      * @return array<string, mixed>
      */
-    public static function rules(): array
+    public static function rules(string $prefix = ''): array
     {
-        return [
+        $rules = [
             // Not a default: moving to an empty volume has to be what was meant
             'volume' => ['required', Rule::in(['existing', 'new'])],
             'claim' => ['required_if:volume,existing', 'nullable', 'string', 'max:253', 'regex:'.self::NAME],
@@ -61,6 +63,34 @@ class StorageHandover
             'storage_class' => ['nullable', 'string', 'max:253', 'regex:'.self::NAME],
             'size' => ['nullable', 'integer', 'min:1', 'max:100000'],
         ];
+
+        $prefixed = [];
+
+        foreach ($rules as $field => $field_rules) {
+            // A rule that names the other field names it where it now is
+            $prefixed[$prefix.$field] = array_map(
+                fn ($rule) => is_string($rule) ? str_replace('required_if:volume,', "required_if:{$prefix}volume,", $rule) : $rule,
+                $field_rules,
+            );
+        }
+
+        return $prefixed;
+    }
+
+    /**
+     * The rules for this app: a chart that can't be given a volume that exists can only start with a new one.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rulesFor(AppInstance $app_instance, string $prefix = ''): array
+    {
+        $rules = self::rules($prefix);
+
+        if (! self::supports($app_instance)) {
+            $rules["{$prefix}volume"] = ['required', Rule::in(['new'])];
+        }
+
+        return $rules;
     }
 
     /**
