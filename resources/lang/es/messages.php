@@ -47,6 +47,19 @@ return [
         'rollback_failed' => 'La migración de la base de datos falló (:reason) y también falló devolver la aplicación a su base de datos anterior: :error. Revisa el servidor de base de datos de la aplicación y ejecuta una actualización.',
         'migrated' => ':app ahora usa el servidor de base de datos :server',
     ],
+    // Mover el servidor de base de datos, de aplicación (web) o SSO (:type) de una aplicación
+    'server_move' => [
+        'wrong_organization' => 'La aplicación no pertenece a esa organización',
+        'app_not_active' => 'La aplicación debe estar activa antes de mover su servidor :type',
+        'has_children' => 'La aplicación tiene aplicaciones hijas que se ejecutan con ella, por lo que su servidor :type no se puede mover por separado',
+        'is_child' => 'La aplicación se ejecuta como parte de su aplicación padre, por lo que su servidor :type se mueve con el padre',
+        'wrong_type' => 'Ese no es un servidor :type',
+        'server_inactive' => 'Ese servidor no está activo',
+        'backup_server' => 'Un servidor que solo guarda copias de seguridad no se puede usar como servidor :type de la aplicación',
+        'same_server' => 'La aplicación ya usa ese servidor :type',
+        'rolled_back' => 'El movimiento del servidor :type falló y la aplicación volvió a :server: :reason',
+        'rollback_failed' => 'El movimiento del servidor :type falló (:reason) y también falló devolver la aplicación a su servidor anterior: :error. Revisa los servidores de la aplicación y ejecuta una actualización.',
+    ],
     'exception' => [
         'database_error' => 'Ocurrió un error de base de datos. Revise los registros de la aplicación para más detalles.',
         'no_default_plan' => '¡No hay un plan predeterminado!',

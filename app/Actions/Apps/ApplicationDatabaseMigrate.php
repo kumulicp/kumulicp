@@ -6,15 +6,14 @@ use App\Actions\Apps\DatabaseMigrate\BackupDatabase;
 use App\Actions\Apps\DatabaseMigrate\CutOver;
 use App\Actions\Apps\DatabaseMigrate\PrepareMigration;
 use App\Actions\Apps\DatabaseMigrate\RestoreDatabase;
-use App\Actions\Steps\StepAction;
+use App\Actions\Apps\ServerMove\ApplicationServerMove;
+use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\AppInstance;
 use App\OrgBackup;
 use App\OrgServer;
 use App\Server;
 use App\Support\Facades\Backup;
 use App\Task;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Moves an app's database to another database server:
@@ -35,7 +34,7 @@ use Illuminate\Support\Facades\Log;
  * left in place afterwards for the same reason (and is the way back if the
  * new server turns out to be a mistake: migrate to the old server again).
  */
-class ApplicationDatabaseMigrate extends StepAction
+class ApplicationDatabaseMigrate extends ApplicationServerMove
 {
     public $slug = 'application_database_migrate';
 
@@ -52,30 +51,22 @@ class ApplicationDatabaseMigrate extends StepAction
     // How long the fresh backup is kept as a safety copy of the old data.
     public const BACKUP_RETENTION_DAYS = 14;
 
-    public function __construct(AppInstance $app_instance, Server $target_server)
+    public static function serverType(): string
     {
-        $this->organization = $app_instance->organization;
-        $this->app_instance = $app_instance;
-        $this->addCustomValue(['target_server_id' => $target_server->id]);
+        return 'database';
+    }
 
-        $this->description = __('actions.migrating_app_database', [
+    protected static function messageGroup(): string
+    {
+        return 'database_migration';
+    }
+
+    protected function describe(AppInstance $app_instance, Server $target_server): string
+    {
+        return __('actions.migrating_app_database', [
             'app' => $app_instance->label,
             'server' => $target_server->name,
         ]);
-
-    }
-
-    // Only once the task really exists (not for a duplicate that
-    // Action::execute() turns away)
-    public function onCreate(Task $task)
-    {
-        self::begin($task);
-    }
-
-    private static function begin(Task $task): void
-    {
-        $task->app_instance->status = 'updating';
-        $task->app_instance->save();
     }
 
     /**
@@ -89,11 +80,16 @@ class ApplicationDatabaseMigrate extends StepAction
             return __('messages.database_migration.no_database');
         }
 
-        if ($require_active && $app_instance->status !== 'active') {
-            return __('messages.database_migration.not_active');
+        // What every move of a server checks, in the words the database migration has always used
+        if ($reason = MoveBlockers::app($app_instance, 'database', $require_active)) {
+            return self::blockerMessage($reason);
         }
 
-        if ($target_server->type !== 'database' || ! $target_server->host || ! $target_server->internal_address) {
+        if ($reason = MoveBlockers::target('database', $target_server)) {
+            return self::blockerMessage($reason);
+        }
+
+        if (! $target_server->host || ! $target_server->internal_address) {
             return __('messages.database_migration.invalid_server');
         }
 
@@ -105,11 +101,20 @@ class ApplicationDatabaseMigrate extends StepAction
 
         // Restoring replaces the database it loads into, so a different server
         // record for the same host is just as much the app's live database.
-        if ($current->server_id === $target_server->id || $current->server->host === $target_server->host) {
-            return __('messages.database_migration.same_server');
+        if ($reason = MoveBlockers::same($app_instance, 'database', $target_server)) {
+            return self::blockerMessage($reason);
         }
 
         return null;
+    }
+
+    private static function blockerMessage(string $reason): string
+    {
+        return match ($reason) {
+            MoveBlockers::APP_NOT_ACTIVE => __('messages.database_migration.not_active'),
+            MoveBlockers::SAME_SERVER => __('messages.database_migration.same_server'),
+            default => __('messages.database_migration.invalid_server'),
+        };
     }
 
     /**
@@ -126,40 +131,6 @@ class ApplicationDatabaseMigrate extends StepAction
     public static function steps(): array
     {
         return [PrepareMigration::class, BackupDatabase::class, RestoreDatabase::class, CutOver::class];
-    }
-
-    public static function reset(Task $task): void
-    {
-        // Starts over; the previous attempt already rolled itself back, so only
-        // where it was going stays.
-        $task->custom_values = Arr::only($task->customValues(), ['target_server_id']);
-
-        self::begin($task);
-    }
-
-    /**
-     * Says where the app is back on, and what is left behind on the new server.
-     */
-    public static function failureMessage(Task $task, string $reason, array $notes, array $errors): string
-    {
-        if ($errors) {
-            $message = __('messages.database_migration.rollback_failed', ['reason' => $reason, 'error' => $errors[0]]);
-        } else {
-            $previous = OrgServer::find($task->getValue('previous_org_server_id'));
-
-            $message = __('messages.database_migration.rolled_back', [
-                'server' => $previous?->server?->name,
-                'reason' => $reason,
-            ]);
-
-            if ($notes) {
-                $message .= ' '.implode(' ', $notes);
-            }
-        }
-
-        Log::critical($message, ['organization_id' => $task->organization_id]);
-
-        return $message;
     }
 
     /**
