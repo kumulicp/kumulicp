@@ -262,6 +262,9 @@ return [
         ],
         'denied' => [
             'exists' => 'Backup type does not exist',
+            'unsupported_type' => ':type backups are not supported: there is no backup driver for it',
+            'no_driver' => 'The backup server for this app has no backup driver, so no backup was scheduled',
+            'nothing_scheduled' => 'No backups were scheduled: none of the servers has a backup driver',
             'delete' => 'Backup scheduled for :time cannot be deleted',
             'restore_server' => 'This backup cannot be restored to the selected database server',
         ],

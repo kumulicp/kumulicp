@@ -48,6 +48,7 @@ return [
         'action_not_subclass' => ':action is not a subclass of Action',
         'no_configuration' => 'Could not obtain :app configuration :configuration',
         'no_backup_driver' => ':driver doesn\'t exist',
+        'no_backup_driver_for' => 'There is no backup driver for :server (:type)',
         'no_backup_file' => 'No backup file to restore from',
         'no_domain_driver' => ':name driver not found',
         'no_server_interface' => ':server interface doesn\'t exist',
@@ -66,6 +67,10 @@ return [
         'app_not_found_rancher' => 'Please review the error in Rancher.',
         'helm_operation_failed' => 'Helm operation for :chart failed: :error',
         'shared_app_has_children' => ':app is a shared app with other organizations still registered against it -- remove or reassign them before deleting it.',
+    ],
+    'backups' => [
+        'recurring_unsupported' => 'The recurring backup of :server (:type) was turned off: there is no backup driver for :type',
+        'skipped_no_driver' => 'No backup of :app was scheduled: its backup server (:server) has no backup driver',
     ],
     'database_migration' => [
         'no_database' => 'This app has no database to migrate',
