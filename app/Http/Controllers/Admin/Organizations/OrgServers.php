@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin\Organizations;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\OrgServer;
-use Closure;
+use App\Server;
+use App\Services\OrgServerService;
+use App\Support\ServerChoices;
 use Illuminate\Http\Request;
 
 class OrgServers extends Controller
@@ -13,6 +15,14 @@ class OrgServers extends Controller
     public function index(Organization $organization)
     {
         $orgServers = $organization->servers()->with('server', 'backup_server.server')->get();
+
+        // A server is backed up by a backup server of its own type. Any active backup server
+        // can be picked, not only the ones the organization is already on; the one a server
+        // has now is always listed.
+        $backupServers = $orgServers->pluck('server.type')->unique()
+            ->flatMap(fn (string $type) => ServerChoices::for($type, backup: true))
+            ->merge($orgServers->map(fn (OrgServer $orgServer) => $orgServer->backup_server?->server)->filter())
+            ->unique('id');
 
         return inertia()->render('Admin/Organizations/Servers/ServersList', [
             'organization' => [
@@ -23,19 +33,11 @@ class OrgServers extends Controller
                 'id' => $orgServer->id,
                 'name' => $orgServer->server->name,
                 'type' => $orgServer->server->type,
-                'is_backup_server' => $orgServer->server->is_backup_server,
-                'backup_server_id' => $orgServer->backup_server_id,
+                // The Server it is backed up to
+                'backup_server_id' => $orgServer->backup_server?->server_id,
                 'backup_server_name' => $orgServer->backup_server?->server->name,
             ])->values(),
-            // A server is backed up by a backup server of its own type. The page only offers
-            // the ones of the type of the server being edited.
-            'backup_servers' => $orgServers
-                ->filter(fn (OrgServer $orgServer) => $orgServer->server->is_backup_server)
-                ->map(fn (OrgServer $orgServer) => [
-                    'id' => $orgServer->id,
-                    'name' => $orgServer->server->name,
-                    'type' => $orgServer->server->type,
-                ])->values(),
+            'backup_servers' => ServerChoices::options($backupServers),
             'breadcrumbs' => [
                 [
                     'label' => __('admin.organizations.organizations'),
@@ -57,25 +59,17 @@ class OrgServers extends Controller
         abort_unless($orgServer->organization_id === $organization->id, 404);
 
         $validated = $request->validate([
-            'backup_server_id' => [
-                'nullable',
-                'integer',
-                function (string $attribute, mixed $value, Closure $fail) use ($organization, $orgServer) {
-                    $valid = $organization->servers()
-                        ->whereKey($value)
-                        ->whereHas('server', fn ($query) => $query
-                            ->where('is_backup_server', true)
-                            ->where('type', $orgServer->server->type))
-                        ->exists();
-
-                    if (! $valid) {
-                        $fail(__('validation.exists', ['attribute' => $attribute]));
-                    }
-                },
-            ],
+            'backup_server_id' => ServerChoices::rules(
+                $orgServer->server->type,
+                backup: true,
+                keep: $orgServer->backup_server?->server_id,
+            ),
         ]);
 
-        $orgServer->backup_server_id = $validated['backup_server_id'] ?? null;
+        // The organization may not be on the backup server yet
+        $orgServer->backup_server_id = isset($validated['backup_server_id'])
+            ? OrgServerService::forServer($organization, Server::findOrFail($validated['backup_server_id']))->get()->id
+            : null;
         $orgServer->save();
 
         return redirect("/admin/organizations/{$organization->id}/servers")->with('success', __('admin.servers.updated', ['server' => $orgServer->server->name]));

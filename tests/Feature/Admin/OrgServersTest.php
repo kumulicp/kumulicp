@@ -17,99 +17,94 @@ beforeEach(function () {
     $this->organization = Organization::find(1);
 });
 
-function linkOrgServer(Organization $organization, string $type, bool $backup = false): OrgServer
+function bindOrgServer(Organization $organization, Server $server): OrgServer
 {
-    $server = Server::factory()->create([
-        'type' => $type,
-        'name' => ($backup ? 'Backup ' : '').ucfirst($type),
-        'is_backup_server' => $backup,
-    ]);
+    return OrgServer::forceCreate(['organization_id' => $organization->id, 'server_id' => $server->id]);
+}
 
-    $orgServer = new OrgServer;
-    $orgServer->organization_id = $organization->id;
-    $orgServer->server_id = $server->id;
-    $orgServer->save();
-
-    return $orgServer;
+function setBackup($test, OrgServer $orgServer, ?Server $backup)
+{
+    return $test->actingAs($test->user)->put(
+        "/admin/organizations/{$test->organization->id}/servers/{$orgServer->id}",
+        ['backup_server_id' => $backup?->id],
+    );
 }
 
 it('lists the servers of an organization and the backup servers it can use', function () {
-    $database = linkOrgServer($this->organization, 'database');
-    $backup = linkOrgServer($this->organization, 'database', backup: true);
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
+    $ssoBackup = Server::factory()->create(['type' => 'sso', 'is_backup_server' => true]);
 
     $this->actingAs($this->user)
         ->get("/admin/organizations/{$this->organization->id}/servers")
         ->assertInertia(fn ($page) => $page
             ->component('Admin/Organizations/Servers/ServersList')
             ->where('org_servers', fn ($servers) => collect($servers)->pluck('id')->contains($database->id))
-            ->has('backup_servers', 1)
-            ->where('backup_servers.0.id', $backup->id)
-            ->where('backup_servers.0.type', 'database')
+            // The organization is not on it yet
+            ->where('backup_servers', fn ($servers) => collect($servers)->pluck('id')->contains($backup->id))
+            // Only for the types the organization has
+            ->where('backup_servers', fn ($servers) => ! collect($servers)->pluck('id')->contains($ssoBackup->id))
         );
 });
 
-it('changes the backup server of a server', function () {
-    $database = linkOrgServer($this->organization, 'database');
-    $backup = linkOrgServer($this->organization, 'database', backup: true);
+it('changes the backup server of a server, binding the organization to it', function () {
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
 
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$database->id}", ['backup_server_id' => $backup->id])
+    setBackup($this, $database, $backup)
         ->assertRedirect("/admin/organizations/{$this->organization->id}/servers");
 
-    expect($database->refresh()->backup_server_id)->toBe($backup->id);
+    $binding = OrgServer::where('organization_id', $this->organization->id)->where('server_id', $backup->id)->first();
+    expect($binding)->not->toBeNull()
+        ->and($database->refresh()->backup_server_id)->toBe($binding->id);
+});
+
+it('uses the binding the organization already has to the backup server', function () {
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
+    $existing = bindOrgServer($this->organization, $backup);
+
+    setBackup($this, $database, $backup)->assertSessionHasNoErrors();
+
+    expect($database->refresh()->backup_server_id)->toBe($existing->id)
+        ->and(OrgServer::where('organization_id', $this->organization->id)->where('server_id', $backup->id)->count())->toBe(1);
 });
 
 it('removes the backup server of a server', function () {
-    $backup = linkOrgServer($this->organization, 'database', backup: true);
-    $database = linkOrgServer($this->organization, 'database');
-    $database->backup_server_id = $backup->id;
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $database->backup_server_id = bindOrgServer($this->organization, $backup)->id;
     $database->save();
 
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$database->id}", ['backup_server_id' => null])
-        ->assertSessionHasNoErrors();
+    setBackup($this, $database, null)->assertSessionHasNoErrors();
 
     expect($database->refresh()->backup_server_id)->toBeNull();
 });
 
 it('does not take a server that is not a backup server as a backup server', function () {
-    $database = linkOrgServer($this->organization, 'database');
-    $notBackup = linkOrgServer($this->organization, 'database');
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $notBackup = Server::factory()->create(['type' => 'database']);
 
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$database->id}", ['backup_server_id' => $notBackup->id])
-        ->assertSessionHasErrors('backup_server_id');
+    setBackup($this, $database, $notBackup)->assertSessionHasErrors('backup_server_id');
 
     expect($database->refresh()->backup_server_id)->toBeNull();
 });
 
-it('does not take a backup server of another type', function () {
-    $database = linkOrgServer($this->organization, 'database');
-    $ssoBackup = linkOrgServer($this->organization, 'sso', backup: true);
+it('does not take a backup server of another type or an inactive one', function () {
+    $database = bindOrgServer($this->organization, Server::factory()->create(['type' => 'database']));
+    $ssoBackup = Server::factory()->create(['type' => 'sso', 'is_backup_server' => true]);
+    $inactive = Server::factory()->create(['type' => 'database', 'is_backup_server' => true, 'status' => 'inactive']);
 
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$database->id}", ['backup_server_id' => $ssoBackup->id])
-        ->assertSessionHasErrors('backup_server_id');
-});
-
-it('does not take a backup server of another organization', function () {
-    $other = Organization::factory()->create();
-    $database = linkOrgServer($this->organization, 'database');
-    $otherBackup = linkOrgServer($other, 'database', backup: true);
-
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$database->id}", ['backup_server_id' => $otherBackup->id])
-        ->assertSessionHasErrors('backup_server_id');
+    setBackup($this, $database, $ssoBackup)->assertSessionHasErrors('backup_server_id');
+    setBackup($this, $database, $inactive)->assertSessionHasErrors('backup_server_id');
 });
 
 it('does not change a server of another organization', function () {
     $other = Organization::factory()->create();
-    $otherServer = linkOrgServer($other, 'database');
-    $backup = linkOrgServer($this->organization, 'database', backup: true);
+    $otherServer = bindOrgServer($other, Server::factory()->create(['type' => 'database']));
+    $backup = Server::factory()->create(['type' => 'database', 'is_backup_server' => true]);
 
-    $this->actingAs($this->user)
-        ->put("/admin/organizations/{$this->organization->id}/servers/{$otherServer->id}", ['backup_server_id' => $backup->id])
-        ->assertNotFound();
+    setBackup($this, $otherServer, $backup)->assertNotFound();
 
     expect($otherServer->refresh()->backup_server_id)->toBeNull();
 });
