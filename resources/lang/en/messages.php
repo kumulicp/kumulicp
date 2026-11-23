@@ -94,6 +94,8 @@ return [
         'update_failed' => 'The app did not come back up with the new sign-in server',
         'copy_left' => 'The provider and application made on :server were left in place and can be removed manually.',
         'moved' => ':app now signs in through :server',
+        'nothing_to_remove' => 'There is no sign-in entry left on that server to remove',
+        'old_entry_left' => 'The app still has an entry on :server from an earlier move. Remove it first.',
     ],
     'server_move' => [
         'wrong_organization' => 'The app does not belong to that organization',
