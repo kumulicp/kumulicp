@@ -128,7 +128,7 @@ class Groups extends Controller
 
         $managers = $group->managerNames();
         $members = $group->members();
-        $category = $group->categoryName($group);
+        $category = $group->categoryName();
 
         $users = AccountManager::account($organization)->users()->collect()->map(function ($user) {
             return [
