@@ -164,6 +164,10 @@ export default {
       type: Array,
       default: () => []
     },
+    supported_types: {
+      type: Array,
+      default: () => ['database']
+    },
     errors: Object,
     meta: Object
   },
@@ -181,10 +185,11 @@ export default {
         backup_type: 'database',
         backup: ''
       }),
+      // Only what there is a backup driver for
       backup_types: [
         { text: this.$t('admin.backups.email'), value: 'email' },
         { text: this.$t('admin.backups.appDatabase'), value: 'database' }
-      ],
+      ].filter(type => this.supported_types.includes(type.value)),
       selected_backup: '',
       restore_to: 'original',
       showRestore: false,

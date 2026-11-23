@@ -26,7 +26,7 @@ class BackupScheduler extends Controller
         $backups = BackupSchedule::orderBy('scheduled_at', 'desc')->paginate(30);
         $organizations = Organization::notTest()->get();
         $applications = Application::all();
-        $servers = Server::all();
+        $servers = Server::all()->filter(fn (Server $server) => Backup::supports($server->type))->values();
 
         return inertia()->render('Admin/Backups/SchedulesList', [
             'backups' => $backups->map(function ($backup) {
@@ -116,6 +116,13 @@ class BackupScheduler extends Controller
             'organization' => 'nullable|integer|exists:organizations,id',
         ]);
 
+        $server = Server::find($validated['server']);
+
+        // Only what a driver exists for. Anything else would never run.
+        if (! Backup::supports($server->type)) {
+            return redirect('/admin/server/backup_scheduler')->with('error', __('admin.backups.denied.unsupported_type', ['type' => $server->type]));
+        }
+
         $date = (new Carbon($validated['date']))->setTimezone('America/Vancouver')->format('Y-m-d');
         $time = (new Carbon($validated['time']))->setTimezone('America/Vancouver')->format('H:i:s');
 
@@ -125,14 +132,20 @@ class BackupScheduler extends Controller
         $backup_schedule->scheduled_at = $scheduled_at;
         $backup_schedule->save();
 
-        $server = Server::find($validated['server']);
         $application_type = 'application_'.$server->type.'s';
+        $scheduled = 0;
 
         foreach ($server->org_servers as $org_server) {
             foreach ($org_server->$application_type as $app_instance) {
                 if (! array_key_exists('application', $validated) || $app_instance->application_id != $validated['application']) {
                     $backup_server = AppFacade::instance($app_instance)->backupServer($server->type);
-                    $backup = Backup::schedule(
+
+                    // An app whose backup server has no driver is left out, and counted below
+                    if (! Backup::driverExists($backup_server->get())) {
+                        continue;
+                    }
+
+                    Backup::schedule(
                         $backup_schedule,
                         organization: $org_server->organization,
                         org_server: $backup_server->get(),
@@ -141,8 +154,15 @@ class BackupScheduler extends Controller
                         delete_after: $validated['keep_for'],
                         scheduled_at: $scheduled_at,
                     );
+                    $scheduled++;
                 }
             }
+        }
+
+        if ($scheduled === 0) {
+            $backup_schedule->delete();
+
+            return redirect('/admin/server/backup_scheduler')->with('error', __('admin.backups.denied.nothing_scheduled'));
         }
 
         return redirect('/admin/server/backup_scheduler')->with('success', __('admin.backups.added', ['time' => $scheduled_at]));

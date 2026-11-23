@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Organization;
 use App\RecurringBackup;
 use App\Server;
+use App\Support\Facades\Backup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -15,7 +16,7 @@ class RecurringBackups extends Controller
     public function index()
     {
         $backups = RecurringBackup::all();
-        $servers = Server::all();
+        $servers = Server::all()->filter(fn (Server $server) => Backup::supports($server->type))->values();
         $applications = Application::all();
         $organizations = Organization::notTest()->get();
 
@@ -83,6 +84,11 @@ class RecurringBackups extends Controller
         ]);
 
         $server = Server::find($validated['server']);
+
+        // Only what a driver exists for. Anything else would never run.
+        if (! Backup::supports($server->type)) {
+            return redirect('/admin/server/backup_scheduler/recurring')->with('error', __('admin.backups.denied.unsupported_type', ['type' => $server->type]));
+        }
 
         $time = (new Carbon($validated['time']))->setTimezone('America/Vancouver')->format('H:i');
 

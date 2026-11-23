@@ -3,11 +3,14 @@
 namespace App\Console\Calls;
 
 use App\Application;
+use App\AppInstance;
 use App\BackupSchedule;
 use App\Organization;
+use App\OrgServer;
 use App\RecurringBackup;
 use App\Support\Facades\Application as AppFacade;
 use App\Support\Facades\Backup;
+use Illuminate\Support\Facades\Log;
 
 class RecurringBackups
 {
@@ -28,6 +31,19 @@ class RecurringBackups
             $backup_schedule = $backup->scheduled()->where('scheduled_at', '>', now())->count();
 
             if ($backup_schedule > 0) {
+                continue;
+            }
+
+            // Nothing could run it. Turned off, once, rather than skipped every minute.
+            if (! Backup::supports($backup->server->type)) {
+                $backup->status = 'inactive';
+                $backup->save();
+
+                Log::warning(__('messages.backups.recurring_unsupported', [
+                    'server' => $backup->server->name,
+                    'type' => $backup->server->type,
+                ]));
+
                 continue;
             }
 
@@ -73,15 +89,7 @@ class RecurringBackups
 
         foreach ($app_instances as $app_instance) {
             $backup_server = AppFacade::instance($app_instance)->backupServer($server_type);
-            Backup::schedule(
-                $backup_schedule,
-                scheduled_at: $this->datetime,
-                organization: $app_instance->organization,
-                org_server: $backup_server->get(),
-                app_instance: $app_instance,
-                type: $recurring_backup->type,
-                delete_after: $recurring_backup->delete_after,
-            );
+            $this->schedule($recurring_backup, $backup_schedule, $app_instance->organization, $app_instance, $backup_server->get());
         }
     }
 
@@ -94,15 +102,7 @@ class RecurringBackups
             $app_instances = $organization->app_instances()->notDeactivated()->get();
             foreach ($app_instances as $app_instance) {
                 $backup_server = AppFacade::instance($app_instance)->backupServer($server_type);
-                Backup::schedule(
-                    $backup_schedule,
-                    scheduled_at: $this->datetime,
-                    organization: $recurring_backup->organization,
-                    org_server: $backup_server->get(),
-                    app_instance: $app_instance,
-                    type: $recurring_backup->type,
-                    delete_after: $recurring_backup->delete_after,
-                );
+                $this->schedule($recurring_backup, $backup_schedule, $organization, $app_instance, $backup_server->get());
             }
 
             return;
@@ -113,17 +113,35 @@ class RecurringBackups
             $app_instances = $organization->app_instances()->notDeactivated()->get();
             foreach ($app_instances as $app_instance) {
                 if ($backup_server = AppFacade::instance($app_instance)->backupServer($recurring_backup->type)) {
-                    Backup::schedule(
-                        $backup_schedule,
-                        scheduled_at: $this->datetime,
-                        organization: $organization,
-                        org_server: $backup_server->get(),
-                        app_instance: $app_instance,
-                        type: $recurring_backup->type,
-                        delete_after: $recurring_backup->delete_after,
-                    );
+                    $this->schedule($recurring_backup, $backup_schedule, $organization, $app_instance, $backup_server->get());
                 }
             }
         }
+    }
+
+    /**
+     * Schedules one app's backup. An app whose backup server has no driver is skipped
+     * and said so in the log; it must not stop the backups of the others.
+     */
+    private function schedule(RecurringBackup $recurring_backup, BackupSchedule $backup_schedule, Organization $organization, AppInstance $app_instance, OrgServer $backup_server): void
+    {
+        if (! Backup::driverExists($backup_server)) {
+            Log::warning(__('messages.backups.skipped_no_driver', [
+                'app' => $app_instance->label,
+                'server' => $backup_server->server?->name,
+            ]), ['organization_id' => $organization->id]);
+
+            return;
+        }
+
+        Backup::schedule(
+            $backup_schedule,
+            scheduled_at: $this->datetime,
+            organization: $organization,
+            org_server: $backup_server,
+            app_instance: $app_instance,
+            type: $recurring_backup->type,
+            delete_after: $recurring_backup->delete_after,
+        );
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\AppInstance;
 use App\BackupSchedule;
 use App\Contracts\BackupServerTargetContract;
+use App\Exceptions\NoBackupDriverException;
 use App\Integrations\ServerManagers\AppDatabase\BackupInterface;
 use App\Organization;
 use App\OrgBackup;
@@ -28,6 +29,21 @@ class BackupService
         } else {
             throw new \Exception('Backup class doesn\'t exist');
         }
+    }
+
+    /**
+     * The types (of the server being backed up) there is a backup driver for.
+     *
+     * @return array<int, string>
+     */
+    public function supportedTypes(): array
+    {
+        return array_keys(array_filter($this->drivers));
+    }
+
+    public function supports(string $type): bool
+    {
+        return in_array($type, $this->supportedTypes(), true);
     }
 
     public function connect(OrgBackup $org_backup, ...$args)
@@ -89,10 +105,11 @@ class BackupService
         OrgServer $org_server,
         Organization $organization,
         AppInstance $app_instance,
-    ) {
-        // Check if backup should even be scheduled
+    ): OrgBackup {
+        // A backup nothing can run is an error, not a backup that was quietly left out.
+        // Callers that go through many servers check driverExists() first, to skip.
         if (! $this->driverExists($org_server)) {
-            return;
+            throw NoBackupDriverException::for($org_server);
         }
 
         switch ($backup_schedule->recurring_backup?->delete_interval) {
@@ -119,5 +136,7 @@ class BackupService
         $org_backup->status = 'scheduled';
         $org_backup->delete_at = $delete_at;
         $org_backup->save();
+
+        return $org_backup;
     }
 }

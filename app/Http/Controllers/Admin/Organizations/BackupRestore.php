@@ -30,6 +30,7 @@ class BackupRestore extends Controller
                     'text' => $app->label." ({$app->application->name})",
                 ];
             }),
+            'supported_types' => Backup::supportedTypes(),
             'database_servers' => Server::where('type', 'database')
                 ->orderBy('name')
                 ->get()
@@ -86,6 +87,12 @@ class BackupRestore extends Controller
             'backup_type' => 'required|string',
             'keep_for' => 'required|integer',
         ]);
+
+        // Only what a driver exists for. Anything else would never run.
+        if (! Backup::supports($validated['backup_type'])) {
+            return redirect('/admin/organizations/'.$organization->id.'/backups')->with('error', __('admin.backups.denied.unsupported_type', ['type' => $validated['backup_type']]));
+        }
+
         $app_instance = null;
         if ($validated['backup_type'] == 'email') {
             $org_server = $organization->domains()->where('id', $validated['backup'])->first()->email_server;
@@ -99,13 +106,18 @@ class BackupRestore extends Controller
             return redirect('/admin/organizations/'.$organization->slug.'/backups')->with('error', __('admin.backups.denied.exists'));
         }
 
+        $backup_server = (new OrgServerService($org_server))->backupServer();
+
+        if (! Backup::driverExists($backup_server->get())) {
+            return redirect('/admin/organizations/'.$organization->id.'/backups')->with('error', __('admin.backups.denied.no_driver'));
+        }
+
         $date_time = (new Carbon($validated['date_time']))->setTimezone(config('app.timezone'));
 
         $scheduled_backup = new BackupSchedule;
         $scheduled_backup->scheduled_at = $date_time;
         $scheduled_backup->save();
 
-        $backup_server = (new OrgServerService($org_server))->backupServer();
         $backup = Backup::schedule(
             $scheduled_backup,
             scheduled_at: $date_time,
