@@ -109,6 +109,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
           <va-list-item-label :id="row.type + 'Server'">
             {{ row.name ?? $t('admin.apps.noServer') }}
             <va-button v-if="row.type === 'database' && app.database_server" id="migrateDatabase" size="small" class="ml-3" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
+            <va-button v-if="row.type === 'sso'" id="moveSso" size="small" class="ml-3" @click="showMoveSsoModal = true">{{ $t('admin.apps.moveSso') }}</va-button>
           </va-list-item-label>
         </va-list-item-section>
       </va-list-item>
@@ -301,6 +302,40 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </form>
       </template>
     </va-modal>
+    <va-modal v-model="showMoveSsoModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="moveSsoForm.post('/admin/organizations/'+organization.id+'/apps/'+app.id+'/move-sso', { onSuccess: () => { showMoveSsoModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.moveSsoTitle') }}</va-card-title>
+          <va-card-content class="m-0 p-0">
+            <p v-if="app.sso_server" class="mb-2">{{ $t('admin.apps.moveSsoCurrent', { server: app.sso_server }) }}</p>
+            <p>{{ $t('admin.apps.moveSsoDescription') }}</p>
+            <p class="mt-2"><strong>{{ $t('admin.apps.moveSsoWarning') }}</strong></p>
+            <p v-if="app.status !== 'active'" class="mt-2">{{ $t('admin.apps.moveSsoNotActive') }}</p>
+            <p v-else-if="sso_servers.length === 0" class="mt-2">{{ $t('admin.apps.moveSsoNoServers') }}</p>
+            <va-select
+              v-else
+              v-model="moveSsoForm.sso_server_id"
+              class="mt-3"
+              :label="$t('admin.apps.moveSsoTarget')"
+              :options="sso_servers"
+              text-by="text"
+              value-by="value"
+              required-mark
+              :error="!!$page.props.errors.sso_server_id"
+              :error-messages="$page.props.errors.sso_server_id"
+            />
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="moveSsoForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" class="mr-2" :disabled="moveSsoForm.processing || !moveSsoForm.sso_server_id || app.status !== 'active'">{{ $t('admin.apps.moveSso') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showMaintenanceModal"
     hide-default-actions
     no-padding
@@ -381,6 +416,10 @@ export default {
       default: () => []
     },
     database_servers: Array,
+    sso_servers: {
+      type: Array,
+      default: () => []
+    },
     maintenance: {
       type: Object,
       default: () => ({ enabled: false, available: false })
@@ -467,12 +506,16 @@ export default {
       showUpgradeAppModal: false,
       showDeleteAppModal: false,
       showMigrateDatabaseModal: false,
+      showMoveSsoModal: false,
       showMaintenanceModal: false,
       maintenanceForm: useForm({
         enabled: !this.maintenance.enabled
       }),
       migrateForm: useForm({
         database_server_id: null
+      }),
+      moveSsoForm: useForm({
+        sso_server_id: null
       }),
       deleteApp: useForm({
         when: 'later',

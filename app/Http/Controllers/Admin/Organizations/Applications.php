@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Organizations;
 
 use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDelete;
+use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Actions\Apps\ServerMove\MoveBlockers;
@@ -196,6 +197,12 @@ class Applications extends Controller
             'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
             // Settings of the instance for an image its version sets itself, which are not used
             'ignored_image_settings' => $external ? [] : app(ShadowedImages::class)->for($app),
+            'sso_servers' => $external ? [] : ServerChoices::for('sso')
+                ->filter(fn (Server $server) => ! ApplicationSsoMove::blockers($app, $server))
+                ->map(fn (Server $server) => [
+                    'value' => $server->id,
+                    'text' => $server->name,
+                ])->values(),
             'database_servers' => $external ? [] : ApplicationDatabaseMigrate::targets($app)->map(fn (Server $server) => [
                 'value' => $server->id,
                 'text' => $server->name,
@@ -364,6 +371,33 @@ class Applications extends Controller
         }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.migrating_database', ['app' => $app->label, 'server' => $server->name]));
+    }
+
+    public function move_sso(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'sso_server_id' => 'required|integer|exists:servers,id',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $server = Server::findOrFail($validated['sso_server_id']);
+
+        if ($blockers = ApplicationSsoMove::blockers($app, $server)) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
+        }
+
+        $task = Action::execute(new ApplicationSsoMove($app, $server));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.sso_move_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_sso', ['app' => $app->label, 'server' => $server->name]));
     }
 
     public function run(Organization $organization, AppInstance $app, $action)
