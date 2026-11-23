@@ -64,7 +64,7 @@ class WordpressChart extends HelmChart
                     'cert-manager.io/cluster-issuer' => $app_instance->configuration('ingress-annotation-cluster_issuer'),
                     'traefik.ingress.kubernetes.io/router.middlewares' => $app_instance->configuration('ingress-annotation-traefik_middlewares'),
                 ] : [],
-                'enabled' => ($this->appEnabled() && $app_instance->configuration('ingress-enabled')), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
+                'enabled' => ($this->appEnabled() && ! $this->inMaintenance() && $app_instance->configuration('ingress-enabled')), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data. In maintenance mode the maintenance release serves the domain instead
                 'hostname' => $app_instance->domain(),
                 'tls' => $app_instance->configuration('ingress-tls'),
             ],

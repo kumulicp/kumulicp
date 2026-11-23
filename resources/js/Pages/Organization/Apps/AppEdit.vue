@@ -13,7 +13,7 @@ import { useForm, Link } from '@inertiajs/vue3'
   </Head>
   <va-card class="mb-4">
     <va-card-title>
-      <app-status-icon :status="app.status" class="mr-2" />
+      <app-status-icon :status="app.status" :maintenance="app.maintenance" class="mr-2" />
       {{ $t('organization.apps.labelSettings', { label: app.label }) }}
     </va-card-title>
     <va-card-content>
@@ -21,6 +21,9 @@ import { useForm, Link } from '@inertiajs/vue3'
         <Link :href="`/support/tickets/create?app=${app.id}`"><va-button size="small" icon="support_agent">{{ $t('tickets.getHelp') }}</va-button></Link>
         <Link :href="`/support/tickets?assigned=all&status=all&app=${app.id}`"><va-button size="small" preset="secondary" border-color="primary">{{ $t('tickets.viewAppTickets') }}</va-button></Link>
       </div>
+      <va-alert v-if="app.maintenance && app.status === 'active'" id="maintenanceMode" color="warning" icon="fa-screwdriver-wrench" class="mb-5">
+        {{ $t('organization.apps.maintenanceNotice') }}
+      </va-alert>
       <va-alert
         color="primary"
         border="top"

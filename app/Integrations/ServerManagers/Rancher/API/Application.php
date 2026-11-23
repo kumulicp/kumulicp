@@ -95,7 +95,7 @@ class Application extends BaseApplication
 
     private function catalogAction(AppInstance $app_instance, HelmChart $chart, string $action): array
     {
-        $repo_name = $chart->repo_name ?? $app_instance->version->setting('helm_repo_name');
+        $repo_name = $chart->repo_name ?? $chart->helmRepo();
 
         // buildChart() fills $chart->secrets() as a side effect, so the Secret
         // is only applied after the chart is built, and before the install

@@ -124,8 +124,8 @@ abstract class HelmChart extends Chart
         $chart = [
             'charts' => [
                 [
-                    'chartName' => $app_instance->version->setting('chart_name'), // The generic chart name in the repo
-                    'version' => $app_instance->version->setting('chart_version'),
+                    'chartName' => $this->helmChartName(), // The generic chart name in the repo
+                    'version' => $this->helmChartVersion(),
                     'releaseName' => $this->chartName(), // The chart name of this specific instance
                     'values' => $values,
                 ],
@@ -140,6 +140,34 @@ abstract class HelmChart extends Chart
         ];
 
         return $chart;
+    }
+
+    // Where this release's chart comes from: the app's version says, unless the chart
+    // is not the app's own (see MaintenanceChart).
+    public function helmChartName(): ?string
+    {
+        return $this->app_instance->version->setting('chart_name');
+    }
+
+    public function helmChartVersion(): ?string
+    {
+        $version = $this->app_instance->version->setting('chart_version');
+
+        return $version === null ? null : (string) $version;
+    }
+
+    // The chart repository: a plain https URL, an oci:// reference, or for Rancher the name of a ClusterRepo
+    public function helmRepo(): ?string
+    {
+        return $this->app_instance->version->setting('helm_repo_name');
+    }
+
+    // The credentials of a private chart repository
+    public function helmRepoSecret()
+    {
+        $version = $this->app_instance->version;
+
+        return $version->requiresHelmRepoAuth() ? $version->helmRepoSecret : null;
     }
 
     public function appStorage()
@@ -180,6 +208,14 @@ abstract class HelmChart extends Chart
         }
 
         return $this->awaitingActivation ??= $this->app_instance->isAwaitingActivation();
+    }
+
+    // Whether the app is in maintenance mode: its ingress is turned off, and the
+    // maintenance release serves the page at its domain. An app that is disabled
+    // has no ingress at all, so there is no page to serve either.
+    public function inMaintenance(): bool
+    {
+        return $this->app_instance->inMaintenance() && $this->appEnabled();
     }
 
     public function replicaCount()
