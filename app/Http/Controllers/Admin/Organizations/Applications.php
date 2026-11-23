@@ -9,6 +9,7 @@ use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
 use App\Actions\Apps\ServerMove\MoveBlockers;
+use App\Actions\Steps\AwaitConfirmation;
 use App\AppInstance;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
@@ -201,6 +202,8 @@ class Applications extends Controller
             'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
             // Settings of the instance for an image its version sets itself, which are not used
             'ignored_image_settings' => $external ? [] : app(ShadowedImages::class)->for($app),
+            // A task of the app that is waiting for an administrator to say something has been done
+            'awaiting' => $external ? null : $this->awaiting($app),
             // Providers left on the servers the app signed in through before, to be removed
             'old_sso_entries' => $external ? [] : ApplicationSsoCleanup::pending($app)->map(fn (Task $move) => [
                 'id' => $move->id,
@@ -407,6 +410,34 @@ class Applications extends Controller
         }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_sso', ['app' => $app->label, 'server' => $server->name]));
+    }
+
+    /**
+     * @return array{task_id: int, message: string}|null
+     */
+    private function awaiting(AppInstance $app): ?array
+    {
+        $task = AwaitConfirmation::waiting($app);
+
+        return $task ? ['task_id' => $task->id, 'message' => (string) $task->getValue('awaiting.message')] : null;
+    }
+
+    public function confirm_step(Request $request, Organization $organization, AppInstance $app)
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $validated = $request->validate(['task_id' => 'required|integer']);
+        $task = AwaitConfirmation::waiting($app);
+
+        if (! $task || $task->id !== (int) $validated['task_id']) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.nothing_to_confirm'));
+        }
+
+        // What the step asks for with the go-ahead is checked by the step
+        $step = $task->getValue('awaiting.class');
+        $step::confirm($task, $request->validate($step::rules($task)));
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.confirmed', ['app' => $app->label]));
     }
 
     public function remove_old_sso(Request $request, Organization $organization, AppInstance $app)

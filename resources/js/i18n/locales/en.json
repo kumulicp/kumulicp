@@ -731,6 +731,7 @@
       "moveSsoUnsupported": "This app does not support single sign-on.",
       "oldSsoEntry": "Still has an entry on {server} from an earlier move.",
       "removeOldSso": "Remove",
+      "confirmStep": "Continue",
       "removeOldSsoTitle": "Remove the Old Sign-in Entry",
       "removeOldSsoDescription": "Removes this app's provider and application from {server}. The app signs in through its current server and is not affected. Only do this once the move is working.",
       "databaseServer": "Database Server",

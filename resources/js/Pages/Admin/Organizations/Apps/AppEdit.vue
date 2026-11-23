@@ -37,6 +37,10 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
     <va-list-separator class="my-4" fit />
 
     <template v-if="!app.managed_externally">
+    <va-alert v-if="awaiting" id="awaiting" color="warning" icon="warning" class="mb-3">
+      <div>{{ awaiting.message }}</div>
+      <va-button id="confirmStep" size="small" class="mt-2" :disabled="confirmForm.processing" @click="confirmForm.post('/admin/organizations/'+organization.id+'/apps/'+app.id+'/confirm-step')">{{ $t('admin.apps.confirmStep') }}</va-button>
+    </va-alert>
     <va-alert v-if="updates.length > 0" id="outOfDate" color="warning" icon="warning" class="mb-3">
       <div>{{ $t('admin.updates.appOutOfDate', { aspects: updates.map(update => update.label).join(', ') }) }}</div>
       <div v-for="change in changes" :key="change ? change.id : 'none'" class="secondary">
@@ -447,6 +451,10 @@ export default {
       type: Array,
       default: () => []
     },
+    awaiting: {
+      type: Object,
+      default: null
+    },
     maintenance: {
       type: Object,
       default: () => ({ enabled: false, available: false })
@@ -548,6 +556,9 @@ export default {
       }),
       removeOldSsoForm: useForm({
         move_task_id: null
+      }),
+      confirmForm: useForm({
+        task_id: this.awaiting ? this.awaiting.task_id : null
       }),
       deleteApp: useForm({
         when: 'later',

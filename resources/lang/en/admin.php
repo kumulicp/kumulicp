@@ -243,11 +243,13 @@ return [
             'migrating_database' => ':app\'s database is being migrated to :server',
             'moving_sso' => ':app\'s sign-in is being moved to :server',
             'removing_old_sso' => 'Removing :app\'s sign-in entry from :server',
+            'confirmed' => 'Thanks: :app will carry on shortly',
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
                 'migration_running' => 'A database migration to that server is already running or needs attention -- check the Tasks page',
                 'sso_move_running' => 'A sign-in move to that server is already running or needs attention -- check the Tasks page',
                 'sso_cleanup_running' => 'The entry is already being removed -- check the Tasks page',
+                'nothing_to_confirm' => 'Nothing is waiting for you on this app any more',
                 'servers_not_active' => 'The app\'s servers can only be changed while the app is active. Nothing was saved.',
                 'maintenance_unsupported' => 'This app can\'t have a maintenance page: it has to be deployed as its own release, on a Kubernetes or Rancher web server',
                 'maintenance_not_active' => 'The app can only go in or out of maintenance mode while it is active',
