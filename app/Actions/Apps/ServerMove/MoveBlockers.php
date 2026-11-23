@@ -111,14 +111,13 @@ class MoveBlockers
 
         // A web move takes the release, and a shared app's children are part of it (their
         // own release is the parent's). Moving a child alone would move nothing.
-        if ($type === 'web') {
-            if ($app->children()->notDeactivated()->exists()) {
-                $reasons[] = self::HAS_CHILDREN;
-            }
+        if ($type === 'web' && $app->children()->notDeactivated()->exists()) {
+            $reasons[] = self::HAS_CHILDREN;
+        }
 
-            if (! $app->usesOwnResources()) {
-                $reasons[] = self::IS_CHILD;
-            }
+        // The same child has no sign-in of its own either: it signs in as its parent does
+        if (in_array($type, ['web', 'sso'], true) && ! $app->usesOwnResources()) {
+            $reasons[] = self::IS_CHILD;
         }
 
         return $reasons;

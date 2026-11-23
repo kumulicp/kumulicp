@@ -8,6 +8,7 @@ return [
     'deactivating_app' => 'Desactivando :app',
     'deleting_app' => 'Eliminando :app',
     'migrating_app_database' => 'Migrando la base de datos de :app a :server',
+    'moving_app_sso_server' => 'Moviendo el inicio de sesión de :app a :server',
     'update_step' => 'Actualizar :step: :app',
     'updating_app' => 'Actualizando :app',
     'upgrading_app' => 'Mejorando :app',

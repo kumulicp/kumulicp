@@ -48,6 +48,14 @@ return [
         'migrated' => ':app ahora usa el servidor de base de datos :server',
     ],
     // Mover el servidor de base de datos, de aplicación (web) o SSO (:type) de una aplicación
+    'sso_move' => [
+        'setup_not_scheduled' => 'No se pudo programar la configuración del inicio de sesión en el nuevo servidor',
+        'setup_failed' => 'No se pudo configurar el inicio de sesión en el nuevo servidor',
+        'update_not_scheduled' => 'No se pudo programar la actualización de la aplicación que aplica el nuevo servidor de inicio de sesión',
+        'update_failed' => 'La aplicación no volvió a iniciarse con el nuevo servidor de inicio de sesión',
+        'copy_left' => 'El proveedor y la aplicación creados en :server se dejaron en su lugar y se pueden eliminar manualmente.',
+        'moved' => ':app ahora inicia sesión a través de :server',
+    ],
     'server_move' => [
         'wrong_organization' => 'La aplicación no pertenece a esa organización',
         'app_not_active' => 'La aplicación debe estar activa antes de mover su servidor :type',

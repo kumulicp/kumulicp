@@ -125,13 +125,14 @@ it('refuses a web move for an app with child apps, but not the others', function
     expect(MoveBlockers::app($app, 'web'))->toBe([]);
 });
 
-it('refuses a web move for an app that runs as part of its parent', function () {
+it('refuses a web or sso move for an app that runs as part of its parent', function () {
     $child = Mockery::mock(AppInstance::class)->makePartial();
     $child->status = 'active';
     $child->shouldReceive('children->notDeactivated->exists')->andReturn(false);
     $child->shouldReceive('usesOwnResources')->andReturn(false);
 
     expect(MoveBlockers::app($child, 'web'))->toBe([MoveBlockers::IS_CHILD])
+        ->and(MoveBlockers::app($child, 'sso'))->toBe([MoveBlockers::IS_CHILD])
         ->and(MoveBlockers::app($child, 'database'))->toBe([]);
 });
 
