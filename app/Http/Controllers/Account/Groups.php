@@ -122,7 +122,7 @@ class Groups extends Controller
 
         $resolved = $this->resolve($request, $group);
         if (! $resolved) {
-            return redirect('/groups')->with('error', 'Group not found');
+            return redirect('/groups')->with('error', __('organization.group.not_found'));
         }
         [$organization, $group] = $resolved;
 
@@ -167,7 +167,7 @@ class Groups extends Controller
 
         $resolved = $this->resolve($request, $group_name);
         if (! $resolved) {
-            return redirect('/groups')->with('error', 'Group not found');
+            return redirect('/groups')->with('error', __('organization.group.not_found'));
         }
         [$organization, $group] = $resolved;
         $groups = AccountManager::account($organization)->groups();
