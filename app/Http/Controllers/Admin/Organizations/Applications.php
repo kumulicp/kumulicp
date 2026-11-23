@@ -52,7 +52,6 @@ class Applications extends Controller
                         'name' => $app->domain(),
                     ],
                     'status' => $app->status,
-                    'maintenance' => $app->inMaintenance(),
                 ];
             }),
             'breadcrumbs' => [
@@ -95,7 +94,6 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
             ],
-            'maintenance' => ['enabled' => $app->inMaintenance()],
             'updates' => app(PendingUpdates::class)->forInstance($app),
             'servers' => collect([
                 'web' => $app->web_server,

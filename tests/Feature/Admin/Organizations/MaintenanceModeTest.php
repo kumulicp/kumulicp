@@ -87,27 +87,6 @@ class MaintenanceModeTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('maintenance.enabled', true));
     }
 
-    public function test_the_app_page_and_the_apps_list_show_that_an_app_is_in_maintenance_mode()
-    {
-        $this->actingAs($this->admin)
-            ->get($this->url())
-            ->assertInertia(fn ($page) => $page->where('maintenance.enabled', false));
-
-        $this->actingAs($this->admin)
-            ->get("/admin/organizations/{$this->organization->id}/apps")
-            ->assertInertia(fn ($page) => $page->where('apps.0.maintenance', false));
-
-        $this->appInstance->updateSetting('maintenance.enabled', true);
-
-        $this->actingAs($this->admin)
-            ->get($this->url())
-            ->assertInertia(fn ($page) => $page->where('maintenance.enabled', true));
-
-        $this->actingAs($this->admin)
-            ->get("/admin/organizations/{$this->organization->id}/apps")
-            ->assertInertia(fn ($page) => $page->where('apps.0.maintenance', true));
-    }
-
     public function test_the_edit_page_does_not_offer_it_on_a_server_that_does_not_deploy_charts()
     {
         $this->webServer('other');

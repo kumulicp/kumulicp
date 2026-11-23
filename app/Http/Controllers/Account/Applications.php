@@ -43,6 +43,7 @@ class Applications extends Controller
                         'name' => $app->label,
                         'has_admin_address' => ! is_null($app->version->admin_path),
                         'status' => $app->status,
+                        'maintenance' => $app->inMaintenance(),
                         'manage_url' => $can_manage ? "/admin/organizations/{$app->organization_id}/apps/{$app->id}" : null,
                         'address' => $app->address(),
                         'admin_address' => $app->admin_address(),
@@ -157,6 +158,7 @@ class Applications extends Controller
                 ] : null,
                 'label' => $app->label,
                 'status' => $app->status,
+                'maintenance' => $app->inMaintenance(),
                 'organization' => $organization->suborganizations()->count() > 0 ? [
                     'name' => $app->organization->name,
                 ] : null,

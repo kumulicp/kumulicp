@@ -16,22 +16,6 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
     </div>
   </va-alert>
   <va-list>
-    <template v-if="maintenance.enabled">
-      <va-list-item id="maintenanceMode" class="py-3">
-        <va-list-item-section label>
-          <va-list-item-label>
-            <h5>{{ $t('admin.apps.maintenanceMode') }}</h5>
-          </va-list-item-label>
-        </va-list-item-section>
-        <va-list-item-section>
-          <va-list-item-label>
-            <va-icon name="build" size="small" color="#ff9800" class="mr-2" />
-            {{ $t('admin.apps.maintenanceActive') }}
-          </va-list-item-label>
-        </va-list-item-section>
-      </va-list-item>
-      <va-list-separator class="my-1" fit />
-    </template>
     <template v-if="$page.props.flags?.tickets">
       <va-list-item class="py-3">
         <va-list-item-section label>
@@ -130,10 +114,6 @@ export default {
     organization: Object,
     versions: Object,
     servers: Array,
-    maintenance: {
-      type: Object,
-      default: () => ({ enabled: false })
-    },
     updates: {
       type: Array,
       default: () => []

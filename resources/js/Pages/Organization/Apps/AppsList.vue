@@ -33,7 +33,7 @@ import { Link, useForm, router } from '@inertiajs/vue3'
             <tbody>
               <tr v-for="(app, i) in apps" :key="i">
                 <td class="va-text-center" style="vertical-align: middle">
-                  <app-status-icon :status="app.status" />
+                  <app-status-icon :status="app.status" :maintenance="app.maintenance" />
                 </td>
                 <td class="vertical-middle">
                   <Link :href="'/apps/'+app.id+'/edit'" v-if="$page.props.auth.status !== 'deactivated' && !deactivated_statuses.includes(app.status)">
@@ -45,6 +45,9 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   <Link v-if="app.manage_url" :id="'manage-'+app.id" :href="app.manage_url" class="manage-link">
                     {{ $t('organization.apps.manage') }}
                   </Link>
+                  <va-list-item-label v-if="app.maintenance && app.status === 'active'" :id="'maintenance-'+app.id" caption>
+                    {{ $t('organization.apps.maintenanceMode') }}
+                  </va-list-item-label>
                   <va-list-item-label caption v-for="(task, index) in app.tasks" :key="index">
                     {{ task.description }}
                   </va-list-item-label>

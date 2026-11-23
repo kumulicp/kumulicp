@@ -703,7 +703,6 @@
       "maintenanceDisableTitle": "Desactivar Modo de Mantenimiento",
       "maintenanceEnableModal": "Quienes visiten la dirección de esta aplicación verán una página de mantenimiento en lugar de la aplicación. La aplicación sigue en ejecución y sus datos no se modifican, pero no se podrá acceder a ella desde internet hasta que se desactive el modo de mantenimiento. ¿Está seguro de que desea continuar?",
       "maintenanceDisableModal": "Se eliminará la página de mantenimiento y la aplicación volverá a estar accesible en su dirección. ¿Está seguro de que desea continuar?",
-      "maintenanceMode": "En modo de mantenimiento",
       "maintenanceActive": "Esta aplicación está en modo de mantenimiento: quienes visiten su dirección ven una página de mantenimiento.",
       "migrateDatabase": "Migrar Base de Datos",
       "migrateDatabaseTitle": "Migrar la Base de Datos a un Servidor Nuevo",
@@ -1298,7 +1297,9 @@
       "loginToApp": "Iniciar Sesión en la Aplicación",
       "planSettings": "Configuración del Plan {label}",
       "plansTitle": "Planes de {label}",
-      "visitWebsite": "Visitar Sitio Web"
+      "visitWebsite": "Visitar Sitio Web",
+      "maintenanceMode": "En modo de mantenimiento",
+      "maintenanceNotice": "Esta aplicación está en modo de mantenimiento. Quienes visiten su dirección ven una página de mantenimiento hasta que se vuelva a activar."
     },
     "city": "Ciudad",
     "state": "Provincia/Estado",
