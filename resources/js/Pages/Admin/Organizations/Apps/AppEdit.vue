@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import AdminSettings from '@/components/AdminSettings.vue'
 import AppsLayout from './AppsLayout.vue'
 import AppDomainFields from '@/components/AppDomainFields.vue'
 import ChangeSummary from '@/components/updates/ChangeSummary.vue'
@@ -99,45 +98,63 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </va-list-item-section>
         </va-list-item>
     </va-list>
+    <va-list id="servers" class="my-2">
+      <va-list-item v-for="row in serverRows" :key="row.type" class="py-2">
+        <va-list-item-section label>
+          <va-list-item-label>
+            <h5>{{ row.label }}</h5>
+          </va-list-item-label>
+        </va-list-item-section>
+        <va-list-item-section>
+          <va-list-item-label :id="row.type + 'Server'">
+            {{ row.name ?? $t('admin.apps.noServer') }}
+            <va-button v-if="row.type === 'database' && app.database_server" id="migrateDatabase" size="small" class="ml-3" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
+          </va-list-item-label>
+        </va-list-item-section>
+      </va-list-item>
+    </va-list>
+    <va-collapse v-model="showRepair" id="reassignServers" :header="$t('admin.apps.reassignServers')" class="mb-3">
+      <form @submit.prevent="repairForm.put('/admin/organizations/'+organization.id+'/apps/'+app.id)">
+        <va-alert color="warning" icon="warning" class="mb-3">{{ $t('admin.apps.serversNote') }}</va-alert>
+        <va-select
+          v-model="repairForm.database_server_id"
+          class="mb-3"
+          :label="$t('admin.apps.databaseServer')"
+          :options="server_options.database ?? []"
+          text-by="name"
+          value-by="id"
+          :error="!!$page.props.errors.database_server_id"
+          :error-messages="$page.props.errors.database_server_id"
+        />
+        <va-select
+          v-model="repairForm.web_server_id"
+          class="mb-3"
+          :label="$t('admin.apps.appServer')"
+          :options="server_options.web ?? []"
+          text-by="name"
+          value-by="id"
+          :error="!!$page.props.errors.web_server_id"
+          :error-messages="$page.props.errors.web_server_id"
+        />
+        <va-select
+          v-model="repairForm.sso_server_id"
+          class="mb-3"
+          :label="$t('admin.apps.ssoServer')"
+          :options="server_options.sso ?? []"
+          text-by="name"
+          value-by="id"
+          :error="!!$page.props.errors.sso_server_id"
+          :error-messages="$page.props.errors.sso_server_id"
+        />
+        <va-checkbox v-model="confirmRepair" id="confirmReassign" class="mb-3" :label="$t('admin.apps.reassignConfirm')" />
+        <div>
+          <va-button type="submit" id="reassignSubmit" :disabled="!confirmRepair || repairForm.processing">{{ $t('admin.apps.reassignSave') }}</va-button>
+        </div>
+      </form>
+    </va-collapse>
+    <va-list-separator class="my-3" fit />
     <form @submit.prevent="form.put('/admin/organizations/'+organization.id+'/apps/'+app.id)">
 
-      <AdminSettings>
-        <template #name></template>
-        <template #description>{{ $t('admin.apps.serversNote') }}</template>
-        <template #settings>
-          <va-select
-            v-model="form.database_server_id"
-            class="flex flex-col sm12 mb-3"
-            :label="$t('admin.apps.databaseServer')"
-            :options="server_options.database ?? []"
-            text-by="name"
-            value-by="id"
-            :error="!!$page.props.errors.database_server_id"
-            :error-messages="$page.props.errors.database_server_id"
-          />
-          <va-select
-            v-model="form.web_server_id"
-            class="flex flex-col sm12 mb-3"
-            :label="$t('admin.apps.appServer')"
-            :options="server_options.web ?? []"
-            text-by="name"
-            value-by="id"
-            :error="!!$page.props.errors.web_server_id"
-            :error-messages="$page.props.errors.web_server_id"
-          />
-          <va-select
-            v-model="form.sso_server_id"
-            class="flex flex-col sm12 mb-3"
-            :label="$t('admin.apps.ssoServer')"
-            :options="server_options.sso ?? []"
-            text-by="name"
-            value-by="id"
-            :error="!!$page.props.errors.sso_server_id"
-            :error-messages="$page.props.errors.sso_server_id"
-          />
-        </template>
-      </AdminSettings>
-      <va-list-separator class="my-3" fit />
       <div class="row mt-3">
       <va-textarea
           v-model="form.settings"
@@ -374,6 +391,13 @@ export default {
     }
   },
   computed: {
+    serverRows () {
+      return [
+        { type: 'database', label: this.$t('admin.apps.databaseServer'), name: this.app.database_server },
+        { type: 'web', label: this.$t('admin.apps.appServer'), name: this.app.web_server },
+        { type: 'sso', label: this.$t('admin.apps.ssoServer'), name: this.app.sso_server }
+      ]
+    },
     // Each edit once, however many things it put out of date
     changes () {
       const seen = new Map()
@@ -417,7 +441,13 @@ export default {
           value: 'version'
         }
       ],
+      // Saving the settings never sends servers: moving those is a separate, confirmed action
       form: useForm({
+        settings
+      }),
+      showRepair: false,
+      confirmRepair: false,
+      repairForm: useForm({
         settings,
         database_server_id: this.app.database_server_id ?? null,
         web_server_id: this.app.web_server_id ?? null,

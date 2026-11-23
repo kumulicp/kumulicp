@@ -156,6 +156,8 @@ class Applications extends Controller
                     'name' => $app->version->name,
                 ],
                 'database_server' => $external ? null : $app->database_server?->server?->name,
+                'web_server' => $external ? null : $app->web_server?->server?->name,
+                'sso_server' => $external ? null : $app->sso_server?->server?->name,
                 'settings' => $app->settings,
                 'status' => $app->status,
                 'password' => $app->api_password(),
