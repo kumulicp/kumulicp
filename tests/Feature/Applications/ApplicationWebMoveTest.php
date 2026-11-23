@@ -13,6 +13,7 @@ use App\OrgSubdomain;
 use App\Server;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
+use App\Support\ServerReach;
 use App\Task;
 use Illuminate\Support\Facades\Validator;
 use Tests\Support\Applications\DemoAppProfile;
@@ -314,4 +315,29 @@ it('does not remove the release of the server the app runs on', function () {
 
     expect($cleanup->status)->toBe(TaskStatus::FAILED)
         ->and(FakeServerManager::$calls)->toBe([]);
+});
+
+it('only moves to an app server that can reach the app\'s database, which is moved first, by way of one both can reach', function () {
+    [$instance, $old] = appOnWebServer();
+    $target = webServer('new-cluster', '10.0.0.2');
+
+    // The database is on a network only the old app server is on
+    $database = Server::factory()->create(['type' => 'database', 'name' => 'inner-db', 'host' => 'inner-db.example.com']);
+    $database->app_servers()->sync([$old->server_id]);
+    $instance->database_server_id = OrgServer::forceCreate(['organization_id' => $instance->organization_id, 'server_id' => $database->id])->id;
+    $instance->save();
+    $instance = $instance->fresh();
+
+    expect(ApplicationWebMove::blockers($instance, $target))->toBe([
+        __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'inner-db']),
+    ]);
+
+    // Moved to a database both app servers can reach, which can be done from where the app is now
+    $bridge = Server::factory()->create(['type' => 'database', 'name' => 'bridge-db', 'host' => 'bridge-db.example.com']);
+    $bridge->app_servers()->sync([$old->server_id, $target->id]);
+    $instance->database_server_id = OrgServer::forceCreate(['organization_id' => $instance->organization_id, 'server_id' => $bridge->id])->id;
+    $instance->save();
+
+    expect(ApplicationWebMove::blockers($instance->fresh(), $target))->toBe([])
+        ->and(ServerReach::reachableFromAll('database', [$old->server, $target])->pluck('name')->all())->toBe(['bridge-db']);
 });
