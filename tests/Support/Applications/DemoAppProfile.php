@@ -13,11 +13,16 @@ class DemoAppProfile extends AppProfile
     // Set while a test needs the app to be one whose shared children keep a site, and groups, of their own
     public static bool $multisite = false;
 
+    // Set while a test needs the app to be one that signs people in through an SSO server
+    public static bool $sso = false;
+
     public function isCompatible(string|array $compatibility): bool
     {
         $flags = (array) $compatibility;
 
-        return (static::$multisite && in_array('multisite', $flags, true)) || parent::isCompatible($compatibility);
+        return (static::$multisite && in_array('multisite', $flags, true))
+            || (static::$sso && array_intersect($flags, ['sso', 'openid', 'oauth2', 'saml']))
+            || parent::isCompatible($compatibility);
     }
 
     // Set while a test needs the app's site to live in a parent's release, made by a job

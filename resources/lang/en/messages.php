@@ -100,6 +100,7 @@ return [
         'app_not_active' => 'The app must be active before its :type server can be moved',
         'has_children' => 'The app has child apps that run with it, so its :type server can\'t be moved on its own',
         'is_child' => 'The app runs as part of its parent app, so its :type server is moved with the parent',
+        'no_sso_support' => 'This app does not support single sign-on, so it has no sign-in server to move',
         'wrong_type' => 'That is not a :type server',
         'server_inactive' => 'That server is not active',
         'backup_server' => 'A server that only holds backups cannot be used as the app\'s :type server',

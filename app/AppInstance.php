@@ -397,6 +397,12 @@ class AppInstance extends Model
             : null;
     }
 
+    // Whether the app can sign people in through an SSO server at all
+    public function supportsSso(): bool
+    {
+        return ApplicationFacade::profile($this->application)->supportsSso();
+    }
+
     public function usesMultisitePermissions(): bool
     {
         return ApplicationFacade::profile($this->application)->isCompatible('multisite');

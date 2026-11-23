@@ -35,6 +35,8 @@ class MoveBlockers
 
     public const IS_CHILD = 'is_child';
 
+    public const NO_SSO_SUPPORT = 'no_sso_support';
+
     public const WRONG_TYPE = 'wrong_type';
 
     public const SERVER_INACTIVE = 'server_inactive';
@@ -113,6 +115,11 @@ class MoveBlockers
         // own release is the parent's). Moving a child alone would move nothing.
         if ($type === 'web' && $app->children()->notDeactivated()->exists()) {
             $reasons[] = self::HAS_CHILDREN;
+        }
+
+        // An app that can't sign people in through an SSO server has nothing to move
+        if ($type === 'sso' && ! $app->supportsSso()) {
+            $reasons[] = self::NO_SSO_SUPPORT;
         }
 
         // The same child has no sign-in of its own either: it signs in as its parent does

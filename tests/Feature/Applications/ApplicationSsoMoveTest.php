@@ -12,6 +12,7 @@ use App\Task;
 use App\TaskStep;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\SSO\FakeSSO;
 use Tests\Support\TestSupports;
 
@@ -30,11 +31,14 @@ const OLD_SSO_SETTINGS = [
 ];
 
 beforeEach(function () {
+    // The demo app signs people in through an SSO server, unless a test says it does not
+    DemoAppProfile::$sso = true;
     $this->setupFakeServerInterfaces();
     $this->fakeNotificationsAndMail();
 });
 
 afterEach(function () {
+    DemoAppProfile::$sso = false;
     $this->restoreServerInterfaces();
 });
 
@@ -192,6 +196,21 @@ it('refuses a server that cannot take the app, before touching anything', functi
     expect($instance->sso_server_id)->toBe($old->id)
         ->and(collect($instance->settings)->only(array_keys(OLD_SSO_SETTINGS))->all())->toBe(OLD_SSO_SETTINGS)
         ->and($instance->status)->toBe('active')
+        ->and(FakeSSO::$calls)->toBe([]);
+});
+
+it('refuses an app that does not support single sign-on, before touching anything', function () {
+    [$instance, $old] = appOnSsoServer();
+    DemoAppProfile::$sso = false;
+
+    expect(ApplicationSsoMove::blockers($instance, ssoServer('new-sso')))
+        ->toBe([__('messages.server_move.no_sso_support', ['type' => 'sso'])]);
+
+    $task = startSsoMove($instance, ssoServer('other-sso'));
+
+    expect($task->status)->toBe(TaskStatus::FAILED)
+        ->and($instance->fresh()->sso_server_id)->toBe($old->id)
+        ->and(collect($instance->fresh()->settings)->only(array_keys(OLD_SSO_SETTINGS))->all())->toBe(OLD_SSO_SETTINGS)
         ->and(FakeSSO::$calls)->toBe([]);
 });
 

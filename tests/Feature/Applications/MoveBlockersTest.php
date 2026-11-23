@@ -6,6 +6,7 @@ use App\Organization;
 use App\OrgServer;
 use App\Server;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -15,8 +16,15 @@ use Tests\TestCase;
  */
 uses(TestCase::class, RefreshDatabase::class);
 
+afterEach(function () {
+    DemoAppProfile::$sso = false;
+});
+
 beforeEach(function () {
     (new TestSupports)->seed();
+
+    // The demo app signs people in through an SSO server, unless a test says it does not
+    DemoAppProfile::$sso = true;
 
     $this->organization = Organization::find(1);
     $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
@@ -130,6 +138,7 @@ it('refuses a web or sso move for an app that runs as part of its parent', funct
     $child->status = 'active';
     $child->shouldReceive('children->notDeactivated->exists')->andReturn(false);
     $child->shouldReceive('usesOwnResources')->andReturn(false);
+    $child->shouldReceive('supportsSso')->andReturn(true);
 
     expect(MoveBlockers::app($child, 'web'))->toBe([MoveBlockers::IS_CHILD])
         ->and(MoveBlockers::app($child, 'sso'))->toBe([MoveBlockers::IS_CHILD])
@@ -157,6 +166,17 @@ it('lists everything in the way at once, not one thing at a time', function () {
 
 it('joins messages into one text', function () {
     expect(MoveBlockers::summary(['One', 'Two']))->toBe('One. Two.');
+});
+
+it('refuses an sso move for an app that does not support single sign-on, but no other move', function () {
+    DemoAppProfile::$sso = false;
+    $app = $this->appInstance->fresh();
+
+    expect(MoveBlockers::app($app, 'sso'))->toBe([MoveBlockers::NO_SSO_SUPPORT])
+        ->and(MoveBlockers::app($app, 'database'))->toBe([])
+        ->and(MoveBlockers::app($app, 'web'))->toBe([])
+        ->and(MoveBlockers::for($app, 'sso', moveTarget('sso')))
+        ->toBe(__('messages.server_move.no_sso_support', ['type' => 'sso']));
 });
 
 it('only knows the servers an app has', function () {
