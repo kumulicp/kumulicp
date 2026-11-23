@@ -735,6 +735,7 @@
       "oldSsoEntry": "Still has an entry on {server} from an earlier move.",
       "removeOldSso": "Remove",
       "confirmStep": "Continue",
+      "moveTab": "Move",
       "moveWeb": "Move App",
       "moveWebTitle": "Move the App to Another Server",
       "moveWebDescription": "Stops the app on its current server, then waits for you to restore its volume on the new cluster by hand. Once you say what the volume is called, the app is installed on the new server against it, checked, and its domains are pointed at it. If anything fails, the app goes back to its current server and is started again.",
