@@ -13,6 +13,14 @@ class DemoAppProfile extends AppProfile
     // Set while a test needs the app to be one whose shared children keep a site, and groups, of their own
     public static bool $multisite = false;
 
+    // Set while a test needs the app's chart to be one that can be given a volume that already exists
+    public static ?array $storage_handover = null;
+
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        return static::$storage_handover;
+    }
+
     // Set while a test needs the app to be one that signs people in through an SSO server
     public static bool $sso = false;
 

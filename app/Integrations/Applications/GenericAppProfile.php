@@ -2,7 +2,9 @@
 
 namespace App\Integrations\Applications;
 
+use App\AppInstance;
 use App\Integrations\ServerManagers\Kubernetes\Charts\GenericChart;
+use App\Support\Facades\Application;
 
 class GenericAppProfile extends AppProfile
 {
@@ -183,4 +185,19 @@ class GenericAppProfile extends AppProfile
             'validations' => 'nullable|array',
         ],
     ];
+
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        // One volume only: which of several the claim is for is not something to guess
+        if (count(Application::instance($app_instance)->arrayConfiguration('persistence')) > 1) {
+            return null;
+        }
+
+        return [
+            'claim' => ['path' => 'configurations.persistence-0-existingClaim'],
+            'access_mode' => ['path' => 'configurations.persistence-0-accessMode'],
+            'storage_class' => ['path' => 'configurations.persistence-0-storageClass'],
+            'size' => ['path' => 'configurations.persistence-0-size'],
+        ];
+    }
 }

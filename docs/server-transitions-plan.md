@@ -257,8 +257,22 @@ provider instead of making one with a client id and secret, so the entry has to 
 Still open from this phase: wiring for apps that do not read the stored SSO values (CiviCRM and
 generic apps get a provider but no configuration). Runbook in Appendix A.
 
-**Phase 3 - web move.** Claim handover mapping, `AwaitVolume` gate, `ApplicationWebMove`, DNS
-refresh, `blocker()`. Runbook in Appendix B. Add the old-copy cleanup action last.
+**Phase 3 - web move**, built as a stack, each slice based on the one before:
+
+1. The storage handover (`App\Support\StorageHandover`): one mapping from a claim name, access mode,
+   storage class and size to the settings each chart reads (`AppProfile::storageHandover()`), with
+   what was there before kept so it can be put back. A new volume clears the claim name the old
+   volume may have left in the settings.
+2. A "wait for an admin to confirm" step, and the button on the app page that confirms it.
+3. `ApplicationWebMove`: prepare, scale the old release to zero (its own flag, not
+   `expand_storage`), wait for the volume, hand over the storage and flip the pointer and run the
+   standard update on the new server, check it is up, refresh the DNS records. Rollback
+   restores the settings, points back and scales the old release up again.
+4. The Move button on the app page, with the target server, and the route.
+5. Removing the old release, as its own action (`delete()` on the old server's interface has
+   side effects on the old server's redirects that need care).
+
+Runbook in Appendix B.
 
 **Phase 4 - polish.** Backup copy between servers, optional volume backup driver, `sub_mode`
 guidance in the server form. No bulk move for now: each app is moved on its own.
