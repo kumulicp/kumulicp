@@ -87,6 +87,15 @@ return [
         'migrated' => ':app is now using the :server database server',
     ],
     // Moving an app's database, app (web) or SSO server (:type); see ApplicationServerMove
+    'web_move' => [
+        'rolled_back' => 'The app\'s move to another server failed and it was returned to :server: :reason',
+        'rollback_failed' => 'The app\'s move to another server failed (:reason) and returning the app to its previous server also failed: :error. Check the app\'s servers and run an app update.',
+        'other_driver' => 'The app is on :server, which is a :driver server, and can only move to another of the same kind',
+        'quiesce_failed' => 'The app could not be stopped on its current server',
+        'update_not_scheduled' => 'The app update that installs it on the new server could not be scheduled',
+        'copy_left' => 'The release on :server was left in place and can be removed manually.',
+        'await_volume' => 'The app is stopped. On :server, restore its volume from the backup and make a claim for it with a name of its own, then say what it is called here. Choose a new volume to start the app with an empty one.',
+    ],
     'sso_move' => [
         'setup_not_scheduled' => 'The sign-in setup on the new server could not be scheduled',
         'setup_failed' => 'Sign-in could not be set up on the new server',

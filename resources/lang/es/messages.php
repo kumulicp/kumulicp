@@ -48,6 +48,15 @@ return [
         'migrated' => ':app ahora usa el servidor de base de datos :server',
     ],
     // Mover el servidor de base de datos, de aplicación (web) o SSO (:type) de una aplicación
+    'web_move' => [
+        'rolled_back' => 'El traslado de la aplicación a otro servidor falló y se devolvió a :server: :reason',
+        'rollback_failed' => 'El traslado de la aplicación a otro servidor falló (:reason) y devolverla a su servidor anterior también falló: :error. Revisa los servidores de la aplicación y ejecuta una actualización.',
+        'other_driver' => 'La aplicación está en :server, que es un servidor :driver, y solo puede trasladarse a otro del mismo tipo',
+        'quiesce_failed' => 'No se pudo detener la aplicación en su servidor actual',
+        'update_not_scheduled' => 'No se pudo programar la actualización que instala la aplicación en el nuevo servidor',
+        'copy_left' => 'La versión desplegada en :server se dejó en su lugar y se puede eliminar manualmente.',
+        'await_volume' => 'La aplicación está detenida. En :server, restaura su volumen desde la copia de seguridad y crea un claim con un nombre propio, y luego indica aquí cómo se llama. Elige un volumen nuevo para iniciar la aplicación con uno vacío.',
+    ],
     'sso_move' => [
         'setup_not_scheduled' => 'No se pudo programar la configuración del inicio de sesión en el nuevo servidor',
         'setup_failed' => 'No se pudo configurar el inicio de sesión en el nuevo servidor',
