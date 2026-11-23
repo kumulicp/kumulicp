@@ -6,6 +6,7 @@ use App\Enums\AccessType;
 use App\Events\Users\UserEmailChanged;
 use App\Mailbox;
 use App\OrgDomain;
+use App\Rules\ConfirmOldPassword;
 use App\Services\Email\MailboxService;
 use App\Services\Email\RecoveryEmailDirectory;
 use App\Services\Email\RecoveryEmailService;
@@ -297,6 +298,14 @@ class OrgEmailFlowTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         Event::assertDispatched(UserEmailChanged::class, fn ($event) => $event->username === 'demo' && $event->old_email === 'demo@example.com' && $event->new_email === 'moved@example.org');
+    }
+
+    public function test_the_password_is_checked_for_the_signed_in_user_even_if_the_panels_copy_of_their_email_is_out_of_date()
+    {
+        // The directory can change an email without the panel's copy knowing until the next sign in
+        $this->assertTrue((new ConfirmOldPassword('out-of-date@example.org', 'demo'))->passes('current_password', 'demouser'));
+        $this->assertFalse((new ConfirmOldPassword('out-of-date@example.org', 'demo'))->passes('current_password', 'wrong-password'));
+        $this->assertFalse((new ConfirmOldPassword('out-of-date@example.org'))->passes('current_password', 'demouser'));
     }
 
     public function test_an_administrator_cannot_edit_the_email_of_someone_who_has_an_organization_address()
