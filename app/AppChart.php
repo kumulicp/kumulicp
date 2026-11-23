@@ -2,6 +2,8 @@
 
 namespace App;
 
+use App\Enums\ApplicationSource;
+use App\Support\Facades\Application as ApplicationFacade;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +24,8 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property string|null $helm_repo
  * @property int|null $helm_repo_secret_id
  * @property int|null $chart_source_id
+ * @property ApplicationSource $source
+ * @property array|null $catalog
  * @property bool $is_default
  * @property bool $enabled
  * @property Carbon|null $created_at
@@ -37,17 +41,27 @@ class AppChart extends Model
 
     protected $table = 'app_charts';
 
-    protected $fillable = ['application_id', 'name', 'slug', 'chart_name', 'helm_repo', 'helm_repo_secret_id', 'chart_source_id', 'is_default', 'enabled'];
+    protected $fillable = ['application_id', 'name', 'slug', 'chart_name', 'helm_repo', 'helm_repo_secret_id', 'chart_source_id', 'source', 'catalog', 'is_default', 'enabled'];
 
     protected $attributes = [
+        'source' => 'generic',
         'is_default' => false,
         'enabled' => true,
     ];
 
     protected $casts = [
+        'source' => ApplicationSource::class,
+        'catalog' => 'array',
         'is_default' => 'boolean',
         'enabled' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        // Which profile an app's installs use is worked out from its charts
+        static::saved(fn (AppChart $chart) => ApplicationFacade::forgetCharts($chart->application_id));
+        static::deleted(fn (AppChart $chart) => ApplicationFacade::forgetCharts($chart->application_id));
+    }
 
     /**
      * The chart the given version is deployed from, for an app that has none yet.
@@ -62,6 +76,7 @@ class AppChart extends Model
             'helm_repo' => self::text($version?->setting('helm_repo_name')),
             'helm_repo_secret_id' => $version?->helm_repo_secret_id,
             'chart_source_id' => $application->chart_source_id,
+            'source' => $application->source,
             'is_default' => true,
         ]);
     }

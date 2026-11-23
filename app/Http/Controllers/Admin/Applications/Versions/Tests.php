@@ -148,7 +148,7 @@ class Tests extends Controller
         }
 
         return [
-            'username' => ApplicationFacade::profile($app_instance->application)->adminUsername($app_instance),
+            'username' => ApplicationFacade::profileFor($app_instance)->adminUsername($app_instance),
             'password' => $app_instance->api_password(),
         ];
     }

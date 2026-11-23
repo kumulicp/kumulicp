@@ -113,11 +113,9 @@ class Chart
 
     public function extraEnv()
     {
-        $name = $this->app_instance->application->slug;
         $env_vars = [];
 
-        $app = Application::profile($name);
-        foreach (Application::profile($name)->envs() as $env_class) {
+        foreach (Application::profileFor($this->app_instance)->envs() as $env_class) {
             $env = new $env_class;
             $secret_names = $env->secretNames();
             foreach ($env->get($this->app_instance) as $name => $value) {
@@ -133,7 +131,7 @@ class Chart
     public function convertFeaturesToEnvVars()
     {
         $app_instance_features = Application::instance($this->app_instance)->features();
-        $app_features = Application::profile($this->app_instance->application->slug)->features();
+        $app_features = Application::profileFor($this->app_instance)->features();
         $app_features_keys = $app_features->keys()->all();
 
         $env_vars = [];
@@ -186,11 +184,9 @@ class Chart
 
     public function sidecars()
     {
-        $name = $this->app_instance->application->slug;
         $sidecars = [];
 
-        $app = Application::profile($name)->sidecars();
-        foreach ($app as $sidecar_class) {
+        foreach (Application::profileFor($this->app_instance)->sidecars() as $sidecar_class) {
             $sidecar = new $sidecar_class;
             if ($get_sidecar = $sidecar->get($this->app_instance)) {
                 $sidecars[] = $sidecar->get($this->app_instance);
@@ -226,7 +222,7 @@ class Chart
     {
         return array_map(
             fn (string $modifier) => new $modifier,
-            Application::profile($this->app_instance->application->slug)->chartModifiers()
+            Application::profileFor($this->app_instance)->chartModifiers()
         );
     }
 

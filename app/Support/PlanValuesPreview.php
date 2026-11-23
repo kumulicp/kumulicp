@@ -114,7 +114,7 @@ class PlanValuesPreview
             }
         }
 
-        $profile_names = array_keys(ApplicationFacade::profile($app)->configurations());
+        $profile_names = array_keys(ApplicationFacade::profileFor($plan)->configurations());
         $known = array_merge($profile_names, array_keys($additional));
 
         // Profile configs the form left out keep their saved value; removed additional configs drop out, as they do on save.

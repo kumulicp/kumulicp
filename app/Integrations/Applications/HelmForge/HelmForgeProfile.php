@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Applications\HelmForge;
 
+use App\AppChart;
 use App\AppInstance;
 use App\Application;
 use App\Integrations\Applications\AppProfile;
@@ -20,10 +21,13 @@ class HelmForgeProfile extends AppProfile
 
     protected $helm_chart = HelmForgeChart::class;
 
-    public function __construct(Application $application)
+    /**
+     * @param  AppChart|null  $chart  a catalog chart added to an app that is deployed another way, whose own data is used instead of the app's
+     */
+    public function __construct(Application $application, ?AppChart $chart = null)
     {
         $this->name = $application->slug;
-        $this->configurations = $application->catalog['configurations'] ?? [];
+        $this->configurations = ($chart?->catalog ?? $application->catalog)['configurations'] ?? [];
     }
 
     public function storageHandover(AppInstance $app_instance): ?array

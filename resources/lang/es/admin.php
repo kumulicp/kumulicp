@@ -88,6 +88,15 @@ return [
             'enabled' => 'Rol :role habilitado',
             'disabled' => 'Rol :role deshabilitado',
         ],
+        'charts' => [
+            'charts' => 'Charts',
+            'added' => 'Se añadió :chart. Está desactivado hasta que lo habilites.',
+            'refreshed' => ':chart está al día',
+            'enabled' => 'Los planes ya pueden elegir :chart',
+            'disabled' => 'Los planes ya no pueden elegir :chart',
+            'default' => 'El chart predeterminado siempre está activo.',
+            'in_use' => 'Un chart que usan planes no se puede desactivar: muévelos primero a otro grupo de versiones.',
+        ],
         'version_groups' => [
             'added' => 'Se añadió el grupo de versiones :group',
             'renamed' => 'El grupo de versiones ahora se llama :group',

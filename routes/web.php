@@ -83,6 +83,12 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::post('secrets/reveal', 'Admin\Applications\Plans\Secrets@reveal')->name('app.plans.secrets.reveal');
                     });
                 });
+                Route::prefix('charts')->group(function () {
+                    Route::get('', 'Admin\Applications\Charts@index')->name('app.charts');
+                    Route::post('', 'Admin\Applications\Charts@attach')->name('app.charts.attach');
+                    Route::post('{chart}/enable', 'Admin\Applications\Charts@enable')->name('app.charts.enable');
+                    Route::post('{chart}/disable', 'Admin\Applications\Charts@disable')->name('app.charts.disable');
+                });
                 Route::prefix('version-groups')->group(function () {
                     Route::post('', 'Admin\Applications\VersionGroups@store')->name('app.version-groups.store');
                     Route::put('{group}', 'Admin\Applications\VersionGroups@update')->name('app.version-groups.update');

@@ -2,8 +2,10 @@
 
 namespace App\Support\Catalog;
 
+use App\AppChart;
 use App\Application;
 use App\AppVersion;
+use App\AppVersionGroup;
 use App\ChartSource;
 use App\Enums\ApplicationSource;
 use App\Support\Facades\Application as ApplicationFacade;
@@ -11,6 +13,7 @@ use App\Support\VersionUpdates\ChartPackage;
 use App\Support\VersionUpdates\HttpChartRepository;
 use App\Tag;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -72,9 +75,150 @@ class ChartCatalogSync
             }
         }
 
+        $this->syncAttachedCharts($source, $report);
+
         $source->update(['last_synced_at' => now(), 'last_sync_error' => null]);
 
         return $report;
+    }
+
+    /**
+     * Keeps the charts this source was added to other apps as up to date too.
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function syncAttachedCharts(ChartSource $source, array &$report): void
+    {
+        $charts = AppChart::where('chart_source_id', $source->id)
+            ->where('is_default', false)
+            ->where('source', ApplicationSource::HelmForge->value)
+            ->with('application')
+            ->get();
+
+        foreach ($charts as $chart) {
+            $label = "{$chart->application->slug} ({$source->slug})";
+
+            try {
+                $this->attach($source, $chart->application, $chart->chart_name);
+                $report['updated'][] = $label;
+            } catch (Throwable $exception) {
+                $report['failed'][$label] = $exception->getMessage();
+            }
+        }
+    }
+
+    /**
+     * Adds a chart of the source to an app that is deployed another way (the
+     * registered Nextcloud chart gets HelmForge's as a second one), so plans
+     * can choose between them. The new chart is off until an admin enables it,
+     * and has the newest versions of the chart in a group of its own. Safe to
+     * repeat: it brings an added chart up to date.
+     *
+     * @return array{chart: AppChart, created: bool, skipped: array<string, string>}
+     *
+     * @throws RuntimeException when the source or its chart can't be used
+     */
+    public function attach(ChartSource $source, Application $application, ?string $chart_name = null): array
+    {
+        if (ApplicationSource::forChartSource($source) !== ApplicationSource::HelmForge) {
+            throw new RuntimeException("Chart source {$source->slug} has no supported chart schema, only HelmForge charts can be added");
+        }
+
+        // An app imported from the source already is its chart: there is nothing to choose
+        if ($application->isHelmForge() && $application->chart_source_id === $source->id) {
+            throw new RuntimeException("{$application->name} is already deployed from {$source->name}");
+        }
+
+        $chart_name ??= $application->slug;
+        $secret = $source->helmRepoSecret?->requiresAuth() ? $source->helmRepoSecret : null;
+        $entries = (new HttpChartRepository($source->url, '', $secret))->index()[$chart_name] ?? [];
+
+        if (! $entries || ($entries[0]['type'] ?? 'application') === 'library') {
+            throw new RuntimeException("{$source->name} has no application chart named {$chart_name}");
+        }
+
+        $repository = (new HttpChartRepository($source->url, $chart_name, $secret))->withEntries($entries);
+        $latest = $entries[0];
+
+        // The app needs a chart of its own first, so the new one is the other
+        $application->defaultVersionGroup();
+
+        $chart = $application->charts()->where('chart_source_id', $source->id)->where('is_default', false)->first();
+        $created = ! $chart;
+        $catalog = $chart?->catalog ?? [];
+
+        // Detection needs the chart's values, so only download on a new version
+        if (($catalog['chart_version'] ?? null) !== (string) $latest['version']) {
+            $catalog = $this->catalog($chart_name, $latest, ChartPackage::fromArchive($repository->package((string) $latest['version'])));
+        }
+
+        $attributes = ['chart_name' => $chart_name, 'helm_repo' => $source->url, 'helm_repo_secret_id' => $source->helm_repo_secret_id, 'catalog' => $catalog];
+
+        if ($created) {
+            $chart = $application->charts()->create($attributes + [
+                'name' => $source->name,
+                'slug' => $this->uniqueChartSlug($application, $source->slug),
+                'chart_source_id' => $source->id,
+                'source' => ApplicationSource::HelmForge,
+                'is_default' => false,
+                'enabled' => false,
+            ]);
+        } else {
+            $chart->update($attributes);
+        }
+
+        $skipped = [];
+        $group = $chart->defaultVersionGroup();
+
+        foreach (array_slice($entries, 0, (int) config('catalog.versions_per_chart', 3)) as $entry) {
+            if ($reason = $this->syncChartVersion($chart, $group, $entry)) {
+                $skipped[(string) $entry['version']] = $reason;
+            }
+        }
+
+        return ['chart' => $chart, 'created' => $created, 'skipped' => $skipped];
+    }
+
+    private function uniqueChartSlug(Application $application, string $base): string
+    {
+        $taken = $application->charts()->pluck('slug')->all();
+        $slug = Str::slug($base) ?: 'chart';
+        $candidate = $slug;
+
+        for ($n = 2; in_array($candidate, $taken, true); $n++) {
+            $candidate = "{$slug}-{$n}";
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Adds a version of an added chart to its group, unless it has it. Version names are
+     * the app's own, so one the app already has under another chart can't be used.
+     */
+    private function syncChartVersion(AppChart $chart, AppVersionGroup $group, array $entry): ?string
+    {
+        $name = (string) $entry['version'];
+        $existing = AppVersion::where('application_id', $chart->application_id)->where('name', $name)->first();
+
+        if ($existing) {
+            return $existing->versionGroup?->app_chart_id === $chart->id ? null : "the app already has a version named {$name}";
+        }
+
+        $version = new AppVersion;
+        $version->application_id = $chart->application_id;
+        $version->version_group_id = $group->id;
+        $version->name = $name;
+        $version->settings = [
+            'chart_name' => $chart->chart_name,
+            'chart_version' => $name,
+            'helm_repo_name' => $chart->helm_repo,
+        ];
+        $version->helm_repo_secret_id = $chart->helm_repo_secret_id;
+        $version->status = 'deactivated';
+        $version->save();
+
+        return null;
     }
 
     private function skipReason(ChartSource $source, string $chart_name, array $entries): ?string

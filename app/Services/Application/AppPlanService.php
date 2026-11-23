@@ -73,7 +73,7 @@ class AppPlanService
         $plan_changed = false;
 
         $plan_settings = [];
-        $app_features = Application::profile($this->plan->application->slug)->features();
+        $app_features = Application::profileFor($this->plan)->features();
         $default_currency = SettingsFacade::get('default_currency', 'USD');
 
         foreach ($features as $name => $feature) {

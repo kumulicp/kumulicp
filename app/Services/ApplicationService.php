@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\AppChart;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -39,6 +40,12 @@ class ApplicationService
 
     // Profiles of HelmForge apps by slug (false = looked up, not a HelmForge app)
     private $helmforge_profiles = [];
+
+    // Whether an app has charts besides its default one, by application id
+    private $extra_charts = [];
+
+    // Profiles of charts that are deployed differently from their app, by chart id
+    private $chart_profiles = [];
 
     public function __construct()
     {
@@ -91,6 +98,65 @@ class ApplicationService
         }
 
         return $this->helmForgeProfile($slug, $model) ?? Arr::get($this->applications, 'generic');
+    }
+
+    /**
+     * The profile an install, a plan or a chart is deployed and configured with.
+     * An app's default chart has the app's own (see profile()); another chart
+     * can be deployed differently, like HelmForge's chart of an app that has a
+     * hand-written profile.
+     */
+    public function profileFor(AppInstance|AppPlan|AppChart $subject)
+    {
+        $application = $subject->application;
+
+        // Most apps have one chart, which is the app's own profile
+        if (! $this->hasExtraCharts($application)) {
+            return $this->profile($application);
+        }
+
+        $chart = $subject instanceof AppChart ? $subject : $this->chartFor($subject);
+
+        return $chart ? $this->profileForChart($chart) : $this->profile($application);
+    }
+
+    public function profileForChart(AppChart $chart)
+    {
+        $application = $chart->application;
+
+        // Only a catalog chart added to an app that is deployed another way has a profile of its own
+        if ($chart->is_default || $chart->source !== ApplicationSource::HelmForge || ! $chart->catalog) {
+            return $this->profile($application);
+        }
+
+        return $this->chart_profiles[$chart->id] ??= new HelmForgeProfile($application, $chart);
+    }
+
+    /**
+     * The chart an install or a plan is deployed from, when it is not just the
+     * default: the one of the version the install runs, else of the group its plan picked.
+     */
+    public function chartFor(AppInstance|AppPlan $subject): ?AppChart
+    {
+        if ($subject instanceof AppPlan) {
+            return $subject->selectedVersionGroup?->chart;
+        }
+
+        return $subject->version?->chart() ?? $subject->plan?->selectedVersionGroup?->chart;
+    }
+
+    private function hasExtraCharts(Application $application): bool
+    {
+        return $this->extra_charts[$application->id] ??= $application->charts()->where('is_default', false)->exists();
+    }
+
+    /**
+     * Forgets what was worked out about the charts of an app, once they change.
+     */
+    public function forgetCharts(int $application_id): void
+    {
+        unset($this->extra_charts[$application_id]);
+        $this->chart_profiles = [];
     }
 
     // Apps imported from HelmForge have no registered profile; theirs is built
@@ -150,7 +216,7 @@ class ApplicationService
 
     public function configurations(Application $app, ?AppPlan $plan = null, $raw = false)
     {
-        $options = $this->profile($app->slug)->configurations();
+        $options = ($plan ? $this->profileFor($plan) : $this->profile($app->slug))->configurations();
         $configs = [];
 
         if (count($options) > 0) {
@@ -187,9 +253,9 @@ class ApplicationService
         });
     }
 
-    public function validateConfigurations(Application $app, $personalized = false)
+    public function validateConfigurations(Application $app, $personalized = false, ?AppPlan $plan = null)
     {
-        $options = $this->profile($app)->configurations();
+        $options = ($plan ? $this->profileFor($plan) : $this->profile($app))->configurations();
         $validations = [];
 
         foreach ($options as $name => $option) {
@@ -220,7 +286,7 @@ class ApplicationService
 
     public function processConfigurations(Application $app, AppPlan $plan, $configs)
     {
-        $options = $this->profile($app)->configurations();
+        $options = $this->profileFor($plan)->configurations();
 
         foreach ($options as $name => $option) {
             if (Arr::has($configs, $name)) {
@@ -318,7 +384,7 @@ class ApplicationService
 
     public function runJob(AppInstance $app_instance, string $job_name)
     {
-        $job_class = $this->profile($app_instance->application)->jobs();
+        $job_class = $this->profileFor($app_instance)->jobs();
         $job_command = Str::camel($job_name);
 
         if ($job_class && class_exists($job_class) && method_exists($job_class, $job_command)) {
@@ -510,7 +576,9 @@ class ApplicationService
     {
         $features = [];
 
-        foreach ($this->profile($app_slug)->features() as $name => $feature) {
+        $profile = $app_instance ? $this->profileFor($app_instance) : $this->profile($app_slug);
+
+        foreach ($profile->features() as $name => $feature) {
             if ($app_instance) {
                 $features[$name] = new $feature($app_instance);
             } else {

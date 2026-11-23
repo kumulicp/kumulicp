@@ -84,7 +84,7 @@ class Plans extends Controller
         // Checks if there are active subscribers of this plan
         $subscribers = $plan->subscribers()->count() == 0 ? false : true;
 
-        $features = ApplicationFacade::profile($app->slug)->features();
+        $features = ApplicationFacade::profileFor($plan)->features();
         $parent_servers = Server::where('app_instance_id', '>', 0)->with('app_instance')->get();
         $application_id = $app->slug;
         $configs = ApplicationFacade::configurations($app, $plan, true);
@@ -261,7 +261,7 @@ class Plans extends Controller
         $settings = $plan->publicSettings();
 
         $plan_features = ApplicationFacade::plan($plan)->features()->all();
-        $profile = ApplicationFacade::profile($app);
+        $profile = ApplicationFacade::profileFor($plan);
         $settings['features'] = $plan_features;
 
         $enabledCurrencies = json_decode(SettingsFacade::get('enabled_currencies', '["USD"]'), true) ?: ['USD'];
@@ -307,7 +307,7 @@ class Plans extends Controller
                 'version_group_id' => $plan->version_group_id,
                 'version_group' => $plan->versionGroup()->id,
             ],
-            'version_groups' => $app->versionGroups()->with('chart')->orderBy('app_charts.id')->orderBy('app_version_groups.id')->get()->map(fn ($group) => [
+            'version_groups' => $this->selectableGroups($app, $plan)->map(fn ($group) => [
                 'value' => $group->id,
                 'text' => $group->chart->name.' / '.$group->name,
             ])->values(),
@@ -352,7 +352,7 @@ class Plans extends Controller
         }
 
         /* Validate */
-        $validateConfigurations = ApplicationFacade::validateConfigurations($app);
+        $validateConfigurations = ApplicationFacade::validateConfigurations($app, false, $plan);
         $validated = $request->validate(array_merge([
             'name' => 'required',
             'default' => 'nullable',
@@ -385,7 +385,7 @@ class Plans extends Controller
             'domain_option' => 'nullable|array',
             'domain_option.*' => 'in:subdomains,primary,base,parent',
             'parent_app' => ['nullable', 'numeric', Rule::exists('applications', 'id'), Rule::notIn([$app->id])],
-            'version_group_id' => ['nullable', 'integer', Rule::in($app->versionGroups()->pluck('app_version_groups.id'))],
+            'version_group_id' => ['nullable', 'integer', Rule::in($this->selectableGroups($app, $plan)->pluck('id'))],
         ], $currencyRules));
 
         // Installs of a plan keep the chart they were deployed from, so the plan can only change group within it
@@ -572,5 +572,20 @@ class Plans extends Controller
                 'text' => $plan->name,
             ];
         }));
+    }
+
+    /**
+     * The groups a plan can pick: those of the charts that are enabled, and the one it has now.
+     *
+     * @return \Illuminate\Support\Collection<int, AppVersionGroup>
+     */
+    private function selectableGroups(Application $app, AppPlan $plan)
+    {
+        return $app->versionGroups()
+            ->with('chart')
+            ->where(fn ($query) => $query->where('app_charts.enabled', true)->orWhere('app_version_groups.id', $plan->version_group_id))
+            ->orderBy('app_charts.id')
+            ->orderBy('app_version_groups.id')
+            ->get();
     }
 }

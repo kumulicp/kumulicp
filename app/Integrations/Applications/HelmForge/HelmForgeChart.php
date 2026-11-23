@@ -3,6 +3,7 @@
 namespace App\Integrations\Applications\HelmForge;
 
 use App\AppInstance;
+use App\Enums\ApplicationSource;
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\Support\Facades\Application;
@@ -159,8 +160,16 @@ class HelmForgeChart extends HelmChart
         return $this->catalog()['convention'] ?? [];
     }
 
+    // The data of the chart the instance is deployed from: its own when that is a
+    // catalog chart added to an app that is deployed another way, else the app's
     private function catalog(): array
     {
+        $chart = Application::chartFor($this->app_instance);
+
+        if ($chart && ! $chart->is_default && $chart->source === ApplicationSource::HelmForge && $chart->catalog) {
+            return $chart->catalog;
+        }
+
         return $this->app_instance->application->catalog ?? [];
     }
 }

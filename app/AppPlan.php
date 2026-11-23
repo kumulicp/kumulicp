@@ -161,7 +161,7 @@ class AppPlan extends Model
     {
         $full = $this->hasFullSettings();
         $shared = $this->usesSharedApp();
-        $multisite = $shared && ApplicationFacade::profile($this->application)->isCompatible('multisite');
+        $multisite = $shared && ApplicationFacade::profileFor($this)->isCompatible('multisite');
 
         return [
             'features' => $full && (! $shared || $multisite),

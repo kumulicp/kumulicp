@@ -55,7 +55,7 @@ class AspectRegistry
     {
         $aspects = collect($this->aspects);
 
-        foreach (Application::profile($app_instance->application->slug)->aspects() as $aspect) {
+        foreach (Application::profileFor($app_instance)->aspects() as $aspect) {
             $aspects->put($aspect->key(), $aspect);
         }
 

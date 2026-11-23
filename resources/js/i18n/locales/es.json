@@ -331,6 +331,21 @@
       "message": "Mensaje",
       "time": "Hora"
     },
+    "charts": {
+      "charts": "Charts",
+      "intro": "Una aplicación se puede desplegar desde más de un chart. Los planes eligen el chart mediante el grupo de versiones que usan; el chart predeterminado es el que usan todos los planes hasta que eligen otro.",
+      "source": "Origen de charts",
+      "chartName": "Nombre del chart",
+      "add": "Añadir chart",
+      "name": "Nombre",
+      "chart": "Chart",
+      "deployedBy": "Desplegado por",
+      "usage": "En uso",
+      "usageSummary": "{groups} grupos, {versions} versiones, {plans} planes",
+      "default": "predeterminado",
+      "enable": "Habilitar",
+      "disable": "Deshabilitar"
+    },
     "roles": {
       "details": "Detalles",
       "detailsDescription": "Detalles tal como se presentan a los usuarios",

@@ -305,7 +305,7 @@ class VersionTestRunner
         // A shared app is tried out in two stages: the shared app itself, then a site added to it.
         // One that is only a container for sites has no address or login of its own to try.
         $shared = (bool) ($step->run->app_plan_id && $app_instance);
-        $has_site = $app_instance && ApplicationFacade::profile($app_instance->application)->hasOwnSite($app_instance);
+        $has_site = $app_instance && ApplicationFacade::profileFor($app_instance)->hasOwnSite($app_instance);
 
         $domain = $shared && ! $has_site ? null : $app_instance?->domain();
 

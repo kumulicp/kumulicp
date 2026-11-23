@@ -45,6 +45,30 @@ Other chart repositories follow their own values schema, so `catalog:sync`
 refuses any chart source other than `helmforge` (`ApplicationSource::forChartSource()`)
 until it gets its own profile, chart class and source value.
 
+## Several charts for one app
+
+An app can be deployed from more than one chart: the registered Nextcloud
+chart and HelmForge's, say. Each is an `app_charts` row with its own version
+groups; the app's first chart is its default, and a plan picks another by
+picking one of its version groups (plan edit, "Version group").
+
+- **Adding one**: the app's *Charts* tab, or `ChartCatalogSync::attach()`. The
+  chart is added off, with the newest `catalog.versions_per_chart` versions in a
+  group of its own, and its `source` and `catalog` kept on the chart row (the
+  app is left as it was). `catalog:sync` keeps added charts up to date.
+- **Deploying**: `ApplicationService::profileFor()` gives an install, plan or
+  chart the profile of its chart. The default chart uses the app's own profile; a
+  catalog chart added to another kind of app uses a `HelmForgeProfile` built from
+  the chart's catalog data, so the registered profile's features, configurations,
+  sidecars and env vars do not apply to it.
+- **Plans**: only the groups of enabled charts are offered, and a plan with
+  subscribers cannot move to another chart. A chart that plans use cannot be turned off.
+- **Version names** are the app's own, so a version of an added chart whose name
+  the app already has is skipped.
+
+Not yet chart-aware: activation type (`job` or `chart`) and the `Nextcloud`
+instance extensions, which still follow the app.
+
 ## Not covered
 
 SSO/LDAP, roles, external database servers (charts use their bundled

@@ -337,6 +337,21 @@
       "message": "Message",
       "time": "Time"
     },
+    "charts": {
+      "charts": "Charts",
+      "intro": "An app can be deployed from more than one chart. Plans pick the chart through the version group they use; the default chart is the one every plan uses until it picks another.",
+      "source": "Chart source",
+      "chartName": "Chart name",
+      "add": "Add chart",
+      "name": "Name",
+      "chart": "Chart",
+      "deployedBy": "Deployed by",
+      "usage": "In use",
+      "usageSummary": "{groups} groups, {versions} versions, {plans} plans",
+      "default": "default",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
     "roles": {
       "details": "Details",
       "detailsDescription": "Details as they are presented to users",

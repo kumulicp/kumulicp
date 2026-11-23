@@ -59,8 +59,7 @@ class AppInstanceService
     public function charts()
     {
         $organization = $this->app_instance->organization;
-        $app_name = $this->app_instance->application->slug;
-        $charts = Application::profile($app_name)->chart();
+        $charts = Application::profileFor($this->app_instance)->chart();
 
         $return_charts = [];
 
@@ -181,14 +180,14 @@ class AppInstanceService
     // See AppProfile::hasOwnSite()
     public function hasOwnSite(): bool
     {
-        return Application::profile($this->app_instance->application)->hasOwnSite($this->app_instance);
+        return Application::profileFor($this->app_instance)->hasOwnSite($this->app_instance);
     }
 
     public function configuration($configuration, $required = false)
     {
         $settings = $this->app_instance->settings;
 
-        $config = Application::profile($this->app_instance->application)->configuration($configuration);
+        $config = Application::profileFor($this->app_instance)->configuration($configuration);
         $config_persistent = Arr::get($config, 'persistent', false) || Arr::get($this->app_instance->plan?->additionalConfigs(), "$configuration.persistent", false);
         $config_personalized = Arr::get($config, 'personalized', false);
 
@@ -222,7 +221,7 @@ class AppInstanceService
     public function arrayConfiguration(string $prefix): array
     {
         $names = array_merge(
-            array_keys(Application::profile($this->app_instance->application)->configurations()),
+            array_keys(Application::profileFor($this->app_instance)->configurations()),
             array_keys($this->app_instance->plan?->additionalConfigs() ?? []),
             array_keys((array) Arr::get($this->app_instance->settings, 'configurations', [])),
         );

@@ -43,7 +43,7 @@ class UpdateSteps
     {
         $steps = collect($this->steps);
 
-        foreach (Application::profile($app_instance->application->slug)->updateSteps() as $step) {
+        foreach (Application::profileFor($app_instance)->updateSteps() as $step) {
             $steps->put($step->key(), $step);
         }
 
