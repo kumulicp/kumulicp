@@ -30,6 +30,13 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
 
     public static int $recover_stuck_release_calls = 0;
 
+    /**
+     * What it was asked to do, in order: [method, the OrgServer's id, the app's id].
+     *
+     * @var array<int, array{string, int, int|null}>
+     */
+    public static array $calls = [];
+
     public static function reset(): void
     {
         self::$deleted_instances = [];
@@ -38,6 +45,7 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
         self::$missing_instances = [];
         self::$organization_missing = false;
         self::$recover_stuck_release_calls = 0;
+        self::$calls = [];
     }
 
     public static function markPending(int $app_instance_id): void
@@ -103,6 +111,8 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
 
     public function checkStatus(): array
     {
+        self::$calls[] = ['checkStatus', $this->server->id, $this->app_instance?->id];
+
         if ($this->app_instance && in_array($this->app_instance->id, self::$deleted_instances)) {
             return ['active' => false, 'pending' => false, 'message' => 'not found'];
         }
@@ -134,6 +144,8 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
 
     public function update(): bool
     {
+        self::$calls[] = ['update', $this->server->id, $this->app_instance?->id];
+
         return true;
     }
 

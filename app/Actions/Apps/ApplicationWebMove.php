@@ -7,6 +7,9 @@ use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\Actions\Apps\WebMove\PrepareWebMove;
 use App\Actions\Apps\WebMove\Quiesce;
+use App\Actions\Apps\WebMove\RefreshDns;
+use App\Actions\Apps\WebMove\SwitchServer;
+use App\Actions\Apps\WebMove\Verify;
 use App\AppInstance;
 use App\Server;
 
@@ -38,6 +41,12 @@ class ApplicationWebMove extends ApplicationServerMove
 
     // The app is stopped by an update that scales its release to zero
     public const QUIESCE_TIMEOUT_MINUTES = 20;
+
+    // Installing on a new cluster pulls the images, so it can take a while
+    public const UPDATE_TIMEOUT_MINUTES = 30;
+
+    // How long the release has, once installed, to be running
+    public const VERIFY_TIMEOUT_MINUTES = 15;
 
     // The instance setting that has the app's chart scale its release to zero
     public const QUIESCE_SETTING = 'quiesced_for_move';
@@ -82,7 +91,6 @@ class ApplicationWebMove extends ApplicationServerMove
 
     public static function steps(): array
     {
-        // The install, the check that it runs and the DNS refresh are the next change's
-        return [PrepareWebMove::class, Quiesce::class, AwaitVolume::class];
+        return [PrepareWebMove::class, Quiesce::class, AwaitVolume::class, SwitchServer::class, Verify::class, RefreshDns::class];
     }
 }
