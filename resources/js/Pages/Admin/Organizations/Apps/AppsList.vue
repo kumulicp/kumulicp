@@ -23,7 +23,19 @@ import { Link } from '@inertiajs/vue3'
           <td><Link :href="'/admin/organizations/'+organization.id+'/apps/'+app.id">{{ app.name }}</Link></td>
           <td>{{ app.version }}</td>
           <td>{{ app.domain.name }}</td>
-          <td>{{ app.status }}</td>
+          <td>
+            {{ app.status }}
+            <va-icon
+              v-if="app.maintenance"
+              name="build"
+              size="small"
+              color="#ff9800"
+              class="ml-1 maintenance-icon"
+              role="img"
+              :title="$t('admin.apps.maintenanceMode')"
+              :aria-label="$t('admin.apps.maintenanceMode')"
+            />
+          </td>
         </tr>
       </tbody>
     </table>

@@ -51,7 +51,7 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         <li v-for="item in ignored_image_settings" :key="item.setting">{{ $t('admin.apps.ignoredImageSetting', { setting: item.setting, value: item.value, image: item.image, used: item.used }) }}</li>
       </ul>
     </va-alert>
-    <va-alert v-if="maintenance.enabled" id="maintenanceActive" color="warning" icon="construction" class="mb-3">
+    <va-alert v-if="maintenance.enabled" id="maintenanceActive" color="warning" icon="build" class="mb-3">
       {{ $t('admin.apps.maintenanceActive') }}
     </va-alert>
     <div class="row justify-center">
