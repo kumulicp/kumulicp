@@ -304,7 +304,7 @@ class Applications extends Controller
         )->get()->id);
         $app->save();
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.updated', ['app' => $app->label]));
     }
 
     /**
