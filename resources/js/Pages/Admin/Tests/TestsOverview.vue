@@ -18,7 +18,7 @@ const stepColor = (status) => stepColors[status] || 'secondary'
 </script>
 <template>
   <Head>
-    <title>{{ $t('admin.tests.tests') }} - Control Panel</title>
+    <title>{{ $t('admin.versionTests.tests') }} - Control Panel</title>
   </Head>
 
   <div id="stats" class="mb-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem">
