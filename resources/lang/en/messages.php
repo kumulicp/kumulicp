@@ -97,6 +97,7 @@ return [
         'not_running' => 'The app is not running on the new server: :message',
         'still_starting' => 'it did not finish starting in time',
         'copy_left' => 'The release on :server was left in place and can be removed manually.',
+        'nothing_to_remove' => 'There is no release left on that server to remove',
         'await_volume' => 'The app is stopped. On :server, restore its volume from the backup and make a claim for it with a name of its own, then say what it is called here. Choose a new volume to start the app with an empty one.',
         'moved' => ':app is now running on :server',
         'dns_failed' => 'The DNS records for :app could not all be updated after its move',

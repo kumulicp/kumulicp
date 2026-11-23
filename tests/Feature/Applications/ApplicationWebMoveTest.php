@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\Actions\Steps\AwaitConfirmation;
@@ -271,4 +272,46 @@ it('lists everything in the way of the move at once', function () {
         __('messages.server_move.app_not_active', ['type' => 'web']),
         __('messages.server_move.same_server', ['type' => 'web']),
     ]);
+});
+
+it('removes the old release by asking the old server to uninstall it, and nothing else', function () {
+    [$instance, $old] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $move = advanceWebMove($task);
+    $instance = $instance->fresh();
+    FakeServerManager::$calls = [];
+
+    expect($move->status)->toBe(TaskStatus::COMPLETE)
+        ->and(ApplicationWebCleanup::pending($instance)->pluck('id')->all())->toBe([$move->id]);
+
+    $cleanup = advanceWebMove(Action::execute(new ApplicationWebCleanup($instance, $move))->fresh());
+
+    // Asked of the old server alone, and not to delete the app, which would also rewrite its redirects there
+    expect($cleanup->status)->toBe(TaskStatus::COMPLETE)
+        ->and(FakeServerManager::$calls)->toBe([['uninstallRelease', $old->id, $instance->id]])
+        ->and($move->fresh()->getValue('old_release_removed_at'))->not->toBeNull()
+        ->and(ApplicationWebCleanup::pending($instance->fresh())->all())->toBe([]);
+});
+
+it('does not remove the release of the server the app runs on', function () {
+    [$instance, $old] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $move = advanceWebMove($task);
+
+    // Moved back onto the server it came from: that release is the app's now
+    $instance = $instance->fresh();
+    $instance->web_server_id = $old->id;
+    $instance->save();
+    FakeServerManager::$calls = [];
+
+    expect(ApplicationWebCleanup::pending($instance->fresh())->all())->toBe([]);
+
+    $cleanup = advanceWebMove(Action::execute(new ApplicationWebCleanup($instance->fresh(), $move))->fresh());
+
+    expect($cleanup->status)->toBe(TaskStatus::FAILED)
+        ->and(FakeServerManager::$calls)->toBe([]);
 });

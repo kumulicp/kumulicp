@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Apps\WebMove\AwaitVolume;
@@ -234,4 +235,79 @@ it('does not confirm an existing volume without a name, or to a chart that canno
     $this->actingAs($this->admin)
         ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'new'])
         ->assertSessionHas('success');
+});
+
+/**
+ * A finished move of the app away from a cluster called "left-cluster", which left its release there.
+ */
+function finishedWebMove($test, array $values = [], ?OrgServer $previous = null): Task
+{
+    $previous ??= OrgServer::forceCreate(['organization_id' => $test->organization->id, 'server_id' => moveWebServer('left-cluster')->id]);
+
+    return Task::forceCreate([
+        'organization_id' => $test->organization->id,
+        'app_instance_id' => $test->appInstance->id,
+        'action_slug' => 'application_web_move',
+        'action_group' => 'system',
+        'task_group' => 1,
+        'description' => 'Moving',
+        'status' => TaskStatus::COMPLETE,
+        'custom_values' => $values + ['previous_org_server_id' => $previous->id],
+    ]);
+}
+
+it('lists the releases left on the servers the app ran on before', function () {
+    $move = finishedWebMove($this);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page
+            ->has('old_web_entries', 1)
+            ->where('old_web_entries.0.id', $move->id)
+            ->where('old_web_entries.0.server', 'left-cluster')
+        );
+});
+
+it('does not list a release that was removed, or the one on the server the app is on', function () {
+    finishedWebMove($this, ['old_release_removed_at' => now()->toDateTimeString()]);
+    finishedWebMove($this, [], $this->old);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->has('old_web_entries', 0));
+});
+
+it('starts removing an old release', function () {
+    $move = finishedWebMove($this);
+
+    Action::shouldReceive('execute')
+        ->once()
+        ->with(Mockery::type(ApplicationWebCleanup::class))
+        ->andReturn(new Task);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/remove-old-release', ['move_task_id' => $move->id])
+        ->assertRedirect(moveWebUrl($this))
+        ->assertSessionHas('success');
+});
+
+it('refuses to remove a release that is not left', function () {
+    $removed = finishedWebMove($this, ['old_release_removed_at' => now()->toDateTimeString()]);
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/remove-old-release', ['move_task_id' => $removed->id])
+        ->assertSessionHas('error', __('messages.web_move.nothing_to_remove'));
+});
+
+it('does not remove a release through another organization', function () {
+    $move = finishedWebMove($this);
+    $other = Organization::factory()->create();
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/remove-old-release", ['move_task_id' => $move->id])
+        ->assertNotFound();
 });

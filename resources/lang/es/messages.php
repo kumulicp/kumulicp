@@ -58,6 +58,7 @@ return [
         'not_running' => 'La aplicación no se está ejecutando en el nuevo servidor: :message',
         'still_starting' => 'no terminó de iniciarse a tiempo',
         'copy_left' => 'La versión desplegada en :server se dejó en su lugar y se puede eliminar manualmente.',
+        'nothing_to_remove' => 'No queda ninguna versión desplegada que eliminar en ese servidor',
         'await_volume' => 'La aplicación está detenida. En :server, restaura su volumen desde la copia de seguridad y crea un claim con un nombre propio, y luego indica aquí cómo se llama. Elige un volumen nuevo para iniciar la aplicación con uno vacío.',
         'moved' => ':app ahora se ejecuta en :server',
         'dns_failed' => 'No se pudieron actualizar todos los registros DNS de :app tras su traslado',

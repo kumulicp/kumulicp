@@ -155,6 +155,10 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             {{ row.name ?? $t('admin.apps.noServer') }}
             <va-button v-if="row.type === 'database' && app.database_server" id="migrateDatabase" size="small" class="ml-3" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
             <va-button v-if="row.type === 'web'" id="moveWeb" size="small" class="ml-3" @click="showMoveWebModal = true">{{ $t('admin.apps.moveWeb') }}</va-button>
+            <div v-for="entry in (row.type === 'web' ? old_web_entries : [])" :key="entry.id" class="oldWebEntry mt-1">
+              {{ $t('admin.apps.oldWebEntry', { server: entry.server }) }}
+              <va-button size="small" preset="secondary" class="ml-2" @click="askRemoveOldWeb(entry)">{{ $t('admin.apps.removeOldWeb') }}</va-button>
+            </div>
             <va-button v-if="row.type === 'sso'" id="moveSso" size="small" class="ml-3" :disabled="!app.supports_sso" @click="showMoveSsoModal = true">{{ $t('admin.apps.moveSso') }}</va-button>
             <span v-if="row.type === 'sso' && !app.supports_sso" id="moveSsoUnsupported" class="secondary ml-2">{{ $t('admin.apps.moveSsoUnsupported') }}</span>
             <div v-for="entry in (row.type === 'sso' ? old_sso_entries : [])" :key="entry.id" class="oldSsoEntry mt-1">
@@ -371,6 +375,24 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </form>
       </template>
     </va-modal>
+    <va-modal v-model="showRemoveOldWebModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="removeOldWebForm.post('/admin/organizations/'+organization.id+'/apps/'+app.id+'/remove-old-release', { onSuccess: () => { showRemoveOldWebModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.removeOldWebTitle') }}</va-card-title>
+          <va-card-content class="m-0 p-0">
+            <p>{{ $t('admin.apps.removeOldWebDescription', { server: removeOldWebServer }) }}</p>
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="removeOldWebForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" color="danger" class="mr-2" :disabled="removeOldWebForm.processing">{{ $t('admin.apps.removeOldWeb') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showMoveWebModal"
     hide-default-actions
     no-padding
@@ -527,6 +549,10 @@ export default {
       type: Array,
       default: () => []
     },
+    old_web_entries: {
+      type: Array,
+      default: () => []
+    },
     old_sso_entries: {
       type: Array,
       default: () => []
@@ -631,6 +657,8 @@ export default {
       showMigrateDatabaseModal: false,
       showMoveSsoModal: false,
       showMoveWebModal: false,
+      showRemoveOldWebModal: false,
+      removeOldWebServer: '',
       showRemoveOldSsoModal: false,
       removeOldSsoServer: '',
       showMaintenanceModal: false,
@@ -645,6 +673,9 @@ export default {
       }),
       moveWebForm: useForm({
         web_server_id: null
+      }),
+      removeOldWebForm: useForm({
+        move_task_id: null
       }),
       removeOldSsoForm: useForm({
         move_task_id: null
@@ -676,6 +707,11 @@ export default {
     }
   },
   methods: {
+    askRemoveOldWeb (entry) {
+      this.removeOldWebForm.move_task_id = entry.id
+      this.removeOldWebServer = entry.server
+      this.showRemoveOldWebModal = true
+    },
     askRemoveOldSso (entry) {
       this.removeOldSsoForm.move_task_id = entry.id
       this.removeOldSsoServer = entry.server

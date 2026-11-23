@@ -8,6 +8,7 @@ use App\Actions\Apps\ApplicationSsoCleanup;
 use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Steps\AwaitConfirmation;
@@ -209,6 +210,11 @@ class Applications extends Controller
             'old_sso_entries' => $external ? [] : ApplicationSsoCleanup::pending($app)->map(fn (Task $move) => [
                 'id' => $move->id,
                 'server' => ApplicationSsoCleanup::previousServer($move)?->server?->name,
+            ])->values(),
+            // Releases left on the servers the app ran on before, to be removed
+            'old_web_entries' => $external ? [] : ApplicationWebCleanup::pending($app)->map(fn (Task $move) => [
+                'id' => $move->id,
+                'server' => ApplicationWebCleanup::previousServer($move)?->server?->name,
             ])->values(),
             'web_servers' => $external ? [] : ServerChoices::for('web')
                 ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server))
@@ -482,6 +488,36 @@ class Applications extends Controller
         }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_web', ['app' => $app->label, 'server' => $server->name]));
+    }
+
+    public function remove_old_release(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'move_task_id' => 'required|integer',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $move = ApplicationWebCleanup::pending($app)->firstWhere('id', $validated['move_task_id']);
+
+        if (! $move) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('messages.web_move.nothing_to_remove'));
+        }
+
+        $task = Action::execute(new ApplicationWebCleanup($app, $move));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.web_cleanup_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.removing_old_release', [
+            'app' => $app->label,
+            'server' => ApplicationWebCleanup::previousServer($move)?->server?->name,
+        ]));
     }
 
     public function remove_old_sso(Request $request, Organization $organization, AppInstance $app)
