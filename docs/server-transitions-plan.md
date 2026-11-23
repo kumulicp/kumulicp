@@ -108,7 +108,7 @@ per-app work, not a user migration.
 | Add the `Server` (address, `api_key` = `Bearer`, `api_secret` = token) and enter `signing_key`, `invalidation_flow`, `authorization_flow`, `authentication_flow`, `property_mappings`, optional `ldap_source_slug` | Admin > Servers | Manual (the other default settings are filled in automatically) |
 | Verify the server | `Servers@testSettings` (`AuthentikConfigTest`: throwaway provider, application, group, binding) | Auto. It does **not** check the LDAP source or the group mapping, so add that check: Auto (new). |
 | Bind the organization to the new server | `OrgServerService::forServer()` | Auto |
-| Delete the instance's provider and application on the old server | `connect('sso')->delete()` on the old server | Auto (exists, needs calling), run last |
+| Delete the instance's provider and application on the old server | `delete()` on the old server's interface, run last as its own action | Auto (new). The API removes by the **pk stored in the instance's settings**, which after the move is the new server's: the cleanup must use the old pk saved by the move, or it deletes the wrong provider. |
 | **Clear** `settings.sso`, `sso_client_id`, `sso_client_secret` on the instance | | Auto (new). Required: a stale `provider_obj.pk` is looked up on the new server and throws or hits an unrelated provider. |
 | Set `sso_server_id` to the new binding | `CutOver` | Auto (new) |
 | Create provider, application, client id/secret, policy bindings on the new server | `ApplicationSSOSetup` | Auto |
@@ -235,7 +235,9 @@ accidental clearing, no change while the app is not `active`, a note on the edit
 the app server fields only reassign (nothing is moved; use Migrate Database for the
 database), and tests.
 
-**Phase 1 - shared groundwork.**
+**Phase 1 - shared groundwork.** Done (#257 server choices, #258 move/repair UI, #259 backups with
+no driver are an error, #260 `MoveBlockers` and the base move action, which report every blocker at
+once).
 
 - Eligible-server lookup by `Server` type with `forServer()` on save (replaces org-row-only
   dropdowns). **Done** (`App\Support\ServerChoices`): the app edit page and the Servers tab
@@ -246,7 +248,10 @@ database), and tests.
   behind an explicit, labelled repair option.
 - Fix the silent `web` backup no-op.
 
-**Phase 2 - SSO move** (smallest and best understood). `ApplicationSsoMove`, the stale-state
+**Phase 2 - SSO move** (smallest and best understood), built as a stack, each slice based on the one
+before: the LDAP-source check in the Authentik server test; `ApplicationSsoMove` (snapshot and clear
+the stale ids, set up on the new server, then the standard update); the Move button and route; the
+old-server cleanup action. `ApplicationSsoMove`, the stale-state
 clear, an LDAP-source check added to the Authentik server test, ordered release/settings/SSO
 steps, wiring for apps that do not read the SSO values. Runbook in Appendix A.
 
