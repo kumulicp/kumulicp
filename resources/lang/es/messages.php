@@ -55,6 +55,8 @@ return [
         'update_failed' => 'La aplicación no volvió a iniciarse con el nuevo servidor de inicio de sesión',
         'copy_left' => 'El proveedor y la aplicación creados en :server se dejaron en su lugar y se pueden eliminar manualmente.',
         'moved' => ':app ahora inicia sesión a través de :server',
+        'nothing_to_remove' => 'No queda ninguna entrada de inicio de sesión que eliminar en ese servidor',
+        'old_entry_left' => 'La aplicación todavía tiene una entrada en :server de un traslado anterior. Elimínala primero.',
     ],
     'server_move' => [
         'wrong_organization' => 'La aplicación no pertenece a esa organización',

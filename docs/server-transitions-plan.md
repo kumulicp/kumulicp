@@ -248,12 +248,14 @@ once).
   behind an explicit, labelled repair option.
 - Fix the silent `web` backup no-op.
 
-**Phase 2 - SSO move** (smallest and best understood), built as a stack, each slice based on the one
-before: the LDAP-source check in the Authentik server test; `ApplicationSsoMove` (snapshot and clear
-the stale ids, set up on the new server, then the standard update); the Move button and route; the
-old-server cleanup action. `ApplicationSsoMove`, the stale-state
-clear, an LDAP-source check added to the Authentik server test, ordered release/settings/SSO
-steps, wiring for apps that do not read the SSO values. Runbook in Appendix A.
+**Phase 2 - SSO move.** Done, as a stack of four PRs: the LDAP-source check in the Authentik server
+test; `ApplicationSsoMove` (snapshot and clear the stale ids, set up on the new server, then the
+standard update, with rollback); the Move Sign-in button and route; and `ApplicationSsoCleanup`,
+which removes the old server's provider by the pk the move saved. One rule came out of it: an app
+cannot be moved back to a server that still has its old entry, because setup would find that
+provider instead of making one with a client id and secret, so the entry has to be removed first.
+Still open from this phase: wiring for apps that do not read the stored SSO values (CiviCRM and
+generic apps get a provider but no configuration). Runbook in Appendix A.
 
 **Phase 3 - web move.** Claim handover mapping, `AwaitVolume` gate, `ApplicationWebMove`, DNS
 refresh, `blocker()`. Runbook in Appendix B. Add the old-copy cleanup action last.

@@ -111,6 +111,10 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
             <va-button v-if="row.type === 'database' && app.database_server" id="migrateDatabase" size="small" class="ml-3" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
             <va-button v-if="row.type === 'sso'" id="moveSso" size="small" class="ml-3" :disabled="!app.supports_sso" @click="showMoveSsoModal = true">{{ $t('admin.apps.moveSso') }}</va-button>
             <span v-if="row.type === 'sso' && !app.supports_sso" id="moveSsoUnsupported" class="secondary ml-2">{{ $t('admin.apps.moveSsoUnsupported') }}</span>
+            <div v-for="entry in (row.type === 'sso' ? old_sso_entries : [])" :key="entry.id" class="oldSsoEntry mt-1">
+              {{ $t('admin.apps.oldSsoEntry', { server: entry.server }) }}
+              <va-button size="small" preset="secondary" class="ml-2" @click="askRemoveOldSso(entry)">{{ $t('admin.apps.removeOldSso') }}</va-button>
+            </div>
           </va-list-item-label>
         </va-list-item-section>
       </va-list-item>
@@ -303,6 +307,24 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </form>
       </template>
     </va-modal>
+    <va-modal v-model="showRemoveOldSsoModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="removeOldSsoForm.post('/admin/organizations/'+organization.id+'/apps/'+app.id+'/remove-old-sso', { onSuccess: () => { showRemoveOldSsoModal = false } })">
+          <va-card-title class="m-0">{{ $t('admin.apps.removeOldSsoTitle') }}</va-card-title>
+          <va-card-content class="m-0 p-0">
+            <p>{{ $t('admin.apps.removeOldSsoDescription', { server: removeOldSsoServer }) }}</p>
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="removeOldSsoForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" color="danger" class="mr-2" :disabled="removeOldSsoForm.processing">{{ $t('admin.apps.removeOldSso') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showMoveSsoModal"
     hide-default-actions
     no-padding
@@ -421,6 +443,10 @@ export default {
       type: Array,
       default: () => []
     },
+    old_sso_entries: {
+      type: Array,
+      default: () => []
+    },
     maintenance: {
       type: Object,
       default: () => ({ enabled: false, available: false })
@@ -508,6 +534,8 @@ export default {
       showDeleteAppModal: false,
       showMigrateDatabaseModal: false,
       showMoveSsoModal: false,
+      showRemoveOldSsoModal: false,
+      removeOldSsoServer: '',
       showMaintenanceModal: false,
       maintenanceForm: useForm({
         enabled: !this.maintenance.enabled
@@ -517,6 +545,9 @@ export default {
       }),
       moveSsoForm: useForm({
         sso_server_id: null
+      }),
+      removeOldSsoForm: useForm({
+        move_task_id: null
       }),
       deleteApp: useForm({
         when: 'later',
@@ -536,6 +567,11 @@ export default {
     }
   },
   methods: {
+    askRemoveOldSso (entry) {
+      this.removeOldSsoForm.move_task_id = entry.id
+      this.removeOldSsoServer = entry.server
+      this.showRemoveOldSsoModal = true
+    },
     toggleMaintenance (close) {
       // What the button asks for: the opposite of what the app is in now
       this.maintenanceForm.enabled = !this.maintenance.enabled

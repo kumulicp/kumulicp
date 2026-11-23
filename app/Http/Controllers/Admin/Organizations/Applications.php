@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Organizations;
 
 use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDelete;
+use App\Actions\Apps\ApplicationSsoCleanup;
 use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
@@ -23,6 +24,7 @@ use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\ServerChoices;
 use App\Support\SharedAppContext;
+use App\Task;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
 use App\Updates\UpdateSteps;
@@ -199,6 +201,11 @@ class Applications extends Controller
             'update_steps' => $external ? [] : app(UpdateSteps::class)->options($app),
             // Settings of the instance for an image its version sets itself, which are not used
             'ignored_image_settings' => $external ? [] : app(ShadowedImages::class)->for($app),
+            // Providers left on the servers the app signed in through before, to be removed
+            'old_sso_entries' => $external ? [] : ApplicationSsoCleanup::pending($app)->map(fn (Task $move) => [
+                'id' => $move->id,
+                'server' => ApplicationSsoCleanup::previousServer($move)?->server?->name,
+            ])->values(),
             'sso_servers' => $external ? [] : ServerChoices::for('sso')
                 ->filter(fn (Server $server) => ! ApplicationSsoMove::blockers($app, $server))
                 ->map(fn (Server $server) => [
@@ -400,6 +407,36 @@ class Applications extends Controller
         }
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_sso', ['app' => $app->label, 'server' => $server->name]));
+    }
+
+    public function remove_old_sso(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'move_task_id' => 'required|integer',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $move = ApplicationSsoCleanup::pending($app)->firstWhere('id', $validated['move_task_id']);
+
+        if (! $move) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('messages.sso_move.nothing_to_remove'));
+        }
+
+        $task = Action::execute(new ApplicationSsoCleanup($app, $move));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.sso_cleanup_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.removing_old_sso', [
+            'app' => $app->label,
+            'server' => ApplicationSsoCleanup::previousServer($move)?->server?->name,
+        ]));
     }
 
     public function run(Organization $organization, AppInstance $app, $action)

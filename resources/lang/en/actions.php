@@ -11,6 +11,7 @@ return [
     'updating_app' => 'Updating :app',
     'migrating_app_database' => 'Migrating :app database to :server',
     'moving_app_sso_server' => 'Moving :app sign-in to :server',
+    'removing_old_sso' => 'Removing :app sign-in entry from :server',
     'upgrading_app' => 'Upgrading :app',
     'provision_version_test_step' => 'Setting up a test of :app :version, :plan',
     'provision_version_test_site' => 'Adding a site to the test of :app :version, :plan',
