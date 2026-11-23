@@ -204,6 +204,13 @@ class AppInstance extends Model
             && ! $this->tasks()->where('action_slug', 'application_activate')->exists();
     }
 
+    // Whether an admin put the app in maintenance mode: its own ingress is off, and
+    // a maintenance page is served at its domain instead (see MaintenanceChart)
+    public function inMaintenance(): bool
+    {
+        return (bool) $this->setting('maintenance.enabled');
+    }
+
     /**
      * Whether this is one of the shared apps that organizations' apps are shared from.
      */

@@ -116,7 +116,7 @@ class HelmForgeChart extends HelmChart
         ]);
 
         // If the app is disabled, also disable ingress so it isn't reachable from the internet without deleting the app and losing data
-        Arr::set($values, "$base.enabled", $this->appEnabled() && $app_instance->configuration('ingress-enabled'));
+        Arr::set($values, "$base.enabled", $this->appEnabled() && ! $this->inMaintenance() && $app_instance->configuration('ingress-enabled'));
         Arr::set($values, "$base.annotations", $annotations);
 
         if ($ingress['style'] === 'hostname') {

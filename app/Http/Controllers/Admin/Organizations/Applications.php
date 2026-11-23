@@ -15,6 +15,7 @@ use App\Services\AppInstanceService;
 use App\Services\OrgServerService;
 use App\Support\Facades\Action;
 use App\Support\AdminAppDomain;
+use App\Support\AppMaintenance;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
@@ -176,6 +177,11 @@ class Applications extends Controller
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),
             ],
+            'maintenance' => [
+                'enabled' => $app->inMaintenance(),
+                // Whether the app is deployed in a way that can have a maintenance page
+                'available' => ! $external && AppMaintenance::supported($app),
+            ],
             'server_options' => $serverOptions,
             'versions' => $versions->map(function ($version) {
                 return [
@@ -206,6 +212,31 @@ class Applications extends Controller
         AdminAppDomain::apply($app, $request->validate(AdminAppDomain::rules($app)));
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}/edit")->with('success', __('admin.organizations.apps.domain_updated', ['app' => $app->label]));
+    }
+
+    public function maintenance(Request $request, Organization $organization, AppInstance $app)
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $enable = (bool) $request->validate(['enabled' => 'required|boolean'])['enabled'];
+        $edit = "/admin/organizations/{$organization->id}/apps/{$app->id}/edit";
+
+        if ($blocker = AppMaintenance::blocker($app, $enable)) {
+            return redirect($edit)->with('error', $blocker);
+        }
+
+        try {
+            AppMaintenance::apply($app, $enable);
+        } catch (\Throwable $e) {
+            return redirect($edit)->with('error', SafeErrorMessage::from($e));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")
+            ->with('success', __($enable ? 'admin.organizations.apps.maintenance_enabling' : 'admin.organizations.apps.maintenance_disabling', ['app' => $app->label]));
     }
 
     public function helmValues(Organization $organization, AppInstance $app)

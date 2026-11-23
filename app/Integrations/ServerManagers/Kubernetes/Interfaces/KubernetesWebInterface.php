@@ -186,7 +186,15 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
 
     protected function chartsForStatus(): array
     {
-        return ApplicationFacade::instance($this->statusInstance())->charts();
+        $instance = ApplicationFacade::instance($this->statusInstance());
+        $charts = $instance->charts();
+
+        // An app in maintenance is deployed once the page that stands in for it is too
+        if (($maintenance = $instance->maintenanceChart())->inMaintenance()) {
+            $charts[] = $maintenance;
+        }
+
+        return $charts;
     }
 
     protected function statusLabel(int $status): string
@@ -249,7 +257,32 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
             }
         }
 
+        $this->updateMaintenance();
+
         return true;
+    }
+
+    // The app's own releases have turned their ingress off or on by now (see
+    // HelmChart::inMaintenance()): put the maintenance page where it was, or take
+    // it away. Releases are installed by Jobs that this does not wait for, so the
+    // two ingresses can be there together for a moment, but not for good.
+    protected function updateMaintenance(): void
+    {
+        $chart = ApplicationFacade::instance($this->app_instance)->maintenanceChart();
+
+        if ($chart->inMaintenance()) {
+            $this->assertSuccessful($this->application->update($this->app_instance, $chart), $chart);
+        } else {
+            $this->removeMaintenance($chart);
+        }
+    }
+
+    // Only a release that is there: removing one is a Job
+    protected function removeMaintenance($chart): void
+    {
+        if ($this->application->isActive($this->app_instance, $chart) !== 0) {
+            $this->application->remove($this->app_instance, $chart);
+        }
     }
 
     // A shared-plan child has no release of its own (see AppInstance::sharedPlanParent()),
@@ -292,6 +325,8 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
         $this->app_instance->refresh();
 
         $charts = ApplicationFacade::instance($this->app_instance)->charts();
+
+        $this->removeMaintenance(ApplicationFacade::instance($this->app_instance)->maintenanceChart());
 
         foreach ($charts as $chart) {
             if ($chart->delete_method === 'remove') {

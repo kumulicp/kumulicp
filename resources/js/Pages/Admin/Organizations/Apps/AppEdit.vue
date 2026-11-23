@@ -51,11 +51,20 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         <li v-for="item in ignored_image_settings" :key="item.setting">{{ $t('admin.apps.ignoredImageSetting', { setting: item.setting, value: item.value, image: item.image, used: item.used }) }}</li>
       </ul>
     </va-alert>
+    <va-alert v-if="maintenance.enabled" id="maintenanceActive" color="warning" icon="construction" class="mb-3">
+      {{ $t('admin.apps.maintenanceActive') }}
+    </va-alert>
     <div class="row justify-center">
         <VaButtonGroup>
         <va-button @click="showUpdateAppModal = true">{{ $t('admin.apps.update') }}</va-button>
         <va-button @click="showUpgradeAppModal = true">{{ $t('admin.apps.upgrade') }}</va-button>
         <va-button v-if="app.database_server" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
+        <va-button
+          v-if="maintenance.available"
+          id="toggleMaintenance"
+          :disabled="app.status !== 'active'"
+          @click="showMaintenanceModal = true"
+        >{{ maintenance.enabled ? $t('admin.apps.disableMaintenance') : $t('admin.apps.enableMaintenance') }}</va-button>
         <va-button color="danger" @click="showDeleteAppModal = true">{{ $t('admin.apps.delete') }}</va-button>
         </VaButtonGroup>
     </div>
@@ -275,6 +284,24 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
         </form>
       </template>
     </va-modal>
+    <va-modal v-model="showMaintenanceModal"
+    hide-default-actions
+    no-padding
+    class="p-0"
+    >
+      <template #content="{ ok }">
+        <form @submit.prevent="toggleMaintenance(ok)">
+          <va-card-title class="m-0">{{ maintenance.enabled ? $t('admin.apps.maintenanceDisableTitle') : $t('admin.apps.maintenanceEnableTitle') }}</va-card-title>
+          <va-card-content class="m-0 p-0">
+            {{ maintenance.enabled ? $t('admin.apps.maintenanceDisableModal') : $t('admin.apps.maintenanceEnableModal') }}
+          </va-card-content>
+          <va-card-actions align="right" class="">
+            <va-button color="textInverted" :disabled="maintenanceForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+            <va-button type="submit" id="confirmMaintenance" class="mr-2" :disabled="maintenanceForm.processing">{{ $t('common.yes') }}</va-button>
+          </va-card-actions>
+        </form>
+      </template>
+    </va-modal>
     <va-modal v-model="showDeleteAppModal"
     hide-default-actions
     no-padding
@@ -337,6 +364,10 @@ export default {
       default: () => []
     },
     database_servers: Array,
+    maintenance: {
+      type: Object,
+      default: () => ({ enabled: false, available: false })
+    },
     server_options: {
       type: Object,
       default: () => ({})
@@ -406,6 +437,10 @@ export default {
       showUpgradeAppModal: false,
       showDeleteAppModal: false,
       showMigrateDatabaseModal: false,
+      showMaintenanceModal: false,
+      maintenanceForm: useForm({
+        enabled: !this.maintenance.enabled
+      }),
       migrateForm: useForm({
         database_server_id: null
       }),
@@ -427,6 +462,13 @@ export default {
     }
   },
   methods: {
+    toggleMaintenance (close) {
+      // What the button asks for: the opposite of what the app is in now
+      this.maintenanceForm.enabled = !this.maintenance.enabled
+      this.maintenanceForm.put('/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/maintenance', {
+        onSuccess: () => close()
+      })
+    },
     runUpdate (close) {
       this.updateForm.post('/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/update', {
         onSuccess: () => close()

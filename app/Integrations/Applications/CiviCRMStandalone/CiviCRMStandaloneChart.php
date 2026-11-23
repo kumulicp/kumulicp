@@ -61,7 +61,7 @@ class CiviCRMStandaloneChart extends HelmChart
             ],
             'ingress' => [
                 'annotations' => $app_instance->configuration('ingress-annotations'),
-                'enabled' => ($this->appEnabled() && $app_instance->configuration('ingress-enabled')), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
+                'enabled' => ($this->appEnabled() && ! $this->inMaintenance() && $app_instance->configuration('ingress-enabled')), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data. In maintenance mode the maintenance release serves the domain instead
                 'hostname' => $app_instance->domain(),
                 'tls' => $app_instance->configuration('ingress-tls'),
                 'path' => '/',

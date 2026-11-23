@@ -8,6 +8,7 @@ use App\AppInstance;
 use App\AppPlan;
 use App\Events\Apps\AppInstanceDomainChanged;
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\MaintenanceChart;
 use App\OrgSubdomain;
 use App\Services\AppInstance\AppInstancePlanService;
 use App\Services\AppInstance\AppStorageService;
@@ -79,6 +80,14 @@ class AppInstanceService
         }
 
         return $return_charts;
+    }
+
+    // The release that serves the maintenance page while the app is in maintenance
+    // mode. It is not one of the app's charts(): the app's own releases are
+    // deployed whether it is in maintenance or not.
+    public function maintenanceChart(): MaintenanceChart
+    {
+        return new MaintenanceChart($this->app_instance->organization, $this->app_instance);
     }
 
     public function server(string $type)

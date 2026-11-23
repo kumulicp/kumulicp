@@ -62,7 +62,7 @@ class GenericChart extends HelmChart
             ],
             'persistence' => $this->persistence($app_instance, $fullname),
             'ingress' => [
-                'enabled' => $this->appEnabled() && $app_instance->configuration('ingress-enabled'), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
+                'enabled' => $this->appEnabled() && ! $this->inMaintenance() && $app_instance->configuration('ingress-enabled'), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data. In maintenance mode the maintenance release serves the domain instead
                 'ingressClassName' => $app_instance->configuration('ingress-className'),
                 // Platform-managed annotations win over admin-supplied ones
                 'annotations' => array_merge((array) $app_instance->configuration('ingress-annotations'), $app_instance->configuration('ingress-tls') ? [

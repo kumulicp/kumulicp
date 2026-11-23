@@ -42,7 +42,7 @@ class Application extends Kubernetes
         $namespace = $chart->namespace();
         $release_name = $chart->chartName();
 
-        [$chart_ref, $repo_args, $secret_env] = $this->chartReference($app_instance);
+        [$chart_ref, $repo_args, $secret_env] = $this->chartReference($chart);
 
         // values() fills $chart->secrets() as a side effect, so the Secret is
         // only applied after the values are built, and before the install Job
@@ -57,8 +57,8 @@ class Application extends Kubernetes
 
         $subcommand = array_merge(['upgrade', '--install', $release_name, $chart_ref], $repo_args);
 
-        if ($version = $app_instance->version->setting('chart_version')) {
-            array_push($subcommand, '--version', (string) $version);
+        if ($version = $chart->helmChartVersion()) {
+            array_push($subcommand, '--version', $version);
         }
 
         array_push($subcommand, '-f', '/values/values.yaml', '--wait', '--timeout', '720s');
@@ -166,11 +166,11 @@ class Application extends Kubernetes
     // OCI_REGISTRY_HOST/OCI_USERNAME/OCI_PASSWORD to `helm registry login`
     // before the main command, or HELM_REPO_USERNAME/HELM_REPO_PASSWORD to
     // append --username/--password for classic repos.
-    protected function chartReference(AppInstance $app_instance): array
+    protected function chartReference(HelmChart $chart): array
     {
-        $chart_name = $app_instance->version->setting('chart_name');
-        $repo = $app_instance->version->setting('helm_repo_name');
-        $secret = $app_instance->version->requiresHelmRepoAuth() ? $app_instance->version->helmRepoSecret : null;
+        $chart_name = $chart->helmChartName();
+        $repo = $chart->helmRepo();
+        $secret = $chart->helmRepoSecret();
 
         if ($repo && str_starts_with($repo, 'oci://')) {
             $chart_ref = rtrim($repo, '/').'/'.$chart_name;

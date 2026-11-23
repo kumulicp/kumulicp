@@ -86,7 +86,7 @@ class NextcloudChart extends HelmChart
                 ] : ($ingress_enabled ? [
                     'traefik.ingress.kubernetes.io/router.middlewares' => $app_instance->configuration('ingress-annotation-router_middlewares'),
                 ] : []),
-                'enabled' => $app_instance->configuration('ingress-enabled', true) ?? $this->appEnabled(), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data
+                'enabled' => ($app_instance->configuration('ingress-enabled', true) ?? $this->appEnabled()) && ! $this->inMaintenance(), // If app is disabled, also disable ingress so it's not accessible from internet without deleting app and losing data. In maintenance mode the maintenance release serves the domain instead
                 'tls' => $app_instance->configuration('ingress-tls') ? [
                     [
                         'hosts' => [$app_instance->domain()],
