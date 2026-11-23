@@ -10,6 +10,7 @@ use App\Support\Facades\Action;
 use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -20,8 +21,15 @@ use Tests\TestCase;
  */
 uses(TestCase::class, RefreshDatabase::class);
 
+afterEach(function () {
+    DemoAppProfile::$sso = false;
+});
+
 beforeEach(function () {
     (new TestSupports)->seed();
+
+    // The demo app signs people in through an SSO server, unless a test says it does not
+    DemoAppProfile::$sso = true;
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
@@ -62,6 +70,38 @@ it('offers the other sign-in servers on the edit page', function () {
             ->where('sso_servers.0.value', $new->id)
             ->where('sso_servers.0.text', 'new-sso')
         );
+});
+
+it('says whether the app supports single sign-on, for the button to be turned off', function () {
+    $this->actingAs($this->admin)
+        ->get(moveSsoUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('app.supports_sso', true));
+
+    DemoAppProfile::$sso = false;
+
+    $this->actingAs($this->admin)
+        ->get(moveSsoUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('app.supports_sso', false));
+});
+
+it('offers no sign-in servers to an app that does not support single sign-on', function () {
+    moveSsoServer('new-sso');
+    DemoAppProfile::$sso = false;
+
+    $this->actingAs($this->admin)
+        ->get(moveSsoUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->has('sso_servers', 0));
+});
+
+it('refuses to move an app that does not support single sign-on', function () {
+    $new = moveSsoServer('new-sso');
+    DemoAppProfile::$sso = false;
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveSsoUrl($this).'/move-sso', ['sso_server_id' => $new->id])
+        ->assertSessionHas('error', MoveBlockers::summary([__('messages.server_move.no_sso_support', ['type' => 'sso'])]));
 });
 
 it('offers no sign-in servers while the app is not active', function () {

@@ -109,7 +109,8 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
           <va-list-item-label :id="row.type + 'Server'">
             {{ row.name ?? $t('admin.apps.noServer') }}
             <va-button v-if="row.type === 'database' && app.database_server" id="migrateDatabase" size="small" class="ml-3" @click="showMigrateDatabaseModal = true">{{ $t('admin.apps.migrateDatabase') }}</va-button>
-            <va-button v-if="row.type === 'sso'" id="moveSso" size="small" class="ml-3" @click="showMoveSsoModal = true">{{ $t('admin.apps.moveSso') }}</va-button>
+            <va-button v-if="row.type === 'sso'" id="moveSso" size="small" class="ml-3" :disabled="!app.supports_sso" @click="showMoveSsoModal = true">{{ $t('admin.apps.moveSso') }}</va-button>
+            <span v-if="row.type === 'sso' && !app.supports_sso" id="moveSsoUnsupported" class="secondary ml-2">{{ $t('admin.apps.moveSsoUnsupported') }}</span>
           </va-list-item-label>
         </va-list-item-section>
       </va-list-item>

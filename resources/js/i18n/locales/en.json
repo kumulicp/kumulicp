@@ -728,6 +728,7 @@
       "moveSsoTarget": "New Sign-in Server",
       "moveSsoNoServers": "There are no other sign-in servers this app can be moved to.",
       "moveSsoNotActive": "The app must be active to move its sign-in.",
+      "moveSsoUnsupported": "This app does not support single sign-on.",
       "databaseServer": "Database Server",
       "appServer": "App Server",
       "ssoServer": "SSO Server",

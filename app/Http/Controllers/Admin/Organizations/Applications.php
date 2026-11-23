@@ -168,6 +168,8 @@ class Applications extends Controller
                     'name' => $app->plan->name,
                 ],
                 'managed_externally' => $external,
+                // Without it there is no sign-in server to move
+                'supports_sso' => $app->supportsSso(),
                 'database_server_id' => $current['database'],
                 'web_server_id' => $current['web'],
                 'sso_server_id' => $current['sso'],
