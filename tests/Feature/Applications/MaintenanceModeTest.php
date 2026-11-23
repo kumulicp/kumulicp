@@ -107,6 +107,23 @@ it('serves the maintenance image at the app\'s domain from a release of its own'
     expect(json_encode($values))->not->toContain('secretKeyRef');
 });
 
+it('deploys none of the app\'s own plan configuration with the maintenance page', function () {
+    // The plan's additional configs are set as raw Helm value paths on the app's
+    // chart; the maintenance chart's schema rejects any it doesn't know
+    $app_instance = maintenanceInstance(['test' => 'value']);
+    $app_instance->plan->forceFill(['settings' => array_merge($app_instance->plan->settings, [
+        'additionalConfigs' => ['test' => ['name' => 'test', 'type' => 'text']],
+    ])])->save();
+    $app_instance->updateSetting('maintenance.enabled', true);
+
+    $chart = new MaintenanceChart($app_instance->organization, $app_instance);
+    $values = $chart->valuesWithAdditionalConfigs();
+
+    expect($values)->not->toHaveKey('test');
+    expect($values)->toHaveKeys(['fullnameOverride', 'image', 'ingress', 'commonLabels']);
+    expect($values['ingress']['enabled'])->toBeTrue();
+});
+
 it('leaves out the TLS of an app that has none, and what the image can\'t take', function () {
     $app_instance = maintenanceInstance(['ingress-tls' => false]);
     $app_instance->organization->forceFill(['name' => 'Smith & Sons/Co $(reboot)'])->save();

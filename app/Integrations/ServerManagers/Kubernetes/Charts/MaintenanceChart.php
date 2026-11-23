@@ -54,6 +54,17 @@ class MaintenanceChart extends HelmChart
         return null;
     }
 
+    // Only what values() says, and the labels. The rest of what HelmChart adds is
+    // the app's own and is meant for the app's chart, whose schema this one
+    // doesn't share: the plan's additional configs are set as raw Helm value
+    // paths (the generic chart rejects any it doesn't know, e.g. "Additional
+    // property test is not allowed"), and the chart modifiers and the version's
+    // image overrides are the app's too.
+    public function valuesWithAdditionalConfigs(): array
+    {
+        return array_replace_recursive($this->values(), $this->labelValues());
+    }
+
     public function values(): array
     {
         $app_instance = Application::instance($this->app_instance);
