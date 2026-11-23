@@ -6,6 +6,7 @@ use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDelete;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\AppInstance;
 use App\AppVersion;
 use App\Http\Controllers\Controller;
@@ -303,7 +304,7 @@ class Applications extends Controller
         )->get()->id);
         $app->save();
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.update', ['app' => $app->label]));
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.updated', ['app' => $app->label]));
     }
 
     /**
@@ -352,8 +353,8 @@ class Applications extends Controller
 
         $server = Server::findOrFail($validated['database_server_id']);
 
-        if ($blocker = ApplicationDatabaseMigrate::blocker($app, $server)) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', $blocker);
+        if ($blockers = ApplicationDatabaseMigrate::blockers($app, $server)) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
         }
 
         $task = Action::execute(new ApplicationDatabaseMigrate($app, $server));

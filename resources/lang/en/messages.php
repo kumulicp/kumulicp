@@ -86,6 +86,19 @@ return [
         'rollback_failed' => 'The database migration failed (:reason) and returning the app to its previous database also failed: :error. Check the app\'s database server and run an app update.',
         'migrated' => ':app is now using the :server database server',
     ],
+    // Moving an app's database, app (web) or SSO server (:type); see ApplicationServerMove
+    'server_move' => [
+        'wrong_organization' => 'The app does not belong to that organization',
+        'app_not_active' => 'The app must be active before its :type server can be moved',
+        'has_children' => 'The app has child apps that run with it, so its :type server can\'t be moved on its own',
+        'is_child' => 'The app runs as part of its parent app, so its :type server is moved with the parent',
+        'wrong_type' => 'That is not a :type server',
+        'server_inactive' => 'That server is not active',
+        'backup_server' => 'A server that only holds backups cannot be used as the app\'s :type server',
+        'same_server' => 'The app is already using that :type server',
+        'rolled_back' => 'The :type server move failed and the app was returned to :server: :reason',
+        'rollback_failed' => 'The :type server move failed (:reason) and returning the app to its previous server also failed: :error. Check the app\'s servers and run an app update.',
+    ],
     'plan_secrets' => [
         'revealed' => 'Plan secret :name (:app, plan :plan) was revealed by :user',
     ],

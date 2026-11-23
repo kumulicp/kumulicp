@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin\Organizations;
 
 use App\Actions\Apps\ApplicationDatabaseMigrate;
+use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
@@ -197,7 +198,7 @@ class DatabaseMigrationTest extends TestCase
 
         $this->actingAs($this->admin)
             ->post("/admin/organizations/{$this->organization->id}/apps/{$this->appInstance->id}/migrate-database", ['database_server_id' => $this->old->server_id])
-            ->assertSessionHas('error', __('messages.database_migration.same_server'));
+            ->assertSessionHas('error', MoveBlockers::summary([__('messages.database_migration.same_server')]));
     }
 
     public function test_migrating_an_app_through_another_organization_is_refused()

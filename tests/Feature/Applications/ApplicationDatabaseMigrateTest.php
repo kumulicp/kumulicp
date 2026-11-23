@@ -468,6 +468,20 @@ it('refuses a second server record for the host the app is already on', function
     expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->all())->toBe([]);
 });
 
+it('lists everything that stops a migration at once, the first being what the single blocker says', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $no_driver = Server::factory()->create(['name' => 'odd-db', 'type' => 'database', 'interface' => 'something_else', 'host' => 'odd', 'internal_address' => 'odd', 'status' => 'inactive']);
+    $instance->status = 'updating';
+    $instance->databasename = null;
+
+    expect(ApplicationDatabaseMigrate::blockers($instance, $no_driver))->toBe([
+        __('messages.database_migration.no_database'),
+        __('messages.database_migration.not_active'),
+        __('messages.database_migration.invalid_server'),
+    ])->and(ApplicationDatabaseMigrate::blocker($instance, $no_driver))->toBe(__('messages.database_migration.no_database'))
+        ->and(ApplicationDatabaseMigrate::blockers($instance, $old->server))->toContain(__('messages.database_migration.same_server'));
+});
+
 it('refuses to migrate an app that is not active or has no database', function () {
     [$instance] = appOnDatabaseServer();
     $target = databaseServer('new-db');
