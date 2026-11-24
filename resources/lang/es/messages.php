@@ -60,6 +60,7 @@ return [
         'copy_left' => 'La versión desplegada en :server se dejó en su lugar y se puede eliminar manualmente.',
         'nothing_to_remove' => 'No queda ninguna versión desplegada que eliminar en ese servidor',
         'await_volume' => 'La aplicación está detenida. En :server, restaura su volumen desde la copia de seguridad y crea un claim con un nombre propio, y luego indica aquí cómo se llama. Elige un volumen nuevo para iniciar la aplicación con uno vacío.',
+        'await_chosen_volume' => 'La aplicación está detenida. En :server, restaura su volumen desde la copia de seguridad y crea un claim llamado ":claim", con el tamaño, el modo de acceso y la clase de almacenamiento elegidos, y luego continúa.',
         'moved' => ':app ahora se ejecuta en :server',
         'dns_failed' => 'No se pudieron actualizar todos los registros DNS de :app tras su traslado',
         'dns_manual' => 'Los dominios de :app que no se gestionan aquí necesitan cambiar su dirección a :ip: :domains',
