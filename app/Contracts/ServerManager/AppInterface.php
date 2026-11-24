@@ -25,4 +25,11 @@ interface AppInterface
     public function update();
 
     public function delete();
+
+    /**
+     * Removes the app's release, and what it keeps, from this server, and does nothing else: no
+     * redirects are rewritten and nothing is installed. For the server an app was moved away from,
+     * where delete() would do both.
+     */
+    public function uninstallRelease(): bool;
 }

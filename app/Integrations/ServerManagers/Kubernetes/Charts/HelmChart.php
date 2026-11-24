@@ -221,8 +221,10 @@ abstract class HelmChart extends Chart
     public function replicaCount()
     {
         $expand_storage = $this->app_instance->setting('expand_storage');
+        // Stopped by a move to another server, so that its volume can be copied
+        $moving = $this->app_instance->setting('quiesced_for_move') === true;
 
-        if ($expand_storage === true || ! $this->appEnabled()) {
+        if ($expand_storage === true || $moving || ! $this->appEnabled()) {
             return 0;
         }
 

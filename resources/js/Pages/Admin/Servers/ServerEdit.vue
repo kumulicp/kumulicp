@@ -156,6 +156,20 @@ import { Link, useForm } from '@inertiajs/vue3'
         :error="$page.props.errors.internal_address"
         :error-messages="$page.props.errors.internal_address"
       />
+      <va-select v-if="['database', 'sso'].includes(server.type)"
+        v-model="form.app_servers"
+        :label="$t('admin.servers.appServers')"
+        id="appServers"
+        :options="app_server_options"
+        :messages="server.type === 'database' ? $t('admin.servers.appServersDatabase') : $t('admin.servers.appServersSso')"
+        multiple
+        value-by="id"
+        class="mb-2"
+        text-by="name"
+        :required-mark="server.type === 'database'"
+        :error="!!$page.props.errors.app_servers"
+        :error-messages="$page.props.errors.app_servers"
+      />
       <va-select v-model="form.default_backup_server"
         :label="$t('admin.servers.defaultBackupServer')"
         id="defaultBackupServer"
@@ -241,7 +255,11 @@ export default {
     server: Object,
     errors: Object,
     can: Object,
-    backup_servers: Object
+    backup_servers: Object,
+    app_server_options: {
+      type: Array,
+      default: () => []
+    }
   },
   data () {
     const settings = []
@@ -278,7 +296,8 @@ export default {
         api_key: '',
         api_secret: '',
         default_backup_server: this.server.default_backup_server,
-        is_backup_server: this.server.is_backup_server
+        is_backup_server: this.server.is_backup_server,
+        app_servers: this.server.app_servers ?? []
       }),
       testForm: useForm({})
     }

@@ -101,6 +101,11 @@ class ApplicationDatabaseMigrate extends ApplicationServerMove
             $messages[] = __('messages.database_migration.invalid_server');
         }
 
+        // The app has to be able to reach it: the app server of the app, which is why it has to have one
+        foreach (MoveBlockers::reach($app_instance, 'database', $target_server) as $reason) {
+            $messages[] = MoveBlockers::message($reason, 'database', MoveBlockers::reachParams($app_instance, $reason));
+        }
+
         // Restoring replaces the database it loads into, so a different server
         // record for the same host is just as much the app's live database.
         foreach (MoveBlockers::same($app_instance, 'database', $target_server) as $reason) {
