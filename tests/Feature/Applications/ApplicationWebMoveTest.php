@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\Actions\Steps\AwaitConfirmation;
@@ -8,9 +9,11 @@ use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\NextcloudProfile;
 use App\Organization;
 use App\OrgServer;
+use App\OrgSubdomain;
 use App\Server;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
+use App\Support\ServerReach;
 use App\Task;
 use Illuminate\Support\Facades\Validator;
 use Tests\Support\Applications\DemoAppProfile;
@@ -75,9 +78,9 @@ function appOnWebServer(): array
     return [$instance->fresh(), $old];
 }
 
-function startWebMove(AppInstance $instance, Server $target): Task
+function startWebMove(AppInstance $instance, Server $target, ?array $storage = null): Task
 {
-    return Action::execute(new ApplicationWebMove($instance, $target))->fresh();
+    return Action::execute(new ApplicationWebMove($instance, $target, $storage))->fresh();
 }
 
 /**
@@ -103,7 +106,7 @@ function advanceWebMove(Task $task, int $rounds = 8): Task
     return $task->fresh();
 }
 
-it('stops the app and waits for its volume to be restored on the new cluster', function () {
+it('stops the app, waits for its volume, installs it on the new server against it and runs it there', function () {
     [$instance, $old] = appOnWebServer();
     $target = webServer('new-cluster', '10.0.0.2');
 
@@ -115,6 +118,69 @@ it('stops the app and waits for its volume to be restored on the new cluster', f
         ->and($instance->fresh()->web_server_id)->toBe($old->id)
         ->and(AwaitConfirmation::waiting($instance)?->id)->toBe($task->id)
         ->and(Task::where('action_slug', 'application_update')->where('task_group', $task->task_group)->first()->getValue('steps'))->toBe(['release']);
+
+    AwaitVolume::confirm($task, ['volume' => 'existing', 'claim' => 'restored-data', 'access_mode' => 'ReadWriteMany']);
+    $task = advanceWebMove($task);
+
+    $new = OrgServer::where('organization_id', $instance->organization_id)->where('server_id', $target->id)->first();
+    $instance = $instance->fresh();
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and($instance->web_server_id)->toBe($new->id)
+        ->and($instance->status)->toBe('active')
+        // Told to stop no longer, and given the volume
+        ->and($instance->setting('quiesced_for_move'))->toBeFalse()
+        ->and($instance->setting('existing_claim'))->toBe('restored-data')
+        ->and($instance->setting('configurations.persistence-accessMode'))->toBe('ReadWriteMany')
+        // Asked of the new server, not the old one, whether it is running
+        ->and(collect(FakeServerManager::$calls)->contains(['checkStatus', $new->id, $instance->id]))->toBeTrue()
+        ->and(collect(FakeServerManager::$calls)->contains(['checkStatus', $old->id, $instance->id]))->toBeFalse();
+});
+
+it('only starts the app on a new volume when asked to', function () {
+    [$instance] = appOnWebServer();
+    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
+    $instance->save();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $task = advanceWebMove($task);
+
+    // The old volume's claim, kept in the settings, is not looked for on the new cluster
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and($instance->fresh()->setting('existing_claim'))->toBe('');
+});
+
+it('puts the old settings and server back, and scales the old release up, when the install fails', function () {
+    [$instance, $old] = appOnWebServer();
+    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
+    $instance->save();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'existing', 'claim' => 'restored-data']);
+
+    // Past the wait, into the install
+    app(TaskRunner::class)->poll($task);
+    $install = Task::find($task->fresh()->getValue('update_task_id'));
+    expect($instance->fresh()->setting('existing_claim'))->toBe('restored-data');
+
+    $install->status = TaskStatus::FAILED;
+    $install->error_message = 'helm install failed';
+    $install->save();
+    app(TaskRunner::class)->poll($task);
+
+    $instance = $instance->fresh();
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED)
+        ->and($task->fresh()->error_message)->toContain('helm install failed')->toContain('old-cluster')
+        ->and($instance->web_server_id)->toBe($old->id)
+        ->and($instance->setting('existing_claim'))->toBe('old-claim')
+        ->and($instance->setting('quiesced_for_move'))->toBeFalse();
+
+    // Another update, which scales the old release up
+    $rollback = Task::where('action_slug', 'application_update')->where('id', '>', $install->id)->sole();
+    expect($instance->status)->toBe('updating');
+
+    app(TaskRunner::class)->poll($rollback);
+    expect($instance->fresh()->status)->toBe('active');
 });
 
 it('scales the old release back up when the app cannot be stopped', function () {
@@ -134,6 +200,47 @@ it('scales the old release back up when the app cannot be stopped', function () 
     // Never pointed anywhere else, so nothing but this puts the release back
     $again = Task::where('action_slug', 'application_update')->where('id', '>', $stop->id)->sole();
     expect($again->getValue('steps'))->toBe(['release']);
+});
+
+it('gives up, rolled back, when the new server does not run it', function () {
+    [$instance, $old] = appOnWebServer();
+    $target = webServer('new-cluster', '10.0.0.2');
+
+    $task = advanceWebMove(startWebMove($instance, $target));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+
+    // The install goes through, but its release is stopped
+    app(TaskRunner::class)->poll($task);
+    app(TaskRunner::class)->poll(Task::find($task->fresh()->getValue('update_task_id')));
+    FakeServerManager::markInactive($instance->id);
+    app(TaskRunner::class)->poll($task);
+
+    expect($task->fresh()->status)->toBe(TaskStatus::FAILED)
+        ->and($task->fresh()->error_message)->toContain('stopped')
+        ->and($instance->fresh()->web_server_id)->toBe($old->id);
+});
+
+it('refreshes the copies of the old address in the app\'s subdomains, and only those', function () {
+    [$instance] = appOnWebServer();
+    $subdomain = fn (string $name, string $value) => OrgSubdomain::forceCreate([
+        'organization_id' => $instance->organization_id,
+        'app_instance_id' => $instance->id,
+        'host' => $name,
+        'name' => "{$name}.example.com",
+        'type' => 'app',
+        'value' => $value,
+        'status' => 'active',
+    ]);
+    $copy = $subdomain('app', '10.0.0.1');
+    $other = $subdomain('other', 'somewhere.example.net');
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $task = advanceWebMove($task);
+
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and($copy->fresh()->value)->toBe('10.0.0.2')
+        ->and($other->fresh()->value)->toBe('somewhere.example.net');
 });
 
 it('only offers a new volume to an app whose chart cannot be given one that exists', function () {
@@ -166,4 +273,119 @@ it('lists everything in the way of the move at once', function () {
         __('messages.server_move.app_not_active', ['type' => 'web']),
         __('messages.server_move.same_server', ['type' => 'web']),
     ]);
+});
+
+it('removes the old release by asking the old server to uninstall it, and nothing else', function () {
+    [$instance, $old] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $move = advanceWebMove($task);
+    $instance = $instance->fresh();
+    FakeServerManager::$calls = [];
+
+    expect($move->status)->toBe(TaskStatus::COMPLETE)
+        ->and(ApplicationWebCleanup::pending($instance)->pluck('id')->all())->toBe([$move->id]);
+
+    $cleanup = advanceWebMove(Action::execute(new ApplicationWebCleanup($instance, $move))->fresh());
+
+    // Asked of the old server alone, and not to delete the app, which would also rewrite its redirects there
+    expect($cleanup->status)->toBe(TaskStatus::COMPLETE)
+        ->and(FakeServerManager::$calls)->toBe([['uninstallRelease', $old->id, $instance->id]])
+        ->and($move->fresh()->getValue('old_release_removed_at'))->not->toBeNull()
+        ->and(ApplicationWebCleanup::pending($instance->fresh())->all())->toBe([]);
+});
+
+it('does not remove the release of the server the app runs on', function () {
+    [$instance, $old] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $move = advanceWebMove($task);
+
+    // Moved back onto the server it came from: that release is the app's now
+    $instance = $instance->fresh();
+    $instance->web_server_id = $old->id;
+    $instance->save();
+    FakeServerManager::$calls = [];
+
+    expect(ApplicationWebCleanup::pending($instance->fresh())->all())->toBe([]);
+
+    $cleanup = advanceWebMove(Action::execute(new ApplicationWebCleanup($instance->fresh(), $move))->fresh());
+
+    expect($cleanup->status)->toBe(TaskStatus::FAILED)
+        ->and(FakeServerManager::$calls)->toBe([]);
+});
+
+it('only moves to an app server that can reach the app\'s database, which is moved first, by way of one both can reach', function () {
+    [$instance, $old] = appOnWebServer();
+    $target = webServer('new-cluster', '10.0.0.2');
+
+    // The database is on a network only the old app server is on
+    $database = Server::factory()->create(['type' => 'database', 'name' => 'inner-db', 'host' => 'inner-db.example.com']);
+    $database->app_servers()->sync([$old->server_id]);
+    $instance->database_server_id = OrgServer::forceCreate(['organization_id' => $instance->organization_id, 'server_id' => $database->id])->id;
+    $instance->save();
+    $instance = $instance->fresh();
+
+    expect(ApplicationWebMove::blockers($instance, $target))->toBe([
+        __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'inner-db']),
+    ]);
+
+    // Moved to a database both app servers can reach, which can be done from where the app is now
+    $bridge = Server::factory()->create(['type' => 'database', 'name' => 'bridge-db', 'host' => 'bridge-db.example.com']);
+    $bridge->app_servers()->sync([$old->server_id, $target->id]);
+    $instance->database_server_id = OrgServer::forceCreate(['organization_id' => $instance->organization_id, 'server_id' => $bridge->id])->id;
+    $instance->save();
+
+    expect(ApplicationWebMove::blockers($instance->fresh(), $target))->toBe([])
+        ->and(ServerReach::reachableFromAll('database', [$old->server, $target])->pluck('name')->all())->toBe(['bridge-db']);
+});
+
+it('waits for the volume that was chosen when it was started, without asking for it again', function () {
+    [$instance] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2'), [
+        'volume' => 'existing',
+        'claim' => 'restored-data',
+        'access_mode' => 'ReadWriteMany',
+    ]));
+
+    // Waiting for the volume to be restored, which is all that is asked: it already says what to
+    expect($task->status)->toBe(TaskStatus::IN_PROGRESS)
+        ->and(AwaitVolume::form($task))->toBeNull()
+        ->and(AwaitVolume::rules($task))->toBe([])
+        ->and($task->error_message)->toContain('restored-data');
+
+    AwaitVolume::confirm($task);
+    $task = advanceWebMove($task);
+
+    $instance = $instance->fresh();
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and($instance->setting('existing_claim'))->toBe('restored-data')
+        ->and($instance->setting('configurations.persistence-accessMode'))->toBe('ReadWriteMany');
+});
+
+it('does not wait at all for an app that is to start with a new volume', function () {
+    [$instance] = appOnWebServer();
+    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
+    $instance->save();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2'), ['volume' => 'new']));
+
+    // Nothing to restore: it goes straight on, and the old volume's claim is not looked for there
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and(AwaitConfirmation::waiting($instance))->toBeNull()
+        ->and($instance->fresh()->setting('existing_claim'))->toBe('');
+});
+
+it('keeps the volume that was chosen when it is started over', function () {
+    [$instance] = appOnWebServer();
+    $task = startWebMove($instance, webServer('new-cluster', '10.0.0.2'), ['volume' => 'existing', 'claim' => 'restored-data']);
+    $task->custom_values = array_merge($task->customValues(), ['quiesce_update_task_id' => 1, 'update_task_id' => 2]);
+
+    ApplicationWebMove::reset($task);
+
+    expect(array_keys($task->customValues()))->toBe(['target_server_id', 'storage'])
+        ->and($task->getValue('storage.claim'))->toBe('restored-data');
 });

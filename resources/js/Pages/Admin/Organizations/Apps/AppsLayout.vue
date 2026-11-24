@@ -51,6 +51,10 @@ export default {
       {
         title: this.$t('admin.apps.helmValues'),
         url: basePath + '/helm-values'
+      },
+      {
+        title: this.$t('admin.apps.moveTab'),
+        url: basePath + '/move'
       }
     ]
 

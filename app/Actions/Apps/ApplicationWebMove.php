@@ -7,8 +7,14 @@ use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\Actions\Apps\WebMove\PrepareWebMove;
 use App\Actions\Apps\WebMove\Quiesce;
+use App\Actions\Apps\WebMove\RefreshDns;
+use App\Actions\Apps\WebMove\SwitchServer;
+use App\Actions\Apps\WebMove\Verify;
 use App\AppInstance;
 use App\Server;
+use App\Support\ServerReach;
+use App\Task;
+use Illuminate\Support\Arr;
 
 /**
  * Moves an app to another web server (another cluster), with its volume (see
@@ -39,6 +45,12 @@ class ApplicationWebMove extends ApplicationServerMove
     // The app is stopped by an update that scales its release to zero
     public const QUIESCE_TIMEOUT_MINUTES = 20;
 
+    // Installing on a new cluster pulls the images, so it can take a while
+    public const UPDATE_TIMEOUT_MINUTES = 30;
+
+    // How long the release has, once installed, to be running
+    public const VERIFY_TIMEOUT_MINUTES = 15;
+
     // The instance setting that has the app's chart scale its release to zero
     public const QUIESCE_SETTING = 'quiesced_for_move';
 
@@ -50,6 +62,28 @@ class ApplicationWebMove extends ApplicationServerMove
     protected static function messageGroup(): string
     {
         return 'web_move';
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $storage  What the app's chart is to be given for its volume
+     *                                               (StorageHandover): chosen here, so that the move
+     *                                               does not have to stop and ask for it
+     */
+    public function __construct(AppInstance $app_instance, Server $target_server, ?array $storage = null)
+    {
+        parent::__construct($app_instance, $target_server);
+
+        if ($storage !== null) {
+            $this->addCustomValue(['storage' => $storage]);
+        }
+    }
+
+    // Starts over where it was going, with what the app was to be given
+    public static function reset(Task $task): void
+    {
+        $task->custom_values = Arr::only($task->customValues(), ['target_server_id', 'storage']);
+
+        static::begin($task);
     }
 
     protected function describe(AppInstance $app_instance, Server $target_server): string
@@ -65,9 +99,9 @@ class ApplicationWebMove extends ApplicationServerMove
      *
      * @return array<int, string>
      */
-    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true): array
+    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true, bool $with_reach = true): array
     {
-        $blockers = MoveBlockers::all($app_instance, 'web', $target_server, $require_active);
+        $blockers = MoveBlockers::all($app_instance, 'web', $target_server, $require_active, with_reach: $with_reach);
 
         // Rancher and plain Kubernetes servers are given different values, so an app can't be taken from one
         // to the other by a move
@@ -80,9 +114,44 @@ class ApplicationWebMove extends ApplicationServerMove
         return $blockers;
     }
 
+    /**
+     * What has to be true of the servers the app uses for the new app server to be able to reach them,
+     * and what to do if it is not: a database is always on a network of its own, so is moved to one both
+     * app servers can reach; the SSO server is only if the new app server can't reach it already, which
+     * is not the case for one that is on the internet. Only the servers the app has are listed.
+     *
+     * @return array<int, array{type: string, server: string, reachable: bool, bridges: array<int, array{value: int, text: string}>}>
+     */
+    public static function requirements(AppInstance $app_instance, Server $target_server): array
+    {
+        $current = $app_instance->web_server?->server;
+        $requirements = [];
+
+        foreach (['database', 'sso'] as $type) {
+            $used = $app_instance->{"{$type}_server"}?->server;
+
+            if (! $used) {
+                continue;
+            }
+
+            $reachable = ServerReach::reaches($target_server, $used);
+
+            $requirements[] = [
+                'type' => $type,
+                'server' => $used->name,
+                'reachable' => $reachable,
+                // The ones to move it to first: the app is on the old app server until it is moved, so
+                // they have to be reachable from that one too
+                'bridges' => $reachable || ! $current ? [] : ServerReach::reachableFromAll($type, [$current, $target_server])
+                    ->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])->values()->all(),
+            ];
+        }
+
+        return $requirements;
+    }
+
     public static function steps(): array
     {
-        // The install, the check that it runs and the DNS refresh are the next change's
-        return [PrepareWebMove::class, Quiesce::class, AwaitVolume::class];
+        return [PrepareWebMove::class, Quiesce::class, AwaitVolume::class, SwitchServer::class, Verify::class, RefreshDns::class];
     }
 }

@@ -16,6 +16,7 @@ use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpdateJob;
 use App\Actions\Apps\ApplicationUpdateStep;
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\MassApplicationUpgrade;
 use App\Actions\Apps\MassReconcile;
@@ -76,6 +77,7 @@ class ActionService
             'application_sso_move' => ApplicationSsoMove::class,
             'application_sso_cleanup' => ApplicationSsoCleanup::class,
             'application_web_move' => ApplicationWebMove::class,
+            'application_web_cleanup' => ApplicationWebCleanup::class,
             'application_upgrade' => ApplicationUpgrade::class,
             'application_delete' => ApplicationDelete::class,
             'application_domain_checks' => ApplicationDomainChecks::class,

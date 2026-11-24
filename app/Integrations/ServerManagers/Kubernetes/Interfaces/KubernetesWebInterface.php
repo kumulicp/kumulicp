@@ -339,6 +339,21 @@ class KubernetesWebInterface implements AppInterface, JobInterface, Organization
         return true;
     }
 
+    public function uninstallRelease(): bool
+    {
+        $app = ApplicationFacade::instance($this->app_instance);
+
+        $this->removeMaintenance($app->maintenanceChart());
+
+        foreach ($app->charts() as $chart) {
+            if ($chart->delete_method === 'remove') {
+                $this->application->remove($this->app_instance, $chart);
+            }
+        }
+
+        return true;
+    }
+
     public function updateRedirectDomains()
     {
         $this->makeDomainMiddleware()->update();
