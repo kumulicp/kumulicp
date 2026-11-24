@@ -224,6 +224,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
+                        Route::get('move', 'Admin\Organizations\Applications@move')->name('organizations.app.move');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::put('maintenance', 'Admin\Organizations\Applications@maintenance')->name('organizations.app.maintenance');
@@ -232,6 +233,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::post('migrate-database', 'Admin\Organizations\Applications@migrate_database')->name('organizations.app.migrate_database');
                         Route::post('move-sso', 'Admin\Organizations\Applications@move_sso')->name('organizations.app.move_sso');
                         Route::post('move-web', 'Admin\Organizations\Applications@move_web')->name('organizations.app.move_web');
+                        Route::post('remove-old-release', 'Admin\Organizations\Applications@remove_old_release')->name('organizations.app.remove_old_release');
                         Route::post('remove-old-sso', 'Admin\Organizations\Applications@remove_old_sso')->name('organizations.app.remove_old_sso');
                         Route::post('confirm-step', 'Admin\Organizations\Applications@confirm_step')->name('organizations.app.confirm_step');
                         Route::delete('', 'Admin\Organizations\Applications@delete')->name('organizations.app.delete');

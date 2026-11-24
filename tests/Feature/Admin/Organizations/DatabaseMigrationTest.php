@@ -75,13 +75,15 @@ class DatabaseMigrationTest extends TestCase
         $this->appInstance->status = 'active';
         $this->appInstance->databasename = 'org_demo';
         $this->appInstance->database_server_id = $this->old->id;
+        // On an app server, which is what the database servers have to be reachable from
+        $this->appInstance->web_server_id = OrgServer::create(['organization_id' => $this->organization->id, 'server_id' => 1])->id;
         $this->appInstance->db_password = 'app-specific-password';
         $this->appInstance->save();
     }
 
     private function databaseServer(string $name): Server
     {
-        return Server::factory()->create([
+        $server = Server::factory()->create([
             'name' => $name,
             'type' => 'database',
             'interface' => 'app_database',
@@ -89,6 +91,11 @@ class DatabaseMigrationTest extends TestCase
             'internal_address' => "{$name}.db.svc",
             'default_web_server' => 0,
         ]);
+
+        // Reached from the app server the app runs on: the seeded one
+        $server->app_servers()->attach(1);
+
+        return $server;
     }
 
     private function completedBackup(): OrgBackup

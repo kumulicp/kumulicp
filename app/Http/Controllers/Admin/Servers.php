@@ -151,7 +151,12 @@ class Servers extends Controller
                 ] : [],
                 'default_backup_server' => $server->default_backup_server_id,
                 'is_backup_server' => $server->is_backup_server,
+                'app_servers' => $server->app_servers->pluck('id')->values(),
             ],
+            // The app servers a database or SSO server can be said to be reachable from
+            'app_server_options' => in_array($server->type, ['database', 'sso'], true)
+                ? Server::where('type', 'web')->orderBy('name')->get(['id', 'name'])->map(fn (Server $web) => ['id' => $web->id, 'name' => $web->name])->values()
+                : [],
             'backup_servers' => Server::where('is_backup_server', true)->where('type', $server->type)->whereNot('id', $server->id)->get()->map(function ($server) {
                 /** @var array{id: int|null, name: string} */
                 return [
@@ -201,6 +206,10 @@ class Servers extends Controller
         }
 
         $server->save();
+
+        if (in_array($server->type, ['database', 'sso'], true)) {
+            $server->app_servers()->sync($validated['app_servers'] ?? []);
+        }
 
         return redirect('/admin/server/servers/'.$server->id)->with('success', __('admin.servers.updated', ['server' => $server->name]));
     }

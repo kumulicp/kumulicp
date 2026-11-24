@@ -149,6 +149,14 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
         return true;
     }
 
+    // Not delete(): that is what makes the fake say the app is gone
+    public function uninstallRelease(): bool
+    {
+        self::$calls[] = ['uninstallRelease', $this->server->id, $this->app_instance?->id];
+
+        return true;
+    }
+
     public function delete(): bool
     {
         if ($this->app_instance) {

@@ -29,6 +29,9 @@ beforeEach(function () {
     $this->organization = Organization::find(1);
     $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
     $this->appInstance->status = 'active';
+    // On an app server, as an app has to be for the others to be checked against
+    $this->appInstance->web_server_id = (OrgServer::where('organization_id', $this->organization->id)->where('server_id', 1)->first()
+        ?? OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => 1]))->id;
     $this->appInstance->save();
 });
 
@@ -40,7 +43,14 @@ function moveTarget(string $type, array $attributes = []): Server
     static $count = 0;
     $count++;
 
-    return Server::factory()->create($attributes + ['type' => $type, 'name' => "{$type}-{$count}", 'host' => "{$type}-{$count}.example"]);
+    $server = Server::factory()->create($attributes + ['type' => $type, 'name' => "{$type}-{$count}", 'host' => "{$type}-{$count}.example"]);
+
+    // A database is reached from the app servers it is assigned to: the app's own (the seeded one)
+    if ($type === 'database') {
+        $server->app_servers()->attach(1);
+    }
+
+    return $server;
 }
 
 /**
@@ -182,3 +192,55 @@ it('refuses an sso move for an app that does not support single sign-on, but no 
 it('only knows the servers an app has', function () {
     MoveBlockers::target('email', moveTarget('web'));
 })->throws(InvalidArgumentException::class);
+
+it('only takes a database or SSO server the app\'s app server can reach', function () {
+    $other_app_server = moveTarget('web');
+    $far_database = moveTarget('database');
+    $far_database->app_servers()->sync([$other_app_server->id]);
+    $far_sso = moveTarget('sso');
+    $far_sso->app_servers()->sync([$other_app_server->id]);
+    $app = $this->appInstance->fresh();
+
+    expect(MoveBlockers::reach($app, 'database', $far_database->fresh()))->toBe([MoveBlockers::NOT_REACHABLE])
+        ->and(MoveBlockers::reach($app, 'sso', $far_sso->fresh()))->toBe([MoveBlockers::NOT_REACHABLE])
+        // An SSO server that is assigned to none is on the internet
+        ->and(MoveBlockers::reach($app, 'sso', moveTarget('sso')->fresh()))->toBe([])
+        ->and(MoveBlockers::reach($app, 'database', moveTarget('database')->fresh()))->toBe([])
+        ->and(MoveBlockers::for($app, 'database', $far_database->fresh()))
+        ->toBe(__('messages.server_move.not_reachable', ['type' => 'database', 'app_server' => 'Rancher']));
+});
+
+it('needs the app to have an app server, to say whether it can reach a database or SSO server', function () {
+    $this->appInstance->web_server_id = null;
+    $this->appInstance->save();
+    $app = $this->appInstance->fresh();
+
+    expect(MoveBlockers::reach($app, 'database', moveTarget('database')->fresh()))->toBe([MoveBlockers::NO_APP_SERVER])
+        ->and(MoveBlockers::reach($app, 'sso', moveTarget('sso')->fresh()))->toBe([MoveBlockers::NO_APP_SERVER])
+        // The app server being moved to is the one that is chosen
+        ->and(MoveBlockers::reach($app, 'web', moveTarget('web')))->toBe([]);
+});
+
+it('only moves the app to an app server that can reach its database and SSO server', function () {
+    $database = putAppOn($this->appInstance, 'database');
+    $sso = putAppOn($this->appInstance, 'sso');
+    $sso->app_servers()->sync([1]);
+    $new_app_server = moveTarget('web');
+    $app = $this->appInstance->fresh();
+
+    expect(MoveBlockers::reach($app, 'web', $new_app_server))->toBe([MoveBlockers::CANNOT_REACH_DATABASE, MoveBlockers::CANNOT_REACH_SSO])
+        ->and(MoveBlockers::all($app, 'web', $new_app_server))->toContain(
+            __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => $database->name]),
+            __('messages.server_move.cannot_reach_sso', ['type' => 'web', 'server' => $sso->name]),
+        );
+
+    // Once they can: the database is assigned to both app servers, and the SSO server is open
+    $database->app_servers()->attach($new_app_server->id);
+    $sso->app_servers()->sync([]);
+
+    expect(MoveBlockers::reach($app->fresh(), 'web', $new_app_server->fresh()))->toBe([]);
+});
+
+it('has no reach to check for an app that uses no database or SSO server', function () {
+    expect(MoveBlockers::reach($this->appInstance->fresh(), 'web', moveTarget('web')))->toBe([]);
+});
