@@ -224,6 +224,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('', 'Admin\Organizations\Applications@show')->name('organizations.app.show');
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
+                        Route::get('move', 'Admin\Organizations\Applications@move')->name('organizations.app.move');
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::put('maintenance', 'Admin\Organizations\Applications@maintenance')->name('organizations.app.maintenance');

@@ -311,3 +311,129 @@ it('does not remove a release through another organization', function () {
         ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/remove-old-release", ['move_task_id' => $move->id])
         ->assertNotFound();
 });
+
+/**
+ * The app on a database that only its own app server can reach, and a sign-in server, with another app
+ * server to move to and a database server both can reach.
+ *
+ * @return array{Server, Server, Server}
+ */
+function moveWebWithServers($test, array $sso = []): array
+{
+    $new = moveWebServer('new-cluster');
+
+    $inner = Server::factory()->create(['type' => 'database', 'name' => 'inner-db', 'host' => 'inner-db.example.com']);
+    $inner->app_servers()->sync([$test->old->server_id]);
+    $bridge = Server::factory()->create(['type' => 'database', 'name' => 'bridge-db', 'host' => 'bridge-db.example.com']);
+    $bridge->app_servers()->sync([$test->old->server_id, $new->id]);
+    $login = Server::factory()->create($sso + ['type' => 'sso', 'name' => 'login', 'host' => 'login.example.com']);
+
+    $test->appInstance->database_server_id = OrgServer::forceCreate(['organization_id' => $test->organization->id, 'server_id' => $inner->id])->id;
+    $test->appInstance->sso_server_id = OrgServer::forceCreate(['organization_id' => $test->organization->id, 'server_id' => $login->id])->id;
+    $test->appInstance->save();
+
+    return [$new, $inner, $bridge];
+}
+
+it('lists an app server the app can\'t be moved to yet, with what has to be moved first', function () {
+    [$new, , $bridge] = moveWebWithServers($this);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new, $bridge) {
+            $entry = collect($servers)->firstWhere('value', $new->id);
+
+            expect($entry['ready'])->toBeFalse()
+                // The database is on a network of its own: moved to one both app servers can reach, first
+                ->and($entry['requirements'][0])->toMatchArray(['type' => 'database', 'server' => 'inner-db', 'reachable' => false])
+                ->and($entry['requirements'][0]['bridges'])->toBe([['value' => $bridge->id, 'text' => 'bridge-db']])
+                // The sign-in server is on the internet: nothing to do
+                ->and($entry['requirements'][1])->toMatchArray(['type' => 'sso', 'server' => 'login', 'reachable' => true, 'bridges' => []]);
+
+            return true;
+        }));
+});
+
+it('is ready once the database is on a server the new app server can reach', function () {
+    [$new, , $bridge] = moveWebWithServers($this);
+    $this->appInstance->database_server_id = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => $bridge->id])->id;
+    $this->appInstance->save();
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new) {
+            $entry = collect($servers)->firstWhere('value', $new->id);
+
+            expect($entry['ready'])->toBeTrue()
+                ->and($entry['requirements'][0]['reachable'])->toBeTrue();
+
+            return true;
+        }));
+});
+
+it('also asks for the sign-in to be moved when the new app server can\'t reach it', function () {
+    [$new] = moveWebWithServers($this);
+    // Only reachable from the old app server
+    $this->appInstance->sso_server->server->app_servers()->sync([$this->old->server_id]);
+
+    $this->actingAs($this->admin)
+        ->get(moveWebUrl($this).'/edit')
+        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new) {
+            $sso = collect($servers)->firstWhere('value', $new->id)['requirements'][1];
+
+            expect($sso['reachable'])->toBeFalse()
+                ->and($sso['type'])->toBe('sso');
+
+            return true;
+        }));
+});
+
+it('refuses to move the app to an app server that can\'t reach its database yet', function () {
+    [$new] = moveWebWithServers($this);
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->assertSessionHas('error', MoveBlockers::summary([
+            __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'inner-db']),
+        ]));
+});
+
+it('starts the move with the volume chosen', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $new = moveWebServer('new-cluster');
+    $storage = ['volume' => 'existing', 'claim' => 'restored-data', 'access_mode' => 'ReadWriteMany'];
+
+    Action::shouldReceive('execute')
+        ->once()
+        ->with(Mockery::on(fn ($action) => $action instanceof ApplicationWebMove && $action->customValues()['storage'] === $storage))
+        ->andReturn(new Task);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => $storage])
+        ->assertSessionHas('success');
+});
+
+it('does not start the move with a volume that is not chosen properly', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')->never();
+
+    // An existing volume needs its claim; none at all needs to be said to be wanted
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'existing']])
+        ->assertSessionHasErrors('storage.claim');
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['claim' => 'restored-data']])
+        ->assertSessionHasErrors('storage.volume');
+
+    // A chart that can't be given one that exists
+    DemoAppProfile::$storage_handover = null;
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'existing', 'claim' => 'restored-data']])
+        ->assertSessionHasErrors('storage.volume');
+});
