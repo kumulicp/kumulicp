@@ -71,6 +71,8 @@ function appOnSsoServer(): array
     $old = OrgServer::forceCreate(['organization_id' => $org->id, 'server_id' => ssoServer('old-sso')->id]);
 
     $instance->sso_server_id = $old->id;
+    $instance->web_server_id = (OrgServer::where('organization_id', $org->id)->where('server_id', 1)->first()
+        ?? OrgServer::forceCreate(['organization_id' => $org->id, 'server_id' => 1]))->id;
     $instance->settings = array_merge($instance->settings ?? [], OLD_SSO_SETTINGS);
     $instance->save();
 

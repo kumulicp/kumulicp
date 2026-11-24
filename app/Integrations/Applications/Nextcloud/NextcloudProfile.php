@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Applications\Nextcloud;
 
+use App\AppInstance;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\Applications\Nextcloud\Features\CalendarAddon;
 use App\Integrations\Applications\Nextcloud\Features\ContactsAddon;
@@ -573,4 +574,14 @@ class NextcloudProfile extends AppProfile
             'validations' => 'required|integer',
         ],
     ];
+
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        return [
+            'claim' => ['path' => 'existing_claim'],
+            'access_mode' => ['path' => 'configurations.persistence-accessMode'],
+            'storage_class' => ['path' => 'configurations.persistence-storageClass'],
+            'size' => ['path' => 'chart_storage'],
+        ];
+    }
 }

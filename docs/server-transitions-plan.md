@@ -257,8 +257,34 @@ provider instead of making one with a client id and secret, so the entry has to 
 Still open from this phase: wiring for apps that do not read the stored SSO values (CiviCRM and
 generic apps get a provider but no configuration). Runbook in Appendix A.
 
-**Phase 3 - web move.** Claim handover mapping, `AwaitVolume` gate, `ApplicationWebMove`, DNS
-refresh, `blocker()`. Runbook in Appendix B. Add the old-copy cleanup action last.
+**Phase 3 - web move**, built as a stack, each slice based on the one before:
+
+1. The storage handover (`App\Support\StorageHandover`): one mapping from a claim name, access mode,
+   storage class and size to the settings each chart reads (`AppProfile::storageHandover()`), with
+   what was there before kept so it can be put back. A new volume clears the claim name the old
+   volume may have left in the settings.
+2. A "wait for an admin to confirm" step, and the button on the app page that confirms it.
+3. `ApplicationWebMove`: prepare, scale the old release to zero (its own flag, not
+   `expand_storage`), wait for the volume, hand over the storage and flip the pointer and run the
+   standard update on the new server, check it is up, refresh the DNS records. Rollback
+   restores the settings, points back and scales the old release up again.
+4. The Move button on the app page, with the target server, and the route.
+5. Removing the old release, as its own action (`delete()` on the old server's interface has
+   side effects on the old server's redirects that need care).
+
+All five are done, as a stack of six PRs (the move is in two: stop and wait for the volume, then install, check and
+refresh the DNS). Notes that came out of building it:
+
+- The pointer is flipped before the install, since several chart pieces read the instance's web server. The old
+  release is only scaled down (`quiesced_for_move`), never removed, until the cleanup.
+- The cleanup asks the old server to `uninstallRelease()`. Its `delete()` also rewrites the app's redirects on that
+  server and, for the charts that are updated rather than removed, installs the app there again.
+- Rancher and Kubernetes servers can't be moved between: their values differ.
+- Domains the control panel doesn't manage are listed in the organization's log with the new address.
+- Still open: a volume backup driver (the volume is restored by hand), and the other charts' claim keys have only
+  been checked against their code, not against a cluster.
+
+Runbook in Appendix B.
 
 **Phase 4 - polish.** Backup copy between servers, optional volume backup driver, `sub_mode`
 guidance in the server form. No bulk move for now: each app is moved on its own.

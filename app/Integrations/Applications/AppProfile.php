@@ -84,6 +84,20 @@ class AppProfile
         return collect($features);
     }
 
+    /**
+     * Where the app's chart reads the claim of its persistent volume and the settings of the
+     * volume from, in the instance's settings (see App\Support\StorageHandover); null when
+     * the chart has no way to be given a claim that already exists. Each entry has a `path`
+     * (dot notation) and, where it differs, `as` ('list' for a value the chart takes as a list).
+     * `claim` may also have `with` / `without`: settings that go with using or not using one.
+     *
+     * @return array<string, array<string, mixed>>|null
+     */
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        return null;
+    }
+
     public function configuration(string $config)
     {
         return Arr::get($this->configurations, $config);

@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Applications\CiviCRMStandalone;
 
+use App\AppInstance;
 use App\Integrations\Applications\AppProfile;
 
 class CiviCRMStandaloneProfile extends AppProfile
@@ -427,4 +428,15 @@ class CiviCRMStandaloneProfile extends AppProfile
             'validations' => 'nullable|string',
         ],
     ];
+
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        return [
+            // The chart only uses the name when told to
+            'claim' => ['path' => 'override.pvc.name', 'with' => ['override.pvc.override' => true], 'without' => ['override.pvc.override' => false]],
+            'access_mode' => ['path' => 'configurations.persistence-accessModes'],
+            'storage_class' => ['path' => 'configurations.persistence-storageClass'],
+            'size' => ['path' => 'chart_storage'],
+        ];
+    }
 }

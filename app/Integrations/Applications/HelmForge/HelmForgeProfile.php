@@ -2,6 +2,7 @@
 
 namespace App\Integrations\Applications\HelmForge;
 
+use App\AppInstance;
 use App\Application;
 use App\Integrations\Applications\AppProfile;
 
@@ -23,5 +24,15 @@ class HelmForgeProfile extends AppProfile
     {
         $this->name = $application->slug;
         $this->configurations = $application->catalog['configurations'] ?? [];
+    }
+
+    public function storageHandover(AppInstance $app_instance): ?array
+    {
+        // Its chart is never given an access mode
+        return [
+            'claim' => ['path' => 'override.pvc.name'],
+            'storage_class' => ['path' => 'configurations.persistence-storageClass'],
+            'size' => ['path' => 'chart_storage'],
+        ];
     }
 }
