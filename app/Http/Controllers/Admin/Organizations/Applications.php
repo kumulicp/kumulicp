@@ -8,10 +8,13 @@ use App\Actions\Apps\ApplicationSsoCleanup;
 use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationUpdate;
 use App\Actions\Apps\ApplicationUpgrade;
+use App\Actions\Apps\ApplicationWebCleanup;
+use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Steps\AwaitConfirmation;
 use App\AppInstance;
 use App\AppVersion;
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
 use App\Organization;
 use App\Server;
@@ -24,7 +27,9 @@ use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\ServerChoices;
+use App\Support\ServerReach;
 use App\Support\SharedAppContext;
+use App\Support\StorageHandover;
 use App\Task;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
@@ -209,6 +214,25 @@ class Applications extends Controller
                 'id' => $move->id,
                 'server' => ApplicationSsoCleanup::previousServer($move)?->server?->name,
             ])->values(),
+            // Releases left on the servers the app ran on before, to be removed
+            'old_web_entries' => $external ? [] : ApplicationWebCleanup::pending($app)->map(fn (Task $move) => [
+                'id' => $move->id,
+                'server' => ApplicationWebCleanup::previousServer($move)?->server?->name,
+            ])->values(),
+            // The app servers it can be moved to, or could be once what it uses is moved to servers they can
+            // reach (requirements), which is what the page takes the admin through
+            'web_servers' => $external ? [] : ServerChoices::for('web')
+                ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server, with_reach: false))
+                ->map(function (Server $server) use ($app) {
+                    $requirements = ApplicationWebMove::requirements($app, $server);
+
+                    return [
+                        'value' => $server->id,
+                        'text' => $server->name,
+                        'ready' => collect($requirements)->every(fn (array $requirement) => $requirement['reachable']),
+                        'requirements' => $requirements,
+                    ];
+                })->values(),
             'sso_servers' => $external ? [] : ServerChoices::for('sso')
                 ->filter(fn (Server $server) => ! ApplicationSsoMove::blockers($app, $server))
                 ->map(fn (Server $server) => [
@@ -373,16 +397,16 @@ class Applications extends Controller
         $server = Server::findOrFail($validated['database_server_id']);
 
         if ($blockers = ApplicationDatabaseMigrate::blockers($app, $server)) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
+            return redirect($this->backTo($request, $organization, $app))->with('error', MoveBlockers::summary($blockers));
         }
 
         $task = Action::execute(new ApplicationDatabaseMigrate($app, $server));
 
         if (! $task) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.migration_running'));
+            return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.migration_running'));
         }
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.migrating_database', ['app' => $app->label, 'server' => $server->name]));
+        return redirect($this->backTo($request, $organization, $app))->with('success', __('admin.organizations.apps.migrating_database', ['app' => $app->label, 'server' => $server->name]));
     }
 
     public function move_sso(Request $request, Organization $organization, AppInstance $app)
@@ -400,26 +424,159 @@ class Applications extends Controller
         $server = Server::findOrFail($validated['sso_server_id']);
 
         if ($blockers = ApplicationSsoMove::blockers($app, $server)) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', MoveBlockers::summary($blockers));
+            return redirect($this->backTo($request, $organization, $app))->with('error', MoveBlockers::summary($blockers));
         }
 
         $task = Action::execute(new ApplicationSsoMove($app, $server));
 
         if (! $task) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.sso_move_running'));
+            return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.sso_move_running'));
         }
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.moving_sso', ['app' => $app->label, 'server' => $server->name]));
+        return redirect($this->backTo($request, $organization, $app))->with('success', __('admin.organizations.apps.moving_sso', ['app' => $app->label, 'server' => $server->name]));
     }
 
     /**
-     * @return array{task_id: int, message: string}|null
+     * Where an action goes back to: the Move tab when it was started from there (with the app server
+     * being moved to), and the app's page otherwise.
+     */
+    private function backTo(Request $request, Organization $organization, AppInstance $app): string
+    {
+        $base = "/admin/organizations/{$organization->id}/apps/{$app->id}";
+
+        return $request->filled('move_target') ? "{$base}/move?target=".(int) $request->input('move_target') : $base;
+    }
+
+    /**
+     * The tab for moving an app to another app server, in steps: the database to a server the new app
+     * server can reach, the sign-in server kept or changed to one it can, then the app server, with the
+     * settings for its volume. What each step is in is worked out from the servers, so the page is the
+     * same wherever it is left and came back to.
+     */
+    public function move(Request $request, Organization $organization, AppInstance $app)
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        // Nothing is deployed for it
+        if ($app->isSharedApp() && SharedAppContext::state($app) === SharedAppContext::EXTERNAL) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}");
+        }
+
+        // Not only the ones it can be moved to now: the steps are what makes the rest possible. And not
+        // while it is active: a step that is running is what it is not
+        $targets = ServerChoices::for('web')
+            ->filter(fn (Server $server) => ! ApplicationWebMove::blockers($app, $server, require_active: false, with_reach: false))
+            ->values();
+        $target = $targets->firstWhere('id', (int) $request->query('target'));
+        $app_server = $app->web_server?->server;
+
+        return inertia()->render('Admin/Organizations/Apps/AppMove', [
+            'organization' => [
+                'id' => $organization->id,
+                'name' => $organization->name,
+            ],
+            'app' => [
+                'id' => $app->id,
+                'name' => $app->application->name,
+                'status' => $app->status,
+                'web_server' => $app_server?->name,
+                'database_server' => $app->database_server?->server?->name,
+                'sso_server' => $app->sso_server?->server?->name,
+                'supports_sso' => $app->supportsSso(),
+            ],
+            'targets' => $targets->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])->values(),
+            'target' => $target ? ['value' => $target->id, 'text' => $target->name] : null,
+            'steps' => $target && $app_server ? $this->moveSteps($app, $app_server, $target) : null,
+            // What is being done to the app now, so that the page can say so and look again
+            'running' => $this->runningMoves($app),
+            'awaiting' => $this->awaiting($app),
+            'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
+        ]);
+    }
+
+    /**
+     * What each step of moving the app to $target needs: the server the app has for it, whether the new
+     * app server can reach it, and the servers it can be moved to that both app servers can reach (the
+     * app is on the old one until the move, so the new server has to be reachable from there too). Both can
+     * be kept or changed when they can already be reached.
+     *
+     * @return array<string, mixed>
+     */
+    private function moveSteps(AppInstance $app, Server $app_server, Server $target): array
+    {
+        $requirements = collect(ApplicationWebMove::requirements($app, $target))->keyBy('type');
+
+        $step = function (string $type) use ($app, $app_server, $target, $requirements) {
+            $requirement = $requirements->get($type);
+
+            return [
+                'server' => $requirement['server'] ?? null,
+                'reachable' => $requirement['reachable'] ?? true,
+                'options' => ServerReach::reachableFromAll($type, [$app_server, $target])
+                    ->filter(fn (Server $server) => ! ($type === 'database'
+                        ? ApplicationDatabaseMigrate::blockers($app, $server)
+                        : ApplicationSsoMove::blockers($app, $server)))
+                    ->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])
+                    ->values(),
+            ];
+        };
+
+        return [
+            'database' => $step('database'),
+            'sso' => $step('sso'),
+            'app' => [
+                'ready' => $requirements->every(fn (array $requirement) => $requirement['reachable']),
+                // What the chart can be given for its volume
+                'storage' => [
+                    'supports_existing' => StorageHandover::supports($app),
+                    'fields' => StorageHandover::fields($app),
+                    'access_modes' => StorageHandover::ACCESS_MODES,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * The moves of the app that are being done: by what they move.
+     *
+     * @return array<string, array{task_id: int, description: string}|null>
+     */
+    private function runningMoves(AppInstance $app): array
+    {
+        $slugs = ['database' => 'application_database_migrate', 'sso' => 'application_sso_move', 'web' => 'application_web_move'];
+
+        $open = Task::where('app_instance_id', $app->id)
+            ->whereIn('action_slug', array_values($slugs))
+            ->whereIn('status', TaskStatus::openValues())
+            ->get();
+
+        return collect($slugs)->map(fn (string $slug) => ($task = $open->firstWhere('action_slug', $slug))
+            ? ['task_id' => $task->id, 'description' => (string) $task->description]
+            : null)->all();
+    }
+
+    /**
+     * @return array{task_id: int, message: string, form: array<string, mixed>|null}|null
      */
     private function awaiting(AppInstance $app): ?array
     {
         $task = AwaitConfirmation::waiting($app);
 
-        return $task ? ['task_id' => $task->id, 'message' => (string) $task->getValue('awaiting.message')] : null;
+        if (! $task) {
+            return null;
+        }
+
+        $step = $task->getValue('awaiting.class');
+
+        return [
+            'task_id' => $task->id,
+            'message' => (string) $task->getValue('awaiting.message'),
+            'form' => $step::form($task),
+        ];
     }
 
     public function confirm_step(Request $request, Organization $organization, AppInstance $app)
@@ -430,14 +587,74 @@ class Applications extends Controller
         $task = AwaitConfirmation::waiting($app);
 
         if (! $task || $task->id !== (int) $validated['task_id']) {
-            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.nothing_to_confirm'));
+            return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.nothing_to_confirm'));
         }
 
         // What the step asks for with the go-ahead is checked by the step
         $step = $task->getValue('awaiting.class');
         $step::confirm($task, $request->validate($step::rules($task)));
 
-        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.confirmed', ['app' => $app->label]));
+        return redirect($this->backTo($request, $organization, $app))->with('success', __('admin.organizations.apps.confirmed', ['app' => $app->label]));
+    }
+
+    public function move_web(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'web_server_id' => 'required|integer|exists:servers,id',
+            // What the chart is to be given for the app's volume, chosen now so that the move does not stop to ask
+            'storage' => 'nullable|array',
+            ...($request->has('storage') ? StorageHandover::rulesFor($app, 'storage.') : []),
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $server = Server::findOrFail($validated['web_server_id']);
+
+        if ($blockers = ApplicationWebMove::blockers($app, $server)) {
+            return redirect($this->backTo($request, $organization, $app))->with('error', MoveBlockers::summary($blockers));
+        }
+
+        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'] ?? null));
+
+        if (! $task) {
+            return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.web_move_running'));
+        }
+
+        return redirect($this->backTo($request, $organization, $app))->with('success', __('admin.organizations.apps.moving_web', ['app' => $app->label, 'server' => $server->name]));
+    }
+
+    public function remove_old_release(Request $request, Organization $organization, AppInstance $app)
+    {
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'move_task_id' => 'required|integer',
+        ]);
+
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $move = ApplicationWebCleanup::pending($app)->firstWhere('id', $validated['move_task_id']);
+
+        if (! $move) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('messages.web_move.nothing_to_remove'));
+        }
+
+        $task = Action::execute(new ApplicationWebCleanup($app, $move));
+
+        if (! $task) {
+            return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('error', __('admin.organizations.apps.denied.web_cleanup_running'));
+        }
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")->with('success', __('admin.organizations.apps.removing_old_release', [
+            'app' => $app->label,
+            'server' => ApplicationWebCleanup::previousServer($move)?->server?->name,
+        ]));
     }
 
     public function remove_old_sso(Request $request, Organization $organization, AppInstance $app)

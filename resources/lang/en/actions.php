@@ -12,6 +12,7 @@ return [
     'migrating_app_database' => 'Migrating :app database to :server',
     'moving_app_sso_server' => 'Moving :app sign-in to :server',
     'moving_app_web_server' => 'Moving :app to :server',
+    'removing_old_web' => 'Removing :app from :server',
     'removing_old_sso' => 'Removing :app sign-in entry from :server',
     'upgrading_app' => 'Upgrading :app',
     'provision_version_test_step' => 'Setting up a test of :app :version, :plan',

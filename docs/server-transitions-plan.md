@@ -272,6 +272,18 @@ generic apps get a provider but no configuration). Runbook in Appendix A.
 5. Removing the old release, as its own action (`delete()` on the old server's interface has
    side effects on the old server's redirects that need care).
 
+All five are done, as a stack of six PRs (the move is in two: stop and wait for the volume, then install, check and
+refresh the DNS). Notes that came out of building it:
+
+- The pointer is flipped before the install, since several chart pieces read the instance's web server. The old
+  release is only scaled down (`quiesced_for_move`), never removed, until the cleanup.
+- The cleanup asks the old server to `uninstallRelease()`. Its `delete()` also rewrites the app's redirects on that
+  server and, for the charts that are updated rather than removed, installs the app there again.
+- Rancher and Kubernetes servers can't be moved between: their values differ.
+- Domains the control panel doesn't manage are listed in the organization's log with the new address.
+- Still open: a volume backup driver (the volume is restored by hand), and the other charts' claim keys have only
+  been checked against their code, not against a cluster.
+
 Runbook in Appendix B.
 
 **Phase 4 - polish.** Backup copy between servers, optional volume backup driver, `sub_mode`
