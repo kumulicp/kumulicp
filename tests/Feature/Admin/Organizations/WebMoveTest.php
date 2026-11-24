@@ -399,3 +399,41 @@ it('refuses to move the app to an app server that can\'t reach its database yet'
             __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'inner-db']),
         ]));
 });
+
+it('starts the move with the volume chosen', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $new = moveWebServer('new-cluster');
+    $storage = ['volume' => 'existing', 'claim' => 'restored-data', 'access_mode' => 'ReadWriteMany'];
+
+    Action::shouldReceive('execute')
+        ->once()
+        ->with(Mockery::on(fn ($action) => $action instanceof ApplicationWebMove && $action->customValues()['storage'] === $storage))
+        ->andReturn(new Task);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => $storage])
+        ->assertSessionHas('success');
+});
+
+it('does not start the move with a volume that is not chosen properly', function () {
+    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')->never();
+
+    // An existing volume needs its claim; none at all needs to be said to be wanted
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'existing']])
+        ->assertSessionHasErrors('storage.claim');
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['claim' => 'restored-data']])
+        ->assertSessionHasErrors('storage.volume');
+
+    // A chart that can't be given one that exists
+    DemoAppProfile::$storage_handover = null;
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'existing', 'claim' => 'restored-data']])
+        ->assertSessionHasErrors('storage.volume');
+});

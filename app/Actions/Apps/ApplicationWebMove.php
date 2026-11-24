@@ -13,6 +13,8 @@ use App\Actions\Apps\WebMove\Verify;
 use App\AppInstance;
 use App\Server;
 use App\Support\ServerReach;
+use App\Task;
+use Illuminate\Support\Arr;
 
 /**
  * Moves an app to another web server (another cluster), with its volume (see
@@ -60,6 +62,28 @@ class ApplicationWebMove extends ApplicationServerMove
     protected static function messageGroup(): string
     {
         return 'web_move';
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $storage  What the app's chart is to be given for its volume
+     *                                               (StorageHandover): chosen here, so that the move
+     *                                               does not have to stop and ask for it
+     */
+    public function __construct(AppInstance $app_instance, Server $target_server, ?array $storage = null)
+    {
+        parent::__construct($app_instance, $target_server);
+
+        if ($storage !== null) {
+            $this->addCustomValue(['storage' => $storage]);
+        }
+    }
+
+    // Starts over where it was going, with what the app was to be given
+    public static function reset(Task $task): void
+    {
+        $task->custom_values = Arr::only($task->customValues(), ['target_server_id', 'storage']);
+
+        static::begin($task);
     }
 
     protected function describe(AppInstance $app_instance, Server $target_server): string
