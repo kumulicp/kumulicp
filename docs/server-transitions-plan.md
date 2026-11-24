@@ -57,6 +57,15 @@ rollback, started from a button that says what it will do.
    moved on its own; there is no bulk move for now, and a plan edit can't stand in for one.
 6. **Leave the old copy alone.** Do not delete the old database, release, provider or volume as
    part of the move. Offer "clean up the old server" as a separate, later action.
+7. **A move of the app server leaves the old server alone.** When the app is moved to another web
+   server, its database and sign-in server only have to be reachable from the *new* app server, and are
+   changed in the same move when the new one can't reach what the app has (or when the administrator
+   chooses others). The app is stopped first (the old release is scaled to zero, which is the only change
+   made to it), the database is copied and the sign-in is set up on the new server while it is stopped, and
+   the new release is installed against them. The old release is never updated again unless the move is
+   given up, and then it is only scaled up with the old servers put back, so going back is quick. Changing
+   only the database or the sign-in of an app that stays where it is, is a migration of its own, which does
+   update the app (and so needs the app's server to reach the new one).
 
 ## 1. Database server
 
@@ -153,7 +162,7 @@ the same on a new cluster.
 
 What the code does:
 
-- PVC names come from per-chart code and are stable: Nextcloud `<org>-nextcloud-<id>-nextcloud`,
+- PVC names come from per-chart code and are stable: Nextcloud `<org>-<instance name>-nextcloud` (new instances; ones deployed earlier keep the older `<org>-nextcloud-<id>-nextcloud`),
   generic charts `<fullname>-<volumeName>`. On a new cluster the chart would ask for the **same
   name**.
 - Size comes from `storage_quota`/`chart_storage` (`HelmChart::appStorage()`), access mode and

@@ -20,9 +20,9 @@ use App\Organization;
 use App\Server;
 use App\Services\AppInstanceService;
 use App\Services\OrgServerService;
-use App\Support\Facades\Action;
 use App\Support\AdminAppDomain;
 use App\Support\AppMaintenance;
+use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
 use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
@@ -486,9 +486,9 @@ class Applications extends Controller
 
     /**
      * What each step of moving the app to $target needs: the server the app has for it, whether the new
-     * app server can reach it, and the servers it can be moved to that both app servers can reach (the
-     * app is on the old one until the move, so the new server has to be reachable from there too). Both can
-     * be kept or changed when they can already be reached.
+     * app server can reach it, and the servers it can be moved to, with the app, that the new app server
+     * can reach. The old app server is not updated by the move, so it does not have to reach them. Each can
+     * be kept when it can already be reached, or changed.
      *
      * @return array<string, mixed>
      */
@@ -496,16 +496,16 @@ class Applications extends Controller
     {
         $requirements = collect(ApplicationWebMove::requirements($app, $target))->keyBy('type');
 
-        $step = function (string $type) use ($app, $app_server, $target, $requirements) {
+        $step = function (string $type) use ($app, $target, $requirements) {
             $requirement = $requirements->get($type);
 
             return [
                 'server' => $requirement['server'] ?? null,
                 'reachable' => $requirement['reachable'] ?? true,
-                'options' => ServerReach::reachableFromAll($type, [$app_server, $target])
+                'options' => ServerReach::reachableFromAll($type, [$target])
                     ->filter(fn (Server $server) => ! ($type === 'database'
-                        ? ApplicationDatabaseMigrate::blockers($app, $server)
-                        : ApplicationSsoMove::blockers($app, $server)))
+                        ? ApplicationDatabaseMigrate::blockers($app, $server, with_reach: false)
+                        : ApplicationSsoMove::blockers($app, $server, with_reach: false)))
                     ->map(fn (Server $server) => ['value' => $server->id, 'text' => $server->name])
                     ->values(),
             ];
@@ -591,6 +591,9 @@ class Applications extends Controller
 
         $validated = $request->validate([
             'web_server_id' => 'required|integer|exists:servers,id',
+            // Servers to move the app's database and sign-in to along with it, ones the new app server can reach
+            'database_server_id' => 'nullable|integer|exists:servers,id',
+            'sso_server_id' => 'nullable|integer|exists:servers,id',
             // What the chart is to be given for the app's volume, chosen now so that the move does not stop to ask
             'storage' => 'nullable|array',
             ...($request->has('storage') ? StorageHandover::rulesFor($app, 'storage.') : []),
@@ -599,12 +602,14 @@ class Applications extends Controller
         abort_unless($app->organization_id === $organization->id, 404);
 
         $server = Server::findOrFail($validated['web_server_id']);
+        $database_server = isset($validated['database_server_id']) ? Server::findOrFail($validated['database_server_id']) : null;
+        $sso_server = isset($validated['sso_server_id']) ? Server::findOrFail($validated['sso_server_id']) : null;
 
-        if ($blockers = ApplicationWebMove::blockers($app, $server)) {
+        if ($blockers = ApplicationWebMove::blockers($app, $server, database_server: $database_server, sso_server: $sso_server)) {
             return redirect($this->backTo($request, $organization, $app))->with('error', MoveBlockers::summary($blockers));
         }
 
-        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'] ?? null));
+        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'] ?? null, $database_server, $sso_server));
 
         if (! $task) {
             return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.web_move_running'));

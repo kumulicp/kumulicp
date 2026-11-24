@@ -11,12 +11,15 @@ use App\Task;
 
 /**
  * The volume is ready on the new cluster, so give the chart it, point the app at the new server and
- * run the standard update, which installs the release there (a release of the same name, in the
+ * update the release, which installs it there (a release of the same name, in the
  * same namespace). The app is no longer told to stay stopped: the new release starts up with its
  * volume. The old release is still scaled to zero where it was.
  *
- * Undone by putting the chart's settings back. Pointing the app at the old server again, and
- * scaling its release up, is PrepareWebMove's rollback.
+ * A database server the app was copied to along with the move is given to it here, with the app
+ * server (and the sign-in server, which was pointed at earlier, as the setup there needs it).
+ *
+ * Undone by putting the chart's settings and the database server back. Pointing the app at the old
+ * app server again, and scaling its release up, is PrepareWebMove's rollback.
  */
 class SwitchServer extends Step
 {
@@ -49,9 +52,18 @@ class SwitchServer extends Step
 
         $app_instance->updateSetting(ApplicationWebMove::QUIESCE_SETTING, false);
         $app_instance->web_server()->associate($target);
+
+        // The database the app was copied to, if it was moved with the app: only now, with the app server, so
+        // the old release is never given a different database to run against
+        if ($database = OrgServer::find($task->getValue('database_target_org_server_id'))) {
+            $app_instance->database_server()->associate($database);
+        }
+
         $app_instance->save();
 
-        return $this->startUpdate($task);
+        // Only the release: it is done when the release is running there. The app's settings job comes after, once
+        // that is known (RunSettingsJob): started with it, it would run against a release that is not there yet
+        return $this->startUpdate($task, ['release']);
     }
 
     public function check(Task $task): ActionResult
@@ -61,6 +73,14 @@ class SwitchServer extends Step
 
     public function rollback(Task $task): ?string
     {
+        $database = OrgServer::find($task->getValue('database_target_org_server_id'));
+        $previous = OrgServer::find($task->getValue('database_previous_org_server_id'));
+
+        if ($database && $previous && $task->app_instance->database_server_id === $database->id) {
+            $task->app_instance->database_server()->associate($previous);
+            $task->app_instance->save();
+        }
+
         $snapshot = $task->getValue('storage_snapshot');
 
         if (is_array($snapshot)) {

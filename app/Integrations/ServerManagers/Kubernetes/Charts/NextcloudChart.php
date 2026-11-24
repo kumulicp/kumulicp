@@ -52,7 +52,7 @@ class NextcloudChart extends HelmChart
 
         $chart = [
             'replicaCount' => $this->replicaCount(),
-            'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-nextcloud-'.$app_instance->id),
+            'fullnameOverride' => $app_instance->setOverrideIfEmpty('chart.values.fullNameOverride', $organization->slug.'-'.$this->chartName()),
             'image' => [
                 'pullPolicy' => $app_instance->configuration('image-pullPolicy'),
                 'registry' => $this->imageRegistry(),
@@ -114,6 +114,11 @@ class NextcloudChart extends HelmChart
                     // conditional later.
                     'blank.config.php' => "<?php\n\$CONFIG = array (\n);\n",
                     'previews.config.php' => $this->previewsConfig(),
+                    // Where the database is, as the app has it now: Nextcloud keeps the host it was installed with in
+                    // config.php on its volume, and the environment only gives it on the first install. A volume that
+                    // comes from elsewhere (a move, restored from a backup) or a migrated database would otherwise
+                    // keep looking for the old one. These files are read after config.php, and win.
+                    ...($database_server ? ['database.config.php' => $this->databaseConfig((string) $database_server->internal_address)] : []),
                 ],
                 'defaultConfigs' => [
                     'imaginary.config.php' => $app_instance->configuration('imaginary-enabled'),
@@ -222,6 +227,11 @@ class NextcloudChart extends HelmChart
     // Kept separate from the chart's own imaginary.config.php (activated via
     // 'defaultConfigs' above) so the two don't fight over the same keys --
     // that one already sets preview_imaginary_url/enable_previews/enabledPreviewProviders.
+    private function databaseConfig(string $host): string
+    {
+        return "<?php\n\$CONFIG = ".var_export(['dbhost' => $host], true).";\n";
+    }
+
     private function previewsConfig(): string
     {
         $app_instance = Application::instance($this->app_instance);
