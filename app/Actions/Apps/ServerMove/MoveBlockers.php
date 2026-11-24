@@ -5,6 +5,7 @@ namespace App\Actions\Apps\ServerMove;
 use App\AppInstance;
 use App\Organization;
 use App\Server;
+use App\Support\ServerReach;
 use InvalidArgumentException;
 
 /**
@@ -45,11 +46,22 @@ class MoveBlockers
 
     public const SAME_SERVER = 'same_server';
 
+    // A database or SSO move: the app has no app server to say whether it can reach the target from
+    public const NO_APP_SERVER = 'no_app_server';
+
+    public const NOT_REACHABLE = 'not_reachable';
+
+    // An app server move: the new one can't reach what the app uses
+    public const CANNOT_REACH_DATABASE = 'cannot_reach_database';
+
+    public const CANNOT_REACH_SSO = 'cannot_reach_sso';
+
     public const TYPES = ['database', 'web', 'sso'];
 
     /**
      * The messages for everything in the way of moving the app's $type server to $target
-     * (none if nothing is).
+     * (none if nothing is). Without $with_reach, not the servers being unable to reach each other:
+     * that is the one thing that can be made right in steps before the move.
      *
      * @return array<int, string>
      */
@@ -59,12 +71,14 @@ class MoveBlockers
         Server $target,
         bool $require_active = true,
         ?Organization $organization = null,
+        bool $with_reach = true,
     ): array {
         return collect([
             ...self::app($app, $type, $require_active, $organization),
             ...self::target($type, $target),
+            ...($with_reach ? self::reach($app, $type, $target) : []),
             ...self::same($app, $type, $target),
-        ])->map(fn (string $reason) => self::message($reason, $type))->unique()->values()->all();
+        ])->map(fn (string $reason) => self::message($reason, $type, self::reachParams($app, $reason)))->unique()->values()->all();
     }
 
     /**
@@ -158,6 +172,60 @@ class MoveBlockers
     }
 
     /**
+     * The servers can reach each other, which is said on the servers (see ServerReach). A database or SSO
+     * server has to be one the app's app server can reach, which is why the app has to have one. And the
+     * other way: a new app server has to reach the database and SSO server the app already uses, so
+     * those are moved first, to one both app servers can reach.
+     *
+     * @return array<int, string>
+     */
+    public static function reach(AppInstance $app, string $type, Server $target): array
+    {
+        self::guard($type);
+
+        if ($type === 'web') {
+            $reasons = [];
+
+            foreach (['database' => self::CANNOT_REACH_DATABASE, 'sso' => self::CANNOT_REACH_SSO] as $used => $reason) {
+                $server = $app->{"{$used}_server"}?->server;
+
+                if ($server && ! ServerReach::reaches($target, $server)) {
+                    $reasons[] = $reason;
+                }
+            }
+
+            return $reasons;
+        }
+
+        if (! in_array($type, ['database', 'sso'], true)) {
+            return [];
+        }
+
+        $app_server = $app->web_server?->server;
+
+        if (! $app_server) {
+            return [self::NO_APP_SERVER];
+        }
+
+        return ServerReach::reaches($app_server, $target) ? [] : [self::NOT_REACHABLE];
+    }
+
+    /**
+     * What the message of a reason has in it besides the type: the server it is about.
+     *
+     * @return array<string, mixed>
+     */
+    public static function reachParams(AppInstance $app, string $reason): array
+    {
+        return match ($reason) {
+            self::NOT_REACHABLE => ['app_server' => $app->web_server?->server?->name],
+            self::CANNOT_REACH_DATABASE => ['server' => $app->database_server?->server?->name],
+            self::CANNOT_REACH_SSO => ['server' => $app->sso_server?->server?->name],
+            default => [],
+        };
+    }
+
+    /**
      * The app is not on that server already. For a database, a different server record for
      * the same host is just as much where the app is (restoring replaces what is there), so
      * the host is compared too. For the others it is not: a host is shared by, for example,
@@ -182,9 +250,12 @@ class MoveBlockers
         return [];
     }
 
-    public static function message(string $reason, string $type): string
+    /**
+     * @param  array<string, mixed>  $params
+     */
+    public static function message(string $reason, string $type, array $params = []): string
     {
-        return __("messages.server_move.{$reason}", ['type' => $type]);
+        return __("messages.server_move.{$reason}", ['type' => $type] + $params);
     }
 
     private static function guard(string $type): void

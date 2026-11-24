@@ -39,7 +39,7 @@ afterEach(function () {
 
 function databaseServer(string $name): Server
 {
-    return Server::factory()->create([
+    $server = Server::factory()->create([
         'name' => $name,
         'type' => 'database',
         'interface' => 'app_database',
@@ -47,6 +47,11 @@ function databaseServer(string $name): Server
         'internal_address' => "{$name}.db.svc",
         'default_web_server' => 0,
     ]);
+
+    // Reached from the app server the app runs on: the seeded one
+    $server->app_servers()->attach(1);
+
+    return $server;
 }
 
 /**
@@ -67,6 +72,8 @@ function appOnDatabaseServer(): array
     $old->save();
 
     $instance->database_server_id = $old->id;
+    $instance->web_server_id = (OrgServer::where('organization_id', $org->id)->where('server_id', 1)->first()
+        ?? OrgServer::forceCreate(['organization_id' => $org->id, 'server_id' => 1]))->id;
     $instance->databasename = 'org_demo';
     $instance->save();
 
@@ -492,4 +499,24 @@ it('refuses to migrate an app that is not active or has no database', function (
     $instance->status = 'active';
     $instance->databasename = null;
     expect(ApplicationDatabaseMigrate::blocker($instance, $target))->toBe(__('messages.database_migration.no_database'));
+});
+
+it('only offers database servers the app server can reach', function () {
+    [$instance, $old] = appOnDatabaseServer();
+    $reachable = databaseServer('near-db');
+    $unreachable = databaseServer('far-db');
+    $unreachable->app_servers()->detach();
+
+    expect(ApplicationDatabaseMigrate::targets($instance)->pluck('id')->values()->all())->toBe([$reachable->id])
+        ->and(ApplicationDatabaseMigrate::blockers($instance, $unreachable->fresh()))
+        ->toBe([__('messages.server_move.not_reachable', ['type' => 'database', 'app_server' => 'Rancher'])]);
+});
+
+it('needs the app to have an app server before a database can be migrated', function () {
+    [$instance] = appOnDatabaseServer();
+    $instance->web_server_id = null;
+    $instance->save();
+
+    expect(ApplicationDatabaseMigrate::blockers($instance->fresh(), databaseServer('new-db')))
+        ->toBe([__('messages.server_move.no_app_server', ['type' => 'database'])]);
 });

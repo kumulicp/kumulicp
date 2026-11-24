@@ -419,10 +419,34 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
               :error="!!$page.props.errors.web_server_id"
               :error-messages="$page.props.errors.web_server_id"
             />
+            <div v-if="selectedWebServer" id="moveWebSteps" class="mt-3">
+              <h6 class="va-h6 mb-1">{{ $t('admin.apps.moveWebStepsTitle') }}</h6>
+              <ol class="ml-4" style="list-style: decimal">
+                <li v-for="step in selectedWebServer.requirements" :key="step.type" :id="'moveWebStep-' + step.type" class="mb-2">
+                  <template v-if="step.reachable">
+                    {{ $t('admin.apps.moveWebStepReachable', { what: step.type === 'database' ? $t('admin.apps.databaseServer') : $t('admin.apps.ssoServer'), server: step.server, target: selectedWebServer.text }) }}
+                  </template>
+                  <template v-else>
+                    <strong>{{ step.type === 'database' ? $t('admin.apps.moveWebStepDatabase', { server: step.server }) : $t('admin.apps.moveWebStepSso', { server: step.server }) }}</strong>
+                    <div v-if="step.bridges.length > 0" class="secondary">{{ $t('admin.apps.moveWebStepOptions', { servers: step.bridges.map(bridge => bridge.text).join(', ') }) }}</div>
+                    <div v-else class="secondary">{{ $t('admin.apps.moveWebStepNoOptions', { what: step.type === 'database' ? $t('admin.apps.databaseServer') : $t('admin.apps.ssoServer') }) }}</div>
+                    <va-button
+                      v-if="step.bridges.length > 0"
+                      size="small"
+                      preset="secondary"
+                      class="mt-1"
+                      @click="startMoveWebStep(step.type)"
+                    >{{ step.type === 'database' ? $t('admin.apps.migrateDatabase') : $t('admin.apps.moveSso') }}</va-button>
+                  </template>
+                </li>
+                <li>{{ $t('admin.apps.moveWebStepFinal') }}</li>
+              </ol>
+              <p v-if="!selectedWebServer.ready" class="mt-2">{{ $t('admin.apps.moveWebNotReady') }}</p>
+            </div>
           </va-card-content>
           <va-card-actions align="right" class="">
             <va-button color="textInverted" :disabled="moveWebForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-            <va-button type="submit" class="mr-2" :disabled="moveWebForm.processing || !moveWebForm.web_server_id || app.status !== 'active'">{{ $t('admin.apps.moveWeb') }}</va-button>
+            <va-button type="submit" class="mr-2" :disabled="moveWebForm.processing || !moveWebForm.web_server_id || !selectedWebServer?.ready || app.status !== 'active'">{{ $t('admin.apps.moveWeb') }}</va-button>
           </va-card-actions>
         </form>
       </template>
@@ -571,6 +595,10 @@ export default {
     }
   },
   computed: {
+    // The app server chosen to move to, with what has to be done first
+    selectedWebServer () {
+      return this.web_servers.find(server => server.value === this.moveWebForm.web_server_id)
+    },
     // A chart that can't be given a claim can only start with a new volume
     volumeOptions () {
       const options = [{ text: this.$t('admin.apps.volumeNew'), value: 'new' }]
@@ -707,6 +735,16 @@ export default {
     }
   },
   methods: {
+    // A step before the app server can change: the database or the sign-in is moved first
+    startMoveWebStep (type) {
+      this.showMoveWebModal = false
+
+      if (type === 'database') {
+        this.showMigrateDatabaseModal = true
+      } else {
+        this.showMoveSsoModal = true
+      }
+    },
     askRemoveOldWeb (entry) {
       this.removeOldWebForm.move_task_id = entry.id
       this.removeOldWebServer = entry.server
