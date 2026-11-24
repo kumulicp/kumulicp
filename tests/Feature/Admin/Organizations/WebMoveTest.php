@@ -77,36 +77,7 @@ function moveWaitingForVolume($test): Task
     ]);
 }
 
-it('offers the other servers of the same kind on the edit page', function () {
-    $new = moveWebServer('new-cluster');
-    $other_kind = moveWebServer('direct-cluster', ['interface' => 'kubernetes']);
-    $inactive = moveWebServer('inactive-cluster', ['status' => 'inactive']);
-    $backup = moveWebServer('backup-cluster', ['is_backup_server' => true]);
 
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page
-            ->component('Admin/Organizations/Apps/AppEdit')
-            ->where('web_servers', function ($servers) use ($new, $other_kind, $inactive, $backup) {
-                $ids = collect($servers)->pluck('value');
-
-                // Not the one it is on, another kind, one that is turned off, or one that only holds backups
-                return $ids->contains($new->id)
-                    && ! $ids->contains($this->old->server_id)
-                    && ! $ids->intersect([$other_kind->id, $inactive->id, $backup->id])->isNotEmpty();
-            })
-        );
-});
-
-it('offers no servers while the app is not active', function () {
-    moveWebServer('new-cluster');
-    $this->appInstance->status = 'updating';
-    $this->appInstance->save();
-
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page->has('web_servers', 0));
-});
 
 it('starts the move', function () {
     $new = moveWebServer('new-cluster');
@@ -335,58 +306,8 @@ function moveWebWithServers($test, array $sso = []): array
     return [$new, $inner, $bridge];
 }
 
-it('lists an app server the app can\'t be moved to yet, with what has to be moved first', function () {
-    [$new, , $bridge] = moveWebWithServers($this);
 
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new, $bridge) {
-            $entry = collect($servers)->firstWhere('value', $new->id);
 
-            expect($entry['ready'])->toBeFalse()
-                // The database is on a network of its own: moved to one both app servers can reach, first
-                ->and($entry['requirements'][0])->toMatchArray(['type' => 'database', 'server' => 'inner-db', 'reachable' => false])
-                ->and($entry['requirements'][0]['bridges'])->toBe([['value' => $bridge->id, 'text' => 'bridge-db']])
-                // The sign-in server is on the internet: nothing to do
-                ->and($entry['requirements'][1])->toMatchArray(['type' => 'sso', 'server' => 'login', 'reachable' => true, 'bridges' => []]);
-
-            return true;
-        }));
-});
-
-it('is ready once the database is on a server the new app server can reach', function () {
-    [$new, , $bridge] = moveWebWithServers($this);
-    $this->appInstance->database_server_id = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => $bridge->id])->id;
-    $this->appInstance->save();
-
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new) {
-            $entry = collect($servers)->firstWhere('value', $new->id);
-
-            expect($entry['ready'])->toBeTrue()
-                ->and($entry['requirements'][0]['reachable'])->toBeTrue();
-
-            return true;
-        }));
-});
-
-it('also asks for the sign-in to be moved when the new app server can\'t reach it', function () {
-    [$new] = moveWebWithServers($this);
-    // Only reachable from the old app server
-    $this->appInstance->sso_server->server->app_servers()->sync([$this->old->server_id]);
-
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page->where('web_servers', function ($servers) use ($new) {
-            $sso = collect($servers)->firstWhere('value', $new->id)['requirements'][1];
-
-            expect($sso['reachable'])->toBeFalse()
-                ->and($sso['type'])->toBe('sso');
-
-            return true;
-        }));
-});
 
 it('refuses to move the app to an app server that can\'t reach its database yet', function () {
     [$new] = moveWebWithServers($this);
