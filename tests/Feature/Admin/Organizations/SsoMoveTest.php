@@ -38,6 +38,8 @@ beforeEach(function () {
     $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
     $this->old = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => moveSsoServer('old-sso')->id]);
     $this->appInstance->status = 'active';
+    $this->appInstance->web_server_id = (OrgServer::where('organization_id', $this->organization->id)->where('server_id', 1)->first()
+        ?? OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => 1]))->id;
     $this->appInstance->sso_server_id = $this->old->id;
     $this->appInstance->save();
 });
