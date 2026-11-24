@@ -87,11 +87,20 @@ return [
         'migrated' => ':app is now using the :server database server',
     ],
     // Moving an app's database, app (web) or SSO server (:type); see ApplicationServerMove
+    'sso_move' => [
+        'setup_not_scheduled' => 'The sign-in setup on the new server could not be scheduled',
+        'setup_failed' => 'Sign-in could not be set up on the new server',
+        'update_not_scheduled' => 'The app update that applies the new sign-in server could not be scheduled',
+        'update_failed' => 'The app did not come back up with the new sign-in server',
+        'copy_left' => 'The provider and application made on :server were left in place and can be removed manually.',
+        'moved' => ':app now signs in through :server',
+    ],
     'server_move' => [
         'wrong_organization' => 'The app does not belong to that organization',
         'app_not_active' => 'The app must be active before its :type server can be moved',
         'has_children' => 'The app has child apps that run with it, so its :type server can\'t be moved on its own',
         'is_child' => 'The app runs as part of its parent app, so its :type server is moved with the parent',
+        'no_sso_support' => 'This app does not support single sign-on, so it has no sign-in server to move',
         'wrong_type' => 'That is not a :type server',
         'server_inactive' => 'That server is not active',
         'backup_server' => 'A server that only holds backups cannot be used as the app\'s :type server',

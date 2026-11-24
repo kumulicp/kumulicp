@@ -6,6 +6,7 @@ use App\Integrations\ServerManagers\Rancher\RancherProfile;
 use App\Integrations\SSO\Authentik\AuthentikProfile;
 use Tests\Support\ServerManagers\FakeServerManager;
 use Tests\Support\ServerManagers\FakeServerManagerProfile;
+use Tests\Support\SSO\FakeSSO;
 use Tests\Support\SSO\FakeSSOProfile;
 
 /**
@@ -43,6 +44,7 @@ trait TestsWithServerInterfaces
         app('server_interfaces')->register('web', 'rancher', RancherProfile::class);
         app('server_interfaces')->register('sso', 'authentik', AuthentikProfile::class);
         FakeServerManager::reset();
+        FakeSSO::reset();
     }
 
     protected function skipIfNotServerManager(string $required): void

@@ -48,11 +48,20 @@ return [
         'migrated' => ':app ahora usa el servidor de base de datos :server',
     ],
     // Mover el servidor de base de datos, de aplicación (web) o SSO (:type) de una aplicación
+    'sso_move' => [
+        'setup_not_scheduled' => 'No se pudo programar la configuración del inicio de sesión en el nuevo servidor',
+        'setup_failed' => 'No se pudo configurar el inicio de sesión en el nuevo servidor',
+        'update_not_scheduled' => 'No se pudo programar la actualización de la aplicación que aplica el nuevo servidor de inicio de sesión',
+        'update_failed' => 'La aplicación no volvió a iniciarse con el nuevo servidor de inicio de sesión',
+        'copy_left' => 'El proveedor y la aplicación creados en :server se dejaron en su lugar y se pueden eliminar manualmente.',
+        'moved' => ':app ahora inicia sesión a través de :server',
+    ],
     'server_move' => [
         'wrong_organization' => 'La aplicación no pertenece a esa organización',
         'app_not_active' => 'La aplicación debe estar activa antes de mover su servidor :type',
         'has_children' => 'La aplicación tiene aplicaciones hijas que se ejecutan con ella, por lo que su servidor :type no se puede mover por separado',
         'is_child' => 'La aplicación se ejecuta como parte de su aplicación padre, por lo que su servidor :type se mueve con el padre',
+        'no_sso_support' => 'Esta aplicación no admite el inicio de sesión único, por lo que no tiene un servidor de inicio de sesión que trasladar',
         'wrong_type' => 'Ese no es un servidor :type',
         'server_inactive' => 'Ese servidor no está activo',
         'backup_server' => 'Un servidor que solo guarda copias de seguridad no se puede usar como servidor :type de la aplicación',

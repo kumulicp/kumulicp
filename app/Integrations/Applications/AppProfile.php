@@ -211,6 +211,15 @@ class AppProfile
         return in_array($compatibility, $this->compatibility);
     }
 
+    /**
+     * Whether the app can sign people in through a single sign-on server: it declares one of
+     * the ways to (the same flags the plan forms use to offer the choice).
+     */
+    public function supportsSso(): bool
+    {
+        return $this->isCompatible(['sso', 'openid', 'oauth2', 'saml']);
+    }
+
     public function compatibility()
     {
         return $this->compatibility;

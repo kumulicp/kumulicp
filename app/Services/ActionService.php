@@ -8,6 +8,7 @@ use App\Actions\Apps\ApplicationActivate;
 use App\Actions\Apps\ApplicationDatabaseMigrate;
 use App\Actions\Apps\ApplicationDeactivate;
 use App\Actions\Apps\ApplicationDelete;
+use App\Actions\Apps\ApplicationSsoMove;
 use App\Actions\Apps\ApplicationDomainChecks;
 use App\Actions\Apps\ApplicationSSOSetup;
 use App\Actions\Apps\ApplicationUpdate;
@@ -70,6 +71,7 @@ class ActionService
             'application_update' => ApplicationUpdate::class,
             'application_update_step' => ApplicationUpdateStep::class,
             'application_database_migrate' => ApplicationDatabaseMigrate::class,
+            'application_sso_move' => ApplicationSsoMove::class,
             'application_upgrade' => ApplicationUpgrade::class,
             'application_delete' => ApplicationDelete::class,
             'application_domain_checks' => ApplicationDomainChecks::class,
