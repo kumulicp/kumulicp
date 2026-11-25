@@ -80,20 +80,15 @@ class ApplicationWebMove extends ApplicationServerMove
     }
 
     /**
-     * @param  array<string, mixed>|null  $storage  What the app's chart is to be given for its volume
-     *                                              (StorageHandover): chosen here, so that the move
-     *                                              does not have to stop and ask for it
-     * @param  Server|null  $database_server  A database server to move the app's database to with it,
-     *                                        one the new app server can reach
-     * @param  Server|null  $sso_server  A sign-in server to move the app's sign-in to with it
+     * @param  array<string, mixed>  $storage  What the app's chart is to be given for its volume
+     *                                         (StorageHandover): chosen here, so that the move does
+     *                                         not have to stop and ask for it
      */
-    public function __construct(AppInstance $app_instance, Server $target_server, ?array $storage = null, ?Server $database_server = null, ?Server $sso_server = null)
+    public function __construct(AppInstance $app_instance, Server $target_server, array $storage, ?Server $database_server = null, ?Server $sso_server = null)
     {
         parent::__construct($app_instance, $target_server);
 
-        if ($storage !== null) {
-            $this->addCustomValue(['storage' => $storage]);
-        }
+        $this->addCustomValue(['storage' => $storage]);
 
         if ($database_server) {
             $this->addCustomValue(['database_target_server_id' => $database_server->id]);

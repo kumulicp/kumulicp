@@ -546,7 +546,7 @@ class Applications extends Controller
     }
 
     /**
-     * @return array{task_id: int, message: string, form: array<string, mixed>|null}|null
+     * @return array{task_id: int, message: string}|null
      */
     private function awaiting(AppInstance $app): ?array
     {
@@ -556,12 +556,9 @@ class Applications extends Controller
             return null;
         }
 
-        $step = $task->getValue('awaiting.class');
-
         return [
             'task_id' => $task->id,
             'message' => (string) $task->getValue('awaiting.message'),
-            'form' => $step::form($task),
         ];
     }
 
@@ -595,8 +592,8 @@ class Applications extends Controller
             'database_server_id' => 'nullable|integer|exists:servers,id',
             'sso_server_id' => 'nullable|integer|exists:servers,id',
             // What the chart is to be given for the app's volume, chosen now so that the move does not stop to ask
-            'storage' => 'nullable|array',
-            ...($request->has('storage') ? StorageHandover::rulesFor($app, 'storage.') : []),
+            'storage' => 'required|array',
+            ...StorageHandover::rulesFor($app, 'storage.'),
         ]);
 
         abort_unless($app->organization_id === $organization->id, 404);
@@ -609,7 +606,7 @@ class Applications extends Controller
             return redirect($this->backTo($request, $organization, $app))->with('error', MoveBlockers::summary($blockers));
         }
 
-        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'] ?? null, $database_server, $sso_server));
+        $task = Action::execute(new ApplicationWebMove($app, $server, $validated['storage'], $database_server, $sso_server));
 
         if (! $task) {
             return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.web_move_running'));

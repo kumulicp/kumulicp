@@ -39,8 +39,8 @@ class SwitchServer extends Step
     {
         $app_instance = $task->app_instance;
         $target = OrgServer::findOrFail($task->getValue('target_org_server_id'));
-        // Chosen when the move was started, or given with the go-ahead
-        $volume = AwaitVolume::chosen($task) ?? AwaitVolume::confirmation($task)['values'] ?? [];
+        // Chosen when the move was started
+        $volume = AwaitVolume::chosen($task) ?? [];
 
         // What was there is saved on the task as soon as it is changed, for the rollback
         if (StorageHandover::supports($app_instance) && ! empty($volume['volume'])) {

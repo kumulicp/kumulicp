@@ -137,7 +137,7 @@ it('does not start the move to an app server that can\'t reach the database the 
     $elsewhere = moveTabDatabaseServer('elsewhere-db', [$this->oldCluster->id]);
 
     $this->actingAs($this->admin)
-        ->post(moveTabUrl($this, '/move-web'), ['web_server_id' => $new->id, 'database_server_id' => $elsewhere->id])
+        ->post(moveTabUrl($this, '/move-web'), ['web_server_id' => $new->id, 'database_server_id' => $elsewhere->id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', MoveBlockers::summary([
             __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'elsewhere-db']),
         ]));
@@ -150,7 +150,7 @@ it('does not start the move to an app server that can\'t reach the database the 
     moveTabAppWithDatabase($this);
 
     $this->actingAs($this->admin)
-        ->post(moveTabUrl($this, '/move-web'), ['web_server_id' => $new->id])
+        ->post(moveTabUrl($this, '/move-web'), ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', MoveBlockers::summary([
             __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'old-db']),
         ]));

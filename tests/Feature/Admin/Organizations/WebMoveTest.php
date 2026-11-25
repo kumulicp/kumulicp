@@ -95,7 +95,7 @@ it('starts the move', function () {
         ->andReturn(new Task);
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
         ->assertRedirect(moveWebUrl($this))
         ->assertSessionHas('success');
 });
@@ -108,7 +108,7 @@ it('says everything that is in the way at once', function () {
     Action::shouldReceive('execute')->never();
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $other_kind->id])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $other_kind->id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', MoveBlockers::summary([
             __('messages.server_move.app_not_active', ['type' => 'web']),
             __('messages.web_move.other_driver', ['server' => 'old-cluster', 'driver' => 'rancher']),
@@ -119,7 +119,7 @@ it('refuses the server the app is already on', function () {
     Action::shouldReceive('execute')->never();
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $this->old->server_id])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $this->old->server_id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', MoveBlockers::summary([__('messages.server_move.same_server', ['type' => 'web'])]));
 });
 
@@ -129,7 +129,7 @@ it('says so when a move of the app is already running', function () {
     Action::shouldReceive('execute')->once()->andReturn(null);
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', __('admin.organizations.apps.denied.web_move_running'));
 });
 
@@ -140,80 +140,17 @@ it('does not move an app through another organization, or to a server that is no
     Action::shouldReceive('execute')->never();
 
     $this->actingAs($this->admin)
-        ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/move-web", ['web_server_id' => $new->id])
+        ->post("/admin/organizations/{$other->id}/apps/{$this->appInstance->id}/move-web", ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
         ->assertNotFound();
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => 999999])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => 999999, 'storage' => ['volume' => 'new']])
         ->assertSessionHasErrors('web_server_id');
 });
 
-it('shows the form for the volume, with what the chart can be given', function () {
-    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
-    moveWaitingForVolume($this);
 
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page
-            ->where('awaiting.form.type', 'storage')
-            ->where('awaiting.form.fields', ['claim', 'access_mode', 'storage_class', 'size'])
-            ->where('awaiting.form.access_modes', ['ReadWriteOnce', 'ReadWriteMany', 'ReadWriteOncePod', 'ReadOnlyMany'])
-        );
-});
 
-it('shows no fields for a chart that cannot be given a volume', function () {
-    moveWaitingForVolume($this);
 
-    $this->actingAs($this->admin)
-        ->get(moveWebUrl($this).'/edit')
-        ->assertInertia(fn ($page) => $page->where('awaiting.form.fields', []));
-});
-
-it('confirms the volume with what the chart is to be given', function () {
-    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
-    $task = moveWaitingForVolume($this);
-
-    $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/confirm-step', [
-            'task_id' => $task->id,
-            'volume' => 'existing',
-            'claim' => 'restored-data',
-            'access_mode' => 'ReadWriteMany',
-            'storage_class' => null,
-            'size' => null,
-        ])
-        ->assertSessionHas('success');
-
-    expect(AwaitVolume::confirmation($task->fresh())['values'])->toBe([
-        'volume' => 'existing',
-        'claim' => 'restored-data',
-        'access_mode' => 'ReadWriteMany',
-        'storage_class' => null,
-        'size' => null,
-    ]);
-});
-
-it('does not confirm an existing volume without a name, or to a chart that cannot be given one', function () {
-    DemoAppProfile::$storage_handover = (new NextcloudProfile)->storageHandover(new AppInstance);
-    $task = moveWaitingForVolume($this);
-
-    $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'existing'])
-        ->assertSessionHasErrors('claim');
-
-    DemoAppProfile::$storage_handover = null;
-
-    $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'existing', 'claim' => 'restored-data'])
-        ->assertSessionHasErrors('volume');
-
-    expect(AwaitVolume::confirmation($task->fresh()))->toBeNull();
-
-    // A new volume is something it can always start with
-    $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/confirm-step', ['task_id' => $task->id, 'volume' => 'new'])
-        ->assertSessionHas('success');
-});
 
 /**
  * A finished move of the app away from a cluster called "left-cluster", which left its release there.
@@ -322,7 +259,7 @@ it('refuses to move the app to an app server that can\'t reach its database yet'
     Action::shouldReceive('execute')->never();
 
     $this->actingAs($this->admin)
-        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
         ->assertSessionHas('error', MoveBlockers::summary([
             __('messages.server_move.cannot_reach_database', ['type' => 'web', 'server' => 'inner-db']),
         ]));
@@ -364,4 +301,14 @@ it('does not start the move with a volume that is not chosen properly', function
     $this->actingAs($this->admin)
         ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'existing', 'claim' => 'restored-data']])
         ->assertSessionHasErrors('storage.volume');
+});
+
+it('does not start the move without the volume being chosen', function () {
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
+        ->assertSessionHasErrors('storage');
 });

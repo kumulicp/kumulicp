@@ -22,7 +22,6 @@ use App\Support\Facades\Backup;
 use App\Support\ServerReach;
 use App\Task;
 use App\TaskStep;
-use Illuminate\Support\Facades\Validator;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
 use Tests\Support\Concerns\TestsWithServerInterfaces;
@@ -87,7 +86,7 @@ function appOnWebServer(): array
     return [$instance->fresh(), $old];
 }
 
-function startWebMove(AppInstance $instance, Server $target, ?array $storage = null): Task
+function startWebMove(AppInstance $instance, Server $target, array $storage = ['volume' => 'new']): Task
 {
     return Action::execute(new ApplicationWebMove($instance, $target, $storage))->fresh();
 }
@@ -137,7 +136,7 @@ it('stops the app, waits for its volume, installs it on the new server against i
     [$instance, $old] = appOnWebServer();
     $target = webServer('new-cluster', '10.0.0.2');
 
-    $task = advanceWebMove(startWebMove($instance, $target));
+    $task = advanceWebMove(startWebMove($instance, $target, ['volume' => 'existing', 'claim' => 'restored-data', 'access_mode' => 'ReadWriteMany']));
 
     // Stopped where it is, and waiting for the volume to be restored on the new cluster
     expect($task->status)->toBe(TaskStatus::IN_PROGRESS)
@@ -146,7 +145,7 @@ it('stops the app, waits for its volume, installs it on the new server against i
         ->and(AwaitConfirmation::waiting($instance)?->id)->toBe($task->id)
         ->and(Task::where('action_slug', 'application_update')->where('task_group', $task->task_group)->first()->getValue('steps'))->toBe(['release']);
 
-    AwaitVolume::confirm($task, ['volume' => 'existing', 'claim' => 'restored-data', 'access_mode' => 'ReadWriteMany']);
+    AwaitVolume::confirm($task);
     $task = advanceWebMove($task);
 
     $new = OrgServer::where('organization_id', $instance->organization_id)->where('server_id', $target->id)->first();
@@ -163,27 +162,14 @@ it('stops the app, waits for its volume, installs it on the new server against i
         ->and(collect(FakeServerManager::$calls)->contains(['checkStatus', $old->id, $instance->id]))->toBeFalse();
 });
 
-it('only starts the app on a new volume when asked to', function () {
-    [$instance] = appOnWebServer();
-    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
-    $instance->save();
-
-    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    AwaitVolume::confirm($task, ['volume' => 'new']);
-    $task = advanceWebMove($task);
-
-    // The old volume's claim, kept in the settings, is not looked for on the new cluster
-    expect($task->status)->toBe(TaskStatus::COMPLETE)
-        ->and($instance->fresh()->setting('existing_claim'))->toBe('');
-});
 
 it('puts the old settings and server back, and scales the old release up, when the install fails', function () {
     [$instance, $old] = appOnWebServer();
     $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
     $instance->save();
 
-    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    AwaitVolume::confirm($task, ['volume' => 'existing', 'claim' => 'restored-data']);
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2'), ['volume' => 'existing', 'claim' => 'restored-data']));
+    AwaitVolume::confirm($task);
 
     // Past the wait, into the install
     app(TaskRunner::class)->poll($task);
@@ -260,26 +246,12 @@ it('refreshes the copies of the old address in the app\'s subdomains, and only t
     $other = $subdomain('other', 'somewhere.example.net');
 
     $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    AwaitVolume::confirm($task, ['volume' => 'new']);
-    $task = advanceWebMove($task);
 
     expect($task->status)->toBe(TaskStatus::COMPLETE)
         ->and($copy->fresh()->value)->toBe('10.0.0.2')
         ->and($other->fresh()->value)->toBe('somewhere.example.net');
 });
 
-it('only offers a new volume to an app whose chart cannot be given one that exists', function () {
-    [$instance] = appOnWebServer();
-    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    $existing = ['volume' => 'existing', 'claim' => 'restored-data'];
-
-    expect(Validator::make($existing, AwaitVolume::rules($task))->passes())->toBeTrue();
-
-    DemoAppProfile::$storage_handover = null;
-
-    expect(Validator::make($existing, AwaitVolume::rules($task))->fails())->toBeTrue()
-        ->and(Validator::make(['volume' => 'new'], AwaitVolume::rules($task))->passes())->toBeTrue();
-});
 
 it('lists everything in the way of the move at once', function () {
     [$instance, $old] = appOnWebServer();
@@ -303,9 +275,7 @@ it('lists everything in the way of the move at once', function () {
 it('removes the old release by asking the old server to uninstall it, and nothing else', function () {
     [$instance, $old] = appOnWebServer();
 
-    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    AwaitVolume::confirm($task, ['volume' => 'new']);
-    $move = advanceWebMove($task);
+    $move = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
     $instance = $instance->fresh();
     FakeServerManager::$calls = [];
 
@@ -324,9 +294,7 @@ it('removes the old release by asking the old server to uninstall it, and nothin
 it('does not remove the release of the server the app runs on', function () {
     [$instance, $old] = appOnWebServer();
 
-    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
-    AwaitVolume::confirm($task, ['volume' => 'new']);
-    $move = advanceWebMove($task);
+    $move = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
 
     // Moved back onto the server it came from: that release is the app's now
     $instance = $instance->fresh();
@@ -378,8 +346,6 @@ it('waits for the volume that was chosen when it was started, without asking for
 
     // Waiting for the volume to be restored, which is all that is asked: it already says what to
     expect($task->status)->toBe(TaskStatus::IN_PROGRESS)
-        ->and(AwaitVolume::form($task))->toBeNull()
-        ->and(AwaitVolume::rules($task))->toBe([])
         ->and($task->error_message)->toContain('restored-data');
 
     AwaitVolume::confirm($task);
@@ -559,8 +525,8 @@ it('puts the old database and server back, and scales the old release up, when t
     $new_db = webMoveDatabaseServer('new-db', [$target->id]);
     fakeWebMoveBackupDriver();
 
-    $task = advanceWebMove(Action::execute(new ApplicationWebMove($instance->fresh(), $target, null, $new_db))->fresh());
-    AwaitVolume::confirm($task, ['volume' => 'new']);
+    $task = advanceWebMove(Action::execute(new ApplicationWebMove($instance->fresh(), $target, ['volume' => 'existing', 'claim' => 'restored-data'], $new_db))->fresh());
+    AwaitVolume::confirm($task);
 
     // Past the wait, into the install, which is against the new database
     app(TaskRunner::class)->poll($task);

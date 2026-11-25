@@ -5,7 +5,6 @@ namespace App\Actions\Apps\WebMove;
 use App\Actions\ActionResult;
 use App\Actions\Steps\AwaitConfirmation;
 use App\Server;
-use App\Support\StorageHandover;
 use App\Task;
 
 /**
@@ -15,12 +14,12 @@ use App\Task;
  *
  * What the chart is to be given (StorageHandover) is chosen when the move is started, and is on the
  * task (`storage`); an app that is to start with a new, empty volume has nothing to restore, so it
- * does not wait at all. A move started without it asks for it here, with the go-ahead.
+ * does not wait at all. For an existing one, this only waits to be told it has been restored.
  */
 class AwaitVolume extends AwaitConfirmation
 {
     /**
-     * What the chart is to be given, if it was chosen when the move was started.
+     * What the chart is to be given, which was chosen when the move was started.
      *
      * @return array<string, mixed>|null
      */
@@ -42,29 +41,6 @@ class AwaitVolume extends AwaitConfirmation
     {
         $server = Server::find($task->getValue('target_server_id'))?->name;
 
-        if ($claim = static::chosen($task)['claim'] ?? null) {
-            return __('messages.web_move.await_chosen_volume', ['server' => $server, 'claim' => $claim]);
-        }
-
-        return __('messages.web_move.await_volume', ['server' => $server]);
-    }
-
-    // What the chart can be given, and what the access mode can be: only when it was not chosen
-    public static function form(Task $task): ?array
-    {
-        if (static::chosen($task)) {
-            return null;
-        }
-
-        return [
-            'type' => 'storage',
-            'fields' => StorageHandover::fields($task->app_instance),
-            'access_modes' => StorageHandover::ACCESS_MODES,
-        ];
-    }
-
-    public static function rules(Task $task): array
-    {
-        return static::chosen($task) ? [] : StorageHandover::rulesFor($task->app_instance);
+        return __('messages.web_move.await_chosen_volume', ['server' => $server, 'claim' => static::chosen($task)['claim'] ?? '']);
     }
 }

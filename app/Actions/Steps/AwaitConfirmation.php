@@ -37,17 +37,6 @@ abstract class AwaitConfirmation extends Step
         return [];
     }
 
-    /**
-     * What the app's page shows to be filled in with the go-ahead, if anything: a `type` for the page
-     * to know which form it is, and what that needs.
-     *
-     * @return array<string, mixed>|null
-     */
-    public static function form(Task $task): ?array
-    {
-        return null;
-    }
-
     public function run(Task $task): ActionResult
     {
         $this->show($task);
