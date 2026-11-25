@@ -7,6 +7,11 @@ use Illuminate\Support\Arr;
 
 class AuthentikProfile
 {
+    // Authentik 2026.2+ creates OAuth2 providers with no grant types unless they're sent, and then rejects
+    // every authorize request with invalid_request. Nextcloud (user_oidc) and the other OIDC apps only
+    // need the code flow, plus refresh tokens for the offline_access scope.
+    public const DEFAULT_GRANT_TYPES = ['authorization_code', 'refresh_token'];
+
     private $interfaces = [
         'sso' => AuthentikSSOInterface::class,
     ];
@@ -53,6 +58,7 @@ class AuthentikProfile
             'refresh_token_validity' => 'days=30',
             'include_claims_in_id_token' => false,
             'encryption_key' => null,
+            'grant_types' => self::DEFAULT_GRANT_TYPES,
             'jwt_federation_sources' => [],
             'jwt_federation_providers' => [],
         ];

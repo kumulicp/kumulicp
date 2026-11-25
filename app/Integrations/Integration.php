@@ -102,6 +102,13 @@ class Integration
         return $this->response();
     }
 
+    public function patch(string $url, $data)
+    {
+        $this->send('PATCH', $url, $data);
+
+        return $this->response();
+    }
+
     public function delete(string $url, $data = [])
     {
         $this->send('DELETE', $url, $data);

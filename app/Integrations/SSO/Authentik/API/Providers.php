@@ -4,6 +4,7 @@ namespace App\Integrations\SSO\Authentik\API;
 
 use App\AppInstance;
 use App\Integrations\SSO\Authentik\Authentik;
+use App\Integrations\SSO\Authentik\AuthentikProfile;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
@@ -74,11 +75,34 @@ class Providers extends Authentik
             'include_claims_in_id_token' => true,
             'signing_key' => $server->setting('signing_key'),
             'encryption_key' => $server->setting('encryption_key'),
+            'grant_types' => $server->settingArray('grant_types', AuthentikProfile::DEFAULT_GRANT_TYPES),
             'redirect_uris' => [$redirect_uri],
             'sub_mode' => $server->setting('sub_mode'),
             'issuer_mode' => $server->setting('issuer_mode'),
             'jwt_federation_sources' => $server->settingArray('jwt_federation_sources'),
             'jwt_federation_providers' => $server->settingArray('jwt_federation_providers'),
+        ]);
+
+        return Arr::get($provider, 'content');
+    }
+
+    /**
+     * Brings a provider that already exists up to date with the server's settings. It's a PATCH so
+     * the client id, secret and redirect URIs the provider was created with are left alone.
+     */
+    public function update(AppInstance $app_instance)
+    {
+        $this->resetClient();
+        $server = $this->org_server->server;
+
+        $provider_id = $app_instance->setting('sso.provider_obj.pk') ?? Arr::get($this->find($app_instance), 'pk');
+
+        if (! $provider_id) {
+            return null;
+        }
+
+        $provider = $this->json()->patch($this->basePath().'/api/v3/providers/oauth2/'.$provider_id.'/', [
+            'grant_types' => $server->settingArray('grant_types', AuthentikProfile::DEFAULT_GRANT_TYPES),
         ]);
 
         return Arr::get($provider, 'content');

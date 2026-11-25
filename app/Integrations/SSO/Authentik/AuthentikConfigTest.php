@@ -100,6 +100,7 @@ class AuthentikConfigTest
             'include_claims_in_id_token' => true,
             'signing_key' => $this->server->setting('signing_key'),
             'encryption_key' => $this->server->setting('encryption_key'),
+            'grant_types' => $this->server->settingArray('grant_types', AuthentikProfile::DEFAULT_GRANT_TYPES),
             'redirect_uris' => [['matching_mode' => 'regex', 'url' => '.*']],
             'sub_mode' => $this->server->setting('sub_mode'),
             'issuer_mode' => $this->server->setting('issuer_mode'),

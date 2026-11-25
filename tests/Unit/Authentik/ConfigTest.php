@@ -80,3 +80,17 @@ it('fails when the LDAP source is turned off, does not sync groups or has no gro
     'no groups' => [['sync_groups' => false], 'ldap_source_no_groups'],
     'no group mapping' => [['group_property_mappings' => []], 'ldap_source_no_group_mapping'],
 ]);
+
+// Authentik 2026.2+ makes a provider with no grant types reject every authorize request with invalid_request.
+it('creates its test provider with grant types, from the server settings when set', function (array $settings, array $expected) {
+    fakeAuthentik(ldapSource());
+
+    (new AuthentikConfigTest(authentikServer($settings)))->run();
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'POST'
+        && str_ends_with($request->url(), '/api/v3/providers/oauth2/')
+        && $request['grant_types'] === $expected);
+})->with([
+    'default' => [[], ['authorization_code', 'refresh_token']],
+    'from settings' => [['grant_types' => '["authorization_code"]'], ['authorization_code']],
+]);

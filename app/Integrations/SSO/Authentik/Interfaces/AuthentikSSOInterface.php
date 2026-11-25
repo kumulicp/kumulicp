@@ -88,6 +88,10 @@ class AuthentikSSOInterface
     {
         $this->sources->LDAPSync($this->app_instance);
         if ($this->exists()) {
+            if ($this->providers->exists($this->app_instance)) {
+                $this->providers->update($this->app_instance);
+            }
+
             $application = $this->applications->update($this->app_instance);
             $this->app_instance->updateSetting('sso', $application);
 

@@ -21,7 +21,7 @@ return [
             'api_secret' => 'The token value from the API Token you created above (not the service account name). Paste only the token string — do not include "Bearer" or any extra spaces.',
             'ip' => 'IP address of the domain used in the address',
             'internal_address' => 'Internal address isn\'t used',
-            'settings' => 'Added automatically when the server is created: sub_mode, client_type, issuer_mode, access_code_validity, access_token_validity, refresh_token_validity, include_claims_in_id_token, encryption_key (blank), jwt_federation_sources (empty), jwt_federation_providers (empty).
+            'settings' => 'Added automatically when the server is created: sub_mode, client_type, issuer_mode, access_code_validity, access_token_validity, refresh_token_validity, include_claims_in_id_token, encryption_key (blank), grant_types (authorization_code, refresh_token), jwt_federation_sources (empty), jwt_federation_providers (empty).
 
         You still need to add these yourself — look up each one\'s ID in Authentik: signing_key, invalidation_flow, property_mappings (one or more property mapping IDs), authorization_flow, authentication_flow.',
             'general_1' => '0. If activating up Authentik through the control panel, first you must go here to set your first user: https://<example.com>/if/flow/initial-setup/',
