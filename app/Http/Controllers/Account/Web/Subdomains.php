@@ -109,7 +109,7 @@ class Subdomains extends Controller
         $organization = auth()->user()->organization;
 
         $validated = $request->validate([
-            'host' => ['string', 'required', 'lowercase', new HostLabel, new SubdomainNotExists($domain, $subdomain)],
+            'host' => ['string', 'required', 'lowercase', new HostLabel($request->input('type') !== 'app'), new SubdomainNotExists($domain, $subdomain)],
             'type' => ['in:A,AAAA,ALIAS,CAA,CNAME,MX,MXE,NS,TXT,URL,URL301,FRAME,app'],
             'value' => ['required_unless:type,app'],
             'ttl' => ['exclude_if:type,app', 'numeric', 'required'],
