@@ -87,6 +87,22 @@ describe('adding a chart', function () {
             ->and($chart->defaultVersionGroup()->versions()->pluck('name')->sort()->values()->all())->toBe(['1.0.0', '1.1.0']);
     });
 
+    it('leaves where an admin changed the chart to be deployed from when it brings it up to date', function () {
+        $chart = attachedChart();
+        $login = \App\RepoSecret::factory()->helm()->create();
+        // On a Rancher server the repository is the name it was given in Rancher
+        $chart->update(['helm_repo' => 'helmforge', 'helm_repo_secret_id' => $login->id]);
+
+        fakeGiteaRepo(['1.1.0', '1.0.0']);
+        app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
+
+        $chart->refresh();
+        expect($chart)->helm_repo->toBe('helmforge')->helm_repo_secret_id->toBe($login->id)
+            ->and($chart->catalog['chart_version'])->toBe('1.1.0')
+            // Versions it adds are deployed from the same place
+            ->and($chart->defaultVersionGroup()->versions()->where('name', '1.1.0')->first()->setting('helm_repo_name'))->toBe('helmforge');
+    });
+
     it('does not take a version name the app already has under another chart', function () {
         AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id, 'name' => '1.0.0']);
         fakeGiteaRepo(['1.0.0', '0.9.0']);

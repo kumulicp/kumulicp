@@ -152,7 +152,8 @@ class ChartCatalogSync
      * registered Nextcloud chart gets HelmForge's as a second one), so plans
      * can choose between them. The new chart is off until an admin enables it,
      * and has the newest versions of the chart in a group of its own. Safe to
-     * repeat: it brings an added chart up to date.
+     * repeat: it brings an added chart up to date, and leaves alone where an admin
+     * changed it to be deployed from.
      *
      * @return array{chart: AppChart, created: bool, skipped: array<string, string>}
      *
@@ -192,10 +193,12 @@ class ChartCatalogSync
             $catalog = $this->catalog($chart_name, $latest, ChartPackage::fromArchive($repository->package((string) $latest['version'])));
         }
 
-        $attributes = ['chart_name' => $chart_name, 'helm_repo' => $source->url, 'helm_repo_secret_id' => $source->helm_repo_secret_id, 'catalog' => $catalog];
-
         if ($created) {
-            $chart = $application->charts()->create($attributes + [
+            $chart = $application->charts()->create([
+                'chart_name' => $chart_name,
+                'helm_repo' => $source->url,
+                'helm_repo_secret_id' => $source->helm_repo_secret_id,
+                'catalog' => $catalog,
                 'name' => $source->name,
                 'slug' => $this->uniqueChartSlug($application, $source->slug),
                 'chart_source_id' => $source->id,
@@ -204,7 +207,9 @@ class ChartCatalogSync
                 'enabled' => false,
             ]);
         } else {
-            $chart->update($attributes);
+            // Where the chart is deployed from is kept as an admin set it: on a Rancher server it is
+            // the name the repository has in Rancher, not the source's URL, which is only read here
+            $chart->update(['catalog' => $catalog]);
         }
 
         $skipped = [];

@@ -16,8 +16,9 @@ class HelmForgeProfile extends AppProfile
 {
     protected $activation_type = 'chart';
 
-    // Not `rancher`: Rancher can only install from repos registered in it
-    protected $compatibility = ['helm_chart'];
+    // Rancher can only install from a repository registered in it, so on a Rancher server
+    // the chart's repository is the name it was given there instead of its URL (see AppChart)
+    protected $compatibility = ['helm_chart', 'rancher'];
 
     protected $helm_chart = HelmForgeChart::class;
 

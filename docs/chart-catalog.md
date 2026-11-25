@@ -73,8 +73,17 @@ picking one of its version groups when it is created.
 Not yet chart-aware: activation type (`job` or `chart`) and the `Nextcloud`
 instance extensions, which still follow the app.
 
+## Rancher
+
+Rancher can only install from a repository that was added to it, so on a
+Rancher server a catalog chart is deployed from the name the repository was
+given in Rancher, not from its URL. Add the source's URL to Rancher as a
+repository, then enter that name as the chart's repository (version page,
+*Edit chart*). The catalog sync keeps reading the source's own URL for new
+versions and leaves the chart's repository as it was set. A chart has one
+repository, so plans on Rancher and on plain Kubernetes servers need a chart each.
+
 ## Not covered
 
 SSO/LDAP, roles, external database servers (charts use their bundled
-subcharts), post-install user sync, and the Rancher driver (it can only
-install from repositories registered in Rancher).
+subcharts) and post-install user sync.
