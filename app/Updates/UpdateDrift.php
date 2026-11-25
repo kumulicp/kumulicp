@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\DB;
  */
 class UpdateDrift
 {
+    /** Stored for an aspect that has to be brought up to date again: no fingerprint is this */
+    public const INVALIDATED = 'invalidated';
+
     public function __construct(private readonly AspectRegistry $aspects, private readonly UpdateSteps $steps) {}
 
     /**
@@ -177,6 +180,27 @@ class UpdateDrift
                 ],
             );
         }
+    }
+
+    /**
+     * Says that an aspect has to be brought up to date again, whatever it works
+     * out now: what its step does depends on something the fingerprint doesn't
+     * cover, like a new version's roles. Aspects nothing is stored for are left
+     * alone (see baseline()).
+     *
+     * @param  array<int, string>  $aspects
+     */
+    public function invalidate(AppInstance $app_instance, array $aspects): void
+    {
+        if ($aspects === []) {
+            return;
+        }
+
+        UpdateState::where('app_instance_id', $app_instance->id)
+            ->whereIn('aspect', $aspects)
+            ->update(['fingerprint' => self::INVALIDATED]);
+
+        $this->refresh($app_instance);
     }
 
     /**

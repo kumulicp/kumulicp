@@ -251,6 +251,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::get('', 'Admin\Updates@index')->name('admin.updates');
                 Route::post('dismiss', 'Admin\Updates@dismiss')->name('admin.updates.dismiss');
                 Route::post('preview', 'Admin\Updates@preview')->name('admin.updates.preview');
+                Route::post('subscriptions/apply', 'Admin\Updates@applySubscriptions')->name('admin.updates.subscriptions.apply');
+                Route::post('subscriptions/dismiss', 'Admin\Updates@dismissSubscriptions')->name('admin.updates.subscriptions.dismiss');
                 Route::post('apply', 'Admin\Updates@apply')->name('admin.updates.apply');
                 Route::post('policy', 'Admin\Updates@policy')->name('admin.updates.policy');
                 Route::post('scan', 'Admin\Updates@scan')->name('admin.updates.scan');

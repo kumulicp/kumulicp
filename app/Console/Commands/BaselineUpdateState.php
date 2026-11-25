@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\AppInstance;
+use App\Updates\OrganizationDrift;
 use App\Updates\UpdateDrift;
 use Illuminate\Console\Command;
 
@@ -17,7 +18,7 @@ class BaselineUpdateState extends Command
 
     protected $description = 'Take the app instances as up to date, for the aspects nothing is stored for yet';
 
-    public function handle(UpdateDrift $drift): int
+    public function handle(UpdateDrift $drift, OrganizationDrift $organization_drift): int
     {
         $stored = 0;
         $instances = 0;
@@ -41,6 +42,23 @@ class BaselineUpdateState extends Command
             });
 
         $this->info("Stored {$stored} aspects on {$instances} app instances.");
+
+        // The subscriptions of organizations too, unless it was just one app
+        if (! $this->option('app')) {
+            $organizations = 0;
+
+            $organization_drift->scannable()->chunkById(50, function ($chunk) use ($organization_drift, &$organizations) {
+                foreach ($chunk as $organization) {
+                    try {
+                        $organizations += $organization_drift->baseline($organization) ? 1 : 0;
+                    } catch (\Throwable $e) {
+                        $this->warn("{$organization->name} (#{$organization->id}): {$e->getMessage()}");
+                    }
+                }
+            });
+
+            $this->info("Stored the subscription of {$organizations} organizations.");
+        }
 
         return self::SUCCESS;
     }

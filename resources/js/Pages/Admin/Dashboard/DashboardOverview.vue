@@ -70,9 +70,13 @@ import { Link } from '@inertiajs/vue3'
         <va-card class="mb-2" id="pendingUpdates">
           <va-card-title>{{ $t('admin.dashboard.pending_updates') }}</va-card-title>
           <va-card-content>
-            <p v-if="pending_updates.instances === 0" class="secondary">{{ $t('admin.dashboard.no_pending_updates') }}</p>
+            <p v-if="pending_updates.instances === 0 && pending_updates.subscriptions.organizations === 0" class="secondary">{{ $t('admin.dashboard.no_pending_updates') }}</p>
             <template v-else>
-              <p>
+              <p v-if="pending_updates.subscriptions.organizations > 0" id="pendingSubscriptions">
+                <strong>{{ $t('admin.updates.subscriptionsTitle') }}:</strong>
+                {{ $t('admin.updates.organizations', { count: pending_updates.subscriptions.organizations }) }}
+              </p>
+              <p v-if="pending_updates.instances > 0">
                 <strong>{{ $t('admin.updates.appInstances', { count: pending_updates.instances }) }}</strong>
                 <span class="secondary"> · {{ $t('admin.updates.organizations', { count: pending_updates.organizations }) }}</span>
               </p>

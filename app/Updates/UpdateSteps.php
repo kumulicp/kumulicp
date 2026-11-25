@@ -63,49 +63,39 @@ class UpdateSteps
 
     /**
      * What the update list offers: every step, ticked if it normally goes with
-     * an update, the app was upgraded since it last ran, or what it brings up to
-     * date has changed (out_of_date).
+     * an update or what it brings up to date has changed (out_of_date), which
+     * includes what a new version may need (see aspectsAfterUpgrade()).
      *
      * @return array<int, array{key: string, label: string, description: string, checked: bool, out_of_date: bool}>
      */
     public function options(AppInstance $app_instance): array
     {
-        $recommended = $this->recommended($app_instance);
         $out_of_date = app(UpdateDrift::class)->stepsToRun($app_instance);
 
         return $this->for($app_instance)->map(fn (UpdateStep $step, string $key) => [
             'key' => $key,
             'label' => $step->label(),
             'description' => $step->description(),
-            'checked' => $step->checkedByDefault() || in_array($key, $recommended, true) || in_array($key, $out_of_date, true),
+            'checked' => $step->checkedByDefault() || in_array($key, $out_of_date, true),
             'out_of_date' => in_array($key, $out_of_date, true),
         ])->values()->all();
     }
 
-    /** @return array<int, string> */
-    public function recommended(AppInstance $app_instance): array
+    /**
+     * The aspects that a new version may put out of date without anything the
+     * fingerprints cover changing, because the steps for them say so (see
+     * UpdateStep::afterUpgrade()).
+     *
+     * @return array<int, string>
+     */
+    public function aspectsAfterUpgrade(AppInstance $app_instance): array
     {
-        return (array) $app_instance->setting('update.recommended', []);
-    }
-
-    /** The app has a new version: the steps that may have to catch up are ticked next time */
-    public function recommendAfterUpgrade(AppInstance $app_instance): void
-    {
-        $keys = $this->for($app_instance)
+        return $this->for($app_instance)
             ->filter(fn (UpdateStep $step) => $step->afterUpgrade($app_instance))
-            ->keys()
+            ->flatMap(fn (UpdateStep $step) => $step->aspects())
+            ->unique()
+            ->values()
             ->all();
-
-        $app_instance->updateSetting('update.recommended', array_values(array_unique(array_merge($this->recommended($app_instance), $keys))));
-    }
-
-    public function forget(AppInstance $app_instance, string $key): void
-    {
-        $recommended = $this->recommended($app_instance);
-
-        if (in_array($key, $recommended, true)) {
-            $app_instance->updateSetting('update.recommended', array_values(array_diff($recommended, [$key])));
-        }
     }
 
     /**

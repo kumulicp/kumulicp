@@ -10,6 +10,9 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Task;
+use App\Updates\AspectRegistry;
+use App\Updates\Aspects\Aspect;
+use App\Updates\UpdateDrift;
 use App\Updates\UpdateStep;
 use App\Updates\UpdateSteps;
 use App\User;
@@ -41,7 +44,13 @@ class RecordingStep extends UpdateStep
     /** @var array<int, string> */
     public static array $ran = [];
 
-    public function __construct(private string $key = 'recording', private array $after = [], private bool $applies = true) {}
+    /** @param  array<int, string>  $names  The aspects it brings up to date */
+    public function __construct(private string $key = 'recording', private array $after = [], private bool $applies = true, private array $names = []) {}
+
+    public function aspects(): array
+    {
+        return $this->names;
+    }
 
     public function key(): string
     {
@@ -73,6 +82,25 @@ class RecordingStep extends UpdateStep
         self::$ran[] = $this->key;
 
         return ActionResult::done();
+    }
+}
+
+// What a new version may need whatever the fingerprints say: its fingerprint never changes
+class RecordingAspect extends Aspect
+{
+    public function key(): string
+    {
+        return 'recording';
+    }
+
+    public function label(): string
+    {
+        return 'Recording';
+    }
+
+    public function fingerprint(AppInstance $app_instance): string
+    {
+        return 'always the same';
     }
 }
 
@@ -187,19 +215,37 @@ it('fails the step task, rather than the whole run, when its step is no longer t
         ->and($task->fresh()->error_code)->toBe('unknown_step');
 });
 
-it('recommends the steps a new version may need once an app is upgraded, and forgets one when it has run', function () {
+it('flags the steps a new version may need once an app is upgraded, ticks them, and clears them when they have run', function () {
     $instance = updateStepsInstance();
-    app(UpdateSteps::class)->register(new RecordingStep);
+    app(AspectRegistry::class)->register(new RecordingAspect);
+    app(UpdateSteps::class)->register(new RecordingStep(names: ['recording']));
+    Bus::fake([AddLdapGroups::class]);
+    app(UpdateDrift::class)->baseline($instance->fresh());
+
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->not->toContain('recording');
+
+    $this->runUpgrade($instance);
+
+    // Though nothing its fingerprint covers changed
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->toContain('recording');
+    $option = collect(app(UpdateSteps::class)->options($instance->fresh()))->keyBy('key')['recording'];
+    expect($option['checked'])->toBeTrue()
+        ->and($option['out_of_date'])->toBeTrue();
+
+    runUpdateWithSteps($instance->fresh(), ['recording']);
+
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->not->toContain('recording');
+});
+
+it('flags them for an app that nothing was stored for before it was upgraded', function () {
+    $instance = updateStepsInstance();
+    app(AspectRegistry::class)->register(new RecordingAspect);
+    app(UpdateSteps::class)->register(new RecordingStep(names: ['recording']));
     Bus::fake([AddLdapGroups::class]);
 
     $this->runUpgrade($instance);
 
-    expect(app(UpdateSteps::class)->recommended($instance->fresh()))->toContain('recording');
-    expect(collect(app(UpdateSteps::class)->options($instance->fresh()))->keyBy('key')['recording']['checked'])->toBeTrue();
-
-    runUpdateWithSteps($instance->fresh(), ['recording']);
-
-    expect(app(UpdateSteps::class)->recommended($instance->fresh()))->not->toContain('recording');
+    expect(app(UpdateDrift::class)->drift($instance->fresh()))->toContain('recording');
 });
 
 it('does not create LDAP groups or set up single sign-on when an app is upgraded', function () {

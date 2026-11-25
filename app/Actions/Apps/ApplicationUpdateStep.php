@@ -63,12 +63,10 @@ class ApplicationUpdateStep extends NativeAction
         return new self($task->app_instance, (string) $task->getValue('step'));
     }
 
-    // A step that has run no longer needs to be recommended, and what it brought up to date is remembered
+    // What a step that is done brought up to date is remembered
     private static function finished(Task $task, ActionResult $result): ActionResult
     {
         if ($result->outcome === ActionResult::DONE) {
-            app(UpdateSteps::class)->forget($task->app_instance, (string) $task->getValue('step'));
-
             if (is_array($aspects = $task->getValue('aspects')) && $aspects !== []) {
                 $drift = app(UpdateDrift::class);
                 $drift->record($task->app_instance, $aspects, $task->id);

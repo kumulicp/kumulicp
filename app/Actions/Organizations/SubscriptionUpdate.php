@@ -15,6 +15,7 @@ use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
 use App\Support\SubscriptionSnapshot;
 use App\Task;
+use App\Updates\OrganizationDrift;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
@@ -27,7 +28,8 @@ use Throwable;
  * customized, a payment method changed...) and most of them change nothing the
  * subscription cares about, so the work is only done when it is needed. The
  * state of the subscription is compared to a snapshot taken the last time this
- * completed:
+ * completed (kept with what else the organization is out of date for, see
+ * OrganizationDrift):
  *
  *  - The billing provider is updated when the pricing, plan selection, status,
  *    discount or trial of the organization or any of its apps changed. Pass
@@ -41,8 +43,6 @@ use Throwable;
  */
 class SubscriptionUpdate extends Action
 {
-    public const SNAPSHOT_SETTING = 'subscription_snapshot';
-
     public $slug = 'subscription_update';
 
     public $prerequisites;
@@ -72,7 +72,7 @@ class SubscriptionUpdate extends Action
 
         OrganizationFacade::setOrganization($task->organization);
 
-        $previous = SubscriptionSnapshot::fromArray($organization->setting(self::SNAPSHOT_SETTING));
+        $previous = app(OrganizationDrift::class)->previous($organization);
         $current = SubscriptionSnapshot::capture($subscription);
 
         $billing_changed = (bool) Arr::get($task->custom_values, 'force_billing') || $current->billingChanged($previous);
@@ -108,7 +108,9 @@ class SubscriptionUpdate extends Action
             $task->organization->updateSetting('emails_enabled', Gate::allows('view-emails'));
             // Only remembered once everything is settled, so a change that is still
             // pending gets compared (and notified about) by the next update
-            $task->organization->updateSetting(self::SNAPSHOT_SETTING, $current->toArray());
+            app(OrganizationDrift::class)->record($organization, $current, $task->id);
+            // Where it was kept before it was kept with what else is out of date
+            $task->organization->updateSetting(OrganizationDrift::LEGACY_SETTING, null);
             $task->organization->save();
 
             $task->complete();
