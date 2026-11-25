@@ -196,7 +196,7 @@ class PendingUpdates
                 $instances = $group->pluck('app_instance_id')->unique();
 
                 return [
-                    'change' => $this->change($group->first()),
+                    'change' => $this->changeOf($group->first()->change),
                     'instances' => $instances->count(),
                     'organizations' => $instances->map(fn ($id) => $organizations[$id] ?? null)->filter()->unique()->count(),
                     'since' => $group->min('drift_detected_at')?->toIso8601String(),
@@ -279,7 +279,7 @@ class PendingUpdates
                 'key' => $state->aspect,
                 'label' => $this->aspects->label($state->aspect),
                 'since' => $state->drift_detected_at?->toIso8601String(),
-                'change' => $this->change($state),
+                'change' => $this->changeOf($state->change),
             ])->values()->all())
             ->all();
     }
@@ -321,12 +321,6 @@ class PendingUpdates
      *
      * @return array<string, mixed>|null
      */
-    private function change(?UpdateState $state): ?array
-    {
-        return $this->changeOf($state?->change);
-    }
-
-    /** @return array<string, mixed>|null */
     private function changeOf(?DefinitionChange $change): ?array
     {
         return $change ? [
