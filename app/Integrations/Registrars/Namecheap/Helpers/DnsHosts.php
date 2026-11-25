@@ -79,7 +79,10 @@ class DnsHosts
     {
         $array = [];
 
-        if ($this->with_email) {
+        // Custom MX records need EmailType=MX whether they're ours or the admin's own (Zoho, etc.). Without it
+        // Namecheap falls back to the domain's current type, which it can't always parse (error 5050900,
+        // "Requested value 'UNKNOWN' was not found").
+        if ($this->with_email || collect($this->dns_records)->contains(fn ($record) => $record['RecordType'] === 'MX')) {
             $array['EmailType'] = 'MX';
         }
 

@@ -126,3 +126,26 @@ it('reports whether there is anything to publish', function () {
         ->and((new DnsHosts($with_email))->hasRecords())->toBeTrue()
         ->and((new DnsHosts($with_record))->hasRecords())->toBeTrue();
 });
+
+it('sends EmailType MX when the domain has its own MX records but no email server', function () {
+    $domain = OrgDomain::factory()->create([
+        'organization_id' => $this->organization->id,
+        'name' => 'zoho.example',
+        'status' => 'active',
+        'email_server_id' => null,
+    ]);
+    $domain->subdomains()->forceCreate([
+        'organization_id' => $this->organization->id,
+        'host' => '@',
+        'name' => '@.zoho.example',
+        'type' => 'MX',
+        'value' => 'mx.zoho.com',
+        'ttl' => 1800,
+        'status' => 'active',
+    ]);
+
+    $converted = (new DnsHosts($domain))->convertToNamecheap();
+
+    expect($converted['EmailType'])->toBe('MX')
+        ->and($converted['RecordType1'])->toBe('MX');
+});
