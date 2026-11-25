@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use OffloadProject\Toggle\Facades\Toggle;
 use Illuminate\Support\Arr;
+use OffloadProject\Toggle\Facades\Toggle;
 
 /**
  * @property int $id
@@ -137,6 +137,21 @@ class Application extends Model
     public function versionGroups(): HasManyThrough
     {
         return $this->hasManyThrough(AppVersionGroup::class, AppChart::class, 'application_id', 'app_chart_id');
+    }
+
+    /**
+     * The groups a new plan can pick: those of the charts that are enabled.
+     *
+     * @return \Illuminate\Support\Collection<int, AppVersionGroup>
+     */
+    public function selectableVersionGroups()
+    {
+        return $this->versionGroups()
+            ->with('chart')
+            ->where('app_charts.enabled', true)
+            ->orderBy('app_charts.id')
+            ->orderBy('app_version_groups.id')
+            ->get();
     }
 
     /**

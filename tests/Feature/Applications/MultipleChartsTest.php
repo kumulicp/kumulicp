@@ -10,6 +10,7 @@ use App\Enums\ApplicationSource;
 use App\Integrations\Applications\HelmForge\HelmForgeChart;
 use App\Integrations\Applications\HelmForge\HelmForgeProfile;
 use App\Organization;
+use App\RepoSecret;
 use App\Support\Catalog\ChartCatalogSync;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\User;
@@ -89,7 +90,7 @@ describe('adding a chart', function () {
 
     it('leaves where an admin changed the chart to be deployed from when it brings it up to date', function () {
         $chart = attachedChart();
-        $login = \App\RepoSecret::factory()->helm()->create();
+        $login = RepoSecret::factory()->helm()->create();
         // On a Rancher server the repository is the name it was given in Rancher
         $chart->update(['helm_repo' => 'helmforge', 'helm_repo_secret_id' => $login->id]);
 
@@ -336,28 +337,47 @@ describe('plans', function () {
             ->and($plan->versionGroup()->is($this->default_group))->toBeTrue();
     });
 
-    it('cannot switch group afterwards', function () {
+    it('can pick a group once when they follow the default, then it is fixed', function () {
         $chart = attachedChart();
         $chart->update(['enabled' => true]);
         $group = $chart->defaultVersionGroup();
         $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}";
+
+        $this->get("$url/edit")->assertInertia(fn ($page) => $page->has('version_groups', 2)->where('plan.version_group_id', null));
+
+        $this->post($url, ['name' => 'Renamed', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false, 'version_group_id' => $group->id])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed')->version_group_id->toBe($group->id);
+
+        $this->get("$url/edit")->assertInertia(fn ($page) => $page->has('version_groups', 0));
+
+        $this->post($url, ['name' => 'Renamed again', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false, 'version_group_id' => $this->default_group->id])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed again')->version_group_id->toBe($group->id);
+    });
+
+    it('keep the default group when none is sent on update', function () {
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", ['name' => 'Renamed', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false])->assertRedirect();
+
+        expect($plan->fresh()->version_group_id)->toBeNull();
+    });
+
+    it('with installs can only pick a group of the chart they were deployed from', function () {
+        $chart = attachedChart();
+        $chart->update(['enabled' => true]);
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        AppInstance::factory()->create(['application_id' => $this->application->id, 'plan_id' => $plan->id, 'organization_id' => Organization::factory()->create()->id, 'version_id' => AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id])->id]);
 
         $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", [
             'name' => 'Renamed',
-            'description' => 'x',
-            'version_group_id' => $group->id,
-        ])->assertRedirect();
+            'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false,
+            'version_group_id' => $chart->defaultVersionGroup()->id,
+        ])->assertSessionHasErrors('version_group_id');
 
-        expect($plan->fresh())->name->toBe('Renamed')->version_group_id->toBeNull();
-
-        $plan->update(['version_group_id' => $group->id]);
-        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", [
-            'name' => 'Renamed again',
-            'description' => 'x',
-            'version_group_id' => $this->default_group->id,
-        ])->assertRedirect();
-
-        expect($plan->fresh())->name->toBe('Renamed again')->version_group_id->toBe($group->id);
+        expect($plan->fresh()->version_group_id)->toBeNull();
     });
 
     it('show their group on the edit page, only when the app has several', function () {
@@ -367,9 +387,9 @@ describe('plans', function () {
         $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', null));
 
         $chart = attachedChart();
-        $plan->update(['version_group_id' => $chart->defaultVersionGroup()->id]);
+        $plan->forceFill(['version_group_id' => $chart->defaultVersionGroup()->id])->save();
 
-        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', $chart->name.' / Default')->missing('version_groups'));
+        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', $chart->name.' / Default')->has('version_groups', 0));
     });
 
     it('keep their group when cloned', function () {

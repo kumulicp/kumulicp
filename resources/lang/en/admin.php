@@ -537,6 +537,7 @@ return [
             'not_activated' => 'This shared app hasn\'t been activated yet, so there is nothing to edit. Set it up from its own page.',
             'not_shareable' => ':app can\'t be run as a shared app.',
             'no_version' => 'This app has no enabled version to activate.',
+            'no_group_version' => 'This version group has no enabled version to activate.',
             'not_tested' => 'Version :version has to pass its tests on this shared app\'s plan, or have them bypassed, before it can be activated.',
         ],
     ],

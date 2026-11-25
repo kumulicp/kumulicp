@@ -6,6 +6,7 @@ use App\Actions\Apps\ApplicationActivate;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
+use App\AppVersionGroup;
 use App\Exceptions\VersionTestException;
 use App\Http\Controllers\Controller;
 use App\Jobs\Applications\AddLdapGroups;
@@ -41,9 +42,15 @@ class SharedApps extends Controller
                 ];
             }),
             'available_apps' => Application::all()->filter(fn ($app) => $this->isShareable($app))->values()->map(function ($app) {
+                $groups = $app->selectableVersionGroups();
+
                 return [
                     'id' => $app->id,
                     'name' => $app->name,
+                    // Chosen once, here: the shared app is deployed from the chart of its group
+                    'version_groups' => $groups->count() > 1
+                        ? $groups->map(fn (AppVersionGroup $group) => ['value' => $group->id, 'text' => $group->chart->name.' / '.$group->name])->values()
+                        : [],
                 ];
             }),
             'meta' => $apps ? [
@@ -101,11 +108,24 @@ class SharedApps extends Controller
             ],
             'label' => 'required|string',
             'externally_managed' => 'boolean',
+            'version_group_id' => ['nullable', 'integer'],
         ]);
 
         $organization = Organization::where('type', 'shared')->first();
         $application = Application::find($validated['app']);
-        $version = $application->active_version();
+
+        // The group it is deployed from; without one it follows the default group
+        $group = null;
+
+        if (! empty($validated['version_group_id'])) {
+            $group = $application->selectableVersionGroups()->firstWhere('id', $validated['version_group_id']);
+
+            if (! $group || ! $group->activeVersion) {
+                return back()->withErrors(['version_group_id' => __('admin.shared_apps.errors.no_group_version')])->withInput();
+            }
+        }
+
+        $version = $group ? $group->activeVersion : $application->active_version();
 
         // Every shared app gets its own dedicated, hidden plan -- it's not
         // meant to be picked by organizations subscribing to the app, just
@@ -116,6 +136,7 @@ class SharedApps extends Controller
         $plan->name = $validated['label'];
         $plan->description = __('admin.shared_apps.plan_description', ['app' => $application->name]);
         $plan->hidden = true;
+        $plan->version_group_id = $group?->id;
         $plan->features = [];
         $plan->settings = [
             ...$application->inheritedPlanSettings(),

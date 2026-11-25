@@ -28,6 +28,20 @@ import { Link, useForm, router } from '@inertiajs/vue3'
                   :error="$page.props.errors.app"
                   :error-messages="$page.props.errors.app"
                 />
+                <va-select v-if="versionGroups.length"
+                  v-model="form.version_group_id"
+                  id="versionGroup"
+                  :label="$t('admin.plans.versionGroup')"
+                  :messages="$t('admin.plans.versionGroupCaption')"
+                  class="mb-3"
+                  clearable
+                  value-by="value"
+                  text-by="text"
+                  :placeholder="$t('admin.plans.versionGroupDefault')"
+                  :options="versionGroups"
+                  :error="!!$page.props.errors.version_group_id"
+                  :error-messages="$page.props.errors.version_group_id"
+                />
                 <va-input v-model="form.label"
                   id="label"
                   required-mark
@@ -111,8 +125,19 @@ export default {
       form: useForm({
         app: null,
         label: '',
+        version_group_id: null,
         externally_managed: false
       })
+    }
+  },
+  computed: {
+    versionGroups () {
+      return this.available_apps.find(app => app.id === this.form.app)?.version_groups ?? []
+    }
+  },
+  watch: {
+    'form.app' () {
+      this.form.version_group_id = null
     }
   },
   methods: {

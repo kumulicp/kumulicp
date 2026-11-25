@@ -433,6 +433,7 @@ return [
             'not_activated' => 'Esta aplicación compartida aún no se ha activado, así que no hay nada que editar. Configúrala desde su propia página.',
             'not_shareable' => ':app no se puede ejecutar como aplicación compartida.',
             'no_version' => 'Esta aplicación no tiene ninguna versión habilitada para activar.',
+            'no_group_version' => 'Este grupo de versiones no tiene ninguna versión habilitada para activar.',
             'not_tested' => 'La versión :version debe superar sus pruebas en el plan de esta aplicación compartida, o tenerlas omitidas, antes de poder activarla.',
         ],
     ],
