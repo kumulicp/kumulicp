@@ -66,6 +66,28 @@ class Charts extends Controller
         return redirect('/admin/apps/'.$app->slug.'/charts')->with('success', __($result['created'] ? 'admin.applications.charts.added' : 'admin.applications.charts.refreshed', ['chart' => $result['chart']->name]));
     }
 
+    /**
+     * Where the chart comes from. It is the chart's, not a version's, so it changes for every version of it.
+     */
+    public function update(Request $request, Application $app, AppChart $chart)
+    {
+        abort_unless($chart->application_id === $app->id, 404);
+
+        $validated = $request->validate([
+            'chart_name' => 'nullable|string|max:255',
+            'helm_repo' => 'nullable|string|max:255',
+            'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
+        ]);
+
+        $chart->update([
+            'chart_name' => $validated['chart_name'] ?? null,
+            'helm_repo' => $validated['helm_repo'] ?? null,
+            'helm_repo_secret_id' => $validated['helm_repo_secret_id'] ?? null,
+        ]);
+
+        return back()->with('success', __('admin.applications.charts.updated', ['chart' => $chart->name]));
+    }
+
     public function enable(Application $app, AppChart $chart)
     {
         abort_unless($chart->application_id === $app->id, 404);

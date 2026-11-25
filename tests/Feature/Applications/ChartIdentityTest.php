@@ -86,33 +86,64 @@ describe('editing a version', function () {
         $this->registry = RepoSecret::factory()->create();
     });
 
-    it('changes the chart for all of its versions', function () {
+    it('changes the chart for all of its versions, from the chart', function () {
         $edited = versionOfChart($this->chart, ['name' => '1.0', 'roles' => []]);
         $sibling = versionOfChart($this->chart, ['name' => '2.0']);
+        $login = RepoSecret::factory()->helm()->create();
+
+        $this->put("/admin/apps/{$this->application->slug}/charts/{$this->chart->id}", [
+            'chart_name' => 'renamed',
+            'helm_repo' => 'https://new.test',
+            'helm_repo_secret_id' => $login->id,
+        ])->assertSessionDoesntHaveErrors()->assertSessionHas('success');
+
+        expect($this->chart->fresh())->chart_name->toBe('renamed')->helm_repo->toBe('https://new.test')->helm_repo_secret_id->toBe($login->id)
+            ->and($sibling->fresh()->helmRepo())->toBe('https://new.test')
+            ->and($sibling->fresh()->chartName())->toBe('renamed')
+            ->and($edited->fresh()->chartRepoSecretId())->toBe($login->id);
+    });
+
+    it('clears what the chart form leaves empty', function () {
+        $this->put("/admin/apps/{$this->application->slug}/charts/{$this->chart->id}", ['chart_name' => '', 'helm_repo' => ''])->assertSessionDoesntHaveErrors();
+
+        expect($this->chart->fresh())->chart_name->toBeNull()->helm_repo->toBeNull();
+    });
+
+    it('does not edit the chart of another app, or a login that does not exist', function () {
+        $foreign = AppChart::factory()->create();
+
+        $this->put("/admin/apps/{$this->application->slug}/charts/{$foreign->id}", ['chart_name' => 'x'])->assertNotFound();
+        $this->put("/admin/apps/{$this->application->slug}/charts/{$this->chart->id}", ['helm_repo_secret_id' => 99999])->assertSessionHasErrors('helm_repo_secret_id');
+    });
+
+    it('leaves the chart alone when the version form is saved, and keeps the version its own chart version', function () {
+        $edited = versionOfChart($this->chart, ['name' => '1.0', 'roles' => []]);
 
         $this->post("/admin/apps/{$this->application->slug}/versions/{$edited->id}", [
             'version' => '1.0',
             'chart_version' => '3.0.0',
-            'chart_name' => 'renamed',
-            'helm_repo_name' => 'https://new.test',
+            'chart_name' => 'ignored',
+            'helm_repo_name' => 'https://ignored.test',
             'image_registry_id' => $this->registry->id,
             'announcement_location' => 'none',
         ])->assertSessionDoesntHaveErrors();
 
-        expect($this->chart->fresh())->chart_name->toBe('renamed')->helm_repo->toBe('https://new.test')
-            ->and($sibling->fresh()->helmRepo())->toBe('https://new.test')
-            ->and($sibling->fresh()->chartName())->toBe('renamed')
-            // The chart version is the version's own
-            ->and($edited->fresh()->setting('chart_version'))->toBe('3.0.0')
-            ->and($sibling->fresh()->setting('chart_version'))->not->toBe('3.0.0');
+        expect($this->chart->fresh())->chart_name->toBe('demo')->helm_repo->toBe('https://old.test')
+            ->and($edited->fresh()->setting('chart_version'))->toBe('3.0.0');
     });
 
     it('shows the chart as it is on the chart', function () {
+        $login = RepoSecret::factory()->helm()->create(['name' => 'Charts login']);
+        $this->chart->update(['helm_repo_secret_id' => $login->id]);
         $version = versionOfChart($this->chart, ['name' => '1.0', 'settings' => ['chart_name' => 'stale', 'helm_repo_name' => 'https://stale.test']]);
 
         $this->get("/admin/apps/{$this->application->slug}/versions/{$version->id}")
             ->assertInertia(fn ($page) => $page
-                ->where('version.chart_name', 'demo')
-                ->where('version.helm_repo_name', 'https://old.test'));
+                ->where('chart.id', $this->chart->id)
+                ->where('chart.chart_name', 'demo')
+                ->where('chart.helm_repo', 'https://old.test')
+                ->where('chart.helm_repo_secret', 'Charts login')
+                ->missing('version.chart_name')
+                ->missing('version.helm_repo_name'));
     });
 });

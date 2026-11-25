@@ -152,6 +152,7 @@ return [
         'charts' => [
             'charts' => 'Charts',
             'added' => ':chart was added. It is off until you enable it.',
+            'updated' => ':chart was updated for all of its versions',
             'refreshed' => ':chart is up to date',
             'enabled' => ':chart can now be picked by plans',
             'disabled' => ':chart can no longer be picked by plans',

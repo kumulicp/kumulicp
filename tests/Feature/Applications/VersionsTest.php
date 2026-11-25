@@ -276,7 +276,6 @@ it('updates version settings and default roles', function () {
         'version' => '1.1',
         'admin_path' => '/new-admin',
         'chart_version' => '3.0.0',
-        'helm_repo_name' => 'updated-chart',
         'image_repo_name' => 'updated/app',
         'image_registry_id' => $image_registry->id,
         'announcement_location' => 'none',
@@ -291,7 +290,6 @@ it('updates version settings and default roles', function () {
     expect($version->name)->toBe('1.1');
     expect($version->admin_path)->toBe('/new-admin');
     expect($version->setting('chart_version'))->toBe('3.0.0');
-    expect($version->setting('helm_repo_name'))->toBe('updated-chart');
     expect($version->setting('image_repo_name'))->toBe('updated/app');
     expect($version->image_registry_id)->toBe($image_registry->id);
     expect($version->imageRegistry->registry)->toBe('registry2.example.com');

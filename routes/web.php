@@ -86,6 +86,7 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                 Route::prefix('charts')->group(function () {
                     Route::get('', 'Admin\Applications\Charts@index')->name('app.charts');
                     Route::post('', 'Admin\Applications\Charts@attach')->name('app.charts.attach');
+                    Route::put('{chart}', 'Admin\Applications\Charts@update')->name('app.charts.update');
                     Route::post('{chart}/enable', 'Admin\Applications\Charts@enable')->name('app.charts.enable');
                     Route::post('{chart}/disable', 'Admin\Applications\Charts@disable')->name('app.charts.disable');
                 });

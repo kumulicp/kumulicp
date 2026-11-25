@@ -91,6 +91,7 @@ return [
         'charts' => [
             'charts' => 'Charts',
             'added' => 'Se añadió :chart. Está desactivado hasta que lo habilites.',
+            'updated' => 'Se actualizó :chart para todas sus versiones',
             'refreshed' => ':chart está al día',
             'enabled' => 'Los planes ya pueden elegir :chart',
             'disabled' => 'Los planes ya no pueden elegir :chart',

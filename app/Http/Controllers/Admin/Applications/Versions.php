@@ -149,13 +149,10 @@ class Versions extends Controller
             'version' => [
                 'id' => $version->id,
                 'version' => $version->name,
-                'helm_repo_name' => $version->helmRepo(),
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
                 'image_registry_id' => $version->image_registry_id,
-                'helm_repo_secret_id' => $version->chartRepoSecretId(),
                 'chart_version' => $version->setting('chart_version'),
-                'chart_name' => $version->chartName(),
                 // The images besides the one these settings describe
                 'extra_images' => $version->images()->where('role', '!=', 'primary')->count(),
                 'version_group_id' => $version->version_group_id,
@@ -174,6 +171,7 @@ class Versions extends Controller
                 'is_active' => $version->status == 'active',
             ],
             'mass_upgrade' => $this->massUpgradeSummary($app, $version->versionGroup),
+            'chart' => $this->chartSummary($version->chart()),
             'groups' => $this->groupOptions($app, $version->chart()),
             'app' => [
                 'slug' => $app->slug,
@@ -272,14 +270,11 @@ class Versions extends Controller
             'default_user_roles' => 'array|nullable',
             'admin_path' => 'string|nullable',
             'chart_version' => 'string|nullable',
-            'chart_name' => 'string|nullable',
-            'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
             // Only within the version's own chart, and only while it is not the one enabled
             'version_group_id' => ['nullable', 'integer', Rule::in($version->chart()?->versionGroups()->pluck('id') ?? [])],
             'image_registry_id' => 'required|integer|exists:repo_secrets,id',
-            'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
             'announcement_url' => 'required_if:announcement_location,remote|url:http,https|nullable',
@@ -302,21 +297,11 @@ class Versions extends Controller
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
         $version->image_registry_id = $validatedData['image_registry_id'];
-        $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
 
-        // Where the chart comes from belongs to the chart, so it changes for all of its versions.
-        // The version keeps a copy until nothing reads it from there.
-        $version->chart()?->update([
-            'chart_name' => $request->input('chart_name') ?: null,
-            'helm_repo' => $request->input('helm_repo_name') ?: null,
-            'helm_repo_secret_id' => $version->helm_repo_secret_id,
-        ]);
-
+        // Where the chart comes from is the chart's (see Charts::update()), not the version's
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
-            'helm_repo_name' => $request->input('helm_repo_name'),
             'image_repo_name' => $request->input('image_repo_name'),
-            'chart_name' => $request->input('chart_name'),
             'port' => $request->input('port'),
         ]);
         $version->announcement_location = $request->input('announcement_location');
@@ -533,5 +518,24 @@ class Versions extends Controller
                 'plans' => $group->plans_count,
             ])
             ->values();
+    }
+
+    /**
+     * What the version page shows of the chart its versions are deployed from.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function chartSummary(?AppChart $chart): ?array
+    {
+        return $chart ? [
+            'id' => $chart->id,
+            'name' => $chart->name,
+            'is_default' => $chart->is_default,
+            'source' => $chart->source->label(),
+            'chart_name' => $chart->chart_name,
+            'helm_repo' => $chart->helm_repo,
+            'helm_repo_secret_id' => $chart->helm_repo_secret_id,
+            'helm_repo_secret' => $chart->helmRepoSecret?->name,
+        ] : null;
     }
 }
