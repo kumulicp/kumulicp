@@ -17,11 +17,24 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Tolerates a table that already went part of the way (MySQL does not roll DDL back), or
+        // one that never had `server_email_id`
+        if (Schema::hasColumn('email_forwarders', 'server_email_id')) {
+            Schema::table('email_forwarders', function (Blueprint $table) {
+                $table->integer('server_email_id')->nullable()->change();
+            });
+        }
+
         Schema::table('email_forwarders', function (Blueprint $table) {
-            $table->integer('server_email_id')->nullable()->change();
-            $table->string('status', 20)->default('pending')->after('email');
-            $table->timestamp('applied_at')->nullable()->after('status');
-            $table->text('last_error')->nullable()->after('applied_at');
+            if (! Schema::hasColumn('email_forwarders', 'status')) {
+                $table->string('status', 20)->default('pending')->after('email');
+            }
+            if (! Schema::hasColumn('email_forwarders', 'applied_at')) {
+                $table->timestamp('applied_at')->nullable()->after('status');
+            }
+            if (! Schema::hasColumn('email_forwarders', 'last_error')) {
+                $table->text('last_error')->nullable()->after('applied_at');
+            }
         });
 
         Schema::create('email_forwarder_destinations', function (Blueprint $table) {
