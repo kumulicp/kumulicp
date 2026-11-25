@@ -29,7 +29,7 @@ class ChangePassword extends Controller
         }
 
         if ($new_user->expires_at && $new_user->expires_at->isPast()) {
-            return abort(410);
+            return $this->expired();
         }
 
         Organization::setOrganization($new_user->organization);
@@ -50,20 +50,22 @@ class ChangePassword extends Controller
 
     public function store(Request $request, $code)
     {
-        /* Validate */
-        $validatedData = $request->validate([
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()->uncompromised()],
-        ]);
-
         $new_user = NewUserCode::where('code', $code)->first();
 
         if (! $new_user || $new_user->activated) {
             return abort(404);
         }
 
+        // Back to the page that says so: this is a form post, and a bare error would only be a dialog.
+        // Checked before the password, which is looked up in a list of breached passwords online
         if ($new_user->expires_at && $new_user->expires_at->isPast()) {
-            return abort(410);
+            return redirect()->route('public.password.set', ['code' => $code]);
         }
+
+        /* Validate */
+        $validatedData = $request->validate([
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()->symbols()->uncompromised()],
+        ]);
 
         Organization::setOrganization($new_user->organization);
 
@@ -75,6 +77,17 @@ class ChangePassword extends Controller
         $new_user->save();
 
         return redirect('/public/users/done/'.$code);
+    }
+
+    /**
+     * The link was valid once. Whoever opens it now needs another, which the password reset gives
+     * to anyone who has an account (and a user added by an administrator or by registering has one).
+     */
+    private function expired()
+    {
+        return inertia('Auth/SetPasswordExpired', [
+            'resetUrl' => route('password.request'),
+        ])->toResponse(request())->setStatusCode(410);
     }
 
     public function update(Request $request, $organization, $email)
