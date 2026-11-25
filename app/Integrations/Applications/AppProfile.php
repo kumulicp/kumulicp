@@ -164,9 +164,24 @@ class AppProfile
     }
 
     /**
-     * The settings of a version made from what the profile recommends: its chart (name,
-     * version and the repository it is published in) and its image. What the profile
-     * doesn't recommend is left out.
+     * The chart the profile recommends: its name and the repository it is published in.
+     * It is the app's chart, not a version's. What the profile doesn't recommend is left out.
+     *
+     * @return array<string, string>
+     */
+    public function recommendedChart(): array
+    {
+        $recommendations = $this->recommendations();
+
+        return array_filter([
+            'chart_name' => Arr::get($recommendations, 'helm_chart_name'),
+            'helm_repo' => Arr::get($recommendations, 'helm_chart_repo'),
+        ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * The settings of a version made from what the profile recommends: the version of
+     * its chart and its image. What the profile doesn't recommend is left out.
      *
      * @return array<string, string>
      */
@@ -175,9 +190,7 @@ class AppProfile
         $recommendations = $this->recommendations();
 
         return array_filter([
-            'chart_name' => Arr::get($recommendations, 'helm_chart_name'),
             'chart_version' => Arr::get($recommendations, 'helm_chart_version'),
-            'helm_repo_name' => Arr::get($recommendations, 'helm_chart_repo'),
             'image_repo_name' => Arr::get($recommendations, 'image_repo'),
             'image_registry' => Arr::get($recommendations, 'image_registry'),
         ], fn ($value) => $value !== null);

@@ -447,6 +447,9 @@ class ApplicationService
             return;
         }
 
+        // The chart is the app's, so it comes first and the version joins its default group
+        AppChart::createDefaultFor($application, null, $this->profile($application->slug)->recommendedChart());
+
         $version = new AppVersion;
         $version->application_id = $application->id;
         $version->name = $version_name;

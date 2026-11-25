@@ -99,7 +99,7 @@ it('names the release after the chart and the instance', function () {
 
     expect($chart->chart_name)->toBe('gitea');
     expect($chart->chartName())->toBe($app_instance->name);
-    expect($app_instance->version->setting('chart_name'))->toBe('gitea');
+    expect($app_instance->version->chartName())->toBe('gitea');
 });
 
 it('leaves ingress.tls to the chart default when TLS is off', function () {

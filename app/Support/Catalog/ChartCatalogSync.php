@@ -254,12 +254,7 @@ class ChartCatalogSync
         $version->application_id = $chart->application_id;
         $version->version_group_id = $group->id;
         $version->name = $name;
-        $version->settings = [
-            'chart_name' => $chart->chart_name,
-            'chart_version' => $name,
-            'helm_repo_name' => $chart->helm_repo,
-        ];
-        $version->helm_repo_secret_id = $chart->helm_repo_secret_id;
+        $version->settings = ['chart_version' => $name];
         $version->status = 'deactivated';
         $version->save();
 
@@ -321,13 +316,23 @@ class ChartCatalogSync
         $application->catalog = $catalog;
         $application->save();
 
+        // Where the app is deployed from is its chart's, which is made once: what an admin
+        // changes it to (a Rancher repository name, say) is not put back
+        if (! $application->charts()->exists()) {
+            AppChart::createDefaultFor($application, null, [
+                'chart_name' => $catalog['chart_name'] ?? $chart_name,
+                'helm_repo' => $source->url,
+                'helm_repo_secret_id' => $source->helm_repo_secret_id,
+            ]);
+        }
+
         // Only seeded, never overwritten: an admin may have curated the tags
         if ($created || ! $application->tags()->exists()) {
             $application->tags()->sync(Tag::findOrCreateMany($this->tagNames($chart_name, $latest))->modelKeys());
         }
 
         foreach (array_slice($entries, 0, (int) config('catalog.versions_per_chart', 3)) as $entry) {
-            $this->syncVersion($source, $application, $entry);
+            $this->syncVersion($application, $entry);
         }
 
         return ['created' => $created, 'missing' => $this->missingConcerns($catalog['convention'])];
@@ -369,7 +374,7 @@ class ChartCatalogSync
 
     // Named by chart version: several chart versions can ship the same
     // appVersion, and the name has to be unique per application.
-    private function syncVersion(ChartSource $source, Application $application, array $entry): void
+    private function syncVersion(Application $application, array $entry): void
     {
         $name = (string) $entry['version'];
 
@@ -380,12 +385,7 @@ class ChartCatalogSync
         $version = new AppVersion;
         $version->application_id = $application->id;
         $version->name = $name;
-        $version->settings = [
-            'chart_name' => $application->catalog['chart_name'],
-            'chart_version' => (string) $entry['version'],
-            'helm_repo_name' => $source->url,
-        ];
-        $version->helm_repo_secret_id = $source->helm_repo_secret_id;
+        $version->settings = ['chart_version' => (string) $entry['version']];
         $version->status = 'deactivated';
         $version->save();
     }

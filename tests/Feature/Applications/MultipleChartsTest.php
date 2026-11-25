@@ -99,8 +99,8 @@ describe('adding a chart', function () {
         $chart->refresh();
         expect($chart)->helm_repo->toBe('helmforge')->helm_repo_secret_id->toBe($login->id)
             ->and($chart->catalog['chart_version'])->toBe('1.1.0')
-            // Versions it adds are deployed from the same place
-            ->and($chart->defaultVersionGroup()->versions()->where('name', '1.1.0')->first()->setting('helm_repo_name'))->toBe('helmforge');
+            // Versions it adds are deployed from the same place: the chart's
+            ->and($chart->defaultVersionGroup()->versions()->where('name', '1.1.0')->first()->helmRepo())->toBe('helmforge');
     });
 
     it('does not take a version name the app already has under another chart', function () {

@@ -56,9 +56,12 @@ it('creates a version with recommendations — copies settings from app profile'
     $response->assertRedirect("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
     // The chart is the profile's chart, found in the repository it names
-    expect($version->setting('chart_name'))->toBe('demo-chart');
+    $chart = $this->demoApp->charts()->sole();
+    expect($chart->chart_name)->toBe('demo-chart');
+    expect($chart->helm_repo)->toBe('https://charts.example.com');
     expect($version->setting('chart_version'))->toBe('2.5.0');
-    expect($version->setting('helm_repo_name'))->toBe('https://charts.example.com');
+    expect($version->setting('chart_name'))->toBeNull();
+    expect($version->setting('helm_repo_name'))->toBeNull();
     expect($version->setting('image_repo_name'))->toBe('demo/app');
     expect($version->setting('image_registry'))->toBe('registry.example.com');
     expect($version->admin_path)->toBe('/admin');

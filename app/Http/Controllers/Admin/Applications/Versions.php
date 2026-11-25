@@ -105,6 +105,11 @@ class Versions extends Controller
             $profile = ApplicationFacade::profile($app);
             $recommendations = $profile->recommendations();
             $settings = $profile->recommendedVersionSettings();
+
+            // An app that has no chart yet gets the one the profile recommends
+            if (! $app->charts()->where('is_default', true)->exists()) {
+                AppChart::createDefaultFor($app, null, $profile->recommendedChart());
+            }
             $admin_path = Arr::get($recommendations, 'admin_path', null);
             $roles = Arr::get($recommendations, 'roles', null);
         } else {

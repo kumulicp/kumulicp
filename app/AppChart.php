@@ -64,11 +64,15 @@ class AppChart extends Model
     }
 
     /**
-     * The chart the given version is deployed from, for an app that has none yet.
+     * The first chart of an app, which is its default: what the attributes say, else
+     * what the version it is made for has in its settings (the way an app's versions
+     * were made before charts had their own, which seeders and plugins may still use).
+     *
+     * @param  array<string, mixed>  $attributes  chart_name, helm_repo, helm_repo_secret_id
      */
-    public static function createDefaultFor(Application $application, ?AppVersion $version = null): self
+    public static function createDefaultFor(Application $application, ?AppVersion $version = null, array $attributes = []): self
     {
-        return self::create([
+        return self::create($attributes + [
             'application_id' => $application->id,
             'name' => $application->chartSource->name ?? 'Default',
             'slug' => 'default',
