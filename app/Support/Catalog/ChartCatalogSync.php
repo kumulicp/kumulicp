@@ -186,7 +186,7 @@ class ChartCatalogSync
 
         $chart = $application->charts()->where('chart_source_id', $source->id)->where('is_default', false)->first();
         $created = ! $chart;
-        $catalog = $chart?->catalog ?? [];
+        $catalog = $chart->catalog ?? [];
 
         // Detection needs the chart's values, so only download on a new version
         if (($catalog['chart_version'] ?? null) !== (string) $latest['version']) {

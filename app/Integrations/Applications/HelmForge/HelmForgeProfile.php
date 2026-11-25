@@ -28,7 +28,7 @@ class HelmForgeProfile extends AppProfile
     public function __construct(Application $application, ?AppChart $chart = null)
     {
         $this->name = $application->slug;
-        $this->configurations = ($chart?->catalog ?? $application->catalog)['configurations'] ?? [];
+        $this->configurations = ($chart->catalog ?? $application->catalog)['configurations'] ?? [];
     }
 
     public function storageHandover(AppInstance $app_instance): ?array

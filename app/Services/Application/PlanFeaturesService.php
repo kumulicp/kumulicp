@@ -12,12 +12,8 @@ class PlanFeaturesService
 {
     private $features = [];
 
-    private $application;
-
     public function __construct(private AppPlan $plan)
     {
-        $this->application = $this->plan->application;
-
         $this->build();
     }
 
