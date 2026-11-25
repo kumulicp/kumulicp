@@ -66,7 +66,8 @@ class AppChart extends Model
     /**
      * The first chart of an app, which is its default: what the attributes say, else
      * what the version it is made for has in its settings (the way an app's versions
-     * were made before charts had their own, which seeders and plugins may still use).
+     * were made before charts had their own, which seeders and plugins may still use):
+     * its chart_name and helm_repo_name.
      *
      * @param  array<string, mixed>  $attributes  chart_name, helm_repo, helm_repo_secret_id
      */
@@ -78,7 +79,6 @@ class AppChart extends Model
             'slug' => 'default',
             'chart_name' => self::text($version?->setting('chart_name')),
             'helm_repo' => self::text($version?->setting('helm_repo_name')),
-            'helm_repo_secret_id' => $version?->helm_repo_secret_id,
             'chart_source_id' => $application->chart_source_id,
             'source' => $application->source,
             'is_default' => true,

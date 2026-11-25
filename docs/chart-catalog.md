@@ -45,6 +45,16 @@ Other chart repositories follow their own values schema, so `catalog:sync`
 refuses any chart source other than `helmforge` (`ApplicationSource::forChartSource()`)
 until it gets its own profile, chart class and source value.
 
+## Where an app is deployed from
+
+The chart's name, its repository and the login the repository needs are the
+chart's (`app_charts`), shared by all of its versions and edited from the
+version page (*Edit chart*). A version keeps only what is its own: its chart
+version, images and port. An app with no chart gets one when it is first set up,
+imported or given a version, from what its profile recommends, what the catalog
+says, or (for seeders and plugins that make versions directly) the first
+version's `chart_name` and `helm_repo_name` settings.
+
 ## Several charts for one app
 
 An app can be deployed from more than one chart: the registered Nextcloud

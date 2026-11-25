@@ -6,6 +6,7 @@ use App\AppVersion;
 use App\RepoSecret;
 use App\Support\VersionTesting\VersionFingerprint;
 use App\User;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\TestSupports;
 
 function versionOfChart(AppChart $chart, array $attributes = []): AppVersion
@@ -29,19 +30,27 @@ it('reads where a version is deployed from from its chart', function () {
         ->and($version->setting('chart_version'))->toBe('1.0.0');
 });
 
-it('falls back to the version settings while its chart does not say', function () {
+it('has nothing of its own to fall back to when its chart does not say', function () {
     $chart = AppChart::factory()->default()->create(['chart_name' => null, 'helm_repo' => null]);
     $version = versionOfChart($chart, ['settings' => ['chart_name' => 'gitea', 'helm_repo_name' => 'https://repo.test']]);
 
-    expect($version->chartName())->toBe('gitea')
-        ->and($version->helmRepo())->toBe('https://repo.test');
+    expect($version->chartName())->toBeNull()
+        ->and($version->helmRepo())->toBeNull();
 });
 
-it('uses the repo login of the chart, not of the version', function () {
+it('has no chart, so nothing to deploy from, when it is in no group', function () {
+    $version = AppVersion::factory()->create(['application_id' => Application::factory()->create()->id]);
+    DB::table('app_versions')->where('id', $version->id)->update(['version_group_id' => null]);
+
+    expect($version->fresh()->chart())->toBeNull()
+        ->and($version->fresh()->chartName())->toBeNull()
+        ->and($version->fresh()->chartRepoSecretId())->toBeNull();
+});
+
+it('uses the repo login of its chart', function () {
     $secret = RepoSecret::factory()->helm()->create();
-    $other = RepoSecret::factory()->helm()->create();
     $chart = AppChart::factory()->default()->create(['helm_repo_secret_id' => $secret->id]);
-    $version = versionOfChart($chart, ['helm_repo_secret_id' => $other->id]);
+    $version = versionOfChart($chart);
 
     expect($version->chartRepoSecret()->is($secret))->toBeTrue()
         ->and($version->chartRepoSecretId())->toBe($secret->id);

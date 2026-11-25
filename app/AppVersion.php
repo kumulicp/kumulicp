@@ -29,7 +29,6 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property-read Application $application
  * @property-read Collection<int, AppVersionImage> $images
  * @property-read RepoSecret|null $imageRegistry
- * @property-read RepoSecret|null $helmRepoSecret
  * @property-read AppVersionGroup|null $versionGroup
  */
 class AppVersion extends Model
@@ -389,11 +388,6 @@ class AppVersion extends Model
         return $this->image_registry_id !== null && $this->imageRegistry && $this->imageRegistry->requiresAuth();
     }
 
-    public function helmRepoSecret()
-    {
-        return $this->belongsTo('App\RepoSecret', 'helm_repo_secret_id');
-    }
-
     /**
      * The chart the version is deployed from: its group's. A version has no chart
      * of its own to change, only the chart version.
@@ -404,12 +398,11 @@ class AppVersion extends Model
     }
 
     /**
-     * The chart's name in its repository. Falls back to the version's own
-     * settings, which is where it was kept before charts had their own.
+     * The chart's name in its repository.
      */
     public function chartName(): ?string
     {
-        return $this->chart()?->chart_name ?: $this->setting('chart_name');
+        return $this->chart()?->chart_name;
     }
 
     /**
@@ -418,25 +411,20 @@ class AppVersion extends Model
      */
     public function helmRepo(): ?string
     {
-        return $this->chart()?->helm_repo ?: $this->setting('helm_repo_name');
+        return $this->chart()?->helm_repo;
     }
 
     /**
-     * The login the chart's repository needs. A chart decides this for all of
-     * its versions, so a version only has its own when it has no chart.
+     * The login the chart's repository needs. A chart decides this for all of its versions.
      */
     public function chartRepoSecret(): ?RepoSecret
     {
-        $chart = $this->chart();
-
-        return $chart ? $chart->helmRepoSecret : $this->helmRepoSecret;
+        return $this->chart()?->helmRepoSecret;
     }
 
     public function chartRepoSecretId(): ?int
     {
-        $chart = $this->chart();
-
-        return $chart ? $chart->helm_repo_secret_id : $this->helm_repo_secret_id;
+        return $this->chart()?->helm_repo_secret_id;
     }
 
     public function requiresHelmRepoAuth(): bool
@@ -445,9 +433,10 @@ class AppVersion extends Model
     }
 
     /**
-     * The settings that decide how the version is deployed, with the chart's
-     * identity as the chart has it. For fingerprints, which must change when the
-     * chart does, whichever of its versions are looked at.
+     * The settings that decide how the version is deployed, with where its chart
+     * comes from. For fingerprints, which must change when the chart does,
+     * whichever of its versions are looked at (and which come out as they did
+     * when the chart's name and repository were kept in the settings).
      *
      * @return array<string, mixed>
      */

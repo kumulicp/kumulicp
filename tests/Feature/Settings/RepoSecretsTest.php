@@ -1,5 +1,6 @@
 <?php
 
+use App\AppChart;
 use App\Application;
 use App\AppVersion;
 use App\AppVersionImage;
@@ -125,7 +126,7 @@ it('mass migrates app versions from one repo secret to another', function () {
     expect($version->image_registry_id)->toBe($to->id);
 });
 
-it('mass migrates versions on both columns for the both type', function () {
+it('mass migrates the logins of versions and of charts for the both type', function () {
     $this->support->activateDemoApp();
 
     $from = RepoSecret::factory()->both()->create();
@@ -135,10 +136,7 @@ it('mass migrates versions on both columns for the both type', function () {
         'application_id' => $this->support->demo_app->id,
         'image_registry_id' => $from->id,
     ]);
-    $helm_version = AppVersion::factory()->create([
-        'application_id' => $this->support->demo_app->id,
-        'helm_repo_secret_id' => $from->id,
-    ]);
+    $chart = AppChart::factory()->for($this->support->demo_app)->create(['helm_repo_secret_id' => $from->id]);
 
     $response = $this->post('/admin/settings/repo-secrets/mass-migrate', [
         'from_id' => $from->id,
@@ -148,7 +146,7 @@ it('mass migrates versions on both columns for the both type', function () {
     $response->assertSessionDoesntHaveErrors();
 
     expect($image_version->refresh()->image_registry_id)->toBe($to->id);
-    expect($helm_version->refresh()->helm_repo_secret_id)->toBe($to->id);
+    expect($chart->refresh()->helm_repo_secret_id)->toBe($to->id);
 });
 
 it('rejects mass migrating between mismatched secret types', function () {
