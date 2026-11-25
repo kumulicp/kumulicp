@@ -295,22 +295,74 @@ describe('the charts page', function () {
 });
 
 describe('plans', function () {
-    it('are only offered the groups of enabled charts, besides the one they have', function () {
+    it('pick their group when they are created, among those of enabled charts', function () {
         $chart = attachedChart();
         $group = $chart->defaultVersionGroup();
-        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
-        $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}/edit";
+        $url = "/admin/apps/{$this->application->slug}/plans";
 
-        // Off: not offered, and a plan that has none of its groups sees one group, so no picker at all
+        // Off: its groups are not offered, and a group that is not offered is refused
         $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 1));
+        $this->post($url, ['name' => 'Catalog plan', 'description' => 'x', 'version_group_id' => $group->id])->assertSessionHasErrors('version_group_id');
 
         $chart->update(['enabled' => true]);
         $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 2)->where('version_groups.1.value', $group->id));
+        $this->post($url, ['name' => 'Catalog plan', 'description' => 'x', 'version_group_id' => $group->id])->assertSessionDoesntHaveErrors();
 
-        // A plan already on a chart that is switched off keeps seeing it
-        $chart->update(['enabled' => false]);
+        expect(AppPlan::where('name', 'Catalog plan')->first()->version_group_id)->toBe($group->id);
+    });
+
+    it('follow the default group when they pick none', function () {
+        $this->post("/admin/apps/{$this->application->slug}/plans", ['name' => 'Plain plan', 'description' => 'x'])->assertSessionDoesntHaveErrors();
+
+        $plan = AppPlan::where('name', 'Plain plan')->first();
+
+        expect($plan->version_group_id)->toBeNull()
+            ->and($plan->versionGroup()->is($this->default_group))->toBeTrue();
+    });
+
+    it('cannot switch group afterwards', function () {
+        $chart = attachedChart();
+        $chart->update(['enabled' => true]);
+        $group = $chart->defaultVersionGroup();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", [
+            'name' => 'Renamed',
+            'description' => 'x',
+            'version_group_id' => $group->id,
+        ])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed')->version_group_id->toBeNull();
+
         $plan->update(['version_group_id' => $group->id]);
-        $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 2));
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", [
+            'name' => 'Renamed again',
+            'description' => 'x',
+            'version_group_id' => $this->default_group->id,
+        ])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed again')->version_group_id->toBe($group->id);
+    });
+
+    it('show their group on the edit page, only when the app has several', function () {
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}/edit";
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', null));
+
+        $chart = attachedChart();
+        $plan->update(['version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', $chart->name.' / Default')->missing('version_groups'));
+    });
+
+    it('keep their group when cloned', function () {
+        $chart = attachedChart();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}/clone", ['name' => 'Copy'])->assertRedirect();
+
+        expect(AppPlan::where('name', 'Copy')->first()->version_group_id)->toBe($chart->defaultVersionGroup()->id);
     });
 
     it('show the configurations of the chart they are on', function () {

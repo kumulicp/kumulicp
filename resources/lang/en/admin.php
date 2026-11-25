@@ -122,7 +122,6 @@ return [
         'updated' => ':app updated',
         'plans' => [
             'plans' => 'Plans',
-            'group_chart_locked' => 'A plan with subscribers keeps the chart it was deployed from: pick a version group of the same chart.',
             'added' => 'Plan added',
             'updated' => ':plan plan updated',
             'deleted' => ':plan plan deleted',

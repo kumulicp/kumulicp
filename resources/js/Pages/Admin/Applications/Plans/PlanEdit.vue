@@ -187,20 +187,14 @@ import { currencyByCode } from '@/constants/currencies'
             :label="$t('admin.plans.serverType')"
             :messages="$t('admin.plans.serverTypeFixedCaption')"
           />
-          <va-select
-            v-if="version_groups.length > 1"
-            v-model="form.version_group_id"
+          <va-input
+            v-if="plan.version_group"
+            :model-value="plan.version_group"
             id="versionGroup"
             class="my-2"
-            clearable
-            value-by="value"
-            text-by="text"
+            readonly
             :label="$t('admin.plans.versionGroup')"
-            :messages="$t('admin.plans.versionGroupCaption')"
-            :placeholder="$t('admin.plans.versionGroupDefault')"
-            :options="version_groups"
-            :error="$page.props.errors.version_group_id"
-            :error-messages="$page.props.errors.version_group_id"
+            :messages="$t('admin.plans.versionGroupFixedCaption')"
           />
           <template v-if="form.server_type == 'shared'">
             <va-select
@@ -565,10 +559,6 @@ export default {
     errors: Object,
     app: Object,
     web_servers: Object,
-    version_groups: {
-      type: Array,
-      default: () => []
-    },
     database_servers: Object,
     sso_servers: Object,
     shared_apps: Object,
@@ -657,7 +647,6 @@ export default {
           storage: buildCurrencyPrices('storage')
         },
         server_type: this.plan.settings.server_type,
-        version_group_id: this.plan.version_group_id,
         web_server: this.plan.web_server,
         database_server: this.plan.database_server,
         sso_server: this.plan.sso_server,

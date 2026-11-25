@@ -50,7 +50,7 @@ until it gets its own profile, chart class and source value.
 An app can be deployed from more than one chart: the registered Nextcloud
 chart and HelmForge's, say. Each is an `app_charts` row with its own version
 groups; the app's first chart is its default, and a plan picks another by
-picking one of its version groups (plan edit, "Version group").
+picking one of its version groups when it is created.
 
 - **Adding one**: the app's *Charts* tab, or `ChartCatalogSync::attach()`. The
   daily sync does it too: a chart of the source named like a registered app that
@@ -64,8 +64,9 @@ picking one of its version groups (plan edit, "Version group").
   catalog chart added to another kind of app uses a `HelmForgeProfile` built from
   the chart's catalog data, so the registered profile's features, configurations,
   sidecars and env vars do not apply to it.
-- **Plans**: only the groups of enabled charts are offered, and a plan with
-  subscribers cannot move to another chart. A chart that plans use cannot be turned off.
+- **Plans**: only the groups of enabled charts are offered, and only when a plan
+  is created: its group, and so its chart, is fixed afterwards (the edit page
+  shows it). A chart that plans use cannot be turned off.
 - **Version names** are the app's own, so a version of an added chart whose name
   the app already has is skipped.
 

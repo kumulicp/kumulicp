@@ -61,7 +61,6 @@ return [
         'updated' => ':app actualizada',
         'plans' => [
             'plans' => 'Planes',
-            'group_chart_locked' => 'Un plan con suscriptores conserva el chart desde el que se desplegó: elige un grupo de versiones del mismo chart.',
             'added' => 'Plan agregado',
             'updated' => 'Plan :plan actualizado',
             'deleted' => 'Plan :plan eliminado',

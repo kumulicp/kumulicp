@@ -43,6 +43,10 @@ class Plans extends Controller
                 ],
             ],
             'shared_apps' => $this->sharedApps($app),
+            'version_groups' => $this->selectableGroups($app)->map(fn (AppVersionGroup $group) => [
+                'value' => $group->id,
+                'text' => $this->groupLabel($app, $group, true),
+            ])->values(),
             'plans' => $plans->map(function ($plan) {
                 return [
                     'id' => $plan->id,
@@ -158,11 +162,14 @@ class Plans extends Controller
                 'numeric',
                 Rule::exists('app_instances', 'id')->where('application_id', $app->id),
             ],
+            // Fixed for the life of the plan: its installs are deployed from the chart of the group
+            'version_group_id' => ['nullable', 'integer', Rule::in($this->selectableGroups($app)->pluck('id'))],
         ]);
 
         $server_type = $validated['server_type'] ?? 'separate';
 
         $plan = $this->newPlan($app, $request->name, $request->description, $server_type);
+        $plan->version_group_id = $validated['version_group_id'] ?? null;
 
         if ($server_type === 'shared') {
             $this->connectToSharedApp($plan, AppInstance::findOrFail($validated['shared_app']));
@@ -304,13 +311,8 @@ class Plans extends Controller
                 'can_update_domain' => $plan->canUpdateDomain(),
                 'domain_option' => $plan->domainOptions(),
                 'parent_app' => $plan->setting('parent_app_id'),
-                'version_group_id' => $plan->version_group_id,
-                'version_group' => $plan->versionGroup()->id,
+                'version_group' => $this->groupLabel($app, $plan->versionGroup()),
             ],
-            'version_groups' => $this->selectableGroups($app, $plan)->map(fn ($group) => [
-                'value' => $group->id,
-                'text' => $group->chart->name.' / '.$group->name,
-            ])->values(),
             'apps' => Application::where('id', '!=', $app->id)->orderBy('name')->get()->map(fn (Application $other) => [
                 'value' => $other->id,
                 'text' => $other->name,
@@ -385,15 +387,8 @@ class Plans extends Controller
             'domain_option' => 'nullable|array',
             'domain_option.*' => 'in:subdomains,primary,base,parent',
             'parent_app' => ['nullable', 'numeric', Rule::exists('applications', 'id'), Rule::notIn([$app->id])],
-            'version_group_id' => ['nullable', 'integer', Rule::in($this->selectableGroups($app, $plan)->pluck('id'))],
         ], $currencyRules));
 
-        // Installs of a plan keep the chart they were deployed from, so the plan can only change group within it
-        $group = $request->filled('version_group_id') ? AppVersionGroup::find($request->input('version_group_id')) : null;
-
-        if ($group && $plan->subscribers()->exists() && $group->app_chart_id !== $plan->versionGroup()->app_chart_id) {
-            return back()->withErrors(['version_group_id' => __('admin.applications.plans.group_chart_locked')]);
-        }
         // Get bottom display order number
         $order_num = AppPlan::where('display_order', '>', 0)->orderBy('display_order', 'desc')->first();
 
@@ -421,11 +416,6 @@ class Plans extends Controller
         $plan->shared_app_id = $request->shared_app;
         $plan->domain_enabled = $request->domain_enabled;
         $plan->domain_max = $request->domain_max;
-
-        if ($request->has('version_group_id')) {
-            $plan->version_group_id = $group?->id;
-        }
-
         $settingsToUpdate = [
             'admin_access' => $request->input('admin_access'),
             'base.storage' => (int) $request->input('base.storage'),
@@ -575,17 +565,30 @@ class Plans extends Controller
     }
 
     /**
-     * The groups a plan can pick: those of the charts that are enabled, and the one it has now.
+     * The groups a new plan can pick: those of the charts that are enabled. Only a plan
+     * that picks one is tied to it; it is not changed afterwards.
      *
      * @return \Illuminate\Support\Collection<int, AppVersionGroup>
      */
-    private function selectableGroups(Application $app, AppPlan $plan)
+    private function selectableGroups(Application $app)
     {
         return $app->versionGroups()
             ->with('chart')
-            ->where(fn ($query) => $query->where('app_charts.enabled', true)->orWhere('app_version_groups.id', $plan->version_group_id))
+            ->where('app_charts.enabled', true)
             ->orderBy('app_charts.id')
             ->orderBy('app_version_groups.id')
             ->get();
+    }
+
+    /**
+     * "Chart / group" for an app that has several to tell apart, else nothing to show.
+     */
+    private function groupLabel(Application $app, AppVersionGroup $group, bool $always = false): ?string
+    {
+        if (! $always && $app->versionGroups()->count() < 2) {
+            return null;
+        }
+
+        return $group->chart->name.' / '.$group->name;
     }
 }
