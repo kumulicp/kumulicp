@@ -28,6 +28,9 @@ class ChartCatalogSync
     // The concerns whose absence makes a chart "limited" in the admin list
     private const CORE_CONCERNS = ['ingress', 'persistence', 'replicas', 'resources'];
 
+    // Why a chart is not imported as an app of its own: a hand-written profile has the name
+    private const SHADOWED = 'shadowed by a built-in profile';
+
     public function __construct(private ChartConventionDetector $detector) {}
 
     /**
@@ -56,7 +59,11 @@ class ChartCatalogSync
 
         foreach ($index as $chart_name => $entries) {
             if ($reason = $this->skipReason($source, $chart_name, $entries)) {
-                $report['skipped'][$chart_name] = $reason;
+                if ($reason === self::SHADOWED && $application = $this->shadowedApplication($chart_name)) {
+                    $this->attachToShadowed($source, $application, $report);
+                } else {
+                    $report['skipped'][$chart_name] = $reason;
+                }
 
                 continue;
             }
@@ -80,6 +87,39 @@ class ChartCatalogSync
         $source->update(['last_synced_at' => now(), 'last_sync_error' => null]);
 
         return $report;
+    }
+
+    /**
+     * The app a chart of the same name is added to, when the name is that of a
+     * registered profile and the app exists: the chart becomes another one of it.
+     */
+    private function shadowedApplication(string $chart_name): ?Application
+    {
+        return Application::where('slug', $chart_name)->first();
+    }
+
+    /**
+     * Adds the chart to the app the first time it is seen (off, see attach()). One
+     * already added is brought up to date by syncAttachedCharts().
+     *
+     * @param  array<string, mixed>  $report
+     */
+    private function attachToShadowed(ChartSource $source, Application $application, array &$report): void
+    {
+        $exists = $application->charts()->where('chart_source_id', $source->id)->where('is_default', false)->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $label = "{$application->slug} ({$source->slug})";
+
+        try {
+            $this->attach($source, $application);
+            $report['created'][] = $label;
+        } catch (Throwable $exception) {
+            $report['failed'][$label] = $exception->getMessage();
+        }
     }
 
     /**
@@ -233,7 +273,7 @@ class ChartCatalogSync
 
         // A hand-written profile, or an app an admin created themselves, wins
         if (ApplicationFacade::isRegistered($chart_name)) {
-            return 'shadowed by a built-in profile';
+            return self::SHADOWED;
         }
 
         $existing = Application::where('slug', $chart_name)->first();

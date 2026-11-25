@@ -53,6 +53,9 @@ groups; the app's first chart is its default, and a plan picks another by
 picking one of its version groups (plan edit, "Version group").
 
 - **Adding one**: the app's *Charts* tab, or `ChartCatalogSync::attach()`. The
+  daily sync does it too: a chart of the source named like a registered app that
+  has no chart from the source yet is added to that app (it is no longer skipped as
+  shadowed, unless the app does not exist). The
   chart is added off, with the newest `catalog.versions_per_chart` versions in a
   group of its own, and its `source` and `catalog` kept on the chart row (the
   app is left as it was). `catalog:sync` keeps added charts up to date.

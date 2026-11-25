@@ -120,6 +120,57 @@ describe('adding a chart', function () {
     });
 });
 
+describe('the daily sync', function () {
+    function fakeDemoAppRepo(array $versions = ['1.0.0']): void
+    {
+        $fakes = ['repo.test/index.yaml' => Http::response(ChartArchive::index('demo_app', $versions))];
+
+        foreach ($versions as $version) {
+            $fakes["repo.test/demo_app-$version.tgz"] = Http::response(ChartArchive::make('demo_app', $version, ['replicaCount' => 1]));
+        }
+
+        Http::swap(new HttpFactory);
+        Http::fake($fakes);
+    }
+
+    it('adds the chart of the source to the registered app of the same name, off until enabled', function () {
+        fakeDemoAppRepo();
+
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+        $chart = $this->application->charts()->where('is_default', false)->first();
+
+        expect($report['created'])->toBe(['demo_app (helmforge)'])
+            ->and($report['skipped'])->toBe([])
+            ->and($chart)->not->toBeNull()
+            ->enabled->toBeFalse()
+            ->source->toBe(ApplicationSource::HelmForge)
+            ->and(Application::where('slug', 'demo_app')->count())->toBe(1)
+            ->and($this->application->fresh()->source)->toBe(ApplicationSource::Profile);
+    });
+
+    it('adds it once, then only keeps it up to date', function () {
+        fakeDemoAppRepo();
+        app(ChartCatalogSync::class)->sync($this->source);
+
+        fakeDemoAppRepo(['1.1.0', '1.0.0']);
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+
+        expect($report['created'])->toBe([])
+            ->and($report['updated'])->toBe(['demo_app (helmforge)'])
+            ->and($this->application->charts()->where('is_default', false)->count())->toBe(1);
+    });
+
+    it('still skips a chart that has a profile but no app', function () {
+        Application::where('slug', 'demo_app')->delete();
+        fakeDemoAppRepo();
+
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+
+        expect($report['skipped'])->toBe(['demo_app' => 'shadowed by a built-in profile'])
+            ->and($report['created'])->toBe([]);
+    });
+});
+
 describe('which profile deploys what', function () {
     it('uses the registered profile for everything while an app has one chart', function () {
         $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
