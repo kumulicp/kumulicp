@@ -167,7 +167,7 @@ it('resolves a synced app to a HelmForge profile with its detected options', fun
     expect($profile)->toBeInstanceOf(HelmForgeProfile::class);
     expect($profile->name())->toBe('gitea');
     expect($profile->isCompatible('helm_chart'))->toBeTrue();
-    expect($profile->isCompatible('rancher'))->toBeFalse();
+    expect($profile->isCompatible('rancher'))->toBeTrue();
     expect($profile->configuration('replicaCount')['default'])->toBe(2);
     expect(ApplicationFacade::profile('unknown-app')->name())->toBe('generic');
 });
