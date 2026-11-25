@@ -76,7 +76,7 @@ it('replaces the secret when a new one is typed', function () {
 it('needs the keys when a provider is chosen', function (array $overrides, string $field) {
     $this->put('/admin/settings/registration', savedCaptcha($overrides))->assertSessionHasErrors($field);
 
-    expect(Settings::get('captcha_provider'))->toBeNull();
+    expect(Settings::get('captcha_provider'))->toBeEmpty();
 })->with([
     'no site key' => [['captcha_site_key' => ''], 'captcha_site_key'],
     'no secret key the first time' => [['captcha_secret_key' => ''], 'captcha_secret_key'],
@@ -93,7 +93,7 @@ it('clears the keys when the captcha is turned off', function () {
     $this->put('/admin/settings/registration', ['captcha_provider' => null, 'captcha_site_key' => 'ignored', 'captcha_secret_key' => ''])
         ->assertSessionHasNoErrors();
 
-    expect(Settings::get('captcha_provider'))->toBeNull()
-        ->and(Settings::get('captcha_site_key'))->toBeNull()
-        ->and(Settings::get('captcha_secret_key'))->toBeNull();
+    expect(Settings::get('captcha_provider'))->toBeEmpty()
+        ->and(Settings::get('captcha_site_key'))->toBeEmpty()
+        ->and(Settings::get('captcha_secret_key'))->toBeEmpty();
 });
