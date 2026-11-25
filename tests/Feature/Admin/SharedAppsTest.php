@@ -155,7 +155,7 @@ class SharedAppsTest extends TestCase
         $app = Application::where('slug', 'demo_app')->first();
         $default_version = $this->activeVersion($app);
 
-        $chart = AppChart::factory()->for($app, 'application')->create(['enabled' => true]);
+        $chart = AppChart::factory()->for($app, 'application')->create();
         $group = AppVersionGroup::factory()->for($chart, 'chart')->create();
         $version = AppVersion::factory()->create(['application_id' => $app->id, 'version_group_id' => $group->id, 'status' => 'active']);
 

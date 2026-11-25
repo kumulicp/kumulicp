@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Catalog\ChartCatalogSync;
 use App\Support\SafeErrorMessage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Throwable;
 
 class Charts extends Controller
@@ -31,7 +32,8 @@ class Charts extends Controller
                 'helm_repo' => $chart->helm_repo,
                 'source' => $chart->source->label(),
                 'is_default' => $chart->is_default,
-                'enabled' => $chart->enabled,
+                // The default chart is what every plan that picks none uses; any other is used once a plan picks it
+                'in_use' => $chart->is_default || $chart->versionGroups->sum('plans_count') > 0,
                 'groups' => $chart->versionGroups->count(),
                 'versions' => $chart->versionGroups->sum('versions_count'),
                 'plans' => $chart->versionGroups->sum('plans_count'),
@@ -88,39 +90,10 @@ class Charts extends Controller
         return back()->with('success', __('admin.applications.charts.updated', ['chart' => $chart->name]));
     }
 
-    public function enable(Application $app, AppChart $chart)
-    {
-        abort_unless($chart->application_id === $app->id, 404);
-
-        $chart->update(['enabled' => true]);
-
-        return redirect('/admin/apps/'.$app->slug.'/charts')->with('success', __('admin.applications.charts.enabled', ['chart' => $chart->name]));
-    }
-
-    public function disable(Application $app, AppChart $chart)
-    {
-        abort_unless($chart->application_id === $app->id, 404);
-
-        $back = redirect('/admin/apps/'.$app->slug.'/charts');
-
-        if ($chart->is_default) {
-            return $back->with('error', __('admin.applications.charts.default'));
-        }
-
-        // Plans and installs that use it keep it: it is only no longer offered to other plans
-        if ($chart->versionGroups()->whereHas('plans')->exists()) {
-            return $back->with('error', __('admin.applications.charts.in_use'));
-        }
-
-        $chart->update(['enabled' => false]);
-
-        return $back->with('success', __('admin.applications.charts.disabled', ['chart' => $chart->name]));
-    }
-
     /**
      * The chart sources that have a chart of this app's name still to be added.
      *
-     * @param  \Illuminate\Support\Collection<int, AppChart>  $charts
+     * @param  Collection<int, AppChart>  $charts
      * @return array<int, array{id: int, name: string}>
      */
     private function attachableSources(Application $app, $charts): array

@@ -89,13 +89,9 @@ return [
         ],
         'charts' => [
             'charts' => 'Charts',
-            'added' => 'Se añadió :chart. Está desactivado hasta que lo habilites.',
+            'added' => 'Se añadió :chart. Sus grupos de versiones ya pueden elegirlos los planes nuevos.',
             'updated' => 'Se actualizó :chart para todas sus versiones',
             'refreshed' => ':chart está al día',
-            'enabled' => 'Los planes ya pueden elegir :chart',
-            'disabled' => 'Los planes ya no pueden elegir :chart',
-            'default' => 'El chart predeterminado siempre está activo.',
-            'in_use' => 'Un chart que usan planes no se puede desactivar: muévelos primero a otro grupo de versiones.',
         ],
         'version_groups' => [
             'added' => 'Se añadió el grupo de versiones :group',

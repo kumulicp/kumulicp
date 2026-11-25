@@ -150,13 +150,9 @@ return [
         ],
         'charts' => [
             'charts' => 'Charts',
-            'added' => ':chart was added. It is off until you enable it.',
+            'added' => ':chart was added. Its version groups can now be picked by new plans.',
             'updated' => ':chart was updated for all of its versions',
             'refreshed' => ':chart is up to date',
-            'enabled' => ':chart can now be picked by plans',
-            'disabled' => ':chart can no longer be picked by plans',
-            'default' => 'The default chart is always on.',
-            'in_use' => 'A chart that plans use cannot be turned off: move them to another version group first.',
         ],
         'version_groups' => [
             'added' => 'Version group :group was added',

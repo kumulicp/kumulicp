@@ -42,17 +42,16 @@ import { useForm } from '@inertiajs/vue3'
     <table class="va-table va-table--hoverable mt-3">
       <thead>
         <tr>
-          <th style="width: 50px">{{ $t('status.enabled') }}</th>
+          <th style="width: 50px">{{ $t('admin.charts.inUse') }}</th>
           <th>{{ $t('admin.charts.name') }}</th>
           <th>{{ $t('admin.charts.chart') }}</th>
           <th>{{ $t('admin.charts.deployedBy') }}</th>
           <th>{{ $t('admin.charts.usage') }}</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="chart in charts" :key="chart.id" :id="'chart' + chart.id">
-          <td style="text-align: center"><va-icon name="fa-circle" :color="chart.enabled ? 'success' : 'backgroundElement'" /></td>
+          <td style="text-align: center"><va-icon name="fa-circle" :color="chart.in_use ? 'success' : 'backgroundElement'" /></td>
           <td>
             {{ chart.name }}
             <va-badge v-if="chart.is_default" :text="$t('admin.charts.default')" color="info" class="ml-1" />
@@ -63,23 +62,6 @@ import { useForm } from '@inertiajs/vue3'
           </td>
           <td>{{ chart.source }}</td>
           <td>{{ $t('admin.charts.usageSummary', { groups: chart.groups, versions: chart.versions, plans: chart.plans }) }}</td>
-          <td style="text-align: right">
-            <va-button
-              v-if="!chart.is_default && !chart.enabled"
-              :id="'enableChart' + chart.id"
-              size="small"
-              preset="secondary"
-              @click="toggleForm.post('/admin/apps/' + app.slug + '/charts/' + chart.id + '/enable')"
-            >{{ $t('admin.charts.enable') }}</va-button>
-            <va-button
-              v-if="!chart.is_default && chart.enabled"
-              :id="'disableChart' + chart.id"
-              size="small"
-              preset="secondary"
-              color="danger"
-              @click="toggleForm.post('/admin/apps/' + app.slug + '/charts/' + chart.id + '/disable')"
-            >{{ $t('admin.charts.disable') }}</va-button>
-          </td>
         </tr>
       </tbody>
     </table>
@@ -103,7 +85,6 @@ export default {
   data () {
     return {
       attachForm: useForm({ chart_source_id: this.sources.length === 1 ? this.sources[0].id : null, chart_name: '' }),
-      toggleForm: useForm({})
     }
   }
 }

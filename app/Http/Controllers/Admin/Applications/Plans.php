@@ -581,7 +581,7 @@ class Plans extends Controller
     }
 
     /**
-     * The groups a new plan can pick: those of the charts that are enabled. Only a plan
+     * The groups a new plan can pick: those of all the app's charts. Only a plan
      * that picks one is tied to it; it is not changed afterwards.
      *
      * @return Collection<int, AppVersionGroup>

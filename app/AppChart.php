@@ -27,7 +27,6 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property ApplicationSource $source
  * @property array|null $catalog
  * @property bool $is_default
- * @property bool $enabled
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Application $application
@@ -41,19 +40,17 @@ class AppChart extends Model
 
     protected $table = 'app_charts';
 
-    protected $fillable = ['application_id', 'name', 'slug', 'chart_name', 'helm_repo', 'helm_repo_secret_id', 'chart_source_id', 'source', 'catalog', 'is_default', 'enabled'];
+    protected $fillable = ['application_id', 'name', 'slug', 'chart_name', 'helm_repo', 'helm_repo_secret_id', 'chart_source_id', 'source', 'catalog', 'is_default'];
 
     protected $attributes = [
         'source' => 'generic',
         'is_default' => false,
-        'enabled' => true,
     ];
 
     protected $casts = [
         'source' => ApplicationSource::class,
         'catalog' => 'array',
         'is_default' => 'boolean',
-        'enabled' => 'boolean',
     ];
 
     protected static function booted(): void

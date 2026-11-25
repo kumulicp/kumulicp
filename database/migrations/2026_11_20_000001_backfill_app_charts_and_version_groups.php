@@ -72,7 +72,6 @@ return new class extends Migration
                 'helm_repo_secret_id' => $chart_versions->first()->helm_repo_secret_id ?? null,
                 'chart_source_id' => $is_default ? $application->chart_source_id : null,
                 'is_default' => $is_default,
-                'enabled' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

@@ -23,7 +23,6 @@ class AppChartFactory extends Factory
             'chart_name' => fake()->word(),
             'helm_repo' => 'https://charts.example.test',
             'is_default' => false,
-            'enabled' => true,
         ];
     }
 

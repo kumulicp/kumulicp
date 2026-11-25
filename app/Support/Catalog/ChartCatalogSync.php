@@ -204,7 +204,6 @@ class ChartCatalogSync
                 'chart_source_id' => $source->id,
                 'source' => ApplicationSource::HelmForge,
                 'is_default' => false,
-                'enabled' => false,
             ]);
         } else {
             // Where the chart is deployed from is kept as an admin set it: on a Rancher server it is

@@ -348,9 +348,8 @@
       "deployedBy": "Deployed by",
       "usage": "In use",
       "usageSummary": "{groups} groups, {versions} versions, {plans} plans",
-      "default": "default",
-      "enable": "Enable",
-      "disable": "Disable"
+      "inUse": "In use",
+      "default": "default"
     },
     "roles": {
       "details": "Details",

@@ -140,7 +140,7 @@ class Application extends Model
     }
 
     /**
-     * The groups a new plan can pick: those of the charts that are enabled.
+     * The groups a new plan can pick: those of all its charts.
      *
      * @return \Illuminate\Support\Collection<int, AppVersionGroup>
      */
@@ -148,7 +148,6 @@ class Application extends Model
     {
         return $this->versionGroups()
             ->with('chart')
-            ->where('app_charts.enabled', true)
             ->orderBy('app_charts.id')
             ->orderBy('app_version_groups.id')
             ->get();

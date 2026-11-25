@@ -342,9 +342,8 @@
       "deployedBy": "Desplegado por",
       "usage": "En uso",
       "usageSummary": "{groups} grupos, {versions} versiones, {plans} planes",
-      "default": "predeterminado",
-      "enable": "Habilitar",
-      "disable": "Deshabilitar"
+      "inUse": "En uso",
+      "default": "predeterminado"
     },
     "roles": {
       "details": "Detalles",

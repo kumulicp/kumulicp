@@ -5,6 +5,7 @@ use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\AppVersion;
+use App\AppVersionGroup;
 use App\ChartSource;
 use App\Enums\ApplicationSource;
 use App\Integrations\Applications\HelmForge\HelmForgeChart;
@@ -52,7 +53,7 @@ function attachedChart(): AppChart
 }
 
 describe('adding a chart', function () {
-    it('adds the chart of a source to an app deployed another way, off until enabled', function () {
+    it('adds the chart of a source to an app deployed another way, not in use until a plan picks it', function () {
         fakeGiteaRepo(['1.0.0', '0.9.0']);
 
         $result = app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
@@ -61,7 +62,6 @@ describe('adding a chart', function () {
         expect($result['created'])->toBeTrue()
             ->and($chart)->source->toBe(ApplicationSource::HelmForge)
             ->is_default->toBeFalse()
-            ->enabled->toBeFalse()
             ->chart_name->toBe('gitea')
             ->helm_repo->toBe('https://repo.test')
             ->chart_source_id->toBe($this->source->id)
@@ -150,7 +150,7 @@ describe('the daily sync', function () {
         Http::fake($fakes);
     }
 
-    it('adds the chart of the source to the registered app of the same name, off until enabled', function () {
+    it('adds the chart of the source to the registered app of the same name, not in use until a plan picks it', function () {
         fakeDemoAppRepo();
 
         $report = app(ChartCatalogSync::class)->sync($this->source);
@@ -159,7 +159,6 @@ describe('the daily sync', function () {
         expect($report['created'])->toBe(['demo_app (helmforge)'])
             ->and($report['skipped'])->toBe([])
             ->and($chart)->not->toBeNull()
-            ->enabled->toBeFalse()
             ->source->toBe(ApplicationSource::HelmForge)
             ->and(Application::where('slug', 'demo_app')->count())->toBe(1)
             ->and($this->application->fresh()->source)->toBe(ApplicationSource::Profile);
@@ -254,7 +253,8 @@ describe('the charts page', function () {
                 ->has('charts', 2)
                 ->where('charts.0.is_default', true)
                 ->where('charts.1.id', $chart->id)
-                ->where('charts.1.enabled', false)
+                ->where('charts.0.in_use', true)
+                ->where('charts.1.in_use', false)
                 ->where('charts.1.versions', 1)
                 ->where('sources', []));
     });
@@ -282,46 +282,29 @@ describe('the charts page', function () {
         expect($this->application->charts()->count())->toBe(1);
     });
 
-    it('enables and disables a chart other than the default', function () {
+    it('shows a chart as in use once a plan picks one of its groups', function () {
         $chart = attachedChart();
+        $url = "/admin/apps/{$this->application->slug}/charts";
 
-        $this->post("/admin/apps/{$this->application->slug}/charts/{$chart->id}/enable")->assertSessionHas('success');
-        expect($chart->fresh()->enabled)->toBeTrue();
+        $this->get($url)->assertInertia(fn ($page) => $page->where('charts.1.in_use', false));
 
-        $this->post("/admin/apps/{$this->application->slug}/charts/{$chart->id}/disable")->assertSessionHas('success');
-        expect($chart->fresh()->enabled)->toBeFalse();
-    });
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $plan->forceFill(['version_group_id' => $chart->defaultVersionGroup()->id])->save();
 
-    it('keeps the default chart on, and a chart that plans use', function () {
-        $chart = attachedChart();
-        $chart->update(['enabled' => true]);
-        AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
-
-        $this->post("/admin/apps/{$this->application->slug}/charts/{$this->default_group->chart->id}/disable")->assertSessionHas('error');
-        $this->post("/admin/apps/{$this->application->slug}/charts/{$chart->id}/disable")->assertSessionHas('error');
-
-        expect($this->default_group->chart->fresh()->enabled)->toBeTrue()
-            ->and($chart->fresh()->enabled)->toBeTrue();
-    });
-
-    it('does not touch the chart of another app', function () {
-        $foreign = AppChart::factory()->create();
-
-        $this->post("/admin/apps/{$this->application->slug}/charts/{$foreign->id}/enable")->assertNotFound();
+        $this->get($url)->assertInertia(fn ($page) => $page->where('charts.1.in_use', true));
     });
 });
 
 describe('plans', function () {
-    it('pick their group when they are created, among those of enabled charts', function () {
+    it('pick their group when they are created, among those of the app charts', function () {
         $chart = attachedChart();
         $group = $chart->defaultVersionGroup();
         $url = "/admin/apps/{$this->application->slug}/plans";
 
-        // Off: its groups are not offered, and a group that is not offered is refused
-        $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 1));
-        $this->post($url, ['name' => 'Catalog plan', 'description' => 'x', 'version_group_id' => $group->id])->assertSessionHasErrors('version_group_id');
+        // A group of another app is not offered, and is refused
+        $foreign = AppVersionGroup::factory()->create();
+        $this->post($url, ['name' => 'Foreign plan', 'description' => 'x', 'version_group_id' => $foreign->id])->assertSessionHasErrors('version_group_id');
 
-        $chart->update(['enabled' => true]);
         $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 2)->where('version_groups.1.value', $group->id));
         $this->post($url, ['name' => 'Catalog plan', 'description' => 'x', 'version_group_id' => $group->id])->assertSessionDoesntHaveErrors();
 
@@ -339,7 +322,6 @@ describe('plans', function () {
 
     it('can pick a group once when they follow the default, then it is fixed', function () {
         $chart = attachedChart();
-        $chart->update(['enabled' => true]);
         $group = $chart->defaultVersionGroup();
         $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
         $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}";
@@ -367,7 +349,6 @@ describe('plans', function () {
 
     it('with installs can only pick a group of the chart they were deployed from', function () {
         $chart = attachedChart();
-        $chart->update(['enabled' => true]);
         $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
         AppInstance::factory()->create(['application_id' => $this->application->id, 'plan_id' => $plan->id, 'organization_id' => Organization::factory()->create()->id, 'version_id' => AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id])->id]);
 
