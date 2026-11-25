@@ -69,13 +69,13 @@ it('blocks an app with no version and links to adding one', function () {
 it('blocks an app whose versions are all disabled and links to the newest one', function () {
     $app = readinessApp(version: false);
     AppVersion::factory()->create(['application_id' => $app->id, 'name' => '1.0', 'status' => 'deactivated']);
-    AppVersion::factory()->create(['application_id' => $app->id, 'name' => '2.0', 'status' => 'deactivated']);
+    $latest = AppVersion::factory()->create(['application_id' => $app->id, 'name' => '2.0', 'status' => 'deactivated']);
 
     $issue = readinessIssue(new ApplicationReadiness($app), 'version');
 
     expect($issue['blocking'])->toBeTrue();
     expect($issue['message'])->toContain('2.0');
-    expect($issue['actions'][0]['url'])->toBe("/admin/apps/{$app->slug}/versions/2.0");
+    expect($issue['actions'][0]['url'])->toBe("/admin/apps/{$app->slug}/versions/{$latest->id}");
 });
 
 it('blocks an app with no plan and offers to create a default one', function () {

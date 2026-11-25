@@ -45,8 +45,55 @@ Other chart repositories follow their own values schema, so `catalog:sync`
 refuses any chart source other than `helmforge` (`ApplicationSource::forChartSource()`)
 until it gets its own profile, chart class and source value.
 
+## Where an app is deployed from
+
+The chart's name, its repository and the login the repository needs are the
+chart's (`app_charts`), shared by all of its versions and edited from the
+version page (*Edit chart*). A version keeps only what is its own: its chart
+version, images and port. An app with no chart gets one when it is first set up,
+imported or given a version, from what its profile recommends, what the catalog
+says, or (for seeders and plugins that make versions directly) the first
+version's `chart_name` and `helm_repo_name` settings.
+
+## Several charts for one app
+
+An app can be deployed from more than one chart: the registered Nextcloud
+chart and HelmForge's, say. Each is an `app_charts` row with its own version
+groups; the app's first chart is its default, and a plan picks another by
+picking one of its version groups when it is created.
+
+- **Adding one**: the app's *Charts* tab, or `ChartCatalogSync::attach()`. The
+  daily sync does it too: a chart of the source named like a registered app that
+  has no chart from the source yet is added to that app (it is no longer skipped as
+  shadowed, unless the app does not exist). The
+  chart is added off, with the newest `catalog.versions_per_chart` versions in a
+  group of its own, and its `source` and `catalog` kept on the chart row (the
+  app is left as it was). `catalog:sync` keeps added charts up to date.
+- **Deploying**: `ApplicationService::profileFor()` gives an install, plan or
+  chart the profile of its chart. The default chart uses the app's own profile; a
+  catalog chart added to another kind of app uses a `HelmForgeProfile` built from
+  the chart's catalog data, so the registered profile's features, configurations,
+  sidecars and env vars do not apply to it.
+- **Plans**: only the groups of enabled charts are offered, and only when a plan
+  is created: its group, and so its chart, is fixed afterwards (the edit page
+  shows it). A chart that plans use cannot be turned off.
+- **Version names** are the app's own, so a version of an added chart whose name
+  the app already has is skipped.
+
+Not yet chart-aware: activation type (`job` or `chart`) and the `Nextcloud`
+instance extensions, which still follow the app.
+
+## Rancher
+
+Rancher can only install from a repository that was added to it, so on a
+Rancher server a catalog chart is deployed from the name the repository was
+given in Rancher, not from its URL. Add the source's URL to Rancher as a
+repository, then enter that name as the chart's repository (version page,
+*Edit chart*). The catalog sync keeps reading the source's own URL for new
+versions and leaves the chart's repository as it was set. A chart has one
+repository, so plans on Rancher and on plain Kubernetes servers need a chart each.
+
 ## Not covered
 
 SSO/LDAP, roles, external database servers (charts use their bundled
-subcharts), post-install user sync, and the Rancher driver (it can only
-install from repositories registered in Rancher).
+subcharts) and post-install user sync.

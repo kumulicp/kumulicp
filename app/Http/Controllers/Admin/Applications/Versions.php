@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin\Applications;
 use App\Actions\Apps\MassApplicationUpgrade;
 use App\Announcement;
 use App\Application;
+use App\AppChart;
 use App\AppVersion;
+use App\AppVersionGroup;
 use App\Console\Calls\CheckVersionUpdates;
 use App\Http\Controllers\Controller;
 use App\RepoSecret;
@@ -16,12 +18,19 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 class Versions extends Controller
 {
     public function index(Application $app)
     {
-        $versions = $app->versions()->orderBy('name', 'desc')->get();
+        // The versions of one group at a time: the one asked for, else the default
+        $group = $app->versionGroups()->find(request()->integer('group')) ?? $app->findDefaultVersionGroup();
+        $versions = $app->versions()
+            ->when($group, fn ($query) => $query->where('version_group_id', $group->id))
+            ->orderBy('name', 'desc')
+            ->get();
 
         return inertia()->render('Admin/Applications/Versions/VersionsList', [
             'app' => [
@@ -29,6 +38,8 @@ class Versions extends Controller
                 'name' => $app->name,
                 'slug' => $app->slug,
             ],
+            'group_id' => $group?->id,
+            'groups' => $this->groupOptions($app),
             'versions' => $versions->map(function ($version) {
                 return [
                     'id' => $version->id,
@@ -40,7 +51,7 @@ class Versions extends Controller
                     'test' => $this->testSummary($version),
                 ];
             }),
-            'mass_upgrade' => $this->massUpgradeSummary($app),
+            'mass_upgrade' => $this->massUpgradeSummary($app, $group),
             'breadcrumbs' => [
                 [
                     'url' => '/admin/apps',
@@ -68,12 +79,13 @@ class Versions extends Controller
     {
         /* Validate */
         $validatedData = $request->validate([
-            'version' => 'required|not_regex:/\//',
+            'version' => ['required', 'not_regex:/\//', $this->uniqueInGroup($app, $request->input('version_group_id') ?: $app->findDefaultVersionGroup()?->id)],
             'copy_from' => 'required|in:recommendations,previous_version,update,none',
             'copy_version' => 'exclude_unless:copy_from,previous_version,update|required|exists:app_versions,id',
             // The other images an update is adopted for
             'images' => 'exclude_unless:copy_from,update|nullable|array',
             'images.*' => 'string|max:64',
+            'version_group_id' => ['nullable', 'integer', Rule::in($app->versionGroups()->pluck('app_version_groups.id'))],
         ]);
         $image_registry_id = null;
         $copy_version = null;
@@ -93,6 +105,11 @@ class Versions extends Controller
             $profile = ApplicationFacade::profile($app);
             $recommendations = $profile->recommendations();
             $settings = $profile->recommendedVersionSettings();
+
+            // An app that has no chart yet gets the one the profile recommends
+            if (! $app->charts()->where('is_default', true)->exists()) {
+                AppChart::createDefaultFor($app, null, $profile->recommendedChart());
+            }
             $admin_path = Arr::get($recommendations, 'admin_path', null);
             $roles = Arr::get($recommendations, 'roles', null);
         } else {
@@ -103,6 +120,8 @@ class Versions extends Controller
 
         $app_version = new AppVersion;
         $app_version->application_id = $app->id;
+        // Without one it joins the default group
+        $app_version->version_group_id = $validatedData['version_group_id'] ?? null;
         $app_version->name = $request->input('version');
         $app_version->settings = $settings;
         $app_version->roles = $roles;
@@ -123,7 +142,7 @@ class Versions extends Controller
             $app_version->addRecommendedImages($recommendations);
         }
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$validatedData['version'])->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$app_version->id)->with('success', __('admin.applications.versions.added', ['version' => $app_version->name]));
     }
 
     public function edit(Application $app, AppVersion $version)
@@ -135,15 +154,13 @@ class Versions extends Controller
             'version' => [
                 'id' => $version->id,
                 'version' => $version->name,
-                'helm_repo_name' => $version->setting('helm_repo_name'),
                 'image_repo_name' => $version->setting('image_repo_name'),
                 'image_registry' => $version->setting('image_registry'),
                 'image_registry_id' => $version->image_registry_id,
-                'helm_repo_secret_id' => $version->helm_repo_secret_id,
                 'chart_version' => $version->setting('chart_version'),
-                'chart_name' => $version->setting('chart_name'),
                 // The images besides the one these settings describe
                 'extra_images' => $version->images()->where('role', '!=', 'primary')->count(),
+                'version_group_id' => $version->version_group_id,
                 'port' => $version->setting('port'),
                 'admin_path' => $version->admin_path,
                 'announcement_location' => $version->announcement_location,
@@ -158,7 +175,9 @@ class Versions extends Controller
                 'test' => $this->testSummary($version),
                 'is_active' => $version->status == 'active',
             ],
-            'mass_upgrade' => $this->massUpgradeSummary($app),
+            'mass_upgrade' => $this->massUpgradeSummary($app, $version->versionGroup),
+            'chart' => $this->chartSummary($version->chart()),
+            'groups' => $this->groupOptions($app, $version->chart()),
             'app' => [
                 'slug' => $app->slug,
                 'name' => $app->name,
@@ -251,16 +270,16 @@ class Versions extends Controller
     {
         /* Validate */
         $validatedData = $request->validate([
-            'version' => 'required',
+            'version' => ['required', $this->uniqueInGroup($app, $request->input('version_group_id') ?: $version->version_group_id, $version)],
             'default_admin_roles' => 'array|nullable',
             'default_user_roles' => 'array|nullable',
             'admin_path' => 'string|nullable',
             'chart_version' => 'string|nullable',
-            'helm_repo_name' => 'string|nullable',
             'image_repo_name' => 'string|nullable',
             'port' => 'nullable|integer|min:1|max:65535',
+            // Only within the version's own chart, and only while it is not the one enabled
+            'version_group_id' => ['nullable', 'integer', Rule::in($version->chart()?->versionGroups()->pluck('id') ?? [])],
             'image_registry_id' => 'required|integer|exists:repo_secrets,id',
-            'helm_repo_secret_id' => 'nullable|integer|exists:repo_secrets,id',
             'announcement_location' => 'required|in:none,remote,local',
             'announcement_id' => 'required_if:announcement_location,local|exists:announcements,id|nullable',
             'announcement_url' => 'required_if:announcement_location,remote|url:http,https|nullable',
@@ -271,16 +290,23 @@ class Versions extends Controller
         $roles['default_admin_groups'] = $request->default_admin_roles;
         $roles['default_user_groups'] = $request->default_user_roles;
 
+        if (($validatedData['version_group_id'] ?? null) && (int) $validatedData['version_group_id'] !== $version->version_group_id) {
+            if ($version->status === 'active') {
+                return back()->withErrors(['version_group_id' => __('admin.applications.versions.group_move_enabled')]);
+            }
+
+            $version->version_group_id = (int) $validatedData['version_group_id'];
+        }
+
         $version->name = $request->input('version');
         $version->roles = $roles;
         $version->admin_path = $request->admin_path;
         $version->image_registry_id = $validatedData['image_registry_id'];
-        $version->helm_repo_secret_id = $request->input('helm_repo_secret_id') ?: null;
+
+        // Where the chart comes from is the chart's (see Charts::update()), not the version's
         $version->updateSettings([
             'chart_version' => $request->input('chart_version'),
-            'helm_repo_name' => $request->input('helm_repo_name'),
             'image_repo_name' => $request->input('image_repo_name'),
-            'chart_name' => $request->input('chart_name'),
             'port' => $request->input('port'),
         ]);
         $version->announcement_location = $request->input('announcement_location');
@@ -288,16 +314,19 @@ class Versions extends Controller
         $version->announcement_url = $request->input('announcement_url');
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$request->input('version'))->with('success', __('admin.applications.versions.updated', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.updated', ['version' => $version->name]));
     }
 
     public function enable(Application $app, AppVersion $version)
     {
         if (! $version->canBeEnabled()) {
-            return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
+            return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('error', __('admin.version_tests.errors.not_tested', ['version' => $version->name]));
         }
 
-        $versions = AppVersion::where('application_id', $app->id)->get();
+        // One version is enabled per group, so the others of its group make way for it
+        $versions = AppVersion::where('application_id', $app->id)
+            ->when($version->version_group_id, fn ($query) => $query->where('version_group_id', $version->version_group_id))
+            ->get();
 
         foreach ($versions as $deactivated_version) {
             $deactivated_version->status = 'deactivated';
@@ -307,7 +336,7 @@ class Versions extends Controller
         $version->status = 'active';
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.enabled', ['version' => $version->name]));
     }
 
     /**
@@ -315,7 +344,7 @@ class Versions extends Controller
      */
     public function massUpgrade(Application $app, AppVersion $version)
     {
-        $redirect = redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name);
+        $redirect = redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id);
 
         if ($version->status !== 'active') {
             return $redirect->with('error', __('admin.applications.versions.mass_upgrade_not_enabled'));
@@ -335,10 +364,13 @@ class Versions extends Controller
         $version->status = 'deactivated';
         $version->save();
 
-        $app->enabled = false;
-        $app->save();
+        // The app stays on while another group still has an enabled version
+        if (! $app->versions()->where('status', 'active')->exists()) {
+            $app->enabled = false;
+            $app->save();
+        }
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name)->with('success', __('admin.applications.versions.disabled', ['version' => $version->name]));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id)->with('success', __('admin.applications.versions.disabled', ['version' => $version->name]));
     }
 
     public function roles(Application $app, AppVersion $version)
@@ -421,7 +453,7 @@ class Versions extends Controller
         $version->roles = $roles;
         $version->save();
 
-        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->name.'/roles')->with('success', __('admin.applications.versions.order_updated'));
+        return redirect('/admin/apps/'.$app->slug.'/versions/'.$version->id.'/roles')->with('success', __('admin.applications.versions.order_updated'));
     }
 
     /**
@@ -448,13 +480,67 @@ class Versions extends Controller
      *
      * @return array<string, mixed>
      */
-    private function massUpgradeSummary(Application $app): array
+    private function massUpgradeSummary(Application $app, ?AppVersionGroup $group = null): array
     {
-        $active = $app->active_version();
+        $active = $group ? $group->activeVersion : $app->active_version();
 
         return [
+            'id' => $active?->id,
             'version' => $active?->name,
             'count' => $active ? $app->instancesBehind($active)->count() : 0,
         ];
+    }
+
+    /**
+     * A version name only has to be free within its own group: the same version of
+     * another chart is another version.
+     */
+    private function uniqueInGroup(Application $app, mixed $group_id, ?AppVersion $ignore = null): Unique
+    {
+        $rule = Rule::unique('app_versions', 'name')->where('application_id', $app->id)->where('version_group_id', $group_id);
+
+        return $ignore ? $rule->ignore($ignore->id) : $rule;
+    }
+
+    /**
+     * The groups of the app for the pickers of the version pages, those of the
+     * given chart only when one is.
+     *
+     * @return Collection<int, array{id: int, name: string, is_default: bool, versions: int, plans: int}>
+     */
+    private function groupOptions(Application $app, ?AppChart $chart = null): Collection
+    {
+        $groups = $app->versionGroups()->with('chart')->withCount(['versions', 'plans'])->orderBy('app_charts.id')->orderBy('app_version_groups.id')->get();
+        $several_charts = $groups->pluck('app_chart_id')->unique()->count() > 1;
+
+        return $groups
+            ->when($chart, fn ($groups) => $groups->where('app_chart_id', $chart->id))
+            ->map(fn (AppVersionGroup $group) => [
+                'id' => $group->id,
+                'name' => $several_charts ? $group->chart->name.' / '.$group->name : $group->name,
+                'is_default' => $group->isAppDefault(),
+                'versions' => $group->versions_count,
+                'plans' => $group->plans_count,
+            ])
+            ->values();
+    }
+
+    /**
+     * What the version page shows of the chart its versions are deployed from.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function chartSummary(?AppChart $chart): ?array
+    {
+        return $chart ? [
+            'id' => $chart->id,
+            'name' => $chart->name,
+            'is_default' => $chart->is_default,
+            'source' => $chart->source->label(),
+            'chart_name' => $chart->chart_name,
+            'helm_repo' => $chart->helm_repo,
+            'helm_repo_secret_id' => $chart->helm_repo_secret_id,
+            'helm_repo_secret' => $chart->helmRepoSecret?->name,
+        ] : null;
     }
 }

@@ -29,7 +29,7 @@ class StorageHandover
      */
     public static function map(AppInstance $app_instance): ?array
     {
-        return Application::profile($app_instance->application)->storageHandover($app_instance);
+        return Application::profileFor($app_instance)->storageHandover($app_instance);
     }
 
     public static function supports(AppInstance $app_instance): bool

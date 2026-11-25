@@ -405,7 +405,7 @@ class AppInstance extends Model
 
     public function usesMultisitePermissions(): bool
     {
-        return ApplicationFacade::profile($this->application)->isCompatible('multisite');
+        return ApplicationFacade::profileFor($this)->isCompatible('multisite');
     }
 
     // The instance whose role groups hold this instance's permissions. Every instance keeps its own,

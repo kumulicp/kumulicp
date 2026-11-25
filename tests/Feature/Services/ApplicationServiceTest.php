@@ -30,7 +30,7 @@ it('manages applications via service', function () {
     expect($app)->toBeInstanceOf(App\Application::class);
     expect(count(Application::roles('demo_app')))->toBe(1);
 
-    $app_plan = AppPlan::factory()->create();
+    $app_plan = AppPlan::factory()->create(['application_id' => $app->id]);
 
     AppVersion::factory()->create([
         'application_id' => $app->id,

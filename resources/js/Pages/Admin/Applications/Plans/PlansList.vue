@@ -44,6 +44,20 @@ import draggable from 'vuedraggable'
                 :error="$page.props.errors.description"
                 :error-messages="$page.props.errors.description"
                 />
+              <va-select v-if="version_groups.length > 1"
+                v-model="form.version_group_id"
+                id="versionGroup"
+                :label="$t('admin.plans.versionGroup')"
+                :messages="$t('admin.plans.versionGroupCaption')"
+                class="mb-3"
+                clearable
+                value-by="value"
+                text-by="text"
+                :placeholder="$t('admin.plans.versionGroupDefault')"
+                :options="version_groups"
+                :error="!!$page.props.errors.version_group_id"
+                :error-messages="$page.props.errors.version_group_id"
+              />
               <template v-if="canChooseServerType">
                 <va-select v-model="form.server_type"
                   id="serverType"
@@ -193,6 +207,10 @@ export default {
     plans: Object,
     archived: Object,
     shared_apps: Array,
+    version_groups: {
+      type: Array,
+      default: () => []
+    },
     errors: Object
   },
   data() {
@@ -214,7 +232,8 @@ export default {
         name: '',
         description: '',
         server_type: 'separate',
-        shared_app: null
+        shared_app: null,
+        version_group_id: null
       }),
       order: useForm({
         plans: this.plans

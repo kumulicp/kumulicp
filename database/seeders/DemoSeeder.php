@@ -56,23 +56,36 @@ class DemoSeeder extends Seeder
             ],
         ]);
 
+        // Where each app is deployed from (the repositories are the names they have in Rancher),
+        // and the group its versions are in
+        DB::table('app_charts')->insert([
+            ['id' => 1, 'application_id' => 1, 'name' => 'Default', 'slug' => 'default', 'chart_name' => 'nextcloud', 'helm_repo' => 'nextcloud', 'source' => 'profile', 'is_default' => true, 'enabled' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'application_id' => 2, 'name' => 'Default', 'slug' => 'default', 'chart_name' => 'wordpress', 'helm_repo' => 'bitnami', 'source' => 'profile', 'is_default' => true, 'enabled' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('app_version_groups')->insert([
+            ['id' => 1, 'app_chart_id' => 1, 'name' => 'Default', 'slug' => 'default', 'is_default' => true, 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'app_chart_id' => 2, 'name' => 'Default', 'slug' => 'default', 'is_default' => true, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         // Add App Versions
         DB::table('app_versions')->insert([
             [
                 'id' => 1,
                 'application_id' => 1,
+                'version_group_id' => 1,
                 'name' => '33.0.1',
                 'status' => 'active',
                 'roles' => '{}',
-                'settings' => '{"helm_repo_name": "nextcloud", "chart_name": "nextcloud", "image_repo_name": "nextcloud", "image_registry": "docker.io", "chart_version": "9.0.4"}',
+                'settings' => '{"image_repo_name": "nextcloud", "image_registry": "docker.io", "chart_version": "9.0.4"}',
             ],
             [
                 'id' => 2,
                 'application_id' => 2,
+                'version_group_id' => 2,
                 'name' => '6.8.2-debian-12-r5',
                 'status' => 'active',
                 'roles' => '{"order": [1, 2, 3, 4, 5, 6], "default_user_groups": [5], "default_admin_groups": [1]}',
-                'settings' => '{"helm_repo_name": "bitnami", "image_repo_name": "bitnami/wordpress", "image_registry": "docker.io", "chart_name": "wordpress", "chart_version": "20.1.2"}',
+                'settings' => '{"image_repo_name": "bitnami/wordpress", "image_registry": "docker.io", "chart_version": "20.1.2"}',
             ],
         ]);
 

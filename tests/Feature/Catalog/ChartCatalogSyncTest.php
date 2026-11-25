@@ -68,11 +68,14 @@ it('imports every chart as a disabled app with its newest versions', function ()
     $versions = AppVersion::where('application_id', $gitea->id)->orderBy('id')->get();
     expect($versions->pluck('name')->all())->toBe(['2.0.0', '1.9.0', '1.8.0']);
     expect($versions->first()->status)->toBe('deactivated');
-    expect($versions->first()->settings)->toBe([
-        'chart_name' => 'gitea',
-        'chart_version' => '2.0.0',
-        'helm_repo_name' => 'https://repo.test',
-    ]);
+    expect($versions->first()->settings)->toBe(['chart_version' => '2.0.0']);
+    // Where it is deployed from is the app's chart, made once
+    expect($gitea->charts()->sole())
+        ->is_default->toBeTrue()
+        ->chart_name->toBe('gitea')
+        ->helm_repo->toBe('https://repo.test')
+        ->source->toBe(ApplicationSource::HelmForge)
+        ->chart_source_id->toBe($this->source->id);
     expect($this->source->fresh()->last_synced_at)->not->toBeNull();
 });
 
@@ -164,7 +167,7 @@ it('resolves a synced app to a HelmForge profile with its detected options', fun
     expect($profile)->toBeInstanceOf(HelmForgeProfile::class);
     expect($profile->name())->toBe('gitea');
     expect($profile->isCompatible('helm_chart'))->toBeTrue();
-    expect($profile->isCompatible('rancher'))->toBeFalse();
+    expect($profile->isCompatible('rancher'))->toBeTrue();
     expect($profile->configuration('replicaCount')['default'])->toBe(2);
     expect(ApplicationFacade::profile('unknown-app')->name())->toBe('generic');
 });

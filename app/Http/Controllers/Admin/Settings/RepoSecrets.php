@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Settings;
 
+use App\AppChart;
 use App\AppVersion;
 use App\AppVersionImage;
 use App\Http\Controllers\Controller;
@@ -61,7 +62,7 @@ class RepoSecrets extends Controller
 
         AppVersion::where('image_registry_id', $repoSecret->id)->update(['image_registry_id' => null]);
         AppVersionImage::where('registry_secret_id', $repoSecret->id)->update(['registry_secret_id' => null]);
-        AppVersion::where('helm_repo_secret_id', $repoSecret->id)->update(['helm_repo_secret_id' => null]);
+        AppChart::where('helm_repo_secret_id', $repoSecret->id)->update(['helm_repo_secret_id' => null]);
 
         $repoSecret->delete();
 
@@ -89,7 +90,7 @@ class RepoSecrets extends Controller
         }
 
         if ($from->type !== RepoSecret::TYPE_IMAGE) {
-            AppVersion::where('helm_repo_secret_id', $from->id)->update(['helm_repo_secret_id' => $to->id]);
+            AppChart::where('helm_repo_secret_id', $from->id)->update(['helm_repo_secret_id' => $to->id]);
         }
 
         return redirect()->back()->with('success', __('admin.repoSecrets.migrated'));

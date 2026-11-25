@@ -12,12 +12,8 @@ class PlanFeaturesService
 {
     private $features = [];
 
-    private $application;
-
     public function __construct(private AppPlan $plan)
     {
-        $this->application = $this->plan->application;
-
         $this->build();
     }
 
@@ -25,7 +21,7 @@ class PlanFeaturesService
     {
         $feature_prices = $this->plan->pricesForForm();
 
-        foreach (Application::profile($this->application->slug)->features() as $name => $feature) {
+        foreach (Application::profileFor($this->plan)->features() as $name => $feature) {
             $this->features[$name] = (array) $feature;
             $this->features[$name]['status'] = $this->plan->featureValue("$name.status") ?? 'disabled';
             // Legacy flat price/price_id preserved for display; per-currency prices live in plan_prices

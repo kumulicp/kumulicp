@@ -30,6 +30,7 @@ export default {
       tabs: [
         { title: this.$t('common.view'), url: basePath },
         { title: this.$t('common.edit'), url: basePath + '/edit' },
+        { title: this.$t('admin.charts.charts'), url: basePath + '/charts' },
         { title: this.$t('admin.versions.versions'), url: basePath + '/versions' },
         { title: this.$t('admin.plans.plan'), url: basePath + '/plans' },
         { title: this.$t('admin.roles.roles'), url: basePath + '/roles' }

@@ -1,0 +1,393 @@
+<?php
+
+use App\AppChart;
+use App\AppInstance;
+use App\Application;
+use App\AppPlan;
+use App\AppVersion;
+use App\AppVersionGroup;
+use App\ChartSource;
+use App\Enums\ApplicationSource;
+use App\Integrations\Applications\HelmForge\HelmForgeChart;
+use App\Integrations\Applications\HelmForge\HelmForgeProfile;
+use App\Organization;
+use App\RepoSecret;
+use App\Support\Catalog\ChartCatalogSync;
+use App\Support\Facades\Application as ApplicationFacade;
+use App\User;
+use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Support\Facades\Http;
+use Tests\Support\Applications\DemoAppProfile;
+use Tests\Support\TestSupports;
+use Tests\Support\VersionUpdates\ChartArchive;
+
+function fakeGiteaRepo(array $versions = ['1.0.0'], array $values = ['replicaCount' => 1, 'fullnameOverride' => '']): void
+{
+    $fakes = ['repo.test/index.yaml' => Http::response(ChartArchive::index('gitea', $versions))];
+
+    foreach ($versions as $version) {
+        $fakes["repo.test/gitea-$version.tgz"] = Http::response(ChartArchive::make('gitea', $version, $values));
+    }
+
+    Http::swap(new HttpFactory);
+    Http::fake($fakes);
+}
+
+beforeEach(function () {
+    (new TestSupports)->seed();
+    $this->actingAs(User::find(1));
+
+    ApplicationFacade::register(new DemoAppProfile);
+    $this->application = ApplicationFacade::initialize('demo_app');
+    $this->default_group = $this->application->defaultVersionGroup();
+
+    $this->source = ChartSource::where('slug', 'helmforge')->first();
+    $this->source->update(['url' => 'https://repo.test']);
+});
+
+function attachedChart(): AppChart
+{
+    fakeGiteaRepo();
+
+    return app(ChartCatalogSync::class)->attach(test()->source, test()->application, 'gitea')['chart'];
+}
+
+describe('adding a chart', function () {
+    it('adds the chart of a source to an app deployed another way, not in use until a plan picks it', function () {
+        fakeGiteaRepo(['1.0.0', '0.9.0']);
+
+        $result = app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
+        $chart = $result['chart'];
+
+        expect($result['created'])->toBeTrue()
+            ->and($chart)->source->toBe(ApplicationSource::HelmForge)
+            ->is_default->toBeFalse()
+            ->chart_name->toBe('gitea')
+            ->helm_repo->toBe('https://repo.test')
+            ->chart_source_id->toBe($this->source->id)
+            ->and($chart->catalog['chart_version'])->toBe('1.0.0')
+            ->and($chart->defaultVersionGroup()->versions()->orderBy('id')->pluck('name')->all())->toBe(['1.0.0', '0.9.0']);
+
+        // The app itself is left as it was
+        $application = $this->application->fresh();
+        expect($application->source)->toBe(ApplicationSource::Profile)
+            ->and($application->catalog)->toBeNull()
+            ->and($application->chart_source_id)->toBeNull()
+            ->and($application->charts()->where('is_default', true)->count())->toBe(1);
+    });
+
+    it('brings an added chart up to date instead of adding it twice', function () {
+        $chart = attachedChart();
+
+        fakeGiteaRepo(['1.1.0', '1.0.0']);
+        $result = app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
+
+        expect($result['created'])->toBeFalse()
+            ->and($result['chart']->is($chart))->toBeTrue()
+            ->and($this->application->charts()->count())->toBe(2)
+            ->and($chart->defaultVersionGroup()->versions()->pluck('name')->sort()->values()->all())->toBe(['1.0.0', '1.1.0']);
+    });
+
+    it('leaves where an admin changed the chart to be deployed from when it brings it up to date', function () {
+        $chart = attachedChart();
+        $login = RepoSecret::factory()->helm()->create();
+        // On a Rancher server the repository is the name it was given in Rancher
+        $chart->update(['helm_repo' => 'helmforge', 'helm_repo_secret_id' => $login->id]);
+
+        fakeGiteaRepo(['1.1.0', '1.0.0']);
+        app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
+
+        $chart->refresh();
+        expect($chart)->helm_repo->toBe('helmforge')->helm_repo_secret_id->toBe($login->id)
+            ->and($chart->catalog['chart_version'])->toBe('1.1.0')
+            // Versions it adds are deployed from the same place: the chart's
+            ->and($chart->defaultVersionGroup()->versions()->where('name', '1.1.0')->first()->helmRepo())->toBe('helmforge');
+    });
+
+    it('does not take a version name the app already has under another chart', function () {
+        AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id, 'name' => '1.0.0']);
+        fakeGiteaRepo(['1.0.0', '0.9.0']);
+
+        $result = app(ChartCatalogSync::class)->attach($this->source, $this->application, 'gitea');
+
+        expect($result['skipped'])->toHaveKey('1.0.0')
+            ->and($result['chart']->defaultVersionGroup()->versions()->pluck('name')->all())->toBe(['0.9.0']);
+    });
+
+    it('refuses a chart the source does not have, and an app already imported from the source', function () {
+        fakeGiteaRepo();
+
+        expect(fn () => app(ChartCatalogSync::class)->attach($this->source, $this->application, 'nonexistent'))
+            ->toThrow(RuntimeException::class, 'no application chart named nonexistent');
+
+        $imported = Application::factory()->create(['source' => ApplicationSource::HelmForge, 'chart_source_id' => $this->source->id]);
+
+        expect(fn () => app(ChartCatalogSync::class)->attach($this->source, $imported, 'gitea'))
+            ->toThrow(RuntimeException::class, 'already deployed from');
+    });
+
+    it('keeps an added chart up to date with the daily sync', function () {
+        $chart = attachedChart();
+
+        fakeGiteaRepo(['1.1.0', '1.0.0']);
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+
+        expect($report['updated'])->toContain('demo_app (helmforge)')
+            ->and($chart->defaultVersionGroup()->versions()->pluck('name')->sort()->values()->all())->toBe(['1.0.0', '1.1.0']);
+    });
+});
+
+describe('the daily sync', function () {
+    function fakeDemoAppRepo(array $versions = ['1.0.0']): void
+    {
+        $fakes = ['repo.test/index.yaml' => Http::response(ChartArchive::index('demo_app', $versions))];
+
+        foreach ($versions as $version) {
+            $fakes["repo.test/demo_app-$version.tgz"] = Http::response(ChartArchive::make('demo_app', $version, ['replicaCount' => 1]));
+        }
+
+        Http::swap(new HttpFactory);
+        Http::fake($fakes);
+    }
+
+    it('adds the chart of the source to the registered app of the same name, not in use until a plan picks it', function () {
+        fakeDemoAppRepo();
+
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+        $chart = $this->application->charts()->where('is_default', false)->first();
+
+        expect($report['created'])->toBe(['demo_app (helmforge)'])
+            ->and($report['skipped'])->toBe([])
+            ->and($chart)->not->toBeNull()
+            ->source->toBe(ApplicationSource::HelmForge)
+            ->and(Application::where('slug', 'demo_app')->count())->toBe(1)
+            ->and($this->application->fresh()->source)->toBe(ApplicationSource::Profile);
+    });
+
+    it('adds it once, then only keeps it up to date', function () {
+        fakeDemoAppRepo();
+        app(ChartCatalogSync::class)->sync($this->source);
+
+        fakeDemoAppRepo(['1.1.0', '1.0.0']);
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+
+        expect($report['created'])->toBe([])
+            ->and($report['updated'])->toBe(['demo_app (helmforge)'])
+            ->and($this->application->charts()->where('is_default', false)->count())->toBe(1);
+    });
+
+    it('still skips a chart that has a profile but no app', function () {
+        Application::where('slug', 'demo_app')->delete();
+        fakeDemoAppRepo();
+
+        $report = app(ChartCatalogSync::class)->sync($this->source);
+
+        expect($report['skipped'])->toBe(['demo_app' => 'shadowed by a built-in profile'])
+            ->and($report['created'])->toBe([]);
+    });
+});
+
+describe('which profile deploys what', function () {
+    it('uses the registered profile for everything while an app has one chart', function () {
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+
+        expect(ApplicationFacade::profileFor($plan))->toBeInstanceOf(DemoAppProfile::class)
+            ->and(ApplicationFacade::profileFor($this->default_group->chart))->toBeInstanceOf(DemoAppProfile::class);
+    });
+
+    it('uses the profile of the chart a plan picked, and the registered one for a plan that picked none', function () {
+        $chart = attachedChart();
+        $on_registered = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $on_catalog = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        expect(ApplicationFacade::profileFor($on_registered))->toBeInstanceOf(DemoAppProfile::class)
+            ->and(ApplicationFacade::profileFor($on_catalog))->toBeInstanceOf(HelmForgeProfile::class)
+            ->and(array_keys(ApplicationFacade::profileFor($on_catalog)->configurations()))->not->toBe(array_keys(ApplicationFacade::profileFor($on_registered)->configurations()));
+    });
+
+    it('uses the profile of the chart an install runs', function () {
+        $chart = attachedChart();
+        $registered_version = AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id, 'name' => '5.0']);
+        $catalog_version = $chart->defaultVersionGroup()->versions()->first();
+        $organization = Organization::factory()->create();
+
+        $on_registered = AppInstance::factory()->create(['application_id' => $this->application->id, 'organization_id' => $organization->id, 'version_id' => $registered_version->id]);
+        $on_catalog = AppInstance::factory()->create(['application_id' => $this->application->id, 'organization_id' => $organization->id, 'version_id' => $catalog_version->id]);
+
+        expect(ApplicationFacade::profileFor($on_registered))->toBeInstanceOf(DemoAppProfile::class)
+            ->and(ApplicationFacade::profileFor($on_catalog))->toBeInstanceOf(HelmForgeProfile::class)
+            // What is registered for the app as a whole is unchanged
+            ->and(ApplicationFacade::profile($this->application))->toBeInstanceOf(DemoAppProfile::class);
+    });
+
+    it('leaves features the registered profile has out of a plan on the catalog chart', function () {
+        $chart = attachedChart();
+        $on_registered = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $on_catalog = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        expect(ApplicationFacade::profileFor($on_registered)->features())->not->toBeEmpty()
+            ->and(ApplicationFacade::profileFor($on_catalog)->features())->toBeEmpty();
+    });
+
+    it('deploys an install on the catalog chart with the values the chart is detected to take', function () {
+        $chart = attachedChart();
+        $organization = Organization::factory()->create();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+        $version = $chart->defaultVersionGroup()->versions()->first();
+
+        $app_instance = ApplicationFacade::activate($organization, $this->application, $version, $plan)->get();
+        $values = (new HelmForgeChart($organization, $app_instance))->valuesWithAdditionalConfigs();
+
+        // The app has no catalog data of its own: these keys come from the chart's
+        expect($values['replicaCount'])->toBe(1)
+            ->and($values['fullnameOverride'])->toContain($organization->slug);
+    });
+});
+
+describe('the charts page', function () {
+    it('lists the charts of the app with their use, and the sources one could be added from', function () {
+        $chart = attachedChart();
+
+        $this->get("/admin/apps/{$this->application->slug}/charts")
+            ->assertInertia(fn ($page) => $page
+                ->has('charts', 2)
+                ->where('charts.0.is_default', true)
+                ->where('charts.1.id', $chart->id)
+                ->where('charts.0.in_use', true)
+                ->where('charts.1.in_use', false)
+                ->where('charts.1.versions', 1)
+                ->where('sources', []));
+    });
+
+    it('offers a source until its chart was added', function () {
+        $this->get("/admin/apps/{$this->application->slug}/charts")
+            ->assertInertia(fn ($page) => $page->where('sources.0.id', $this->source->id));
+    });
+
+    it('adds a chart from a source', function () {
+        fakeGiteaRepo();
+
+        $this->post("/admin/apps/{$this->application->slug}/charts", ['chart_source_id' => $this->source->id, 'chart_name' => 'gitea'])
+            ->assertSessionHas('success');
+
+        expect($this->application->charts()->where('is_default', false)->count())->toBe(1);
+    });
+
+    it('says why a chart could not be added', function () {
+        fakeGiteaRepo();
+
+        $this->post("/admin/apps/{$this->application->slug}/charts", ['chart_source_id' => $this->source->id, 'chart_name' => 'missing'])
+            ->assertSessionHas('error');
+
+        expect($this->application->charts()->count())->toBe(1);
+    });
+
+    it('shows a chart as in use once a plan picks one of its groups', function () {
+        $chart = attachedChart();
+        $url = "/admin/apps/{$this->application->slug}/charts";
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('charts.1.in_use', false));
+
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $plan->forceFill(['version_group_id' => $chart->defaultVersionGroup()->id])->save();
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('charts.1.in_use', true));
+    });
+});
+
+describe('plans', function () {
+    it('pick their group when they are created, among those of the app charts', function () {
+        $chart = attachedChart();
+        $group = $chart->defaultVersionGroup();
+        $url = "/admin/apps/{$this->application->slug}/plans";
+
+        // A group of another app is not offered, and is refused
+        $foreign = AppVersionGroup::factory()->create();
+        $this->post($url, ['name' => 'Foreign plan', 'description' => 'x', 'version_group_id' => $foreign->id])->assertSessionHasErrors('version_group_id');
+
+        $this->get($url)->assertInertia(fn ($page) => $page->has('version_groups', 2)->where('version_groups.1.value', $group->id));
+        $this->post($url, ['name' => 'Catalog plan', 'description' => 'x', 'version_group_id' => $group->id])->assertSessionDoesntHaveErrors();
+
+        expect(AppPlan::where('name', 'Catalog plan')->first()->version_group_id)->toBe($group->id);
+    });
+
+    it('follow the default group when they pick none', function () {
+        $this->post("/admin/apps/{$this->application->slug}/plans", ['name' => 'Plain plan', 'description' => 'x'])->assertSessionDoesntHaveErrors();
+
+        $plan = AppPlan::where('name', 'Plain plan')->first();
+
+        expect($plan->version_group_id)->toBeNull()
+            ->and($plan->versionGroup()->is($this->default_group))->toBeTrue();
+    });
+
+    it('can pick a group once when they follow the default, then it is fixed', function () {
+        $chart = attachedChart();
+        $group = $chart->defaultVersionGroup();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}";
+
+        $this->get("$url/edit")->assertInertia(fn ($page) => $page->has('version_groups', 2)->where('plan.version_group_id', null));
+
+        $this->post($url, ['name' => 'Renamed', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false, 'version_group_id' => $group->id])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed')->version_group_id->toBe($group->id);
+
+        $this->get("$url/edit")->assertInertia(fn ($page) => $page->has('version_groups', 0));
+
+        $this->post($url, ['name' => 'Renamed again', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false, 'version_group_id' => $this->default_group->id])->assertRedirect();
+
+        expect($plan->fresh())->name->toBe('Renamed again')->version_group_id->toBe($group->id);
+    });
+
+    it('keep the default group when none is sent on update', function () {
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", ['name' => 'Renamed', 'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false])->assertRedirect();
+
+        expect($plan->fresh()->version_group_id)->toBeNull();
+    });
+
+    it('with installs can only pick a group of the chart they were deployed from', function () {
+        $chart = attachedChart();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        AppInstance::factory()->create(['application_id' => $this->application->id, 'plan_id' => $plan->id, 'organization_id' => Organization::factory()->create()->id, 'version_id' => AppVersion::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $this->default_group->id])->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}", [
+            'name' => 'Renamed',
+            'description' => 'x', 'payment_enabled' => false, 'domain_enabled' => false,
+            'version_group_id' => $chart->defaultVersionGroup()->id,
+        ])->assertSessionHasErrors('version_group_id');
+
+        expect($plan->fresh()->version_group_id)->toBeNull();
+    });
+
+    it('show their group on the edit page, only when the app has several', function () {
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $url = "/admin/apps/{$this->application->slug}/plans/{$plan->id}/edit";
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', null));
+
+        $chart = attachedChart();
+        $plan->forceFill(['version_group_id' => $chart->defaultVersionGroup()->id])->save();
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('plan.version_group', $chart->name.' / Default')->has('version_groups', 0));
+    });
+
+    it('keep their group when cloned', function () {
+        $chart = attachedChart();
+        $plan = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        $this->post("/admin/apps/{$this->application->slug}/plans/{$plan->id}/clone", ['name' => 'Copy'])->assertRedirect();
+
+        expect(AppPlan::where('name', 'Copy')->first()->version_group_id)->toBe($chart->defaultVersionGroup()->id);
+    });
+
+    it('show the configurations of the chart they are on', function () {
+        $chart = attachedChart();
+        $on_registered = AppPlan::factory()->create(['application_id' => $this->application->id]);
+        $on_catalog = AppPlan::factory()->create(['application_id' => $this->application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+
+        expect(array_keys(ApplicationFacade::configurations($this->application, $on_registered)))->toBe(array_keys((new DemoAppProfile)->configurations()))
+            ->and(array_keys(ApplicationFacade::configurations($this->application, $on_catalog)))->toBe(array_keys($chart->catalog['configurations']));
+    });
+});

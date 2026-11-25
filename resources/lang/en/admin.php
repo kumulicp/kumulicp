@@ -148,6 +148,20 @@ return [
             'enabled' => ':role role enabled',
             'disabled' => ':role role disabled',
         ],
+        'charts' => [
+            'charts' => 'Charts',
+            'added' => ':chart was added. Its version groups can now be picked by new plans.',
+            'updated' => ':chart was updated for all of its versions',
+            'refreshed' => ':chart is up to date',
+        ],
+        'version_groups' => [
+            'added' => 'Version group :group was added',
+            'renamed' => 'Version group renamed to :group',
+            'deleted' => 'Version group :group was deleted',
+            'default' => 'The default group cannot be deleted.',
+            'in_use' => 'A group with versions or plans cannot be deleted: move them to another group first.',
+            'no_chart' => 'Add a version first: groups belong to the chart the app is deployed from.',
+        ],
         'versions' => [
             'versions' => 'Versions',
             'added' => 'Version :version was added',
@@ -166,6 +180,7 @@ return [
             'updates_checked' => 'Checked for newer images and charts',
             'mass_upgrade_not_enabled' => 'Only the enabled version can be rolled out to existing apps.',
             'mass_upgrade_none' => 'Every app is already on this version.',
+            'group_move_enabled' => 'An enabled version cannot change group: disable it first.',
             'mass_upgrade_started' => 'Upgrading every app that runs an older version to :version',
         ],
         'denied' => [
@@ -248,6 +263,7 @@ return [
             'confirmed' => 'Thanks: :app will carry on shortly',
             'denied' => [
                 'version_exists' => 'The version you selected does not exist',
+                'version_group' => 'That version is not in the version group of this app\'s plan',
                 'migration_running' => 'A database migration to that server is already running or needs attention -- check the Tasks page',
                 'sso_move_running' => 'A sign-in move to that server is already running or needs attention -- check the Tasks page',
                 'web_move_running' => 'A move of that app is already running or needs attention -- check the Tasks page',
@@ -526,6 +542,7 @@ return [
             'not_activated' => 'This shared app hasn\'t been activated yet, so there is nothing to edit. Set it up from its own page.',
             'not_shareable' => ':app can\'t be run as a shared app.',
             'no_version' => 'This app has no enabled version to activate.',
+            'no_group_version' => 'This version group has no enabled version to activate.',
             'not_tested' => 'Version :version has to pass its tests on this shared app\'s plan, or have them bypassed, before it can be activated.',
         ],
     ],

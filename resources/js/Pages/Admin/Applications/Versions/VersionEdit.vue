@@ -14,15 +14,15 @@ import { Link, useForm } from '@inertiajs/vue3'
     <div class="row justify-center">
       <va-button v-if="version.toggle.state == 'disable' || version.test.can_enable" id="showEnableDisable" @click="showEnableDisable = !showEnableDisable">{{ version.toggle.label }}</va-button>
       <template v-else>
-        <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
-        <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
+        <Link v-if="version.test.gate === 'running'" :href="'/admin/apps/'+app.slug+'/versions/'+version.id+'/tests/'+version.test.run_id"><va-button id="viewTestRun">{{ $t('admin.versions.viewTestRun') }}</va-button></Link>
+        <va-button v-else id="runTests" :loading="testForm.processing" :disabled="testForm.processing" @click="testForm.post('/admin/apps/'+app.slug+'/versions/'+version.id+'/tests')">{{ $t('admin.versions.runTests') }}</va-button>
         <va-button v-if="version.test.can_bypass" id="bypassTests" class="ml-2" preset="secondary" color="danger" @click="showBypass = true">{{ $t('admin.versions.bypassTests') }}</va-button>
       </template>
       <va-button v-if="version.is_active && mass_upgrade.count > 0" id="massUpgrade" class="ml-2" color="success" @click="showMassUpgrade = true">{{ $t('admin.versions.massUpgradeButton', { count: mass_upgrade.count, version: version.version }) }}</va-button>
-      <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.version+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
+      <Link class="ml-2" :href="'/admin/apps/'+app.slug+'/versions/'+version.id+'/tests'"><va-button id="testResults" preset="secondary">{{ $t('admin.versions.testResults') }}</va-button></Link>
       <va-modal v-model="showEnableDisable" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
-          <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.version+'/'+version.toggle.state)">
+          <form @submit.prevent="form.get('/admin/apps/'+app.slug+'/versions/'+version.id+'/'+version.toggle.state)">
             <va-card-title class="m-0"> {{ version.toggle.label }} {{ $t('admin.versions.version') }} </va-card-title>
             <va-card-content class="m-0">
               <div v-if="version.toggle.state == 'disable'">
@@ -41,7 +41,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       </va-modal>
       <va-modal v-model="showMassUpgrade" no-outside-dismiss no-padding size="small" class="p-0">
         <template #content="{ ok }">
-          <form @submit.prevent="massUpgradeForm.post('/admin/apps/'+app.slug+'/versions/'+version.version+'/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
+          <form @submit.prevent="massUpgradeForm.post('/admin/apps/'+app.slug+'/versions/'+version.id+'/mass-upgrade', { onSuccess: () => showMassUpgrade = false })">
             <va-card-title class="m-0">{{ $t('admin.versions.massUpgradeTitle') }}</va-card-title>
             <va-card-content class="m-0">
               {{ $t('admin.versions.massUpgradeWarning', { count: mass_upgrade.count, version: version.version }) }}
@@ -82,7 +82,7 @@ import { Link, useForm } from '@inertiajs/vue3'
     </va-alert>
     <div class="row">
       <div class="flex xs12 lg12">
-      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.version)">
+      <form @submit.prevent="form.post('/admin/apps/'+app.slug+'/versions/'+version.id)">
         <AdminSettings v-if="can.helm_chart">
           <template #name>{{ $t('admin.versions.helmChart') }}</template>
           <template #settings>
@@ -95,6 +95,20 @@ import { Link, useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.version"
                   :error-messages="$page.props.errors.version"
                   />
+                <va-select
+                  v-if="groups.length > 1"
+                  v-model="form.version_group_id"
+                  id="versionGroup"
+                  :label="$t('admin.versions.group')"
+                  :messages="$t('admin.versions.groupMoveCaption')"
+                  class="my-2"
+                  :disabled="version.is_active"
+                  :options="groups"
+                  value-by="id"
+                  text-by="name"
+                  :error="$page.props.errors.version_group_id"
+                  :error-messages="$page.props.errors.version_group_id"
+                  />
                 <va-input v-model="form.chart_version"
                   :label="$t('admin.versions.helmChartVersion')"
                   id="chartVersion"
@@ -103,85 +117,25 @@ import { Link, useForm } from '@inertiajs/vue3'
                   :error="$page.props.errors.chart_version"
                   :error-messages="$page.props.errors.chart_version"
                   />
-                <va-input v-model="form.chart_name"
-                  :label="$t('admin.versions.helmChartName')"
-                  id="chartVersion"
-                  class="my-2"
-                  immediateValidation
-                  :error="$page.props.errors.chart_name"
-                  :error-messages="$page.props.errors.chart_name"
-                  />
-                <va-input v-model="form.helm_repo_name"
-                  :label="$t('admin.versions.helmChartRepo')"
-                  id="helmRepoName"
-                  class="my-2"
-                  immediateValidation
-                  :error="$page.props.errors.helm_repo_name"
-                  :error-messages="$page.props.errors.helm_repo_name"
-                  />
-                <va-select
-                  v-model="form.helm_repo_secret_id"
-                  :label="$t('admin.versions.helmChartRepoAuth')"
-                  id="helmRepoSecretId"
-                  class="my-2"
-                  immediateValidation
-                  clearable
-                  :placeholder="$t('admin.versions.helmRepoNone')"
-                  :options="helm_repo_secrets"
-                  text-by="name"
-                  value-by="id"
-                  :error="$page.props.errors.helm_repo_secret_id"
-                  :error-messages="$page.props.errors.helm_repo_secret_id"
-                  />
-                <va-button id="addHelmRepo" preset="secondary" size="small" class="my-2" @click="showAddHelmRepo = !showAddHelmRepo">{{ $t('admin.versions.addHelmRepo') }}</va-button>
-                <va-modal v-model="showAddHelmRepo" no-outside-dismiss no-padding size="small" class="p-0">
-                  <template #content="{ ok }">
-                    <form @submit.prevent="helmRepoSecretForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddHelmRepo = false; helmRepoSecretForm.reset() } })">
-                      <va-card-title class="m-0"> {{ $t('admin.versions.addHelmRepo') }} </va-card-title>
-                      <va-card-content class="m-0">
-                        <va-input v-model="helmRepoSecretForm.name"
-                          immediateValidation
-                          id="helmRepoSecretName"
-                          required-mark
-                          :label="$t('admin.repoSecrets.name')"
-                          class="mb-3"
-                          :messages="$t('admin.repoSecrets.nameMessage')"
-                          :error="$page.props.errors.name"
-                          :error-messages="$page.props.errors.name" />
-                        <va-input v-model="helmRepoSecretForm.registry"
-                          immediateValidation
-                          id="helmRepoSecretRegistry"
-                          required-mark
-                          :label="$t('admin.repoSecrets.registry')"
-                          class="mb-3"
-                          :messages="$t('admin.repoSecrets.registryMessage')"
-                          :error="$page.props.errors.registry"
-                          :error-messages="$page.props.errors.registry" />
-                        <va-input v-model="helmRepoSecretForm.username"
-                          immediateValidation
-                          id="helmRepoSecretUsername"
-                          :label="$t('admin.repoSecrets.username')"
-                          :messages="$t('admin.repoSecrets.usernameMessage')"
-                          class="mb-3"
-                          :error="$page.props.errors.username"
-                          :error-messages="$page.props.errors.username" />
-                        <va-input v-model="helmRepoSecretForm.password"
-                          type="password"
-                          immediateValidation
-                          id="helmRepoSecretPassword"
-                          :label="$t('admin.repoSecrets.password')"
-                          class="mb-3"
-                          :messages="$t('admin.repoSecrets.passwordMessage')"
-                          :error="$page.props.errors.password"
-                          :error-messages="$page.props.errors.password" />
-                      </va-card-content>
-                      <va-card-actions align="right" class="">
-                        <va-button color="textInverted" :disabled="helmRepoSecretForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
-                        <va-button type="submit" :disabled="helmRepoSecretForm.processing" id="submitHelmRepoSecret" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
-                      </va-card-actions>
-                    </form>
-                  </template>
-                </va-modal>
+                <div v-if="chart" id="chartSummary" class="my-3">
+                  <div class="va-text-secondary mb-1" style="font-size: 0.85rem">{{ $t('admin.versions.chart') }}</div>
+                  <va-card outlined>
+                    <va-card-content>
+                      <div class="row align-start justify-space-between">
+                        <dl class="chart-details">
+                          <dt>{{ $t('admin.versions.helmChartName') }}</dt>
+                          <dd id="chartDetailName">{{ chart.chart_name || '—' }}</dd>
+                          <dt>{{ $t('admin.versions.helmChartRepo') }}</dt>
+                          <dd id="chartDetailRepo">{{ chart.helm_repo || '—' }}</dd>
+                          <dt>{{ $t('admin.versions.helmChartRepoAuth') }}</dt>
+                          <dd id="chartDetailLogin">{{ chart.helm_repo_secret || $t('admin.versions.helmRepoNone') }}</dd>
+                        </dl>
+                        <va-button id="editChart" preset="secondary" size="small" @click="openEditChart">{{ $t('admin.versions.editChart') }}</va-button>
+                      </div>
+                      <div class="va-text-secondary mt-2" style="font-size: 0.85rem">{{ $t('admin.versions.chartSharedNote') }}</div>
+                    </va-card-content>
+                  </va-card>
+                </div>
                 <va-select
                   v-model="form.image_registry_id"
                   :label="$t('admin.versions.containerImageRegistry')"
@@ -254,7 +208,7 @@ import { Link, useForm } from '@inertiajs/vue3'
                   />
                 <div v-if="version.extra_images" id="extraImages" class="va-text-secondary mb-2" style="font-size: 0.85rem">
                   {{ $t('admin.versions.extraImages', { count: version.extra_images }) }}
-                  <Link :href="'/admin/apps/' + app.slug + '/versions/' + version.version + '/images'">{{ $t('admin.versions.manageImages') }}</Link>
+                  <Link :href="'/admin/apps/' + app.slug + '/versions/' +version.id + '/images'">{{ $t('admin.versions.manageImages') }}</Link>
                 </div>
                 <va-input v-model="form.port"
                   type="number"
@@ -358,6 +312,100 @@ import { Link, useForm } from '@inertiajs/vue3'
       </div>
     </div>
   </div>
+  <va-modal v-if="chart" v-model="showEditChart" no-outside-dismiss no-padding size="small" class="p-0">
+    <template #content="{ ok }">
+      <form @submit.prevent="chartForm.put('/admin/apps/' + app.slug + '/charts/' + chart.id, { onSuccess: () => showEditChart = false })">
+        <va-card-title class="m-0">{{ $t('admin.versions.editChart') }}</va-card-title>
+        <va-card-content class="m-0">
+          <div class="va-text-secondary mb-3" style="font-size: 0.85rem">{{ $t('admin.versions.chartSharedNote') }}</div>
+          <va-input v-model="chartForm.chart_name"
+            :label="$t('admin.versions.helmChartName')"
+            id="chartName"
+            class="mb-3"
+            immediateValidation
+            :error="$page.props.errors.chart_name"
+            :error-messages="$page.props.errors.chart_name"
+            />
+          <va-input v-model="chartForm.helm_repo"
+            :label="$t('admin.versions.helmChartRepo')"
+            :messages="$t('admin.versions.helmChartRepoMessage')"
+            id="helmRepo"
+            class="mb-3"
+            immediateValidation
+            :error="$page.props.errors.helm_repo"
+            :error-messages="$page.props.errors.helm_repo"
+            />
+          <va-select
+            v-model="chartForm.helm_repo_secret_id"
+            :label="$t('admin.versions.helmChartRepoAuth')"
+            id="helmRepoSecretId"
+            class="mb-1"
+            immediateValidation
+            clearable
+            :placeholder="$t('admin.versions.helmRepoNone')"
+            :options="helm_repo_secrets"
+            text-by="name"
+            value-by="id"
+            :error="$page.props.errors.helm_repo_secret_id"
+            :error-messages="$page.props.errors.helm_repo_secret_id"
+            />
+          <va-button id="addHelmRepo" preset="secondary" size="small" @click="showAddHelmRepo = true">{{ $t('admin.versions.addHelmRepo') }}</va-button>
+        </va-card-content>
+        <va-card-actions align="right" class="">
+          <va-button color="textInverted" :disabled="chartForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button type="submit" id="submitChart" :disabled="chartForm.processing" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+        </va-card-actions>
+      </form>
+    </template>
+  </va-modal>
+  <va-modal v-model="showAddHelmRepo" no-outside-dismiss no-padding size="small" class="p-0">
+    <template #content="{ ok }">
+      <form @submit.prevent="helmRepoSecretForm.post('/admin/settings/repo-secrets', { onSuccess: () => { showAddHelmRepo = false; helmRepoSecretForm.reset() } })">
+        <va-card-title class="m-0"> {{ $t('admin.versions.addHelmRepo') }} </va-card-title>
+        <va-card-content class="m-0">
+          <va-input v-model="helmRepoSecretForm.name"
+            immediateValidation
+            id="helmRepoSecretName"
+            required-mark
+            :label="$t('admin.repoSecrets.name')"
+            class="mb-3"
+            :messages="$t('admin.repoSecrets.nameMessage')"
+            :error="$page.props.errors.name"
+            :error-messages="$page.props.errors.name" />
+          <va-input v-model="helmRepoSecretForm.registry"
+            immediateValidation
+            id="helmRepoSecretRegistry"
+            required-mark
+            :label="$t('admin.repoSecrets.registry')"
+            class="mb-3"
+            :messages="$t('admin.repoSecrets.registryMessage')"
+            :error="$page.props.errors.registry"
+            :error-messages="$page.props.errors.registry" />
+          <va-input v-model="helmRepoSecretForm.username"
+            immediateValidation
+            id="helmRepoSecretUsername"
+            :label="$t('admin.repoSecrets.username')"
+            :messages="$t('admin.repoSecrets.usernameMessage')"
+            class="mb-3"
+            :error="$page.props.errors.username"
+            :error-messages="$page.props.errors.username" />
+          <va-input v-model="helmRepoSecretForm.password"
+            type="password"
+            immediateValidation
+            id="helmRepoSecretPassword"
+            :label="$t('admin.repoSecrets.password')"
+            class="mb-3"
+            :messages="$t('admin.repoSecrets.passwordMessage')"
+            :error="$page.props.errors.password"
+            :error-messages="$page.props.errors.password" />
+        </va-card-content>
+        <va-card-actions align="right" class="">
+          <va-button color="textInverted" :disabled="helmRepoSecretForm.processing" @click="ok">{{ $t('common.cancel') }}</va-button>
+          <va-button type="submit" :disabled="helmRepoSecretForm.processing" id="submitHelmRepoSecret" class="mr-2 mb-2">{{ $t('common.submit') }}</va-button>
+        </va-card-actions>
+      </form>
+    </template>
+  </va-modal>
 </template>
 
 <script>
@@ -367,15 +415,31 @@ export default {
   },
   props: {
     version: Object,
+    groups: {
+      type: Array,
+      default: () => []
+    },
     errors: Object,
     announcements: Object,
     roles: Object,
     app: Object,
+    chart: Object,
     can: Object,
     recommendations: Object,
     mass_upgrade: Object,
     image_registries: Array,
     helm_repo_secrets: Array
+  },
+  methods: {
+    // Starts from what the chart has, not from what an earlier edit left unsaved
+    openEditChart () {
+      this.chartForm.defaults({
+        chart_name: this.chart.chart_name,
+        helm_repo: this.chart.helm_repo,
+        helm_repo_secret_id: this.chart.helm_repo_secret_id
+      }).reset()
+      this.showEditChart = true
+    }
   },
   data () {
     return {
@@ -392,6 +456,12 @@ export default {
       showRecommendations: false,
       showAddImageRegistry: false,
       showAddHelmRepo: false,
+      showEditChart: false,
+      chartForm: useForm({
+        chart_name: this.chart?.chart_name,
+        helm_repo: this.chart?.helm_repo,
+        helm_repo_secret_id: this.chart?.helm_repo_secret_id
+      }),
       imageRegistryForm: useForm({
         type: 'image',
         name: '',
@@ -410,10 +480,8 @@ export default {
         id: this.version.id,
         version: this.version.version,
         admin_path: this.version.admin_path,
+        version_group_id: this.version.version_group_id,
         chart_version: this.version.chart_version,
-        chart_name: this.version.chart_name,
-        helm_repo_name: this.version.helm_repo_name,
-        helm_repo_secret_id: this.version.helm_repo_secret_id,
         image_repo_name: this.version.image_repo_name,
         port: this.version.port,
         image_registry_id: this.version.image_registry_id,
@@ -429,4 +497,19 @@ export default {
 </script>
 
 <style>
+.chart-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+}
+
+.chart-details dt {
+  color: var(--va-secondary);
+}
+
+.chart-details dd {
+  margin: 0;
+  word-break: break-all;
+}
 </style>

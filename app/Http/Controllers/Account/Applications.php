@@ -203,7 +203,7 @@ class Applications extends Controller
             return back()->with('error', 'Unable to update app while updates in progress');
         }
 
-        $validateConfigurations = Application::validateConfigurations($app->application, true);
+        $validateConfigurations = Application::validateConfigurations($app->application, true, $app->plan);
         $validated = $request->validate(array_merge([
             'label' => 'required|string|max:100',
             'domain' => [

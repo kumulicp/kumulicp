@@ -57,7 +57,7 @@ class AspectInputs
 
     public static function configurationAspect(AppInstance $app_instance, string $configuration): string
     {
-        $config = Application::profile($app_instance->application)->configuration($configuration);
+        $config = Application::profileFor($app_instance)->configuration($configuration);
 
         return Arr::get($config, 'aspect')
             ?? Arr::get((array) $app_instance->plan?->additionalConfigs(), "$configuration.aspect")
@@ -67,7 +67,7 @@ class AspectInputs
     /** The aspect a feature belongs to, null when only its own aspect (FeatureAspect) is about it */
     public static function featureAspect(AppInstance $app_instance, string $feature): ?string
     {
-        $found = Application::profile($app_instance->application)->features()->get($feature);
+        $found = Application::profileFor($app_instance)->features()->get($feature);
 
         if ($aspect = $found->aspect ?? null) {
             return $aspect;

@@ -120,9 +120,9 @@ class VersionUpdateChecker
 
     private function checkChart(AppVersion $version): ?array
     {
-        $chart_name = $version->setting('chart_name');
+        $chart_name = $version->chartName();
         $current = $version->setting('chart_version');
-        $repo = $version->setting('helm_repo_name');
+        $repo = $version->helmRepo();
 
         if (! $chart_name || ! $current || ! $repo) {
             return null;

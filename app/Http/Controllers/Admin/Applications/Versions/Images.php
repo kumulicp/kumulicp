@@ -185,7 +185,7 @@ class Images extends Controller
             'version' => [
                 'id' => $version->id,
                 'version' => $version->name,
-                'chart' => $version->setting('chart_name') ? $version->setting('chart_name').' '.$version->setting('chart_version') : null,
+                'chart' => $version->chartName() ? $version->chartName().' '.$version->setting('chart_version') : null,
             ],
             'images' => $version->images()->with('registrySecret')->get()->map(fn (AppVersionImage $image) => [
                 'id' => $image->id,
@@ -216,7 +216,7 @@ class Images extends Controller
                 ['url' => '/admin/apps', 'label' => __('admin.applications.apps')],
                 ['label' => $app->name, 'url' => '/admin/apps/'.$app->slug],
                 ['url' => '/admin/apps/'.$app->slug.'/versions', 'label' => __('admin.applications.versions.versions')],
-                ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->name, 'label' => $version->name],
+                ['url' => '/admin/apps/'.$app->slug.'/versions/'.$version->id, 'label' => $version->name],
                 ['label' => __('admin.applications.versions.images')],
             ],
         ]);
@@ -232,6 +232,6 @@ class Images extends Controller
 
     private function url(Application $app, AppVersion $version): string
     {
-        return '/admin/apps/'.$app->slug.'/versions/'.$version->name.'/images';
+        return '/admin/apps/'.$app->slug.'/versions/'.$version->id.'/images';
     }
 }

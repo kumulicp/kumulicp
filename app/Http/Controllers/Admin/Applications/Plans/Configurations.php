@@ -81,7 +81,7 @@ class Configurations extends Controller
     {
         abort_unless($plan->hasFullSettings(), 404);
 
-        $validateConfigurations = ApplicationFacade::validateConfigurations($app);
+        $validateConfigurations = ApplicationFacade::validateConfigurations($app, false, $plan);
 
         $validationTypes = [
             'string' => 'nullable|string',

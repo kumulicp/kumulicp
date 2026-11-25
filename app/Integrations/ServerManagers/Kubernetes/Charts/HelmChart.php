@@ -146,7 +146,7 @@ abstract class HelmChart extends Chart
     // is not the app's own (see MaintenanceChart).
     public function helmChartName(): ?string
     {
-        return $this->app_instance->version->setting('chart_name');
+        return $this->app_instance->version->chartName();
     }
 
     public function helmChartVersion(): ?string
@@ -159,7 +159,7 @@ abstract class HelmChart extends Chart
     // The chart repository: a plain https URL, an oci:// reference, or for Rancher the name of a ClusterRepo
     public function helmRepo(): ?string
     {
-        return $this->app_instance->version->setting('helm_repo_name');
+        return $this->app_instance->version->helmRepo();
     }
 
     // The credentials of a private chart repository
@@ -167,7 +167,7 @@ abstract class HelmChart extends Chart
     {
         $version = $this->app_instance->version;
 
-        return $version->requiresHelmRepoAuth() ? $version->helmRepoSecret : null;
+        return $version->requiresHelmRepoAuth() ? $version->chartRepoSecret() : null;
     }
 
     public function appStorage()

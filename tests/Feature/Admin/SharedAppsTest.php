@@ -3,10 +3,12 @@
 namespace Tests\Feature\Admin;
 
 use App\Actions\Tests\ProvisionVersionTestStep;
+use App\AppChart;
 use App\AppInstance;
 use App\Application;
 use App\AppPlan;
 use App\AppVersion;
+use App\AppVersionGroup;
 use App\Enums\ApplicationSource;
 use App\Enums\TaskStatus;
 use App\Enums\VersionTestRunStatus;
@@ -144,6 +146,35 @@ class SharedAppsTest extends TestCase
         $this->assertTrue($plan->hidden);
         $this->assertNull($plan->web_server_id);
         $this->assertSame(0, Task::where('action_slug', 'application_activate')->count());
+    }
+
+    public function test_a_shared_app_can_pick_its_version_group_when_it_is_added()
+    {
+        $admin = $this->adminUser();
+        $this->sharedOrganization();
+        $app = Application::where('slug', 'demo_app')->first();
+        $default_version = $this->activeVersion($app);
+
+        $chart = AppChart::factory()->for($app, 'application')->create();
+        $group = AppVersionGroup::factory()->for($chart, 'chart')->create();
+        $version = AppVersion::factory()->create(['application_id' => $app->id, 'version_group_id' => $group->id, 'status' => 'active']);
+
+        $this->actingAs($admin)->get('/admin/service/shared-apps')
+            ->assertInertia(fn ($page) => $page->has('available_apps.0.version_groups', 2));
+
+        // Without one it follows the default group, as before
+        $this->actingAs($admin)->post('/admin/service/shared-apps', ['app' => $app->id, 'label' => 'Plain'])->assertSessionDoesntHaveErrors();
+        $this->assertNull(AppPlan::where('name', 'Plain')->firstOrFail()->version_group_id);
+        $this->assertSame($default_version->id, AppInstance::where('label', 'Plain')->firstOrFail()->version_id);
+
+        $this->actingAs($admin)->post('/admin/service/shared-apps', ['app' => $app->id, 'label' => 'Picked', 'version_group_id' => $group->id])->assertSessionDoesntHaveErrors();
+        $this->assertSame($group->id, AppPlan::where('name', 'Picked')->firstOrFail()->version_group_id);
+        $this->assertSame($version->id, AppInstance::where('label', 'Picked')->firstOrFail()->version_id);
+
+        // A group of another app is refused
+        $foreign = AppVersionGroup::factory()->create();
+        $this->actingAs($admin)->post('/admin/service/shared-apps', ['app' => $app->id, 'label' => 'Foreign', 'version_group_id' => $foreign->id])->assertSessionHasErrors('version_group_id');
+        $this->assertNull(AppPlan::where('name', 'Foreign')->first());
     }
 
     public function test_tests_and_activation_wait_for_a_web_server()
@@ -371,7 +402,7 @@ class SharedAppsTest extends TestCase
             ->where('shared_app.setup.gate', 'bypassed')
             ->where('shared_app.setup.can_activate', true)
             ->where('shared_app.setup.current_step', 5)
-            ->where('shared_app.setup.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}"));
+            ->where('shared_app.setup.run_url', "/admin/apps/{$shared->application->slug}/versions/{$version->id}/tests/{$run->id}"));
     }
 
     public function test_the_steps_start_at_the_servers_and_point_to_each_page()
@@ -415,7 +446,7 @@ class SharedAppsTest extends TestCase
             "{$plan_url}/secrets",
             "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}",
             "/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/helm-values",
-            "/admin/apps/{$app->slug}/versions/{$version->name}/tests/{$run->id}",
+            "/admin/apps/{$app->slug}/versions/{$version->id}/tests/{$run->id}",
         ];
 
         foreach ($pages as $page) {
@@ -701,7 +732,7 @@ class SharedAppsTest extends TestCase
         [$admin, $shared, $version, $plan] = $this->readyToTest();
         $run = $this->recordTestRun($version, VersionTestRunStatus::PASSED, $plan);
 
-        $this->actingAs($admin)->get("/admin/apps/{$shared->application->slug}/versions/{$version->name}/tests/{$run->id}")
+        $this->actingAs($admin)->get("/admin/apps/{$shared->application->slug}/versions/{$version->id}/tests/{$run->id}")
             ->assertInertia(fn ($inertia) => $inertia
                 ->where('breadcrumbs.1.url', "/admin/service/shared-apps/{$shared->id}")
                 ->where('shared_app.id', $shared->id));

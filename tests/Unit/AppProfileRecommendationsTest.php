@@ -2,7 +2,23 @@
 
 use App\Integrations\Applications\AppProfile;
 
-it('makes the settings of a version from the chart and image a profile recommends', function () {
+it('has the chart a profile recommends: its name and the repository it is published in', function () {
+    $profile = new class extends AppProfile
+    {
+        protected $recommendations = [
+            'helm_chart_name' => 'demo-chart',
+            'helm_chart_version' => '2.5.0',
+            'helm_chart_repo' => 'https://charts.example.com',
+            'image_repo' => 'demo/app',
+        ];
+    };
+
+    // The version of the chart is the version's own
+    expect($profile->recommendedChart())->toBe(['chart_name' => 'demo-chart', 'helm_repo' => 'https://charts.example.com'])
+        ->and((new AppProfile)->recommendedChart())->toBe([]);
+});
+
+it('makes the settings of a version from the chart version and image a profile recommends', function () {
     $profile = new class extends AppProfile
     {
         protected $recommendations = [
@@ -16,11 +32,9 @@ it('makes the settings of a version from the chart and image a profile recommend
         ];
     };
 
-    // The name of the chart is not the repository it is in; the version's name and path are not settings
+    // Where the chart is published is the chart's; the version's name and path are not settings
     expect($profile->recommendedVersionSettings())->toBe([
-        'chart_name' => 'demo-chart',
         'chart_version' => '2.5.0',
-        'helm_repo_name' => 'https://charts.example.com',
         'image_repo_name' => 'demo/app',
         'image_registry' => 'registry.example.com',
     ]);

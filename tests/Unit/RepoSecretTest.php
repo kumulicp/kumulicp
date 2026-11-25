@@ -1,5 +1,6 @@
 <?php
 
+use App\AppChart;
 use App\Application;
 use App\AppVersion;
 use App\Integrations\ServerManagers\Rancher\API\Secret;
@@ -46,13 +47,21 @@ it('defaults to the image type', function () {
     expect($repo_secret->type)->toBe(RepoSecret::TYPE_IMAGE);
 });
 
+// A version of a chart of its own, whose repository needs the login
+function versionOfChartWithLogin(Application $application, RepoSecret $login): AppVersion
+{
+    $chart = AppChart::factory()->for($application)->create(['helm_repo_secret_id' => $login->id]);
+
+    return AppVersion::factory()->create(['application_id' => $application->id, 'version_group_id' => $chart->defaultVersionGroup()->id]);
+}
+
 it('scopes versions() by type', function () {
     $image_secret = RepoSecret::factory()->create();
     $helm_secret = RepoSecret::factory()->helm()->create();
     $application = Application::factory()->create();
 
     AppVersion::factory()->create(['application_id' => $application->id, 'image_registry_id' => $image_secret->id]);
-    AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $helm_secret->id]);
+    versionOfChartWithLogin($application, $helm_secret);
 
     expect($image_secret->versions()->count())->toBe(1);
     expect($helm_secret->versions()->count())->toBe(1);
@@ -63,7 +72,7 @@ it('matches versions() via either column for the both type', function () {
     $application = Application::factory()->create();
 
     AppVersion::factory()->create(['application_id' => $application->id, 'image_registry_id' => $both_secret->id]);
-    AppVersion::factory()->create(['application_id' => $application->id, 'helm_repo_secret_id' => $both_secret->id]);
+    versionOfChartWithLogin($application, $both_secret);
 
     expect($both_secret->versions()->count())->toBe(2);
 });

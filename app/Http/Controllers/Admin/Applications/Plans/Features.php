@@ -16,7 +16,7 @@ class Features extends Controller
     {
         abort_unless($plan->hasFullSettings(), 404);
 
-        $features = ApplicationFacade::profile($app->slug)->features();
+        $features = ApplicationFacade::profileFor($plan)->features();
         $settings = $plan->publicSettings();
 
         $plan_features = ApplicationFacade::plan($plan)->features()->all();

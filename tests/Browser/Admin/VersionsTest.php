@@ -55,7 +55,7 @@ describe('Admin Versions', function () {
     });
 
     it('creates a version with previous_version copy option and shows source in select', function () {
-        visit("/admin/apps/{$this->demoApp->slug}/versions")
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions")
             ->click('#addVersion')
             ->fill('#name input', '2.0')
             ->click('text=Previous Version')
@@ -63,11 +63,13 @@ describe('Admin Versions', function () {
             ->click('#copyVersion')
             ->click("[role=option]:text-is(\"{$this->sourceVersion->name}\")")
             ->click('#submit')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/2.0");
+            ->assertPathBeginsWith("/admin/apps/{$this->demoApp->slug}/versions/");
 
         $version = AppVersion::where('application_id', $this->demoApp->id)
             ->where('name', '2.0')
             ->firstOrFail();
+
+        $page->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
         expect($version->setting('chart_version'))->toBe('1.2.3');
         expect($version->admin_path)->toBe('/source-admin');
@@ -87,13 +89,13 @@ describe('Admin Versions', function () {
             'roles' => ['order' => [$selectedRole->id]],
         ]);
 
-        visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles")
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles")
+        visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles")
+            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles")
             ->assertSee('Selected Roles')
             ->assertSee('Available Roles');
 
         // Selected role must be in the left (selected) column
-        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
         $page->assertPresent('#selected-role-'.$selectedRole->id);
         $page->assertPresent('#available-role-'.$availableRole->id);
 
@@ -114,7 +116,7 @@ describe('Admin Versions', function () {
             'roles' => ['order' => $orderedIds],
         ]);
 
-        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
 
         // All roles should be in the selected column
         foreach ($orderedIds as $id) {
@@ -148,7 +150,7 @@ describe('Admin Versions', function () {
             'roles' => ['order' => [$firstRole->id]],
         ]);
 
-        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
 
         // Verify initial state
         $page->assertPresent('#selected-role-'.$firstRole->id);
@@ -189,7 +191,7 @@ describe('Admin Versions', function () {
         ");
 
         $page->click('#updateRoles')
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}/roles");
+            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}/roles");
     });
 
     // ─── Update version ───────────────────────────────────────────────────────
@@ -208,8 +210,8 @@ describe('Admin Versions', function () {
             'roles' => ['order' => $appRoles->pluck('id')->toArray()],
         ]);
 
-        visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}")
+        visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}")
+            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}")
             ->fill('#adminPath input', '/updated-admin')
             ->click('#defaultAdminRoles')
             ->click("[role=option]:text-is(\"{$adminRole->label}\")")
@@ -220,7 +222,7 @@ describe('Admin Versions', function () {
             ->click('#submit')
             // The form posts back to the page it is on, so wait for the flash message rather than the path
             ->assertSee("Version {$version->name} was updated")
-            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
+            ->assertPathIs("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
         $version->refresh();
         expect($version->admin_path)->toBe('/updated-admin');
@@ -238,7 +240,7 @@ describe('Admin Versions', function () {
             'roles' => ['order' => $roles],
         ]);
 
-        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->name}");
+        $page = visit("/admin/apps/{$this->demoApp->slug}/versions/{$version->id}");
 
         // Default is none — neither extra input should be present
         $page->assertNotPresent('#announcementUrl');

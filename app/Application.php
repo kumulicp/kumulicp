@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use OffloadProject\Toggle\Facades\Toggle;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Arr;
+use OffloadProject\Toggle\Facades\Toggle;
 
 /**
  * @property int $id
@@ -27,6 +28,7 @@ use Illuminate\Support\Arr;
  * @property-read int|null $active_instances
  * @property-read Collection<int, AppVersion> $versions
  * @property-read Collection<int, AppPlan> $plans
+ * @property-read Collection<int, AppChart> $charts
  * @property-read Collection<int, AppRole> $roles
  * @property-read Collection<int, AppScreenshot> $screenshots
  * @property-read Collection<int, Tag> $tags
@@ -99,6 +101,59 @@ class Application extends Model
     }
 
     /**
+     * @return HasMany<AppChart, $this>
+     */
+    public function charts(): HasMany
+    {
+        return $this->hasMany(AppChart::class, 'application_id');
+    }
+
+    /**
+     * The group a new version goes in when none is chosen: the default group of
+     * the default chart. An app that has no chart yet gets one, taken from the
+     * version being added.
+     */
+    public function defaultVersionGroup(?AppVersion $version = null): AppVersionGroup
+    {
+        $chart = $this->charts()->where('is_default', true)->first() ?? AppChart::createDefaultFor($this, $version);
+
+        return $chart->defaultVersionGroup();
+    }
+
+    /**
+     * The default group, when the app has one yet. Unlike defaultVersionGroup()
+     * it makes nothing.
+     */
+    public function findDefaultVersionGroup(): ?AppVersionGroup
+    {
+        return $this->versionGroups()->where('app_version_groups.is_default', true)->where('app_charts.is_default', true)->first();
+    }
+
+    /**
+     * Every group of every chart of the app.
+     *
+     * @return HasManyThrough<AppVersionGroup, AppChart, $this>
+     */
+    public function versionGroups(): HasManyThrough
+    {
+        return $this->hasManyThrough(AppVersionGroup::class, AppChart::class, 'application_id', 'app_chart_id');
+    }
+
+    /**
+     * The groups a new plan can pick: those of all its charts.
+     *
+     * @return \Illuminate\Support\Collection<int, AppVersionGroup>
+     */
+    public function selectableVersionGroups()
+    {
+        return $this->versionGroups()
+            ->with('chart')
+            ->orderBy('app_charts.id')
+            ->orderBy('app_version_groups.id')
+            ->get();
+    }
+
+    /**
      * @return BelongsToMany<Tag, $this>
      */
     public function tags(): BelongsToMany
@@ -148,25 +203,40 @@ class Application extends Model
 
     /**
      * The installs of real customers running an older version than the given
-     * one. Test orgs are left out: they are deleted, not upgraded.
+     * one, among those on plans that use the version's group. Test orgs are left
+     * out: they are deleted, not upgraded.
      *
      * @return Collection<int, AppInstance>
      */
     public function instancesBehind(AppVersion $version): Collection
     {
         $comparator = new VersionComparator;
+        $group = $version->versionGroup;
 
         return $this->instances()
             ->whereIn('organization_id', Organization::notTest()->select('organizations.id'))
+            ->when($group, fn (Builder $query) => $query->where(function (Builder $query) use ($group) {
+                $query->whereIn('plan_id', $group->planIds());
+
+                if ($group->isAppDefault()) {
+                    $query->orWhereNull('plan_id');
+                }
+            }))
             ->with('version')
             ->get()
             ->filter(fn (AppInstance $instance) => $instance->version && $comparator->compare($version->name, $instance->version->name) > 0)
             ->values();
     }
 
+    /**
+     * The enabled version of the default group: what a plan that picked no group
+     * is installed and upgraded with. See AppPlan::activeVersion() for a plan's own.
+     */
     public function active_version()
     {
-        return $this->versions()->where('status', 'active')->first();
+        $group = $this->findDefaultVersionGroup();
+
+        return $group ? $group->activeVersion : $this->versions()->where('status', 'active')->first();
     }
 
     /**

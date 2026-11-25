@@ -20,6 +20,7 @@ use Illuminate\Support\Collection as SupportCollection;
 /**
  * @property int $id
  * @property int $application_id
+ * @property int|null $version_group_id
  * @property string|null $name
  * @property string|null $admin_path
  * @property array $roles
@@ -28,7 +29,7 @@ use Illuminate\Support\Collection as SupportCollection;
  * @property-read Application $application
  * @property-read Collection<int, AppVersionImage> $images
  * @property-read RepoSecret|null $imageRegistry
- * @property-read RepoSecret|null $helmRepoSecret
+ * @property-read AppVersionGroup|null $versionGroup
  */
 class AppVersion extends Model
 {
@@ -44,6 +45,14 @@ class AppVersion extends Model
 
     protected static function booted(): void
     {
+        // Every version belongs to a group, so one made without choosing joins the
+        // default group of its app
+        static::creating(function (AppVersion $version) {
+            if ($version->version_group_id === null && $version->application_id) {
+                $version->version_group_id = Application::find($version->application_id)?->defaultVersionGroup($version)->id;
+            }
+        });
+
         // Update checks only describe enabled versions: once a version is no
         // longer enabled, its last result must not keep being shown
         static::saving(function (AppVersion $version) {
@@ -246,6 +255,35 @@ class AppVersion extends Model
     }
 
     /**
+     * The plans a test of this version covers: the ones customers can pick that
+     * use its group. A group no plan uses yet is tested with all of them.
+     *
+     * @return Builder<AppPlan>
+     */
+    public function testPlansQuery(): Builder
+    {
+        $all = fn () => AppPlan::where('application_id', $this->application_id)->where('archive', 0)->visible();
+
+        if ($this->versionGroup) {
+            $in_group = $all()->whereIn('id', $this->versionGroup->planIds());
+
+            if ($in_group->exists()) {
+                return $in_group;
+            }
+        }
+
+        return $all();
+    }
+
+    /**
+     * @return BelongsTo<AppVersionGroup, $this>
+     */
+    public function versionGroup(): BelongsTo
+    {
+        return $this->belongsTo(AppVersionGroup::class, 'version_group_id');
+    }
+
+    /**
      * The runs that test the version itself with the plans customers can pick.
      * Runs for a shared app's own plan are kept apart: see planTestRuns().
      *
@@ -350,14 +388,70 @@ class AppVersion extends Model
         return $this->image_registry_id !== null && $this->imageRegistry && $this->imageRegistry->requiresAuth();
     }
 
-    public function helmRepoSecret()
+    /**
+     * The chart the version is deployed from: its group's. A version has no chart
+     * of its own to change, only the chart version.
+     */
+    public function chart(): ?AppChart
     {
-        return $this->belongsTo('App\RepoSecret', 'helm_repo_secret_id');
+        return $this->versionGroup?->chart;
+    }
+
+    /**
+     * The chart's name in its repository.
+     */
+    public function chartName(): ?string
+    {
+        return $this->chart()?->chart_name;
+    }
+
+    /**
+     * Where the chart is published: a repository URL, an oci:// reference or the
+     * name of a Rancher ClusterRepo.
+     */
+    public function helmRepo(): ?string
+    {
+        return $this->chart()?->helm_repo;
+    }
+
+    /**
+     * The login the chart's repository needs. A chart decides this for all of its versions.
+     */
+    public function chartRepoSecret(): ?RepoSecret
+    {
+        return $this->chart()?->helmRepoSecret;
+    }
+
+    public function chartRepoSecretId(): ?int
+    {
+        return $this->chart()?->helm_repo_secret_id;
     }
 
     public function requiresHelmRepoAuth(): bool
     {
-        return $this->helm_repo_secret_id !== null && $this->helmRepoSecret && $this->helmRepoSecret->requiresAuth();
+        return (bool) $this->chartRepoSecret()?->requiresAuth();
+    }
+
+    /**
+     * The settings that decide how the version is deployed, with where its chart
+     * comes from. For fingerprints, which must change when the chart does,
+     * whichever of its versions are looked at (and which come out as they did
+     * when the chart's name and repository were kept in the settings).
+     *
+     * @return array<string, mixed>
+     */
+    public function deploymentSettings(): array
+    {
+        $settings = Arr::except($this->settings ?? [], ['update_check']);
+        $chart = $this->chart();
+
+        foreach (['chart_name' => $chart?->chart_name, 'helm_repo_name' => $chart?->helm_repo] as $key => $value) {
+            if ($value) {
+                $settings[$key] = $value;
+            }
+        }
+
+        return $settings;
     }
 
     public function roles(string|array|null $type = null, $all = true): Collection

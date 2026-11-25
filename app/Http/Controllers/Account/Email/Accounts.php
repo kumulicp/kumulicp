@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Account\Email;
 
 use App\Http\Controllers\Controller;
 use App\Mailbox;
-use App\Ldap\Models\Email;
 use App\OrgDomain;
 use App\Rules\EmailLocalPart;
 use App\Rules\MailAddressAvailable;

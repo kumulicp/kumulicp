@@ -109,7 +109,7 @@ class ApplicationReadiness
         }
 
         return $this->issue('version', true, __('organization.readiness.version_inactive.message', ['app' => $this->app->name, 'version' => $latest->name]), [
-            $this->action(__('organization.readiness.version_inactive.action', ['version' => $latest->name]), "/admin/apps/{$this->app->slug}/versions/{$latest->name}"),
+            $this->action(__('organization.readiness.version_inactive.action', ['version' => $latest->name]), "/admin/apps/{$this->app->slug}/versions/{$latest->id}"),
         ]);
     }
 

@@ -614,7 +614,7 @@ class AppInstancePlanService
 
         foreach (Arr::get($this->plan->settings, 'features', []) as $feature) {
             if (in_array($feature['status'], ['enabled', 'optional'])) {
-                $features[] = Application::profile($this->application()->slug)->feature($feature['name']);
+                $features[] = Application::profileFor($this->plan)->feature($feature['name']);
             }
         }
 

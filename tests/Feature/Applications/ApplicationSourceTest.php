@@ -64,8 +64,13 @@ it('sets up the recommended version as the default and a default plan when an ap
     $version = $app->versions()->sole();
     expect($version->name)->toBe('33.0.1');
     expect($version->status)->toBe('active');
-    expect($version->setting('chart_name'))->toBe('nextcloud');
-    expect($version->setting('helm_repo_name'))->toBe('https://nextcloud.github.io/helm/');
+    // Where the chart comes from is the app's chart; the version has its version
+    $chart = $app->charts()->sole();
+    expect($chart->is_default)->toBeTrue();
+    expect($chart->chart_name)->toBe('nextcloud');
+    expect($chart->helm_repo)->toBe('https://nextcloud.github.io/helm/');
+    expect($version->version_group_id)->toBe($chart->defaultVersionGroup()->id);
+    expect($version->setting('chart_name'))->toBeNull();
     expect($version->setting('chart_version'))->toBe('9.0.5');
     expect($version->setting('image_repo_name'))->toBe('library/nextcloud');
     expect($app->enabled)->toBeFalse();

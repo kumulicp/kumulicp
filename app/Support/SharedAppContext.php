@@ -158,7 +158,7 @@ class SharedAppContext
 
     public static function runUrl(AppInstance $shared_app, VersionTestRun $run): string
     {
-        return "/admin/apps/{$shared_app->application->slug}/versions/{$shared_app->version->name}/tests/{$run->id}";
+        return "/admin/apps/{$shared_app->application->slug}/versions/{$shared_app->version->id}/tests/{$run->id}";
     }
 
     /**

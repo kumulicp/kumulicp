@@ -87,6 +87,20 @@ return [
             'enabled' => 'Rol :role habilitado',
             'disabled' => 'Rol :role deshabilitado',
         ],
+        'charts' => [
+            'charts' => 'Charts',
+            'added' => 'Se añadió :chart. Sus grupos de versiones ya pueden elegirlos los planes nuevos.',
+            'updated' => 'Se actualizó :chart para todas sus versiones',
+            'refreshed' => ':chart está al día',
+        ],
+        'version_groups' => [
+            'added' => 'Se añadió el grupo de versiones :group',
+            'renamed' => 'El grupo de versiones ahora se llama :group',
+            'deleted' => 'Se eliminó el grupo de versiones :group',
+            'default' => 'El grupo predeterminado no se puede eliminar.',
+            'in_use' => 'Un grupo con versiones o planes no se puede eliminar: muévelos primero a otro grupo.',
+            'no_chart' => 'Añade primero una versión: los grupos pertenecen al chart desde el que se despliega la aplicación.',
+        ],
         'versions' => [
             'versions' => 'Versiones',
             'added' => 'Se agregó la versión :version',
@@ -105,6 +119,7 @@ return [
             'updates_checked' => 'Se buscaron imágenes y charts más recientes',
             'mass_upgrade_not_enabled' => 'Solo la versión habilitada se puede desplegar en las aplicaciones existentes.',
             'mass_upgrade_none' => 'Todas las aplicaciones ya están en esta versión.',
+            'group_move_enabled' => 'Una versión habilitada no puede cambiar de grupo: deshabilítala primero.',
             'mass_upgrade_started' => 'Actualizando a :version todas las aplicaciones que usan una versión anterior',
         ],
         'denied' => [
@@ -182,6 +197,7 @@ return [
             'migrating_database' => 'La base de datos de :app se está migrando a :server',
             'denied' => [
                 'version_exists' => 'La versión que seleccionaste no existe',
+                'version_group' => 'Esa versión no está en el grupo de versiones del plan de esta aplicación',
                 'migration_running' => 'Ya hay una migración de base de datos a ese servidor en curso o que requiere atención -- revisa la página de Tareas',
                 'maintenance_unsupported' => 'Esta aplicación no puede tener una página de mantenimiento: debe estar desplegada como su propio release, en un servidor web Kubernetes o Rancher',
                 'maintenance_not_active' => 'La aplicación solo puede entrar o salir del modo de mantenimiento mientras está activa',
@@ -422,6 +438,7 @@ return [
             'not_activated' => 'Esta aplicación compartida aún no se ha activado, así que no hay nada que editar. Configúrala desde su propia página.',
             'not_shareable' => ':app no se puede ejecutar como aplicación compartida.',
             'no_version' => 'Esta aplicación no tiene ninguna versión habilitada para activar.',
+            'no_group_version' => 'Este grupo de versiones no tiene ninguna versión habilitada para activar.',
             'not_tested' => 'La versión :version debe superar sus pruebas en el plan de esta aplicación compartida, o tenerlas omitidas, antes de poder activarla.',
         ],
     ],
