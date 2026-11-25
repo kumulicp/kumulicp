@@ -7,6 +7,8 @@ use App\OrgServer;
 use App\Server;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Applications\DemoAppProfile;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -15,19 +17,24 @@ use Tests\TestCase;
  * touches anything.
  */
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 afterEach(function () {
+    $this->restoreServerInterfaces();
     DemoAppProfile::$sso = false;
 });
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
 
     // The demo app signs people in through an SSO server, unless a test says it does not
     DemoAppProfile::$sso = true;
 
     $this->organization = Organization::find(1);
-    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->appInstance = $this->activeDemoApp();
     $this->appInstance->status = 'active';
     // On an app server, as an app has to be for the others to be checked against
     $this->appInstance->web_server_id = (OrgServer::where('organization_id', $this->organization->id)->where('server_id', 1)->first()

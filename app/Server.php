@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -50,8 +51,10 @@ class Server extends Model
     /**
      * The app servers (web servers) that can reach this one: for a database or SSO server. See
      * App\Support\ServerReach for what none means.
+     *
+     * @return BelongsToMany<Server, $this>
      */
-    public function app_servers()
+    public function app_servers(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'server_app_servers', 'server_id', 'app_server_id')->withTimestamps();
     }

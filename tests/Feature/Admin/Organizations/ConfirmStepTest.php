@@ -8,6 +8,8 @@ use App\Organization;
 use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\Steps\FakeAwaitConfirmation;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
@@ -17,13 +19,21 @@ use Tests\TestCase;
  * done, and the app's page where they say so.
  */
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+
+afterEach(function () {
+    $this->restoreServerInterfaces();
+});
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
-    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->appInstance = $this->activeDemoApp();
 });
 
 function confirmUrl($test): string

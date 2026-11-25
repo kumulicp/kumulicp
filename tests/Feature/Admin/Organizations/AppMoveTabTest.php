@@ -10,6 +10,8 @@ use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Applications\DemoAppProfile;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -18,12 +20,17 @@ use Tests\TestCase;
  * the servers, and where the actions it starts go back to.
  */
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 afterEach(function () {
+    $this->restoreServerInterfaces();
     DemoAppProfile::$sso = false;
 });
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
 
     // The demo app signs people in through an SSO server
@@ -31,7 +38,7 @@ beforeEach(function () {
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
-    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->appInstance = $this->activeDemoApp();
     $this->appInstance->status = 'active';
 
     $this->oldCluster = tabServer('web', 'old-cluster', ['interface' => 'rancher']);

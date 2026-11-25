@@ -14,6 +14,7 @@ use App\Organization;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Task;
+use Tests\Support\TestSupports;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 
@@ -108,6 +109,18 @@ trait TestsApplicationLifecycle
         }
 
         $this->fail("Task {$task->id} did not complete after {$this->lifecycleMaxIterations} polls (status: {$task->status->value}).");
+    }
+
+    /**
+     * An active instance of the demo app for organization 1, made the way an administrator's app is, for a
+     * test of what is done to an app from its pages. TestSupports::seed() does not make one, so this comes
+     * after it, and after the fake server interfaces are set up.
+     */
+    protected function activeDemoApp(): AppInstance
+    {
+        ['app' => $app, 'plan' => $plan] = (new TestSupports)->prepareDemoApp();
+
+        return $this->runActivate($plan, Organization::find(1), $app);
     }
 
     protected function runActivate(AppPlan $plan, Organization $org, Application $app): AppInstance

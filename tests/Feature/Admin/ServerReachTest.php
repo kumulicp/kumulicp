@@ -24,7 +24,10 @@ beforeEach(function () {
 
 function reachServer(string $type, string $name, array $attributes = []): Server
 {
-    return Server::factory()->create($attributes + ['type' => $type, 'name' => $name, 'host' => "{$name}.example.com"]);
+    // An interface its type has a profile for, which is what its edit page looks up
+    $interface = ['web' => 'rancher', 'database' => 'app_database', 'sso' => 'authentik'][$type];
+
+    return Server::factory()->create($attributes + ['type' => $type, 'interface' => $interface, 'name' => $name, 'host' => "{$name}.example.com"]);
 }
 
 function reachableBy(Server $server, Server ...$app_servers): Server

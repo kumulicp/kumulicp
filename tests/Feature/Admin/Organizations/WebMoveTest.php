@@ -15,6 +15,8 @@ use App\Task;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Applications\DemoAppProfile;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
@@ -24,17 +26,22 @@ use Tests\TestCase;
  * sequencing and rollback of the move itself is covered by ApplicationWebMoveTest.
  */
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 
 afterEach(function () {
+    $this->restoreServerInterfaces();
     DemoAppProfile::$storage_handover = null;
 });
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
-    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->appInstance = $this->activeDemoApp();
     $this->old = OrgServer::forceCreate(['organization_id' => $this->organization->id, 'server_id' => moveWebServer('old-cluster')->id]);
     $this->appInstance->status = 'active';
     $this->appInstance->web_server_id = $this->old->id;
