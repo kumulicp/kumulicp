@@ -39,7 +39,7 @@ class SecurityHeaders
         // views script-by-script doesn't actually work. Scope a relaxed,
         // nonce-free policy to just that route instead of weakening the CSP
         // for the whole app.
-        $captcha = static::captchaSources($request);
+        $captcha = self::captchaSources($request);
         // Adds the captcha provider's hosts to a directive, on the pages that show its widget
         $with = static fn (string $directive): string => $captcha === [] ? $directive : $directive.' '.implode(' ', $captcha);
 
