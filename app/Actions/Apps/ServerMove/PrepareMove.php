@@ -37,6 +37,17 @@ abstract class PrepareMove extends Step
     abstract protected function blockers(AppInstance $app_instance, Server $target_server): array;
 
     /**
+     * The same, for the task being run: a move that was started with more than the target server (see
+     * ApplicationWebMove) checks that too.
+     *
+     * @return array<int, string>
+     */
+    protected function taskBlockers(Task $task, AppInstance $app_instance, Server $target_server): array
+    {
+        return $this->blockers($app_instance, $target_server);
+    }
+
+    /**
      * What the failure message says about the target server after the rollback, if anything.
      */
     protected function rollbackNote(?OrgServer $target): ?string
@@ -49,7 +60,7 @@ abstract class PrepareMove extends Step
         $app_instance = $task->app_instance;
         $target_server = Server::findOrFail($task->getValue('target_server_id'));
 
-        if ($blockers = $this->blockers($app_instance, $target_server)) {
+        if ($blockers = $this->taskBlockers($task, $app_instance, $target_server)) {
             return ActionResult::fail(MoveBlockers::summary($blockers));
         }
 
@@ -79,8 +90,8 @@ abstract class PrepareMove extends Step
         // Still pointing somewhere else than where it came from (an app that had no
         // such server goes back to having none)
         $moved = $previous
-            ? $app_instance->$column !== $previous->id
-            : ($target && $app_instance->$column === $target->id);
+            ? $previous->id !== $app_instance->$column
+            : ($target && $target->id === $app_instance->$column);
 
         if ($moved) {
             $previous ? $app_instance->$relation()->associate($previous) : $app_instance->$relation()->dissociate();

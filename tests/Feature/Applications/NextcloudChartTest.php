@@ -3,6 +3,7 @@
 use App\AppPlan;
 use App\AppVersion;
 use App\AppVersionImage;
+use App\Integrations\Applications\Nextcloud\NextcloudProfile;
 use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
 use App\Organization;
 use App\OrgServer;
@@ -68,6 +69,16 @@ it('gives the app its own database password rather than the organization secret'
     expect($values['externalDatabase']['host'])->toBe('shared-db.db.svc');
     expect($values['externalDatabase']['user'])->toBe('demo_nextcloud');
     expect($values['externalDatabase']['password'])->toBe('instance-database-secret');
+
+    // And in a config file of its own: config.php, on a volume that came from another cluster, has the host the app
+    // was installed with, and is only overridden by the files read after it
+    $config = $values['nextcloud']['configs']['database.config.php'];
+    expect($config)->toStartWith('<?php')
+        ->and($config)->toContain("'dbhost' => 'shared-db.db.svc'");
+});
+
+it('does not override the database host for an app that has no database server of its own', function () {
+    expect(nextcloudChartValues()['nextcloud']['configs'])->not->toHaveKey('database.config.php');
 });
 
 // The chart for a new Nextcloud instance. Images are given to the version before it is activated.
@@ -119,6 +130,25 @@ function nextcloudChartValues(array $configurations = []): array
 {
     return nextcloudChart($configurations)->values();
 }
+
+it('names the release resources after the instance, as the other charts do, not after its id', function () {
+    $chart = nextcloudChart();
+
+    $fullname = $chart->values()['fullnameOverride'];
+
+    expect($fullname)->toBe($chart->organization->slug.'-'.$chart->app_instance->name)
+        ->and($fullname)->not->toContain((string) $chart->app_instance->id.'-')
+        ->and($fullname)->toEndWith($chart->chartName());
+});
+
+it('keeps the name an existing Nextcloud instance was deployed with', function () {
+    $chart = nextcloudChart();
+    $chart->app_instance->updateSetting('override.chart.values.fullNameOverride', "{$chart->organization->slug}-nextcloud-{$chart->app_instance->id}");
+
+    $values = (new NextcloudChart($chart->organization, $chart->app_instance->fresh()))->values();
+
+    expect($values['fullnameOverride'])->toBe("{$chart->organization->slug}-nextcloud-{$chart->app_instance->id}");
+});
 
 it('leaves the chart security contexts and port 80 alone, so it matches the official chart', function () {
     $values = nextcloudChartValues();
@@ -201,7 +231,7 @@ it('runs the image the profile recommends for a version without its own imaginar
 });
 
 it('no longer has configurations for the imaginary image', function () {
-    $profile = new App\Integrations\Applications\Nextcloud\NextcloudProfile;
+    $profile = new NextcloudProfile;
 
     foreach (['imaginary-image-registry', 'imaginary-image-repository', 'imaginary-image-tag'] as $name) {
         expect($profile->configuration($name))->toBeNull();

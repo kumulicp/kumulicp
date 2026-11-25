@@ -64,9 +64,9 @@ class ApplicationSsoMove extends ApplicationServerMove
      *
      * @return array<int, string>
      */
-    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true): array
+    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true, bool $with_reach = true): array
     {
-        $blockers = MoveBlockers::all($app_instance, 'sso', $target_server, $require_active);
+        $blockers = MoveBlockers::all($app_instance, 'sso', $target_server, $require_active, with_reach: $with_reach);
 
         // An earlier move left the app's provider there. Setting the app up would find that one
         // instead of making a new one, and so never make the client id and secret the app needs.

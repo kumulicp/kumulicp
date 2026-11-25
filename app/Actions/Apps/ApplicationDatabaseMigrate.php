@@ -75,7 +75,7 @@ class ApplicationDatabaseMigrate extends ApplicationServerMove
      *
      * @return array<int, string>
      */
-    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true): array
+    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true, bool $with_reach = true): array
     {
         $current = $app_instance->database_server;
         $messages = [];
@@ -101,9 +101,13 @@ class ApplicationDatabaseMigrate extends ApplicationServerMove
             $messages[] = __('messages.database_migration.invalid_server');
         }
 
-        // The app has to be able to reach it: the app server of the app, which is why it has to have one
-        foreach (MoveBlockers::reach($app_instance, 'database', $target_server) as $reason) {
-            $messages[] = MoveBlockers::message($reason, 'database', MoveBlockers::reachParams($app_instance, $reason));
+        // The app has to be able to reach it: the app server of the app, which is why it has to have one. Not
+        // when it is moved along with the app server (ApplicationWebMove): the old one is not updated to use
+        // it, and the new one is checked there
+        if ($with_reach) {
+            foreach (MoveBlockers::reach($app_instance, 'database', $target_server) as $reason) {
+                $messages[] = MoveBlockers::message($reason, 'database', MoveBlockers::reachParams($app_instance, $reason));
+            }
         }
 
         // Restoring replaces the database it loads into, so a different server
