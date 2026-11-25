@@ -6,17 +6,27 @@ use App\OrgServer;
 use App\Server;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+
+afterEach(function () {
+    $this->restoreServerInterfaces();
+});
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
 
     $this->user = User::find(1);
     $this->organization = Organization::find(1);
-    $this->appInstance = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->appInstance = $this->activeDemoApp();
     $this->appInstance->status = 'active';
     $this->appInstance->save();
 });

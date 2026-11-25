@@ -57,6 +57,15 @@ rollback, started from a button that says what it will do.
    moved on its own; there is no bulk move for now, and a plan edit can't stand in for one.
 6. **Leave the old copy alone.** Do not delete the old database, release, provider or volume as
    part of the move. Offer "clean up the old server" as a separate, later action.
+7. **A move of the app server leaves the old server alone.** When the app is moved to another web
+   server, its database and sign-in server only have to be reachable from the *new* app server, and are
+   changed in the same move when the new one can't reach what the app has (or when the administrator
+   chooses others). The app is stopped first (the old release is scaled to zero, which is the only change
+   made to it), the database is copied and the sign-in is set up on the new server while it is stopped, and
+   the new release is installed against them. The old release is never updated again unless the move is
+   given up, and then it is only scaled up with the old servers put back, so going back is quick. Changing
+   only the database or the sign-in of an app that stays where it is, is a migration of its own, which does
+   update the app (and so needs the app's server to reach the new one).
 
 ## 1. Database server
 
@@ -153,7 +162,7 @@ the same on a new cluster.
 
 What the code does:
 
-- PVC names come from per-chart code and are stable: Nextcloud `<org>-nextcloud-<id>-nextcloud`,
+- PVC names come from per-chart code and are stable: Nextcloud `<org>-<instance name>-nextcloud` (new instances; ones deployed earlier keep the older `<org>-nextcloud-<id>-nextcloud`),
   generic charts `<fullname>-<volumeName>`. On a new cluster the chart would ask for the **same
   name**.
 - Size comes from `storage_quota`/`chart_storage` (`HelmChart::appStorage()`), access mode and
@@ -248,15 +257,43 @@ once).
   behind an explicit, labelled repair option.
 - Fix the silent `web` backup no-op.
 
-**Phase 2 - SSO move** (smallest and best understood), built as a stack, each slice based on the one
-before: the LDAP-source check in the Authentik server test; `ApplicationSsoMove` (snapshot and clear
-the stale ids, set up on the new server, then the standard update); the Move button and route; the
-old-server cleanup action. `ApplicationSsoMove`, the stale-state
-clear, an LDAP-source check added to the Authentik server test, ordered release/settings/SSO
-steps, wiring for apps that do not read the SSO values. Runbook in Appendix A.
+**Phase 2 - SSO move.** Done, as a stack of four PRs: the LDAP-source check in the Authentik server
+test; `ApplicationSsoMove` (snapshot and clear the stale ids, set up on the new server, then the
+standard update, with rollback); the Move Sign-in button and route; and `ApplicationSsoCleanup`,
+which removes the old server's provider by the pk the move saved. One rule came out of it: an app
+cannot be moved back to a server that still has its old entry, because setup would find that
+provider instead of making one with a client id and secret, so the entry has to be removed first.
+Still open from this phase: wiring for apps that do not read the stored SSO values (CiviCRM and
+generic apps get a provider but no configuration). Runbook in Appendix A.
 
-**Phase 3 - web move.** Claim handover mapping, `AwaitVolume` gate, `ApplicationWebMove`, DNS
-refresh, `blocker()`. Runbook in Appendix B. Add the old-copy cleanup action last.
+**Phase 3 - web move**, built as a stack, each slice based on the one before:
+
+1. The storage handover (`App\Support\StorageHandover`): one mapping from a claim name, access mode,
+   storage class and size to the settings each chart reads (`AppProfile::storageHandover()`), with
+   what was there before kept so it can be put back. A new volume clears the claim name the old
+   volume may have left in the settings.
+2. A "wait for an admin to confirm" step, and the button on the app page that confirms it.
+3. `ApplicationWebMove`: prepare, scale the old release to zero (its own flag, not
+   `expand_storage`), wait for the volume, hand over the storage and flip the pointer and run the
+   standard update on the new server, check it is up, refresh the DNS records. Rollback
+   restores the settings, points back and scales the old release up again.
+4. The Move button on the app page, with the target server, and the route.
+5. Removing the old release, as its own action (`delete()` on the old server's interface has
+   side effects on the old server's redirects that need care).
+
+All five are done, as a stack of six PRs (the move is in two: stop and wait for the volume, then install, check and
+refresh the DNS). Notes that came out of building it:
+
+- The pointer is flipped before the install, since several chart pieces read the instance's web server. The old
+  release is only scaled down (`quiesced_for_move`), never removed, until the cleanup.
+- The cleanup asks the old server to `uninstallRelease()`. Its `delete()` also rewrites the app's redirects on that
+  server and, for the charts that are updated rather than removed, installs the app there again.
+- Rancher and Kubernetes servers can't be moved between: their values differ.
+- Domains the control panel doesn't manage are listed in the organization's log with the new address.
+- Still open: a volume backup driver (the volume is restored by hand), and the other charts' claim keys have only
+  been checked against their code, not against a cluster.
+
+Runbook in Appendix B.
 
 **Phase 4 - polish.** Backup copy between servers, optional volume backup driver, `sub_mode`
 guidance in the server form. No bulk move for now: each app is moved on its own.

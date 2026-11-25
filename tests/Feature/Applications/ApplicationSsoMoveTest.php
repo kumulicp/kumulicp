@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Apps\ApplicationSsoCleanup;
 use App\Actions\Apps\ApplicationSsoMove;
 use App\AppInstance;
 use App\Enums\TaskStatus;
@@ -70,6 +71,8 @@ function appOnSsoServer(): array
     $old = OrgServer::forceCreate(['organization_id' => $org->id, 'server_id' => ssoServer('old-sso')->id]);
 
     $instance->sso_server_id = $old->id;
+    $instance->web_server_id = (OrgServer::where('organization_id', $org->id)->where('server_id', 1)->first()
+        ?? OrgServer::forceCreate(['organization_id' => $org->id, 'server_id' => 1]))->id;
     $instance->settings = array_merge($instance->settings ?? [], OLD_SSO_SETTINGS);
     $instance->save();
 
@@ -224,4 +227,46 @@ it('lists everything in the way of the move at once', function () {
     ])->and(ApplicationSsoMove::blockers($instance, ssoServer('new-sso')))->toBe([
         __('messages.server_move.app_not_active', ['type' => 'sso']),
     ])->and(ApplicationSsoMove::blockers($instance, ssoServer('other-sso'), require_active: false))->toBe([]);
+});
+
+it('removes the old server\'s entry by the ids the move saved, and touches nothing of the new server\'s', function () {
+    [$instance, $old] = appOnSsoServer();
+    $move = finishSsoMove(startSsoMove($instance, ssoServer('new-sso')));
+    $instance = $instance->fresh();
+    $settings = $instance->settings;
+    FakeSSO::reset();
+
+    expect(ApplicationSsoCleanup::pending($instance)->pluck('id')->all())->toBe([$move->id]);
+
+    $cleanup = finishSsoMove(Action::execute(new ApplicationSsoCleanup($instance, $move))->fresh());
+
+    // Asked of the old server alone, which looks its own ids up in what the move saved
+    expect($cleanup->status)->toBe(TaskStatus::COMPLETE)
+        ->and(FakeSSO::$calls)->toBe([['delete', $old->id, OLD_SSO_SETTINGS['sso']]])
+        ->and($instance->fresh()->settings)->toBe($settings)
+        ->and(ApplicationSsoCleanup::pending($instance->fresh())->all())->toBe([]);
+});
+
+it('has nothing to remove for an app that had no sign-in before', function () {
+    [$instance] = appOnSsoServer();
+    $instance->settings = array_diff_key($instance->settings, OLD_SSO_SETTINGS);
+    $instance->save();
+
+    finishSsoMove(startSsoMove($instance->fresh(), ssoServer('new-sso')));
+
+    expect(ApplicationSsoCleanup::pending($instance->fresh())->all())->toBe([]);
+});
+
+it('will not move the app back to a server that still has its old entry', function () {
+    [$instance, $old] = appOnSsoServer();
+    $move = finishSsoMove(startSsoMove($instance, ssoServer('new-sso')));
+    $instance = $instance->fresh();
+
+    // Setting up would find that provider instead of making one with a client id and secret
+    expect(ApplicationSsoMove::blockers($instance, $old->server))
+        ->toBe([__('messages.sso_move.old_entry_left', ['server' => 'old-sso'])]);
+
+    finishSsoMove(Action::execute(new ApplicationSsoCleanup($instance, $move))->fresh());
+
+    expect(ApplicationSsoMove::blockers($instance->fresh(), $old->server))->toBe([]);
 });

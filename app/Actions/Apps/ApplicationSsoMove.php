@@ -10,6 +10,7 @@ use App\Actions\Apps\SsoMove\PrepareSsoMove;
 use App\Actions\Apps\SsoMove\SetupSso;
 use App\AppInstance;
 use App\Server;
+use App\Task;
 
 /**
  * Moves an app's sign-in to another single sign-on server:
@@ -63,9 +64,20 @@ class ApplicationSsoMove extends ApplicationServerMove
      *
      * @return array<int, string>
      */
-    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true): array
+    public static function blockers(AppInstance $app_instance, Server $target_server, bool $require_active = true, bool $with_reach = true): array
     {
-        return MoveBlockers::all($app_instance, 'sso', $target_server, $require_active);
+        $blockers = MoveBlockers::all($app_instance, 'sso', $target_server, $require_active, with_reach: $with_reach);
+
+        // An earlier move left the app's provider there. Setting the app up would find that one
+        // instead of making a new one, and so never make the client id and secret the app needs.
+        $left = ApplicationSsoCleanup::pending($app_instance)
+            ->contains(fn (Task $move) => ApplicationSsoCleanup::previousServer($move)?->server_id === $target_server->id);
+
+        if ($left) {
+            $blockers[] = __('messages.sso_move.old_entry_left', ['server' => $target_server->name]);
+        }
+
+        return $blockers;
     }
 
     public static function steps(): array

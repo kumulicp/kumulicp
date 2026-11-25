@@ -33,7 +33,8 @@ return new class extends Migration
             $table->string('token_hash', 64)->nullable();
             $table->timestamp('confirmation_sent_at')->nullable();
             $table->timestamps();
-            $table->unique(['email_forwarder_id', 'destination']);
+            // Named: the generated name is 66 characters and MySQL allows 64
+            $table->unique(['email_forwarder_id', 'destination'], 'email_fwd_dest_forwarder_destination_unique');
         });
 
         Schema::table('mailbox_addresses', function (Blueprint $table) {

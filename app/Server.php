@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read AppInstance|null $app_instance
  * @property-read Collection<int, OrgServer> $org_servers
  * @property-read Collection<int, AppInstance> $app_instances
+ * @property-read Collection<int, Server> $app_servers
  */
 class Server extends Model
 {
@@ -44,6 +46,17 @@ class Server extends Model
     public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
+    }
+
+    /**
+     * The app servers (web servers) that can reach this one: for a database or SSO server. See
+     * App\Support\ServerReach for what none means.
+     *
+     * @return BelongsToMany<Server, $this>
+     */
+    public function app_servers(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'server_app_servers', 'server_id', 'app_server_id')->withTimestamps();
     }
 
     public function org_servers()

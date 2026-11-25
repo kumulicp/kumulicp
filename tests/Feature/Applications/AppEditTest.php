@@ -6,21 +6,30 @@ use App\OrgServer;
 use App\Server;
 use App\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\Concerns\TestsApplicationLifecycle;
+use Tests\Support\Concerns\TestsWithServerInterfaces;
 use Tests\Support\TestSupports;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
+uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
+
+afterEach(function () {
+    $this->restoreServerInterfaces();
+});
 
 beforeEach(function () {
+    $this->setupFakeServerInterfaces();
+    $this->fakeNotificationsAndMail();
+
     (new TestSupports)->seed();
+
+    $this->appInstance = $this->activeDemoApp();
 });
 
 function editPage($test)
 {
-    $organization = Organization::find(1);
-    $app = AppInstance::where('organization_id', $organization->id)->first();
-
-    return $test->actingAs(User::find(1))->get("/admin/organizations/{$organization->id}/apps/{$app->id}/edit");
+    return $test->actingAs(User::find(1))->get("/admin/organizations/{$test->appInstance->organization_id}/apps/{$test->appInstance->id}/edit");
 }
 
 it('offers the active servers of each type on the edit page, including ones the organization is not on', function () {
@@ -47,7 +56,7 @@ it('does not offer inactive servers or backup servers', function () {
 
 it('shows the names of the servers the app is on', function () {
     $organization = Organization::find(1);
-    $app = AppInstance::where('organization_id', $organization->id)->first();
+    $app = $this->appInstance;
 
     $web = Server::factory()->create(['type' => 'web', 'name' => 'Web A']);
     $sso = Server::factory()->create(['type' => 'sso', 'name' => 'SSO A']);
