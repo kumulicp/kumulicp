@@ -1,6 +1,7 @@
 <?php
 
 use App\Organization;
+use App\Task;
 use App\User;
 use Illuminate\Support\Facades\Config;
 use Tests\Support\TestSupports;
@@ -210,4 +211,57 @@ it('does not currently support deleting a suborganization', function () {
     $response->assertSuccessful();
 
     expect(Organization::find($suborganization->id))->not->toBeNull();
+});
+
+function suborganizationPayload(string $subdomain): array
+{
+    return [
+        'subdomain' => $subdomain,
+        'name' => 'Sub '.$subdomain,
+        'description' => 'A test suborganization',
+        'email' => $subdomain.'@example.com',
+        'phone_number' => '123-456-7890',
+        'street' => '123 Sub St',
+        'zipcode' => '12345',
+        'city' => 'Subtown',
+        'state' => 'AZ',
+        'country' => 'US',
+        'type' => 'business',
+        'terms_of_use' => true,
+    ];
+}
+
+it('does not allow adding a suborganization when the plan does not have it enabled', function () {
+    $this->organization->plan->updateSettings(['suborganizations.enabled' => false]);
+    $this->organization->plan->save();
+
+    $this->post('/settings/suborganizations', suborganizationPayload('noplan'))->assertForbidden();
+
+    expect(Organization::where('slug', 'noplan')->exists())->toBeFalse();
+});
+
+it('does not allow a suborganization to add a suborganization', function () {
+    $suborganization = Organization::factory()->create([
+        'slug' => 'subparent',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+        'status' => 'active',
+    ]);
+    $user = User::factory()->create([
+        'organization_id' => $suborganization->id,
+        'email_verified_at' => now(),
+    ]);
+    $this->actingAs($user);
+
+    $this->post('/settings/suborganizations', suborganizationPayload('grandchild'))->assertForbidden();
+
+    expect(Organization::where('slug', 'grandchild')->exists())->toBeFalse();
+});
+
+it('updates the subscription of a new suborganization', function () {
+    $this->post('/settings/suborganizations', suborganizationPayload('billed'))->assertSessionHasNoErrors();
+
+    $suborganization = Organization::where('slug', 'billed')->firstOrFail();
+
+    expect(Task::where('organization_id', $suborganization->id)->where('action_slug', 'subscription_update')->exists())->toBeTrue();
 });

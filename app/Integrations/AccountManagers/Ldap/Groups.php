@@ -129,7 +129,10 @@ class Groups
         return new Group($group, $this->organization);
     }
 
-    private function ensureContainers(string $category): void
+    /**
+     * Create the containers this organization's groups go in, and the category's if one is given.
+     */
+    public function ensureContainers(?string $category = null): void
     {
         foreach (Dn::groupContainers($this->organization, $category) as [$ou, $dn]) {
             if (! OrganizationalUnit::find($dn)) {

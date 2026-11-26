@@ -84,7 +84,9 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('add-suborganization', function (User $user) {
-            return ! $user->organization->parent_organization && $user->organization->status !== 'deactivated'
+            return ! $user->organization->parent_organization
+                && $user->organization->status !== 'deactivated'
+                && $user->organization->plan?->setting('suborganizations.enabled')
                 ? Response::allow()
                 : Response::deny();
         });

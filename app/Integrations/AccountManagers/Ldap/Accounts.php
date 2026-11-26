@@ -63,6 +63,12 @@ class Accounts
             $org_admin->save();
         }
 
+        // A suborganization shares its parent's entry, so the entries above already exist. What is its own are
+        // its groups' containers.
+        if ($organization->parent_organization_id) {
+            (new Groups($organization))->ensureContainers();
+        }
+
         return $this->account($organization);
     }
 
