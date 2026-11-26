@@ -54,11 +54,27 @@ class UserAllowance
             return false;
         }
 
-        return match ($this->accessTypeFor($apps)) {
-            AccessType::STANDARD => ! $this->basePlan()->isMax('standard'),
-            AccessType::BASIC => ! $this->basePlan()->isMax('basic'),
-            default => true,
-        };
+        $apps = collect($apps);
+
+        // A package plan counts everyone together, so the apps give one seat between them. Where the
+        // organization pays for each app, every app has its own cap and the registrant takes a seat in each
+        $groups = $this->organization->plan?->type === 'package' ? [$apps] : $apps->map(fn ($app) => collect([$app]))->all();
+
+        foreach ($groups as $group) {
+            $plan = $this->organization->plan?->type === 'package' ? $this->basePlan() : $this->subscription()->app_instance($group->first());
+
+            $full = match ($this->accessTypeFor($group)) {
+                AccessType::STANDARD => $plan->isMax('standard'),
+                AccessType::BASIC => $plan->isMax('basic'),
+                default => false,
+            };
+
+            if ($full) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

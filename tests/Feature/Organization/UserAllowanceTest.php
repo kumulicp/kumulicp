@@ -13,6 +13,7 @@ use App\Enums\AccessType;
 use App\Organization;
 use App\OrgUserRegistration;
 use App\Services\Organization\UserAllowance;
+use App\Support\Facades\AccountManager;
 use App\Support\Facades\Subscription;
 use App\User;
 use Illuminate\Support\Facades\Gate;
@@ -49,6 +50,7 @@ function openRegistration(Organization $organization, string|array $access_types
     $plan = AppPlan::factory()->create(['application_id' => $application->id]);
     $plan->settings = array_merge($plan->settings, [
         'self_registration_enabled' => true,
+        'standard' => array_merge($plan->settings['standard'], ['max' => null]),
         'basic' => array_merge($plan->settings['basic'], ['enabled' => $basic_enabled, 'name' => $basic_enabled ? 'Basic' : null]),
     ]);
     $plan->save();
@@ -273,4 +275,20 @@ it('works the same for a plan that counts users for the whole organization', fun
     limitStandardUsers($this->organization, 1);
 
     $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(null));
+});
+
+it('counts the cap on the app plan when the organization pays for each app and its own plan has none', function () {
+    $app = openRegistration($this->organization, 'standard');
+    $app->plan->updateSettings(['standard.max' => 1]);
+    $app->plan->save();
+    $this->organization->plan->updateSettings(['standard.max' => null]);
+    $this->organization->plan->save();
+
+    // The app has the one standard user its plan allows
+    $users = Mockery::mock();
+    $users->shouldReceive('appStandardUsers')->andReturn([new stdClass]);
+    $users->shouldReceive('appBasicUsers')->andReturn([]);
+    AccountManager::shouldReceive('users')->andReturn($users);
+
+    $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(__('messages.org_registration.full')));
 });
