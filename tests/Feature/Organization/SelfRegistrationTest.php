@@ -20,6 +20,7 @@ use App\AppVersion;
 use App\Events\Users\UserCreated as UserCreatedEvent;
 use App\NewUserCode;
 use App\Notifications\OrgRegistrationComplete;
+use App\Notifications\OrgRegistrationExists;
 use App\Notifications\OrgRegistrationVerification;
 use App\Organization;
 use App\OrgUserRegistration;
@@ -193,6 +194,22 @@ it('sends no verification link to an address that already has an account', funct
 
     Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 0);
     expect(OrgUserRegistration::count())->toBe(0);
+});
+
+it('tells the owner of an address that already has an account, with where to sign in and reset', function () {
+    $this->post($this->base, ['email' => 'demo@example.com'])->assertSessionHasNoErrors();
+
+    Notification::assertSentOnDemand(
+        OrgRegistrationExists::class,
+        function ($notification, $channels, $notifiable) {
+            $mail = $notification->toMail($notifiable);
+
+            return $notifiable->routes['mail'] === 'demo@example.com'
+                && $mail->actionUrl === route('login')
+                && collect($mail->outroLines)->contains(fn ($line) => str_contains($line, route('password.request')));
+        },
+    );
+    Notification::assertSentOnDemandTimes(OrgRegistrationExists::class, 1);
 });
 
 it('stops an address after five tries from the same IP', function () {
@@ -556,21 +573,49 @@ it('does not add users to a deactivated organization', function () {
 
 it('answers the same for an address that has an account and one that does not', function () {
     $known = $this->post($this->base, ['email' => 'demo@example.com']);
-    RateLimiter::clear('org-register:demo:127.0.0.1');
     $unknown = $this->post($this->base, ['email' => 'nobody@example.com']);
 
     $known->assertSessionHasNoErrors();
-    expect($known->headers->get('Location'))->toBe($unknown->headers->get('Location'));
-})->skip('Finding 4: an address that already has an account gets an error, the others get the pending page.');
+    $unknown->assertSessionHasNoErrors();
+    expect($known->getStatusCode())->toBe($unknown->getStatusCode())
+        ->and($known->headers->get('Location'))->toBe($unknown->headers->get('Location'))
+        ->and($known->headers->get('Location'))->toBe(route('public.org.register.pending', ['organization' => 'demo']));
+
+    // What differs is the email, which only the owner of the address sees
+    Notification::assertSentOnDemandTimes(OrgRegistrationExists::class, 1);
+    Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 1);
+});
 
 it('limits how many verification emails one address receives, whatever the IP', function () {
     foreach (range(1, 6) as $i) {
-        $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.{$i}"])
+        $response = $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.{$i}"])
             ->post($this->base, ['email' => 'victim@example.com']);
+
+        // Over the limit it answers like any other time, so it shows nothing about the address
+        $response->assertSessionHasNoErrors()
+            ->assertRedirect(route('public.org.register.pending', ['organization' => 'demo']));
     }
 
     Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 3);
-})->skip('Finding 5: there is no per-address limit; the number is the value phase 1 settles on.');
+});
+
+it('limits an address that has an account in the same way, and answers the same', function () {
+    foreach (range(1, 5) as $i) {
+        $response = $this->withServerVariables(['REMOTE_ADDR' => "10.0.1.{$i}"])
+            ->post($this->base, ['email' => 'demo@example.com']);
+        $response->assertSessionHasNoErrors();
+    }
+
+    Notification::assertSentOnDemandTimes(OrgRegistrationExists::class, 3);
+});
+
+it('counts an address once whatever its case', function () {
+    foreach (['Victim@Example.com', 'victim@example.com', 'VICTIM@EXAMPLE.COM', 'victim@EXAMPLE.com'] as $i => $email) {
+        $this->withServerVariables(['REMOTE_ADDR' => "10.0.2.{$i}"])->post($this->base, ['email' => $email]);
+    }
+
+    Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 3);
+});
 
 it('does not count a mistyped address against the limit', function () {
     foreach (range(1, 5) as $i) {
@@ -580,7 +625,22 @@ it('does not count a mistyped address against the limit', function () {
     $this->post($this->base, ['email' => 'new@example.com'])->assertSessionHasNoErrors();
 
     Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 1);
-})->skip('Finding 5: the attempt is counted before the address is validated.');
+});
+
+it('does not count a failed captcha against the limit either', function () {
+    Settings::update('captcha_provider', 'turnstile');
+    Settings::update('captcha_secret_key', 'secret-key');
+    // The provider accepts one token only
+    Http::fake(['challenges.cloudflare.com/*' => fn ($request) => Http::response(['success' => $request['response'] === 'good'])]);
+
+    foreach (range(1, 5) as $i) {
+        $this->post($this->base, ['email' => 'new@example.com', 'captcha_token' => 'bad'])->assertSessionHasErrors('email');
+    }
+
+    $this->post($this->base, ['email' => 'new@example.com', 'captcha_token' => 'good'])->assertSessionHasNoErrors();
+
+    Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 1);
+});
 
 it('leaves no half-made user and keeps the link when creating the account fails', function () {
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
