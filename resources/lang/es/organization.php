@@ -149,6 +149,7 @@ return [
             'glitch' => ':email no pudo ser creado debido a un fallo con nuestro servidor. Trabajaremos para resolver el problema de inmediato.',
             'delete' => 'No tienes permiso para eliminar esta cuenta de correo',
             'forwarders' => 'El reenvío no está disponible en este servidor de correo.',
+            'unavailable' => 'No se puede acceder al servidor de correo en este momento, así que no se cambió nada. Inténtalo de nuevo en unos minutos.',
         ],
         'forwarder' => [
             'domain_not_allowed' => 'Los reenvíos solo pueden estar en un dominio de esta organización que tenga el correo activado, y :domain no lo es.',

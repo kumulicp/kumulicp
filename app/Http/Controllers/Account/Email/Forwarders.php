@@ -3,22 +3,31 @@
 namespace App\Http\Controllers\Account\Email;
 
 use App\EmailForwarder;
+use App\EmailForwarderDestination;
 use App\Http\Controllers\Controller;
+use App\OrgDomain;
 use App\Rules\OrgDomainName;
-use App\Support\Facades\Domain;
+use App\Services\Email\ForwarderException;
+use App\Services\Email\ForwarderService;
 use App\Support\Facades\Organization;
+use App\Support\Facades\ServerInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
+/**
+ * The organization's forwarders. The database is where they live (ForwarderService); the mail server
+ * only applies them, from the events the service fires, so the page lists what the database has and
+ * says how far the server got (`status`).
+ */
 class Forwarders extends Controller
 {
     /**
-     * Whether the mail server can forward. A driver that never says (the interface doesn't
-     * ask for it) is assumed to; one that doesn't support it says so with supportsForwarders().
+     * Whether the domain's mail server can forward, asked of its interface without connecting: the page does not need
+     * the server to be up, only the applying of a forwarder does (and that is done later, from the events).
      */
-    private function supported($email_server): bool
+    private function supported(OrgDomain $domain): bool
     {
-        return ! method_exists($email_server, 'supportsForwarders') || $email_server->supportsForwarders();
+        return ServerInterface::supportsForwarders($domain->email_server);
     }
 
     private function unsupported()
@@ -31,51 +40,49 @@ class Forwarders extends Controller
         Gate::authorize('view-emails');
 
         $organization = Organization::account();
-        $custom_domains = $organization->domains()->emailEnabled()->active()->where('type', 'connection')->get();
-        $email_forwarders = $organization->email_forwarders;
 
-        $email_domains = $organization->domains()->emailEnabled()->active()->where('type', '!=', 'connection')->get();
+        // Every domain of the organization that has email, the ones it brought itself as well as the ones it was given
+        $email_domains = $organization->domains()->emailEnabled()->active()->primary()->orderBy('name')->get();
 
-        $first_domain = $email_domains->first() ?? $custom_domains->first();
-        if ($first_domain && ! $this->supported(Domain::connect($first_domain, 'email'))) {
+        $first_domain = $email_domains->first();
+        if ($first_domain && ! $this->supported($first_domain)) {
             return $this->unsupported();
         }
         $default_domain = $email_domains->filter(function ($domain, int $key) {
             return $domain->is_primary;
         })->first();
 
-        $forwarders = [];
-
-        foreach ($email_forwarders as $forwarder) {
-            if ($forwarder->domain) {
-                $email_server = Domain::connect($forwarder->domain, 'email');
-                $forwarder_listing = $email_server->emailForwarders($forwarder->email);
-
-                $forwarders[] = [
-                    'id' => $forwarder->id,
-                    'address' => $forwarder->email,
-                    'destinations' => $forwarder_listing['list'],
-                ];
-            }
-        }
+        $forwarders = $organization->email_forwarders()->with('destinations')->orderBy('email')->get()->map(fn (EmailForwarder $forwarder) => [
+            'id' => $forwarder->id,
+            'address' => $forwarder->email,
+            'status' => $forwarder->status,
+            'destinations' => $forwarder->destinations->map(fn (EmailForwarderDestination $destination) => [
+                'address' => $destination->destination,
+                // An outside address only receives mail once its owner has opened the link sent to it
+                'waiting' => ! $destination->isLive(),
+            ])->values(),
+        ])->values();
 
         return inertia('Organization/Settings/EmailAccounts/EmailForwarders', [
             'forwarders' => $forwarders,
             'domains' => $email_domains->map(function ($domain) {
                 return [
                     'text' => $domain->name,
-                    'value' => $domain->name,
+                    // What the form sends back: store() looks the domain up by id
+                    'value' => $domain->id,
                 ];
             }),
             'default_domain' => $default_domain ? $default_domain->id : (count($email_domains) > 0 ? $email_domains->first()->id : 0),
         ]);
     }
 
-    public function store(Request $request)
+    /**
+     * A new forwarder with its first destination, or another destination for one that exists.
+     */
+    public function store(Request $request, ForwarderService $forwarders)
     {
         Gate::authorize('add-email-accounts');
 
-        /* Validate */
         $validated = $request->validate([
             'forwarder' => 'required',
             'domain' => ['required_if:forwarder,new', 'integer', new OrgDomainName],
@@ -84,46 +91,68 @@ class Forwarders extends Controller
         ]);
 
         $organization = Organization::account();
-        $domain = $organization->domains()->find($validated['domain']);
-        $forwarder_name = $validated['forwarder'] == 'new' ? $validated['new_forwarder'] : $validated['forwarder'];
-        $forwarder_email = $validated['forwarder'] != 'new' ? $validated['forwarder'] : $validated['new_forwarder'].'@'.$domain->name;
 
-        $email_server = Domain::connect($domain, 'email');
-        if (! $this->supported($email_server)) {
+        if ($validated['forwarder'] === 'new') {
+            $domain = $organization->domains()->findOrFail($validated['domain']);
+        } else {
+            $forwarder = $this->own($validated['forwarder']);
+            Gate::authorize('edit-email-settings', $forwarder);
+            $domain = $forwarder->domain;
+        }
+
+        if (! $this->supported($domain)) {
             return $this->unsupported();
         }
 
-        $email_response = $email_server->addEmail($domain, $validated['forwarder'], 'forwarder', ['forwarder' => $forwarder_email, 'destination' => $validated['destination']]);
-
-        $forwarder = EmailForwarder::where('organization_id', $organization->id)->where('email', $forwarder_email)->first();
-        if (! $forwarder && ! $email_server->hasEmailError()) {
-            // Add forwarder to database
-            $forwarder = new EmailForwarder;
-            $forwarder->organization_id = $organization->id;
-            $forwarder->domain_id = $domain->id;
-            $forwarder->email = $forwarder_email;
-            $forwarder->server_email_id = $email_response['id'];
-            $forwarder->save();
+        try {
+            if (isset($forwarder)) {
+                $row = $forwarders->addDestination($forwarder, $validated['destination']);
+                $message = __('organization.email.forwarder.added', ['email' => $row->destination]);
+            } else {
+                $forwarder = $forwarders->create($organization, $domain, $validated['new_forwarder'], $validated['destination']);
+                $row = $forwarder->destinations()->first();
+                $message = __('organization.email.forwarder.created', ['email' => $forwarder->email]);
+            }
+        } catch (ForwarderException $e) {
+            return redirect('/settings/email/forwarders')->with('error', $e->getMessage());
         }
 
-        if ($email_server->hasEmailError()) {
-            return redirect('/settings/email/forwarders')->with('error', $email_server->emailError());
-        } else {
-            return redirect('/settings/email/forwarders')->with('success', __('organization.email.created', ['email' => $forwarder_email]));
+        if ($row->kind === EmailForwarderDestination::EXTERNAL) {
+            $message .= ' '.__('organization.email.forwarder.confirmation_sent', ['email' => $row->destination]);
         }
+
+        return redirect('/settings/email/forwarders')->with('success', $message);
     }
 
-    public function remove(EmailForwarder $forwarder, $destination)
+    /**
+     * Only the organization's own: another one's is not found, whatever the gate says.
+     */
+    private function own(int|string $id): EmailForwarder
     {
+        return Organization::account()->email_forwarders()->findOrFail($id);
+    }
+
+    public function destroy(int $forwarder, ForwarderService $forwarders)
+    {
+        $forwarder = $this->own($forwarder);
         Gate::authorize('edit-email-settings', $forwarder);
 
-        $email_server = Domain::connect($forwarder->domain, 'email');
-        if (! $this->supported($email_server)) {
-            return $this->unsupported();
+        $forwarders->remove($forwarder);
+
+        return redirect('/settings/email/forwarders')->with('success', __('organization.email.forwarder.deleted', ['email' => $forwarder->email]));
+    }
+
+    public function removeDestination(int $forwarder, string $destination, ForwarderService $forwarders)
+    {
+        $forwarder = $this->own($forwarder);
+        Gate::authorize('edit-email-settings', $forwarder);
+
+        try {
+            $forwarders->removeDestination($forwarder, $destination);
+        } catch (ForwarderException $e) {
+            return redirect('/settings/email/forwarders')->with('error', $e->getMessage());
         }
 
-        $email_server->deleteEmailForwarders($forwarder->email, $destination);
-
-        return redirect('/settings/email/forwarders/')->with('success', __('organization.email.deleted', ['email' => $forwarder->email]));
+        return redirect('/settings/email/forwarders')->with('success', __('organization.email.forwarder.removed', ['email' => $destination]));
     }
 }

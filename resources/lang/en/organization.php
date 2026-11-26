@@ -152,6 +152,7 @@ return [
             'glitch' => ':email failed to be created due to a glitch with our server. We will work to resolve the issue immediately.',
             'delete' => "You don't have permission to delete this email account",
             'forwarders' => "Forwarding isn't available on this mail server.",
+            'unavailable' => "The mail server can't be reached right now, so nothing was changed. Please try again in a few minutes.",
         ],
         'forwarder' => [
             'domain_not_allowed' => 'Forwarders can only be on a domain of this organization that has email on, and :domain is not one.',

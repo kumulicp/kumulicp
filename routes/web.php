@@ -494,9 +494,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('activate', 'Account\Email\Accounts@activate')->name('organization.settings.email.activate');
             Route::prefix('forwarders')->group(function () {
                 Route::get('', 'Account\Email\Forwarders@index')->name('organization.email.forwarder');
-                Route::get('create', 'Account\Email\Forwarders@add')->name('organization.email.forwarder.create');
                 Route::post('', 'Account\Email\Forwarders@store')->name('organization.email.forwarder.store');
-                Route::get('remove/{forwarder}/{destination}', 'Account\Email\Forwarders@remove')->name('organization.email.forwarder.remove');
+                Route::delete('{forwarder}', 'Account\Email\Forwarders@destroy')->name('organization.email.forwarder.destroy');
+                Route::delete('{forwarder}/destinations/{destination}', 'Account\Email\Forwarders@removeDestination')->name('organization.email.forwarder.destination.remove');
             });
             Route::resource('accounts', 'Account\Email\Accounts');
         });

@@ -1542,7 +1542,10 @@
       "destinationEmailAddress": "Destination Email Address",
       "destinationMessage": "Any email address will work here",
       "createNewEmail": "Create New Email",
-      "forwardersDesc": "Email forwarders allow you to have a single email address that forwards emails to a group within your organization. Example: elders@example.com might forward emails to your organization's board members: bob@example.com, rob@example.com, and robert@example.com.",
+      "waitingForConfirmation": "Waiting for confirmation",
+      "forwarderPending": "Being set up",
+      "forwarderFailed": "Not applied",
+      "forwardersDesc": "Email forwarders allow you to have a single email address that forwards emails to a group within your organization. Example: elders{'@'}example.com might forward emails to your organization's board members: bob{'@'}example.com, rob{'@'}example.com, and robert{'@'}example.com.",
       "removeForwarderTitle": "Remove {email}?",
       "removeForwarderMessage": "Are you sure you want to remove {email}? This action is permanent."
     },
@@ -1560,7 +1563,7 @@
       "domainSettings": "Domain Settings",
       "actions": "Actions",
       "enableEmailAccounts": "Enable Email Accounts",
-      "enableEmailConfirm": "Enabling email accounts for {name} allows you add email accounts with @{name} at the end. Are you sure you want to enable this feature?",
+      "enableEmailConfirm": "Enabling email accounts for {name} allows you add email accounts with {'@'}{name} at the end. Are you sure you want to enable this feature?",
       "renew": "Renew",
       "reactivate": "Reactivate",
       "selfManage": "Self Manage",
@@ -1918,7 +1921,7 @@
     "cannotSwitch": "{count} users with an email on this domain can't be switched over automatically. Their mail would bounce after the DNS moves.",
     "reason": {
       "not_standard": "doesn't have a standard user account, which a mailbox needs",
-      "name_not_allowed": "the name before the @ can't be used for a mailbox",
+      "name_not_allowed": "the name before the {'@'} can't be used for a mailbox",
       "other_offer": "was offered a different address and has to accept it themselves"
     },
     "recoveryTitle": "Recovery emails on this domain",
