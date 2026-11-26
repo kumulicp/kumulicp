@@ -7,7 +7,11 @@ import { Head, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('auth.orgRegisterCompleteTitle', { org: organization.name }) }} - Control Panel</title>
   </Head>
-  <form @submit.prevent="form.post('/public/org/' + organization.slug + '/register/verify/' + token)">
+  <div v-if="fullMessage">
+    <h5 class="mb-3">{{ $t('auth.orgRegisterCompleteHeading', { org: organization.name }) }}</h5>
+    <va-alert color="warning">{{ fullMessage }}</va-alert>
+  </div>
+  <form v-else @submit.prevent="form.post('/public/org/' + organization.slug + '/register/verify/' + token)">
     <h5 class="mb-3">{{ $t('auth.orgRegisterCompleteHeading', { org: organization.name }) }}</h5>
 
     <va-alert v-if="$page.props.errors.limit" color="danger" class="mb-3">
@@ -82,6 +86,7 @@ export default {
   layout: (h: any, page: any) => h(AuthLayout, [page]),
   props: {
     organization: Object,
+    fullMessage: String,
     token: String,
     email: String,
     errors: Object,

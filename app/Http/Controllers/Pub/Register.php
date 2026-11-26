@@ -34,6 +34,7 @@ class Register extends Controller
                 'name' => $organization->name,
                 'slug' => $organization->slug,
             ],
+            'fullMessage' => $this->fullMessage($organization),
             'captchaProvider' => SettingsFacade::get('captcha_provider'),
             'captchaSiteKey' => SettingsFacade::get('captcha_site_key'),
         ]);
@@ -118,6 +119,7 @@ class Register extends Controller
                 'name' => $organization->name,
                 'slug' => $organization->slug,
             ],
+            'fullMessage' => $this->fullMessage($organization),
             'token' => $token,
             'email' => $registration->email,
         ]);
@@ -215,6 +217,17 @@ class Register extends Controller
         ]);
 
         return $response->json('success') === true;
+    }
+
+    /**
+     * Why registering would fail right now, so the pages can say so before someone fills them in, not
+     * after. Null while there is room. Submitting still checks, since the last place can go in between.
+     */
+    private function fullMessage(Organization $organization): ?string
+    {
+        OrganizationFacade::setOrganization($organization);
+
+        return (new UserAllowance($organization))->allowed() ? null : __('messages.org_registration.full');
     }
 
     private function abortIfDisabled(Organization $organization): void

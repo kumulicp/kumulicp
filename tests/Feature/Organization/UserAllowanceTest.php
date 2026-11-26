@@ -149,3 +149,48 @@ it('closes every registration page for a deactivated organization', function () 
 
     Notification::assertNothingSent();
 });
+
+it('says the organization is full on the registration page, before anyone types anything', function () {
+    openRegistration($this->organization);
+    limitStandardUsers($this->organization, 1);
+
+    $this->get('/public/org/demo/register')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Auth/OrgRegister')
+            ->where('fullMessage', __('messages.org_registration.full')));
+});
+
+it('says nothing about being full while the plan has room', function () {
+    openRegistration($this->organization);
+    limitStandardUsers($this->organization, 2);
+
+    $this->get('/public/org/demo/register')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Auth/OrgRegister')->where('fullMessage', null));
+});
+
+it('says it again on the details page when the last place went while the person was reading their email', function () {
+    openRegistration($this->organization);
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+    limitStandardUsers($this->organization, 1);
+
+    $this->get('/public/org/demo/register/verify/'.$registration->token)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Auth/OrgRegisterComplete')
+            ->where('fullMessage', __('messages.org_registration.full')));
+
+    // Seeing the message does not use the link up: it works if a place opens again
+    expect(OrgUserRegistration::where('token', $registration->token)->exists())->toBeTrue();
+});
+
+it('shows the details form while the plan has room', function () {
+    openRegistration($this->organization);
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+    limitStandardUsers($this->organization, 2);
+
+    $this->get('/public/org/demo/register/verify/'.$registration->token)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Auth/OrgRegisterComplete')->where('fullMessage', null));
+});
