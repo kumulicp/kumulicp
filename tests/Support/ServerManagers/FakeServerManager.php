@@ -30,6 +30,9 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
 
     public static int $recover_stuck_release_calls = 0;
 
+    /** What get() answers: the release as the server describes it (a test sets it; null is no answer). */
+    public static ?array $get_response = null;
+
     /**
      * What it was asked to do, in order: [method, the OrgServer's id, the app's id].
      *
@@ -45,6 +48,7 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
         self::$missing_instances = [];
         self::$organization_missing = false;
         self::$recover_stuck_release_calls = 0;
+        self::$get_response = null;
         self::$calls = [];
     }
 
@@ -101,7 +105,7 @@ class FakeServerManager implements AppInterface, JobInterface, OrganizationInter
 
     public function get(): mixed
     {
-        return null;
+        return self::$get_response;
     }
 
     public function isActive(): bool
