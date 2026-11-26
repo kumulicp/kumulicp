@@ -11,6 +11,7 @@ use App\Enums\TaskStatus;
 use App\VersionTestRun;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use OffloadProject\Toggle\Facades\Toggle;
 
 /**
  * What every page of a shared app needs to draw the shared app layout: its
@@ -120,6 +121,7 @@ class SharedAppContext
                 'edit' => $state === self::ACTIVE || $external ? "{$instance}/edit" : null,
                 // The chart is reviewed while setting it up, too
                 'helm_values' => $state === self::ACTIVE || $state === self::SETUP ? "{$instance}/helm-values" : null,
+                'backups' => $state === self::ACTIVE && Toggle::active('app-backups') ? "{$instance}/backups" : null,
                 'plan' => $external ? null : $plan,
                 'plan_edit' => $external ? null : "{$plan}/edit",
                 'plan_features' => $plan_extras ? "{$plan}/features" : null,

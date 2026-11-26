@@ -55,7 +55,13 @@ export default {
       {
         title: this.$t('admin.apps.moveTab'),
         url: basePath + '/move'
-      }
+      },
+      ...(this.$page.props.flags.appBackups
+        ? [{
+            title: this.$t('admin.backups.backups'),
+            url: basePath + '/backups'
+          }]
+        : [])
     ]
 
     return {

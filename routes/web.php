@@ -235,6 +235,11 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                         Route::get('edit', 'Admin\Organizations\Applications@edit')->name('organizations.app.edit');
                         Route::get('helm-values', 'Admin\Organizations\Applications@helmValues')->name('organizations.app.helm_values');
                         Route::get('move', 'Admin\Organizations\Applications@move')->name('organizations.app.move');
+                        Route::middleware('toggle:app-backups')->group(function () {
+                            Route::get('backups', 'Admin\Organizations\AppBackups@index')->name('organizations.app.backups');
+                            Route::post('backups', 'Admin\Organizations\AppBackups@store')->name('organizations.app.backups.run');
+                            Route::post('backups/{backup}/restore', 'Admin\Organizations\AppBackups@restore')->name('organizations.app.backups.restore');
+                        });
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
                         Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::put('maintenance', 'Admin\Organizations\Applications@maintenance')->name('organizations.app.maintenance');

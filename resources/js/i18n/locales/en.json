@@ -886,6 +886,13 @@
       "noApps": "No apps match these filters"
     },
     "backups": {
+      "runNow": "Back up now",
+      "runNowTitle": "Back up now",
+      "runNowConfirm": "Back up {org}'s {app} database now? The backup starts within a minute.",
+      "runNowDisabled": "This app has no database server with a backup driver, so it cannot be backed up.",
+      "noBackups": "No backups of this app yet",
+      "restoreConfirmApp": "Are you sure you want to restore {app} from the backup of {scheduled}? The app's current data is replaced.",
+
       "action": "Action",
       "addBackup": "Add Backup",
       "addRecurringBackups": "Add Recurring Backups",

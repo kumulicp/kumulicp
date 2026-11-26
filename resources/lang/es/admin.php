@@ -210,6 +210,7 @@ return [
         'backups' => 'Copias de seguridad',
         'added' => 'Copia de seguridad de :time agregada',
         'scheduled' => 'La copia de seguridad ha sido programada',
+        'running' => 'La copia de seguridad comenzará en un minuto',
         'restoring' => 'La copia de seguridad será restaurada',
         'restoring_to' => 'La copia de seguridad será restaurada en :server',
         'cancelled' => 'Copia de seguridad programada para :time fue cancelada',
@@ -223,6 +224,7 @@ return [
             'exists' => 'El tipo de copia de seguridad no existe',
             'delete' => 'La copia de seguridad programada para :time no se puede eliminar',
             'restore_server' => 'Esta copia de seguridad no se puede restaurar en el servidor de base de datos seleccionado',
+            'restore_incomplete' => 'Solo se puede restaurar una copia de seguridad que haya finalizado',
         ],
     ],
     'settings' => [
