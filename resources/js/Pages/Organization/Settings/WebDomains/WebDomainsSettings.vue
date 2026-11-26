@@ -46,6 +46,16 @@ import { useToast } from 'vuestic-ui'
     </va-button-dropdown>
   </div>
   <va-alert
+    v-if="domain.registrar_offline"
+    dense
+    color="warning"
+    icon="warning"
+    outline
+    class="mb-4 py-2"
+  >
+    {{ $t('organization.webDomains.registrarOffline') }}
+  </va-alert>
+  <va-alert
     v-if="domain.email.status == 'activating'"
     dense
     color="primary"

@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Http;
 
 class Namecheap extends Integration
 {
+    // Error code for a request that got no answer at all
+    public const CONNECTION_ERROR = 'connection_error';
+
     public $name = 'Namecheap';
 
     public $request_path = '';

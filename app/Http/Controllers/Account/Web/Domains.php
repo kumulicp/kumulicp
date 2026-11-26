@@ -6,6 +6,8 @@ use App\Actions\Domains\DomainDelete;
 use App\Actions\Domains\TransferDomainName;
 use App\Actions\Email\AddEmailDomain;
 use App\Actions\Organizations\InvoiceOrganization;
+use App\Exceptions\ConnectionFailedException;
+use App\Exceptions\DomainRegistrationException;
 use App\Http\Controllers\Controller;
 use App\Mail\DomainTransferRequest;
 use App\Organization;
@@ -16,6 +18,7 @@ use App\Support\Facades\Domain;
 use App\Support\Facades\Email;
 use App\Support\Facades\Settings;
 use App\Tld;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
@@ -127,13 +130,27 @@ class Domains extends Controller
             $email_ip = $email_server->server->ip;
         }
 
-        // Renewal prices come from the registrar, so they only exist when the registrar feature is on
+        // Renewal prices come from the registrar, so they only exist when the registrar feature is on.
+        // They are kept with the TLD, so the page still loads when the registrar can't be reached: it just
+        // has no prices to offer, and whatever needs the registrar is switched off until it answers again.
         $tld = Toggle::active('domain-registrar') ? $domain->tld : null;
-        $year = 0;
-        $total = 0;
         $max_renewal_years = null;
-        if ($tld && method_exists(Domain::registrar($domain), 'maxRenewalYears')) {
-            $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
+        $renewal_prices = [];
+        $registrar_offline = false;
+        if ($tld) {
+            try {
+                if (method_exists(Domain::registrar($domain), 'maxRenewalYears')) {
+                    $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
+                }
+
+                $pricing = Domain::registrar($tld)->pricing($tld, $domain->name);
+                $renewal_prices = $this->renewalOptions($pricing->renewPrices(), $max_renewal_years);
+                $registrar_offline = $pricing->isOffline();
+            } catch (DomainRegistrationException $e) {
+                report($e);
+                $renewal_prices = [];
+                $registrar_offline = true;
+            }
         }
 
         return inertia('Organization/Settings/WebDomains/WebDomainsSettings', [
@@ -160,30 +177,15 @@ class Domains extends Controller
                 'dkim_public_key' => $domain->dkim_public_key,
                 'actions' => [
                     'enable_email' => Gate::allows('enable-email-domain', $domain),
-                    'renew' => Gate::allows('renew-domain', $domain),
-                    'reactivate' => Gate::allows('reactivated-domain', $domain),
+                    'renew' => ! $registrar_offline && Gate::allows('renew-domain', $domain),
+                    'reactivate' => ! $registrar_offline && Gate::allows('reactivate-domain', $domain),
                     'self_manage' => Gate::allows('self-manage-domain', $domain),
-                    'transfer_in' => Gate::allows('transfer-in-domain', $domain),
+                    'transfer_in' => ! $registrar_offline && Gate::allows('transfer-in-domain', $domain),
                     'request_transfer' => Gate::allows('request-domain-transfer', $domain),
                     'remove' => Gate::allows('remove-domain', $domain),
                 ],
-                'renewal_price' => $tld ? collect(Domain::registrar($tld)->pricing($tld, $domain->name)->renewPrices())->mapWithKeys(function ($price, int $key) use (&$year, &$total) {
-                    $total += $price;
-                    $year++;
-                    $year_string = Str::plural('year', $year);
-
-                    return [
-                        $key - 1 => [
-                            'year' => $year,
-                            'price' => $price,
-                            'total' => $total,
-                            'text' => "$year $year_string (\$$total)",
-                        ],
-                    ];
-
-                })->filter(function ($value, int $key) use ($max_renewal_years) {
-                    return $max_renewal_years === null || $value['year'] < $max_renewal_years;
-                })->all() : [],
+                'renewal_price' => $renewal_prices,
+                'registrar_offline' => $registrar_offline,
                 'can' => [
                 ],
             ],
@@ -227,6 +229,42 @@ class Domains extends Controller
         ]);
     }
 
+    /**
+     * The renewal choices: one per number of years, with what each costs in total.
+     */
+    private function renewalOptions(array $prices, ?int $max_renewal_years): array
+    {
+        $year = 0;
+        $total = 0;
+
+        return collect($prices)->mapWithKeys(function ($price, int $key) use (&$year, &$total) {
+            $total += $price;
+            $year++;
+            $year_string = Str::plural('year', $year);
+
+            return [
+                $key - 1 => [
+                    'year' => $year,
+                    'price' => $price,
+                    'total' => $total,
+                    'text' => "$year $year_string (\$$total)",
+                ],
+            ];
+        })->filter(function ($value) use ($max_renewal_years) {
+            return $max_renewal_years === null || $value['year'] < $max_renewal_years;
+        })->all();
+    }
+
+    /**
+     * Back to the domain with a message, for an action that needed the registrar when it couldn't be reached.
+     */
+    private function registrarUnavailable(OrgDomain $domain, \Throwable $e)
+    {
+        report($e);
+
+        return redirect('/settings/domains/'.$domain->name)->with('error', __('organization.domain.denied.registrar_unavailable'));
+    }
+
     public function update(Request $request, OrgDomain $domain)
     {
         Gate::authorize('edit-domain', $domain);
@@ -255,7 +293,11 @@ class Domains extends Controller
     {
         Gate::authorize('renew-domain', $domain);
 
-        $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
+        try {
+            $max_renewal_years = Domain::registrar($domain)->maxRenewalYears();
+        } catch (DomainRegistrationException|ConnectionException|ConnectionFailedException $e) {
+            return $this->registrarUnavailable($domain, $e);
+        }
 
         $validated = $request->validate([
             'years' => "required|min:1|max:$max_renewal_years|integer",
@@ -263,7 +305,12 @@ class Domains extends Controller
 
         $organization = auth()->user()->organization;
 
-        $registrar = Domain::registrar($domain)->renew($validated['years']);
+        // Nothing is invoiced unless the registrar did the renewal
+        try {
+            $registrar = Domain::registrar($domain)->renew($validated['years']);
+        } catch (DomainRegistrationException|ConnectionException|ConnectionFailedException $e) {
+            return $this->registrarUnavailable($domain, $e);
+        }
 
         Action::execute(new InvoiceOrganization($organization, __('organization.domain.invoice.renewal', ['domain' => $domain->name]), $registrar['price']));
 
@@ -279,9 +326,14 @@ class Domains extends Controller
         ]);
 
         $organization = auth()->user()->organization;
-        $domain = Domain::registrar($domain)->reactivate();
 
-        Action::execute(new InvoiceOrganization($organization, __('organization.domain.invoice.reactivation'), $domain['price']));
+        try {
+            $registrar = Domain::registrar($domain)->reactivate();
+        } catch (DomainRegistrationException|ConnectionException|ConnectionFailedException $e) {
+            return $this->registrarUnavailable($domain, $e);
+        }
+
+        Action::execute(new InvoiceOrganization($organization, __('organization.domain.invoice.reactivation'), $registrar['price']));
 
         return redirect('/settings/domains')->with('success', __('organization.domain.reactivated', ['domain' => $domain->name]));
 
@@ -348,16 +400,22 @@ class Domains extends Controller
             'epp_code' => 'required|string|max:20',
         ]);
 
-        $domain->status = 'transferring';
-        $domain->save();
-
         $organization = auth()->user()->organization;
         $domain_tld = Domain::getTld($domain->name);
 
         $tld = Tld::where('name', $domain_tld)->first();
 
-        $registrar_price = Domain::registrar($tld)->pricing($tld, $domain->name);
-        $transfer_price = $registrar_price->transferPrice(1);
+        // The price is needed before the domain is marked as transferring, so a registrar that can't be
+        // reached leaves it as it was
+        try {
+            $registrar_price = Domain::registrar($tld)->pricing($tld, $domain->name);
+            $transfer_price = $registrar_price->transferPrice(1);
+        } catch (DomainRegistrationException|ConnectionException|ConnectionFailedException $e) {
+            return $this->registrarUnavailable($domain, $e);
+        }
+
+        $domain->status = 'transferring';
+        $domain->save();
 
         Action::execute(new TransferDomainName($organization, $domain, $validated['epp_code'], $transfer_price));
 

@@ -8,6 +8,11 @@ class FakePricingInterface implements RegistrarPricingContract
 {
     public function __construct(private bool $premium = false) {}
 
+    public function isOffline(): bool
+    {
+        return false;
+    }
+
     public function isPremium(): bool
     {
         return $this->premium;

@@ -1478,6 +1478,7 @@
       "selfManage": "Autogestionar",
       "transferIn": "Transferir Hacia",
       "requestTransfer": "Solicitar Transferencia",
+      "registrarOffline": "No podemos conectar con el registrador de dominios en este momento, por lo que renovar, reactivar y transferir este dominio no está disponible. Tu dominio y sus registros DNS no se ven afectados.",
       "emailBeingActivated": "El correo se está activando",
       "dnsRecordsMust": "Los registros DNS deben actualizarse",
       "beforeEmailAccounts": "antes de que se puedan usar las cuentas de correo",

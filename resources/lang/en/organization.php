@@ -131,6 +131,7 @@ return [
             'self_managed' => ':domain cannot be self managed',
             'extended_attributes' => 'Extended attributes validation failed',
             'registration_failed' => ':domain could not be registered. You have not been charged.',
+            'registrar_unavailable' => "We can't reach the domain registrar right now. Renewing, reactivating and transferring domains are unavailable until it responds. Please try again in a few minutes.",
             'transferring' => 'There has been an error transferring your domain. We have been notified of the error and will look into it immediately.',
         ],
     ],

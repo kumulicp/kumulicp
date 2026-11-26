@@ -1554,6 +1554,7 @@
       "selfManage": "Self Manage",
       "transferIn": "Transfer In",
       "requestTransfer": "Request Transfer",
+      "registrarOffline": "We can't reach the domain registrar right now, so renewing, reactivating and transferring this domain are unavailable. Your domain and its DNS records are not affected.",
       "emailBeingActivated": "Email is being activated",
       "dnsRecordsMust": "DNS records must be updated",
       "beforeEmailAccounts": "before email accounts can be used",

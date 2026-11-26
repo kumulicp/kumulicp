@@ -128,6 +128,7 @@ return [
             'self_managed' => ':domain no puede ser autogestionado',
             'extended_attributes' => 'La validación de atributos extendidos falló',
             'registration_failed' => 'No se pudo registrar :domain. No se le ha cobrado.',
+            'registrar_unavailable' => 'No podemos conectar con el registrador de dominios en este momento. Renovar, reactivar y transferir dominios no está disponible hasta que responda. Inténtalo de nuevo en unos minutos.',
             'transferring' => 'Ha ocurrido un error al transferir tu dominio. Hemos sido notificados del error y lo investigaremos de inmediato.',
         ],
     ],

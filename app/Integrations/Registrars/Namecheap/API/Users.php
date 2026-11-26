@@ -2,7 +2,10 @@
 
 namespace App\Integrations\Registrars\Namecheap\API;
 
+use App\Exceptions\ConnectionFailedException;
 use App\Integrations\Registrars\Namecheap\Namecheap;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Log;
 
 class Users extends Namecheap
 {
@@ -19,6 +22,11 @@ class Users extends Namecheap
 
         try {
             $this->form()->post($this->basePath(), $this->postParameters());
+        } catch (ConnectionException|ConnectionFailedException $e) {
+            // Nothing answered. Record it so callers can fall back to cached prices instead of
+            // reading a response that was never received.
+            Log::warning('Namecheap is unreachable: '.$e->getMessage());
+            $this->setError($e->getMessage(), self::CONNECTION_ERROR, quiet: true);
         } catch (\Throwable $e) {
 
         }

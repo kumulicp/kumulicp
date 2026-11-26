@@ -48,4 +48,10 @@ interface RegistrarPricingContract
      * Get reactivation price.
      */
     public function reactivatePrice(): float;
+
+    /**
+     * Whether the registrar could not be reached the last time prices were refreshed. Prices are then
+     * the stored ones, and anything that needs the registrar should not be offered.
+     */
+    public function isOffline(): bool;
 }
