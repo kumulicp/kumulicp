@@ -6,6 +6,7 @@ use App\Events\Users\UserCreated as UserCreatedEvent;
 use App\Http\Controllers\Controller;
 use App\NewUserCode;
 use App\Notifications\OrgRegistrationComplete;
+use App\Notifications\OrgRegistrationExists;
 use App\Notifications\OrgRegistrationVerification;
 use App\Organization;
 use App\OrgUserRegistration;
@@ -45,13 +46,13 @@ class Register extends Controller
         $this->abortIfDisabled($organization);
 
         $key = 'org-register:'.$organization->slug.':'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        $ip_throttle = config('registration.throttle.ip');
+        if (RateLimiter::tooManyAttempts($key, (int) $ip_throttle['attempts'])) {
             $seconds = RateLimiter::availableIn($key);
             throw ValidationException::withMessages([
                 'email' => __('messages.org_registration.too_many_attempts', ['seconds' => $seconds]),
             ]);
         }
-        RateLimiter::hit($key, 600);
 
         if (SettingsFacade::get('captcha_provider')) {
             if (! $this->verifyCaptcha($request->input('captcha_token'))) {
@@ -74,16 +75,32 @@ class Register extends Controller
             return back()->withErrors(['email' => __('messages.org_registration.full')]);
         }
 
-        // Check email isn't already registered in this org
-        if (AccountManager::checkEmail($email)) {
-            return back()->withErrors(['email' => __('messages.rule.email_address_exists')]);
+        // From here an email would go out, so this is the attempt that counts: not a mistyped address
+        // or a failed captcha
+        RateLimiter::hit($key, (int) $ip_throttle['minutes'] * 60);
+
+        // One address cannot be mailed over and over, whoever asks. Over the limit the answer is the
+        // same as ever and nothing is sent, so it does not show whether the address has an account
+        $email_key = 'org-register-email:'.$organization->id.':'.sha1(Str::lower($email));
+        $email_throttle = config('registration.throttle.email');
+        if (RateLimiter::tooManyAttempts($email_key, (int) $email_throttle['attempts'])) {
+            return redirect()->route('public.org.register.pending', ['organization' => $organization->slug]);
         }
+        RateLimiter::hit($email_key, (int) $email_throttle['minutes'] * 60);
 
-        $registration = OrgUserRegistration::generate($organization, $email);
+        // The answer is the same for every address: check your email. What the email says is what
+        // differs, so only the owner of the address finds out whether it has an account
+        if (AccountManager::checkEmail($email)) {
+            (new AnonymousNotifiable)
+                ->route('mail', $email)
+                ->notify(new OrgRegistrationExists($organization));
+        } else {
+            $registration = OrgUserRegistration::generate($organization, $email);
 
-        (new AnonymousNotifiable)
-            ->route('mail', $email)
-            ->notify(new OrgRegistrationVerification($organization, $registration));
+            (new AnonymousNotifiable)
+                ->route('mail', $email)
+                ->notify(new OrgRegistrationVerification($organization, $registration));
+        }
 
         return redirect()->route('public.org.register.pending', ['organization' => $organization->slug]);
     }
