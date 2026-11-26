@@ -52,6 +52,49 @@ So for everything except ERPNext, a shared app move is **the same as moving any 
 instance**, plus the checks and the DNS fan-out below. All of the real extra work is the
 multisite branch, and it is small because the data is restored by hand.
 
+## Parents with addon children (WordPress + CiviCRM)
+
+The same `HAS_CHILDREN` block also stops a WordPress with a CiviCRM from moving, so this plan
+covers it too. Confirmed with the maintainer: in this family the **child has a database of its
+own, but signs in through the parent's SSO**. Reading the code agrees with the rest of it: the
+child has `parent_id` set to the WordPress in the **same organization** (the plan's
+`parent_app_id`), its jobs and updates run against the parent's release
+(`ApplicationUpdate`/`ApplicationUpgrade` use the parent's `connect('web')` for an activation
+type `job`), and its roles live in the parent's (`AppInstance::permissionsApp()`).
+
+| | Shared hub (Nextcloud, ...) | Addon family (WordPress + CiviCRM) | Multisite (ERPNext) |
+|---|---|---|---|
+| Where the children are | Many organizations, in the hub's | Same organization as the parent | Many organizations |
+| Own release | No | No (parent's) | No (job on the hub's) |
+| Own database | No | **Yes**, on a database server | **Yes**, restored with Longhorn |
+| Own sign-in | No | **No**: the parent's | **Yes** |
+| DNS to refresh | Every child's domains | The organization's own | Every child's domains |
+
+What a parent move does with an addon child:
+
+1. **Web**: moves with the parent's release, as above. Lift `HAS_CHILDREN` for a parent whose
+   children are addons (`parent_id` and activation type `job`), and add `ADDON_CHILD` for the
+   child itself: a web or sign-in move of the child alone is refused ("move the parent").
+   `IS_CHILD` does not cover it, because it only knows `sharedPlanParent()` children, and an
+   addon child's `usesOwnResources()` is true.
+2. **Database**: the child's database is not the parent's, so it is handled on its own. The
+   common case is a new cluster with the database servers unchanged: the new app server only has
+   to reach the child's database server, which is the check the move already makes for the
+   parent's (`requirements()` and `CANNOT_REACH_DATABASE`), run for every child that has one and
+   shown as one row each. If the administrator chooses a new database server, the parent's
+   `BackupOldDatabase`/`RestoreNewDatabase` run again for each child with a database of its own,
+   with the same dump driver, and `SwitchServer` repoints them, saved on the task for rollback
+   like the multisite case. A child on a different database server than the parent's is a
+   separate choice in the form, not a guess.
+3. **Sign-in**: the parent's choice is the only one. If the child has a sign-in pointer, it is
+   expected to be the parent's (to verify) and is repointed with it; if it is null there is
+   nothing to do. The sign-in move of the parent is its own move (`ApplicationSsoMove`) and is
+   not part of this one.
+4. **Everything else is simpler than a hub**: one organization, so no acknowledgement of other
+   organizations and no cross-organization DNS; the children are listed, and their domains
+   (the plan's `domain_option` may put them under the parent's domain) are refreshed by the same
+   `RefreshDns` loop.
+
 ## Rules specific to shared apps
 
 1. **The hub moves, the children follow.** `docs/server-transitions-plan.md` already says "moving
@@ -91,10 +134,12 @@ Smallest slice that is correct on its own.
    - Hub is a shared app (`isSharedApp()`) with children whose plan is `server_type = shared`:
      no `HAS_CHILDREN`. There is no per-app allow-list: a hub that is not multisite moves like
      any other instance, and ERPNext is covered by Phase 3.
+   - A parent whose children are addons (WordPress with CiviCRM): no `HAS_CHILDREN` either, and
+     the child gets `ADDON_CHILD` for a web or sign-in move.
    - Anything else keeps `HAS_CHILDREN`.
    Update `MoveBlockersTest` ("refuses a web move for an app with child apps") for both cases.
 2. `MoveBlockers::app()`: new `SHARED_NOT_ACTIVE` when `isSharedApp()` and
-   `SharedAppContext::state() !== ACTIVE` (rule 5), and `MULTISITE_UNSUPPORTED` for a multisite hub until Phase 3 lands, `CHILD_TASKS_OPEN` when any child has an
+   `SharedAppContext::state() !== ACTIVE` (rule 5), and `CHILD_DATABASES_UNSUPPORTED` for a parent with children that have a database of their own (ERPNext, and WordPress with CiviCRM) until Phase 3 lands, `CHILD_TASKS_OPEN` when any child has an
    open task (rule 6). Messages in `resources/lang/{en,es}/messages.php` under `server_move`.
 3. `ApplicationWebMove`: pass the hub's children into the description and into the task's
    custom values (`child_ids`) at construction, so the rollback and DNS steps work from what was
@@ -139,7 +184,26 @@ Tests (Pest, fake driver, like `WebMoveTest`/`WebMoveWithServersTest`):
 5. Announcement: offer to create an `Announcement` (existing `Admin\Announcements`) for the
    children's organizations before the move, with the planned window. Optional, off by default.
 
-## Phase 3: the multisite branch (ERPNext) and what to check on a cluster
+## Phase 3: children with a database of their own (ERPNext, CiviCRM) and what to check on a cluster
+
+Both families need the web move to look after each such child's `database_server_id`; they
+differ in how the data gets across (ERPNext: by hand, CiviCRM: the dump driver) and in sign-in
+(ERPNext: the child's own, CiviCRM: the parent's). One shared piece of code does the child list
+(`ChildDatabases`: the children of the app that have a `databasename`, with their server), and
+the two differ only in the step that copies.
+
+**CiviCRM (addon children).** Build this first, since it has no hand work:
+
+1. `requirements()` and `blockers()` include each child's database server for the reach check.
+2. If a new database server is chosen, repeat `BackupOldDatabase`/`RestoreNewDatabase` per child
+   (a child-aware version of the two steps that records `child_database_backups` on the task),
+   and have `SwitchServer` associate it with each child, saving the old pointers for rollback.
+3. After `Verify`, run the settings job for the parent as now; the child's own update goes
+   through the parent's release already.
+
+Tests: a WordPress with a CiviCRM child on its own database server; the reach check names the
+child's server; the copy and repoint run for both; rollback puts both back; the child cannot be
+moved alone (`ADDON_CHILD`).
 
 **Multisite children (ERPNext).** Each child has its own `database_server_id`,
 `sso_server_id` and `databasename`. The existing web move only repoints and copies the hub's
@@ -200,10 +264,13 @@ interface only, and a test must prove no child's status changes.
 
 1. Phase 1 (blockers, task record, DNS fan-out, tests). Mergeable on its own; no UI yet, but the
    existing move tab already works for a hub once `HAS_CHILDREN` is lifted. Until Phase 3
-   lands, keep a multisite hub (ERPNext) blocked with its own reason (`MULTISITE_UNSUPPORTED`),
-   since moving it without its children's pointers would leave them wrong.
+   lands, keep a parent whose children have databases of their own blocked with its own reason
+   (`CHILD_DATABASES_UNSUPPORTED`), since moving it without its children's pointers would
+   leave them wrong.
 2. Phase 2 (tab, children list, acknowledgement, plan servers, hold the door).
-3. Phase 3 (multisite branch), and remove `MULTISITE_UNSUPPORTED`.
+3. Phase 3: CiviCRM first (the dump driver does the copy), then the multisite branch. Remove
+   `CHILD_DATABASES_UNSUPPORTED` for each family as it lands, so WordPress with CiviCRM can
+   move before ERPNext does.
 4. Phase 4 (database, SSO).
 5. Phase 5 (cleanup).
 
@@ -218,9 +285,11 @@ Answered: only multisite children (ERPNext today) have their own database and si
 settings, and the database volume is restored by hand with Longhorn. Everything else moves like
 any other instance (see "Two kinds of shared app"). Still open:
 
-1. Is `server_type = shared` the only way a child exists? Type-level parents (CiviCRM on
-   WordPress, `activation_type = job`) also use `parent_id`. Out of scope here; are they
-   expected to be movable too, since they are the same `HAS_CHILDREN` block?
+1. For CiviCRM, does the child's `sso_server_id` hold the parent's server, or is it null? And is
+   its database always on a server of the same driver as the parent's? Both are read off
+   `ApplicationActivate` for an addon, which nobody has checked yet; the plan works either way
+   but step 3 of the addon section depends on it. (Resolved: the family is in scope, with its
+   own database and the parent's sign-in.)
 2. During a move, should a child activation wait for the move or be refused? Waiting is friendlier
    but holds a subscription flow open for up to the move's timeouts (about 1.5 hours in total).
 3. Should the announcement to children (Phase 2, step 5) be sent automatically for apps with
