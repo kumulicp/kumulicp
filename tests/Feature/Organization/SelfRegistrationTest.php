@@ -523,22 +523,25 @@ it('only opens the policy to the captcha provider on the registration pages', fu
 it('does not add users past the plan maximum', function () {
     $this->organization->plan->updateSettings(['standard.max' => 1]);
     $this->organization->plan->save();
+    User::where('username', 'demo')->update(['access_type' => 'standard']);
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
 
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())->assertSessionHasErrors();
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())
+        ->assertSessionHasErrors(['limit' => __('messages.org_registration.full')]);
 
-    expect(User::where('username', 'newperson')->exists())->toBeFalse();
-})->skip('Finding 2: registration does not check the add-user limit that adding a user by hand does.');
+    expect(User::where('username', 'newperson')->exists())->toBeFalse()
+        ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeTrue();
+});
 
 it('does not add users to a deactivated organization', function () {
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
     $this->organization->status = 'deactivated';
     $this->organization->save();
 
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())->assertNotFound();
 
     expect(User::where('username', 'newperson')->exists())->toBeFalse();
-})->skip('Finding 2: registration does not check whether the organization is deactivated.');
+});
 
 it('answers the same for an address that has an account and one that does not', function () {
     $known = $this->post($this->base, ['email' => 'demo@example.com']);

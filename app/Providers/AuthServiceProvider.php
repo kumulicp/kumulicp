@@ -10,6 +10,7 @@ use App\Policies\TicketPolicy;
 use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Application\ApplicationReadiness;
 use App\Services\Organization\JointSubscriptionService;
+use App\Services\Organization\UserAllowance;
 use App\Services\SubscriptionService;
 use App\Support\AccountManager\UserManager;
 use App\Support\Facades\AccountManager;
@@ -286,14 +287,7 @@ class AuthServiceProvider extends ServiceProvider
                 : Response::deny(__('organization.user.denied.exists'));
         });
 
-        Gate::define('add-user', function (User $user) {
-            $organization = $user->organization;
-            $maxed = Subscription::base()->isMax('standard');
-
-            return $organization->status !== 'deactivated' && ! $maxed
-                ? Response::allow()
-                : Response::deny(__('organization.user.denied.add'));
-        });
+        Gate::define('add-user', fn (User $user) => (new UserAllowance($user->organization, Subscription::base()))->check());
 
         Gate::define('edit-user', function (User $user, ?UserManager $user_manager = null) {
             if (! $user_manager) {

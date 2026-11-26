@@ -414,6 +414,7 @@ return [
         'token_invalid' => 'Este enlace de registro no es válido o ha expirado. Por favor, solicita uno nuevo.',
         'too_many_attempts' => 'Demasiados intentos de registro. Por favor, inténtalo de nuevo en :seconds segundos.',
         'captcha_failed' => 'La verificación CAPTCHA falló. Por favor, inténtalo de nuevo.',
+        'full' => 'Esta organización no acepta nuevos registros en este momento. Por favor, contacta a su administrador.',
     ],
     'extensions' => [
         'nextcloud' => [

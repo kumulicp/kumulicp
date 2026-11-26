@@ -433,6 +433,7 @@ return [
         'token_invalid' => 'This registration link is invalid or has expired. Please request a new one.',
         'too_many_attempts' => 'Too many registration attempts. Please try again in :seconds seconds.',
         'captcha_failed' => 'CAPTCHA verification failed. Please try again.',
+        'full' => 'This organization is not accepting new registrations right now. Please contact its administrator.',
     ],
     'extensions' => [
         'nextcloud' => [
