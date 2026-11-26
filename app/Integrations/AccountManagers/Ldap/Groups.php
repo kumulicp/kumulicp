@@ -12,8 +12,8 @@ use App\Support\Facades\Organization;
  * The groups of one organization.
  *
  * Which organization is the one given, or the active one. A parent's groups and each of its suborganizations'
- * groups sit in separate containers (see Dn::group()), so every lookup here goes through a category container
- * of this organization and never searches the whole `ou=groups` tree, which would also match the suborgs'.
+ * groups sit in separate containers (see Dn::group()), so a lookup here only ever searches this organization's
+ * own.
  */
 class Groups
 {

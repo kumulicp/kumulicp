@@ -58,14 +58,18 @@ class Dn
      * The DN of an organization's groups, or of one group in it.
      *
      * A parent organization keeps its groups at `ou=<category>,ou=groups,o=<parent>`. A suborganization has no
-     * `o=` entry of its own, so its groups sit inside the parent's tree, in a container of their own:
-     * `ou=<category>,ou=<slug>,ou=suborgs,ou=groups,o=<parent>`. That keeps the ACLs and the apps' bind accounts,
-     * which are per `o=`, working, and keeps a suborg's groups out of the parent's category containers.
+     * `o=` entry of its own, so its groups sit inside the parent's tree, beside the parent's `ou=groups` and not
+     * under it: `ou=<category>,ou=groups,ou=<slug>,ou=suborgs,o=<parent>`.
+     *
+     * That gives every organization one `ou=groups` base that holds only its own groups, so an app that can
+     * only be pointed at a single group base (and searches it as a subtree) still sees just that organization's
+     * groups. It also stays inside `o=<parent>`, so the ACLs and the apps' bind accounts, which are per `o=`,
+     * keep working. Apps should get their base from LdapSupport::groupBase().
      */
     public static function group(Organization $organization, ?string $category = null, ?string $cn = null): string
     {
         $ou = $organization->parent_organization_id
-            ? [$organization->slug, 'suborgs', 'groups']
+            ? ['groups', $organization->slug, 'suborgs']
             : ['groups'];
 
         if ($category) {
@@ -82,11 +86,14 @@ class Dn
      */
     public static function groupContainers(Organization $organization, ?string $category = null): array
     {
-        $containers = [['groups', self::create($organization, 'groups')]];
-
         if ($organization->parent_organization_id) {
-            $containers[] = ['suborgs', self::create($organization, ['suborgs', 'groups'])];
-            $containers[] = [$organization->slug, self::create($organization, [$organization->slug, 'suborgs', 'groups'])];
+            $containers = [
+                ['suborgs', self::create($organization, 'suborgs')],
+                [$organization->slug, self::create($organization, [$organization->slug, 'suborgs'])],
+                ['groups', self::group($organization)],
+            ];
+        } else {
+            $containers = [['groups', self::group($organization)]];
         }
 
         if ($category) {
