@@ -215,21 +215,31 @@ For a multisite hub:
    databases come across with that volume. The gate's message names every multisite child and
    the databases expected on the new server, so the administrator can check them.
 2. If the move was started with a new database server, `SwitchServer` also associates that
-   server with every multisite child that was on the old one (their `database_server_id`),
-   saved in the task (`child_database_snapshot`) for its rollback. A child on a different
-   database server than the hub's is left alone and listed in the confirm message.
-3. A new sign-in server is the same: only repointed on children by `SwitchServer` if chosen
-   in the move, with their providers recreated by the sign-in move. Because that is per-app
-   work with its own cleanup, **start with sign-in unchanged** for multisite hubs: the web move
-   form hides the sign-in choice for a multisite hub, and a separate `ApplicationSsoMove` per
-   child (they use their own resources, so `IS_CHILD` does not stop them) is done afterwards.
+   server with every multisite child (their `database_server_id`), saved in the task
+   (`child_database_snapshot`) for its rollback. Confirmed with the maintainer: an ERPNext
+   child's database is never on a different server than the hub's, so there is no per-child
+   database choice. The move **blocks** if it finds one that is
+   (`CHILD_DATABASE_DIFFERS`), rather than guessing: it means the data is not what this plan
+   assumes.
+3. **One sign-in server for the whole hub.** The form has a single sign-in choice, as for any
+   app, and it applies to the hub and every multisite child. Children may start on different
+   sign-in servers; they all end on the chosen one, which is what is wanted (today they are all
+   on one server anyway). `SetUpNewSignIn` runs once per app that is moving, the hub first, then
+   each child: each saves its own snapshot (`sso_snapshots[<instance id>]`), clears its stale
+   ids, associates the chosen server and runs `ApplicationSSOSetup`, and the step waits for
+   all of them. Rollback restores every snapshot. The old entries are left on the old servers,
+   and `ApplicationSsoCleanup` is offered per app afterwards (the app page already lists one per
+   move; children are listed under the hub's, with the old server named per child). The
+   reachability check (`CANNOT_REACH_SSO`) is made against the one chosen server.
 4. After `Verify`, run `RunSettingsJob` against the hub as now; for each multisite child also
    run its settings job (each child's site is made and migrated by a job on the hub's
    release, `ApplicationUpdateJob`, which already queues children behind each other).
 
-Tests: a hub with two multisite children, one on the hub's database server and one on another;
-the first is repointed and rolled back, the second is untouched and listed; rollback after a
-failure in `SwitchServer` puts every pointer back.
+Tests: a hub with two multisite children on the hub's database server and on different
+sign-in servers; a move to a new database server and a new sign-in server repoints all three
+apps to the one chosen of each and sets up a provider for each; a failure in `SwitchServer`
+(or in the second child's sign-in setup) puts every database and sign-in pointer and every saved
+setting back; a child on another database server blocks the move.
 
 **Checks on a cluster (not code, and not blocking).** Record the results in the PR that
 changes the hub's app; nothing here is allowed to fail the move:
@@ -282,8 +292,9 @@ unmanaged DNS in child organizations; wait; clean up the old release.
 ## Open questions
 
 Answered: only multisite children (ERPNext today) have their own database and sign-in
-settings, and the database volume is restored by hand with Longhorn. Everything else moves like
-any other instance (see "Two kinds of shared app"). Still open:
+settings, the database volume is restored by hand with Longhorn, ERPNext children are always on
+the hub's database server, and one sign-in server is chosen for the whole hub. Everything else
+moves like any other instance (see "Two kinds of shared app"). Still open:
 
 1. For CiviCRM, does the child's `sso_server_id` hold the parent's server, or is it null? And is
    its database always on a server of the same driver as the parent's? Both are read off
@@ -294,7 +305,5 @@ any other instance (see "Two kinds of shared app"). Still open:
    but holds a subscription flow open for up to the move's timeouts (about 1.5 hours in total).
 3. Should the announcement to children (Phase 2, step 5) be sent automatically for apps with
    more than N children, or always left to the administrator?
-4. For ERPNext, is a child's database ever on a different database server than the hub's? Phase 3
-   handles it (left alone and listed), but if it never happens that branch can go.
-5. Should multisite hubs ever be able to change their sign-in server as part of the web move, or
-   is "unchanged, then a sign-in move per child" good enough for good?
+4. Resolved: an ERPNext child's database is never on a different server than the hub's, and one
+   sign-in server is chosen for the hub and all its children (Phase 3). Nothing left to decide.
