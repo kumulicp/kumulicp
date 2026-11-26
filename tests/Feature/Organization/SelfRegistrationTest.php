@@ -345,7 +345,12 @@ it('uses up the link once the account exists', function () {
 });
 
 it('records a user of a suborganization against that suborganization', function () {
-    $sub = Organization::factory()->create(['slug' => 'subco', 'parent_organization_id' => $this->organization->id]);
+    // A suborganization is made with its parent's plan, which the user limit is read from
+    $sub = Organization::factory()->create([
+        'slug' => 'subco',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+    ]);
     selfRegistrationApp($sub);
     $registration = OrgUserRegistration::generate($sub, 'sub@example.com');
 
