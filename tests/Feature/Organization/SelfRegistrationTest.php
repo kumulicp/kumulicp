@@ -345,7 +345,12 @@ it('uses up the link once the account exists', function () {
 });
 
 it('records a user of a suborganization against that suborganization', function () {
-    $sub = Organization::factory()->create(['slug' => 'subco', 'parent_organization_id' => $this->organization->id]);
+    // A suborganization is made with its parent's plan, which the user limit is read from
+    $sub = Organization::factory()->create([
+        'slug' => 'subco',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+    ]);
     selfRegistrationApp($sub);
     $registration = OrgUserRegistration::generate($sub, 'sub@example.com');
 
@@ -521,24 +526,33 @@ it('only opens the policy to the captcha provider on the registration pages', fu
 // -- Findings of docs/plans/self-registration.md, as the behavior we want ---------------------------
 
 it('does not add users past the plan maximum', function () {
+    // The default role gives a standard seat: a smaller one would not be held back by this
+    AppRole::query()->update(['access_type' => 'standard']);
+    // Where the organization pays for each app, the app's own cap counts and the organization's is only
+    // the fallback for an app with none: the factory gives the app a cap of its own, with room in it
+    $this->app_instance->plan->updateSettings(['standard.max' => null]);
+    $this->app_instance->plan->save();
     $this->organization->plan->updateSettings(['standard.max' => 1]);
     $this->organization->plan->save();
+    User::where('username', 'demo')->update(['access_type' => 'standard']);
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
 
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())->assertSessionHasErrors();
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())
+        ->assertSessionHasErrors(['limit' => __('messages.org_registration.full')]);
 
-    expect(User::where('username', 'newperson')->exists())->toBeFalse();
-})->skip('Finding 2: registration does not check the add-user limit that adding a user by hand does.');
+    expect(User::where('username', 'newperson')->exists())->toBeFalse()
+        ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeTrue();
+});
 
 it('does not add users to a deactivated organization', function () {
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
     $this->organization->status = 'deactivated';
     $this->organization->save();
 
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())->assertNotFound();
 
     expect(User::where('username', 'newperson')->exists())->toBeFalse();
-})->skip('Finding 2: registration does not check whether the organization is deactivated.');
+});
 
 it('answers the same for an address that has an account and one that does not', function () {
     $known = $this->post($this->base, ['email' => 'demo@example.com']);

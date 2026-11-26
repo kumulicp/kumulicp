@@ -7,7 +7,11 @@ import { Head, useForm } from '@inertiajs/vue3'
   <Head>
     <title>{{ $t('auth.orgUserRegisterTitle', { org: organization.name }) }} - Control Panel</title>
   </Head>
-  <form @submit.prevent="submit">
+  <div v-if="fullMessage">
+    <h5 class="mb-3">{{ $t('auth.orgUserRegisterHeading', { org: organization.name }) }}</h5>
+    <va-alert color="warning">{{ fullMessage }}</va-alert>
+  </div>
+  <form v-else @submit.prevent="submit">
     <h5 class="mb-3">{{ $t('auth.orgUserRegisterHeading', { org: organization.name }) }}</h5>
     <p class="mb-4">{{ $t('auth.orgUserRegisterSubheading') }}</p>
 
@@ -45,6 +49,7 @@ export default {
   props: {
     organization: Object,
     errors: Object,
+    fullMessage: String,
     captchaProvider: String,
     captchaSiteKey: String,
   },
@@ -74,7 +79,8 @@ export default {
     },
   },
   mounted () {
-    if (this.captchaProvider) {
+    // Nothing to protect when there is no form to send
+    if (this.captchaProvider && !this.fullMessage) {
       const w = window as any
       w.captchaWidgetCallback = (token: string) => {
         this.form.captcha_token = token
