@@ -53,6 +53,44 @@ rest of the code that touches the volume:
   `tests/Feature/Applications/StorageHandoverTest.php`. `AppProfile::storageHandover()` is
   overridden by five profiles and by the `DemoAppProfile` test hook.
 
+### Several charts for one app (added in #233, after this plan was first written)
+
+An application can now be deployed from more than one chart (`app_charts`; see
+`docs/chart-catalog.md`, "Several charts for one app"). The registered Nextcloud chart and a
+HelmForge catalog chart of the same app can both exist, each with its own version groups, and
+a plan picks one of them when it is created. What that changes for this plan:
+
+- **The chart, not the app, decides the settings layout.** `Application::profileFor($instance
+  | $plan | $chart)` gives the profile of the chart the install runs from: the version's
+  chart, else the chart of the group its plan picked (`chartFor()`). The default chart uses the
+  app's own profile (`NextcloudProfile` + `NextcloudChart`); a catalog chart added to a
+  registered app uses a `HelmForgeProfile` built from **the chart's** `catalog`, and
+  `HelmForgeChart::catalog()` reads the chart row for it. So a Nextcloud app instance on the
+  HelmForge chart keeps its claim in `override.pvc.name`, not `existing_claim`, and has no
+  access-mode setting. `AppInstanceService::configuration()`, `arrayConfiguration()` and
+  `StorageHandover::map()` already moved to `profileFor()`.
+- **A legacy key cannot be read from the application.** Anything that picks a volume layout
+  from `$instance->application` (the migration table below, a settings form, a default claim
+  name) is wrong for the instances that run an added chart. They must go through
+  `profileFor()`, or the chart row.
+- **Catalog data lives in two places.** `applications.catalog` for a default catalog chart,
+  `app_charts.catalog` for an added one. The sync (`ChartCatalogSync::attach()` and the daily
+  run) now adds a chart of the source to every registered app of the same name, so a
+  hand-written app such as Nextcloud or WordPress can get a HelmForge chart whose volumes are
+  detected, not declared. Volume detection therefore matters for apps that already have a
+  hand-written layout.
+- **Constructing a chart class is pure** (`PureConstructorsTest` pins this for actions; the
+  charts take only an organization and an instance), so a chart can be instantiated outside a
+  release (in a move form, a settings page, a migration) to read what volumes it declares.
+- **An instance's chart is fixed once the plan is** ("its group, and so its chart, is fixed
+  afterwards"), but an instance can be given another plan. Whether that can change its chart
+  is an open question below.
+- **Precedents to follow.** #233's `move_chart_identity_off_versions` migration and
+  `ChartIdentityMigrationTest` moved chart identity off `app_versions.settings`; #281's
+  `remove_update_recommended_from_app_instances_settings` removed a settings key from
+  instances in chunks with a pure-DB migration. The data migration below should look like
+  those and be tested the same way.
+
 ### Charts with more than one workload
 
 Every chart is treated as having **one** data volume today. Charts that deploy several
@@ -180,7 +218,15 @@ offered in the move form.
 
 #### The store
 
-A small class owns all reads and writes, so no other code spells these paths:
+The location is **the same whichever chart the instance runs**, which is the point: an
+instance that changes chart keeps its primary volume's `claim`, `size`, class and mode,
+because `app/data` means the same on every chart. Secondary volumes are chart-specific by
+name; values stored for a workload the current chart does not declare are ignored, not
+deleted, so going back finds them.
+
+A small class owns all reads and writes, so no other code spells these paths. It finds what
+an instance declares through `Application::profileFor($instance)`, never the application's
+own profile:
 
 ```php
 // App\Support\Volumes\Volume (value object) and App\Support\Volumes\Volumes (the store)
@@ -261,6 +307,13 @@ $values = array_replace_recursive($values, $this->volumeValues());   // one call
   lookup that is wrong once a chart has more than one (`WordpressJobChart` only calls the
   inherited method). Jobs mount the primary volume only, as they do now.
 
+`Volumes::for($instance)` instantiates the instance's chart class (via `profileFor()`) only to
+read `volumes()` and `defaultClaimName()`. For `HelmForgeChart` the declaration is built from
+the chart's own stored convention (`app_charts.catalog` for an added chart,
+`applications.catalog` for a default one), through the existing `catalog()` method, so a
+Nextcloud app on a HelmForge chart declares the volumes the **detector** found, while a
+Nextcloud app on its registered chart declares the ones `NextcloudChart` does.
+
 #### Catalog charts
 
 `ChartConventionDetector::persistence()` is changed from "pick one volume" to **record all**:
@@ -270,7 +323,11 @@ $values = array_replace_recursive($values, $this->volumeValues());   // one call
 chosen by the `persistence_volume` override, else the first enabled, else the first; the rest
 are secondary, `fixed`, and shown with the chart's own default size. The stored convention
 keeps its existing `persistence` key (the primary, so nothing already synced breaks) and gains
-`volumes`. A re-sync fills it in; until then `HelmForgeChart` falls back to `persistence`.
+`volumes`. It is written to **whichever row holds the catalog data**: `applications.catalog`
+for a default catalog chart, `app_charts.catalog` for an added one, so `ChartCatalogSync`'s
+sync and `attach()` both change. A re-sync fills it in; until then `HelmForgeChart` falls back
+to `persistence`. The `config/catalog.php` `persistence_volume` override is keyed by chart
+name, so it applies to a chart wherever it is attached.
 A shape the detector does not recognise is left out and reported by
 `catalog:sync --report`, not guessed at.
 
@@ -291,6 +348,12 @@ exactly one place.
 ### 3. A settings schema the UI can be built from
 
 Extend what profiles already declare instead of adding a second system.
+
+Everything in this section resolves its definitions through `profileFor($instance)`, so the
+form shows the fields of the chart the instance actually runs, with that chart's name in the
+header. Two instances of the same app on different charts have different forms (an instance on
+a HelmForge chart has no access-mode field, for example), and a plan's configuration screen
+follows `profileFor($plan)` the same way.
 
 **Definition** (the existing configuration shape, plus optional fields):
 
@@ -384,24 +447,39 @@ and the snapshot for rollback covers all of them:
 ### Data
 
 A data migration (and an artisan command that runs the same code, with `--dry-run` and
-`--app=<id>`) rewrites each instance, keyed on its application:
+`--app=<id>`) rewrites each instance. It is keyed on **the chart the instance deploys from**,
+not on its application: an instance's chart is its version's chart (`version_group_id` →
+`app_charts`), else its plan's selected group's. A chart is one of these layouts:
+
+- the app's **registered** profile, for a default chart whose `source` is `profile` (Nextcloud,
+  WordPress, CiviCRM);
+- **generic**, for `source = generic`;
+- **catalog**, for `source = helmforge`, whether it is the app's default chart or an added one.
+
+So a Nextcloud instance on an added HelmForge chart is migrated by the *catalog* row below,
+not the Nextcloud one. Like #281's migration, the rewrite reads and writes `app_instances`
+with the query builder and a frozen map in the migration file (resolving the chart from the
+tables, not through the models or `profileFor()`), so a later change to a model or a profile
+cannot change what an old migration does. The old-versus-new values check below runs in the
+artisan command and its tests, which can use the application code.
 
 The primary volume, `app/data`:
 
-| App | `claim` from | `access_mode` from | `storage_class` from | `size` from |
+| Chart layout | `claim` from | `access_mode` from | `storage_class` from | `size` from |
 |---|---|---|---|---|
 | Nextcloud | `existing_claim` | `configurations.persistence-accessMode` | `configurations.persistence-storageClass` | `chart_storage` |
 | WordPress | `override.pvc.name` | `configurations.persistence-accessModes` (first of the list) | same | `chart_storage` |
 | CiviCRM | `override.pvc.name` **only if** `override.pvc.override` is true, else it is a `discovered` value | `persistence-accessModes` | same | `chart_storage` |
-| HelmForge | `override.pvc.name` | none | same | `chart_storage` |
+| Catalog (HelmForge), default or added chart | `override.pvc.name` | none | same | `chart_storage` |
 | Generic | `persistence-<n>-existingClaim` into `app/<name>` (name taken from `persistence-<n>-name`) | `persistence-<n>-accessMode` | `persistence-<n>-storageClass` | `persistence-<n>-size` |
 
 The secondary volumes, which today live inside configuration blobs:
 
-| App | From | To |
+| Chart layout | From | To |
 |---|---|---|
-| Nextcloud | `configurations.redis` (and the plan's) `master.persistence.*`, `replica.persistence.*` | `redis-master/data`, `redis-replica/data`: `enabled`, `size`, `storage_class`; the keys are **removed from the blob** so it cannot fight the volume |
-| WordPress, CiviCRM | `configurations.mariadb` `primary.persistence.*` | `mariadb/data`, the same way |
+| Nextcloud (registered) | `configurations.redis` (and the plan's) `master.persistence.*`, `replica.persistence.*` | `redis-master/data`, `redis-replica/data`: `enabled`, `size`, `storage_class`; the keys are **removed from the blob** so it cannot fight the volume |
+| WordPress, CiviCRM (registered) | `configurations.mariadb` `primary.persistence.*` | `mariadb/data`, the same way |
+| Catalog | none: the chart's own subchart persistence was never set by kumulicp | nothing to migrate; a re-sync records the volumes the chart has |
 
 A blob value that equals the profile default is dropped rather than copied, so an instance
 that never changed it keeps following the plan and profile. An instance whose blob **enabled**
@@ -453,6 +531,14 @@ so the same release adds a re-stamp migration, as
 the new fingerprint for instances that were up to date. Without this, changing a claim in the
 new form would not show the app as needing an update.
 
+#233 changed this aspect (`deploymentSettings()` and `chartRepoSecretId()` replace the version's
+raw settings and repo login, which now come from the chart), and added
+`organization_update_states`, the organization-level counterpart of the per-app state. The
+fingerprint change goes in the same `instance` block as before and does not touch the chart
+inputs. The re-stamp has to cover what `BaselineUpdateState` covers today; check whether any
+organization-level aspect fingerprints instance settings before assuming the re-stamp only
+touches per-app rows.
+
 ## Build order
 
 Each slice is its own PR, based on the one before, with tests, and none needs a cluster.
@@ -461,6 +547,10 @@ Each slice is its own PR, based on the one before, with tests, and none needs a 
 for Nextcloud (with and without Redis persistence turned on), WordPress and CiviCRM (with and
 without the MariaDB subchart's persistence on), Generic (one and several volumes) and a
 HelmForge chart, with and without an existing claim, in each state the migration will see.
+Include **a registered app with an added catalog chart** (the setup in
+`tests/Feature/Applications/MultipleChartsTest.php`: the demo app plus a `gitea` chart),
+because the same app then has two layouts and the tests must show each instance gets its own
+chart's.
 They are the safety net for every later slice. Also a test that pins how `override.pvc.name`
 is written back by `JobChart`, including the "first PVC found" case with two claims.
 
@@ -476,10 +566,11 @@ tests must stay green with no edits. Convert the job charts' claim lookup to
 `Volumes::claimName()`. `HelmForgeChart::setPersistence()` moves into the base class.
 
 **Slice 2b - catalog volumes.** `ChartConventionDetector` records every volume it finds,
-the stored convention gains `volumes` next to `persistence`, `HelmForgeChart` reads
-`volumes` and falls back to `persistence`, and `catalog:sync --report` lists shapes it left
+the stored convention gains `volumes` next to `persistence` (on the application for a default
+chart, on the `app_charts` row for an added one), `HelmForgeChart` reads `volumes` through its
+`catalog()` and falls back to `persistence`, and `catalog:sync --report` lists shapes it left
 out. Tests in `tests/Unit/Catalog/ChartConventionDetectorTest.php` for flat, multi-volume and
-subchart layouts.
+subchart layouts, and in `tests/Feature/Catalog/` for a chart attached to a registered app.
 
 **Slice 3 - replace StorageHandover.** `ApplicationWebMove`, `AwaitVolume`, `SwitchServer`,
 `Applications@move_web` and the move form use `Volumes` / `VolumeRules`, with a handover per
@@ -526,6 +617,9 @@ the volume panel), so they can start in parallel once slice 1 is in.
 | A secondary volume (Redis, MariaDB) is enabled on an instance and its data is not part of a move | Blocker on the move until the admin accepts starting it empty; the dry run lists instances that have one enabled |
 | A StatefulSet volume cannot take a single claim name (several replicas, or a chart that only takes one for the primary) | `claim_mode` per volume; `by_name` or `none` instead of `existing_claim`; the form says why. Whether a StatefulSet adopts a pre-created claim of the template's name is confirmed on a cluster before `by_name` is offered |
 | Workload and volume names become settings keys, so a chart that renames one orphans the stored values | Names are fixed in the chart class and pinned by a test; renaming one needs a migration |
+| The migration or a form reads a layout from the application, so an instance on an added chart gets another chart's keys | Everything resolves through `profileFor()` / the chart row; a Slice 0 test with one app on two charts; the migration is keyed on chart identity |
+| A chart's layout changes between its versions, but one convention is stored for the chart (detected from the newest version) | Known limit of the catalog today. Record the convention's chart version, re-detect on sync, and have the version test run fail when a version's values lack a declared key |
+| An instance is moved to a plan on another chart and its secondary-volume settings no longer match | Values for undeclared workloads are ignored, not deleted; the primary volume's settings carry over; whether this is allowed at all is an open question |
 | The catalog detector misreads a subchart's layout and writes to a key the chart ignores (Helm drops unknown keys silently) | Only recognised layouts are recorded; unknown ones are reported, not guessed; a re-sync shows the diff of the stored convention |
 
 ## Open questions
@@ -550,9 +644,20 @@ the volume panel), so they can start in parallel once slice 1 is in.
 6. **Who sees the form**: the admin page only (where the textarea is today), or also an
    organization-facing settings page? The schema's `owner` / visibility would need an
    audience field for the second.
-7. **Rancher**: its values differ from Kubernetes (see the web move notes). Do the chart
-   methods need a per-driver map, or is one map right for both because the driver only
-   changes how the values are applied?
+7. **Rancher**: its values differ from Kubernetes (see the web move notes), and #233 made
+   HelmForge charts deployable on Rancher (`HelmForgeProfile` is now `rancher`-compatible, with
+   the repository given by name). Do the chart methods need a per-driver map, or is one map
+   right for both because the driver only changes how the values are applied?
+8. **Can an instance change chart?** The plan's chart is fixed once it is created, but an
+   instance can be given another plan. If that can switch it between a registered chart and a
+   catalog chart, do we block it, warn that secondary volumes and their data are not
+   carried over, or move the primary volume's claim and size across (the model allows it,
+   but the claim's PVC name was made by the old chart)?
+9. **Plans on an added chart**: the plan-level `persistence-*` configurations and the
+   accessModes rename apply only to plans whose chart uses a registered profile. A plan on a
+   catalog chart takes its configurations from the chart's detected convention. Is it right
+   for the settings form to show only what that convention detected, or should the standard
+   storage group appear for every chart (and be ignored where the chart has no such key)?
 
 ## Not covered
 
