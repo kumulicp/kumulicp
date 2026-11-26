@@ -528,6 +528,10 @@ it('only opens the policy to the captcha provider on the registration pages', fu
 it('does not add users past the plan maximum', function () {
     // The default role gives a standard seat: a smaller one would not be held back by this
     AppRole::query()->update(['access_type' => 'standard']);
+    // Where the organization pays for each app, the app's own cap counts and the organization's is only
+    // the fallback for an app with none: the factory gives the app a cap of its own, with room in it
+    $this->app_instance->plan->updateSettings(['standard.max' => null]);
+    $this->app_instance->plan->save();
     $this->organization->plan->updateSettings(['standard.max' => 1]);
     $this->organization->plan->save();
     User::where('username', 'demo')->update(['access_type' => 'standard']);
