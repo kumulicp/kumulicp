@@ -813,6 +813,13 @@
       "noApps": "Ninguna aplicación coincide con estos filtros"
     },
     "backups": {
+      "runNow": "Respaldar ahora",
+      "runNowTitle": "Respaldar ahora",
+      "runNowConfirm": "¿Respaldar ahora la base de datos de {app} de {org}? La copia de seguridad comienza en un minuto.",
+      "runNowDisabled": "Esta aplicación no tiene un servidor de base de datos con controlador de copias de seguridad, por lo que no se puede respaldar.",
+      "noBackups": "Aún no hay copias de seguridad de esta aplicación",
+      "restoreConfirmApp": "¿Estás seguro de que quieres restaurar {app} desde la copia de seguridad de {scheduled}? Los datos actuales de la aplicación serán reemplazados.",
+
       "action": "Acción",
       "addBackup": "Agregar Copia de Seguridad",
       "addRecurringBackups": "Agregar Copias de Seguridad Recurrentes",

@@ -147,6 +147,14 @@ class AppInstance extends Model
     }
 
     /**
+     * @return HasMany<OrgBackup, $this>
+     */
+    public function backups(): HasMany
+    {
+        return $this->hasMany(OrgBackup::class, 'app_instance_id');
+    }
+
+    /**
      * @return HasMany<AppInstance, $this>
      */
     public function children(): HasMany

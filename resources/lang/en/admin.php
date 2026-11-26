@@ -282,6 +282,7 @@ return [
         'backups' => 'Backups',
         'added' => 'Backup for :time added',
         'scheduled' => 'Backup has been scheduled',
+        'running' => 'Backup will start within a minute',
         'restoring' => 'Backup will be restored',
         'restoring_to' => 'Backup will be restored to :server',
         'cancelled' => 'Backup scheduled for :time was cancelled',
@@ -298,6 +299,7 @@ return [
             'nothing_scheduled' => 'No backups were scheduled: none of the servers has a backup driver',
             'delete' => 'Backup scheduled for :time cannot be deleted',
             'restore_server' => 'This backup cannot be restored to the selected database server',
+            'restore_incomplete' => 'Only a backup that has completed can be restored',
         ],
     ],
     'settings' => [

@@ -139,4 +139,87 @@ class BackupService
 
         return $org_backup;
     }
+
+    /**
+     * The server an app's database is backed up from, or null when it has no
+     * database server or there is no backup driver for it.
+     */
+    public function databaseBackupServerFor(AppInstance $app_instance): ?OrgServer
+    {
+        $database_server = $app_instance->database_server;
+
+        if (! $database_server || ! $this->driverExists($database_server)) {
+            return null;
+        }
+
+        $backup_server = (new OrgServerService($database_server))->backupServer();
+
+        return $backup_server && $this->driverExists($backup_server->get()) ? $backup_server->get() : null;
+    }
+
+    /**
+     * Backs the app's database up as soon as the backup runner next looks
+     * (ActivateBackup runs every minute), keeping the backup for $keep_days.
+     *
+     * @throws NoBackupDriverException when nothing could run the backup
+     */
+    public function runNow(AppInstance $app_instance, int $keep_days): OrgBackup
+    {
+        $org_server = $this->databaseBackupServerFor($app_instance);
+
+        if (! $org_server) {
+            throw new NoBackupDriverException(__('admin.backups.denied.no_driver'));
+        }
+
+        $now = now();
+        $schedule = BackupSchedule::create(['scheduled_at' => $now]);
+
+        return $this->schedule(
+            $schedule,
+            scheduled_at: $now->toDateTimeString(),
+            type: 'database',
+            delete_after: $keep_days,
+            org_server: $org_server,
+            organization: $app_instance->organization,
+            app_instance: $app_instance,
+        );
+    }
+
+    /**
+     * Whether a database backup can be restored into another database server
+     * than the one it was taken from.
+     */
+    public function canRestoreTo(OrgBackup $backup, Server $server): bool
+    {
+        return $backup->type === 'database'
+            && $backup->app_instance
+            && $server->type === 'database'
+            && $server->host
+            && $this->supportsServerTargets($server);
+    }
+
+    /**
+     * Queues the restore of a completed backup, by default to the server it was
+     * taken from, or to $target_server's database server (adding the app's
+     * database and user there; the app keeps using its current server).
+     */
+    public function queueRestore(OrgBackup $backup, ?Server $target_server = null): OrgBackup
+    {
+        $restore = new OrgBackup;
+        $restore->organization_id = $backup->organization_id;
+        $restore->app_instance_id = $backup->app_instance_id;
+        $restore->scheduled_backup_id = $backup->scheduled_backup_id;
+        $restore->action = 'restore';
+        $restore->type = $backup->type;
+        $restore->status = 'scheduled';
+        $restore->scheduled_at = now();
+        $restore->backup_name = $backup->backup_name;
+        $restore->org_server_id = $backup->org_server_id;
+        $restore->settings = $target_server
+            ? ['target_org_server_id' => OrgServerService::forServer($backup->organization, $target_server)->get()->id]
+            : null;
+        $restore->save();
+
+        return $restore;
+    }
 }

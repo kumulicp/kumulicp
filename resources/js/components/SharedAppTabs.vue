@@ -24,6 +24,7 @@ const tabs = computed(() => {
     { title: t('admin.plans.features'), url: urls.plan_features },
     { title: t('admin.plans.helmChartValues'), url: urls.plan_configurations },
     { title: t('admin.apps.helmValues'), url: urls.helm_values },
+    { title: t('admin.backups.backups'), url: urls.backups },
     { title: t('admin.plans.secrets'), url: urls.plan_secrets }
   ].filter(tab => tab.url)
 })

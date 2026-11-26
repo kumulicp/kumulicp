@@ -147,31 +147,17 @@ class BackupRestore extends Controller
         ]);
 
         $redirect = "/admin/organizations/{$organization->id}/backups";
-        $settings = null;
         $server = null;
 
         if ($validated['database_server_id'] ?? null) {
             $server = Server::findOrFail($validated['database_server_id']);
 
-            if ($backup->type !== 'database' || ! $backup->app_instance || $server->type !== 'database' || ! $server->host || ! Backup::supportsServerTargets($server)) {
+            if (! Backup::canRestoreTo($backup, $server)) {
                 return redirect($redirect)->with('error', __('admin.backups.denied.restore_server'));
             }
-
-            $settings = ['target_org_server_id' => OrgServerService::forServer($organization, $server)->get()->id];
         }
 
-        $restore = new OrgBackup;
-        $restore->organization_id = $organization->id;
-        $restore->app_instance_id = $backup->app_instance_id;
-        $restore->scheduled_backup_id = $backup->scheduled_backup_id;
-        $restore->action = 'restore';
-        $restore->type = $backup->type;
-        $restore->status = 'scheduled';
-        $restore->scheduled_at = now();
-        $restore->backup_name = $backup->backup_name;
-        $restore->org_server_id = $backup->org_server_id;
-        $restore->settings = $settings;
-        $restore->save();
+        Backup::queueRestore($backup, $server);
 
         return redirect($redirect)->with('success', $server ? __('admin.backups.restoring_to', ['server' => $server->name]) : __('admin.backups.restoring'));
     }
