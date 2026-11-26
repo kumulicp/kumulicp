@@ -23,6 +23,7 @@ use App\Actions\Domains\TransferDomainName;
 use App\Actions\Domains\UpdateDnsRecords;
 use App\Actions\DummyAction;
 use App\Actions\Email\AddEmailDomain;
+use App\Actions\Email\DeleteMailserverMailbox;
 use App\Actions\Email\RetrieveDkimKey;
 use App\Actions\Organizations\DeactivateOrganization;
 use App\Actions\Organizations\DeleteOrganization;
@@ -81,6 +82,7 @@ class ActionService
             'clear_version_test_step' => ClearVersionTestStep::class,
             'process_customizations' => ProcessCustomizations::class,
             'retrieve_dkim_key' => RetrieveDkimKey::class,
+            'delete_mailserver_mailbox' => DeleteMailserverMailbox::class,
             'register_domain_name' => RegisterDomainName::class,
             'transfer_domain_name' => TransferDomainName::class,
             'invoice_organization' => InvoiceOrganization::class,

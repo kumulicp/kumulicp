@@ -2,6 +2,7 @@
 
 namespace App\Services\Email;
 
+use App\Actions\Email\DeleteMailserverMailbox;
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
 use App\Events\Users\UserEmailChanged;
@@ -11,6 +12,7 @@ use App\Notifications\PrimaryEmailChanged;
 use App\OrgDomain;
 use App\Support\AccountManager\UserManager;
 use App\Support\Email\HostedDomains;
+use App\Support\Facades\Action as ActionFacade;
 use App\Support\Facades\Domain;
 use App\User as DatabaseUser;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -231,13 +233,13 @@ class MailboxService
             $this->changeEmail($user, $username, $mailbox->previous_mail);
 
             $this->recovery_emails->set($username, $mailbox->previous_recovery_email);
-
-            $this->deprovision($user, $mailbox);
         } catch (\Throwable $e) {
             report($e);
 
             throw new MailboxException(__('organization.email.mailbox.failed'), 0, $e);
         }
+
+        $this->deprovisionOrLeaveToTask($user, $mailbox);
 
         $mailbox->forceFill([
             'status' => Mailbox::PENDING,
@@ -271,13 +273,13 @@ class MailboxService
                     $this->changeEmail($user, $username, $restore);
                     $this->recovery_emails->forget($username);
                 }
-
-                $this->deprovision($user, $mailbox);
             } catch (\Throwable $e) {
                 report($e);
 
                 throw new MailboxException(__('organization.email.mailbox.failed'), 0, $e);
             }
+
+            $this->deprovisionOrLeaveToTask($user, $mailbox);
 
             event(new UserUpdated($user));
 
@@ -317,6 +319,25 @@ class MailboxService
 
             if (method_exists($server, 'createUserEmail')) {
                 $server->createUserEmail($user, $domain);
+            }
+        }
+    }
+
+    /**
+     * Takes the mailbox off the mail server, or, when that fails (it is down, say), leaves it to a
+     * task that keeps trying and puts it in front of an admin when it can't. By now the user is
+     * already back on their own email, so failing here would only leave the two halves apart: the
+     * user changed and the panel still believing in the mailbox.
+     */
+    private function deprovisionOrLeaveToTask(UserManager $user, Mailbox $mailbox): void
+    {
+        try {
+            $this->deprovision($user, $mailbox);
+        } catch (\Throwable $e) {
+            report($e);
+
+            if ($mailbox->domain && $mailbox->organization) {
+                ActionFacade::execute(new DeleteMailserverMailbox($mailbox->organization, $mailbox->domain, $mailbox->address, (string) $user->attribute('username')));
             }
         }
     }

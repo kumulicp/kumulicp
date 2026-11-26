@@ -25,6 +25,7 @@ return [
     'updating_dns_records' => 'Updating :domain DNS Records',
     'activating_email' => 'Activating email for :domain',
     'retrieving_dkim_key' => 'Retrieving DKIM Key for :domain',
+    'deleting_mailserver_mailbox' => 'Deleting :address from the mail server',
     'deactivating_organization' => 'Deactivating :organization',
     'deleting_organization' => 'Deleting organization',
     'invoice_organization' => 'Invoice organization for :description',

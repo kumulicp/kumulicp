@@ -18,6 +18,9 @@ class FakeMailServer
 
     public bool $failing = false;
 
+    /** Whether taking a user's mailbox away fails, as it does when the server is down */
+    public bool $failing_delete = false;
+
     /** @var array<string, string> The standalone mailboxes it holds, by address, with their name */
     public array $emails = [];
 
@@ -34,6 +37,10 @@ class FakeMailServer
 
     public function deleteUserEmail(UserManager $user, ?string $email = null): void
     {
+        if ($this->failing_delete) {
+            throw new \RuntimeException('The mail server is unavailable');
+        }
+
         $this->deleted[] = (string) $user->attribute('username');
     }
 

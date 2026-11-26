@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Email;
 
+use App\Actions\Email\DeleteMailserverMailbox;
 use App\Enums\AccessType;
 use App\Events\Mailboxes\MailboxActivated;
 use App\Events\Mailboxes\MailboxDeactivated;
@@ -19,6 +20,7 @@ use App\Support\AccountManager\UserManager;
 use App\Support\Email\UserEmails;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Domain;
+use App\Task;
 use App\User;
 use App\UserRecoveryEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -382,6 +384,71 @@ class MailboxServiceTest extends TestCase
         $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
         $this->assertSame('demo@example.com', $this->email());
         $this->assertSame([], $this->server->deleted);
+    }
+
+    public function test_removing_a_mailbox_while_the_mail_server_is_down_leaves_the_server_to_a_task()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+        $this->server->failing_delete = true;
+
+        $this->service->remove(AccountManager::users()->find('demo'), $mailbox->fresh());
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertDatabaseMissing('mailboxes', ['id' => $mailbox->id]);
+
+        $task = Task::where('action_slug', 'delete_mailserver_mailbox')->firstOrFail();
+        $this->assertSame('jdoe@corp.org', $task->getValue('address'));
+        $this->assertSame([], $this->server->deleted);
+
+        // The server is back
+        $this->server->failing_delete = false;
+        DeleteMailserverMailbox::handle($task);
+
+        $this->assertSame(['demo'], $this->server->deleted);
+    }
+
+    public function test_undoing_the_switch_while_the_mail_server_is_down_leaves_the_server_to_a_task()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+        $this->server->failing_delete = true;
+
+        $this->service->undo(AccountManager::users()->find('demo'), $mailbox->fresh());
+
+        $this->assertSame('demo@example.com', $this->email());
+        $this->assertSame(Mailbox::PENDING, $mailbox->fresh()->status);
+        $this->assertSame(1, Task::where('action_slug', 'delete_mailserver_mailbox')->count());
+    }
+
+    public function test_the_task_leaves_an_address_that_has_been_given_out_again()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+        $this->server->failing_delete = true;
+        $this->service->remove(AccountManager::users()->find('demo'), $mailbox->fresh());
+        $this->server->failing_delete = false;
+
+        $again = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $again);
+
+        DeleteMailserverMailbox::handle(Task::where('action_slug', 'delete_mailserver_mailbox')->firstOrFail());
+
+        $this->assertSame([], $this->server->deleted);
+    }
+
+    public function test_the_task_throws_when_the_server_is_still_down_so_the_runner_can_retry_and_then_fail_it()
+    {
+        $mailbox = $this->service->offer($this->manager, $this->corp, 'jdoe');
+        $this->service->accept($this->manager, $mailbox);
+        $this->server->failing_delete = true;
+        $this->service->remove(AccountManager::users()->find('demo'), $mailbox->fresh());
+        $task = Task::where('action_slug', 'delete_mailserver_mailbox')->firstOrFail();
+
+        $this->expectException(\RuntimeException::class);
+
+        // What the runner does with an error it doesn't know: tries again until max_attempts, then fails the task
+        DeleteMailserverMailbox::handle($task);
     }
 
     public function test_a_users_mailboxes_go_when_the_user_does()
