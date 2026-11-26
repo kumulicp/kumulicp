@@ -2039,6 +2039,7 @@
     "captchaHcaptcha": "hCaptcha",
     "captchaSiteKey": "Site Key",
     "captchaSecretKey": "Secret Key",
+    "captchaSecretKeySet": "Saved. Leave blank to keep it",
     "selfRegistrationEnabled": "Enable Self-Registration",
     "selfRegistrationDescription": "When enabled, organization admins can share a registration link that allows new users to sign up and join their organization directly, without needing an admin to create their account manually.",
     "securityTools": "Security Scan Tools",

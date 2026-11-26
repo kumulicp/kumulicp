@@ -32,7 +32,10 @@ import { useForm } from '@inertiajs/vue3'
           />
           <va-input
             v-model="form.captcha_secret_key"
+            type="password"
+            autocomplete="new-password"
             :label="$t('settings.captchaSecretKey')"
+            :placeholder="settings.captcha_secret_key_set ? $t('settings.captchaSecretKeySet') : ''"
             class="mb-3"
             :error="$page.props.errors.captcha_secret_key"
             :error-messages="$page.props.errors.captcha_secret_key"
@@ -63,7 +66,7 @@ export default {
       form: useForm({
         captcha_provider: this.settings.captcha_provider ?? null,
         captcha_site_key: this.settings.captcha_site_key ?? '',
-        captcha_secret_key: this.settings.captcha_secret_key ?? '',
+        captcha_secret_key: '',
       }),
     }
   },

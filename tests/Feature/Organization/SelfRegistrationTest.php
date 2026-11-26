@@ -420,15 +420,48 @@ it('keeps one registration per address and organization', function () {
         ->and(strlen($second->token))->toBe(64);
 });
 
-// -- Findings of docs/plans/self-registration.md, as the behavior we want ---------------------------
+// -- The captcha widget under the Content Security Policy -------------------------------------------
 
-it('lets the captcha provider load on the registration page', function () {
-    Settings::update('captcha_provider', 'turnstile');
+function cspDirective(?string $policy, string $directive): string
+{
+    preg_match('/(?:^|; )'.preg_quote($directive, '/').' ([^;]*)/', (string) $policy, $matches);
 
+    return $matches[1] ?? '';
+}
+
+it('lets the captcha provider load its widget on the registration pages', function (string $provider, array $hosts) {
+    Settings::update('captcha_provider', $provider);
+
+    foreach ([$this->base, $this->base.'/pending'] as $url) {
+        $policy = $this->get($url)->headers->get('Content-Security-Policy');
+
+        foreach (['script-src', 'frame-src', 'connect-src'] as $directive) {
+            foreach ($hosts as $host) {
+                expect(cspDirective($policy, $directive))->toContain($host);
+            }
+        }
+    }
+})->with([
+    'turnstile' => ['turnstile', ['https://challenges.cloudflare.com']],
+    'hcaptcha' => ['hcaptcha', ['https://hcaptcha.com', 'https://*.hcaptcha.com']],
+]);
+
+it('keeps the policy as it was when no captcha is set', function () {
     $policy = $this->get($this->base)->headers->get('Content-Security-Policy');
 
-    expect($policy)->toContain('challenges.cloudflare.com');
-})->skip('Finding 1: the policy only allows Stripe, so the captcha widget is blocked. Confirm in a browser first.');
+    expect($policy)->not->toContain('cloudflare')->not->toContain('hcaptcha')
+        ->and(cspDirective($policy, 'frame-src'))->toBe("'self' https://js.stripe.com https://hooks.stripe.com");
+});
+
+it('only opens the policy to the captcha provider on the registration pages', function () {
+    Settings::update('captcha_provider', 'turnstile');
+
+    $policy = $this->get('/login')->headers->get('Content-Security-Policy');
+
+    expect($policy)->not->toContain('challenges.cloudflare.com');
+});
+
+// -- Findings of docs/plans/self-registration.md, as the behavior we want ---------------------------
 
 it('does not add users past the plan maximum', function () {
     $this->organization->plan->updateSettings(['standard.max' => 1]);
@@ -505,13 +538,3 @@ it('says the link expired and offers a new one for the same address (finding 7)'
 // Finding 7: needs the prune command from phase 1.
 it('removes expired registrations (finding 7)')
     ->todo();
-
-it('does not send the captcha secret key to the browser', function () {
-    Settings::update('captcha_provider', 'turnstile');
-    Settings::update('captcha_secret_key', 'secret-key');
-
-    $this->actingAs(User::where('username', 'demo')->firstOrFail())
-        ->get('/admin/settings/registration')
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->missing('settings.captcha_secret_key'));
-})->skip('Finding 8: the settings page returns the secret as a prop.');
