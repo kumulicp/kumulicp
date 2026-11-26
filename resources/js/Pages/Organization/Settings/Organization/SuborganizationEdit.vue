@@ -115,6 +115,15 @@ useInputMask(createRegexMask(/(\+\d \(\d{3}\)|\d{3}) (\d){3}-(\d){4}/), phoneNum
           </va-switch>
         </div>
         <div class="flex flex-col xs12 lg6 mb-2">
+          <va-switch v-if="org.can_manage_activation && form.include_in_parent_invoice"
+            v-model="form.allow_app_activation"
+            id="allow_app_activation"
+            left-label
+            :error="$page.props.errors.allow_app_activation"
+            :error-messages="$page.props.errors.allow_app_activation"
+            >
+            {{ $t('organization.settings.allowAppActivation') }}
+          </va-switch>
         </div>
       </div>
       <template v-if="! form.include_in_parent_invoice">
@@ -191,6 +200,7 @@ export default {
         state: this.org.state,
         country: this.org.country,
         include_in_parent_invoice: this.org.include_in_parent_invoice,
+        allow_app_activation: this.org.allow_app_activation,
         user_first_name: this.org.user_first_name,
         user_last_name: this.org.user_last_name,
         user_phone_number: this.org.user_phone_number,

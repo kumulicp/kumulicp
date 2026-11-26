@@ -1625,6 +1625,7 @@
       "address": "Dirección",
       "invoiceSettings": "Configuración de Facturas",
       "includeInParentInvoice": "Incluir en Factura Padre",
+      "allowAppActivation": "Permitir que esta organización active aplicaciones (se factura a la principal)",
       "suborganizations": "Suborganizaciones",
       "registration": "Registro",
       "selfRegistrationEnabled": "Permitir Autorregistro",

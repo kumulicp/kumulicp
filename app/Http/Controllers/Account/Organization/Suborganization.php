@@ -174,6 +174,8 @@ class Suborganization extends Controller
                 'state' => $organization->state,
                 'country' => $organization->country,
                 'include_in_parent_invoice' => $organization->setting('include_in_parent_invoice'),
+                'allow_app_activation' => (bool) $organization->setting('allow_app_activation'),
+                'can_manage_activation' => $organization->parent_organization_id === auth()->user()->organization->id,
                 'user_first_name' => $organization->contact_first_name,
                 'user_last_name' => $organization->contact_last_name,
                 'user_phone_number' => $organization->contact_phone_number,
@@ -211,6 +213,7 @@ class Suborganization extends Controller
             'state' => 'required',
             'country' => 'required',
             'include_in_parent_invoice' => 'required|boolean',
+            'allow_app_activation' => 'nullable|boolean',
             'user_first_name' => 'required_if:include_in_parent_invoice,false',
             'user_last_name' => 'required_if:include_in_parent_invoice,false',
             'user_phone_number' => 'required_if:include_in_parent_invoice,false',
@@ -238,6 +241,10 @@ class Suborganization extends Controller
         $organization->state = $state;
         $organization->country = $country;
         $organization->updateSetting('include_in_parent_invoice', $request->include_in_parent_invoice);
+        // Whether the suborganization's own users may activate apps, which the parent pays for, is the parent's to say
+        if ($organization->parent_organization_id === $request->user()->organization->id) {
+            $organization->updateSetting('allow_app_activation', $request->boolean('allow_app_activation'));
+        }
         $organization->contact_first_name = $request->user_first_name;
         $organization->contact_last_name = $request->user_last_name;
         $organization->contact_phone_number = $request->user_phone_number;

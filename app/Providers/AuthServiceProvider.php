@@ -9,7 +9,7 @@ use App\Plan;
 use App\Policies\TicketPolicy;
 use App\Services\AppInstance\PendingAppChanges;
 use App\Services\Application\ApplicationReadiness;
-use App\Services\Organization\JointSubscriptionService;
+use App\Services\Organization\AppActivationContext;
 use App\Services\Organization\UserAllowance;
 use App\Services\SubscriptionService;
 use App\Support\AccountManager\UserManager;
@@ -137,8 +137,12 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         /* APPS */
-        Gate::define('select-app-plan', function (User $user, AppPlan $plan) {
-            return Subscription::base()->appPlanSelectable($plan)
+        // $target is the organization the app is for, which for a parent can be one of its suborganizations.
+        // Without one, it is the user's own.
+        Gate::define('select-app-plan', function (User $user, AppPlan $plan, ?\App\Organization $target = null) {
+            $base_plan = $target ? (new SubscriptionService($target))->base() : Subscription::base();
+
+            return $base_plan->appPlanSelectable($plan)
                 ? Response::allow()
                 : Response::deny(__('organization.plan.unavailable'));
         });
@@ -183,8 +187,11 @@ class AuthServiceProvider extends ServiceProvider
 
         // What an app needs before it can be activated depends on the plan it is activated on. Without a
         // plan (the app's own page, which lists them all) the app can be activated if any plan can be.
-        Gate::define('activate-app', function (User $user, Application $app, ?AppPlan $plan = null) use ($admin_only_in_single) {
-            $organization = $user->organization;
+        // $target is the organization the app is for: the user's own, or for a parent one of its suborganizations.
+        // What limits apply, who may do it and who pays are worked out from it (see AppActivationContext).
+        Gate::define('activate-app', function (User $user, Application $app, ?AppPlan $plan = null, ?\App\Organization $target = null) use ($admin_only_in_single) {
+            $context = new AppActivationContext($user, $target ?? $user->organization);
+            $organization = $context->target;
 
             if (! $admin_only_in_single($user)) {
                 return Response::deny(__('organization.app.denied.admin_only'), 'admin_required');
@@ -194,8 +201,15 @@ class AuthServiceProvider extends ServiceProvider
             if (Tenancy::isSingleOrganization($organization) && ! (new ApplicationReadiness($app))->isReady()) {
                 return Response::deny(__('organization.app.denied.not_ready'), 'app_not_ready');
             }
-            $subscription = $organization->suborganizations()->exists() ? new JointSubscriptionService($organization) : Subscription::access();
-            $base_plan = Subscription::base();
+
+            $authorized = $context->authorize();
+            if ($authorized->denied()) {
+                return $authorized;
+            }
+
+            // The target's own plan decides what it may have, whoever is billed for it
+            $subscription = new SubscriptionService($organization);
+            $base_plan = $context->basePlan();
 
             $plans_with_higher_app_limit = $subscription->isAppLimitReached($app);
 
@@ -205,7 +219,11 @@ class AuthServiceProvider extends ServiceProvider
                         return Response::deny(__('organization.app.denied.no_parent_app', ['app' => $candidate->application->name, 'parent_app' => $candidate->parentApplication()->name]), 'missing_parent_app');
                     }
 
-                    if ($candidate->hasDomainOption(['subdomains', 'primary']) && ! $candidate->hasDomainOption(['base', 'parent']) && count($organization->main_domains()) === 0) {
+                    // A suborganization can use its parent's domains too
+                    $has_domains = count($organization->main_domains()) > 0
+                        || ($organization->parent_organization && count($organization->parent_organization->main_domains()) > 0);
+
+                    if ($candidate->hasDomainOption(['subdomains', 'primary']) && ! $candidate->hasDomainOption(['base', 'parent']) && ! $has_domains) {
                         return Response::deny(__('organization.app.denied.primary_domain'));
                     }
 

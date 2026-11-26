@@ -37,7 +37,7 @@ class SubscriptionService
             $subscription->appInstancePlans();
 
             return $subscription->plans;
-        });
+        }, organization: $this->organization);
 
         return $this;
     }

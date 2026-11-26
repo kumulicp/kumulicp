@@ -2,7 +2,6 @@
 
 namespace App\Services\Organization;
 
-use App\Application;
 use App\Organization;
 use App\Services\SubscriptionService;
 use App\Support\Facades\Organization as OrganizationFacade;
@@ -23,6 +22,9 @@ class JointSubscriptionService
 
     public function allSubscriptions()
     {
+        // Built from scratch each time: appending to what an earlier call left would count a suborganization twice
+        $this->subscriptions = [];
+
         $suborgs = $this->organization->suborganizations()->where('settings->include_in_parent_invoice', true)->get();
         foreach ($suborgs as $suborg) {
             $this->subscriptions[] = (new SubscriptionService($suborg))->all();
@@ -33,7 +35,7 @@ class JointSubscriptionService
 
     public function includedSubscriptions()
     {
-        $this->included_subscriptions[] = Subscription::all();
+        $this->included_subscriptions = [Subscription::all()];
 
         $suborgs = $this->organization->suborganizations()->where('settings->include_in_parent_invoice', true)->get();
         foreach ($suborgs as $suborg) {
@@ -52,16 +54,6 @@ class JointSubscriptionService
         }
 
         return $subscriptions;
-    }
-
-    public function countEntity(string $entity)
-    {
-        $count = 0;
-        foreach ($this->includedSubscriptions() as $subscription) {
-            $count += $subscription->countEntity();
-        }
-
-        return $count;
     }
 
     public function domainsEnabled()
@@ -95,16 +87,5 @@ class JointSubscriptionService
         }
 
         return $total;
-    }
-
-    public function isAppLimitReached(Application $app): bool
-    {
-        foreach ($this->allSubscriptions() as $subscription) {
-            if ($subscription->base()->isMaxApps($app)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

@@ -15,6 +15,7 @@ use App\Rules\OrgAppInstance;
 use App\Rules\OrgDomainName;
 use App\Rules\OrgSuborganization;
 use App\Services\Application\ApplicationReadiness;
+use App\Services\Organization\AppActivationContext;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Billing;
@@ -270,12 +271,18 @@ class Discover extends Controller
                 ];
             }),
             'domains' => $domains,
-            'organizations' => collect([['id' => $organization->id, 'name' => $organization->name]])->merge($organization->suborganizations()->notDeactivated()->get()->map(function ($sub) {
-                return [
-                    'id' => $sub->id,
-                    'name' => $sub->name,
-                ];
-            })),
+            // Only the suborganizations the user may activate apps for, which are the ones the parent pays for
+            'organizations' => collect([['id' => $organization->id, 'name' => $organization->name]])->merge(
+                $organization->suborganizations()->notDeactivated()->get()
+                    ->filter(fn ($sub) => (new AppActivationContext(auth()->user(), $sub))->authorize()->allowed())
+                    ->map(function ($sub) {
+                        return [
+                            'id' => $sub->id,
+                            'name' => $sub->name,
+                        ];
+                    })
+                    ->values()
+            ),
             'parent_domains' => $organization->main_domains()->map(function ($domain) {
                 return [
                     'value' => $domain->id,
@@ -284,20 +291,29 @@ class Discover extends Controller
             }),
             'driver' => Billing::component(),
             'default_label' => $other_apps > 0 ? $app->name.' '.$other_apps + 1 : $app->name,
-            'has_payment_method' => Billing::hasDefaultPaymentMethod(),
+            // A suborganization's user whose parent pays isn't asked for a payment method: it's the parent's
+            // that is used, and activating checks it
+            'has_payment_method' => ! (new AppActivationContext(auth()->user(), $organization))->payerIsUsersOrganization() || Billing::hasDefaultPaymentMethod(),
             'settings' => $settings,
         ]);
     }
 
     public function activate(Request $request, Application $app, AppPlan $plan)
     {
-        Gate::authorize('activate-app', [$app, $plan]);
-        Gate::authorize('select-app-plan', $plan);
-
         $organization = Organization::account();
 
-        if ($plan->payment_enabled && ! Billing::hasDefaultPaymentMethod()) {
-            return back()->with('error', __('organization.app.denied.payment_method'));
+        // What is activated, who may do it, what limits apply and who pays all depend on who it is for
+        $target = $this->activationTarget($request, $organization);
+
+        Gate::authorize('activate-app', [$app, $plan, $target]);
+        Gate::authorize('select-app-plan', [$plan, $target]);
+
+        $context = new AppActivationContext($request->user(), $target);
+
+        if ($plan->payment_enabled && ! $context->payerCanPay()) {
+            return back()->with('error', $context->payerIsUsersOrganization()
+                ? __('organization.app.denied.payment_method')
+                : __('organization.app.denied.parent_payment_method'));
         }
 
         $validatedData = $request->validate([
@@ -389,7 +405,7 @@ class Discover extends Controller
             $subdomain = OrgSubdomain::find($validatedData['domain']);
         }
 
-        $organization = Arr::get($validatedData, 'organization', null) ? \App\Organization::find($validatedData['organization']) : $organization;
+        $organization = $target;
 
         $parent_app = null;
         $parent_application = $plan->parentApplication();
@@ -418,6 +434,20 @@ class Discover extends Controller
         }
 
         return redirect('/apps')->with('success', __('organization.app.activating', ['app' => $validatedData['label']]));
+    }
+
+    /**
+     * The organization the app is activated for: the user's own, or one of its suborganizations.
+     */
+    private function activationTarget(Request $request, \App\Organization $organization): \App\Organization
+    {
+        if (! $request->filled('organization')) {
+            return $organization;
+        }
+
+        $request->validate(['organization' => ['numeric', new OrgSuborganization]]);
+
+        return \App\Organization::findOrFail((int) $request->input('organization'));
     }
 
     // Whether this app+plan combo only allows the 'parent' domain choice --

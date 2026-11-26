@@ -144,6 +144,20 @@ via an unlabeled `organization` select on the review page. It only appears when 
 
 ### 3.3 Proposed flow
 
+**Status (branch `claude/suborg-activation-context`, slice 1 of 3, not yet run):**
+- **Done (server side):**
+  - `AppActivationContext` works out, from the target org, who may activate (decisions 7 and 11), the limits (target's own plan) and who pays.
+  - The `activate-app` and `select-app-plan` gates take an optional target org.
+  - `Discover@activate` resolves the target first and checks the payer's payment method instead of the viewer's.
+  - The review page only offers suborgs the user may activate for, and doesn't ask a suborg user whose parent pays for a payment method.
+  - `OrgSuborganization` accepts string ids and refuses deactivated suborgs.
+  - A per-suborg "Let this organization activate apps" switch on the suborg edit page, settable by the parent only.
+  - `JointSubscriptionService` no longer decides limits, and no longer double counts on repeat calls.
+  - `FastCache::retrieve('plans')` was keyed on the active org, so a suborg's plans could be read from the parent's cache entry on a taggable cache store. It now takes the org.
+- **Not done:**
+  - Slice 2: the org selector first (the app page and review take `?organization=`), per-target plans, labels and counts on the Discover pages, and domains/parent apps restricted to the target and its parent (decision 8).
+  - Slice 3: notifications, the registration URL, the cost preview, and the optional family-wide ceiling plan setting.
+
 1. **Choose the org first.**
    - Add an "Activating for" selector at the start (the app page).
    - List only the viewer's org and the non-deactivated suborgs that the viewer is allowed to activate for (rule below).

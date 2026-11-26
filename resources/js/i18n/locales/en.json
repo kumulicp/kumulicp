@@ -1701,6 +1701,7 @@
       "address": "Address",
       "invoiceSettings": "Invoice Settings",
       "includeInParentInvoice": "Include in Parent Invoice",
+      "allowAppActivation": "Let this organization activate apps (billed to the parent)",
       "suborganizations": "Suborganizations",
       "registration": "Registration",
       "selfRegistrationEnabled": "Allow Self-Registration",

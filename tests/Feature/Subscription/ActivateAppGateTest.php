@@ -26,7 +26,7 @@ it('allows activating an app under the plan limit when the organization has no s
     expect($response->allowed())->toBeTrue();
 });
 
-it('checks the plan limit via JointSubscriptionService when the organization has suborganizations', function () {
+it('still checks the organization own plan limit when it has suborganizations', function () {
     $suborg = Organization::factory()->create([
         'plan_id' => $this->support->base_1->id,
         'parent_organization_id' => 1,
