@@ -21,8 +21,8 @@ beforeEach(function () {
 
     $this->admin = User::find(1);
     $this->organization = Organization::find(1);
-    $this->app = AppInstance::where('organization_id', $this->organization->id)->first();
-    $this->base = "/admin/organizations/{$this->organization->id}/apps/{$this->app->id}/backups";
+    $this->demoApp = AppInstance::where('organization_id', $this->organization->id)->first();
+    $this->base = "/admin/organizations/{$this->organization->id}/apps/{$this->demoApp->id}/backups";
 });
 
 afterEach(function () {
@@ -38,6 +38,17 @@ function giveAppDatabase(AppInstance $app, string $interface): OrgServer
     $app->save();
 
     return $orgServer;
+}
+
+/** Another app in the same organization, of the same application, version and plan. */
+function anotherApp(AppInstance $app): AppInstance
+{
+    return AppInstance::factory()->create([
+        'organization_id' => $app->organization_id,
+        'application_id' => $app->application_id,
+        'version_id' => $app->version_id,
+        'plan_id' => $app->plan_id,
+    ]);
 }
 
 function completedBackup(AppInstance $app, OrgServer $orgServer, array $extra = []): OrgBackup
@@ -64,10 +75,10 @@ it('is not there when the app backups flag is off', function () {
 });
 
 it('lists only the backups of the app', function () {
-    $orgServer = giveAppDatabase($this->app, 'app_database');
-    $mine = completedBackup($this->app, $orgServer);
+    $orgServer = giveAppDatabase($this->demoApp, 'app_database');
+    $mine = completedBackup($this->demoApp, $orgServer);
 
-    $other = AppInstance::factory()->create(['organization_id' => $this->organization->id]);
+    $other = anotherApp($this->demoApp);
     $theirs = completedBackup($other, $orgServer, ['backup_name' => 'other-app']);
 
     $this->actingAs($this->admin)->get($this->base)->assertOk()->assertInertia(fn ($page) => $page
@@ -78,7 +89,7 @@ it('lists only the backups of the app', function () {
 });
 
 it('cannot back up an app whose database server has no backup driver', function () {
-    giveAppDatabase($this->app, 'no_such_driver');
+    giveAppDatabase($this->demoApp, 'no_such_driver');
 
     $this->actingAs($this->admin)->get($this->base)->assertInertia(fn ($page) => $page->where('can_backup', false));
 
@@ -88,7 +99,7 @@ it('cannot back up an app whose database server has no backup driver', function 
 });
 
 it('backs the app up straight away, to be picked up by the backup runner', function () {
-    giveAppDatabase($this->app, 'app_database');
+    giveAppDatabase($this->demoApp, 'app_database');
 
     $this->actingAs($this->admin)->post($this->base, ['keep_for' => 14])
         ->assertRedirect($this->base)
@@ -98,14 +109,14 @@ it('backs the app up straight away, to be picked up by the backup runner', funct
     expect($backup->action)->toBe('backup')
         ->and($backup->type)->toBe('database')
         ->and($backup->status)->toBe('scheduled')
-        ->and($backup->app_instance_id)->toBe($this->app->id)
+        ->and($backup->app_instance_id)->toBe($this->demoApp->id)
         ->and($backup->organization_id)->toBe($this->organization->id)
         ->and(now()->parse($backup->scheduled_at)->lte(now()))->toBeTrue()
         ->and(now()->parse($backup->delete_at)->between(now()->addDays(13), now()->addDays(15)))->toBeTrue();
 });
 
 it('keeps a backup run from here for a month unless asked otherwise', function () {
-    giveAppDatabase($this->app, 'app_database');
+    giveAppDatabase($this->demoApp, 'app_database');
 
     $this->actingAs($this->admin)->post($this->base)->assertSessionHas('success');
 
@@ -113,8 +124,8 @@ it('keeps a backup run from here for a month unless asked otherwise', function (
 });
 
 it('restores a completed backup of the app to where it came from', function () {
-    $orgServer = giveAppDatabase($this->app, 'app_database');
-    $backup = completedBackup($this->app, $orgServer);
+    $orgServer = giveAppDatabase($this->demoApp, 'app_database');
+    $backup = completedBackup($this->demoApp, $orgServer);
 
     $this->actingAs($this->admin)->post("{$this->base}/{$backup->id}/restore")
         ->assertRedirect($this->base)
@@ -123,14 +134,14 @@ it('restores a completed backup of the app to where it came from', function () {
     $restore = OrgBackup::where('action', 'restore')->sole();
     expect($restore->status)->toBe('scheduled')
         ->and($restore->backup_name)->toBe('backup-1')
-        ->and($restore->app_instance_id)->toBe($this->app->id)
+        ->and($restore->app_instance_id)->toBe($this->demoApp->id)
         ->and($restore->org_server_id)->toBe($orgServer->id)
         ->and($restore->settings)->toBeNull();
 });
 
 it('refuses to restore a backup that has not completed', function () {
-    $orgServer = giveAppDatabase($this->app, 'app_database');
-    $backup = completedBackup($this->app, $orgServer, ['status' => 'failed']);
+    $orgServer = giveAppDatabase($this->demoApp, 'app_database');
+    $backup = completedBackup($this->demoApp, $orgServer, ['status' => 'failed']);
 
     $this->actingAs($this->admin)->post("{$this->base}/{$backup->id}/restore")->assertSessionHas('error');
 
@@ -138,8 +149,8 @@ it('refuses to restore a backup that has not completed', function () {
 });
 
 it('refuses to restore to a server that cannot take the backup', function () {
-    $orgServer = giveAppDatabase($this->app, 'app_database');
-    $backup = completedBackup($this->app, $orgServer);
+    $orgServer = giveAppDatabase($this->demoApp, 'app_database');
+    $backup = completedBackup($this->demoApp, $orgServer);
     $web = Server::factory()->create(['type' => 'web']);
 
     $this->actingAs($this->admin)->post("{$this->base}/{$backup->id}/restore", ['database_server_id' => $web->id])
@@ -149,8 +160,8 @@ it('refuses to restore to a server that cannot take the backup', function () {
 });
 
 it('does not restore a backup of another app through this one', function () {
-    $orgServer = giveAppDatabase($this->app, 'app_database');
-    $other = AppInstance::factory()->create(['organization_id' => $this->organization->id]);
+    $orgServer = giveAppDatabase($this->demoApp, 'app_database');
+    $other = anotherApp($this->demoApp);
     $theirs = completedBackup($other, $orgServer);
 
     $this->actingAs($this->admin)->post("{$this->base}/{$theirs->id}/restore")->assertNotFound();
@@ -162,6 +173,6 @@ it('does not serve an app through another organization', function () {
     $other = Organization::factory()->create();
 
     $this->actingAs($this->admin)
-        ->get("/admin/organizations/{$other->id}/apps/{$this->app->id}/backups")
+        ->get("/admin/organizations/{$other->id}/apps/{$this->demoApp->id}/backups")
         ->assertNotFound();
 });
