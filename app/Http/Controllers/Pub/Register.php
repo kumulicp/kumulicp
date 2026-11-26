@@ -70,7 +70,7 @@ class Register extends Controller
         OrganizationFacade::setOrganization($organization);
 
         // No point sending a link that cannot be used. The same answer whatever the address is
-        if (! (new UserAllowance($organization))->allowed()) {
+        if (! (new UserAllowance($organization))->allowedFor($organization->selfRegistrationApps())) {
             return back()->withErrors(['email' => __('messages.org_registration.full')]);
         }
 
@@ -154,7 +154,7 @@ class Register extends Controller
         $lock->block(10);
 
         try {
-            if (! (new UserAllowance($organization))->allowed()) {
+            if (! (new UserAllowance($organization))->allowedFor($organization->selfRegistrationApps())) {
                 return back()->withErrors(['limit' => __('messages.org_registration.full')]);
             }
 
@@ -227,7 +227,7 @@ class Register extends Controller
     {
         OrganizationFacade::setOrganization($organization);
 
-        return (new UserAllowance($organization))->allowed() ? null : __('messages.org_registration.full');
+        return (new UserAllowance($organization))->allowedFor($organization->selfRegistrationApps()) ? null : __('messages.org_registration.full');
     }
 
     private function abortIfDisabled(Organization $organization): void

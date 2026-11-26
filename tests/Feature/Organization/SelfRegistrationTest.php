@@ -526,6 +526,8 @@ it('only opens the policy to the captcha provider on the registration pages', fu
 // -- Findings of docs/plans/self-registration.md, as the behavior we want ---------------------------
 
 it('does not add users past the plan maximum', function () {
+    // The default role gives a standard seat: a smaller one would not be held back by this
+    AppRole::query()->update(['access_type' => 'standard']);
     $this->organization->plan->updateSettings(['standard.max' => 1]);
     $this->organization->plan->save();
     User::where('username', 'demo')->update(['access_type' => 'standard']);

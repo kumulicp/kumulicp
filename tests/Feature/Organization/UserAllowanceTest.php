@@ -9,6 +9,7 @@ use App\Application;
 use App\AppPlan;
 use App\AppRole;
 use App\AppVersion;
+use App\Enums\AccessType;
 use App\Organization;
 use App\OrgUserRegistration;
 use App\Services\Organization\UserAllowance;
@@ -27,20 +28,32 @@ function limitStandardUsers(Organization $organization, ?int $max): void
     User::where('username', 'demo')->update(['access_type' => 'standard']);
 }
 
-/** An app that hands out the organization's registration link. */
-function openRegistration(Organization $organization): void
+/**
+ * An app that hands out the organization's registration link, whose default user roles give these
+ * seats. The app's plan offers basic users only when asked, as a plan without them counts a basic
+ * role as a standard one.
+ *
+ * @param  string|array<int, string>  $access_types
+ */
+function openRegistration(Organization $organization, string|array $access_types = 'standard', bool $basic_enabled = false): AppInstance
 {
     $application = Application::factory()->create();
-    $role = AppRole::factory()->create(['application_id' => $application->id]);
+    $roles = collect((array) $access_types)->map(fn (string $access_type) => AppRole::factory()->create([
+        'application_id' => $application->id,
+        'access_type' => $access_type,
+    ]));
     $version = AppVersion::factory()->create([
         'application_id' => $application->id,
-        'roles' => ['order' => [$role->id], 'default_user_groups' => [$role->id]],
+        'roles' => ['order' => $roles->pluck('id')->all(), 'default_user_groups' => $roles->pluck('id')->all()],
     ]);
     $plan = AppPlan::factory()->create(['application_id' => $application->id]);
-    $plan->settings = array_merge($plan->settings, ['self_registration_enabled' => true]);
+    $plan->settings = array_merge($plan->settings, [
+        'self_registration_enabled' => true,
+        'basic' => array_merge($plan->settings['basic'], ['enabled' => $basic_enabled, 'name' => $basic_enabled ? 'Basic' : null]),
+    ]);
     $plan->save();
 
-    AppInstance::factory()->create([
+    return AppInstance::factory()->create([
         'organization_id' => $organization->id,
         'application_id' => $application->id,
         'version_id' => $version->id,
@@ -193,4 +206,71 @@ it('shows the details form while the plan has room', function () {
     $this->get('/public/org/demo/register/verify/'.$registration->token)
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Auth/OrgRegisterComplete')->where('fullMessage', null));
+});
+
+// -- The seat the person would take -----------------------------------------------------------------
+
+function registrationPageSays(?string $message = null): Closure
+{
+    return fn ($page) => $page->component('Auth/OrgRegister')->where('fullMessage', $message);
+}
+
+it('does not stop someone who would take a smaller seat than the one that is full', function () {
+    openRegistration($this->organization, 'minimal');
+    limitStandardUsers($this->organization, 1);
+
+    $this->get('/public/org/demo/register')->assertOk()->assertInertia(registrationPageSays(null));
+
+    $this->post('/public/org/demo/register', ['email' => 'new@example.com'])->assertSessionHasNoErrors();
+    expect(OrgUserRegistration::where('email', 'new@example.com')->exists())->toBeTrue();
+});
+
+it('registers someone into a smaller seat when the standard seats are full', function () {
+    openRegistration($this->organization, 'minimal');
+    limitStandardUsers($this->organization, 1);
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+
+    $this->post('/public/org/demo/register/verify/'.$registration->token, [
+        'username' => 'newperson',
+        'first_name' => 'New',
+        'last_name' => 'Person',
+    ])->assertSessionHasNoErrors();
+
+    expect(User::where('username', 'newperson')->exists())->toBeTrue();
+});
+
+it('counts a basic role against the basic seats and not the standard ones', function () {
+    openRegistration($this->organization, 'basic', basic_enabled: true);
+
+    // Standard is full, basic is not
+    limitStandardUsers($this->organization, 1);
+    $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(null));
+
+    // Basic is full, standard has room
+    limitStandardUsers($this->organization, 5);
+    User::where('username', 'demo')->update(['access_type' => 'basic']);
+    $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(__('messages.org_registration.full')));
+});
+
+it('counts a basic role as a standard one on a plan without basic users', function () {
+    openRegistration($this->organization, 'basic', basic_enabled: false);
+    limitStandardUsers($this->organization, 1);
+
+    $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(__('messages.org_registration.full')));
+});
+
+it('takes the biggest seat of the default roles', function () {
+    $app = openRegistration($this->organization, ['minimal', 'standard']);
+
+    expect((new UserAllowance($this->organization))->accessTypeFor([$app]))->toBe(AccessType::STANDARD);
+});
+
+it('works the same for a plan that counts users for the whole organization', function () {
+    $this->organization->plan->type = 'package';
+    $this->organization->plan->save();
+    $this->organization->refresh();
+    openRegistration($this->organization, 'minimal');
+    limitStandardUsers($this->organization, 1);
+
+    $this->get('/public/org/demo/register')->assertInertia(registrationPageSays(null));
 });
