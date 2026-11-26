@@ -587,10 +587,31 @@ chart's.
 They are the safety net for every later slice. Also a test that pins how `override.pvc.name`
 is written back by `JobChart`, including the "first PVC found" case with two claims.
 
-**Slice 1 - the volume store.** `Volume`, `Volumes` (workload-aware; read both, write new),
-`SettingsSnapshot`, `VolumeRules`. Unit tests, including the fallback order, a two-workload
-chart, size policies (`quota` vs `fixed`) and `assign()` / `restore()` round-trips over
-several volumes (port the cases from `StorageHandoverTest`).
+**Slice 1 - the volume store. Done**, in `App\Support\Volumes` (`VolumeSpec`, `Volume`, `Volumes`,
+`VolumeRules`, `LegacyVolumeKeys`) and `App\Support\SettingsSnapshot`. Nothing is wired to a chart or
+to a move yet, and `StorageHandover` is untouched. Tests: `tests/Feature/Applications/VolumesTest.php`
+(precedence, each chart's old places, a chart with three workloads, size policies, assign and restore)
+and `tests/Unit/Volumes/` (rules, spec, snapshot). What the slice settled, for the ones after it:
+
+- `Volumes::for($instance, $specs)` takes the declared volumes; given none it is the primary one. Slice 2
+  makes the chart the source of `$specs`.
+- **`Volume::$size` is what was given** (the instance's, the old place, or the plan's), and null when
+  nothing was: the chart's own default. The size a volume is made with is `Volumes::size($workload, $name, $quota)`:
+  a `quota` volume ratchets up to the quota and keeps it in `workloads.*.volumes.*.size` (never in
+  `chart_storage`), a `fixed` one is its own size or the spec's `default_size`. Slice 2 calls that, not
+  `appStorage()`.
+- **A generic item with a size of its own must be declared `fixed` in slice 2.** `GenericChart` gives such an
+  item its own size and only sizes the others from the quota, but a `quota` volume would grow it with the
+  quota. `LegacyVolumeKeys` already reads the item's size.
+- The plan's and profile's values for another workload's volume are read as `persistence-<workload>-<field>`
+  (`persistence-<workload>-<name>-<field>` when the volume is not named `data`); the primary's keep
+  `persistence-<field>`. WordPress's `persistence-accessModes` is read as its first mode.
+- A blank claim is none, and a stored null or blank **wins** over the old place, so a move to a new volume
+  can say the old claim is not this volume's. `restore()` brings the old place back into view.
+- `LegacyVolumeKeys` is the one runtime place that knows the old keys, chosen by the profile the instance
+  runs (`profileFor()`). Slice 4 copies a frozen version into the migration, and slice 8 deletes it.
+- `VolumeRules::rulesFor()` follows the claim mode: a `by_name` volume may be restored but is given no claim
+  to name, and a `none` volume can only start new.
 
 **Slice 2 - the chart method and the declarations.** `HelmChart::volumes()` /
 `volumeValues()`, the default map, claim modes, `defaultClaimName()`. Convert the five charts
