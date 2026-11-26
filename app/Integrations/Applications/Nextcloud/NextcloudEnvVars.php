@@ -49,7 +49,13 @@ class NextcloudEnvVars extends EnvVar
         // group (LdapSupport::getAppRoleGroup()) lives under that org's own
         // branch, not this instance's -- widen the group search base to the
         // whole shared LDAP tree so they're all visible.
-        $group_base = $is_shared_hub ? "ou=groups,$global_base\n$global_base" : "ou=groups,$base_dn\n$group_dn";
+        //
+        // Any other instance only sees its own organization's groups (a
+        // suborg's are not the parent's and the other way round), plus the
+        // app's own role groups.
+        $group_base = $is_shared_hub
+            ? "ou=groups,$global_base\n$global_base"
+            : LdapSupport::groupBase($app_instance->organization)."\n$group_dn";
 
         $default_settings = [
             'IS_PROXY' => 'true',

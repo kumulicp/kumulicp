@@ -21,6 +21,17 @@ class LdapSupport
         return Group::find(Dn::create('server', 'controlPanelAccess', 'orgAdmin'));
     }
 
+    /**
+     * The one DN an app should search for an organization's groups: that organization's groups and nobody
+     * else's. A parent's base does not include its suborganizations' groups, which sit beside it, so an app
+     * that can be given only one group base can use it as is. Use this for any app that reads the groups
+     * people make in the control panel, instead of building `ou=groups,<org>` by hand.
+     */
+    public static function groupBase(Organization $organization): string
+    {
+        return Dn::group($organization);
+    }
+
     public static function guid(User $user)
     {
         return $user->getFirstAttribute($user->getGuidKey());

@@ -67,16 +67,20 @@ import { Link, useForm } from '@inertiajs/vue3'
             <tr>
               <th style="width:20rem">{{ $t('common.name') }}</th>
               <th>{{ $t('organization.groups.category') }}</th>
+              <th v-if="multiple_orgs">{{ $t('organization.organization') }}</th>
               <th style="width:6rem"></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="group in groups.slice(initialListValue, (initialListValue + pageSize))" :key="'group' + group.slug" class="table-row">
               <td>
-                <Link :href="'/groups/'+group.slug">{{ group.name }}</Link>
+                <Link :href="'/groups/'+group.slug+'?organization='+group.organization_id">{{ group.name }}</Link>
               </td>
               <td>
                 {{ group.category }}
+              </td>
+              <td v-if="multiple_orgs">
+                {{ group.organization }}
               </td>
               <td class="va-text-right">
                 <va-button
@@ -102,7 +106,7 @@ import { Link, useForm } from '@inertiajs/vue3'
       </va-button>
       <va-button color="danger"
         id="delete"
-        @click="remove.delete('/groups/'+removeGroup.name); showRemoveGroup = !showRemoveGroup">{{ $t('common.delete') }}</va-button>
+        @click="remove.delete('/groups/'+removeGroup.slug+'?organization='+removeGroup.organization_id); showRemoveGroup = !showRemoveGroup">{{ $t('common.delete') }}</va-button>
     </template>
   </va-modal>
 </template>
@@ -112,6 +116,7 @@ export default {
   layout: (h, page) => h(AppLayout, [page]),
   props: {
     categories: Object,
+    multiple_orgs: Boolean,
     errors: Object
   },
   data () {
@@ -158,7 +163,9 @@ export default {
           groups.push({
             slug: group.slug,
             name: group.name,
-            category: category.name
+            category: category.name,
+            organization_id: group.organization_id,
+            organization: group.organization
           })
         }
       }

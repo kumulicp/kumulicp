@@ -81,6 +81,7 @@ return [
     'group' => [
         'updated' => '¡:group actualizado!',
         'deleted' => ':group eliminado',
+        'not_found' => 'Grupo no encontrado',
     ],
     'domain' => [
         'updating' => 'La configuración del dominio se está actualizando. Esto tomará un minuto',

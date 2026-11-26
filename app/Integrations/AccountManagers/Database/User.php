@@ -122,9 +122,24 @@ class User extends UserManager
         });
     }
 
+    /**
+     * The group with this slug the user may belong to: one of their own organization's or, for a user of a
+     * suborganization, one of the parent's. The same name can exist in several organizations.
+     */
+    private function groupFor(string $groupid): ?GroupModel
+    {
+        $organization = $this->user->organization;
+        $organization_ids = array_filter([$organization?->id, $organization?->parent_organization_id]);
+
+        return GroupModel::where('slug', $groupid)
+            ->whereIn('organization_id', $organization_ids)
+            ->orderByRaw('organization_id = ? desc', [$organization?->id])
+            ->first();
+    }
+
     public function addToGroup(string $groupid)
     {
-        $group = GroupModel::where('slug', $groupid)->first();
+        $group = $this->groupFor($groupid);
 
         if ($group) {
             $this->user->groups()->attach($group);
@@ -136,7 +151,7 @@ class User extends UserManager
 
     public function removeFromGroup($groupid)
     {
-        $group = GroupModel::where('slug', $groupid)->first();
+        $group = $this->groupFor($groupid);
 
         if ($group) {
             $this->user->groups()->detach($group);

@@ -373,6 +373,8 @@ class Subscription extends Controller
 
     public function cancel(Request $request, \App\Organization $organization)
     {
+        Gate::authorize('unsubscribe', $organization);
+
         if (Billing::isBillable()) {
             $ends_at = Billing::periodEnds();
         } else {
@@ -389,7 +391,7 @@ class Subscription extends Controller
             $app->save();
         }
 
-        $subscription = SubscriptionFacade::all();
+        $subscription = (new SubscriptionService($organization))->all();
 
         Action::execute(new SubscriptionUpdate($organization, $subscription), background: true);
         $organization->notifyAdmins(new SubscriptionCancelled($organization));
@@ -410,9 +412,9 @@ class Subscription extends Controller
         return back()->with('success', __('organization.subscription.cancelled'));
     }
 
-    public function resubscribe()
+    public function resubscribe(\App\Organization $organization)
     {
-        $organization = auth()->user()->organization;
+        Gate::authorize('resubscribe', $organization);
 
         $organization->status = 'active';
         $organization->save();
@@ -423,7 +425,7 @@ class Subscription extends Controller
             $app->save();
         }
 
-        $subscription = SubscriptionFacade::all();
+        $subscription = (new SubscriptionService($organization))->all();
 
         Action::execute(new SubscriptionUpdate($organization, $subscription), background: true);
 

@@ -6,19 +6,25 @@ use App\AppInstance;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
+use App\Organization as OrganizationModel;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\Organization;
+use App\SuborgUser;
 
 class Group extends GroupManager
 {
-    private $organization;
+    private OrganizationModel $organization;
 
     private $auto_save = true;
 
-    public function __construct(private LdapGroup $group)
+    /**
+     * The organization is the one the group belongs to, which is not always the active one: a parent
+     * manages its suborganizations' groups.
+     */
+    public function __construct(private LdapGroup $group, ?OrganizationModel $organization = null)
     {
-        $this->organization = Organization::account();
+        $this->organization = $organization ?? Organization::account();
     }
 
     public function attribute($attribute)
@@ -68,11 +74,33 @@ class Group extends GroupManager
         return $members;
     }
 
+    /**
+     * Who may belong to this group. A suborganization's group only takes its own users, never the parent's
+     * or a sibling's. A parent's group takes anyone in its directory, its suborganizations' users included.
+     * Parent and suborg users share one `ou=users`, so the DN can't tell them apart, SuborgUser can.
+     *
+     * @param  array<int, string>  $usernames
+     * @return array<int, string>
+     */
+    private function usernamesThatBelong(array $usernames): array
+    {
+        if (! $this->organization->parent_organization_id) {
+            return $usernames;
+        }
+
+        $own = SuborgUser::where('organization_id', $this->organization->id)
+            ->whereIn('username', $usernames)
+            ->pluck('username')
+            ->all();
+
+        return array_values(array_intersect($usernames, $own));
+    }
+
     public function updateManagers(array $managers)
     {
         $manager_dns = [];
 
-        foreach ($managers as $manager) {
+        foreach ($this->usernamesThatBelong($managers) as $manager) {
             $manager_dns[] = Dn::create($this->organization, 'users', $manager);
         }
 
@@ -88,7 +116,7 @@ class Group extends GroupManager
 
         // Convert member names to DN
         $members_dns = [];
-        foreach ($members as $member) {
+        foreach ($this->usernamesThatBelong($members) as $member) {
             $members_dns[] = Dn::create($this->organization, 'users', $member);
         }
 
@@ -113,23 +141,21 @@ class Group extends GroupManager
 
     public function updateCategory($category)
     {
-        $organization = Organization::account();
         if ($category == $this->categoryName()) {
             return;
         }
 
-        $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$category, 'groups']));
+        $category_dn = Dn::group($this->organization, $category);
+        $group_category_ou = OrganizationalUnit::find($category_dn);
 
         if (! $group_category_ou) {
             $group_category_ou = new OrganizationalUnit;
             $group_category_ou->ou = $category;
-            $group_category_ou->setDn(Dn::create($organization, [$category, 'groups']));
+            $group_category_ou->setDn($category_dn);
             $group_category_ou->save();
         }
 
-        if ($new_category = OrganizationalUnit::find(Dn::create($this->organization, [$category, 'groups']))) {
-            $this->group->move($group_category_ou);
-        }
+        $this->group->move($group_category_ou);
     }
 
     public function updateQuota(AppInstance $app_instance, $quantity)

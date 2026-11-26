@@ -81,6 +81,7 @@ return [
     'group' => [
         'updated' => ':group updated!',
         'deleted' => ':group deleted',
+        'not_found' => 'Group not found',
     ],
     'domain' => [
         'updating' => 'Domain settings are updating. This will take a minute',

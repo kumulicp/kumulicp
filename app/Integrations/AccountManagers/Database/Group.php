@@ -4,6 +4,7 @@ namespace App\Integrations\AccountManagers\Database;
 
 use App\AppInstance;
 use App\Group as GroupModel;
+use App\Organization as OrganizationModel;
 use App\Services\AdditionalStorageService;
 use App\Support\AccountManager\GroupManager;
 use App\Support\Facades\Organization;
@@ -11,13 +12,17 @@ use App\User as UserModel;
 
 class Group extends GroupManager
 {
-    private $organization;
+    private OrganizationModel $organization;
 
     private $auto_save = true;
 
-    public function __construct(private GroupModel $group)
+    /**
+     * The organization is the one the group belongs to, which is not always the active one: a parent
+     * manages its suborganizations' groups.
+     */
+    public function __construct(private GroupModel $group, ?OrganizationModel $organization = null)
     {
-        $this->organization = Organization::account();
+        $this->organization = $organization ?? Organization::account();
     }
 
     public function attribute($attribute)

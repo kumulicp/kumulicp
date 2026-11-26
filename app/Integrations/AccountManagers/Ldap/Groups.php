@@ -5,37 +5,34 @@ namespace App\Integrations\AccountManagers\Ldap;
 use App\Ldap\Actions\Dn;
 use App\Ldap\Models\Group as LdapGroup;
 use App\Ldap\Models\OrganizationalUnit;
+use App\Organization as OrganizationModel;
 use App\Support\Facades\Organization;
 
+/**
+ * The groups of one organization.
+ *
+ * Which organization is the one given, or the active one. A parent's groups and each of its suborganizations'
+ * groups sit in separate containers (see Dn::group()), so a lookup here only ever searches this organization's
+ * own.
+ */
 class Groups
 {
+    private OrganizationModel $organization;
+
+    public function __construct(?OrganizationModel $organization = null)
+    {
+        $this->organization = $organization ?? Organization::account();
+    }
+
     public function add($data)
     {
-        $organization = Organization::account();
-        // Check if groups ou exists and create if not
-        $group_ou = OrganizationalUnit::find(Dn::create($organization, 'groups'));
-
-        if (! $group_ou) {
-            $group_ou = new OrganizationalUnit;
-            $group_ou->ou = 'groups';
-            $group_ou->setDn(Dn::create($organization, 'groups'));
-            $group_ou->save();
-        }
-
-        $group_category_ou = OrganizationalUnit::find(Dn::create($organization, [$data['category'], 'groups']));
-
-        if (! $group_category_ou) {
-            $group_ou = new OrganizationalUnit;
-            $group_ou->ou = $data['category'];
-            $group_ou->setDn(Dn::create($organization, [$data['category'], 'groups']));
-            $group_ou->save();
-        }
+        $this->ensureContainers($data['category']);
 
         $group = new LdapGroup;
         $group->setAttribute('cn', $data['name']);
         $group->setAttribute('description', $data['name']);
-        $group->setAttribute('member', Dn::create($organization));
-        $group->setDn(Dn::create($organization, [$data['category'], 'groups'], $data['name']));
+        $group->setAttribute('member', Dn::create($this->organization));
+        $group->setDn(Dn::group($this->organization, $data['category'], $data['name']));
         $group->save();
 
         return $this->get($group);
@@ -43,15 +40,24 @@ class Groups
 
     public function find(string $group_name, ?string $category = null)
     {
-        $organization = Organization::account();
-        if ($category) {
-            $group = LdapGroup::find(Dn::create($organization, [$category, 'groups'], $group_name));
-        } else {
-            $group = LdapGroup::in(Dn::create($organization, 'groups'))->where('cn', $group_name)->first();
-        }
+        $group = $this->findModel($group_name, $category);
 
-        if ($group instanceof LdapGroup) {
-            return $this->get($group);
+        return $group ? $this->get($group) : null;
+    }
+
+    /**
+     * The directory entry of a group of this organization, whichever category it is in.
+     */
+    public function findModel(string $group_name, ?string $category = null): ?LdapGroup
+    {
+        $categories = $category ? [$category] : array_keys($this->categories());
+
+        foreach ($categories as $name) {
+            $group = LdapGroup::find(Dn::group($this->organization, $name, $group_name));
+
+            if ($group instanceof LdapGroup) {
+                return $group;
+            }
         }
 
         return null;
@@ -75,26 +81,21 @@ class Groups
 
     public function collect(?string $category = null)
     {
-        $organization = Organization::account();
-        if ($category) {
-            return LdapGroup::in(Dn::create($organization, [$category, 'groups']))->get()->map(function ($group) {
-                return $this->get($group);
-            });
-        } else {
-            return LdapGroup::in(Dn::create($organization, 'groups'))->get()->map(function ($group) {
-                return $this->get($group);
-            });
+        $categories = $category ? [$category] : array_keys($this->categories());
+        $groups = collect();
+
+        foreach ($categories as $name) {
+            foreach (LdapGroup::in(Dn::group($this->organization, $name))->get() as $group) {
+                $groups->push($this->get($group));
+            }
         }
+
+        return $groups;
     }
 
     public function count(?string $category = null)
     {
-        $organization = Organization::account();
-        if ($category) {
-            return LdapGroup::in(Dn::create($organization, [$category, 'groups']))->get()->count();
-        } else {
-            return LdapGroup::in(Dn::create($organization, 'groups'))->get()->count();
-        }
+        return $this->collect($category)->count();
     }
 
     public function categories()
@@ -125,6 +126,18 @@ class Groups
 
     public function get(LdapGroup $group)
     {
-        return new Group($group);
+        return new Group($group, $this->organization);
+    }
+
+    private function ensureContainers(string $category): void
+    {
+        foreach (Dn::groupContainers($this->organization, $category) as [$ou, $dn]) {
+            if (! OrganizationalUnit::find($dn)) {
+                $unit = new OrganizationalUnit;
+                $unit->ou = $ou;
+                $unit->setDn($dn);
+                $unit->save();
+            }
+        }
     }
 }

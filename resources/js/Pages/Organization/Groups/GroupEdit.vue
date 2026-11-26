@@ -155,6 +155,7 @@ export default {
       showNextcloudAlertModal: false,
       form: useForm({
         original_name: this.group.name,
+        organization: this.group.organization_id,
         name: this.group.name,
         category: this.category,
         members: this.members,

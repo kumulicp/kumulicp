@@ -45,20 +45,28 @@ The fix (decided, 2.2) is to give each suborg its own `o=` path for groups.
 - The parent admin gets a group list that includes suborg groups, labelled by org, and can create, edit and delete them.
 - A parent user cannot belong to a suborg group (decided). The DB driver already enforces this. LDAP must too.
 - A parent group may contain suborg users (decided). This is what the DB driver allows today (`belongsToGroupOrganization`).
-- **LDAP layout (decided, option B): suborg groups live inside the parent's tree.** A suborg's groups live at
-  `cn=<group>,ou=<category>,ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent-slug>,<base_dn>`. The parent's own groups stay where they are, at `cn=<group>,ou=<category>,ou=groups,o=<parent-slug>`.
+- **LDAP layout (decided, option B, revised): suborg groups sit inside the parent's tree, beside the parent's `ou=groups`.** A suborg's groups live at
+  `cn=<group>,ou=<category>,ou=groups,ou=<suborg-slug>,ou=suborgs,o=<parent-slug>,<base_dn>`. The parent's own groups stay where they are, at `cn=<group>,ou=<category>,ou=groups,o=<parent-slug>`.
   - **Why this layout:** the ACLs in `.github/ldap/acl.ldif` and the app bind accounts (for example Nextcloud binds as the parent's `cn=admin,o=<parent>`) both assume everything for a tenant sits under the parent's `o=`. Keeping suborg groups there means no ACL change and no new bind accounts.
-  - **Why `ou=suborgs`:** it keeps a suborg slug from colliding with a category OU (`teams`, `projects` and so on), which are siblings under `ou=groups`.
-  - **Scoping each app:** a suborg's app narrows its group base to `ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent>`. The parent's app keeps the wide base. This also closes the leak where a suborg's Nextcloud can see every parent group today.
-  - **Searches must not bleed:** a subtree search under `ou=groups` also matches `ou=suborgs`. The parent's `Groups::find` (no category) and `collect` (no category) must search the category OUs only, or exclude `ou=suborgs`, and the suborg's must search only its own subtree.
+  - **One `ou=groups` base per organization, holding only its own groups.** The suborgs' groups are not under the parent's `ou=groups`, so an app that can be given only a single group base and searches it as a subtree (Nextcloud takes several, Frappe/ERPNext's LDAP settings appear to take one) sees just that organization's groups. No search needs to exclude anything, and no app has to list category containers.
+  - **Apps get their base from `LdapSupport::groupBase($organization)`.** Any app that reads the groups people make in the control panel must use it rather than build `ou=groups,<org>` by hand. A new app asks the helper and puts the result in its own config format.
+  - **Apps that cannot be given a base at all** and only read a user's `memberOf` cannot be restricted by the layout. They still only see the groups that user is in, and a suborg group only contains that suborg's users.
   - Users stay where they are, in the parent's `ou=users`. Group `member` values point at those user DNs.
-  - A new group-DN builder takes (org, category, name) and returns the right DN for a parent or a suborg. Do not change `Dn::create`, which users, apps and domains rely on.
-  - The suborg's `ou=<suborg-slug>,ou=suborgs,ou=groups` container is created on suborg creation (section 4) and lazily on first group.
-  - The parent's group list queries its own tree plus each suborg's container, labelled by org.
-  - Still to check: `UpdateLDAPGroups`, `AddLdapGroups`, `LdapSupport`, the Authentik group mapping, `Ldap\Models\User::groups()`, and the memberof overlay (`olcMemberOfRefint`) with the longer DNs. **(verify)**
+  - The group-DN builder (`Dn::group`) takes (org, category, name) and returns the right DN for a parent or a suborg. Do not change `Dn::create`, which users, apps and domains rely on.
+  - The suborg's containers (`ou=suborgs`, `ou=<suborg-slug>`, `ou=groups`) are created lazily on first group, and should also be created when the suborg is created (section 4).
+  - The parent's group list queries its own container plus each suborg's, labelled by org.
+  - Still to check: `UpdateLDAPGroups`, `AddLdapGroups`, the Authentik group mapping, `Ldap\Models\User::groups()`, and the memberof overlay (`olcMemberOfRefint`) with the longer DNs. **(verify)** Also confirm with the ERPNext module's maintainer whether it reads `ou=groups`, and whether its group path is a single DN.
 - **Existing groups.** Nobody is using suborg groups yet (decided), so no backfill or migration is needed. Anything already there stays with the parent.
 
 ### 2.3 Group work items
+
+**Status (branch `claude/suborg-ldap-group-scoping`, not yet run):**
+- **Done:** the group DN builder (`Dn::group`, `Dn::groupContainers`) and `LdapSupport::groupBase()`; Nextcloud's `LDAP_GROUP_BASE` now uses it, so an org's Nextcloud sees only its own groups (shared hubs keep the wide base); LDAP `Groups` and `Group` scoped to one organization (no searches over the whole `ou=groups` tree); suborg membership checked against `SuborgUser` for LDAP; `Account::groups()` passes its organization on both drivers; parent can list, edit and delete suborg groups (`Groups` controller resolves a group by organization and slug, `?organization=<id>` picks one when two suborgs share a name); DB driver groups take an organization; user-side group add/remove looks only in the user's organization and, for a suborg user, the parent's.
+- **Not done yet:**
+  - Existing Nextcloud instances keep their old group base until their environment is re-applied (upgrade or redeploy). Confirm how the image's `set-ldap.sh` handles `LDAP_GROUP_BASE`.
+  - Creating the suborg's group containers when the suborg is created (they are created on first group).
+  - The DB-driver fixes in item 5 (member removal, orphaned rows, slug on rename).
+  - A test that the directory-reader and per-org admin ACLs still see suborg groups.
 
 0. **Baseline: confirm the LDAP tests run (correction to an earlier draft).** CI already starts an OpenLDAP container with the memberof overlay and the per-org ACLs (`.github/ldap/*.ldif`) and runs the `AccountManagerLdap` suite in both `laravel.yml` and `laravel-frankenphp.yml`. An earlier version of this plan said CI had no LDAP. That was wrong.
    - `GroupsTest` calls `skipUnlessDriver('ldap', $driver)`, so only its `ldap` dataset row runs. The `db` row is skipped by design.
@@ -195,6 +203,7 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - The `delete-organization` gate then has no caller for suborgs. Leave it, or remove it if nothing else uses it.
   - Deactivation lives in `Subscription@cancel` and `resubscribe`. Both need work first (next item).
 - **Deactivation and reactivation are not safe for suborgs (verify).**
+  - **Status:** `cancel` now authorizes with the `unsubscribe` gate, and `resubscribe` takes the `{organization}` from the route and authorizes with the `resubscribe` gate. Both build the subscription for the target org. Tests: `tests/Feature/Subscription/SuborgDeactivationTest.php`. Still open: cancel uses the viewer's `Billing` facade for `isBillable()` and `periodEnds()`, and the apps of a cancelled parent's suborgs are not marked `deactivating`.
   - `Subscription@cancel(Organization $organization)` has no `Gate::authorize('unsubscribe', ...)`. The gate exists and is used only to decide whether to show the button. If nothing else guards the route, any authenticated user can cancel any organization by id. Write a test for this first.
   - `Subscription@resubscribe()` takes no organization argument and uses `auth()->user()->organization`, although the route is `/subscription/{organization}/resubscribe`. Resubscribing a suborg from the parent resubscribes the parent and all its children instead.
   - `cancel` passes the viewer's `SubscriptionFacade::all()` to `SubscriptionUpdate` for the suborg. `run()` rebuilds from the DB, so it works but is misleading.
@@ -257,7 +266,7 @@ via an unlabeled `organization` select on the review page. It only appears when 
 6. App limits come from the target suborg's own plan. `include_in_parent_invoice` only decides who pays. An optional family-wide ceiling plan setting covers free plans.
 7. A separately billed suborg can only be activated into by its own admins, with the suborg's payment method.
 8. A suborg app may use the parent's domains (domains only). It may not use a parent or sibling app as its parent app. Sibling domains are not allowed (assumed from "domain only").
-9. Suborg groups live inside the parent's LDAP tree, under `ou=<suborg-slug>,ou=suborgs,ou=groups,o=<parent>` (option B). A separate `o=` per suborg was rejected because it conflicts with the ACLs and Nextcloud's bind account.
+9. Suborg groups live inside the parent's LDAP tree, under `ou=groups,ou=<suborg-slug>,ou=suborgs,o=<parent>`, beside the parent's own `ou=groups` (option B, revised). A separate `o=` per suborg was rejected because it conflicts with the ACLs and Nextcloud's bind account.
 10. A parent group may contain suborg users.
 
 11. For a jointly billed suborg, suborg admins can activate apps only when the parent turns on a per-suborg "Let this suborganization activate apps" setting (off by default). When it is on, the payment requirement is hidden from the suborg user (3.3).
