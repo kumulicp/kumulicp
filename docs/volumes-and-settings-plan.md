@@ -99,8 +99,9 @@ code does not model:
 
 | Chart | Other workloads with their own volume | How it is handled today |
 |---|---|---|
-| Nextcloud | Redis master and replica (`redis.master.persistence`, `redis.replica.persistence`) | A `redis` YAML configuration holds them as an opaque blob, `persistence.enabled: false` by default. No size, class or claim control, not part of a move. |
-| WordPress, CiviCRM | The MariaDB subchart (`mariadb.primary.persistence`) | A `mariadb` JSON configuration, `enabled: false` by default (the database is an external server). Same limits. |
+| Nextcloud | Redis master and replica (`redis.master.persistence`, `redis.replica.persistence`), and the MariaDB subchart (`mariadb.primary.persistence`, which has `existingClaim`, `size`, `accessMode` and `storageClass` of its own) | Two opaque blobs, the `redis` YAML and the `mariadb` JSON configurations, with persistence off by default. No size, class or claim control, not part of a move. Both reach the chart as they are (`ChartVolumeValuesTest`). |
+| WordPress | The MariaDB subchart (`mariadb.primary.persistence`: `enabled`, `size`, `storageClass`) | A `mariadb` JSON configuration, `enabled: false` by default (the database is an external server). Same limits. |
+| CiviCRM | None the chart uses: its profile has a `mariadb` blob with no volume settings, and a `redis` blob (persistence off, class `longhorn`) that `CiviCRMStandaloneChart` never reads | Nothing to migrate for it. The unread `redis` blob is dead configuration, like `persistence-existingClaim`. |
 | Nextcloud | Imaginary, the cron sidecar | No volume today. They are workloads that other settings (resources, images) already touch, so they are named here for completeness. |
 | Generic | One pod, several PVCs (`persistence-<n>-*`) | Modelled, as items of one array configuration; handover is refused when there is more than one. |
 | HelmForge catalog | Whatever the chart has | `ChartConventionDetector::persistence()` records **one** volume: `persistence.<volume>` is picked by the `persistence_volume` override (`config/catalog.php`, used for `paperless-ngx`), else the first enabled, else the first. The others keep the chart's defaults and cannot be sized, classed or handed a claim. |
@@ -480,11 +481,18 @@ The secondary volumes, which today live inside configuration blobs:
 | Chart layout | From | To |
 |---|---|---|
 | Nextcloud (registered) | `configurations.redis` (and the plan's) `master.persistence.*`, `replica.persistence.*` | `redis-master/data`, `redis-replica/data`: `enabled`, `size`, `storage_class`; the keys are **removed from the blob** so it cannot fight the volume |
-| WordPress, CiviCRM (registered) | `configurations.mariadb` `primary.persistence.*` | `mariadb/data`, the same way |
+| Nextcloud (registered) | `configurations.mariadb` `primary.persistence.*` (includes `existingClaim`, `size`, `accessMode`) | `mariadb/data`, the same way, with the claim as `claim` |
+| WordPress (registered) | `configurations.mariadb` `primary.persistence.*` | `mariadb/data`, the same way |
+| CiviCRM (registered) | none (its `mariadb` blob has no volume settings; its `redis` blob is not read) | nothing |
 | Catalog | none: the chart's own subchart persistence was never set by kumulicp | nothing to migrate; a re-sync records the volumes the chart has |
 
-A blob value that equals the profile default is dropped rather than copied, so an instance
-that never changed it keeps following the plan and profile. An instance whose blob **enabled**
+**Activation copies every persistent configuration's default into the instance's own
+settings** (checked by building one instance of each app: `configurations.persistence-*`,
+`redis` and `mariadb` are all there from the first day, including the unread
+`persistence-existingClaim: ""`). So "the instance has the key" says nothing about whether
+anyone chose it, and a blob value that equals the profile default is dropped rather than
+copied, so an instance that never changed it keeps following the plan and profile. The
+migration compares with the profile's default of the **chart the instance runs**, not the value's presence. An instance whose blob **enabled**
 a secondary volume is listed in the dry run: its data was never part of a move.
 
 The old per-app map lives **only inside the migration**, as a frozen array, so the runtime
@@ -512,6 +520,24 @@ The migration also:
   instances' persistent configurations, and in the profiles' definitions;
 - deletes the migrated legacy keys (`existing_claim`, `chart_storage`, `override.pvc`)
   only in the second step below, so a rollback has something to read.
+
+### Quirks pinned by Slice 0
+
+`ChartVolumeValuesTest` and `ChartClaimLookupTest` pin these as they are today. The migration
+and the new chart method must keep each one, or change it **on purpose**, naming the test:
+
+- Nextcloud gives the chart `existingClaim => null` (not `''`) when the instance has settings
+  but no `existing_claim`: `setting($key, $default)` returns its default only when the
+  instance has no settings at all. WordPress and CiviCRM give `''`; CiviCRM with
+  `override.pvc.override` true and no name gives `null`.
+- CiviCRM stores `persistence-accessModes` as one string and the chart wraps it in a list;
+  WordPress stores a list. A list stored for CiviCRM would be wrapped twice.
+- A catalog chart's values hold only the keys kumulicp writes (the size, and the claim and class when set);
+  the chart's own defaults are not repeated, and it is never given an access mode.
+- `JobChart` keeps the **first** claim of the release in `override.pvc.name`, whichever workload it is for,
+  and the next WordPress, CiviCRM-with-override or catalog release is given it as an existing claim.
+  The "first claim" and "found becomes chosen" tests are the ones the `claim` / `discovered` split
+  is meant to change.
 
 ### Behaviour, in two steps
 
@@ -545,7 +571,12 @@ touches per-app rows.
 
 Each slice is its own PR, based on the one before, with tests, and none needs a cluster.
 
-**Slice 0 - characterization tests (no behaviour change).** Golden tests of the Helm values
+**Slice 0 - characterization tests (no behaviour change). Done**, in
+`tests/Feature/Applications/ChartVolumeValuesTest.php` (what each chart gives its volumes),
+`ChartClaimLookupTest.php` (which claim a job mounts, and what the lookup writes back) and
+`ChartVolumeLayoutPerChartTest.php` (one app on two charts), with `tests/Support/Applications/VolumeFixtures.php`
+building the instances through `profileFor()`. They use the `db` account manager, so they run
+without an LDAP server. Each was checked by breaking the code it pins and seeing it fail. Golden tests of the Helm values
 for Nextcloud (with and without Redis persistence turned on), WordPress and CiviCRM (with and
 without the MariaDB subchart's persistence on), Generic (one and several volumes) and a
 HelmForge chart, with and without an existing claim, in each state the migration will see.
