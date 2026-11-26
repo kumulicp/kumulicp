@@ -373,6 +373,8 @@ follows `profileFor($plan)` the same way.
 for the groups every chart shares (storage, resources, ingress, image, replicas), so a profile
 adds `...StandardSettings::storage()` instead of re-declaring five configurations. These are
 the same names the chart methods in section 2 read, so a chart and its form cannot disagree.
+For a catalog chart nothing is assumed: its fields are only those its stored convention
+detected (see "Decided").
 
 **Registry of the non-configuration keys.** `App\Support\Settings\InstanceSettings` lists the
 other top-level keys with an `owner`:
@@ -619,7 +621,7 @@ the volume panel), so they can start in parallel once slice 1 is in.
 | Workload and volume names become settings keys, so a chart that renames one orphans the stored values | Names are fixed in the chart class and pinned by a test; renaming one needs a migration |
 | The migration or a form reads a layout from the application, so an instance on an added chart gets another chart's keys | Everything resolves through `profileFor()` / the chart row; a Slice 0 test with one app on two charts; the migration is keyed on chart identity |
 | A chart's layout changes between its versions, but one convention is stored for the chart (detected from the newest version) | Known limit of the catalog today. Record the convention's chart version, re-detect on sync, and have the version test run fail when a version's values lack a declared key |
-| An instance is moved to a plan on another chart and its secondary-volume settings no longer match | Values for undeclared workloads are ignored, not deleted; the primary volume's settings carry over; whether this is allowed at all is an open question |
+| An instance is moved to a plan on another chart and its secondary-volume settings no longer match | Values for undeclared workloads are ignored, not deleted; the primary volume's settings carry over. Whether the move is allowed, blocked or migrated is planned separately (see Decided) |
 | The catalog detector misreads a subchart's layout and writes to a key the chart ignores (Helm drops unknown keys silently) | Only recognised layouts are recorded; unknown ones are reported, not guessed; a re-sync shows the diff of the stored convention |
 
 ## Open questions
@@ -648,20 +650,24 @@ the volume panel), so they can start in parallel once slice 1 is in.
    HelmForge charts deployable on Rancher (`HelmForgeProfile` is now `rancher`-compatible, with
    the repository given by name). Do the chart methods need a per-driver map, or is one map
    right for both because the driver only changes how the values are applied?
-8. **Can an instance change chart?** The plan's chart is fixed once it is created, but an
-   instance can be given another plan. If that can switch it between a registered chart and a
-   catalog chart, do we block it, warn that secondary volumes and their data are not
-   carried over, or move the primary volume's claim and size across (the model allows it,
-   but the claim's PVC name was made by the old chart)?
-9. **Plans on an added chart**: the plan-level `persistence-*` configurations and the
-   accessModes rename apply only to plans whose chart uses a registered profile. A plan on a
-   catalog chart takes its configurations from the chart's detected convention. Is it right
-   for the settings form to show only what that convention detected, or should the standard
-   storage group appear for every chart (and be ignored where the chart has no such key)?
+## Decided
+
+- **Standard groups on catalog charts**: the settings form for an instance on a catalog chart
+  shows **only what the catalog detected** for that chart (the keys its stored convention
+  has). `StandardSettings` groups are offered for a chart only where the chart has the keys;
+  a missing key means no field, not a field that is ignored. The same rule applies to a
+  plan's configuration screen on a catalog chart (`profileFor($plan)`), and the accessModes
+  rename only touches plans on registered profiles.
+- **Moving an instance to a plan on another chart** is out of scope here and is planned in a
+  separate session (migrating, or blocking, the move). This plan only fixes what it must not
+  break meanwhile: values stored for a workload the current chart does not declare are
+  ignored and kept, never deleted, and the primary volume's settings stay valid because
+  `app/data` means the same on every chart.
 
 ## Not covered
 
 A volume backup driver, volume expansion changes (`expand_storage` stays as it is; a larger
 quota still grows only the primary volume, through the ratchet and a re-render), moving the
 system keys, per-workload resources, replicas and images beyond reserving the `workloads.*`
-key for them, and an organization-facing settings UI.
+key for them, an organization-facing settings UI, and what happens when an instance is moved
+to a plan on another chart (a separate plan).
