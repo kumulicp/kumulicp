@@ -198,6 +198,8 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - Create the base domain.
   - Dispatch whatever the normal registration path dispatches in `Pub\Register` and the setup flow.
   - Compare the three paths and extract the shared logic into one action, instead of the current copy.
+  - **Status (branch `claude/suborg-creation-provisioning`, not yet run):** the base domain is not a stored row (`AppInstance::base_domain()` builds it from the slug), so there is nothing to create for it. Registration's other steps (user, admin access, events) don't apply to a suborg. `store` now calls `AccountManager::accounts()->create()`, which for LDAP only adds the suborg's group containers because everything else already exists under the parent, and queues a `SubscriptionUpdate` for the suborg so its plan reaches the parent invoice when it is billed jointly. A suborg still has no admins of its own: `primary_contact` is the parent's, and who `notifyAdmins` reaches for a suborg on LDAP needs checking. **(verify)**
+  - **Found while doing this: deleting a suborg could delete its parent's whole LDAP tree.** `Dn::create()` resolves a suborg to its parent's `o=`, and `Account::destroy()` deleted that entry recursively. The admin "delete organization" action and the scheduled deletion (`DeleteOrganization::complete()`) can both reach a deactivated suborg. Fixed: for a suborg, `destroy()` now removes only its group containers and its own users' entries (and `SuborgUser` rows). Tests in `SuborgGroupsTest`. The same collapse affects any other code that treats `Dn::create($suborg)` as the suborg's own entry, so grep for it before shipping.
 - **No delete (decided). Suborgs are deactivated only.**
   - Remove the `destroy()` stub and the `DELETE /settings/suborganizations/{organization}` route, and any UI for it. The `// not deleted yet` message and its translations go with it.
   - The `delete-organization` gate then has no caller for suborgs. Leave it, or remove it if nothing else uses it.
@@ -209,14 +211,14 @@ via an unlabeled `organization` select on the review page. It only appears when 
   - `cancel` passes the viewer's `SubscriptionFacade::all()` to `SubscriptionUpdate` for the suborg. `run()` rebuilds from the DB, so it works but is misleading.
   - Define what deactivating a suborg does: apps to `deactivating`, billing roll-up on the parent invoice, users unable to log in (`active` gate), and what the parent sees afterwards. Then test deactivate and reactivate on a suborg alone, and cascade from the parent.
   - Deactivated suborgs must be excluded from the activation target list (section 3) and from `add-suborganization` style checks.
-- **Enforce the plan flag on create.** Nothing checks `plan->setting('suborganizations.enabled')` on store. `view-suborganizations` checks it, `add-suborganization` does not. Add it. There is no cap on the number of suborgs (decided), so no max-count setting.
+- **Enforce the plan flag on create.** *(Done: the `add-suborganization` gate now checks the plan setting, with tests.)* Nothing checked `plan->setting('suborganizations.enabled')` on store. `view-suborganizations` checks it, `add-suborganization` does not. Add it. There is no cap on the number of suborgs (decided), so no max-count setting.
 - **The suborg inherits the parent's `plan_id`.** The create form offers `org_types`, but `type` does not drive plan selection. Decide the intended behaviour and test it.
 
 ### Correctness
 - **Update field mismatch.** `edit()` returns `email` and `phone_number`, but `update()` validates `org_email` and `org_phone_number`. Check what `SuborganizationEdit.vue` actually sends.
 - **Contact fields.** `user_*` is `required_if:include_in_parent_invoice,false`, but `update()` writes it unconditionally. A parent-billed suborg ends up with `null` contacts that were copied from the parent at creation.
 - **Update calls the driver.** It calls `AccountManager::account($organization)->update(...)`, which is a no-op `update($data) {}` on both drivers. LDAP org attributes then drift from the DB.
-- **Failure cleanup in `store`.** It deletes the org row but nothing else. Once provisioning is added, make the whole thing transactional or use compensating steps.
+- **Failure cleanup in `store`.** *(Done for now: the catch removes the suborg's own directory entries through the now-safe `destroy()`, then the row. It is not transactional, and the queued update task is not cancelled.)*
 - **Billing toggle.** Switching `include_in_parent_invoice` dispatches `SubscriptionUpdate` for the parent only. Confirm the Stripe-side effect on the suborg's own subscription, and that `JointSubscriptionService::countEntity()` is correct (it takes `$entity` but calls `countEntity()` with no argument).
 - **Cross-org checks** for suborgs in the gates (`view-user`, `edit-user`, `delete-user`, `activate-app`, etc.). The parent-to-child rule is repeated by hand in a dozen places. Move it to one `Organization::isSelfOrChildOf()` helper so it is tested once.
 

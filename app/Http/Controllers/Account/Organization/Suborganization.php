@@ -7,9 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Jobs\Accounts\UpdateOrganization;
 use App\Organization;
 use App\Plan;
+use App\Services\SubscriptionService;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Action;
-use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Settings;
 use App\Support\Facades\Subscription;
 use App\Support\Organizations;
@@ -133,12 +133,21 @@ class Suborganization extends Controller
             $suborganization->status = 'active';
             $suborganization->save();
 
-            // Add domain
-            $organization_service = OrganizationFacade::setOrganization($suborganization);
+            // The suborganization shares its parent's directory entry. What it gets of its own is
+            // its groups' containers.
+            AccountManager::accounts()->create($suborganization);
 
+            // Its plan is added to the parent's invoice when it is billed with the parent
+            Action::execute(new SubscriptionUpdate($suborganization, (new SubscriptionService($suborganization))->all()), background: true);
         } catch (\Throwable $e) {
             report($e);
             if ($suborganization) {
+                // Only the suborganization's own entries are removed, never its parent's
+                try {
+                    AccountManager::account($suborganization)->destroy();
+                } catch (\Throwable $cleanup) {
+                    report($cleanup);
+                }
                 $suborganization->domains()->delete();
                 $suborganization->delete();
             }

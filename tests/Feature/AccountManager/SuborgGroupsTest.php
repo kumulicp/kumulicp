@@ -23,9 +23,14 @@
 |
 */
 
+use App\Ldap\Actions\Dn;
+use App\Ldap\Models\Organization as LdapOrganization;
+use App\Ldap\Models\OrganizationalUnit;
+use App\Ldap\Models\User as LdapUser;
 use App\Organization;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization as OrganizationFacade;
+use App\SuborgUser;
 use App\User;
 use Illuminate\Support\Facades\Queue;
 use Tests\Support\TestSupports;
@@ -248,3 +253,48 @@ it('lets a parent group contain suborg users', function (string $driver) {
     expect(collect($group->members())->contains('demo'))->toBeTrue()
         ->and(collect($group->members())->contains('suba-user'))->toBeTrue();
 })->with('account_manager_drivers');
+
+// The directory entries of a suborganization
+
+it('creates the group containers of a suborg when its account is created', function () {
+    setupAccountManagerDriver('ldap');
+    (new TestSupports)->seed();
+
+    $suborg = Organization::factory()->create([
+        'plan_id' => 1,
+        'parent_organization_id' => 1,
+        'slug' => 'subc',
+        'type' => Organization::find(1)->type,
+    ]);
+
+    expect(OrganizationalUnit::find(Dn::group($suborg)))->toBeNull();
+
+    AccountManager::accounts()->create($suborg);
+
+    expect(OrganizationalUnit::find(Dn::group($suborg)))->not->toBeNull();
+});
+
+it('removes only the suborg own entries when its account is destroyed, never the parent', function () {
+    [$parent, $user_a, $user_b] = suborgGroupsSetup('ldap');
+    $parent_organization = Organization::find(1);
+    $suborg = $user_a->organization;
+
+    suborgGroupsCreate($this, $parent, 'parent-group');
+    suborgGroupsCreate($this, $user_a, 'alpha-group');
+    suborgGroupsCreate($this, $user_b, 'beta-group');
+
+    OrganizationFacade::setOrganization($parent_organization);
+    AccountManager::account($suborg)->destroy();
+
+    // The parent and everything of its own and of its other suborg are still there
+    expect(LdapOrganization::find(Dn::create($parent_organization)))->not->toBeNull()
+        ->and(LdapUser::find(Dn::create($parent_organization, 'users', 'demo')))->not->toBeNull()
+        ->and(LdapUser::find(Dn::create($parent_organization, 'users', 'subb-user')))->not->toBeNull()
+        ->and(suborgGroupsFind($this, $parent, 'parent-group'))->not->toBeNull()
+        ->and(suborgGroupsFind($this, $user_b, 'beta-group'))->not->toBeNull();
+
+    // What was the suborg's is gone
+    expect(LdapUser::find(Dn::create($parent_organization, 'users', 'suba-user')))->toBeNull()
+        ->and(SuborgUser::where('username', 'suba-user')->exists())->toBeFalse()
+        ->and(AccountManager::account($suborg)->groups()->find('alpha-group'))->toBeNull();
+});
