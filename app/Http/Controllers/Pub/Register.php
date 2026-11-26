@@ -156,6 +156,7 @@ class Register extends Controller
         $new_user_code->organization()->associate($organization);
         $new_user_code->generate($user->attribute('username'));
         $new_user_code->status = 'pending';
+        $new_user_code->expires_at = now()->addHours(NewUserCode::LIFETIME_HOURS);
         $new_user_code->save();
 
         if ($organization->parent_organization_id) {

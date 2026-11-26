@@ -420,7 +420,64 @@ it('keeps one registration per address and organization', function () {
         ->and(strlen($second->token))->toBe(64);
 });
 
-// -- The captcha widget under the Content Security Policy -------------------------------------------
+// -- The set-password link ---------------------------------------------------------------------------
+
+it('gives the set-password link the same 72 hours as an invited user', function () {
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
+
+    $expires = NewUserCode::where('username', 'newperson')->firstOrFail()->expires_at;
+    expect(NewUserCode::LIFETIME_HOURS)->toBe(72)
+        ->and($expires)->not->toBeNull()
+        ->and($expires->between(now()->addHours(71), now()->addHours(73)))->toBeTrue();
+});
+
+function expiredPasswordCode(Organization $organization, ?DateTimeInterface $expires_at): NewUserCode
+{
+    $code = new NewUserCode;
+    $code->organization()->associate($organization);
+    $code->generate('newperson');
+    $code->status = 'sent';
+    $code->expires_at = $expires_at;
+    $code->save();
+
+    return $code;
+}
+
+it('says so, and points to the password reset, when the set-password link has expired', function () {
+    $code = expiredPasswordCode($this->organization, now()->subMinute());
+
+    $this->get('/public/setpassword/'.$code->code)
+        ->assertStatus(410)
+        ->assertInertia(fn ($page) => $page
+            ->component('Auth/SetPasswordExpired')
+            ->where('resetUrl', route('password.request')));
+});
+
+it('does not set a password with an expired link, and sends the person to the page that explains it', function () {
+    $code = expiredPasswordCode($this->organization, now()->subMinute());
+
+    $this->post('/public/setpassword/'.$code->code.'/save', [
+        'password' => 'Str0ng!Passw0rd#2026',
+        'password_confirmation' => 'Str0ng!Passw0rd#2026',
+    ])->assertRedirect(route('public.password.set', ['code' => $code->code]));
+
+    expect($code->fresh()->activated)->toBeFalsy();
+});
+
+it('still opens a set-password link that has no expiry, as the ones sent before this was added', function () {
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
+    NewUserCode::where('username', 'newperson')->update(['expires_at' => null]);
+    $code = NewUserCode::where('username', 'newperson')->firstOrFail()->code;
+
+    $this->get('/public/setpassword/'.$code)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Auth/SetPassword')->where('user.email', 'new@example.com'));
+});
+
+// -- Findings of docs/plans/self-registration.md, as the behavior we want ---------------------------
 
 function cspDirective(?string $policy, string $directive): string
 {
@@ -482,16 +539,6 @@ it('does not add users to a deactivated organization', function () {
 
     expect(User::where('username', 'newperson')->exists())->toBeFalse();
 })->skip('Finding 2: registration does not check whether the organization is deactivated.');
-
-it('gives the set-password link the same 72 hours as an invited user', function () {
-    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
-
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
-
-    $expires = NewUserCode::where('username', 'newperson')->firstOrFail()->expires_at;
-    expect($expires)->not->toBeNull()
-        ->and($expires->between(now()->addHours(71), now()->addHours(73)))->toBeTrue();
-})->skip('Finding 3: the code is created without an expiry.');
 
 it('answers the same for an address that has an account and one that does not', function () {
     $known = $this->post($this->base, ['email' => 'demo@example.com']);

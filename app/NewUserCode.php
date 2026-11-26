@@ -14,6 +14,9 @@ use Illuminate\Support\Str;
  */
 class NewUserCode extends Model
 {
+    /** How long the set-password link a new user is sent stays valid, however the user was added. */
+    public const LIFETIME_HOURS = 72;
+
     protected $table = 'new_user_code';
 
     protected $attributes = [

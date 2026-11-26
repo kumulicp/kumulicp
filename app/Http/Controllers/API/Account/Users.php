@@ -63,7 +63,7 @@ class Users extends Controller
             $new_user_code = new NewUserCode;
             $new_user_code->organization()->associate($organization);
             $new_user_code->generate($user->attribute('username'));
-            $new_user_code->expires_at = now()->addHours(72);
+            $new_user_code->expires_at = now()->addHours(NewUserCode::LIFETIME_HOURS);
             $new_user_code->save();
 
             $code = $new_user_code->code;
