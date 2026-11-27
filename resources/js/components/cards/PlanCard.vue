@@ -41,6 +41,7 @@ import { Link } from '@inertiajs/vue3'
                 <va-button :id="'select'+plan.id" disabled>{{ $t('plans.select') }}</va-button>
                 <div v-if="unavailableReason" :id="'unavailable'+plan.id" class="mt-2 va-text-secondary">{{ unavailableReason }}</div>
               </template>
+              <va-button v-else-if="emitSelect" :id="'select'+plan.id" @click="$emit('select', plan)">{{ $t('plans.select') }}</va-button>
               <Link v-else :id="'select'+plan.id" :href="plan.url"><va-button>{{ $t('plans.select') }}</va-button></Link>
             </div>
           </div>
@@ -60,9 +61,15 @@ import { Link } from '@inertiajs/vue3'
 
 <script lang="ts">
 export default {
+  emits: ['select'],
   props: {
     plan: Object,
     select: {
+      type: Boolean,
+      default: false
+    },
+    // Tell the page the plan was selected, rather than going to it, when the page has something to ask first
+    emitSelect: {
       type: Boolean,
       default: false
     },

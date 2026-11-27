@@ -22,6 +22,17 @@ import { useForm } from '@inertiajs/vue3'
               <va-divider class="my-3" />
             </template>
             <form @submit.prevent="form.post('/discover/'+app.slug+'/plans/'+plan.id+'/activate')">
+              <div v-if="organization.is_suborganization" class="mb-3 va-text-secondary">
+                {{ $t('organization.discover.activatingFor', { name: organization.name }) }}
+              </div>
+              <va-alert
+                v-if="$page.props.errors.organization"
+                color="danger"
+                outline
+                class="mb-3"
+              >
+                {{ $page.props.errors.organization }}
+              </va-alert>
               <div v-if="app.parent_app" class="row">
                 <div class="flex flex-col xs12 mb-2">
                   <div v-if="parent_apps.length == 0" class="mb-3">
@@ -67,20 +78,6 @@ import { useForm } from '@inertiajs/vue3'
                     :error="$page.props.errors.label"
                     :error-messages="$page.props.errors.label"
                   />
-                </div>
-                <div class="flex flex-col xs12 lg6 mb-2">
-                  <va-select  v-model="form.organization"
-                    v-if="organizations.length > 1"
-                    :label="$t('organization.organization')"
-                    class="mb-3"
-                    id="organization"
-                    :options="organizations"
-                    :messages="$t('organization.discover.multipleOrgsMessage')"
-                    value-by="id"
-                    text-by="name"
-                    immediateValidation
-                    auto-select-first-option
-                    />
                 </div>
               </div>
               <div class="row">
@@ -130,7 +127,7 @@ import { useForm } from '@inertiajs/vue3'
               <app-customizations :customizations="customizations" :customizations_form="form.customizations" @update:customizations="updateCustomizations($event)" />
               <h5 v-if="settings.length > 0" class="va-h5">{{ $t('organization.apps.settingsTitle') }}</h5>
               <app-settings class="mb-3" :settings="settings" :settings_form="form.configurations" @update:settings="updateSettings($event)" />
-              <template v-if="domains.length === 0 && parent_apps.length === 0 && (!plan.payment_enabled || hasDefaultPaymentMethod) && customizations.length === 0 && organizations.length <= 1">
+              <template v-if="domains.length === 0 && parent_apps.length === 0 && (!plan.payment_enabled || hasDefaultPaymentMethod) && customizations.length === 0">
                 <div class="row m-5">
                   <div class="flex lg12 va-text-center mt-4">
                     <va-icon name="fa-thumbs-up" style="color: var(--va-list-item-label-caption-color)"  size="5rem" />
@@ -164,7 +161,6 @@ export default {
     has_payment_method: Boolean,
     parent_apps: Object,
     parent_domains: Object,
-    organizations: Object,
     domains: Object,
     default_label: String,
     organization: Object,
@@ -214,6 +210,15 @@ export default {
         customizations: customizationsForm,
         configurations: settings
       })
+    }
+  },
+  computed: {
+    // An organization that can't take the app is shown with the reason beside its name
+    organizationOptions () {
+      return Object.values(this.organizations).map((organization) => ({
+        ...organization,
+        label: organization.note ? `${organization.name} - ${organization.note}` : organization.name
+      }))
     }
   },
   methods: {

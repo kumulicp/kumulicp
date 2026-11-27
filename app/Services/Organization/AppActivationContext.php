@@ -7,6 +7,7 @@ use App\Services\SubscriptionService;
 use App\Support\Facades\Billing;
 use App\User;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Collection;
 
 /**
  * Who an app is activated for, and what that means: which plan limits apply, who may do it and who pays.
@@ -28,6 +29,20 @@ class AppActivationContext
         public readonly User $user,
         public readonly Organization $target,
     ) {}
+
+    /**
+     * The organizations the user could activate an app for: their own and the suborganizations they may
+     * activate for (the ones their organization pays for).
+     *
+     * @return Collection<int, Organization>
+     */
+    public static function organizationsFor(User $user): Collection
+    {
+        return collect([$user->organization])->merge(
+            $user->organization->suborganizations()->notDeactivated()->get()
+                ->filter(fn (Organization $suborganization) => (new self($user, $suborganization))->authorize()->allowed())
+        )->values();
+    }
 
     /**
      * The organization the user is in, or one of its suborganizations.

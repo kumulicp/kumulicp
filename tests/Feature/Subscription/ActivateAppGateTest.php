@@ -26,8 +26,8 @@ it('allows activating an app under the plan limit when the organization has no s
     expect($response->allowed())->toBeTrue();
 });
 
-it('still checks the organization own plan limit when it has suborganizations', function () {
-    $suborg = Organization::factory()->create([
+it('lets an organization at its own plan limit activate while a suborganization can still take the app', function () {
+    Organization::factory()->create([
         'plan_id' => $this->support->base_1->id,
         'parent_organization_id' => 1,
         'settings' => ['include_in_parent_invoice' => true],
@@ -35,9 +35,24 @@ it('still checks the organization own plan limit when it has suborganizations', 
 
     expect(Organization::find(1)->suborganizations()->exists())->toBeTrue();
 
-    $response = Gate::inspect('activate-app', $this->support->demo_app);
+    expect(Gate::inspect('activate-app', $this->support->demo_app)->allowed())->toBeTrue();
+});
 
-    expect($response->allowed())->toBeFalse();
+it('still checks the organization own plan limit when its suborganizations are at theirs too', function () {
+    $no_apps = $this->support->base_1->replicate();
+    $no_apps->forceFill([
+        'name' => 'no apps',
+        'is_default' => false,
+        'app_plans' => ['demo_app' => ['max' => 0, 'plans' => 'enabled']],
+    ])->save();
+
+    Organization::factory()->create([
+        'plan_id' => $no_apps->id,
+        'parent_organization_id' => 1,
+        'settings' => ['include_in_parent_invoice' => true],
+    ]);
+
+    expect(Gate::inspect('activate-app', $this->support->demo_app)->allowed())->toBeFalse();
 });
 
 it('denies activating an app on a plan whose parent app has not been activated', function () {

@@ -1,5 +1,4 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
 import axios from 'axios'
 </script>
 <template>
@@ -45,7 +44,12 @@ import axios from 'axios'
                   >
                     Cancel
                   </va-button>
-                  <Link href="/subscription/payment/method/delete"><va-button color="danger">Delete</va-button></Link>
+                  <va-button
+                    color="danger"
+                    @click="deletePaymentMethod"
+                  >
+                    Delete
+                  </va-button>
                 </template>
               </va-modal>
             </va-list-item-label>
@@ -276,6 +280,10 @@ export default {
         vueState.error = 'There has been an error updating your payment method. Please reload and try again'
         vueState.stripeProcessing = false
       })
+    },
+    deletePaymentMethod () {
+      // The widget is its own bundle, so Inertia's router isn't initialised here: navigate normally
+      window.location.href = '/subscription/payment/method/delete'
     },
     submit () {
       // this will trigger the process

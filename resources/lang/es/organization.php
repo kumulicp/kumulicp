@@ -17,6 +17,7 @@ return [
             'deactivation' => ':app no se puede desactivar',
             'reactivation' => ':app no se puede reactivar',
             'plan_limit' => 'Tu suscripción ha limitado el número de aplicaciones que puedes activar a :max',
+            'org_limit' => 'No se pueden activar más instancias de :app',
             'no_parent_app' => 'Debes activar :parent_app antes de poder activar :app',
             'select_parent_app' => 'Debe seleccionarse una instancia de :parent_app',
             'payment_method' => 'Debe ingresarse un método de pago antes de continuar',

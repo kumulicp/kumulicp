@@ -17,6 +17,7 @@ return [
             'deactivation' => ':app cannot be deactivated',
             'reactivation' => ':app cannot be reactivated',
             'plan_limit' => 'Your subscription has limited the number of apps you can activate to :max',
+            'org_limit' => 'Can\'t activate any more :app instances',
             'no_parent_app' => 'You must activate :parent_app before you can activate :app',
             'select_parent_app' => 'A :parent_app instance must be selected',
             'payment_method' => 'A payment method must be entered before continuing',

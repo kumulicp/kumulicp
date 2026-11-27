@@ -232,10 +232,18 @@ class AuthServiceProvider extends ServiceProvider
             $plan_denial = $plan_denials->isNotEmpty() && $plan_denials->every(fn ($denial) => $denial !== null) ? $plan_denials->first() : null;
 
             // If app limit hasn't been reached and there is no parent app or if there is a parent app, that it has been installed
-            if ($base_plan->isMaxApps($app) && $plans_with_higher_app_limit) {
-                return Response::deny(__('organization.app.denied.plan_limit', ['max' => $base_plan->appMax($app)]), 'plan_limit_reached');
-            } elseif ($base_plan->isMaxApps($app) && ! $plans_with_higher_app_limit) {
-                return Response::deny(__('organization.app.denied.limit'), 'limit_reached');
+            if ($base_plan->isMaxApps($app)) {
+                $limit_denial = $plans_with_higher_app_limit
+                    ? Response::deny(__('organization.app.denied.plan_limit', ['max' => $base_plan->appMax($app)]), 'plan_limit_reached')
+                    : Response::deny(__('organization.app.denied.limit'), 'limit_reached');
+
+                // Without an organization in mind, the user's own reaching its limit only blocks them when
+                // none of its suborganizations can take the app either
+                $another_can = ! $target && AppActivationContext::organizationsFor($user)
+                    ->reject(fn ($candidate) => $candidate->is($organization))
+                    ->contains(fn ($candidate) => Gate::forUser($user)->allows('activate-app', [$app, $plan, $candidate]));
+
+                return $another_can ? Response::allow() : $limit_denial;
             } elseif ($plan_denial) {
                 return $plan_denial;
             }
