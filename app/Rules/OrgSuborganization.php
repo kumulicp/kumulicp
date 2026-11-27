@@ -26,9 +26,14 @@ class OrgSuborganization implements Rule
     public function passes($attribute, $value)
     {
         $organization = auth()->user()->organization;
-        $suborganization = $organization->suborganizations()->where('id', $value)->first();
 
-        return $value === $organization->id || ! is_null($suborganization);
+        // The value arrives as a string from a form, and a deactivated suborganization can't be picked
+        $suborganization = $organization->suborganizations()
+            ->where('id', $value)
+            ->where('status', '!=', 'deactivated')
+            ->first();
+
+        return (int) $value === $organization->id || ! is_null($suborganization);
     }
 
     /**

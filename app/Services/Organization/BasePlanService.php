@@ -24,6 +24,7 @@ use Illuminate\Support\Str;
  * @property array|null $app_plans
  *
  * @method mixed appPlansList(Application $app)
+ * @method mixed appMax(Application $app)
  * @method mixed setting(string $setting)
  */
 class BasePlanService

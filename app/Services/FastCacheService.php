@@ -22,9 +22,13 @@ class FastCacheService
         return Cache::getStore() instanceof TaggableStore;
     }
 
-    public function retrieve(string $key, mixed $value, mixed $time = null): mixed
+    /**
+     * Entries are kept per organization: the active one, unless the entry is for another, like a
+     * suborganization's plans looked up while its parent is the one logged in.
+     */
+    public function retrieve(string $key, mixed $value, mixed $time = null, ?\App\Organization $organization = null): mixed
     {
-        $org_name = Organization::account()?->slug;
+        $org_name = ($organization ?? Organization::account())?->slug;
         $taggable = $org_name && $this->supportsTags();
 
         if ($taggable && Cache::tags($org_name)->has($key)) {

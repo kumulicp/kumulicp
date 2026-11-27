@@ -18,6 +18,7 @@ use App\Integrations\Applications\Wordpress\WordpressProfile;
 use App\Organization;
 use App\OrgSubdomain;
 use App\Services\Application\AppPlanService;
+use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Subscription;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
@@ -37,6 +38,9 @@ class ApplicationService
     private $activated_apps;
 
     private $instances = [];
+
+    // The instances of an app each organization has, by organization id and app slug
+    private $organization_instances = [];
 
     // Profiles of HelmForge apps by slug (false = looked up, not a HelmForge app)
     private $helmforge_profiles = [];
@@ -367,19 +371,16 @@ class ApplicationService
 
     public function instances(Organization $organization, $app_name)
     {
+        // Kept per organization: what one organization has is not what another is counted as having
         $applications = Application::with(['instances' => function ($query) use ($organization) {
             $query->where('organization_id', $organization->id);
         }])->where('slug', $app_name)->first();
 
         foreach ($applications->instances as $app_instance) {
-            $this->instances[$app_name][$app_instance->id] = $app_instance;
+            $this->organization_instances[$organization->id][$app_name][$app_instance->id] = $app_instance;
         }
 
-        if (array_key_exists($app_name, $this->instances)) {
-            return $this->instances[$app_name];
-        }
-
-        return [];
+        return $this->organization_instances[$organization->id][$app_name] ?? [];
     }
 
     public function runJob(AppInstance $app_instance, string $job_name)
@@ -592,15 +593,23 @@ class ApplicationService
         return collect($features);
     }
 
+    /**
+     * The app plans the organization may pick from, which come from the organization's own plan: a
+     * suborganization is not on its parent's.
+     */
     public function availablePlans(Application $app, Organization $organization, bool $display_order = false)
     {
-        $slug = $app->slug;
+        $key = "{$organization->id}_{$app->slug}_".(int) $display_order;
 
-        if (! Arr::has($this->plans, $slug)) {
-            $this->plans[$slug] = Subscription::base()->appPlans($app, archived: false, display_order: $display_order);
+        if (! array_key_exists($key, $this->plans)) {
+            $base_plan = $organization->is(OrganizationFacade::account())
+                ? Subscription::base()
+                : (new SubscriptionService($organization))->base();
+
+            $this->plans[$key] = $base_plan->appPlans($app, archived: false, display_order: $display_order);
         }
 
-        return $this->plans[$slug];
+        return $this->plans[$key];
     }
 
     public function plan(AppPlan $plan)

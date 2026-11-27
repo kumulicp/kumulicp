@@ -265,3 +265,56 @@ it('updates the subscription of a new suborganization', function () {
 
     expect(Task::where('organization_id', $suborganization->id)->where('action_slug', 'subscription_update')->exists())->toBeTrue();
 });
+
+function suborganizationUpdatePayload(Organization $suborganization, array $extra = []): array
+{
+    return $extra + [
+        'name' => $suborganization->name,
+        'description' => $suborganization->description,
+        'org_email' => 'updated@example.com',
+        'org_phone_number' => '111-222-3333',
+        'street' => '456 New St',
+        'zipcode' => '54321',
+        'city' => 'Newtown',
+        'state' => 'CA',
+        'country' => 'US',
+        'include_in_parent_invoice' => true,
+        'user_first_name' => $suborganization->contact_first_name,
+        'user_last_name' => $suborganization->contact_last_name,
+        'user_phone_number' => $suborganization->contact_phone_number,
+        'user_email' => $suborganization->contact_email,
+    ];
+}
+
+it('lets the parent allow a suborganization to activate apps', function () {
+    $suborganization = Organization::factory()->create([
+        'slug' => 'subactivate',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+        'settings' => ['step' => 4, 'include_in_parent_invoice' => true],
+    ]);
+
+    $this->put('/settings/suborganizations/'.$suborganization->id, suborganizationUpdatePayload($suborganization, ['allow_app_activation' => true]))
+        ->assertSessionHasNoErrors();
+
+    expect($suborganization->fresh()->setting('allow_app_activation'))->toBeTrue();
+});
+
+it('does not let a suborganization allow itself to activate apps', function () {
+    $suborganization = Organization::factory()->create([
+        'slug' => 'subself',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+        'status' => 'active',
+        'settings' => ['step' => 4, 'include_in_parent_invoice' => true],
+    ]);
+    $user = User::factory()->create([
+        'organization_id' => $suborganization->id,
+        'email_verified_at' => now(),
+    ]);
+    $this->actingAs($user);
+
+    $this->put('/settings/suborganizations/'.$suborganization->id, suborganizationUpdatePayload($suborganization, ['allow_app_activation' => true]));
+
+    expect($suborganization->fresh()->setting('allow_app_activation'))->toBeFalsy();
+});

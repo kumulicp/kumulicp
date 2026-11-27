@@ -15,6 +15,7 @@ use App\Rules\OrgAppInstance;
 use App\Rules\OrgDomainName;
 use App\Rules\OrgSuborganization;
 use App\Services\Application\ApplicationReadiness;
+use App\Services\Organization\AppActivationContext;
 use App\Support\Facades\Action;
 use App\Support\Facades\Application as ApplicationFacade;
 use App\Support\Facades\Billing;
@@ -22,9 +23,12 @@ use App\Support\Facades\Domain;
 use App\Support\Facades\Organization;
 use App\Support\Facades\Subscription;
 use App\Support\Facades\Tenancy;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class Discover extends Controller
 {
@@ -78,17 +82,22 @@ class Discover extends Controller
         $is_installed = $app->is_installed($organization);
         $app_instance_count = $organization->app_instances()->where('application_id', $app->id)->count();
 
-        $plans = ApplicationFacade::availablePlans($app, $organization);
+        // The plans on offer are the (sub)organization's own, so which organization the app is for is chosen first.
+        // When more than one can take the app the user picks in a modal; until then, the first that can.
+        $target = $this->chosenTarget($request) ?? $this->defaultTarget($app);
+        $organizations = $this->organizationOptions($app);
+
+        $plans = ApplicationFacade::availablePlans($app, $target);
         $plan = null;
         if (count($plans) == 1) {
 
-            $plan = $plans->map(function ($plan) use ($app) {
+            $plan = $plans->map(function ($plan) use ($app, $target) {
                 return [
                     'id' => $plan->id,
                     'name' => $plan->name,
                     'descriptions' => $plan->description,
                     'features' => $plan->displayFeatures(),
-                    'url' => "/discover/{$app->slug}/plans/{$plan->id}/review",
+                    'url' => $this->withTarget("/discover/{$app->slug}/plans/{$plan->id}/review", $target),
                 ];
             })->first();
         }
@@ -114,6 +123,7 @@ class Discover extends Controller
                 }),
                 'plan_count' => count($plans),
                 'plan_id' => $plan ? $plan['id'] : null,
+                'plans_url' => $this->withTarget("/discover/{$app->slug}/plans", $target),
                 'activated' => $is_installed,
                 'count' => $app_instance_count,
                 'parent_app' => $parent_app ? [
@@ -122,12 +132,18 @@ class Discover extends Controller
                 ] : null,
             ],
             'plan' => $plan,
+            // Where there is a choice of organization to activate for, the user is asked which when they go on
+            'organizations' => $organizations,
+            // Which organization the app goes to when there is no choice, so it is clear when there are suborganizations
+            'target' => $this->organizationSummary($target),
             'readiness' => $readiness && $is_admin ? [
                 'status' => $readiness->status(),
                 'items' => $readiness->issues(),
             ] : null,
             'can' => [
                 'activate' => $can_activate->allowed(),
+                'choose_organization' => $organizations->where('disabled', false)->count() > 1,
+                'has_suborganizations' => $organizations->isNotEmpty(),
                 'manage' => $is_admin,
             ],
             'authorization' => [
@@ -139,43 +155,50 @@ class Discover extends Controller
         ]);
     }
 
-    public function plans(Application $app)
+    public function plans(Request $request, Application $app)
     {
-        Gate::authorize('activate-app', $app);
+        $target = $this->chosenTarget($request) ?? $this->defaultTarget($app);
 
-        $organization = Organization::account();
-        $plans = ApplicationFacade::availablePlans($app, $organization, display_order: true);
+        Gate::authorize('activate-app', [$app, null, $target]);
+
+        $plans = ApplicationFacade::availablePlans($app, $target, display_order: true);
         $plan_count = $plans->count();
 
         if ($plan_count == 0) {
             return redirect('/discover');
         } elseif ($plan_count == 1) {
-            return redirect("/discover/{$app->slug}/plans/{$plans->first()->id}/review");
+            return redirect($this->withTarget("/discover/{$app->slug}/plans/{$plans->first()->id}/review", $target));
         }
 
         return inertia('Organization/Discover/DiscoverPlans', [
             'app' => [
+                'name' => $app->name,
                 'slug' => $app->slug,
             ],
-            'plans' => $plans->map(function ($plan) use ($app) {
+            // Plans are the organization's own, which only needs saying when there is more than one it could be
+            'organization' => $this->organizationSummary($target),
+            'has_suborganizations' => AppActivationContext::organizationsFor(auth()->user())->count() > 1,
+            'plans' => $plans->map(function ($plan) use ($app, $target) {
                 return [
                     'id' => $plan->id,
                     'name' => $plan->name,
                     'description' => $plan->description,
                     'features' => $plan->displayFeatures(),
-                    'url' => "/discover/{$app->slug}/plans/{$plan->id}/review",
+                    'url' => $this->withTarget("/discover/{$app->slug}/plans/{$plan->id}/review", $target),
                     'can' => [
-                        'select' => Gate::allows('select-app-plan', $plan),
+                        'select' => Gate::allows('select-app-plan', [$plan, $target]),
                     ],
                 ];
             }),
         ]);
     }
 
-    public function review(Application $app, AppPlan $plan)
+    public function review(Request $request, Application $app, AppPlan $plan)
     {
-        Gate::authorize('activate-app', [$app, $plan]);
-        Gate::authorize('select-app-plan', $plan);
+        $target = $this->chosenTarget($request) ?? $this->defaultTarget($app, $plan);
+
+        Gate::authorize('activate-app', [$app, $plan, $target]);
+        Gate::authorize('select-app-plan', [$plan, $target]);
 
         $organization = Organization::account();
 
@@ -183,7 +206,7 @@ class Discover extends Controller
         $parent_application = $plan->parentApplication();
         $customizations = ApplicationFacade::plan($plan)->features()->optional();
 
-        $other_apps = $app->instances()->where('organization_id', $organization->id)->count();
+        $other_apps = $app->instances()->where('organization_id', $target->id)->count();
 
         // Create domain list
         $domains = Organization::availableDomains($plan)->map(function ($domain) {
@@ -237,8 +260,11 @@ class Discover extends Controller
         $settings = ApplicationFacade::personalizedConfigurations($app, $plan)->values();
 
         return inertia('Organization/Discover/DiscoverOverview', [
+            // The organization the app is being activated for, which was chosen before the plans were listed
             'organization' => [
-                'id' => $organization->id,
+                'id' => $target->id,
+                'name' => $target->name,
+                'is_suborganization' => (bool) $target->parent_organization_id,
             ],
             'customizations' => collect($customizations)->map(function ($customization) {
                 return [
@@ -254,7 +280,7 @@ class Discover extends Controller
                 'name' => $plan->name,
                 'descriptions' => $plan->description,
                 'features' => $plan->displayFeatures(),
-                'url' => "/discover/{$app->slug}/plans/{$plan->id}/review",
+                'url' => $this->withTarget("/discover/{$app->slug}/plans/{$plan->id}/review", $target),
             ],
             'app' => [
                 'name' => $app->name,
@@ -270,12 +296,6 @@ class Discover extends Controller
                 ];
             }),
             'domains' => $domains,
-            'organizations' => collect([['id' => $organization->id, 'name' => $organization->name]])->merge($organization->suborganizations()->notDeactivated()->get()->map(function ($sub) {
-                return [
-                    'id' => $sub->id,
-                    'name' => $sub->name,
-                ];
-            })),
             'parent_domains' => $organization->main_domains()->map(function ($domain) {
                 return [
                     'value' => $domain->id,
@@ -284,20 +304,34 @@ class Discover extends Controller
             }),
             'driver' => Billing::component(),
             'default_label' => $other_apps > 0 ? $app->name.' '.$other_apps + 1 : $app->name,
-            'has_payment_method' => Billing::hasDefaultPaymentMethod(),
+            // A suborganization's user whose parent pays isn't asked for a payment method: it's the parent's
+            // that is used, and activating checks it
+            'has_payment_method' => ! (new AppActivationContext(auth()->user(), $target))->payerIsUsersOrganization() || Billing::hasDefaultPaymentMethod(),
             'settings' => $settings,
         ]);
     }
 
     public function activate(Request $request, Application $app, AppPlan $plan)
     {
-        Gate::authorize('activate-app', [$app, $plan]);
-        Gate::authorize('select-app-plan', $plan);
-
         $organization = Organization::account();
 
-        if ($plan->payment_enabled && ! Billing::hasDefaultPaymentMethod()) {
-            return back()->with('error', __('organization.app.denied.payment_method'));
+        // What is activated, who may do it, what limits apply and who pays all depend on who it is for
+        $target = $this->activationTarget($request, $organization);
+
+        $context = new AppActivationContext($request->user(), $target);
+
+        // An organization the screen offers but that can't take the app (it has reached its limit) is an
+        // error on that field. Anything else is a request the screen never makes.
+        $denial = $this->activationDenial($app, $plan, $target);
+        if ($denial && $request->filled('organization') && $context->authorize()->allowed()) {
+            throw ValidationException::withMessages(['organization' => $this->denialMessage($denial, $app)]);
+        }
+        $denial?->authorize();
+
+        if ($plan->payment_enabled && ! $context->payerCanPay()) {
+            return back()->with('error', $context->payerIsUsersOrganization()
+                ? __('organization.app.denied.payment_method')
+                : __('organization.app.denied.parent_payment_method'));
         }
 
         $validatedData = $request->validate([
@@ -389,7 +423,7 @@ class Discover extends Controller
             $subdomain = OrgSubdomain::find($validatedData['domain']);
         }
 
-        $organization = Arr::get($validatedData, 'organization', null) ? \App\Organization::find($validatedData['organization']) : $organization;
+        $organization = $target;
 
         $parent_app = null;
         $parent_application = $plan->parentApplication();
@@ -403,7 +437,7 @@ class Discover extends Controller
                 if ($available_parent_apps->count() == 1) {
                     $parent_app = $available_parent_apps->first();
                 } else {
-                    return redirect("/discover/{$app->slug}/plans/{$plan->id}/review")->with('error', __('organization.app.denied.select_parent_app', ['parent_app' => $parent_application?->name]));
+                    return redirect($this->withTarget("/discover/{$app->slug}/plans/{$plan->id}/review", $target))->with('error', __('organization.app.denied.select_parent_app', ['parent_app' => $parent_application?->name]));
                 }
             }
         }
@@ -418,6 +452,112 @@ class Discover extends Controller
         }
 
         return redirect('/apps')->with('success', __('organization.app.activating', ['app' => $validatedData['label']]));
+    }
+
+    /**
+     * Why the app can't be activated with this plan for the organization, or null when it can.
+     */
+    private function activationDenial(Application $app, ?AppPlan $plan, \App\Organization $target): ?Response
+    {
+        $checks = [['activate-app', [$app, $plan, $target]]];
+        if ($plan) {
+            $checks[] = ['select-app-plan', [$plan, $target]];
+        }
+
+        foreach ($checks as [$ability, $arguments]) {
+            $response = Gate::inspect($ability, $arguments);
+
+            if ($response->denied()) {
+                return $response;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The organization the user chose to activate for, or null when they haven't: it travels with them
+     * from the app, through its plans, to activating it.
+     */
+    private function chosenTarget(Request $request): ?\App\Organization
+    {
+        return $request->filled('organization') ? $this->activationTarget($request, Organization::account()) : null;
+    }
+
+    /**
+     * Where the user hasn't chosen: their own organization if it can take the app, otherwise the first of
+     * its suborganizations that can.
+     */
+    private function defaultTarget(Application $app, ?AppPlan $plan = null): \App\Organization
+    {
+        $candidates = AppActivationContext::organizationsFor(auth()->user());
+
+        return $candidates->first(fn ($candidate) => $this->activationDenial($app, $plan, $candidate) === null) ?? $candidates->first();
+    }
+
+    /**
+     * The organizations the user could activate the app for, with why one can't take it when that is so. Empty
+     * when the user's organization has no suborganizations, as there is no choice to make.
+     */
+    private function organizationOptions(Application $app): Collection
+    {
+        $candidates = AppActivationContext::organizationsFor(auth()->user());
+
+        if ($candidates->count() < 2) {
+            return collect();
+        }
+
+        return $candidates->map(function ($candidate) use ($app) {
+            $denial = $this->activationDenial($app, null, $candidate);
+
+            return [
+                'id' => $candidate->id,
+                'name' => $candidate->name,
+                'disabled' => $denial !== null,
+                'note' => $denial ? $this->denialMessage($denial, $app) : null,
+            ];
+        })->values();
+    }
+
+    private function organizationSummary(\App\Organization $organization): array
+    {
+        return [
+            'id' => $organization->id,
+            'name' => $organization->name,
+            'is_suborganization' => (bool) $organization->parent_organization_id,
+        ];
+    }
+
+    /**
+     * The url for the organization the app is for. The user's own is what a url means without one.
+     */
+    private function withTarget(string $url, \App\Organization $target): string
+    {
+        return $target->is(auth()->user()->organization) ? $url : $url.'?organization='.$target->id;
+    }
+
+    /**
+     * What to tell the user about a denial. Reaching the number of instances of the app is said as such.
+     */
+    private function denialMessage(Response $denial, Application $app): string
+    {
+        return in_array($denial->code(), ['limit_reached', 'plan_limit_reached'], true)
+            ? __('organization.app.denied.org_limit', ['app' => $app->name])
+            : (string) $denial->message();
+    }
+
+    /**
+     * The organization the app is activated for: the user's own, or one of its suborganizations.
+     */
+    private function activationTarget(Request $request, \App\Organization $organization): \App\Organization
+    {
+        if (! $request->filled('organization')) {
+            return $organization;
+        }
+
+        $request->validate(['organization' => ['numeric', new OrgSuborganization]]);
+
+        return \App\Organization::findOrFail((int) $request->input('organization'));
     }
 
     // Whether this app+plan combo only allows the 'parent' domain choice --
