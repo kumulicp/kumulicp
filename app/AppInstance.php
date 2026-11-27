@@ -433,6 +433,18 @@ class AppInstance extends Model
         return ! $this->sharedPlanParent() || $this->usesMultisitePermissions();
     }
 
+    /**
+     * Whether this is an addon of another app (a CiviCRM in a WordPress): it is installed by a job
+     * against its parent's release rather than by a release of its own, and signs in as its parent
+     * does. Not a shared app's child, which is the other kind (see sharedPlanParent()).
+     */
+    public function isAddonChild(): bool
+    {
+        return $this->parent_id !== null
+            && ! $this->sharedPlanParent()
+            && ApplicationFacade::profileFor($this)->activationType($this) === 'job';
+    }
+
     public function canEnableSelfRegistration(): bool
     {
         return (bool) $this->plan?->selfRegistrationEnabled() && count($this->version?->defaultUserRoles() ?? []) > 0;

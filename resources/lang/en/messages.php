@@ -104,6 +104,7 @@ return [
         'moved' => ':app is now running on :server',
         'dns_failed' => 'The DNS records for :app could not all be updated after its move',
         'dns_manual' => 'The domains of :app that are not managed here need their address changed to :ip: :domains',
+        'child_dns_manual' => 'The domains of :app (which runs on :parent, now moved) that are not managed here need their address changed to :ip: :domains',
     ],
     'sso_move' => [
         'setup_not_scheduled' => 'The sign-in setup on the new server could not be scheduled',
@@ -120,6 +121,10 @@ return [
         'app_not_active' => 'The app must be active before its :type server can be moved',
         'has_children' => 'The app has child apps that run with it, so its :type server can\'t be moved on its own',
         'is_child' => 'The app runs as part of its parent app, so its :type server is moved with the parent',
+        'addon_child' => 'The app is an addon of its parent app and is installed with it, so its :type server is moved with the parent',
+        'shared_not_active' => 'The shared app is not deployed by Kumuli CP yet, or is run outside it, so there is nothing to move',
+        'child_tasks_open' => 'Something is still being done to one of the apps that run with this one. Wait for it to finish',
+        'child_databases_unsupported' => 'Some of the apps that run with this one have a database of their own, which moving the app server does not look after yet',
         'no_sso_support' => 'This app does not support single sign-on, so it has no sign-in server to move',
         'wrong_type' => 'That is not a :type server',
         'server_inactive' => 'That server is not active',

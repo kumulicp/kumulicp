@@ -65,6 +65,7 @@ return [
         'moved' => ':app ahora se ejecuta en :server',
         'dns_failed' => 'No se pudieron actualizar todos los registros DNS de :app tras su traslado',
         'dns_manual' => 'Los dominios de :app que no se gestionan aquí necesitan cambiar su dirección a :ip: :domains',
+        'child_dns_manual' => 'Los dominios de :app (que se ejecuta en :parent, ya trasladada) que no se gestionan aquí necesitan cambiar su dirección a :ip: :domains',
     ],
     'sso_move' => [
         'setup_not_scheduled' => 'No se pudo programar la configuración del inicio de sesión en el nuevo servidor',
@@ -81,6 +82,10 @@ return [
         'app_not_active' => 'La aplicación debe estar activa antes de mover su servidor :type',
         'has_children' => 'La aplicación tiene aplicaciones hijas que se ejecutan con ella, por lo que su servidor :type no se puede mover por separado',
         'is_child' => 'La aplicación se ejecuta como parte de su aplicación padre, por lo que su servidor :type se mueve con el padre',
+        'addon_child' => 'La aplicación es un complemento de su aplicación padre y se instala con ella, por lo que su servidor :type se mueve con el padre',
+        'shared_not_active' => 'La aplicación compartida todavía no la despliega Kumuli CP, o se ejecuta fuera de ella, por lo que no hay nada que mover',
+        'child_tasks_open' => 'Todavía se está haciendo algo en una de las aplicaciones que se ejecutan con esta. Espera a que termine',
+        'child_databases_unsupported' => 'Algunas de las aplicaciones que se ejecutan con esta tienen una base de datos propia, de la que el traslado del servidor de aplicaciones todavía no se ocupa',
         'no_sso_support' => 'Esta aplicación no admite el inicio de sesión único, por lo que no tiene un servidor de inicio de sesión que trasladar',
         'wrong_type' => 'Ese no es un servidor :type',
         'server_inactive' => 'Ese servidor no está activo',

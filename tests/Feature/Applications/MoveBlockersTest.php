@@ -2,9 +2,13 @@
 
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\AppInstance;
+use App\AppPlan;
+use App\Enums\ApplicationSource;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\OrgServer;
 use App\Server;
+use App\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Applications\DemoAppProfile;
 use Tests\Support\Concerns\TestsApplicationLifecycle;
@@ -22,6 +26,8 @@ uses(TestsApplicationLifecycle::class, TestsWithServerInterfaces::class);
 afterEach(function () {
     $this->restoreServerInterfaces();
     DemoAppProfile::$sso = false;
+    DemoAppProfile::$job_activation = false;
+    DemoAppProfile::$multisite = false;
 });
 
 beforeEach(function () {
@@ -250,4 +256,128 @@ it('only moves the app to an app server that can reach its database and SSO serv
 
 it('has no reach to check for an app that uses no database or SSO server', function () {
     expect(MoveBlockers::reach($this->appInstance->fresh(), 'web', moveTarget('web')))->toBe([]);
+});
+
+
+/**
+ * An app that runs in $parent's release: one shared from it (its plan is a shared plan, and the apps
+ * of other organizations are on it) or, otherwise, an addon.
+ */
+function releaseChildOf(AppInstance $parent, bool $shared, array $attributes = []): AppInstance
+{
+    $plan = $parent->plan;
+
+    if ($shared) {
+        $plan = AppPlan::factory()->create([
+            'application_id' => $parent->application_id,
+            'web_server_id' => 1,
+            'shared_app_id' => $parent->id,
+            'settings' => array_merge($parent->plan->settings ?? [], ['server_type' => 'shared']),
+        ]);
+    }
+
+    return AppInstance::factory()->create($attributes + [
+        'application_id' => $parent->application_id,
+        'organization_id' => $parent->organization_id,
+        'version_id' => $parent->version_id,
+        'plan_id' => $plan->id,
+        'parent_id' => $parent->id,
+        'status' => 'active',
+    ]);
+}
+
+it('lets a web move through for an app whose children are shared from it', function () {
+    putAppOn($this->appInstance, 'web');
+    // In organizations of their own, the way an app shared from a shared app is
+    releaseChildOf($this->appInstance, true, ['organization_id' => Organization::factory()->create()->id]);
+    releaseChildOf($this->appInstance, true, ['organization_id' => Organization::factory()->create()->id]);
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([]);
+});
+
+it('lets a web move through for an app whose children are addons, but not a move of the addon alone', function () {
+    DemoAppProfile::$job_activation = true;
+    putAppOn($this->appInstance, 'web');
+    $addon = releaseChildOf($this->appInstance, false);
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([])
+        ->and($addon->isAddonChild())->toBeTrue()
+        ->and(MoveBlockers::app($addon, 'web'))->toBe([MoveBlockers::ADDON_CHILD])
+        ->and(MoveBlockers::app($addon, 'sso'))->toBe([MoveBlockers::ADDON_CHILD])
+        // It has a database of its own, which can be moved
+        ->and(MoveBlockers::app($addon, 'database'))->toBe([]);
+});
+
+it('does not take a child that is neither shared nor an addon for one that goes with the release', function () {
+    putAppOn($this->appInstance, 'web');
+    releaseChildOf($this->appInstance, true);
+    releaseChildOf($this->appInstance, false);
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([MoveBlockers::HAS_CHILDREN]);
+});
+
+it('refuses a web move while a child has a database of its own, which it does not look after yet', function () {
+    DemoAppProfile::$multisite = true;
+    putAppOn($this->appInstance, 'web');
+    $child = releaseChildOf($this->appInstance, true);
+
+    // Without one of its own, as a child of an app without multisite is
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([]);
+
+    $child->databasename = 'site_database';
+    $child->save();
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([MoveBlockers::CHILD_DATABASES_UNSUPPORTED])
+        // Only the app server is moved with the children
+        ->and(MoveBlockers::app($this->appInstance->fresh(), 'database'))->toBe([]);
+
+    // One that runs entirely in its parent's has nothing of its own, whatever it is recorded with
+    DemoAppProfile::$multisite = false;
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([]);
+});
+
+it('refuses a web move while something is being done to a child, and not once it is', function () {
+    putAppOn($this->appInstance, 'web');
+    $child = releaseChildOf($this->appInstance, true);
+    $task = Task::forceCreate([
+        'organization_id' => $child->organization_id,
+        'app_instance_id' => $child->id,
+        'action_slug' => 'application_update',
+        'action_group' => 'application',
+        'description' => 'Updating',
+        'status' => TaskStatus::IN_PROGRESS,
+    ]);
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([MoveBlockers::CHILD_TASKS_OPEN]);
+
+    $task->status = TaskStatus::COMPLETE;
+    $task->save();
+
+    expect(MoveBlockers::app($this->appInstance->fresh(), 'web'))->toBe([]);
+});
+
+it('refuses a shared app that nothing is deployed for, and lets a deployed one through', function () {
+    $application = $this->appInstance->application;
+    $application->source = ApplicationSource::Profile;
+    $application->save();
+
+    $this->appInstance->organization_id = Organization::factory()->create(['type' => 'shared'])->id;
+    $this->appInstance->save();
+    $app = $this->appInstance->fresh();
+
+    expect(MoveBlockers::app($app, 'web'))->toBe([]);
+
+    // Run outside Kumuli CP: nothing of it to move
+    $app->updateSetting('managed_externally', true);
+
+    expect(MoveBlockers::app($app->fresh(), 'web'))->toBe([MoveBlockers::SHARED_NOT_ACTIVE])
+        ->and(MoveBlockers::app($app->fresh(), 'database'))->toBe([MoveBlockers::SHARED_NOT_ACTIVE]);
+
+    // Added but never activated
+    $app->updateSetting('managed_externally', false);
+    $app->status = 'deactivated';
+    $app->save();
+
+    expect(MoveBlockers::app($app->fresh(), 'web', require_active: false))->toBe([MoveBlockers::SHARED_NOT_ACTIVE]);
 });

@@ -272,7 +272,8 @@ interface only, and a test must prove no child's status changes.
 
 ## Build order
 
-1. Phase 1 (blockers, task record, DNS fan-out, tests). Mergeable on its own; no UI yet, but the
+1. Phase 1 (blockers, task record, DNS fan-out, tests). **Built** (see the PR for it); the blockers it adds
+   are `SHARED_NOT_ACTIVE`, `ADDON_CHILD`, `CHILD_TASKS_OPEN` and `CHILD_DATABASES_UNSUPPORTED`. Mergeable on its own; no UI yet, but the
    existing move tab already works for a hub once `HAS_CHILDREN` is lifted. Until Phase 3
    lands, keep a parent whose children have databases of their own blocked with its own reason
    (`CHILD_DATABASES_UNSUPPORTED`), since moving it without its children's pointers would

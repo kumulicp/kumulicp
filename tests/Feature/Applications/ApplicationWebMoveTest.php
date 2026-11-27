@@ -8,10 +8,12 @@ use App\Actions\Apps\WebMove\RunSettingsJob;
 use App\Actions\Apps\WebMove\Verify;
 use App\Actions\Steps\AwaitConfirmation;
 use App\AppInstance;
+use App\AppPlan;
 use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\NextcloudProfile;
 use App\Organization;
 use App\OrgBackup;
+use App\OrgDomain;
 use App\OrgServer;
 use App\OrgSubdomain;
 use App\Server;
@@ -19,6 +21,7 @@ use App\Services\BackupService;
 use App\Services\Tasks\TaskRunner;
 use App\Support\Facades\Action;
 use App\Support\Facades\Backup;
+use Illuminate\Support\Facades\Log;
 use App\Support\ServerReach;
 use App\Task;
 use App\TaskStep;
@@ -252,6 +255,61 @@ it('refreshes the copies of the old address in the app\'s subdomains, and only t
         ->and($other->fresh()->value)->toBe('somewhere.example.net');
 });
 
+
+it('refreshes the domains of the apps shared from the app too, and tells their organizations about the ones it does not manage', function () {
+    [$instance] = appOnWebServer();
+    $child_organization = Organization::factory()->create();
+    $shared_plan = AppPlan::factory()->create([
+        'application_id' => $instance->application_id,
+        'web_server_id' => 1,
+        'shared_app_id' => $instance->id,
+        'settings' => array_merge($instance->plan->settings ?? [], ['server_type' => 'shared']),
+    ]);
+    $child = AppInstance::factory()->create([
+        'application_id' => $instance->application_id,
+        'organization_id' => $child_organization->id,
+        'version_id' => $instance->version_id,
+        'plan_id' => $shared_plan->id,
+        'parent_id' => $instance->id,
+        'status' => 'active',
+    ]);
+    // A domain that is not managed here, which is not the old address's to be changed, but the customer's to point
+    $domain = OrgDomain::factory()->create(['organization_id' => $child_organization->id, 'type' => 'connection']);
+    $copy = OrgSubdomain::forceCreate([
+        'organization_id' => $child_organization->id,
+        'app_instance_id' => $child->id,
+        'parent_domain_id' => $domain->id,
+        'host' => 'church',
+        'name' => "church.{$domain->name}",
+        'type' => 'app',
+        'value' => '10.0.0.1',
+        'status' => 'active',
+    ]);
+    Log::spy();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        // Recorded when it was asked for
+        ->and($task->getValue('child_ids'))->toBe([$child->id])
+        ->and($copy->fresh()->value)->toBe('10.0.0.2')
+        ->and($task->getValue('child_dns_manual'))->toBe([(string) $child->id => [$domain->name]]);
+
+    // Said in the log of the organization the app is in, not the one that was moved
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn ($message, $context = []) => ($context['organization_id'] ?? null) === $child_organization->id && str_contains($message, $domain->name))
+        ->once();
+});
+
+it('records no children for an app that has none', function () {
+    [$instance] = appOnWebServer();
+
+    $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2')));
+
+    expect($task->status)->toBe(TaskStatus::COMPLETE)
+        ->and($task->getValue('child_ids'))->toBeNull()
+        ->and($task->getValue('child_dns_manual'))->toBeNull();
+});
 
 it('lists everything in the way of the move at once', function () {
     [$instance, $old] = appOnWebServer();
