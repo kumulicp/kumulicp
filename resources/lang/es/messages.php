@@ -424,7 +424,7 @@ return [
         'too_many_attempts' => 'Demasiados intentos de registro. Por favor, inténtalo de nuevo en :seconds segundos.',
         'captcha_failed' => 'La verificación CAPTCHA falló. Por favor, inténtalo de nuevo.',
         'full' => 'Esta organización no acepta nuevos registros en este momento. Por favor, contacta a su administrador.',
-        'failed' => "No pudimos terminar de crear tu cuenta. No se guardó nada, así que inténtalo de nuevo en un momento.",
+        'failed' => "No pudimos terminar de crear tu cuenta. Inténtalo de nuevo en un momento.",
     ],
     'extensions' => [
         'nextcloud' => [
