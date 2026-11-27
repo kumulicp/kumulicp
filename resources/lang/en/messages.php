@@ -443,6 +443,7 @@ return [
         'too_many_attempts' => 'Too many registration attempts. Please try again in :seconds seconds.',
         'captcha_failed' => 'CAPTCHA verification failed. Please try again.',
         'full' => 'This organization is not accepting new registrations right now. Please contact its administrator.',
+        'failed' => "We couldn't finish creating your account. Nothing was kept, so please try again in a moment.",
     ],
     'extensions' => [
         'nextcloud' => [

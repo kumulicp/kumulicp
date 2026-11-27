@@ -24,6 +24,7 @@ use App\Notifications\OrgRegistrationExists;
 use App\Notifications\OrgRegistrationVerification;
 use App\Organization;
 use App\OrgUserRegistration;
+use App\Support\Facades\AccountManager;
 use App\Support\Facades\Settings;
 use App\SuborgUser;
 use App\User;
@@ -642,15 +643,79 @@ it('does not count a failed captcha against the limit either', function () {
     Notification::assertSentOnDemandTimes(OrgRegistrationVerification::class, 1);
 });
 
-it('leaves no half-made user and keeps the link when creating the account fails', function () {
+// -- Making the account is all or nothing ------------------------------------------------------------
+
+it('leaves nothing behind and keeps the link when creating the account fails', function () {
     $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
     Event::listen(UserCreatedEvent::class, fn () => throw new RuntimeException('directory is down'));
 
-    $this->post($this->base.'/verify/'.$registration->token, registrationDetails());
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())
+        ->assertSessionHasErrors(['registration' => __('messages.org_registration.failed')]);
 
-    expect(User::where('username', 'newperson')->exists())->toBeFalse()
+    // Not even a deleted user: the database account manager keeps those, with the name still taken
+    expect(User::withTrashed()->where('username', 'newperson')->exists())->toBeFalse()
+        ->and(NewUserCode::where('username', 'newperson')->exists())->toBeFalse()
         ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeTrue();
-})->skip('Finding 6: the user is created before the steps that can fail, and nothing is undone.');
+
+    // The email that tells them about the account is the last step, so it was never sent
+    Notification::assertNothingSent();
+});
+
+it('lets the person try again with the same details after it fails', function () {
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+    $url = $this->base.'/verify/'.$registration->token;
+    $calls = 0;
+    Event::listen(UserCreatedEvent::class, function () use (&$calls) {
+        if (++$calls === 1) {
+            throw new RuntimeException('directory is down');
+        }
+    });
+
+    $this->post($url, registrationDetails())->assertSessionHasErrors('registration');
+    $this->post($url, registrationDetails())->assertSessionHasNoErrors();
+
+    $user = User::where('username', 'newperson')->sole();
+    expect(User::where('email', 'new@example.com')->count())->toBe(1)
+        ->and(NewUserCode::where('username', 'newperson')->count())->toBe(1)
+        ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeFalse();
+    Notification::assertSentToTimes($user, OrgRegistrationComplete::class, 1);
+});
+
+it('removes the record of a suborganization user when creating the account fails', function () {
+    $sub = Organization::factory()->create([
+        'slug' => 'subco',
+        'parent_organization_id' => $this->organization->id,
+        'plan_id' => $this->organization->plan_id,
+    ]);
+    selfRegistrationApp($sub);
+    $registration = OrgUserRegistration::generate($sub, 'sub@example.com');
+    Event::listen(UserCreatedEvent::class, fn () => throw new RuntimeException('directory is down'));
+
+    $this->post('/public/org/subco/register/verify/'.$registration->token, registrationDetails(['username' => 'subuser']))
+        ->assertSessionHasErrors('registration');
+
+    expect(SuborgUser::where('username', 'subuser')->exists())->toBeFalse()
+        ->and(User::withTrashed()->where('username', 'subuser')->exists())->toBeFalse();
+});
+
+it('does not make a second account for an address that got one while the link was waiting', function () {
+    $registration = OrgUserRegistration::generate($this->organization, 'new@example.com');
+    AccountManager::users($this->organization)->add([
+        'username' => 'someoneelse',
+        'first_name' => 'Someone',
+        'last_name' => 'Else',
+        'email' => 'new@example.com',
+        'password' => 'password',
+    ]);
+
+    $this->post($this->base.'/verify/'.$registration->token, registrationDetails())
+        ->assertRedirect($this->base)
+        ->assertSessionHasErrors(['email' => __('messages.rule.email_address_exists')]);
+
+    expect(User::where('email', 'new@example.com')->count())->toBe(1)
+        ->and(User::where('username', 'newperson')->exists())->toBeFalse()
+        ->and(OrgUserRegistration::where('token', $registration->token)->exists())->toBeFalse();
+});
 
 // Finding 7: needs the page and the resend route from phase 1.
 it('says the link expired and offers a new one for the same address (finding 7)')

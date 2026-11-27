@@ -14,8 +14,8 @@ import { Head, useForm } from '@inertiajs/vue3'
   <form v-else @submit.prevent="form.post('/public/org/' + organization.slug + '/register/verify/' + token)">
     <h5 class="mb-3">{{ $t('auth.orgRegisterCompleteHeading', { org: organization.name }) }}</h5>
 
-    <va-alert v-if="$page.props.errors.limit" color="danger" class="mb-3">
-      {{ $page.props.errors.limit }}
+    <va-alert v-if="$page.props.errors.limit || $page.props.errors.registration" color="danger" class="mb-3">
+      {{ $page.props.errors.limit || $page.props.errors.registration }}
     </va-alert>
 
     <va-input
