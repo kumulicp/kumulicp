@@ -613,11 +613,46 @@ and `tests/Unit/Volumes/` (rules, spec, snapshot). What the slice settled, for t
 - `VolumeRules::rulesFor()` follows the claim mode: a `by_name` volume may be restored but is given no claim
   to name, and a `none` volume can only start new.
 
-**Slice 2 - the chart method and the declarations.** `HelmChart::volumes()` /
-`volumeValues()`, the default map, claim modes, `defaultClaimName()`. Convert the five charts
-one commit each, with their secondary volumes (Redis, MariaDB) declared; the slice-0 golden
-tests must stay green with no edits. Convert the job charts' claim lookup to
-`Volumes::claimName()`. `HelmForgeChart::setPersistence()` moves into the base class.
+**Slice 2 - the chart method and the declarations. Done for the primary volume**, in
+`tests/Feature/Applications/ChartVolumeDeclarationTest.php` and the Slice 0 tests. `HelmChart::volumes()`
+declares a chart's volumes, each a `VolumeSpec` with a `map` of where the chart keeps it in its values;
+`volumeValues()` writes every declared one from `Volumes`, and a chart puts the result over its own values.
+Nextcloud, WordPress, CiviCRM, the catalog chart and the generic chart declare their primary volume (the
+generic chart one volume for each item) and no longer build persistence by hand. `JobChart` and
+`NextcloudJobChart` read the claim through the store. A chart that declares none keeps writing its own,
+with `appStorage()`, which is why that method is unchanged. The slice was kept to the primary volume and
+split from **Slice 2c** below. What it settled:
+
+- **The map** has `path` (or none, for absolute keys), `enabled`, `size`, `storage_class`, `access_mode`
+  (`access_mode_as: list` for a chart that takes a list, which is given every mode the volume has),
+  `claim`, `blank_claim` (what is written when there is none: `''`, or null for Nextcloud) and `only_set`
+  (the catalog chart is only given what is set). `HelmChart::persistenceVolume()` is the bitnami-style default.
+- **The legacy layout is chosen by the chart class** that deploys the instance (`LegacyVolumeKeys::layoutOf()`),
+  and `HelmChart` passes its own, so a plugin chart extending Nextcloud's is read as Nextcloud's. Choosing by
+  profile class was wrong and was caught by `ChartLabelsTest`, where a demo app runs `NextcloudJobChart`.
+- **Generic items** are the volumes of the app, named by their item; one with a size of its own is `fixed`,
+  the others `quota`. The generic chart keeps building its own lists and its own errors, so a repeated name is
+  still reported by `persistence()`.
+- **`defaultClaimName()` and dropping the cluster lookup are not done.** The lookup stays: the default PVC name
+  of WordPress and CiviCRM is not known from the repo. A found claim is kept as `discovered`, and the lookup
+  still takes the first claim of the release.
+
+Changes on purpose, each with its Slice 0 test updated and the reason in it:
+
+- A size the quota grows is kept in `workloads.app.volumes.data.size`, not `chart_storage`, which is only read.
+- A claim a job finds is `discovered` and is **not** given to the next release as a claim that exists. An
+  instance that already has it in `override.pvc.name` keeps today's behaviour until it is migrated.
+- CiviCRM told to use a claim, with no name, gets `''` like the others, not null.
+- **Slice 4 must leave `discovered` out of the release fingerprint**: a release writes it, and `ReleaseAspect`
+  excluded `override.pvc` for the same reason.
+
+**Slice 2c - secondary volumes.** Redis and MariaDB declared for Nextcloud and WordPress, as `fixed` volumes
+the instance turns on. Not done in slice 2 because it needs the blob read as legacy first: the
+configurations `redis` and `mariadb` hold their volume settings today (`master.persistence.*`,
+`primary.persistence.*`), and the chart takes them as they are. A declared volume would write over them,
+so `LegacyVolumeKeys` has to read those keys for the volume's workload and only what is then set
+differently written, which is what makes an unmigrated instance render the same. The golden tests for the
+blobs (`ChartVolumeValuesTest`) must stay green.
 
 **Slice 2b - catalog volumes.** `ChartConventionDetector` records every volume it finds,
 the stored convention gains `volumes` next to `persistence` (on the application for a default
