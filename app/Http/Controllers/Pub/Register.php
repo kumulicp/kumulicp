@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Pub;
 
+use App\Events\Users\DeletingUser;
 use App\Events\Users\UserCreated as UserCreatedEvent;
+use App\Events\Users\UserDeleted;
 use App\Http\Controllers\Controller;
 use App\NewUserCode;
 use App\Notifications\OrgRegistrationComplete;
@@ -13,16 +15,20 @@ use App\OrgUserRegistration;
 use App\Rules\UserNotExists;
 use App\Services\Organization\UserAllowance;
 use App\SuborgUser;
+use App\Support\AccountManager\UserManager;
 use App\Support\Facades\AccountManager;
 use App\Support\Facades\Organization as OrganizationFacade;
 use App\Support\Facades\Settings as SettingsFacade;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class Register extends Controller
 {
@@ -146,14 +152,10 @@ class Register extends Controller
     {
         $this->abortIfDisabled($organization);
 
-        $registration = OrgUserRegistration::where('organization_id', $organization->id)
-            ->where('token', $token)
-            ->first();
-
-        if (! $registration || $registration->isExpired()) {
-            return redirect()
-                ->route('public.org.register', ['organization' => $organization->slug])
-                ->withErrors(['email' => __('messages.org_registration.token_invalid')]);
+        // A first look, to turn away a dead link before anything else is done. It is looked at again
+        // under the lock below, which is the one that counts
+        if (! $this->linkIsOpen($organization, $token)) {
+            return $this->invalidLink($organization);
         }
 
         OrganizationFacade::setOrganization($organization);
@@ -171,50 +173,160 @@ class Register extends Controller
         $lock->block(10);
 
         try {
+            // Everything is checked again now that nobody else is between the check and the account: a
+            // request that waited for the lock may have used this link, or taken this name, meanwhile
+            $registration = $this->findRegistration($organization, $token);
+            if (! $registration) {
+                return $this->invalidLink($organization);
+            }
+
             if (! (new UserAllowance($organization))->allowedFor($organization->selfRegistrationApps())) {
                 return back()->withErrors(['limit' => __('messages.org_registration.full')]);
             }
 
-            $input = [
-                'username' => $request->input('username'),
+            if (AccountManager::checkUsername($request->input('username'))) {
+                return back()->withErrors(['username' => __('messages.rule.user_exists', ['attribute' => 'username'])]);
+            }
+
+            // Someone else has an account with this address now, so this link has nothing left to do
+            if (AccountManager::checkEmail($registration->email)) {
+                $registration->delete();
+
+                return redirect()
+                    ->route('public.org.register', ['organization' => $organization->slug])
+                    ->withErrors(['email' => __('messages.rule.email_address_exists')]);
+            }
+
+            return $this->createUser($request, $organization, $registration);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Makes the account, in the order that leaves the least to undo: the email that tells the person
+     * about it goes last, and the link is only used up once everything else has worked. When a step
+     * fails, whatever was made is taken away again and the link still works, so trying again is all
+     * that is needed and nothing is left half-made.
+     */
+    private function createUser(Request $request, Organization $organization, OrgUserRegistration $registration)
+    {
+        $username = $request->input('username');
+        $started = now()->startOfSecond();
+        $user = $code = $suborg_user = null;
+        $announced = false;
+
+        try {
+            $user = AccountManager::users($organization)->add([
+                'username' => $username,
                 'first_name' => $request->input('first_name'),
                 'last_name' => $request->input('last_name'),
                 'name' => $request->input('first_name').' '.$request->input('last_name'),
                 'email' => $registration->email,
                 'password' => Str::password(20, true, true, false, false),
                 'phone_number' => $request->input('phone_number'),
-            ];
-
-            $user = AccountManager::users($organization)->add($input);
+            ]);
             $user->addToDefaultUserGroups($organization->selfRegistrationApps());
             $user->permissions()->updateUserAccessType();
 
-            $new_user_code = new NewUserCode;
-            $new_user_code->organization()->associate($organization);
-            $new_user_code->generate($user->attribute('username'));
-            $new_user_code->status = 'pending';
-            $new_user_code->expires_at = now()->addHours(NewUserCode::LIFETIME_HOURS);
-            $new_user_code->save();
+            $code = new NewUserCode;
+            $code->organization()->associate($organization);
+            $code->generate($user->attribute('username'));
+            $code->status = 'pending';
+            $code->expires_at = now()->addHours(NewUserCode::LIFETIME_HOURS);
+            $code->save();
 
             if ($organization->parent_organization_id) {
                 $suborg_user = new SuborgUser;
                 $suborg_user->organization()->associate($organization);
-                $suborg_user->username = $input['username'];
+                $suborg_user->username = $username;
                 $suborg_user->save();
             }
 
-            $user->notify(new OrgRegistrationComplete($user, $new_user_code->code));
-            $new_user_code->status = 'sent';
-            $new_user_code->save();
-
+            $announced = true;
             event(new UserCreatedEvent($user));
 
-            $registration->delete();
+            $user->notify(new OrgRegistrationComplete($user, $code->code));
+            $code->status = 'sent';
+            $code->save();
 
-            return redirect()->route('public.password.set', ['code' => $new_user_code->code]);
-        } finally {
-            $lock->release();
+            $registration->delete();
+        } catch (Throwable $e) {
+            report($e);
+            $this->undoUser($organization, $username, $started, $user, $code, $suborg_user, $announced);
+
+            return back()->withErrors(['registration' => __('messages.org_registration.failed')]);
         }
+
+        return redirect()->route('public.password.set', ['code' => $code->code]);
+    }
+
+    /**
+     * Takes away what createUser made before it failed. Each part is tried whatever happens to the
+     * others, and what goes wrong is reported, since there is nobody to show it to.
+     */
+    private function undoUser(Organization $organization, string $username, Carbon $started, ?UserManager $user, ?NewUserCode $code, ?SuborgUser $suborg_user, bool $announced): void
+    {
+        $attempt = function (callable $step): void {
+            try {
+                $step();
+            } catch (Throwable $e) {
+                report($e);
+            }
+        };
+
+        $attempt(fn () => $suborg_user?->delete());
+        $attempt(fn () => $code?->delete());
+
+        // add() can fail after the user exists. Nobody had this username a moment ago (it was checked
+        // under the lock), so one that is there now is the one that was being made
+        $attempt(function () use (&$user, $organization, $username) {
+            $found = $user ?? AccountManager::users($organization)->find($username);
+
+            if ($found instanceof UserManager) {
+                $user = $found;
+            }
+        });
+
+        if ($user) {
+            // Whatever listened to the user being created is told they are gone, as when an administrator
+            // removes someone
+            if ($announced) {
+                $attempt(fn () => event(new DeletingUser($user)));
+            }
+            $attempt(fn () => $user->delete());
+            if ($announced) {
+                $attempt(fn () => event(new UserDeleted($organization)));
+            }
+        }
+
+        // The database account manager only soft-deletes, which would keep the username and address taken
+        $attempt(fn () => User::withTrashed()
+            ->where('username', $username)
+            ->where('organization_id', $organization->id)
+            ->where('deleted_at', '>=', $started)
+            ->forceDelete());
+    }
+
+    private function linkIsOpen(Organization $organization, string $token): bool
+    {
+        return $this->findRegistration($organization, $token) !== null;
+    }
+
+    private function findRegistration(Organization $organization, string $token): ?OrgUserRegistration
+    {
+        $registration = OrgUserRegistration::where('organization_id', $organization->id)
+            ->where('token', $token)
+            ->first();
+
+        return $registration && ! $registration->isExpired() ? $registration : null;
+    }
+
+    private function invalidLink(Organization $organization)
+    {
+        return redirect()
+            ->route('public.org.register', ['organization' => $organization->slug])
+            ->withErrors(['email' => __('messages.org_registration.token_invalid')]);
     }
 
     private function verifyCaptcha(?string $token): bool
