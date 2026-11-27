@@ -116,7 +116,7 @@ the catalog detected. That is where it already is.
 
 ## The migration
 
-One data migration, and two commands to prove it changed nothing.
+One data migration, and a backup of every chart's values to prove it changed nothing.
 
 ### What moves
 
@@ -155,24 +155,83 @@ Rules that keep it honest:
 
 ### Proof it changed nothing
 
-Run on the release **before** the migration, and then after:
+Two checks, one by a machine and one by a person, both from the same files.
+
+**A backup of every chart's values, taken before** (`backup:charts`, below), and again after. Each is a zip
+of YAML files an admin can download.
 
 ```
-php artisan volumes:snapshot     # the volume values each instance's chart renders today, stored
-php artisan volumes:migrate --dry-run   # what would move, and every instance listed above
+php artisan backup:charts                      # on the release BEFORE: the "before" archive
+php artisan volumes:migrate --dry-run          # what would move, and every instance listed above
 php artisan volumes:migrate
-php artisan volumes:verify       # renders them again and compares, instance by instance
+php artisan volumes:verify <before archive>    # renders every instance again and compares, file by file
+php artisan backup:charts                      # on the release AFTER: the "after" archive
 ```
 
-`snapshot` and `verify` use the real render, so they check the whole chain and not the migration's
-own idea of it. A difference is a stop. The Slice 0 tests do the same for the shapes a test can build.
+- **`volumes:verify` reads the before archive**, renders each instance's chart again the same way, and lists
+  every file that differs. A difference is a stop. There is no separate snapshot command: the backup is the
+  snapshot, so a person and the command look at the same thing.
+- **The visual audit**: an admin downloads the before archive and compares a file with the app's Helm values
+  page (`Admin\Organizations\Applications@helmValues`), which shows the chart's values today; after the
+  release they compare the page with the file. They are the same render, so they should be identical.
+
+Both check the whole chain and not the migration's own idea of it. The Slice 0 tests do the same for the
+shapes a test can build.
+
+## Chart values backup (its own PR, to `main`, first)
+
+`backup:charts` is built and merged **before** any of the volume work, so a "before" archive can be taken
+from the release that is running now. It is a feature on its own: a record of what every app was deployed
+with, useful before any upgrade or chart change, and not only for this migration.
+
+**What it does**
+
+- For every app instance that has a chart (not deactivated, and with a web server), render each chart the
+  way the Helm values page does (`AppInstanceService::charts()`, then `Redactor::redact()`), and write it as
+  YAML.
+- Write one zip to the private `backups` disk (`config('filesystems.app_backup')`), in a `chart-values/`
+  folder, named `chart-values-<date and time>.zip`. Inside:
+  `<organization slug>/<app instance name>/<chart name>.yaml`, and a `manifest.json` with when it was taken,
+  the core version, and for each file the instance, app, version, chart and its sha256, and any instance that
+  could not be rendered, with the reason (`SafeErrorMessage`). One that fails does not stop the others.
+- Keep the last N archives (`--keep`, default 8) and delete older ones, as `backup:clean` does for the others.
+
+**How admins use it**
+
+- An admin page lists the archives, with **Download**, **Create now** (a queued job) and **Delete**, behind the
+  existing `can:admin` gate. Downloads are streamed from the disk and never served from a public path.
+- The command is also scheduled (weekly), with the others in `routes/console.php`.
+
+**Things it has to get right**
+
+- **It must not change anything.** Charts write small bookkeeping settings when they are built
+  (`override.chart.values.fullNameOverride`, the storage ratchet). `PlanValuesPreview` renders inside a
+  transaction that is always rolled back for that reason; the backup does the same, for each instance. The
+  Helm values page does not today, so opening it can write; that is not changed here, but the same
+  rendering method can serve both, and then it would.
+- **Secrets stay masked.** The files are what the page shows, through the same `Redactor`, so the archive is
+  safe to download. A test builds an instance with known passwords and checks none is in the archive. The
+  cost is that a changed password is not seen by the audit; for volumes that does not matter.
+- **The name.** `backup:charts` puts it beside Spatie's `backup:run`, `backup:clean` and `backup:list`, which
+  are scheduled in `routes/console.php` and back up the app itself. That is fine, but the page and the
+  help text should say this one is a record of rendered values, not something to restore from.
+- **Same render as the page.** The page shows `values()`; a release deploys `valuesWithAdditionalConfigs()`
+  (the plan's extra configurations, the kumulicp labels and the version's image overrides as well). For the
+  audit to be exact the archive and the page should show the same, so both should use one method, which is an
+  open question below.
+
+**Tests**: a command test (one archive, the layout, the manifest, a chart that fails), a test that nothing
+in the database changed, one that no secret is in the archive, retention, and the page (list, create,
+download, delete, a non-admin refused once for the whole admin group).
 
 ## Build order
 
+0. **`backup:charts` and its admin page**, a separate PR to `main`, merged and released first, and run
+   by hand on the release that is live before the migration release goes out.
 1. **The store.** `AppProfile::$volumes` and its default, `Volumes`, `Volume` (`enabled()`, `size()`,
    `storageClass()`, `accessMode()`, `claim()`), `assign()` / `restore()` over `SettingsSnapshot`, and
    `VolumeRules`. No chart uses it yet.
-2. **The migration and the two commands.** With tests for every row above, and for the chart a
+2. **The migration and `volumes:migrate`, `volumes:verify`.** With tests for every row above, and for the chart a
    catalog app runs.
 3. **The charts switch.** Nextcloud, WordPress, CiviCRM, the catalog chart and the job charts read
    `$volume->…()`; `appStorage()` is rewritten on the store; the profiles declare `$volumes` and lose their
@@ -224,8 +283,15 @@ and an organization-facing settings page.
 
 ## Open questions
 
+0. **What the archive and the page show.** Today the page shows `values()`. A release deploys
+   `valuesWithAdditionalConfigs()`, which also has the plan's extra configurations, the labels and the image
+   overrides. Make both show the deployed values (changes the page), or keep both on `values()` (the audit
+   then does not cover what is added on top; volumes are in `values()`, so it covers them).
+0b. **Schedule and retention.** Weekly, keeping the last 8 is a guess. Daily would be cheap (the files are
+   small) but is more to look through.
+
 1. **Release unit.** Slices 2 and 3 ship together and there is no fallback, so an instance the migration
-   missed loses its claim and its chart would make a new, empty volume. The snapshot and verify commands are
+   missed loses its claim and its chart would make a new, empty volume. The chart values backup and `volumes:verify` are
    the guard. Is a run against a copy of production data before the release acceptable, or do you want the
    old keys read for one release as well?
 2. **Plan-level `claim`.** Not allowed here (a claim belongs to one instance). Confirm.
