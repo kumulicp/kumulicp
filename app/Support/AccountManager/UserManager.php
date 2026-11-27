@@ -32,6 +32,12 @@ abstract class UserManager
 
     abstract public function save();
 
+    /**
+     * Removes the user. Both account managers have always had it, and an administrator removing someone
+     * relies on it: it is here so that what holds a user of either kind can call it.
+     */
+    abstract public function delete();
+
     public function appStorage(AppInstance $app_instance)
     {
         $subscription = Subscription::app_instance($app_instance);

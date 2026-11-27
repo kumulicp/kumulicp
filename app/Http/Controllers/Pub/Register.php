@@ -152,7 +152,9 @@ class Register extends Controller
     {
         $this->abortIfDisabled($organization);
 
-        if (! $this->findRegistration($organization, $token)) {
+        // A first look, to turn away a dead link before anything else is done. It is looked at again
+        // under the lock below, which is the one that counts
+        if (! $this->linkIsOpen($organization, $token)) {
             return $this->invalidLink($organization);
         }
 
@@ -304,6 +306,11 @@ class Register extends Controller
             ->where('organization_id', $organization->id)
             ->where('deleted_at', '>=', $started)
             ->forceDelete());
+    }
+
+    private function linkIsOpen(Organization $organization, string $token): bool
+    {
+        return $this->findRegistration($organization, $token) !== null;
     }
 
     private function findRegistration(Organization $organization, string $token): ?OrgUserRegistration
