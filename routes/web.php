@@ -494,9 +494,9 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
             Route::get('activate', 'Account\Email\Accounts@activate')->name('organization.settings.email.activate');
             Route::prefix('forwarders')->group(function () {
                 Route::get('', 'Account\Email\Forwarders@index')->name('organization.email.forwarder');
-                Route::get('create', 'Account\Email\Forwarders@add')->name('organization.email.forwarder.create');
                 Route::post('', 'Account\Email\Forwarders@store')->name('organization.email.forwarder.store');
-                Route::get('remove/{forwarder}/{destination}', 'Account\Email\Forwarders@remove')->name('organization.email.forwarder.remove');
+                Route::delete('{forwarder}', 'Account\Email\Forwarders@destroy')->name('organization.email.forwarder.destroy');
+                Route::delete('{forwarder}/destinations/{destination}', 'Account\Email\Forwarders@removeDestination')->name('organization.email.forwarder.destination.remove');
             });
             Route::resource('accounts', 'Account\Email\Accounts');
         });
@@ -620,6 +620,13 @@ Route::get('profile/recovery-email/{username}/{hash}', 'App\Http\Controllers\Pro
     ->middleware('signed')
     ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
     ->name('profile.recovery.confirm');
+
+// The same for the link sent to an outside address that mail is to be forwarded to: whoever opens it has no
+// account here, so there is no session to start. The signed link says which destination it is for.
+Route::get('forwarders/confirm/{destination}/{token}', 'App\Http\Controllers\Account\Email\ForwarderConfirmation@show')
+    ->middleware('signed')
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('forwarder.destination.confirm');
 
 Route::get('setup', 'App\Http\Controllers\Setup@settings')->name('initial.setup');
 Route::post('install', 'App\Http\Controllers\Setup@build')->name('initial.build');

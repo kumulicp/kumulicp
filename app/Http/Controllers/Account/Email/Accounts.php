@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account\Email;
 
 use App\Http\Controllers\Controller;
+use App\Ldap\Models\Email;
 use App\Mailbox;
 use App\OrgDomain;
 use App\Rules\EmailLocalPart;
@@ -26,28 +27,21 @@ class Accounts extends Controller
             return $domain->is_primary;
         })->first();
 
-        $page = isset($_GET['page']) ? $_GET['page'] : 1;
-
-        $emails = [];
-        foreach ($domains as $domain) {
-            $emails = array_merge($emails, Domain::connect($domain, 'email')->emailList($domain));
-        }
-
-        // The panel's record of each standalone mailbox, for its aliases
-        $mailboxes = Mailbox::where('organization_id', $organization->id)->whereNull('username')
-            ->whereIn('address', array_map(fn ($email) => strtolower($email['email'] ?? ''), $emails))
-            ->with('addresses')->get()->keyBy('address');
+        // From the panel's own record of the mailboxes, so the page opens whether or not the mail server is up
+        $emails = Mailbox::where('organization_id', $organization->id)->whereNull('username')
+            ->where('status', Mailbox::ACTIVE)
+            ->whereIn('org_domain_id', $domains->pluck('id'))
+            ->with('addresses')->orderBy('address')->get();
         $alias_service = app(MailboxAliasService::class);
-        $emails = array_map(function ($email) use ($mailboxes, $alias_service) {
-            $mailbox = $mailboxes->get(strtolower($email['email'] ?? ''));
-
-            return $email + [
-                'mailbox_id' => $mailbox?->id,
-                // Whether this mailbox's mail server keeps aliases, or LDAP has an attribute for them
-                'aliases_enabled' => $mailbox ? $alias_service->enabledFor($mailbox) : false,
-                'aliases' => $mailbox ? $mailbox->addresses->where('is_primary', false)->pluck('address')->values()->all() : [],
-            ];
-        }, $emails);
+        $emails = $emails->map(fn (Mailbox $mailbox) => [
+            'email' => $mailbox->address,
+            'name' => $mailbox->display_name ?? $mailbox->local_part,
+            'username' => $mailbox->local_part,
+            'mailbox_id' => $mailbox->id,
+            // Whether this mailbox's mail server keeps aliases, or LDAP has an attribute for them
+            'aliases_enabled' => $alias_service->enabledFor($mailbox),
+            'aliases' => $mailbox->addresses->where('is_primary', false)->pluck('address')->values()->all(),
+        ])->values()->all();
 
         return inertia('Organization/Settings/EmailAccounts/EmailAccountsList', [
             'accounts' => $emails,
@@ -82,7 +76,12 @@ class Accounts extends Controller
         /* Add email account to server */
         $email_address = $validated['email'].'@'.$domain->name;
 
-        $email_server = Domain::connect($domain, 'email');
+        $email_server = $this->connect($domain);
+
+        if (! $email_server) {
+            return $this->unavailable();
+        }
+
         if (! $email_server->existsEmail($domain, $email_address)) {
             try {
                 $email_server->addEmail(
@@ -134,7 +133,12 @@ class Accounts extends Controller
             'password' => 'confirmed|nullable',
         ]);
 
-        $email_server = Domain::connect($domain, 'email');
+        $email_server = $this->connect($domain);
+
+        if (! $email_server) {
+            return $this->unavailable();
+        }
+
         if ($email_server->existsEmail($domain, $email_address)) {
             $email_server->updateEmail(
                 domain: $domain,
@@ -162,7 +166,11 @@ class Accounts extends Controller
             return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.exists', ['email' => $email]));
         }
 
-        $email_server = Domain::connect($email_domain, 'email');
+        $email_server = $this->connect($email_domain);
+
+        if (! $email_server) {
+            return $this->unavailable();
+        }
 
         if ($email_server->existsEmail($email_domain, $email)) {
             $email_server->deleteEmail($email_domain, $email);
@@ -172,6 +180,25 @@ class Accounts extends Controller
         Mailbox::where('address', strtolower($email))->whereNull('username')->delete();
 
         return redirect('/settings/email/accounts')->with('success', __('organization.email.deleted', ['email' => $email]));
+    }
+
+    /**
+     * The domain's mail server, or null when it can't be reached: what has to change on the server waits until it can.
+     */
+    private function connect(OrgDomain $domain)
+    {
+        try {
+            return Domain::connect($domain, 'email');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
+    }
+
+    private function unavailable()
+    {
+        return redirect('/settings/email/accounts')->with('error', __('organization.email.denied.unavailable'));
     }
 
     /**

@@ -325,6 +325,11 @@ class Organization extends Model
         return 0;
     }
 
+    public function countForwarder()
+    {
+        return 0;
+    }
+
     public function activeAppFamilies()
     {
         $select_apps = [];

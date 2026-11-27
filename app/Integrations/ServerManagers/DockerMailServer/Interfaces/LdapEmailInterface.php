@@ -166,7 +166,7 @@ class LdapEmailInterface implements EmailContract, OrganizationInterface
      * Forwarding is not built on the directory: the methods below only answer "none" so a
      * caller that asks anyway doesn't get nothing back. Callers should ask this first.
      */
-    public function supportsForwarders(): bool
+    public static function supportsForwarders(): bool
     {
         return false;
     }

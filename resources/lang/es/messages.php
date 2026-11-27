@@ -185,6 +185,14 @@ return [
             'changed_line' => 'El correo de recuperación de la cuenta :username en :panel_name cambió a :new.',
             'changed_delay' => 'Hasta el :date los restablecimientos de contraseña seguirán llegando a esta dirección. Si no fuiste tú, inicia sesión y cambia tu contraseña ahora.',
         ],
+        'forwarder' => [
+            'subject' => 'Confirma el reenvío desde :address',
+            'line' => 'Alguien que usa :panel_name pidió que el correo enviado a :address se reenvíe a esta dirección. No se reenvía nada hasta que lo confirmes.',
+            'action' => 'Confirmar el reenvío',
+            'ignore' => 'Si no quieres estos correos, ignora este mensaje y no se reenviará nada. El enlace funciona durante :hours horas.',
+            'confirmed' => 'Listo. El correo enviado a esa dirección ahora se te reenviará.',
+            'invalid' => 'Este enlace de confirmación ya no es válido. Pide uno nuevo.',
+        ],
         'primary_email' => [
             'subject' => 'Cambió el correo de tu cuenta',
             'line' => 'El correo con el que inicias sesión en la cuenta :username en :panel_name cambió de :old a :new.',

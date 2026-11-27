@@ -1473,7 +1473,10 @@
       "destinationEmailAddress": "Dirección de Correo de Destino",
       "destinationMessage": "Cualquier dirección de correo funcionará aquí",
       "createNewEmail": "Crear Nuevo Correo",
-      "forwardersDesc": "Los reenviadores de correo te permiten tener una sola dirección de correo que reenvía correos a un grupo dentro de tu organización. Ejemplo: ancianos@ejemplo.com podría reenviar correos a los miembros de la junta de tu organización: bob@ejemplo.com, rob@ejemplo.com y robert@ejemplo.com.",
+      "waitingForConfirmation": "Esperando confirmación",
+      "forwarderPending": "En configuración",
+      "forwarderFailed": "No aplicado",
+      "forwardersDesc": "Los reenviadores de correo te permiten tener una sola dirección de correo que reenvía correos a un grupo dentro de tu organización. Ejemplo: ancianos{'@'}ejemplo.com podría reenviar correos a los miembros de la junta de tu organización: bob{'@'}ejemplo.com, rob{'@'}ejemplo.com y robert{'@'}ejemplo.com.",
       "removeForwarderTitle": "¿Eliminar {email}?",
       "removeForwarderMessage": "¿Estás seguro de que quieres eliminar {email}? Esta acción es permanente."
     },
@@ -1491,7 +1494,7 @@
       "domainSettings": "Configuración del Dominio",
       "actions": "Acciones",
       "enableEmailAccounts": "Habilitar Cuentas de Correo",
-      "enableEmailConfirm": "Habilitar cuentas de correo para {name} te permite agregar cuentas de correo con @{name} al final. ¿Estás seguro de que quieres habilitar esta función?",
+      "enableEmailConfirm": "Habilitar cuentas de correo para {name} te permite agregar cuentas de correo con {'@'}{name} al final. ¿Estás seguro de que quieres habilitar esta función?",
       "renew": "Renovar",
       "reactivate": "Reactivar",
       "selfManage": "Autogestionar",
@@ -1850,7 +1853,7 @@
     "cannotSwitch": "{count} usuarios con correo en este dominio no se pueden pasar automáticamente. Su correo rebotaría cuando el DNS cambie.",
     "reason": {
       "not_standard": "no tiene una cuenta de usuario estándar, que un buzón necesita",
-      "name_not_allowed": "el nombre antes de la @ no se puede usar para un buzón",
+      "name_not_allowed": "el nombre antes de la {'@'} no se puede usar para un buzón",
       "other_offer": "recibió una dirección distinta y tiene que aceptarla personalmente"
     },
     "recoveryTitle": "Correos de recuperación en este dominio",

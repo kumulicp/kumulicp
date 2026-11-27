@@ -106,6 +106,32 @@ class ServerInterfaceService
             && method_exists($interface, 'supportsAliases') && $interface::supportsAliases() === true;
     }
 
+    /**
+     * Whether the mail server forwards: its interface has a `supportsForwarders()`, which says no when it can't. Asked of
+     * the class, so there is no connection to the server and a page can ask it freely. An interface that never says is
+     * assumed to, as is a domain with no mail server of its own to ask.
+     */
+    public function supportsForwarders(OrgServer|Server|null $server): bool
+    {
+        $server = $server instanceof OrgServer ? $server->server : $server;
+
+        if (! $server) {
+            return true;
+        }
+
+        try {
+            $interface = $this->profile($server)->interface($server->type);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        if (! is_string($interface) || ! class_exists($interface) || ! method_exists($interface, 'supportsForwarders')) {
+            return true;
+        }
+
+        return (new \ReflectionMethod($interface, 'supportsForwarders'))->isStatic() ? $interface::supportsForwarders() : true;
+    }
+
     public function checkConnection($connection)
     {
         for ($n = 0; $n < 5; $n++) {
