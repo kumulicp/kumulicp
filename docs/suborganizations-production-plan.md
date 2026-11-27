@@ -204,6 +204,39 @@ via an unlabeled `organization` select on the review page. It only appears when 
    - Redirect to `/apps`, filtered to that org.
    - Use the app's org for the registration URL.
 
+### 3.4 Organization filters: on every list page, and one universal filter
+
+**Why.** A parent's lists mix its own data with its suborganizations'. Someone who works in one (sub)organization shouldn't have to pick it again on every page they open.
+
+**Where lists mix organizations today** (from the code; none has an organization filter yet):
+- **Users** (`Users@index`): `AccountManager::users()->collect()` returns the whole family. The two drivers also disagree elsewhere: the DB driver's `paginate()` lists only the organization's own users, the LDAP one lists the whole tree. The filter should fix that too.
+- **Domains** (`Web\Domains@index`): merges the suborgs' domains.
+- **Apps** (`Applications@index`, through `Organization::apps()`): includes the suborgs' apps and shows an organization name when `multiple_orgs`.
+- **Groups**: the list now has an organization column for a parent (the suborg-groups work) but no filter.
+- **Dashboard** (`HomeController`, `OrganizationService::count*`) and **Subscription** (a section per organization, plus totals).
+- **To audit first:** email addresses and mailboxes, tickets, notifications, backups, and any other list. Grep for `suborganizations`, `allOrganizationIds` and `*IncludingChildren`, and list every page the audit finds in the PR.
+
+**Design**
+1. **One service decides what is in scope.** An `OrganizationFilter` service, session-backed, that every list controller asks instead of reading request parameters itself:
+   - `options(User)`: the user's own organization plus its non-deactivated suborganizations. Empty (or just one) for a user whose organization has none.
+   - `selected()`: the universal filter, or null for "all organizations".
+   - `ids(Request)`: the organization ids in scope. With a universal filter set, that one. Otherwise the page's `?organization=<id>`, if it is valid. Otherwise the whole family.
+   - Any id outside the user's family is refused, so a crafted value can't widen a list.
+2. **Page filters.** Every list above gets `?organization=<id>` (shareable, back-button friendly) and a small control above the list. The control is not shown when a universal filter is set, and the page parameter is then ignored, so the two never disagree.
+3. **Universal filter.** `POST /organization-filter` with an organization id, or empty for all. Stored in the session and cleared on logout. `HandleInertiaRequests` shares `org_filter: { selected, options }` on every page.
+4. **Top bar button** (next to the profile dropdown, `AppNavbarActions.vue`). The label is the selected organization's name, or "All organizations". It opens a modal that looks and works like the new organization modal on `/discover/<app>` (the radio list in `DiscoverApp.vue`), with an extra "All organizations" option.
+   - Extract that radio list into one shared component (`OrganizationPicker.vue`: options with `id`, `name`, `disabled`, `note`, and `v-model`) so the Discover modal, the top bar modal and the page filters stay the same.
+   - The button, the modal and the page filters appear only when the user's organization has suborganizations. For everyone else nothing changes.
+5. **Filtering at the source.** Lists filter in the query (`organization_id` in the ids) rather than in the page. For users, add an optional organization to the account managers' `collect()` and `paginate()` on both drivers, using the user's organization (`SuborgUser` on LDAP, `organization_id` on the DB driver). The dashboard counts and the subscription page take the same ids; the subscription page keeps showing the parent's invoice total, with a note when it is filtered.
+6. **Creating things follows the filter.** With a universal filter set, create forms default to that organization (add user, add domain, create group, activate app). On `/discover/<app>` the organization modal is skipped when the selected organization can take the app, and shows why when it can't. With "All organizations" everything behaves as today.
+7. **A view filter, not a permission.** A link to something outside the filter still opens it. Authorization is unchanged. Optionally show a notice: "This belongs to X, you're viewing Y".
+
+**Tests**
+- `OrganizationFilter`: an unrelated organization or a sibling is refused, a deactivated suborg is not offered, the selection is kept in the session and cleared on logout, the universal filter wins over the page parameter, and a user whose organization has no suborganizations gets no options.
+- Shared props: `org_filter` has options only when there are suborgs.
+- Each list page: filtered by the page parameter, filtered by the universal filter, the universal filter overrides the page parameter, and a user with no suborganizations sees no change. Users on both drivers return the same rows.
+- Creation defaults follow the selected organization.
+
 ## 4. Rest of the suborganization flow
 
 ### Blockers
@@ -267,9 +300,10 @@ via an unlabeled `organization` select on the review page. It only appears when 
 3. Fix LDAP group scoping and membership (2.3.2 to 2.3.4), backfill existing groups, then the parent view (2.3.6 to 2.3.9). DB driver fixes (2.3.5) after that.
 4. Fix the creation provisioning and plan-flag enforcement.
 5. Rework app activation (section 3): fix `JointSubscriptionService`, add the activation context, the per-plan limit and the optional family ceiling, then the gates, the org selector first, and the UI and notifications.
-6. Fix the update and billing issues.
-7. Remove the delete stub and route; harden suborg deactivation and reactivation.
-8. Staging soak with the toggle on for a single real tenant, then enable it by default.
+6. Organization filters (3.4): the audit of lists, the `OrganizationFilter` service, the shared picker component and the top bar button, then page by page (users, domains, apps, groups, dashboard, subscription).
+7. Fix the update and billing issues.
+8. Remove the delete stub and route; harden suborg deactivation and reactivation.
+9. Staging soak with the toggle on for a single real tenant, then enable it by default.
 
 ## 7. Decisions and open questions
 
@@ -289,5 +323,9 @@ via an unlabeled `organization` select on the review page. It only appears when 
 12. Nobody uses suborg groups in production yet, so no backfill of existing groups is needed.
 13. Sibling domains are not allowed for suborg apps. Only the suborg's own and the parent's domains are.
 
+14. Every list page gets an organization filter, and one universal filter in the top bar applies to all pages. When it is set, the page filters are hidden. Its modal works like the organization modal on `/discover/<app>` (3.4).
+
 ### Still open
-14. Should the parent also get a default for new suborgs? (Not needed for the first release; each suborg starts with the setting off.)
+15. Should the parent also get a default for new suborgs? (Not needed for the first release; each suborg starts with the setting off.)
+16. Should the universal filter last only for the session (the plan's assumption), or be remembered per user?
+17. Should the subscription and billing pages follow the universal filter? The plan assumes they show the selected organization's section but keep the parent's invoice total visible.
