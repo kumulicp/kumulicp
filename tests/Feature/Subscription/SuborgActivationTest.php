@@ -55,8 +55,9 @@ function suborgActivationUser(Organization $organization): User
 it('checks the limit against the target organization own plan, not the parent', function () {
     $suborg = suborgActivationMakeSuborg($this);
 
-    // The parent is at its limit of one demo app
-    expect(Gate::inspect('activate-app', $this->support->demo_app)->allowed())->toBeFalse();
+    // The parent is at its limit of one demo app. Named as the target, since without one the gate
+    // lets the parent through while a suborganization can still take the app.
+    expect(Gate::inspect('activate-app', [$this->support->demo_app, null, Organization::find(1)])->allowed())->toBeFalse();
 
     // The suborganization has none, so it can have one
     expect(Gate::inspect('activate-app', [$this->support->demo_app, null, $suborg])->allowed())->toBeTrue();
