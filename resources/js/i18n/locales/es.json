@@ -306,6 +306,7 @@
       "tabPlan": "Plan",
       "updateRequired": "Se cambiaron las configuraciones de {app}. Hay que actualizar la instancia de la aplicación para que surtan efecto.",
       "goToInstance": "Ir a la instancia de la aplicación",
+      "moving": "{app} se está trasladando a otro servidor. Las organizaciones que se están añadiendo esperan a que termine el traslado.",
       "planNote": "Guardar la configuración aquí solo cambia el plan. La instancia de la aplicación no se actualiza hasta que estés listo: haz todos los cambios que necesites y luego actualiza la instancia desde su página.",
       "setupTitle": "Configurar {app}",
       "stepVersion": "Versión",

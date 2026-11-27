@@ -187,6 +187,26 @@ import AppsLayout from './AppsLayout.vue'
             />
           </template>
           <p class="mt-3 mb-3"><strong>{{ $t('admin.apps.moveWebWarning') }}</strong></p>
+          <!-- The apps that run in its release are stopped with it -->
+          <template v-if="children.length">
+            <va-alert id="moveChildren" color="warning" icon="warning" class="mb-3">
+              <p class="mb-2">{{ $t('admin.apps.moveChildrenWarning', { count: children.length }) }}</p>
+              <ul class="ml-4">
+                <li v-for="child in children" :key="child.id">
+                  {{ child.label }}<span v-if="child.organization"> ({{ child.organization }})</span><span v-if="child.domain"> {{ child.domain }}</span>
+                  <span v-if="child.domain && !child.managed" class="secondary"> {{ $t('admin.apps.moveChildUnmanaged') }}</span>
+                </li>
+              </ul>
+            </va-alert>
+            <va-checkbox
+              id="moveAcknowledge"
+              v-model="acknowledged"
+              class="mb-3"
+              :label="$t('admin.apps.moveChildrenAcknowledge', { count: children.length })"
+              :error="!!$page.props.errors.acknowledge"
+              :error-messages="$page.props.errors.acknowledge"
+            />
+          </template>
           <p v-if="!(stepDone(1) && stepDone(2))" id="moveNotReady" class="mb-3">{{ $t('admin.apps.moveNotReady') }}</p>
           <p v-if="app.status !== 'active'" class="mb-3">{{ $t('admin.apps.moveWebNotActive') }}</p>
           <va-button preset="secondary" class="mr-2" @click="step = 2">{{ $t('admin.apps.moveBack') }}</va-button>
@@ -211,7 +231,12 @@ export default {
     // What each step needs, once an app server is chosen
     steps: Object,
     running: Object,
-    awaiting: Object
+    awaiting: Object,
+    // The apps that run in its release, which the move stops along with it
+    children: {
+      type: Array,
+      default: () => []
+    }
   },
   data () {
     const base = '/admin/organizations/' + this.organization.id + '/apps/' + this.app.id
@@ -221,6 +246,8 @@ export default {
       base,
       step: 0,
       timer: null,
+      // That the apps that run with it are stopped too has been agreed to
+      acknowledged: false,
       // The database and the sign-in server are kept when the new app server can reach them, and otherwise moved
       // with the app, to one it can reach
       databaseChoice: this.steps?.database?.reachable === false ? 'change' : 'keep',
@@ -298,7 +325,7 @@ export default {
       const storage = this.webForm.storage
       const chosen = storage.volume === 'new' || (storage.volume === 'existing' && !!storage.claim)
 
-      return !!this.steps && this.stepDone(1) && this.stepDone(2) && chosen && this.app.status === 'active' && !this.running.web && !this.webForm.processing
+      return !!this.steps && this.stepDone(1) && this.stepDone(2) && chosen && this.app.status === 'active' && !this.running.web && !this.webForm.processing && (this.children.length === 0 || this.acknowledged)
     }
   },
   watch: {
@@ -332,7 +359,7 @@ export default {
     // What is being done takes a while: look again until it is
     this.timer = setInterval(() => {
       if (this.hasRunning) {
-        router.reload({ only: ['app', 'steps', 'running', 'awaiting'] })
+        router.reload({ only: ['app', 'steps', 'running', 'awaiting', 'children'] })
       }
     }, 8000)
   },
@@ -362,6 +389,7 @@ export default {
     startMove () {
       this.webForm.transform(data => ({
         ...data,
+        acknowledge: this.acknowledged,
         // Only what is to be changed is sent
         database_server_id: this.databaseChoice === 'change' ? data.database_server_id : null,
         sso_server_id: this.ssoChoice === 'change' ? data.sso_server_id : null,

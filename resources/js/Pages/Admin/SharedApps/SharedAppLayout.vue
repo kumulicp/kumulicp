@@ -15,6 +15,9 @@ const sharedApp = computed(() => page.props.shared_app as Record<string, any> | 
 <template>
   <template v-if="sharedApp">
     <SharedAppSetupCard v-if="sharedApp.setup" :shared-app="sharedApp" />
+    <va-alert v-if="sharedApp.moving" id="moving" color="warning" icon="warning" class="mb-4">
+      {{ $t('admin.sharedApps.moving', { app: sharedApp.label }) }}
+    </va-alert>
     <va-alert v-if="sharedApp.update_required" id="updateRequired" color="info" icon="info" class="mb-4">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <span>{{ $t('admin.sharedApps.updateRequired', { app: sharedApp.label }) }}</span>

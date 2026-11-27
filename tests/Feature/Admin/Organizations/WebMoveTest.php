@@ -5,6 +5,7 @@ use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\ServerMove\MoveBlockers;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\AppInstance;
+use App\AppPlan;
 use App\Enums\TaskStatus;
 use App\Integrations\Applications\Nextcloud\NextcloudProfile;
 use App\Organization;
@@ -311,4 +312,72 @@ it('does not start the move without the volume being chosen', function () {
     $this->actingAs($this->admin)
         ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id])
         ->assertSessionHasErrors('storage');
+});
+
+
+/**
+ * An app of another organization that runs in the app's release, as one shared from it does.
+ */
+function sharedChild($test, string $organization_name = 'Child Church'): AppInstance
+{
+    $plan = AppPlan::factory()->create([
+        'application_id' => $test->appInstance->application_id,
+        'web_server_id' => 1,
+        'shared_app_id' => $test->appInstance->id,
+        'settings' => array_merge($test->appInstance->plan->settings ?? [], ['server_type' => 'shared']),
+    ]);
+
+    return AppInstance::factory()->create([
+        'application_id' => $test->appInstance->application_id,
+        'organization_id' => Organization::factory()->create(['name' => $organization_name])->id,
+        'version_id' => $test->appInstance->version_id,
+        'plan_id' => $plan->id,
+        'parent_id' => $test->appInstance->id,
+        'label' => 'Church site',
+        'status' => 'active',
+    ]);
+}
+
+it('lists the apps that run in the app\'s release on the move page', function () {
+    $child = sharedChild($this);
+    $deactivated = sharedChild($this, 'Gone Church');
+    $deactivated->status = 'deactivated';
+    $deactivated->save();
+
+    $children = $this->actingAs($this->admin)->get(moveWebUrl($this).'/move')->viewData('page')['props']['children'];
+
+    expect($children)->toHaveCount(1)
+        ->and($children[0]['id'])->toBe($child->id)
+        ->and($children[0]['label'])->toBe('Church site')
+        ->and($children[0]['organization'])->toBe('Child Church');
+});
+
+it('lists none for an app that has no others in its release', function () {
+    expect($this->actingAs($this->admin)->get(moveWebUrl($this).'/move')->viewData('page')['props']['children'])->toBe([]);
+});
+
+it('does not start the move of an app with others in its release until that is agreed to', function () {
+    sharedChild($this);
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')->never();
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'new']])
+        ->assertSessionHasErrors('acknowledge');
+});
+
+it('starts the move of an app with others in its release once that is agreed to, and says how many go down with it', function () {
+    sharedChild($this);
+    sharedChild($this, 'Other Church');
+    $new = moveWebServer('new-cluster');
+
+    Action::shouldReceive('execute')
+        ->once()
+        ->with(Mockery::type(ApplicationWebMove::class))
+        ->andReturn(new Task);
+
+    $this->actingAs($this->admin)
+        ->post(moveWebUrl($this).'/move-web', ['web_server_id' => $new->id, 'storage' => ['volume' => 'new'], 'acknowledge' => true])
+        ->assertSessionHas('success', __('admin.organizations.apps.moving_web_children', ['app' => $this->appInstance->label, 'server' => 'new-cluster', 'count' => 2]));
 });
