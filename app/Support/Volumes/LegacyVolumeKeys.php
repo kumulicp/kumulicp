@@ -3,11 +3,11 @@
 namespace App\Support\Volumes;
 
 use App\AppInstance;
-use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneProfile;
-use App\Integrations\Applications\GenericAppProfile;
-use App\Integrations\Applications\HelmForge\HelmForgeProfile;
-use App\Integrations\Applications\Nextcloud\NextcloudProfile;
-use App\Integrations\Applications\Wordpress\WordpressProfile;
+use App\Integrations\Applications\CiviCRMStandalone\CiviCRMStandaloneChart;
+use App\Integrations\Applications\HelmForge\HelmForgeChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\GenericChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\NextcloudChart;
+use App\Integrations\ServerManagers\Kubernetes\Charts\WordpressChart;
 use App\Support\Facades\Application;
 use Illuminate\Support\Arr;
 
@@ -20,9 +20,9 @@ use Illuminate\Support\Arr;
  * This is the one place with that knowledge. It goes with the migration (slice 8), and a frozen
  * copy of it lives in the migration that moves the settings (slice 4).
  *
- * Which keys are read is decided by the chart the instance runs from, through its profile
+ * Which keys are read is decided by the chart class that deploys the instance, through its profile
  * (Application::profileFor()), not by its application: an app with an added catalog chart has
- * two layouts.
+ * two layouts. A chart that is given the instance says its own (layoutOf()).
  */
 final class LegacyVolumeKeys
 {
@@ -31,21 +31,27 @@ final class LegacyVolumeKeys
      * layout has an opinion on are given; a field that is not in the answer is not known, and a
      * null in it is known to be empty.
      *
-     * Only the primary volume ever had a place of its own. The volumes of other workloads were
-     * parts of a configuration blob the chart took as it was.
+     * Only the primary volume ever had a place of its own, and the generic chart's volumes, one
+     * for each item. The volumes of other workloads were parts of a configuration blob the chart took
+     * as it was.
      *
+     * @param  string|null  $layout  the layout to read, when the caller knows it; else the one of the chart the instance runs
      * @return array{claim?: string|null, discovered?: string|null, size?: int|null, storage_class?: string|null, access_mode?: string|null}
      */
-    public static function read(AppInstance $app_instance, VolumeSpec $spec): array
+    public static function read(AppInstance $app_instance, VolumeSpec $spec, ?string $layout = null): array
     {
-        if (! $spec->primary) {
+        $layout ??= self::layout($app_instance);
+
+        // The generic chart keeps every volume of the app as an item of its own; for the rest only
+        // the primary one had a place
+        if (! $spec->primary && $layout !== 'generic') {
             return [];
         }
 
         $settings = $app_instance->settings ?? [];
         $stored_size = self::number(Arr::get($settings, 'chart_storage'));
 
-        return match (self::layout($app_instance)) {
+        return match ($layout) {
             'nextcloud' => [
                 'claim' => self::text(Arr::get($settings, 'existing_claim')),
                 'size' => $stored_size,
@@ -66,14 +72,29 @@ final class LegacyVolumeKeys
      */
     public static function layout(AppInstance $app_instance): ?string
     {
-        $profile = Application::profileFor($app_instance);
+        // A profile can have several charts (a job and an app)
+        foreach ((array) Application::profileFor($app_instance)->chart() as $chart) {
+            if (is_string($chart) && $layout = self::layoutOf($chart)) {
+                return $layout;
+            }
+        }
 
+        return null;
+    }
+
+    /**
+     * The layout of the instances a chart class deploys: where that chart read its volume from.
+     *
+     * @param  class-string|string  $chart
+     */
+    public static function layoutOf(string $chart): ?string
+    {
         return match (true) {
-            $profile instanceof NextcloudProfile => 'nextcloud',
-            $profile instanceof WordpressProfile => 'wordpress',
-            $profile instanceof CiviCRMStandaloneProfile => 'civicrm',
-            $profile instanceof HelmForgeProfile => 'catalog',
-            $profile instanceof GenericAppProfile => 'generic',
+            is_a($chart, NextcloudChart::class, true) => 'nextcloud',
+            is_a($chart, WordpressChart::class, true) => 'wordpress',
+            is_a($chart, CiviCRMStandaloneChart::class, true) => 'civicrm',
+            is_a($chart, HelmForgeChart::class, true) => 'catalog',
+            is_a($chart, GenericChart::class, true) => 'generic',
             default => null,
         };
     }

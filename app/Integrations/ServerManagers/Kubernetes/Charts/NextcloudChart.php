@@ -149,13 +149,6 @@ class NextcloudChart extends HelmChart
                 ],
                 'extraSidecarContainers' => $this->sidecars(),
             ],
-            'persistence' => [
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'size' => $this->appStorage().'Gi',
-                'existingClaim' => $app_instance->setting('existing_claim', ''),
-                'accessMode' => $app_instance->configuration('persistence-accessMode', true),
-            ],
             'rbac' => [
                 'enabled' => $app_instance->configuration('rbac-enabled', true),
             ],
@@ -185,7 +178,19 @@ class NextcloudChart extends HelmChart
             ],
         ];
 
-        return $chart;
+        return array_replace_recursive($chart, $this->volumeValues());
+    }
+
+    /**
+     * Nextcloud's chart takes one access mode, and a claim that is not there as a null.
+     */
+    public function volumes(): array
+    {
+        return [$this->persistenceVolume([
+            'access_mode' => 'accessMode',
+            'access_mode_as' => null,
+            'blank_claim' => null,
+        ])];
     }
 
     // Imaginary's image is one of the version's own (see HelmChart::applyImageOverrides()), which

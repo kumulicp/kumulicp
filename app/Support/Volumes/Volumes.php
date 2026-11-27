@@ -32,8 +32,9 @@ class Volumes
 
     /**
      * @param  array<int, VolumeSpec>  $specs
+     * @param  string|null  $layout  where the old places are, when the caller knows (see LegacyVolumeKeys); else from the chart the instance runs
      */
-    public function __construct(private AppInstance $app_instance, array $specs)
+    public function __construct(private AppInstance $app_instance, array $specs, private ?string $layout = null)
     {
         foreach ($specs as $spec) {
             if (isset($this->specs[$spec->id()])) {
@@ -51,9 +52,9 @@ class Volumes
     /**
      * @param  array<int, VolumeSpec>|null  $specs  the volumes the chart declares; the primary one alone when not given
      */
-    public static function for(AppInstance $app_instance, ?array $specs = null): self
+    public static function for(AppInstance $app_instance, ?array $specs = null, ?string $layout = null): self
     {
-        return new self($app_instance, $specs ?? [VolumeSpec::primary()]);
+        return new self($app_instance, $specs ?? [VolumeSpec::primary()], $layout);
     }
 
     /**
@@ -168,11 +169,14 @@ class Volumes
 
     private function resolve(VolumeSpec $spec): Volume
     {
-        $legacy = LegacyVolumeKeys::read($this->app_instance, $spec);
+        $legacy = LegacyVolumeKeys::read($this->app_instance, $spec, $this->layout);
 
         $size = $this->read($spec, 'size', $legacy, fn () => $spec->size_policy === 'fixed'
             ? $this->configured($spec, 'size')
             : null);
+
+        // A chart can keep several, as a list (WordPress's); the one it keeps is the first
+        $modes = $this->read($spec, 'access_mode', $legacy, fn () => $this->configuredAccessModes($spec));
 
         return new Volume(
             spec: $spec,
@@ -180,9 +184,10 @@ class Volumes
             // A size that is blank or 0 is none: the chart is left to say
             size: is_numeric($size) && (int) $size > 0 ? (int) $size : null,
             storage_class: $this->read($spec, 'storage_class', $legacy, fn () => $this->configured($spec, 'storageClass')),
-            access_mode: $this->read($spec, 'access_mode', $legacy, fn () => $this->configuredAccessMode($spec)),
+            access_mode: is_array($modes) ? ($modes === [] ? null : (string) Arr::first($modes)) : ($modes === null ? null : (string) $modes),
             claim: $this->blank($this->read($spec, 'claim', $legacy, fn () => null)),
             discovered: $this->blank($this->read($spec, 'discovered', $legacy, fn () => null)),
+            access_modes: array_values(array_map('strval', array_filter((array) $modes, fn ($mode) => $mode !== null && $mode !== ''))),
         );
     }
 
@@ -214,13 +219,10 @@ class Volumes
         return Application::instance($this->app_instance)->configuration("{$prefix}-{$field}");
     }
 
-    // WordPress keeps the access modes as a list under another name, and its chart takes a list
-    private function configuredAccessMode(VolumeSpec $spec): ?string
+    // WordPress keeps the access modes as a list, under another name
+    private function configuredAccessModes(VolumeSpec $spec): string|array|null
     {
-        $mode = $this->configured($spec, 'accessMode') ?? $this->configured($spec, 'accessModes');
-        $mode = is_array($mode) ? Arr::first($mode) : $mode;
-
-        return $mode === null ? null : (string) $mode;
+        return $this->configured($spec, 'accessMode') ?? $this->configured($spec, 'accessModes');
     }
 
     private function spec(string $workload, string $name): VolumeSpec

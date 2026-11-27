@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use App\Support\Volumes\VolumeSpec;
 use Illuminate\Support\Arr;
 
 // Values builder for the third-party "generic" chart published at
@@ -137,6 +138,33 @@ class GenericChart extends HelmChart
         ];
     }
 
+    /**
+     * One volume of the app for each `persistence-<index>-*` item, the first the primary one. An item
+     * with a size of its own keeps it; one without is sized as the app is. The chart writes them in
+     * its own lists (see persistence()), so none has a map. An item with no name, or one that repeats
+     * an earlier one, is left for persistence() to report.
+     */
+    public function volumes(): array
+    {
+        if (! Application::instance($this->app_instance)->configuration('persistence-enabled')) {
+            return [];
+        }
+
+        $specs = [];
+
+        foreach (Application::instance($this->app_instance)->arrayConfiguration('persistence') as $item) {
+            $name = $item['name'] ?? null;
+
+            if (! $name || isset($specs[$name])) {
+                continue;
+            }
+
+            $specs[$name] = new VolumeSpec('app', $name, primary: $specs === [], size_policy: filled($item['size'] ?? null) ? 'fixed' : 'quota');
+        }
+
+        return array_values($specs);
+    }
+
     // One PVC-backed volume per `persistence-<index>-*` configuration item,
     // each mounted into every container. The chart keeps PVC creation,
     // pod-volume attachment, and container mounts as three deliberately
@@ -148,6 +176,7 @@ class GenericChart extends HelmChart
             return [];
         }
 
+        $store = $this->volumeStore();
         $claims = $volumes = $mounts = [];
 
         foreach ($app_instance->arrayConfiguration('persistence') as $index => $item) {
@@ -162,20 +191,20 @@ class GenericChart extends HelmChart
                 throw new \Exception("Generic app persistence item $index repeats the name or mountPath of an earlier item");
             }
 
-            $existing_claim = $item['existingClaim'] ?? null;
+            $volume = $store->get('app', $name);
 
-            if (! $existing_claim) {
+            if (! $volume->claim) {
                 $claims[] = array_filter([
                     'name' => $name,
-                    'storage' => (($item['size'] ?? null) ?: $this->appStorage()).'Gi',
-                    'accessModes' => [$item['accessMode'] ?? 'ReadWriteOnce'],
-                    'storageClassName' => $item['storageClass'] ?? null,
+                    'storage' => $this->volumeGibibytes('app', $name).'Gi',
+                    'accessModes' => [$volume->access_mode ?? 'ReadWriteOnce'],
+                    'storageClassName' => $volume->storage_class,
                 ]);
             }
 
             $volumes[] = [
                 'name' => $name,
-                'persistentVolumeClaim' => ['claimName' => $existing_claim ?: "{$fullname}-{$name}"],
+                'persistentVolumeClaim' => ['claimName' => $volume->claim ?: "{$fullname}-{$name}"],
             ];
             $mounts[] = ['name' => $name, 'mountPath' => $mount_path];
         }

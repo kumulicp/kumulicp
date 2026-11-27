@@ -69,13 +69,6 @@ class WordpressChart extends HelmChart
                 'tls' => $app_instance->configuration('ingress-tls'),
             ],
             'mariadb' => $app_instance->configuration('mariadb', true),
-            'persistence' => [
-                'size' => $this->appStorage().'Gi',
-                'accessModes' => $app_instance->configuration('persistence-accessModes', true),
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'existingClaim' => $app_instance->getOverride('pvc.name') ?? '',
-            ],
             'resources' => [
                 'requests' => [
                     'cpu' => $app_instance->configuration('resources-requests-cpu'),
@@ -116,6 +109,11 @@ class WordpressChart extends HelmChart
             unset($values['sidecars']);
         }
 
-        return $values;
+        return array_replace_recursive($values, $this->volumeValues());
+    }
+
+    public function volumes(): array
+    {
+        return [$this->persistenceVolume()];
     }
 }

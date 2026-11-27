@@ -169,12 +169,14 @@ class VolumeFixtures
 
     /**
      * The values the chart gives the release, as it deploys them: its own plus what the plan adds.
+     * Built from the model it is given, since the application service keeps the first model it sees for
+     * an instance: a test that changes the instance and builds again has to change that one.
      *
      * @return array<string, mixed>
      */
     public static function values(AppInstance $app_instance): array
     {
-        return self::chart($app_instance->fresh())->valuesWithAdditionalConfigs();
+        return self::chart($app_instance)->valuesWithAdditionalConfigs();
     }
 
     /**

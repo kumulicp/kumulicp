@@ -7,6 +7,7 @@ use App\Enums\ApplicationSource;
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\Support\Facades\Application;
+use App\Support\Volumes\VolumeSpec;
 use Illuminate\Support\Arr;
 
 /**
@@ -53,10 +54,6 @@ class HelmForgeChart extends HelmChart
             $this->setResources($values, $path);
         }
 
-        if ($persistence = $convention['persistence'] ?? null) {
-            $this->setPersistence($values, $persistence);
-        }
-
         if ($ingress = $convention['ingress'] ?? null) {
             $this->setIngress($values, $ingress);
         }
@@ -69,7 +66,26 @@ class HelmForgeChart extends HelmChart
             Arr::set($values, $path, $app_instance->api_password());
         }
 
-        return $values;
+        return array_replace_recursive($values, $this->volumeValues());
+    }
+
+    /**
+     * The volume the chart was detected to have, at the keys it was detected to keep it. Only what
+     * the volume has is written, so what the chart has no setting for, or the instance has no value
+     * for, keeps the chart's own default.
+     */
+    public function volumes(): array
+    {
+        if (! $persistence = $this->convention()['persistence'] ?? null) {
+            return [];
+        }
+
+        return [new VolumeSpec('app', 'data', primary: true, size_policy: 'quota', map: array_filter([
+            'size' => $persistence['size'] ?? null,
+            'storage_class' => $persistence['storage_class'] ?? null,
+            'claim' => $persistence['existing_claim'] ?? null,
+            'only_set' => true,
+        ]))];
     }
 
     // Only the limits/requests the plan actually sets, so a blank option
@@ -86,21 +102,6 @@ class HelmForgeChart extends HelmChart
                     Arr::set($values, "$path.$kind.$resource", $value);
                 }
             }
-        }
-    }
-
-    private function setPersistence(array &$values, array $persistence): void
-    {
-        $app_instance = Application::instance($this->app_instance);
-
-        Arr::set($values, $persistence['size'], $this->appStorage().'Gi');
-
-        if (($path = $persistence['storage_class']) && $storage_class = $app_instance->configuration('persistence-storageClass')) {
-            Arr::set($values, $path, $storage_class);
-        }
-
-        if (($path = $persistence['existing_claim']) && $claim = $app_instance->getOverride('pvc.name')) {
-            Arr::set($values, $path, $claim);
         }
     }
 

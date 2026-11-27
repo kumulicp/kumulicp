@@ -95,10 +95,18 @@ describe('reading', function () {
             ->claim->toBeNull()->discovered->toBeNull()->size->toBeNull();
     });
 
-    it('takes the first of the access modes WordPress keeps as a list', function () {
-        $app_instance = Fixtures::instance('wordpress', settings: ['configurations' => ['persistence-accessModes' => ['ReadWriteMany']]]);
+    it('takes the first of the access modes WordPress keeps as a list, and has them all', function () {
+        $app_instance = Fixtures::instance('wordpress', settings: ['configurations' => ['persistence-accessModes' => ['ReadWriteMany', 'ReadOnlyMany']]]);
 
-        expect(Volumes::for($app_instance)->primary()->access_mode)->toBe('ReadWriteMany');
+        expect(Volumes::for($app_instance)->primary())->access_mode->toBe('ReadWriteMany')->access_modes->toBe(['ReadWriteMany', 'ReadOnlyMany']);
+    });
+
+    it('has the one access mode it keeps as the only one', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['workloads' => ['app' => ['volumes' => ['data' => ['access_mode' => 'ReadWriteMany']]]]]);
+        $none = Fixtures::instance('civicrm-standalone', settings: ['configurations' => ['persistence-accessModes' => '']]);
+
+        expect(Volumes::for($app_instance)->primary())->access_mode->toBe('ReadWriteMany')->access_modes->toBe(['ReadWriteMany'])
+            ->and(Volumes::for($none)->primary())->access_modes->toBe([]);
     });
 
     it('keeps the storage class the chart is left to choose as it is, not as none', function () {

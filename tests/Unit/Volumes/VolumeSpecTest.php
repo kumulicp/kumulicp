@@ -33,3 +33,14 @@ it('refuses what it does not know', function (array $arguments) {
     'a size of nothing' => [['default_size' => 0]],
     'a primary volume that is optional' => [['primary' => true, 'optional' => true]],
 ])->throws(InvalidArgumentException::class);
+
+it('says where the chart keeps it, in the keys a map has', function () {
+    $spec = new VolumeSpec('app', 'data', map: ['path' => 'persistence', 'size' => 'size', 'only_set' => true]);
+
+    expect($spec->map)->toBe(['path' => 'persistence', 'size' => 'size', 'only_set' => true])
+        ->and((new VolumeSpec('redis', 'data'))->map)->toBe([]);
+});
+
+it('refuses a map with a key it does not have', function () {
+    new VolumeSpec('app', 'data', map: ['path' => 'persistence', 'colour' => 'blue']);
+})->throws(InvalidArgumentException::class, 'no colour');

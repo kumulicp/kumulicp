@@ -21,6 +21,8 @@ final class Volume
         public readonly ?string $claim,
         /** A claim the cluster reported, which is kept for jobs and never given to the chart */
         public readonly ?string $discovered,
+        /** Every access mode, for a chart that takes a list; `access_mode` is the first of them */
+        public readonly array $access_modes = [],
     ) {}
 
     public function id(): string

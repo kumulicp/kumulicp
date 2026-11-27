@@ -3,6 +3,10 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use App\Support\Volumes\LegacyVolumeKeys;
+use App\Support\Volumes\Volume;
+use App\Support\Volumes\Volumes;
+use App\Support\Volumes\VolumeSpec;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -170,6 +174,116 @@ abstract class HelmChart extends Chart
         return $version->requiresHelmRepoAuth() ? $version->chartRepoSecret() : null;
     }
 
+    /**
+     * The volumes this chart deploys, which it says where in its values it keeps (VolumeSpec::$map).
+     * A chart that declares none writes its own persistence values, with appStorage() for the size.
+     *
+     * @return array<int, VolumeSpec>
+     */
+    public function volumes(): array
+    {
+        return [];
+    }
+
+    /**
+     * The volume of a chart that keeps it where most do: `persistence.{enabled,size,storageClass,accessModes,existingClaim}`,
+     * its access modes a list, and sized by the storage quota. A chart that differs in a field says so.
+     *
+     * @param  array<string, mixed>  $map  what differs in where the chart keeps it
+     */
+    protected function persistenceVolume(array $map = []): VolumeSpec
+    {
+        return new VolumeSpec('app', 'data', primary: true, size_policy: 'quota', map: $map + [
+            'path' => 'persistence',
+            'enabled' => 'enabled',
+            'size' => 'size',
+            'storage_class' => 'storageClass',
+            'access_mode' => 'accessModes',
+            'access_mode_as' => 'list',
+            'claim' => 'existingClaim',
+        ]);
+    }
+
+    protected function volumeStore(): Volumes
+    {
+        // Where this chart's instances kept their volume before, which is the chart's to say
+        return Volumes::for($this->app_instance, $this->volumes(), LegacyVolumeKeys::layoutOf(static::class));
+    }
+
+    /**
+     * The values of every volume the chart declares, at the keys it says it keeps them in. The chart
+     * puts these over its own (array_replace_recursive), and writes none of them itself.
+     *
+     * @return array<string, mixed>
+     */
+    public function volumeValues(): array
+    {
+        $store = $this->volumeStore();
+        $values = [];
+
+        foreach ($store->specs() as $spec) {
+            if ($spec->map !== []) {
+                $this->writeVolume($values, $spec, $store->get($spec->workload, $spec->name), $store);
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     */
+    private function writeVolume(array &$values, VolumeSpec $spec, Volume $volume, Volumes $store): void
+    {
+        $map = $spec->map;
+        $only_set = $map['only_set'] ?? false;
+
+        $fields = [
+            'enabled' => $volume->enabled,
+            'size' => $this->volumeSize($spec, $store).'Gi',
+            'storage_class' => $volume->storage_class,
+            'access_mode' => ($map['access_mode_as'] ?? null) === 'list' ? ($volume->access_modes ?: null) : $volume->access_mode,
+            // Said as blank, in the way the chart takes it, unless the chart is only given what is set
+            'claim' => $only_set ? $volume->claim : ($volume->claim ?? (array_key_exists('blank_claim', $map) ? $map['blank_claim'] : '')),
+        ];
+
+        foreach ($fields as $field => $value) {
+            if (! isset($map[$field]) || ($only_set && ($value === null || $value === ''))) {
+                continue;
+            }
+
+            Arr::set($values, isset($map['path']) ? "{$map['path']}.{$map[$field]}" : $map[$field], $value);
+        }
+    }
+
+    /**
+     * The size, in Gi, of a volume the chart declares.
+     */
+    protected function volumeGibibytes(string $workload, string $name): int
+    {
+        $store = $this->volumeStore();
+
+        return $this->volumeSize($store->specs()["{$workload}/{$name}"], $store);
+    }
+
+    private function volumeSize(VolumeSpec $spec, Volumes $store): int
+    {
+        // A chart can be given the storage of the release it belongs to
+        if ($spec->size_policy === 'quota' && is_int($this->app_storage) && $this->app_storage > 0) {
+            return $this->app_storage;
+        }
+
+        return $store->size($spec->workload, $spec->name, $spec->size_policy === 'quota' ? $this->storageQuota() : 0);
+    }
+
+    /**
+     * What the subscription gives the app to store, in Gi: 0 when it is not worked out yet.
+     */
+    protected function storageQuota(): int
+    {
+        return (int) Application::instance($this->app_instance)->storage()->totalAppStorage();
+    }
+
     public function appStorage()
     {
         // A chart can be given the storage of the release it belongs to; 0 is no storage worked out yet
@@ -177,8 +291,7 @@ abstract class HelmChart extends Chart
             return $this->app_storage;
         }
 
-        $storage = Application::instance($this->app_instance)->storage();
-        $total_storage = (int) $storage->totalAppStorage();
+        $total_storage = $this->storageQuota();
 
         $chart_storage = (int) $this->app_instance->setting('chart_storage');
         // Not a 0: the next chart built for this instance would take it for the size

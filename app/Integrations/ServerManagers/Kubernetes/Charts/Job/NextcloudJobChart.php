@@ -2,6 +2,7 @@
 
 namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Str;
 
 class NextcloudJobChart extends JobChart
@@ -19,7 +20,7 @@ class NextcloudJobChart extends JobChart
         // The job runs against the hub's release on a shared plan
         $release_instance = $this->app_instance->sharedPlanParent() ?? $this->app_instance;
 
-        if ($claim = $release_instance->setting('existing_claim')) {
+        if ($claim = Volumes::for($release_instance, layout: 'nextcloud')->primary()->claim) {
             return $claim;
         }
 

@@ -19,6 +19,18 @@ final class VolumeSpec
     /** The size follows the subscription's storage quota, or is its own */
     public const SIZE_POLICIES = ['quota', 'fixed'];
 
+    /**
+     * What a map says about where the chart keeps the volume in its values. Each key but `path`
+     * is a field of the volume, and says where, relative to `path` (or from the root of the values
+     * when there is none).
+     *
+     * - `access_mode_as` is 'list' for a chart that takes the modes as a list.
+     * - `blank_claim` is what is written when there is no claim: '' unless the chart wants a null.
+     * - `only_set` leaves out what the volume has no value for, so the chart keeps its own default,
+     *   instead of writing it as blank.
+     */
+    public const MAP_KEYS = ['path', 'enabled', 'size', 'storage_class', 'access_mode', 'access_mode_as', 'claim', 'blank_claim', 'only_set'];
+
     // Names are used as settings keys, so no dots
     private const NAME = '/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/';
 
@@ -30,6 +42,8 @@ final class VolumeSpec
         public readonly int $default_size = 1,
         public readonly string $claim_mode = 'existing_claim',
         public readonly bool $optional = false,
+        /** Where the chart keeps the volume in its values; none for a volume the chart writes itself */
+        public readonly array $map = [],
     ) {
         foreach (['workload' => $workload, 'name' => $name] as $part => $value) {
             if (! preg_match(self::NAME, $value)) {
@@ -47,6 +61,10 @@ final class VolumeSpec
 
         if ($default_size < 1) {
             throw new InvalidArgumentException('A volume is at least 1Gi');
+        }
+
+        if ($unknown = array_diff(array_keys($map), self::MAP_KEYS)) {
+            throw new InvalidArgumentException('A volume map has no '.implode(', ', $unknown));
         }
 
         if ($primary && $optional) {

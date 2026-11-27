@@ -80,8 +80,10 @@ describe('Nextcloud', function () {
         $new = Fixtures::instance('nextcloud');
         Fixtures::values($new);
 
-        // The size the plan gave is kept on the instance as what it was given
-        expect($new->fresh()->setting('chart_storage'))->toBe(2);
+        // The size the plan gave is kept on the instance as what it was given, in the volume's own place:
+        // chart_storage is only read now, for an instance that has one
+        expect($new->fresh()->setting('workloads.app.volumes.data.size'))->toBe(2)
+            ->and($new->fresh()->setting('chart_storage'))->toBeNull();
     });
 
     it('passes the Redis volume settings through as the configuration says', function () {
@@ -148,6 +150,12 @@ describe('WordPress', function () {
         expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->toBe('found-by-a-job');
     });
 
+    it('gives the chart every access mode the instance keeps, as a list', function () {
+        $app_instance = Fixtures::instance('wordpress', settings: ['configurations' => ['persistence-accessModes' => ['ReadWriteOnce', 'ReadOnlyMany']]]);
+
+        expect(Fixtures::values($app_instance)['persistence']['accessModes'])->toBe(['ReadWriteOnce', 'ReadOnlyMany']);
+    });
+
     it('passes the MariaDB volume settings through as the configuration says', function () {
         $mariadb = [
             'enabled' => true,
@@ -176,7 +184,7 @@ describe('CiviCRM', function () {
         ]);
     });
 
-    it('uses the claim name only when it is told to', function (array $pvc, ?string $claim) {
+    it('uses the claim name only when it is told to', function (array $pvc, string $claim) {
         $app_instance = Fixtures::instance('civicrm-standalone', settings: ['override' => ['pvc' => $pvc]]);
 
         expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->toBe($claim);
@@ -184,8 +192,8 @@ describe('CiviCRM', function () {
         'a name, and told to use it' => [['name' => 'restored-data', 'override' => true], 'restored-data'],
         'a name, not told to' => [['name' => 'found-by-a-job'], ''],
         'a name, told not to' => [['name' => 'old-claim', 'override' => false], ''],
-        // As it is today: the name is read as it is, so a missing one is null and not ''
-        'told to, with no name' => [['override' => true], null],
+        // Was null while the chart read the name as it was; a claim that is not there is '' now, as for the others
+        'told to, with no name' => [['override' => true], ''],
     ]);
 
     it('wraps the access mode it keeps as one value into a list', function () {

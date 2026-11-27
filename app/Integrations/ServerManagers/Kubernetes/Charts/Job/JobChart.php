@@ -4,6 +4,7 @@ namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
 use App\Integrations\ServerManagers\Kubernetes\Charts\Chart;
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -25,8 +26,20 @@ class JobChart extends Chart
         return Str::slug("{$this->organization->slug}-{$this->name}-job-{$this->secretsSuffix}-secrets");
     }
 
+    /**
+     * The claim a job mounts: the one that was chosen for the app's volume, else the one that was
+     * found on the cluster before. A claim found now is kept apart from a chosen one
+     * (`discovered`), so the release is never given it as a claim that exists.
+     */
     public function persistentVolumeClaim()
     {
+        $volumes = Volumes::for($this->app_instance);
+
+        if ($claim = $volumes->claimName('app', 'data')) {
+            return $claim;
+        }
+
+        // Where an app kept it before volumes were kept in one place, whatever its chart
         if ($pvc_name = $this->app_instance->getOverride('pvc.name')) {
             return $pvc_name;
         }
@@ -36,7 +49,7 @@ class JobChart extends Chart
         if (Arr::get($app, 'status') == 'success') {
             foreach (Arr::get($app, 'response.spec.resources', []) as $resource) {
                 if (Arr::get($resource, 'kind') == 'PersistentVolumeClaim') {
-                    $this->app_instance->updateSetting('override.pvc.name', $resource['name']);
+                    $volumes->assign('app', 'data', ['discovered' => $resource['name']]);
 
                     return $resource['name'];
                 }

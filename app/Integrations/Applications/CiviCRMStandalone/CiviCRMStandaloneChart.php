@@ -29,7 +29,7 @@ class CiviCRMStandaloneChart extends HelmChart
             $secrets->set('mariadb-password', $this->app_instance->dbPassword());
         }
 
-        return [
+        $values = [
             'affinity' => [
                 'podAffinity' => [
                     'requiredDuringSchedulingIgnoredDuringExecution' => [
@@ -67,13 +67,6 @@ class CiviCRMStandaloneChart extends HelmChart
                 'path' => '/',
             ],
             'mariadb' => $app_instance->configuration('mariadb', true),
-            'persistence' => [
-                'size' => $this->appStorage().'Gi',
-                'accessModes' => [$app_instance->configuration('persistence-accessModes', true)],
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'existingClaim' => $app_instance->getOverride('pvc.override') ? $app_instance->getOverride('pvc.name') : '',
-            ],
             'resources' => [
                 'requests' => [
                     'cpu' => $app_instance->configuration('resources-requests-cpu'),
@@ -120,5 +113,12 @@ class CiviCRMStandaloneChart extends HelmChart
             'civicrmSkipInstall' => false,
             'civicrmURL' => $app_instance->address(),
         ];
+
+        return array_replace_recursive($values, $this->volumeValues());
+    }
+
+    public function volumes(): array
+    {
+        return [$this->persistenceVolume()];
     }
 }
