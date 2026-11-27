@@ -1,704 +1,235 @@
-# Plan: standard chart values and a standard app-settings framework
+# Plan: volumes, kept simple
 
-Status: proposed. Nothing here is built. It records what the code does today (checked
-against `main` at `4e5c582`, no cluster and no test run), what to change, and an order to
-build it in.
+Status: proposed. This replaces the first version of the plan. Slice 0 (the tests that pin what each
+chart gives its volumes) is merged and is the safety net for everything here; nothing else is built on
+`main`.
 
-## Why
+## What changed from the first plan, and why
 
-Two goals, one piece of work:
+The first plan kept every instance working while its settings were being moved, so it grew a layer to read
+the old places (`LegacyVolumeKeys`), a map from each volume to each chart's Helm keys (`VolumeSpec::map`,
+`blob`, `only_set`, `blank_claim`, `access_mode_as`), claim modes, a claim/discovered split and a
+`workloads.<workload>.volumes.<volume>` nesting. All of that exists to avoid one thing: migrating the data.
 
-1. **One method per common Helm value group**, volumes first. Every chart class spells the
-   same things (persistence, resources, ingress, image, replicas) by hand. The volume spelling
-   differs so much between charts that `App\Support\StorageHandover` needed a per-profile
-   map (`AppProfile::storageHandover()`) just to find where each chart keeps its claim.
-2. **Settings an admin can read.** The instance settings page
-   (`resources/js/Pages/Admin/Organizations/Apps/AppEdit.vue`) is one JSON textarea over
-   `app_instances.settings`, saved whole by `Admin\Organizations\Applications@update`
-   (`$app->settings = json_decode(...)`). The target is a real form, laid out in groups.
+This plan migrates the data once, up front, and then there is nothing to bridge:
 
-The two meet in one place: if every chart reads a volume from the **same settings location**,
-there is nothing left for `StorageHandover` to map, and a form can be generated from the same
-definitions the charts use.
+- A profile declares its volumes in a `$volumes` array next to `$configurations`.
+- The same volume name is used by the plan's settings, the instance's settings, the form and the chart.
+- A chart spells its own Helm keys from the volume. No map, no blob, no legacy reader.
 
-## Where we are
+## The shape
 
-### Volume settings, per chart
-
-| App / chart | Claim | Access mode | Storage class | Size |
-|---|---|---|---|---|
-| Nextcloud | `existing_claim` | `configurations.persistence-accessMode` (string) | `configurations.persistence-storageClass` | `chart_storage` |
-| WordPress | `override.pvc.name` | `configurations.persistence-accessModes` (list) | same | same |
-| CiviCRM | `override.pvc.name` **and** `override.pvc.override = true` | `persistence-accessModes`, wrapped in a list by the chart | same | same |
-| HelmForge catalog | `override.pvc.name` | none | same | same |
-| Generic | `configurations.persistence-<n>-existingClaim` (one entry per volume) | `persistence-<n>-accessMode` | `persistence-<n>-storageClass` | `persistence-<n>-size`, else `chart_storage` |
-
-Each chart then turns those into its own Helm keys (`persistence.existingClaim`,
-`persistence.accessMode` / `accessModes`, `persistence.persistentVolumeClaims[]`, ...). The
-rest of the code that touches the volume:
-
-- `HelmChart::appStorage()` writes `chart_storage` as a **ratchet** (it only ever grows, to
-  the subscription's `storage_quota`).
-- `JobChart::persistentVolumeClaim()` returns `override.pvc.name`, and if that is empty
-  **looks the claim up on the cluster and writes it back** to `override.pvc.name`.
-  `NextcloudJobChart` has its own variant (`existing_claim`, else `<fullname>-nextcloud`).
-- `ReleaseAspect` fingerprints `configurations` and `override` but **excludes `override.pvc`**
-  ("written back by the release itself"), and does not fingerprint `existing_claim` or
-  `chart_storage` at all.
-- `persistence-existingClaim` is declared as a configuration in the Nextcloud, WordPress and
-  CiviCRM profiles, but none of those charts read it (they read the keys in the table).
-  It looks like dead configuration; confirm before removing.
-- `StorageHandover` (rules, `apply()`, `restore()`) is used by `ApplicationWebMove`,
-  `AwaitVolume`, `SwitchServer`, `Applications@move_web`, the move form, and
-  `tests/Feature/Applications/StorageHandoverTest.php`. `AppProfile::storageHandover()` is
-  overridden by five profiles and by the `DemoAppProfile` test hook.
-
-### Several charts for one app (added in #233, after this plan was first written)
-
-An application can now be deployed from more than one chart (`app_charts`; see
-`docs/chart-catalog.md`, "Several charts for one app"). The registered Nextcloud chart and a
-HelmForge catalog chart of the same app can both exist, each with its own version groups, and
-a plan picks one of them when it is created. What that changes for this plan:
-
-- **The chart, not the app, decides the settings layout.** `Application::profileFor($instance
-  | $plan | $chart)` gives the profile of the chart the install runs from: the version's
-  chart, else the chart of the group its plan picked (`chartFor()`). The default chart uses the
-  app's own profile (`NextcloudProfile` + `NextcloudChart`); a catalog chart added to a
-  registered app uses a `HelmForgeProfile` built from **the chart's** `catalog`, and
-  `HelmForgeChart::catalog()` reads the chart row for it. So a Nextcloud app instance on the
-  HelmForge chart keeps its claim in `override.pvc.name`, not `existing_claim`, and has no
-  access-mode setting. `AppInstanceService::configuration()`, `arrayConfiguration()` and
-  `StorageHandover::map()` already moved to `profileFor()`.
-- **A legacy key cannot be read from the application.** Anything that picks a volume layout
-  from `$instance->application` (the migration table below, a settings form, a default claim
-  name) is wrong for the instances that run an added chart. They must go through
-  `profileFor()`, or the chart row.
-- **Catalog data lives in two places.** `applications.catalog` for a default catalog chart,
-  `app_charts.catalog` for an added one. The sync (`ChartCatalogSync::attach()` and the daily
-  run) now adds a chart of the source to every registered app of the same name, so a
-  hand-written app such as Nextcloud or WordPress can get a HelmForge chart whose volumes are
-  detected, not declared. Volume detection therefore matters for apps that already have a
-  hand-written layout.
-- **Constructing a chart class is pure** (`PureConstructorsTest` pins this for actions; the
-  charts take only an organization and an instance), so a chart can be instantiated outside a
-  release (in a move form, a settings page, a migration) to read what volumes it declares.
-- **An instance's chart is fixed once the plan is** ("its group, and so its chart, is fixed
-  afterwards"), but an instance can be given another plan. Whether that can change its chart
-  is an open question below.
-- **Precedents to follow.** #233's `move_chart_identity_off_versions` migration and
-  `ChartIdentityMigrationTest` moved chart identity off `app_versions.settings`; #281's
-  `remove_update_recommended_from_app_instances_settings` removed a settings key from
-  instances in chunks with a pure-DB migration. The data migration below should look like
-  those and be tested the same way.
-
-### Charts with more than one workload
-
-Every chart is treated as having **one** data volume today. Charts that deploy several
-workloads (a Deployment plus StatefulSets, from subcharts or sidecars) have volumes the
-code does not model:
-
-| Chart | Other workloads with their own volume | How it is handled today |
-|---|---|---|
-| Nextcloud | Redis master and replica (`redis.master.persistence`, `redis.replica.persistence`), and the MariaDB subchart (`mariadb.primary.persistence`, which has `existingClaim`, `size`, `accessMode` and `storageClass` of its own) | Two opaque blobs, the `redis` YAML and the `mariadb` JSON configurations, with persistence off by default. No size, class or claim control, not part of a move. Both reach the chart as they are (`ChartVolumeValuesTest`). |
-| WordPress | The MariaDB subchart (`mariadb.primary.persistence`: `enabled`, `size`, `storageClass`) | A `mariadb` JSON configuration, `enabled: false` by default (the database is an external server). Same limits. |
-| CiviCRM | None the chart uses: its profile has a `mariadb` blob with no volume settings, and a `redis` blob (persistence off, class `longhorn`) that `CiviCRMStandaloneChart` never reads | Nothing to migrate for it. The unread `redis` blob is dead configuration, like `persistence-existingClaim`. |
-| Nextcloud | Imaginary, the cron sidecar | No volume today. They are workloads that other settings (resources, images) already touch, so they are named here for completeness. |
-| Generic | One pod, several PVCs (`persistence-<n>-*`) | Modelled, as items of one array configuration; handover is refused when there is more than one. |
-| HelmForge catalog | Whatever the chart has | `ChartConventionDetector::persistence()` records **one** volume: `persistence.<volume>` is picked by the `persistence_volume` override (`config/catalog.php`, used for `paperless-ngx`), else the first enabled, else the first. The others keep the chart's defaults and cannot be sized, classed or handed a claim. |
-
-Consequences found while reading the code:
-
-- `appStorage()` / `storage_quota` is **one** number, written to the one volume the chart
-  treats as the app's. Secondary volumes have no size policy at all.
-- `JobChart::persistentVolumeClaim()` writes back the **first** `PersistentVolumeClaim` in the
-  release's resources to `override.pvc.name`. If a secondary volume is ever enabled, the first
-  one found could be Redis's or MariaDB's, and the next WordPress or HelmForge release would be
-  given it as `existingClaim`. Today it is mostly hidden because those volumes are disabled.
-- A web move restores and hands over one volume. An enabled Redis or MariaDB volume would not
-  move with the app, and nothing says so.
-- StatefulSet volumes behave differently from a Deployment's PVC: replicas get their own claims
-  from `volumeClaimTemplates` (`<template>-<pod>-<ordinal>`), and many subcharts accept
-  `existingClaim` only for a single replica. A single "claim name" does not describe them.
-  (This is Kubernetes behaviour to confirm on a cluster, not something the repo proves.)
-
-### The settings bag
-
-`app_instances.settings` is one JSON column (`'settings' => 'array'`) holding several
-different things:
-
-| Kind | Examples | Who writes it |
-|---|---|---|
-| Admin/plan configuration | `configurations.*` (persistent ones), `override.<config>` | admin, plan |
-| Chart overrides and caches | `override.chart.*`, `override.pvc.*` | the release code |
-| Volume | `existing_claim`, `chart_storage`, `override.pvc.*` | admin, moves, release code |
-| Runtime state | `storage_quota`, `expand_storage`, `quiesced_for_move`, `availability`, `maintenance`, `project_id` | the system |
-| Integration state | `sso`, `sso_client_id`, `sso_client_secret`, `features.*` | SSO and feature actions |
-
-`AppInstanceService::configuration()` resolves a value as: `override.<name>` (when the
-configuration is not persistent) > `configurations.<name>` (when persistent or personalized)
-> the plan's `configurations.<name>` > the profile's default. Profiles already describe
-their configurations as data (`name`, `type`, `default`, `persistent`, `validations`), and
-the plan Configurations screen (`PlanConfigurations.vue`, `arrayConfigs.ts`) already renders
-them by type. So **a schema half-exists**; what is missing is grouping, labels, sources, and
-a place for the settings that are not configurations.
-
-Saving the textarea replaces the whole column, so an admin who opens the page, waits while a
-task writes `sso` or `storage_quota`, and then saves puts the old values back.
-
-## Design
-
-### 1. A volume belongs to a workload; one settings location for all of them
-
-Volumes are addressed by **workload and volume name**. A workload is one Deployment,
-StatefulSet or sidecar group the chart deploys; it owns zero or more volumes. Instance
-settings get one namespace:
-
-```
-settings.workloads.<workload>.volumes.<volume> = {
-    claim:         "name of an existing PVC" | null,   // explicit, chosen by a person or a move
-    discovered:    "name the cluster reported" | null, // cache written by the release; never fed to the chart
-    size:          Gi (int) | null,
-    storage_class: string | null,
-    access_mode:   string | null,                      // always one string; the chart makes a list if it needs one
-    enabled:       bool | null,                        // for volumes the chart can run without (Redis, MariaDB)
-}
-```
-
-- **The primary volume** is `app` / `data` for every chart: the one that holds the customer's
-  files and follows the subscription's storage quota. Single-volume charts have only this.
-  The generic chart's items become `app` / `<item name>`, with the item flagged primary
-  when it is the one the quota applies to (the first, unless the plan says otherwise).
-- **Secondary volumes** are the other workloads' (`redis-master` / `data`, `mariadb` /
-  `data`, ...). The workload names are chosen by the chart class and are stable: they are
-  settings keys, so renaming one is a migration.
-- The workload key also gives a home for the other per-workload values later (resources,
-  replicas, image), which Redis, Imaginary and the cron sidecar already need. Only
-  `volumes` is in scope here; the key is chosen so the rest can follow without moving it.
-- **`claim` and `discovered` are separate on purpose.** Today `override.pvc.name` is both:
-  the handover writes it, and `JobChart` caches the cluster's answer in it, and WordPress and
-  HelmForge feed it back to the chart as `existingClaim`. That mix is why
-  `ReleaseAspect` has to exclude `override.pvc`. After the split, only `claim` reaches the
-  chart; `discovered` is read only by jobs, and the `override.pvc` exclusion goes away.
-- Defaults still come from the plan and the profile through the existing `persistence-*`
-  configurations, with the name normalised to **`persistence-accessMode`** (one string) in
-  every profile. Resolution for each field: the instance's `workloads.*.volumes.*` > the plan >
-  the profile's default, the same order `configuration()` uses. Secondary volumes use the
-  same names with the workload as a prefix (`persistence-redis-master-size`); array
-  configurations (`persistence-<n>-*`) stay the way the generic chart's plan defines its
-  volumes.
-- The plan decides **which volumes exist** for the generic chart (its items); for hand-written
-  charts the chart class does (section 2). The instance only holds what is specific to it: a
-  claim, a grown size, an overridden class, a secondary volume turned on.
-
-#### Sizing
-
-Today `appStorage()` is the one size for the one volume. With several volumes each declares
-a **size policy**:
-
-| Policy | Meaning | Used by |
-|---|---|---|
-| `quota` | follows `storage_quota` through the existing ratchet (`chart_storage`, which only grows) | the primary volume; exactly one per instance |
-| `fixed` | the instance's `size`, else the plan's, else the volume's declared default; never follows the quota | Redis, MariaDB, any secondary volume |
-
-Secondary volumes are not billed or counted in `storage_quota` (see open questions).
-
-#### How a claim is handed over
-
-A volume declares a **claim mode**, because the three kinds of volume need different things:
-
-| Claim mode | The chart takes | Handover |
-|---|---|---|
-| `existing_claim` | one claim name at a values path (Deployment PVCs, single-replica subcharts) | write `claim`; the chart skips creating its own |
-| `by_name` | no name: a StatefulSet makes `<template>-<pod>-<ordinal>` per replica | the restored claim must be created with the name the chart would make (`defaultClaimName($workload, $volume, $ordinal)`); no `claim` is written |
-| `none` | nothing (a chart that cannot be given or adopt a claim) | only a new volume is offered |
-
-A volume with more than one replica is `by_name` or `none`, never `existing_claim`; the
-form says why. Whether a StatefulSet adopts a claim that already exists under its template
-name (the usual Kubernetes behaviour) is to be confirmed on a cluster before `by_name` is
-offered in the move form.
-
-#### The store
-
-The location is **the same whichever chart the instance runs**, which is the point: an
-instance that changes chart keeps its primary volume's `claim`, `size`, class and mode,
-because `app/data` means the same on every chart. Secondary volumes are chart-specific by
-name; values stored for a workload the current chart does not declare are ignored, not
-deleted, so going back finds them.
-
-A small class owns all reads and writes, so no other code spells these paths. It finds what
-an instance declares through `Application::profileFor($instance)`, never the application's
-own profile:
+### In the profile
 
 ```php
-// App\Support\Volumes\Volume (value object) and App\Support\Volumes\Volumes (the store)
-Volumes::for($appInstance)->all();                       // every volume the chart declares, resolved
-Volumes::for($appInstance)->primary();                   // app/data
-Volumes::for($appInstance)->get('redis-master', 'data'); // resolved Volume: enabled, size, storageClass, accessMode, claim, claimMode
-Volumes::for($appInstance)->claimName('app', 'data');    // claim ?: discovered ?: the chart's default claim name
-Volumes::for($appInstance)->assign($workload, $volume, $values);  // writes the fields, returns the previous values
-Volumes::for($appInstance)->restore($before);
+// NextcloudProfile, beside $configurations
+protected $volumes = [
+    'data' => [
+        'label' => 'admin.volumes.data',
+        'size' => 'quota',                  // follows the subscription's storage quota
+        'enabled' => false,                 // the defaults of the fields a plan or an instance can change
+        'storage_class' => '',
+        'access_mode' => 'ReadWriteOnce',
+    ],
+    'redis-master' => ['label' => 'admin.volumes.redis_master', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => ''],
+    'redis-replica' => ['label' => 'admin.volumes.redis_replica', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => '', 'claim' => false],
+    'mariadb' => ['label' => 'admin.volumes.mariadb', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => '', 'access_mode' => 'ReadWriteOnce'],
+];
 ```
 
-`assign()` / `restore()` are the part of `StorageHandover` that is not chart-specific. They
-write the fields and return what was there (`['path' => ['value' => ...] | null]`), which is
-what `SwitchServer` already stores on the task, so one snapshot covers every volume of the
-app. That snapshot helper is not about volumes, so it becomes a small generic
-`SettingsSnapshot` (apply a set of dot-path writes, return what was there, put it back),
-which the SSO move can use too.
+- `size` is `'quota'` for the volume that holds the customer's files, or a number of Gi for a volume with
+  a size of its own.
+- `optional` means the app can do without it: it is off until `enabled` is true.
+- `claim => false` means the volume can't be given a claim that exists (a StatefulSet's replicas make their
+  own), so the move form offers only a new one.
+- `AppProfile` has a default `$volumes` with one `data` volume sized by the quota, so every app has one,
+  plugins included.
 
-### 2. One chart-side method per value group
+### In the settings
 
-`HelmChart` gets one method per group. Each chart class **declares its volumes once**, and
-the base class writes all of them; the chart never writes persistence values itself:
+The same name and the same fields, in the plan's settings and in the instance's:
+
+```
+plan.settings.volumes.<name>.{enabled, size, storage_class, access_mode}
+instance.settings.volumes.<name>.{enabled, size, storage_class, access_mode, claim}
+```
+
+A field resolves the way `configuration()` does: **the instance's, else the plan's, else the profile's.**
+`claim` is the instance's alone: a claim is a fact about one instance's volume, never a default.
+For a `quota` volume, the instance's `size` is the largest size it has been given: it only grows.
+
+### In the chart
 
 ```php
-// in a chart class
-public function volumes(): array
-{
-    return [
-        'app/data' => [
-            'primary' => true, 'size' => 'quota', 'claim_mode' => 'existing_claim',
-            'map' => ['path' => 'persistence', 'enabled' => 'enabled', 'size' => 'size',
-                      'storage_class' => 'storageClass', 'access_mode' => 'accessMode',
-                      'claim' => 'existingClaim'],
-        ],
-        'redis-master/data' => [
-            'size' => 'fixed', 'default_size' => 1, 'claim_mode' => 'existing_claim', 'optional' => true,
-            'map' => ['path' => 'redis.master.persistence', 'enabled' => 'enabled', 'size' => 'size',
-                      'storage_class' => 'storageClass', 'claim' => 'existingClaim'],
-        ],
-        'redis-replica/data' => [
-            'size' => 'fixed', 'default_size' => 1, 'claim_mode' => 'by_name', 'optional' => true,
-            'map' => ['path' => 'redis.replica.persistence', 'enabled' => 'enabled', 'size' => 'size',
-                      'storage_class' => 'storageClass'],
-        ],
-    ];
-}
+$volumes = Volumes::for($this->app_instance);
+$data = $volumes->get('data');
+$redis_master = $volumes->get('redis-master');
 
-// in values()
-$values = array_replace_recursive($values, $this->volumeValues());   // one call, every declared volume
+'persistence' => [
+    'enabled' => $data->enabled(),
+    'size' => $data->size().'Gi',
+    'storageClass' => $data->storageClass(),
+    'accessMode' => $data->accessMode(),
+    'existingClaim' => $data->claim(),
+],
+'redis' => ['master' => ['persistence' => [
+    'enabled' => $redis_master->enabled(),
+    'size' => $redis_master->size().'Gi',
+    'storageClass' => $redis_master->storageClass(),
+]]],
 ```
 
-- `volumeValues()` resolves each declared volume through `Volumes`, writes it at its `map`
-  (`size` as `"<n>Gi"`, `access_mode` as a string or, with `'as' => 'list'`, a list, a
-  `claim_flag` for CiviCRM's `override: true`), and writes **only what the volume has**, so a
-  blank option keeps the chart's own default (the rule `HelmForgeChart` already follows).
-- A **default map** covers the common bitnami-style layout
-  (`persistence.{enabled,size,storageClass,accessModes,existingClaim}`), so a chart with one
-  ordinary volume declares nothing beyond `'app/data' => ['primary' => true]`.
-- A secondary volume with `'optional' => true` is off unless `enabled` is set, which replaces
-  the opaque `redis` and `mariadb` configuration blobs' persistence sub-keys. What else those
-  blobs hold (image tags, replica counts, passwords) is left in them for now; the volume
-  resolution is overlaid on top and wins for the persistence keys, so an old blob value cannot
-  fight the new setting.
-- `ChartConventionDetector` already records, for each catalog chart, where it keeps `size`,
-  `storage_class` and `existing_claim`. **That detected shape becomes the map format**, and
-  `HelmForgeChart::setPersistence()` moves up into `HelmChart`. It is extended to record
-  **every** volume it finds (see below), not one.
-- The generic chart builds one declared volume per item (`app/<name>`), and keeps building the
-  `persistentVolumeClaims` / `volumes` / `mounts` lists, which are genuinely chart-specific.
-  Its per-item path is the map: it does not write `persistence.*` but the chart's own list shape.
-- "Can this volume be given a claim that already exists?" is answered by `claim_mode`, not by
-  a profile method. That replaces `StorageHandover::supports()` and `storageHandover() === null`.
-- `defaultClaimName($workload, $volume, $ordinal = null)` (what the chart would call its own
-  PVC, e.g. `<fullname>-nextcloud`, `<fullname>-<volume>`, `<template>-<pod>-<n>`) is declared
-  once per chart and used by `Volumes::claimName()`. The job charts then stop looking the
-  claim up on the cluster: `JobChart::persistentVolumeClaim()` and the `NextcloudJobChart`
-  override become `Volumes::claimName('app', 'data')`. This removes the "first PVC found"
-  lookup that is wrong once a chart has more than one (`WordpressJobChart` only calls the
-  inherited method). Jobs mount the primary volume only, as they do now.
+`Volumes::for($instance)` finds the profile through `Application::profileFor($instance)`, so an app on an
+added catalog chart gets that chart's volumes. `size()` is the number of Gi the volume is made with: for a
+`quota` volume it asks the subscription and keeps any growth. A chart given its release's storage (a shared
+app's) passes it in.
 
-`Volumes::for($instance)` instantiates the instance's chart class (via `profileFor()`) only to
-read `volumes()` and `defaultClaimName()`. For `HelmForgeChart` the declaration is built from
-the chart's own stored convention (`app_charts.catalog` for an added chart,
-`applications.catalog` for a default one), through the existing `catalog()` method, so a
-Nextcloud app on a HelmForge chart declares the volumes the **detector** found, while a
-Nextcloud app on its registered chart declares the ones `NextcloudChart` does.
+Each chart writes the four or five keys itself. They differ between charts (`accessMode` or `accessModes`,
+a list or a string, a claim that is `null` or `''`), and that is clearer in the chart than in a table
+somewhere else. Where several charts really are the same shape, a small `persistence($volume)` helper on
+`HelmChart` can return it; that is a convenience, not a framework.
 
-#### Catalog charts
+The one place a path map stays is `HelmForgeChart`, which has no hand-written chart and writes to the keys
+the catalog detected. That is where it already is.
 
-`ChartConventionDetector::persistence()` is changed from "pick one volume" to **record all**:
-`persistence.<volume>` entries and the usual subchart shapes (`<sub>.persistence`,
-`<sub>.primary.persistence`, `<sub>.master.persistence`), each with the paths it finds for
-`enabled`, `size`, `storage_class`, `access_mode`, `existing_claim`. The primary is still
-chosen by the `persistence_volume` override, else the first enabled, else the first; the rest
-are secondary, `fixed`, and shown with the chart's own default size. The stored convention
-keeps its existing `persistence` key (the primary, so nothing already synced breaks) and gains
-`volumes`. It is written to **whichever row holds the catalog data**: `applications.catalog`
-for a default catalog chart, `app_charts.catalog` for an added one, so `ChartCatalogSync`'s
-sync and `attach()` both change. A re-sync fills it in; until then `HelmForgeChart` falls back
-to `persistence`. The `config/catalog.php` `persistence_volume` override is keyed by chart
-name, so it applies to a chart wherever it is attached.
-A shape the detector does not recognise is left out and reported by
-`catalog:sync --report`, not guessed at.
+### What is read where, and nowhere else
 
-The same treatment, in later slices, for the blocks that are repeated almost verbatim:
-
-| Method | Repeated today in |
+| What | Where |
 |---|---|
-| `resourcesValues($path)` | Nextcloud, WordPress, CiviCRM, Generic, HelmForge (`resources-requests/limits-cpu/memory`) |
-| `ingressValues($style)` | WordPress, CiviCRM, Generic, HelmForge (the annotations/tls/enabled expression, including the "disabled app or maintenance mode turns ingress off" rule, is copied into each) |
-| `imageValues($path)` | Nextcloud, WordPress, CiviCRM, Generic |
-| `replicaValues($path)` | all (`replicaCount()` already exists; only the key differs) |
+| Which volumes an app has, their defaults, whether they take a claim | the profile's `$volumes` |
+| What a plan gives a volume | `plan.settings.volumes.<name>` |
+| What an instance has chosen for a volume | `instance.settings.volumes.<name>` |
+| Reading and writing those | `Volumes` and `Volume`, and nothing else spells the paths |
 
-These are per-workload too (Redis, Imaginary and the cron sidecar take resources and an
-image), so they take a workload name and write under that workload's `map` path. Because the
-"ingress off while disabled or in maintenance" rule is a safety rule, it should live in
-exactly one place.
+## What goes away
 
-### 3. A settings schema the UI can be built from
+- `persistence-*` entries in `$configurations` (Nextcloud, WordPress, CiviCRM), and the `redis` and
+  `mariadb` blobs' persistence keys.
+- `AppProfile::storageHandover()`, its five overrides and `StorageHandover`.
+- `override.pvc.*`, `existing_claim` and `chart_storage` in instance settings.
+- The claim a job finds on the cluster is no longer written to the settings (see "Decisions").
+- Dead configuration found while reading: `persistence-existingClaim` (declared by Nextcloud, WordPress and
+  CiviCRM, read by no chart), `persistence-numberOfReplicas` (declared by Nextcloud and CiviCRM, read by
+  nothing) and CiviCRM's `redis` (its chart never reads it).
+- Not built, from the first plan: the `workloads` level, claim modes, `LegacyVolumeKeys`, `VolumeSpec::map`,
+  the blob reader, `only_set`, `Volume::on()` and the catalog detector recording several volumes.
 
-Extend what profiles already declare instead of adding a second system.
+## The migration
 
-Everything in this section resolves its definitions through `profileFor($instance)`, so the
-form shows the fields of the chart the instance actually runs, with that chart's name in the
-header. Two instances of the same app on different charts have different forms (an instance on
-a HelmForge chart has no access-mode field, for example), and a plan's configuration screen
-follows `profileFor($plan)` the same way.
+One data migration, and two commands to prove it changed nothing.
 
-**Definition** (the existing configuration shape, plus optional fields):
+### What moves
 
-```php
-'persistence-storageClass' => [
-    'name' => 'persistence-storageClass', 'type' => 'string', 'default' => '', 'persistent' => true,
-    'validations' => 'nullable|string',
-    // new, all optional
-    'group' => 'storage', 'label' => 'admin.settings.storage_class.label', 'help' => '...',
-    'options' => [...],            // enum choices (a type that already exists)
-    'visible_if' => 'persistence-enabled',
-    'applies_to' => ['release'],   // update aspect that must run for it to take effect
-]
+Plan settings (`app_plans.settings`) and instance settings (`app_instances.settings`) both hold
+`configurations.*`; the same keys move in both.
+
+| From | To |
+|---|---|
+| `configurations.persistence-enabled` | `volumes.data.enabled` |
+| `configurations.persistence-storageClass` | `volumes.data.storage_class` |
+| `configurations.persistence-accessMode` (Nextcloud) or `persistence-accessModes` (WordPress, CiviCRM; a list or a string) | `volumes.data.access_mode` (the first mode) |
+| `configurations.redis` `master.persistence.{enabled,size,storageClass}` | `volumes.redis-master.{enabled,size,storage_class}`, and out of the blob |
+| `configurations.redis` `replica.persistence.*` | `volumes.redis-replica.*`, and out of the blob |
+| `configurations.mariadb` `primary.persistence.*` (Nextcloud's includes `existingClaim` and `accessMode`) | `volumes.mariadb.*`, and out of the blob |
+| instance `existing_claim` (Nextcloud) | `volumes.data.claim` |
+| instance `override.pvc.name` (WordPress, catalog) | `volumes.data.claim` |
+| instance `override.pvc.name` (CiviCRM) | `volumes.data.claim` only when `override.pvc.override` is true; otherwise it was a name a job found, and is dropped |
+| instance `chart_storage` | `volumes.data.size` |
+
+Rules that keep it honest:
+
+- **Only what differs is written.** Activation copied every persistent default into each instance's
+  `configurations`, so most instance keys equal the plan's or the profile's. A value that equals what the
+  instance would get anyway is not written, so it keeps following the plan.
+- **Which chart's rules apply** is decided by the chart the instance runs (`profileFor()`, then its chart
+  class), not by its application: an app with an added catalog chart has two layouts.
+- **Sizes are whole Gi.** `8Gi` becomes 8. A size that is not (`500Mi`, `1.5Gi`) is rounded up and listed
+  in the dry run.
+- **Only one access mode is kept.** A WordPress list with several is cut to the first and listed.
+- **A claim in a plan's settings** (the blobs have an `existingClaim` key) is listed and dropped: a claim
+  is one instance's, and a plan can't hold one.
+- The migration **copies, it does not delete**. The old keys stay until a later migration removes them, so
+  rolling the code back finds its settings as they were.
+- Plugins' apps get the same treatment for `chart_storage` (it becomes `volumes.data.size`), since
+  `appStorage()` is rewritten on the same store.
+
+### Proof it changed nothing
+
+Run on the release **before** the migration, and then after:
+
+```
+php artisan volumes:snapshot     # the volume values each instance's chart renders today, stored
+php artisan volumes:migrate --dry-run   # what would move, and every instance listed above
+php artisan volumes:migrate
+php artisan volumes:verify       # renders them again and compares, instance by instance
 ```
 
-**Standard groups.** `App\Support\Settings\StandardSettings` returns ready-made definitions
-for the groups every chart shares (storage, resources, ingress, image, replicas), so a profile
-adds `...StandardSettings::storage()` instead of re-declaring five configurations. These are
-the same names the chart methods in section 2 read, so a chart and its form cannot disagree.
-For a catalog chart nothing is assumed: its fields are only those its stored convention
-detected (see "Decided").
-
-**Registry of the non-configuration keys.** `App\Support\Settings\InstanceSettings` lists the
-other top-level keys with an `owner`:
-
-- `editable`: shown as a field (volumes, configurations).
-- `system`: shown read-only in an "Advanced" panel with its current value, never written by
-  the form (`storage_quota`, `expand_storage`, `quiesced_for_move`, `availability`,
-  `maintenance`, `project_id`, `sso*`, `features`).
-- Anything not in the registry is `unknown`: shown only in the raw JSON view.
-
-**Save semantics.** The form posts only the editable fields; the server merges them into the
-current `settings` inside a transaction with a row lock, so concurrent writes to system keys
-are not lost. The raw JSON editor stays as an "Advanced (raw JSON)" tab for unknown keys and
-repair, and is changed to save a **diff against the current settings** with a confirmation,
-not a blind replace.
-
-**Read model for the UI.** `InstanceSettingsSchema::for($appInstance)` returns groups of
-fields, each with the effective value, where it comes from (`instance` / `plan` / `default`),
-whether it is editable, and its rules. The controller passes it as an Inertia prop; the same
-rules validate the save, so the front end has no rules of its own to drift.
-
-**Front end.** One `SettingsForm.vue` with a field component per type (`string`, `int`,
-`bool`, `enum`, `password`, `yaml`/`json`, `textarea`), grouped into cards, using the
-existing Vuestic components and `$t()` labels. Each field shows a source badge and, for an
-instance override, "reset to plan value". A saved change that needs a release shows the
-existing update-drift notice (`SettingsAspect` / `ReleaseAspect`) rather than a new one. The
-volume group is a dedicated panel, built from `Volumes::all()`: one section per workload, one
-row per volume, so a chart with Redis or MariaDB volumes shows them under their own names.
-Each row has claim (with a warning that this changes where data lives; hidden for a `by_name`
-or `none` volume, with the reason), size (read-only when the policy is `quota`), class,
-access mode, and an on/off switch for an `optional` volume. A single-volume chart shows one
-row and no workload heading.
-
-### 4. Moves use the volume methods
-
-`StorageHandover` goes away:
-
-| Today | After |
-|---|---|
-| `StorageHandover::rules()` / `rulesFor()` | `VolumeRules::rules($prefix)`, a plain rules array (claim, access mode, storage class, size; the same regexes) |
-| `StorageHandover::map()`, `supports()`, `fields()` | each declared volume's `claim_mode` and map say whether it takes a claim and which fields it has |
-| `StorageHandover::apply()` / `restore()` | `Volumes::assign()` / `restore()` over the generic snapshot helper, once per volume, into one snapshot |
-| `AppProfile::storageHandover()` and five overrides | removed |
-| `DemoAppProfile::$storage_handover` test hook | a `volumes()` declaration on `DemoHelmChart` |
-| move form fields | the same four fields, **per volume**, from the volume definitions |
-
-`ApplicationWebMove`, `AwaitVolume` and `SwitchServer` keep their shape; they call
-`Volumes` instead.
-
-**What the move does with several volumes.** The move task stores a handover per volume
-(`storage` becomes a map keyed by `workload/volume`, replacing today's single set of values),
-and the snapshot for rollback covers all of them:
-
-- The form lists the volumes that **hold data**: the primary, and any secondary volume whose
-  `enabled` is true. A volume that is off is an `emptyDir` in the chart; there is nothing to
-  hand over and the form does not ask.
-- For each listed volume the admin chooses `new` or `existing`, as now. `existing` needs an
-  `existing_claim` volume; a `by_name` volume says which names the restore must produce
-  (`defaultClaimName()` for each replica); a `none` volume can only start new, and the form
-  says that the data in it will not come along.
-- The wait-for-volume step (`AwaitVolume`) confirms **all** of them at once. Its message lists
-  the volumes still to be restored, so a person restoring Redis and the app volume sees both.
-- `blocker()` for the move refuses (and says why) when a volume that holds data cannot be
-  handed over and the admin has not accepted starting it empty, so an enabled secondary volume
-  can no longer be lost without anyone being told.
-- Today a generic app with more than one volume is refused a handover entirely ("which of
-  several the claim is for is not something to guess"). With volumes addressed by name there is
-  nothing to guess, so that refusal goes away.
-
-## Migration
-
-### Data
-
-A data migration (and an artisan command that runs the same code, with `--dry-run` and
-`--app=<id>`) rewrites each instance. It is keyed on **the chart the instance deploys from**,
-not on its application: an instance's chart is its version's chart (`version_group_id` →
-`app_charts`), else its plan's selected group's. A chart is one of these layouts:
-
-- the app's **registered** profile, for a default chart whose `source` is `profile` (Nextcloud,
-  WordPress, CiviCRM);
-- **generic**, for `source = generic`;
-- **catalog**, for `source = helmforge`, whether it is the app's default chart or an added one.
-
-So a Nextcloud instance on an added HelmForge chart is migrated by the *catalog* row below,
-not the Nextcloud one. Like #281's migration, the rewrite reads and writes `app_instances`
-with the query builder and a frozen map in the migration file (resolving the chart from the
-tables, not through the models or `profileFor()`), so a later change to a model or a profile
-cannot change what an old migration does. The old-versus-new values check below runs in the
-artisan command and its tests, which can use the application code.
-
-The primary volume, `app/data`:
-
-| Chart layout | `claim` from | `access_mode` from | `storage_class` from | `size` from |
-|---|---|---|---|---|
-| Nextcloud | `existing_claim` | `configurations.persistence-accessMode` | `configurations.persistence-storageClass` | `chart_storage` |
-| WordPress | `override.pvc.name` | `configurations.persistence-accessModes` (first of the list) | same | `chart_storage` |
-| CiviCRM | `override.pvc.name` **only if** `override.pvc.override` is true, else it is a `discovered` value | `persistence-accessModes` | same | `chart_storage` |
-| Catalog (HelmForge), default or added chart | `override.pvc.name` | none | same | `chart_storage` |
-| Generic | `persistence-<n>-existingClaim` into `app/<name>` (name taken from `persistence-<n>-name`) | `persistence-<n>-accessMode` | `persistence-<n>-storageClass` | `persistence-<n>-size` |
-
-The secondary volumes, which today live inside configuration blobs:
-
-| Chart layout | From | To |
-|---|---|---|
-| Nextcloud (registered) | `configurations.redis` (and the plan's) `master.persistence.*`, `replica.persistence.*` | `redis-master/data`, `redis-replica/data`: `enabled`, `size`, `storage_class`; the keys are **removed from the blob** so it cannot fight the volume |
-| Nextcloud (registered) | `configurations.mariadb` `primary.persistence.*` (includes `existingClaim`, `size`, `accessMode`) | `mariadb/data`, the same way, with the claim as `claim` |
-| WordPress (registered) | `configurations.mariadb` `primary.persistence.*` | `mariadb/data`, the same way |
-| CiviCRM (registered) | none (its `mariadb` blob has no volume settings; its `redis` blob is not read) | nothing |
-| Catalog | none: the chart's own subchart persistence was never set by kumulicp | nothing to migrate; a re-sync records the volumes the chart has |
-
-**Activation copies every persistent configuration's default into the instance's own
-settings** (checked by building one instance of each app: `configurations.persistence-*`,
-`redis` and `mariadb` are all there from the first day, including the unread
-`persistence-existingClaim: ""`). So "the instance has the key" says nothing about whether
-anyone chose it, and a blob value that equals the profile default is dropped rather than
-copied, so an instance that never changed it keeps following the plan and profile. The
-migration compares with the profile's default of the **chart the instance runs**, not the value's presence. An instance whose blob **enabled**
-a secondary volume is listed in the dry run: its data was never part of a move.
-
-The old per-app map lives **only inside the migration**, as a frozen array, so the runtime
-code has no legacy knowledge.
-
-The one hard part is `override.pvc.name`. For WordPress and HelmForge it is both a chosen
-claim and a cluster-reported cache, and the code cannot always tell which. The rule is
-**the chart values must not change**:
-
-1. Before touching an instance, build its chart values with the old code path and keep them.
-2. Migrate, build the values again with the new code path.
-3. The two must be identical (this is the check the dry run reports, and the check each
-   migrated instance must pass before its row is saved).
-
-Instances where `override.pvc.name` is set and no move task recorded it as a handover are
-reported as "claim looks discovered". They are migrated as `claim` (so nothing changes
-today) but listed for a person to look at, because a chart that is handed the name of the
-PVC it created itself is a hazard when the next upgrade renders: verify on a cluster
-whether Helm then drops the PVC from the release. If it does, those instances should become
-`discovered` instead.
-
-The migration also:
-
-- renames `persistence-accessModes` to `persistence-accessMode` in plan settings, in
-  instances' persistent configurations, and in the profiles' definitions;
-- deletes the migrated legacy keys (`existing_claim`, `chart_storage`, `override.pvc`)
-  only in the second step below, so a rollback has something to read.
-
-### Quirks pinned by Slice 0
-
-`ChartVolumeValuesTest` and `ChartClaimLookupTest` pin these as they are today. The migration
-and the new chart method must keep each one, or change it **on purpose**, naming the test:
-
-- Nextcloud gives the chart `existingClaim => null` (not `''`) when the instance has settings
-  but no `existing_claim`: `setting($key, $default)` returns its default only when the
-  instance has no settings at all. WordPress and CiviCRM give `''`; CiviCRM with
-  `override.pvc.override` true and no name gives `null`.
-- CiviCRM stores `persistence-accessModes` as one string and the chart wraps it in a list;
-  WordPress stores a list. A list stored for CiviCRM would be wrapped twice.
-- A catalog chart's values hold only the keys kumulicp writes (the size, and the claim and class when set);
-  the chart's own defaults are not repeated, and it is never given an access mode.
-- `JobChart` keeps the **first** claim of the release in `override.pvc.name`, whichever workload it is for,
-  and the next WordPress, CiviCRM-with-override or catalog release is given it as an existing claim.
-  The "first claim" and "found becomes chosen" tests are the ones the `claim` / `discovered` split
-  is meant to change.
-
-### Behaviour, in two steps
-
-1. **Read both, write new.** `Volumes` reads `workloads.*.volumes.*` and falls back to the
-   legacy keys and blob sub-keys; everything writes `workloads.*.volumes.*` only. Ship, run the dry run on a copy of production data,
-   run the migration, compare values.
-2. **Drop the fallback and the legacy keys.** A follow-up release removes the fallback reads
-   and runs a second data migration that deletes the legacy keys.
-
-The core is `0.x` and the README says breaking changes are expected, but the second step is
-still a separate release so a bad first step can be reverted without data loss.
-
-### Update drift
-
-`ReleaseAspect::fingerprint()` has to include `workloads` (and drop the `override.pvc` exclusion
-once `discovered` is separate). Changing a fingerprint makes every instance look out of date,
-so the same release adds a re-stamp migration, as
-`2026_11_17_000000_restamp_fingerprints_for_version_images` did, which recomputes and stores
-the new fingerprint for instances that were up to date. Without this, changing a claim in the
-new form would not show the app as needing an update.
-
-#233 changed this aspect (`deploymentSettings()` and `chartRepoSecretId()` replace the version's
-raw settings and repo login, which now come from the chart), and added
-`organization_update_states`, the organization-level counterpart of the per-app state. The
-fingerprint change goes in the same `instance` block as before and does not touch the chart
-inputs. The re-stamp has to cover what `BaselineUpdateState` covers today; check whether any
-organization-level aspect fingerprints instance settings before assuming the re-stamp only
-touches per-app rows.
+`snapshot` and `verify` use the real render, so they check the whole chain and not the migration's
+own idea of it. A difference is a stop. The Slice 0 tests do the same for the shapes a test can build.
 
 ## Build order
 
-Each slice is its own PR, based on the one before, with tests, and none needs a cluster.
+1. **The store.** `AppProfile::$volumes` and its default, `Volumes`, `Volume` (`enabled()`, `size()`,
+   `storageClass()`, `accessMode()`, `claim()`), `assign()` / `restore()` over `SettingsSnapshot`, and
+   `VolumeRules`. No chart uses it yet.
+2. **The migration and the two commands.** With tests for every row above, and for the chart a
+   catalog app runs.
+3. **The charts switch.** Nextcloud, WordPress, CiviCRM, the catalog chart and the job charts read
+   `$volume->…()`; `appStorage()` is rewritten on the store; the profiles declare `$volumes` and lose their
+   `persistence-*` configurations. **Slices 2 and 3 ship in one release**, since the code stops reading the
+   old places in the same release that fills the new ones.
+4. **Replace `StorageHandover`.** The move, `AwaitVolume`, `SwitchServer` and the form use `Volumes`; a
+   handover for each volume the app has; the old class and `storageHandover()` go.
+5. **The forms.** A Volumes card on the plan page and a Volumes panel on the instance page, both built
+   from the profile's `$volumes`, in place of `persistence-*` configurations and the JSON textarea for
+   volumes.
+6. **The generic chart.** Its volumes are a list the plan defines (`persistence-N-name`, `mountPath`, ...),
+   which does not fit a profile's fixed `$volumes`. It keeps its array configurations for the list, reads each
+   volume's claim, class, mode and size from `volumes.<item name>`, and has its own migration.
+7. **Cleanup.** A later release deletes the old keys, and `ReleaseAspect` stops excluding `override.pvc`.
 
-**Slice 0 - characterization tests (no behaviour change). Done**, in
-`tests/Feature/Applications/ChartVolumeValuesTest.php` (what each chart gives its volumes),
-`ChartClaimLookupTest.php` (which claim a job mounts, and what the lookup writes back) and
-`ChartVolumeLayoutPerChartTest.php` (one app on two charts), with `tests/Support/Applications/VolumeFixtures.php`
-building the instances through `profileFor()`. They use the `db` account manager, so they run
-without an LDAP server. Each was checked by breaking the code it pins and seeing it fail. Golden tests of the Helm values
-for Nextcloud (with and without Redis persistence turned on), WordPress and CiviCRM (with and
-without the MariaDB subchart's persistence on), Generic (one and several volumes) and a
-HelmForge chart, with and without an existing claim, in each state the migration will see.
-Include **a registered app with an added catalog chart** (the setup in
-`tests/Feature/Applications/MultipleChartsTest.php`: the demo app plus a `gitea` chart),
-because the same app then has two layouts and the tests must show each instance gets its own
-chart's.
-They are the safety net for every later slice. Also a test that pins how `override.pvc.name`
-is written back by `JobChart`, including the "first PVC found" case with two claims.
+The release fingerprint (`ReleaseAspect`) includes `volumes` from slice 3, with a re-stamp migration as
+`restamp_fingerprints_for_version_images` did, so a changed claim shows the app as out of date.
 
-**Slice 1 - the volume store.** `Volume`, `Volumes` (workload-aware; read both, write new),
-`SettingsSnapshot`, `VolumeRules`. Unit tests, including the fallback order, a two-workload
-chart, size policies (`quota` vs `fixed`) and `assign()` / `restore()` round-trips over
-several volumes (port the cases from `StorageHandoverTest`).
+## Decisions I made, which you can overrule
 
-**Slice 2 - the chart method and the declarations.** `HelmChart::volumes()` /
-`volumeValues()`, the default map, claim modes, `defaultClaimName()`. Convert the five charts
-one commit each, with their secondary volumes (Redis, MariaDB) declared; the slice-0 golden
-tests must stay green with no edits. Convert the job charts' claim lookup to
-`Volumes::claimName()`. `HelmForgeChart::setPersistence()` moves into the base class.
+- **A flat `volumes.<name>`**, not `workloads.<workload>.volumes.<name>`. Per-workload resources or replicas
+  are not planned; if they are, they get their own key then.
+- **No `discovered` claim.** A job that needs the claim uses the chosen one, else asks the cluster, and does
+  not write what it finds. That removes a write from a release and the fingerprint exception for it, and means
+  a name found on the cluster can never be given back to the chart as a claim that exists. It costs a cluster
+  call per job. (The lookup still takes the first claim the release has, whichever workload it is for; a
+  proper fix needs each chart's own claim name.)
+- **One access mode, a string**, in the settings; the chart makes a list where its chart takes one.
+- **A volume either takes a claim or does not** (`claim => false`). Whether a StatefulSet adopts a claim
+  restored under its own name is not verified, so it is not offered.
+- **The generic chart goes last**, because its volume list is plan data.
 
-**Slice 2b - catalog volumes.** `ChartConventionDetector` records every volume it finds,
-the stored convention gains `volumes` next to `persistence` (on the application for a default
-chart, on the `app_charts` row for an added one), `HelmForgeChart` reads `volumes` through its
-`catalog()` and falls back to `persistence`, and `catalog:sync --report` lists shapes it left
-out. Tests in `tests/Unit/Catalog/ChartConventionDetectorTest.php` for flat, multi-volume and
-subchart layouts, and in `tests/Feature/Catalog/` for a chart attached to a registered app.
+## The quirks Slice 0 pins, and what each does here
 
-**Slice 3 - replace StorageHandover.** `ApplicationWebMove`, `AwaitVolume`, `SwitchServer`,
-`Applications@move_web` and the move form use `Volumes` / `VolumeRules`, with a handover per
-volume and the blocker for a data-holding volume that cannot move. Delete
-`StorageHandover`, `AppProfile::storageHandover()` and the five overrides; move
-`StorageHandoverTest` and the `WebMoveTest` / `ApplicationWebMoveTest` setup onto the new
-classes. Update `docs/server-transitions-plan.md` ("Persistent volume handover") to point
-here.
+Each stays, or changes on purpose in the slice that changes it, naming the test.
 
-**Slice 4 - data migration and fingerprint.** Migration, artisan command with `--dry-run`,
-the `ReleaseAspect` change and the re-stamp migration. Test with fixtures of every legacy
-shape in the table above, including the ambiguous `override.pvc.name` cases.
+- Nextcloud gives the chart `existingClaim => null`, WordPress and CiviCRM `''`. Kept, as a line in each chart.
+- CiviCRM stores one access mode as a string and its chart wraps it in a list; WordPress stores a list.
+  Becomes one string in the settings, wrapped by each chart that needs a list.
+- The catalog chart is given only what it has a key for, and never an access mode. Kept, in `HelmForgeChart`.
+- A claim a job found is no longer given to the next release (changed on purpose, with the `discovered` decision).
 
-**Slice 5 - other standard value groups.** `resourcesValues()`, `ingressValues()`,
-`imageValues()`, `replicaValues()`, one PR each, golden-test-first. Moves the
-"ingress off when disabled or in maintenance" rule to one place.
+## Out of scope
 
-**Slice 6 - schema and registry.** Extend definitions with `group` / `label` / `help` /
-`visible_if`; `StandardSettings`; `InstanceSettings` registry; `InstanceSettingsSchema`
-read model; the merge-and-lock save. Backend only, with tests. No UI change.
-
-**Slice 7 - the form.** `SettingsForm.vue` and field components, the volume panel, the
-read-only Advanced panel, source badges, and the raw JSON editor as the last tab with a
-diff and confirmation. Feature tests for the controller (validation errors, a concurrent
-system-key write surviving a save). Browser test for the happy path.
-
-**Slice 8 - drop the fallback.** Remove the legacy reads, run the cleanup migration, delete
-the frozen map's runtime users. Remove the dead `persistence-existingClaim` configurations
-if the check in "Where we are" holds.
-
-Slices 1-4 are the volume goal. Slices 6-7 are the UI goal and only depend on slice 1 (for
-the volume panel), so they can start in parallel once slice 1 is in.
-
-## Risks
-
-| Risk | Mitigation |
-|---|---|
-| A migrated instance renders different Helm values and a release changes or loses data | Slice 0 golden tests; per-instance old-vs-new values check inside the migration, which aborts that row; `--dry-run`; fallback reads kept for one release |
-| `override.pvc.name` is a discovered cache for some apps, so the migrated `claim` is wrong | Reported by the dry run; migrated as today's behaviour first; verify on a cluster before deciding to flip them to `discovered` |
-| Fingerprint change marks every app out of date and triggers auto-updates | Re-stamp migration in the same release; check `AutoUpdates` / `UpdatePolicy` behaviour in the test for it |
-| The form overwrites system keys | Merge-and-lock save; system keys are read-only in the form and the registry |
-| Plugins override `storageHandover()` or read `existing_claim` / `override.pvc.name` | It is a public extension point (`AppProfile`, plugins use `CoreVersion`). Open question below |
-| Plan-level `persistence-accessModes` renamed while plans are being edited | Done in the same migration; the profile accepts both names on read in step 1 |
-| A secondary volume (Redis, MariaDB) is enabled on an instance and its data is not part of a move | Blocker on the move until the admin accepts starting it empty; the dry run lists instances that have one enabled |
-| A StatefulSet volume cannot take a single claim name (several replicas, or a chart that only takes one for the primary) | `claim_mode` per volume; `by_name` or `none` instead of `existing_claim`; the form says why. Whether a StatefulSet adopts a pre-created claim of the template's name is confirmed on a cluster before `by_name` is offered |
-| Workload and volume names become settings keys, so a chart that renames one orphans the stored values | Names are fixed in the chart class and pinned by a test; renaming one needs a migration |
-| The migration or a form reads a layout from the application, so an instance on an added chart gets another chart's keys | Everything resolves through `profileFor()` / the chart row; a Slice 0 test with one app on two charts; the migration is keyed on chart identity |
-| A chart's layout changes between its versions, but one convention is stored for the chart (detected from the newest version) | Known limit of the catalog today. Record the convention's chart version, re-detect on sync, and have the version test run fail when a version's values lack a declared key |
-| An instance is moved to a plan on another chart and its secondary-volume settings no longer match | Values for undeclared workloads are ignored, not deleted; the primary volume's settings carry over. Whether the move is allowed, blocked or migrated is planned separately (see Decided) |
-| The catalog detector misreads a subchart's layout and writes to a key the chart ignores (Helm drops unknown keys silently) | Only recognised layouts are recorded; unknown ones are reported, not guessed; a re-sync shows the diff of the stored convention |
+Resources, ingress, image and replicas are the same shape (a profile array, plan and instance settings by
+the same name, a chart that spells its keys) and can follow once this works. A volume backup driver,
+volume expansion beyond the quota's growth, moving an instance to a plan on another chart (a separate plan),
+and an organization-facing settings page.
 
 ## Open questions
 
-1. **Namespace**: `workloads.<workload>.volumes.<volume>` at the top level (recommended; it
-   leaves room for per-workload resources, replicas and images), or under `configurations.*`
-   next to the plan-level `persistence-*` settings? The second keeps one namespace but
-   mixes the plan's defaults with the instance's chosen claim.
-2. **Plugins**: keep `AppProfile::storageHandover()` as a deprecated shim for one minor
-   version (adapting a legacy map to the new store), or remove it with the release note,
-   given `0.x` minors may break?
-3. **Several volumes in a move**: the plan asks for a handover per data-holding volume, and
-   blocks the move when one cannot be handed over. Is blocking right, or should it warn and
-   let the admin carry on with an empty secondary volume (Redis is a cache; MariaDB is not)?
-   A per-volume `required` flag would let the chart decide.
-4. **Secondary volumes and the quota**: they are `fixed` size and outside `storage_quota`
-   and billing in this plan. Should any count towards what the customer is charged for, and
-   should the plan be able to set their size?
-5. **System keys**: leave them where they are and classify them in the registry
-   (recommended), or move them under `system.*` as well? Moving them touches SSO, storage,
-   availability and maintenance code, and the SSO move plan stores ids that read these paths.
-6. **Who sees the form**: the admin page only (where the textarea is today), or also an
-   organization-facing settings page? The schema's `owner` / visibility would need an
-   audience field for the second.
-7. **Rancher**: its values differ from Kubernetes (see the web move notes), and #233 made
-   HelmForge charts deployable on Rancher (`HelmForgeProfile` is now `rancher`-compatible, with
-   the repository given by name). Do the chart methods need a per-driver map, or is one map
-   right for both because the driver only changes how the values are applied?
-## Decided
-
-- **Standard groups on catalog charts**: the settings form for an instance on a catalog chart
-  shows **only what the catalog detected** for that chart (the keys its stored convention
-  has). `StandardSettings` groups are offered for a chart only where the chart has the keys;
-  a missing key means no field, not a field that is ignored. The same rule applies to a
-  plan's configuration screen on a catalog chart (`profileFor($plan)`), and the accessModes
-  rename only touches plans on registered profiles.
-- **Moving an instance to a plan on another chart** is out of scope here and is planned in a
-  separate session (migrating, or blocking, the move). This plan only fixes what it must not
-  break meanwhile: values stored for a workload the current chart does not declare are
-  ignored and kept, never deleted, and the primary volume's settings stay valid because
-  `app/data` means the same on every chart.
-
-## Not covered
-
-A volume backup driver, volume expansion changes (`expand_storage` stays as it is; a larger
-quota still grows only the primary volume, through the ratchet and a re-render), moving the
-system keys, per-workload resources, replicas and images beyond reserving the `workloads.*`
-key for them, an organization-facing settings UI, and what happens when an instance is moved
-to a plan on another chart (a separate plan).
+1. **Release unit.** Slices 2 and 3 ship together and there is no fallback, so an instance the migration
+   missed loses its claim and its chart would make a new, empty volume. The snapshot and verify commands are
+   the guard. Is a run against a copy of production data before the release acceptable, or do you want the
+   old keys read for one release as well?
+2. **Plan-level `claim`.** Not allowed here (a claim belongs to one instance). Confirm.
+3. **Catalog charts' volumes.** One volume (`data`), from what the detector found for the primary. Several
+   detected volumes would each need a path in `HelmForgeChart`; not planned unless a catalog chart needs it.
+4. **Redis's claim key.** `master.persistence.existingClaim` is not in Nextcloud's `redis` configuration, only
+   MariaDB's is. Check it against the subchart before the move form offers a claim for Redis.
