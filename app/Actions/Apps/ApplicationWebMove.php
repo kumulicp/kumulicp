@@ -36,7 +36,8 @@ use Illuminate\Support\Arr;
  *  7. check the release is running on the new server
  *  8. run the app's settings job against it (not before: it runs the app's own commands, which need
  *     the release to be installed)
- *  9. refresh the DNS records the app's domains were given the old server's address in
+ *  9. refresh the DNS records the app's domains were given the old server's address in, and those of the
+ *     apps that run in its release (the apps shared from a shared app, an addon)
  *
  * The servers the app uses are changed here only when the new app server can't reach them, or the
  * administrator wants others, and then only as part of the move: the old release is never updated
@@ -90,6 +91,14 @@ class ApplicationWebMove extends ApplicationServerMove
 
         $this->addCustomValue(['storage' => $storage]);
 
+        // The apps that run in its release (the apps shared from a shared app, an addon), as they are when the
+        // move is asked for: their domains are refreshed after the move too
+        $children = $app_instance->children()->notDeactivated()->pluck('id')->all();
+
+        if ($children) {
+            $this->addCustomValue(['child_ids' => $children]);
+        }
+
         if ($database_server) {
             $this->addCustomValue(['database_target_server_id' => $database_server->id]);
         }
@@ -102,7 +111,7 @@ class ApplicationWebMove extends ApplicationServerMove
     // Starts over where it was going, with what the app was to be given
     public static function reset(Task $task): void
     {
-        $task->custom_values = Arr::only($task->customValues(), ['target_server_id', 'storage', 'database_target_server_id', 'sso_target_server_id']);
+        $task->custom_values = Arr::only($task->customValues(), ['target_server_id', 'storage', 'database_target_server_id', 'sso_target_server_id', 'child_ids']);
 
         static::begin($task);
     }

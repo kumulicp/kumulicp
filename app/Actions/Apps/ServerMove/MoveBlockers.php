@@ -3,9 +3,12 @@
 namespace App\Actions\Apps\ServerMove;
 
 use App\AppInstance;
+use App\Enums\TaskStatus;
 use App\Organization;
 use App\Server;
 use App\Support\ServerReach;
+use App\Support\SharedAppContext;
+use App\Task;
 use InvalidArgumentException;
 
 /**
@@ -35,6 +38,18 @@ class MoveBlockers
     public const HAS_CHILDREN = 'has_children';
 
     public const IS_CHILD = 'is_child';
+
+    // An addon (a CiviCRM in a WordPress) runs in its parent's release and signs in as its parent does
+    public const ADDON_CHILD = 'addon_child';
+
+    // A shared app that nothing is deployed for: still to be set up, or run outside Kumuli CP
+    public const SHARED_NOT_ACTIVE = 'shared_not_active';
+
+    // Something is being done to a child of the app, which the move would run its release under
+    public const CHILD_TASKS_OPEN = 'child_tasks_open';
+
+    // A child with a database of its own (ERPNext, a CiviCRM) is not looked after by a web move yet
+    public const CHILD_DATABASES_UNSUPPORTED = 'child_databases_unsupported';
 
     public const NO_SSO_SUPPORT = 'no_sso_support';
 
@@ -125,10 +140,15 @@ class MoveBlockers
             $reasons[] = self::APP_NOT_ACTIVE;
         }
 
+        // A shared app that is not deployed by Kumuli CP has nothing to move
+        if ($app->isSharedApp() && SharedAppContext::state($app) !== SharedAppContext::ACTIVE) {
+            $reasons[] = self::SHARED_NOT_ACTIVE;
+        }
+
         // A web move takes the release, and a shared app's children are part of it (their
         // own release is the parent's). Moving a child alone would move nothing.
         if ($type === 'web' && $app->children()->notDeactivated()->exists()) {
-            $reasons[] = self::HAS_CHILDREN;
+            $reasons = [...$reasons, ...self::childrenReasons($app)];
         }
 
         // An app that can't sign people in through an SSO server has nothing to move
@@ -139,6 +159,45 @@ class MoveBlockers
         // The same child has no sign-in of its own either: it signs in as its parent does
         if (in_array($type, ['web', 'sso'], true) && ! $app->usesOwnResources()) {
             $reasons[] = self::IS_CHILD;
+        }
+
+        // An addon has a database of its own, but is installed in its parent's release and signs in through
+        // its parent's server, so those two are moved with the parent
+        if (in_array($type, ['web', 'sso'], true) && $app->isAddonChild()) {
+            $reasons[] = self::ADDON_CHILD;
+        }
+
+        return $reasons;
+    }
+
+    /**
+     * What stands in the way of a web move for the children of the app. Only the children that are
+     * part of its release go with it: the apps shared from a shared app, and addons (a CiviCRM in a
+     * WordPress). Any other app's children, which nothing here knows how to carry, still stop it.
+     *
+     * A child with a database of its own is not yet looked after by the move (docs/shared-app-move-plan.md,
+     * phase 3), and neither is the database or sign-in server it would be moved to, so it is refused
+     * rather than moved with a database pointing at the old place.
+     *
+     * @return array<int, string>
+     */
+    private static function childrenReasons(AppInstance $app): array
+    {
+        $children = $app->children()->notDeactivated()->with('plan')->get();
+
+        if ($children->contains(fn (AppInstance $child) => ! $child->sharedPlanParent() && ! $child->isAddonChild())) {
+            return [self::HAS_CHILDREN];
+        }
+
+        $reasons = [];
+
+        if ($children->contains(fn (AppInstance $child) => $child->usesOwnResources() && ($child->databasename || $child->database_server_id))) {
+            $reasons[] = self::CHILD_DATABASES_UNSUPPORTED;
+        }
+
+        // Their updates and jobs are run on the release the move is stopping and starting again
+        if (Task::whereIn('app_instance_id', $children->modelKeys())->whereIn('status', TaskStatus::openValues())->exists()) {
+            $reasons[] = self::CHILD_TASKS_OPEN;
         }
 
         return $reasons;
