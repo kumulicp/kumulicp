@@ -646,13 +646,33 @@ Changes on purpose, each with its Slice 0 test updated and the reason in it:
 - **Slice 4 must leave `discovered` out of the release fingerprint**: a release writes it, and `ReleaseAspect`
   excluded `override.pvc` for the same reason.
 
-**Slice 2c - secondary volumes.** Redis and MariaDB declared for Nextcloud and WordPress, as `fixed` volumes
-the instance turns on. Not done in slice 2 because it needs the blob read as legacy first: the
-configurations `redis` and `mariadb` hold their volume settings today (`master.persistence.*`,
-`primary.persistence.*`), and the chart takes them as they are. A declared volume would write over them,
-so `LegacyVolumeKeys` has to read those keys for the volume's workload and only what is then set
-differently written, which is what makes an unmigrated instance render the same. The golden tests for the
-blobs (`ChartVolumeValuesTest`) must stay green.
+**Slice 2c - secondary volumes. Done**, in `tests/Feature/Applications/ChartSecondaryVolumeTest.php`. Nextcloud
+declares `redis-master/data`, `redis-replica/data` and `mariadb/data`, WordPress `mariadb/data`; CiviCRM
+declares none, since its `mariadb` configuration has no volume settings and its chart never reads its `redis`.
+Each is a volume of its own workload with a size of its own (`fixed`), off until it is turned on
+(`optional`). What it settled:
+
+- **A volume can name the configuration its settings are in** (`VolumeSpec::$blob`, `redis.master.persistence`).
+  `LegacyVolumeKeys` reads `enabled`, `size`, `storageClass`, `accessMode` and `existingClaim` from there,
+  and only what comes back as the same value when it is written: a size that is not a whole number of Gi
+  (`500Mi`, `1.5Gi`), a non-boolean `enabled`, or a non-string class or claim is not read, so the
+  configuration's own stays in the chart's values. A configuration therefore reaches the chart exactly as
+  before (`ChartVolumeValuesTest` pins it), and only what the instance keeps for the volume in its own
+  place changes it.
+- **The chart is only given what is set** (`only_set`), and a volume with a size of its own that has none
+  is not given one: it has no quota to follow, and the chart's default stands. `HelmChart::workloadVolume()`
+  declares one.
+- **`Volume::$enabled` is null when nothing says**, and `Volume::on()` is what that means: off for a volume
+  the app can do without, on for the one it can't. Slice 1 defaulted an optional volume to false, which
+  would have written `enabled: false` into a configuration that had no `enabled`.
+- **Order, for these volumes**: the instance's own place, then the configuration (the instance's own, which
+  activation filled with the profile's), then the plan's `persistence-<workload>-<field>`, then the
+  profile's. So a plan value only applies where the configuration has nothing, which is how it was: a plan
+  could not set them before.
+- **Claim modes**: the master and MariaDB take a claim by name (`existingClaim`); the replicas are a
+  StatefulSet and make their own (`by_name`). **Not checked against the subcharts**: MariaDB's
+  `existingClaim` is in Nextcloud's own configuration, but Redis's `master.persistence.existingClaim` is
+  not, so confirm it against the chart's values before the move form offers a claim for it (slice 3).
 
 **Slice 2b - catalog volumes.** `ChartConventionDetector` records every volume it finds,
 the stored convention gains `volumes` next to `persistence` (on the application for a default
