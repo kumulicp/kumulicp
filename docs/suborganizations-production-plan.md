@@ -325,7 +325,9 @@ via an unlabeled `organization` select on the review page. It only appears when 
 
 14. Every list page gets an organization filter, and one universal filter in the top bar applies to all pages. When it is set, the page filters are hidden. Its modal works like the organization modal on `/discover/<app>` (3.4).
 
+15. Each new suborg starts with the activation setting off. The parent does not get a default for new suborgs in the first release.
+16. The universal organization filter lasts for the session and is not remembered per user.
+17. The subscription and billing pages follow the universal filter by showing the selected organization's section, and keep the parent's invoice total visible.
+
 ### Still open
-15. Should the parent also get a default for new suborgs? (Not needed for the first release; each suborg starts with the setting off.)
-16. Should the universal filter last only for the session (the plan's assumption), or be remembered per user?
-17. Should the subscription and billing pages follow the universal filter? The plan assumes they show the selected organization's section but keep the parent's invoice total visible.
+None at the moment.
