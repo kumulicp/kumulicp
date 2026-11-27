@@ -204,6 +204,27 @@ abstract class HelmChart extends Chart
         ]);
     }
 
+    /**
+     * The volume of a workload next to the app (a database, a cache) whose chart, a subchart, takes its
+     * settings inside a configuration the instance keeps (`redis`, `mariadb`). It has a size of its own,
+     * and is only given what is set, so what the configuration says stays as it is.
+     *
+     * @param  string  $values_path  where the subchart keeps it in the chart's values, which is where it is in the configuration
+     * @param  bool  $claim  whether the subchart takes the name of a claim that exists; a StatefulSet's replicas make their own
+     */
+    protected function workloadVolume(string $workload, string $values_path, bool $claim = true, bool $access_mode = false): VolumeSpec
+    {
+        return new VolumeSpec($workload, 'data', claim_mode: $claim ? 'existing_claim' : 'by_name', optional: true, map: array_filter([
+            'path' => $values_path,
+            'enabled' => 'enabled',
+            'size' => 'size',
+            'storage_class' => 'storageClass',
+            'access_mode' => $access_mode ? 'accessMode' : null,
+            'claim' => $claim ? 'existingClaim' : null,
+            'only_set' => true,
+        ]), blob: $values_path);
+    }
+
     protected function volumeStore(): Volumes
     {
         // Where this chart's instances kept their volume before, which is the chart's to say
@@ -240,7 +261,8 @@ abstract class HelmChart extends Chart
 
         $fields = [
             'enabled' => $volume->enabled,
-            'size' => $this->volumeSize($spec, $store).'Gi',
+            // A volume with a size of its own and nothing set is left to the chart's: it has no quota to follow
+            'size' => $only_set && $spec->size_policy === 'fixed' && $volume->size === null ? null : $this->volumeSize($spec, $store).'Gi',
             'storage_class' => $volume->storage_class,
             'access_mode' => ($map['access_mode_as'] ?? null) === 'list' ? ($volume->access_modes ?: null) : $volume->access_mode,
             // Said as blank, in the way the chart takes it, unless the chart is only given what is set

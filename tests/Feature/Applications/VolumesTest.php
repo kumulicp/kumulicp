@@ -214,10 +214,13 @@ describe('the volumes of other workloads', function () {
     it('are off, and their chart\'s to size, until they are turned on', function () {
         $volumes = Volumes::for(Fixtures::instance('nextcloud'), volumesOfThreeWorkloads());
 
+        // Nothing says whether they are on, so they are left to the chart; the app can do without them, so they are off.
         // No size is kept for them; the size they are made with is the chart's default
-        expect($volumes->get('redis-master', 'data'))->enabled->toBeFalse()->size->toBeNull()->claim->toBeNull()
+        expect($volumes->get('redis-master', 'data'))->enabled->toBeNull()->size->toBeNull()->claim->toBeNull()
+            ->and($volumes->get('redis-master', 'data')->on())->toBeFalse()
             ->and($volumes->size('redis-master', 'data'))->toBe(2)
-            ->and($volumes->get('mariadb', 'data'))->enabled->toBeFalse()->size->toBeNull()
+            ->and($volumes->get('mariadb', 'data'))->enabled->toBeNull()->size->toBeNull()
+            ->and($volumes->get('mariadb', 'data')->on())->toBeFalse()
             ->and($volumes->size('mariadb', 'data'))->toBe(8);
     });
 
@@ -232,7 +235,7 @@ describe('the volumes of other workloads', function () {
         expect($volumes->get('redis-master', 'data'))->enabled->toBeTrue()->size->toBe(3)->storage_class->toBe('fast')->claim->toBeNull()
             ->and($volumes->get('mariadb', 'data'))->enabled->toBeTrue()->claim->toBe('db-data')->size->toBeNull()
             ->and($volumes->size('mariadb', 'data'))->toBe(8)
-            ->and($volumes->get('redis-replica', 'data'))->enabled->toBeFalse()
+            ->and($volumes->get('redis-replica', 'data')->on())->toBeFalse()
             ->and($volumes->primary())->claim->toBeNull();
     });
 

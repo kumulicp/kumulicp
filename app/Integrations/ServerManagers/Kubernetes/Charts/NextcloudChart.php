@@ -182,15 +182,23 @@ class NextcloudChart extends HelmChart
     }
 
     /**
-     * Nextcloud's chart takes one access mode, and a claim that is not there as a null.
+     * Nextcloud's chart takes one access mode, and a claim that is not there as a null. Its Redis
+     * and MariaDB each have a volume of their own, which the instance's `redis` and `mariadb`
+     * configurations hold until it keeps them for the volume.
      */
     public function volumes(): array
     {
-        return [$this->persistenceVolume([
-            'access_mode' => 'accessMode',
-            'access_mode_as' => null,
-            'blank_claim' => null,
-        ])];
+        return [
+            $this->persistenceVolume([
+                'access_mode' => 'accessMode',
+                'access_mode_as' => null,
+                'blank_claim' => null,
+            ]),
+            // The master takes a claim by name; the replicas are a StatefulSet, which makes theirs
+            $this->workloadVolume('redis-master', 'redis.master.persistence'),
+            $this->workloadVolume('redis-replica', 'redis.replica.persistence', claim: false),
+            $this->workloadVolume('mariadb', 'mariadb.primary.persistence', access_mode: true),
+        ];
     }
 
     // Imaginary's image is one of the version's own (see HelmChart::applyImageOverrides()), which

@@ -114,6 +114,9 @@ class WordpressChart extends HelmChart
 
     public function volumes(): array
     {
-        return [$this->persistenceVolume()];
+        return [
+            $this->persistenceVolume(),
+            $this->workloadVolume('mariadb', 'mariadb.primary.persistence'),
+        ];
     }
 }

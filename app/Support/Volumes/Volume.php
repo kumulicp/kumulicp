@@ -6,7 +6,7 @@ namespace App\Support\Volumes;
  * One volume of an app instance as it is now: what the chart declares for it (the spec) and what
  * the instance, its plan or the profile give it. Made by Volumes; it has no way to change itself.
  *
- * A null is not known: left to the chart's own default. The storage class and the access mode are
+ * A null is not known: left to the chart's own default. That includes `enabled`: see on(). The storage class and the access mode are
  * as they are kept, so '' (the chart's default, said out loud) is not null.
  */
 final class Volume
@@ -24,6 +24,15 @@ final class Volume
         /** Every access mode, for a chart that takes a list; `access_mode` is the first of them */
         public readonly array $access_modes = [],
     ) {}
+
+    /**
+     * Whether the volume is on. Not what `enabled` says when it says nothing: a volume the app can do
+     * without is off until it is turned on, and the one it can't is on.
+     */
+    public function on(): bool
+    {
+        return $this->enabled ?? ! $this->spec->optional;
+    }
 
     public function id(): string
     {

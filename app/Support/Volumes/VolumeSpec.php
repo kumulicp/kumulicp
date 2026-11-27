@@ -31,6 +31,9 @@ final class VolumeSpec
      */
     public const MAP_KEYS = ['path', 'enabled', 'size', 'storage_class', 'access_mode', 'access_mode_as', 'claim', 'blank_claim', 'only_set'];
 
+    // `configuration.path.in.it`
+    private const BLOB = '/^[A-Za-z][A-Za-z0-9_-]*\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/';
+
     // Names are used as settings keys, so no dots
     private const NAME = '/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/';
 
@@ -44,6 +47,12 @@ final class VolumeSpec
         public readonly bool $optional = false,
         /** Where the chart keeps the volume in its values; none for a volume the chart writes itself */
         public readonly array $map = [],
+        /**
+         * For a volume whose settings are part of a configuration the chart takes as it is (Redis's, MariaDB's):
+         * the configuration and where in it, `redis.master.persistence`. They are read from there until the
+         * instance has them in its own place.
+         */
+        public readonly ?string $blob = null,
     ) {
         foreach (['workload' => $workload, 'name' => $name] as $part => $value) {
             if (! preg_match(self::NAME, $value)) {
@@ -65,6 +74,10 @@ final class VolumeSpec
 
         if ($unknown = array_diff(array_keys($map), self::MAP_KEYS)) {
             throw new InvalidArgumentException('A volume map has no '.implode(', ', $unknown));
+        }
+
+        if ($blob !== null && ! preg_match(self::BLOB, $blob)) {
+            throw new InvalidArgumentException("A volume's blob is a configuration and a path in it: '{$blob}'");
         }
 
         if ($primary && $optional) {

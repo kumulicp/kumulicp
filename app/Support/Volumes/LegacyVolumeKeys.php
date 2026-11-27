@@ -40,6 +40,11 @@ final class LegacyVolumeKeys
      */
     public static function read(AppInstance $app_instance, VolumeSpec $spec, ?string $layout = null): array
     {
+        // Part of a configuration the chart takes as it is
+        if ($spec->blob !== null) {
+            return self::blob($app_instance, $spec);
+        }
+
         $layout ??= self::layout($app_instance);
 
         // The generic chart keeps every volume of the app as an item of its own; for the rest only
@@ -97,6 +102,52 @@ final class LegacyVolumeKeys
             is_a($chart, GenericChart::class, true) => 'generic',
             default => null,
         };
+    }
+
+    /**
+     * A volume of another workload, whose settings are in the configuration the chart takes as it is
+     * (`redis`, `mariadb`): `<path>.enabled`, `.size`, `.storageClass`, `.accessMode`, `.existingClaim`.
+     *
+     * Only what is there, and only what comes back as the same value when it is written: a size of
+     * `500Mi` or `1.5Gi` is not a whole number of Gi, so it is not said, and the configuration's own
+     * stays in the chart's values.
+     *
+     * @return array<string, mixed>
+     */
+    private static function blob(AppInstance $app_instance, VolumeSpec $spec): array
+    {
+        [$configuration, $path] = explode('.', $spec->blob, 2);
+
+        $blob = Application::instance($app_instance)->configuration($configuration);
+
+        if (! is_array($blob)) {
+            return [];
+        }
+
+        $legacy = [];
+
+        foreach (['enabled' => 'enabled', 'size' => 'size', 'storageClass' => 'storage_class', 'accessMode' => 'access_mode', 'existingClaim' => 'claim'] as $key => $field) {
+            if (! Arr::has($blob, "{$path}.{$key}")) {
+                continue;
+            }
+
+            $value = Arr::get($blob, "{$path}.{$key}");
+
+            $legacy[$field] = match ($field) {
+                'enabled' => is_bool($value) ? $value : null,
+                'size' => is_string($value) && preg_match('/^([1-9]\d*)Gi$/', $value, $match) ? (int) $match[1] : null,
+                'claim' => is_string($value) ? self::text($value) : null,
+                default => is_string($value) ? $value : null,
+            };
+
+            // What can't be said the same way is left to the chart's values as they are. A blank claim can:
+            // it is known to be none
+            if ($legacy[$field] === null && ! ($field === 'claim' && is_string($value))) {
+                unset($legacy[$field]);
+            }
+        }
+
+        return $legacy;
     }
 
     /**

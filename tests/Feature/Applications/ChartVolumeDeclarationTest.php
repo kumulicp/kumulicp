@@ -153,14 +153,30 @@ describe('what a chart declares', function () {
             ->and($undeclared->volumeValues())->toBe([]);
     });
 
-    it('is the one volume of each chart that holds the files, sized by the quota', function (string $slug) {
+    it('is the volume that holds the files first, sized by the quota, then those of the workloads next to it', function (string $slug, array $ids) {
         $specs = Fixtures::chart(Fixtures::instance($slug))->volumes();
 
-        expect($specs)->toHaveCount(1)
-            ->and($specs[0])->toBeInstanceOf(VolumeSpec::class)
-            ->and($specs[0]->id())->toBe('app/data')
-            ->and($specs[0])->primary->toBeTrue()->size_policy->toBe('quota');
-    })->with(['nextcloud', 'wordpress', 'civicrm-standalone']);
+        expect(array_map(fn (VolumeSpec $spec) => $spec->id(), $specs))->toBe($ids)
+            ->and($specs[0])->primary->toBeTrue()->size_policy->toBe('quota')
+            // The others have a size of their own, and are off until they are turned on
+            ->and(array_unique(array_map(fn (VolumeSpec $spec) => [$spec->size_policy, $spec->optional], array_slice($specs, 1)), SORT_REGULAR))
+            ->toBe($ids === ['app/data'] ? [] : [0 => ['fixed', true]]);
+    })->with([
+        'Nextcloud' => ['nextcloud', ['app/data', 'redis-master/data', 'redis-replica/data', 'mariadb/data']],
+        'WordPress' => ['wordpress', ['app/data', 'mariadb/data']],
+        'CiviCRM' => ['civicrm-standalone', ['app/data']],
+    ]);
+
+    it('has Redis\'s replicas made by their StatefulSet, and the others given a claim by name', function () {
+        $modes = collect(Fixtures::chart(Fixtures::instance('nextcloud'))->volumes())->mapWithKeys(fn (VolumeSpec $spec) => [$spec->id() => $spec->claim_mode]);
+
+        expect($modes->all())->toBe([
+            'app/data' => 'existing_claim',
+            'redis-master/data' => 'existing_claim',
+            'redis-replica/data' => 'by_name',
+            'mariadb/data' => 'existing_claim',
+        ]);
+    });
 
     it('is a volume for the catalog chart when it was detected to have one, at the keys it was detected at', function () {
         $chart = Fixtures::chart(Fixtures::catalogInstance(['persistence' => ['enabled' => true, 'storageClass' => '', 'size' => '10Gi', 'existingClaim' => '']]));

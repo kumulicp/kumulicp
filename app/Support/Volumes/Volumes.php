@@ -180,7 +180,7 @@ class Volumes
 
         return new Volume(
             spec: $spec,
-            enabled: $this->read($spec, 'enabled', $legacy, fn () => $this->configured($spec, 'enabled') ?? ($spec->optional ? false : null)),
+            enabled: $this->read($spec, 'enabled', $legacy, fn () => $this->configured($spec, 'enabled')),
             // A size that is blank or 0 is none: the chart is left to say
             size: is_numeric($size) && (int) $size > 0 ? (int) $size : null,
             storage_class: $this->read($spec, 'storage_class', $legacy, fn () => $this->configured($spec, 'storageClass')),
