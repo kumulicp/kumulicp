@@ -37,15 +37,15 @@ describe('Nextcloud', function () {
             'persistence.size' => '2Gi',
             'persistence.storageClass' => '',
             'persistence.accessMode' => 'ReadWriteOnce',
-            // As it is today: the chart reads setting('existing_claim', ''), and the default of
-            // setting() is only used when the instance has no settings at all
+            // Not '': the chart has always been given a null for a claim that is not there
             'persistence.existingClaim' => null,
-            'redis.master.persistence' => ['enabled' => false, 'storageClass' => ''],
-            'redis.replica.persistence' => ['enabled' => false, 'storageClass' => ''],
+            // The size is the subchart's own default, which the volume says out loud
+            'redis.master.persistence' => ['enabled' => false, 'size' => '8Gi', 'storageClass' => ''],
+            'redis.replica.persistence' => ['enabled' => false, 'size' => '8Gi', 'storageClass' => ''],
         ]);
     });
 
-    it('is given a claim that already exists from existing_claim, with the mode and class the instance keeps', function () {
+    it('is given a claim that already exists from existing_claim, with the mode and class the instance keeps, once migrated', function () {
         $app_instance = Fixtures::instance('nextcloud', settings: [
             'existing_claim' => 'restored-data',
             'configurations' => [
@@ -54,7 +54,7 @@ describe('Nextcloud', function () {
             ],
         ]);
 
-        $values = Fixtures::values($app_instance);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
 
         expect(Fixtures::only($values, ['persistence.existingClaim', 'persistence.accessMode', 'persistence.storageClass']))->toBe([
             'persistence.existingClaim' => 'restored-data',
@@ -63,11 +63,14 @@ describe('Nextcloud', function () {
         ]);
     });
 
-    it('does not read the persistence-existingClaim configuration, which the profile declares', function () {
-        // Declared in NextcloudProfile but never read by NextcloudChart: dead configuration
-        $app_instance = Fixtures::instance('nextcloud', settings: ['configurations' => ['persistence-existingClaim' => 'from-configuration']]);
+    it('does not read where the volume was kept before it is migrated', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['existing_claim' => 'restored-data', 'chart_storage' => 50, 'configurations' => ['persistence-storageClass' => 'fast']]);
 
-        expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->not->toBe('from-configuration');
+        expect(Fixtures::only(Fixtures::values($app_instance), ['persistence.existingClaim', 'persistence.size', 'persistence.storageClass']))->toBe([
+            'persistence.existingClaim' => null,
+            'persistence.size' => '2Gi',
+            'persistence.storageClass' => '',
+        ]);
     });
 
     it('takes the volume size from the volume, which only ever grows', function () {
@@ -86,13 +89,13 @@ describe('Nextcloud', function () {
             ->and($new->fresh()->setting('chart_storage'))->toBeNull();
     });
 
-    it('does not read chart_storage, which the migration copies into the volume', function () {
+    it('is the size chart_storage was, once migrated', function () {
         $app_instance = Fixtures::instance('nextcloud', settings: ['chart_storage' => 50]);
 
-        expect(Fixtures::values($app_instance)['persistence']['size'])->toBe('2Gi');
+        expect(Fixtures::values(Fixtures::migrated($app_instance))['persistence']['size'])->toBe('50Gi');
     });
 
-    it('passes the Redis volume settings through as the configuration says', function () {
+    it('passes the Redis volume settings through as the configuration says, once migrated', function () {
         $redis = [
             'enabled' => true,
             'master' => ['persistence' => ['enabled' => true, 'size' => '3Gi', 'storageClass' => 'fast']],
@@ -102,19 +105,35 @@ describe('Nextcloud', function () {
         // Activation keeps the profile's defaults in the instance's settings; this is the instance's own
         $app_instance->updateSetting('configurations.redis', $redis);
 
-        $values = Fixtures::values($app_instance);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
 
-        // Nothing in the blob is a setting of its own: it is the chart's `redis` values as they are
+        // The same values, now said by the volumes: the instance's settings are copied, not changed
         expect($values['redis'])->toBe($redis);
     });
 
-    it('passes the MariaDB volume settings through as the configuration says', function () {
+    it('passes the MariaDB volume settings through as the configuration says, once migrated, without a claim', function () {
         $mariadb = ['enabled' => true, 'primary' => ['persistence' => ['enabled' => true, 'existingClaim' => 'db-data', 'size' => '8Gi', 'accessMode' => 'ReadWriteOnce', 'storageClass' => 'fast']]];
         $app_instance = Fixtures::instance('nextcloud');
         $app_instance->updateSetting('configurations.mariadb', $mariadb);
 
-        // As it is today: Nextcloud has a MariaDB blob with a claim of its own, which no setting of the app reads
-        expect(Fixtures::values($app_instance)['mariadb'])->toBe($mariadb);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
+
+        // Only the volume that holds the files takes a claim; the migration says so, and the chart is given none
+        $mariadb['primary']['persistence']['existingClaim'] = '';
+        expect($values['mariadb'])->toBe($mariadb);
+    });
+
+    it('is given the volumes of Redis and MariaDB the instance keeps for them', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['volumes' => [
+            'redis-master' => ['enabled' => true, 'size' => 5, 'storage_class' => 'fast'],
+            'mariadb' => ['enabled' => true, 'size' => 20],
+        ]]);
+
+        $values = Fixtures::values($app_instance);
+
+        expect($values['redis']['master']['persistence'])->toBe(['enabled' => true, 'size' => '5Gi', 'storageClass' => 'fast'])
+            ->and($values['redis']['replica']['persistence'])->toBe(['enabled' => false, 'size' => '8Gi', 'storageClass' => ''])
+            ->and($values['mariadb']['primary']['persistence'])->toMatchArray(['enabled' => true, 'size' => '20Gi', 'accessMode' => 'ReadWriteOnce']);
     });
 });
 

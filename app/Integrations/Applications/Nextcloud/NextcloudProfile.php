@@ -90,6 +90,17 @@ class NextcloudProfile extends AppProfile
         ],
     ];
 
+    /**
+     * The volume that holds the files, and those of the Redis and the MariaDB next to the app, which are
+     * off until they are turned on. Their sizes are the subcharts' own defaults.
+     */
+    protected $volumes = [
+        'data' => ['label' => 'admin.volumes.data', 'size' => 'quota', 'claim' => true, 'enabled' => false, 'storage_class' => '', 'access_mode' => 'ReadWriteOnce'],
+        'redis-master' => ['label' => 'admin.volumes.redis_master', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => ''],
+        'redis-replica' => ['label' => 'admin.volumes.redis_replica', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => ''],
+        'mariadb' => ['label' => 'admin.volumes.mariadb', 'optional' => true, 'size' => 8, 'enabled' => false, 'storage_class' => '', 'access_mode' => 'ReadWriteOnce'],
+    ];
+
     protected $configurations = [
         'redis' => [
             'name' => 'redis',
@@ -103,16 +114,6 @@ class NextcloudProfile extends AppProfile
                 ],
                 'replica' => [
                     'replicaCount' => 1,
-                    'persistence' => [
-                        'enabled' => false,
-                        'storageClass' => '',
-                    ],
-                ],
-                'master' => [
-                    'persistence' => [
-                        'enabled' => false,
-                        'storageClass' => '',
-                    ],
                 ],
             ],
             'validations' => 'nullable|array',
@@ -123,41 +124,6 @@ class NextcloudProfile extends AppProfile
             'persistent' => true,
             'default' => 1,
             'validations' => 'integer|required',
-        ],
-        'persistence-enabled' => [
-            'name' => 'persistence-enabled',
-            'type' => 'bool',
-            'persistent' => true,
-            'default' => false,
-            'validations' => 'boolean',
-        ],
-        'persistence-storageClass' => [
-            'name' => 'persistence-storageClass',
-            'type' => 'string',
-            'persistent' => true,
-            'validations' => 'nullable',
-            'default' => '',
-        ],
-        'persistence-existingClaim' => [
-            'name' => 'persistence-existingClaim',
-            'type' => 'string',
-            'persistent' => true,
-            'validations' => 'nullable',
-            'default' => '',
-        ],
-        'persistence-accessMode' => [
-            'name' => 'persistence-accessMode',
-            'type' => 'string',
-            'default' => 'ReadWriteOnce',
-            'persistent' => true,
-            'validations' => 'in:ReadWriteOnce,ReadWriteMany|nullable',
-        ],
-        'persistence-numberOfReplicas' => [
-            'name' => 'persistence-numberOfReplicas',
-            'type' => 'int',
-            'default' => 1,
-            'persistent' => false,
-            'validations' => 'nullable|integer',
         ],
         'resources-requests-cpu' => [
             'name' => 'resources-requests-cpu',
@@ -316,15 +282,6 @@ class NextcloudProfile extends AppProfile
                 ],
                 'existingSecret' => '',
                 'architecture' => 'standalone',
-                'primary' => [
-                    'persistence' => [
-                        'enabled' => false,
-                        'existingClaim' => '',
-                        'storageClass' => '',
-                        'accessMode' => 'ReadWriteOnce',
-                        'size' => '8Gi',
-                    ],
-                ],
             ],
         ],
         'rbac-enabled' => [

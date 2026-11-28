@@ -738,7 +738,10 @@
       "massUpgradeConfirm": "Upgrade apps"
     },
     "volumes": {
-      "data": "Data"
+      "data": "Data",
+      "redis_master": "Redis master",
+      "redis_replica": "Redis replica",
+      "mariadb": "MariaDB"
     },
     "apps": {
       "viewInDiscover": "View in Discover",
