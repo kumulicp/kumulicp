@@ -170,6 +170,52 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
       </form>
     </va-collapse>
     <va-list-separator class="my-3" fit />
+    <va-card v-if="volumes.length" id="volumes" class="mt-3 mb-3">
+      <va-card-title>{{ $t('admin.volumes.title') }}</va-card-title>
+      <va-card-content>
+        <div v-for="volume in volumes" :key="volume.name" :id="'volume-' + volume.name" class="mb-4">
+          <h4 class="va-h6">{{ $t(volume.label) }}</h4>
+          <ul class="mb-2">
+            <li>{{ $t('admin.volumes.enabled') }}: {{ volume.effective.enabled ? $t('admin.volumes.on') : $t('admin.volumes.off') }}</li>
+            <template v-if="volume.effective.enabled">
+              <li v-if="volume.follows_quota">{{ $t('admin.volumes.quota_size', { size: volume.effective.size }) }}</li>
+              <li v-else>{{ $t('admin.volumes.size') }}: {{ volume.effective.size }}</li>
+              <li>{{ $t('admin.volumes.storage_class') }}: {{ volume.effective.storage_class || $t('admin.volumes.default') }}</li>
+              <li v-if="volume.effective.access_mode">{{ $t('admin.volumes.access_mode') }}: {{ volume.effective.access_mode }}</li>
+              <li v-if="volume.takes_claim">{{ $t('admin.volumes.claim') }}: {{ volume.effective.claim || $t('admin.volumes.none') }}</li>
+            </template>
+          </ul>
+          <p v-if="volume.locked" class="va-text-secondary mb-2">{{ $t('admin.volumes.locked') }}</p>
+          <va-button v-else :id="'set-up-' + volume.name" size="small" class="mr-2" @click="openVolume(volume)">{{ $t('admin.volumes.set_up') }}</va-button>
+          <va-button v-if="volume.can_change_claim" :id="'change-claim-' + volume.name" size="small" preset="secondary" @click="openClaim(volume)">{{ $t('admin.volumes.change_claim') }}</va-button>
+        </div>
+      </va-card-content>
+    </va-card>
+    <va-modal v-model="showVolumeModal" hide-default-actions no-padding class="p-0">
+      <template #content>
+        <form v-if="editingVolume" id="volumeForm" class="p-4" @submit.prevent="volumeForm.put(volumeUrl(), { onSuccess: () => { showVolumeModal = false } })">
+          <h3 class="va-h5 mb-1">{{ $t(editingVolume.label) }}</h3>
+          <p class="va-text-secondary mb-3">{{ $t('admin.volumes.set_once') }}</p>
+          <va-switch v-model="volumeForm.enabled" class="mb-3" :label="$t('admin.volumes.enabled')" />
+          <va-input v-if="!editingVolume.follows_quota" v-model="volumeForm.size" type="number" min="1" class="mb-3" :label="$t('admin.volumes.size')" :placeholder="String(editingVolume.effective.size)" :error="!!volumeForm.errors.size" :error-messages="volumeForm.errors.size" />
+          <va-input v-model="volumeForm.storage_class" class="mb-3" :label="$t('admin.volumes.storage_class')" :placeholder="editingVolume.effective.storage_class" :error="!!volumeForm.errors.storage_class" :error-messages="volumeForm.errors.storage_class" />
+          <va-select v-model="volumeForm.access_mode" class="mb-3" :options="editingVolume.access_modes" clearable :label="$t('admin.volumes.access_mode')" :placeholder="editingVolume.effective.access_mode" />
+          <va-button type="submit" id="saveVolume" :disabled="volumeForm.processing">{{ $t('common.save') }}</va-button>
+          <va-button preset="secondary" class="ml-2" @click="showVolumeModal = false">{{ $t('common.cancel') }}</va-button>
+        </form>
+      </template>
+    </va-modal>
+    <va-modal v-model="showClaimModal" hide-default-actions no-padding class="p-0">
+      <template #content>
+        <form v-if="editingVolume" id="claimForm" class="p-4" @submit.prevent="claimForm.put(volumeUrl() + '/claim', { onSuccess: () => { showClaimModal = false } })">
+          <h3 class="va-h5 mb-1">{{ $t('admin.volumes.change_claim') }}</h3>
+          <p class="va-text-secondary mb-3">{{ $t('admin.volumes.claim_warning') }}</p>
+          <va-input v-model="claimForm.claim" class="mb-3" :label="$t('admin.volumes.claim')" :error="!!claimForm.errors.claim" :error-messages="claimForm.errors.claim" />
+          <va-button type="submit" id="saveClaim" :disabled="claimForm.processing">{{ $t('common.save') }}</va-button>
+          <va-button preset="secondary" class="ml-2" @click="showClaimModal = false">{{ $t('common.cancel') }}</va-button>
+        </form>
+      </template>
+    </va-modal>
     <form @submit.prevent="form.put('/admin/organizations/'+organization.id+'/apps/'+app.id)">
 
       <div class="row mt-3">
@@ -463,6 +509,10 @@ export default {
       type: Array,
       default: () => []
     },
+    volumes: {
+      type: Array,
+      default: () => []
+    },
     ignored_image_settings: {
       type: Array,
       default: () => []
@@ -548,6 +598,11 @@ export default {
       form: useForm({
         settings
       }),
+      editingVolume: null,
+      showVolumeModal: false,
+      showClaimModal: false,
+      volumeForm: useForm({ enabled: true, size: null, storage_class: null, access_mode: null }),
+      claimForm: useForm({ claim: '' }),
       showRepair: false,
       confirmRepair: false,
       repairForm: useForm({
@@ -612,6 +667,24 @@ export default {
     }
   },
   methods: {
+    volumeUrl () {
+      return '/admin/organizations/' + this.organization.id + '/apps/' + this.app.id + '/volumes/' + this.editingVolume.name
+    },
+    openVolume (volume) {
+      this.editingVolume = volume
+      this.volumeForm.defaults({
+        enabled: true,
+        ...(volume.follows_quota ? {} : { size: volume.own.size ?? null }),
+        storage_class: volume.own.storage_class ?? null,
+        access_mode: volume.own.access_mode ?? null
+      }).reset()
+      this.showVolumeModal = true
+    },
+    openClaim (volume) {
+      this.editingVolume = volume
+      this.claimForm.defaults({ claim: volume.effective.claim ?? '' }).reset()
+      this.showClaimModal = true
+    },
     askRemoveOldWeb (entry) {
       this.removeOldWebForm.move_task_id = entry.id
       this.removeOldWebServer = entry.server

@@ -241,6 +241,8 @@ Route::middleware(['auth', 'verified'])->namespace('App\Http\Controllers')->grou
                             Route::post('backups/{backup}/restore', 'Admin\Organizations\AppBackups@restore')->name('organizations.app.backups.restore');
                         });
                         Route::put('', 'Admin\Organizations\Applications@update')->name('organizations.app.update');
+                        Route::put('volumes/{volume}', 'Admin\Organizations\Applications@updateVolume')->name('organizations.app.update_volume');
+                        Route::put('volumes/{volume}/claim', 'Admin\Organizations\Applications@updateVolumeClaim')->name('organizations.app.update_volume_claim');
                         Route::put('domain', 'Admin\Organizations\Applications@updateDomain')->name('organizations.app.update_domain');
                         Route::put('maintenance', 'Admin\Organizations\Applications@maintenance')->name('organizations.app.maintenance');
                         Route::get('run/{action}', 'Admin\Organizations\Applications@run')->name('organizations.app.run');

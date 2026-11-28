@@ -29,12 +29,16 @@ use App\Support\ServerChoices;
 use App\Support\ServerReach;
 use App\Support\SharedAppContext;
 use App\Support\StorageHandover;
+use App\Support\Volumes\Volume;
+use App\Support\Volumes\Volumes;
+use App\Support\Volumes\VolumesForm;
 use App\Task;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
 use App\Updates\UpdateSteps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class Applications extends Controller
@@ -190,6 +194,7 @@ class Applications extends Controller
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),
             ],
+            'volumes' => VolumesForm::fields($app, Volumes::for($app)),
             'maintenance' => [
                 'enabled' => $app->inMaintenance(),
                 // Whether the app is deployed in a way that can have a maintenance page
@@ -268,6 +273,58 @@ class Applications extends Controller
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")
             ->with('success', __($enable ? 'admin.organizations.apps.maintenance_enabling' : 'admin.organizations.apps.maintenance_disabling', ['app' => $app->label]));
+    }
+
+    public function updateVolume(Request $request, Organization $organization, AppInstance $app, string $volume)
+    {
+        [$volumes, $found, $redirect] = $this->volumeFor($organization, $app, $volume);
+
+        if ($redirect) {
+            return $redirect;
+        }
+
+        $edit = "/admin/organizations/{$organization->id}/apps/{$app->id}/edit";
+
+        if (VolumesForm::locked($found)) {
+            return redirect($edit)->with('error', __('admin.volumes.locked'));
+        }
+
+        $validated = $request->validate(VolumesForm::settingsRules($found));
+        $volumes->assign($volume, Arr::only($validated, ['enabled', 'size', 'storage_class', 'access_mode']));
+
+        return redirect($edit)->with('success', __('admin.volumes.updated', ['app' => $app->label]));
+    }
+
+    public function updateVolumeClaim(Request $request, Organization $organization, AppInstance $app, string $volume)
+    {
+        [$volumes, $found, $redirect] = $this->volumeFor($organization, $app, $volume);
+
+        if ($redirect) {
+            return $redirect;
+        }
+
+        $edit = "/admin/organizations/{$organization->id}/apps/{$app->id}/edit";
+
+        if (! VolumesForm::canChangeClaim($app, $found)) {
+            return redirect($edit)->with('error', __('admin.volumes.claim_not_allowed'));
+        }
+
+        $volumes->assign($volume, ['claim' => $request->validate(VolumesForm::claimRules())['claim']]);
+
+        return redirect($edit)->with('success', __('admin.volumes.updated', ['app' => $app->label]));
+    }
+
+    /**
+     * @return array{0: Volumes, 1: Volume|null, 2: mixed}
+     */
+    private function volumeFor(Organization $organization, AppInstance $app, string $name): array
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        $volumes = Volumes::for($app);
+        abort_unless($volumes->has($name), 404);
+
+        return [$volumes, $volumes->get($name), $this->notYetActivated($app)];
     }
 
     public function helmValues(Organization $organization, AppInstance $app)

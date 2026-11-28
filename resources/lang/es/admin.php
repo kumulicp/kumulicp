@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'volumes' => [
+        'updated' => 'Volúmenes de :app actualizados',
+        'locked' => 'Los ajustes de un volumen en uso no se pueden cambiar',
+        'claim_not_allowed' => 'El reclamo solo se puede cambiar mientras la aplicación está activa',
+        'unknown' => 'La aplicación no tiene ese volumen',
+    ],
     'servers' => [
         'authentik' => [
             'host' => 'Configura aquí el nombre de dominio: authentik.example.com. Esto sobrescribirá el nombre de host predeterminado para la instancia de la aplicación. (Requiere actualización manual de la aplicación)',

@@ -1,6 +1,12 @@
 <?php
 
 return [
+    'volumes' => [
+        'updated' => ':app volumes updated',
+        'locked' => 'The settings of a volume in use can\'t be changed',
+        'claim_not_allowed' => 'The claim can only be changed while the app is active',
+        'unknown' => 'The app has no such volume',
+    ],
     'dashboard' => [
         'dashboard' => 'Dashboard',
         'warning_messages' => [
