@@ -3,6 +3,8 @@
 return [
     'volumes' => [
         'updated' => 'Volúmenes de :app actualizados',
+        'locked' => 'Los ajustes de un volumen en uso no se pueden cambiar',
+        'claim_not_allowed' => 'El reclamo solo se puede cambiar mientras la aplicación está activa',
         'unknown' => 'La aplicación no tiene ese volumen',
     ],
     'servers' => [
