@@ -160,8 +160,8 @@ it('stops the app, waits for its volume, installs it on the new server against i
         ->and($instance->status)->toBe('active')
         // Told to stop no longer, and given the volume
         ->and($instance->setting('quiesced_for_move'))->toBeFalse()
-        ->and($instance->setting('existing_claim'))->toBe('restored-data')
-        ->and($instance->setting('configurations.persistence-accessMode'))->toBe('ReadWriteMany')
+        ->and($instance->setting('volumes.data.claim'))->toBe('restored-data')
+        ->and($instance->setting('volumes.data.access_mode'))->toBe('ReadWriteMany')
         // Asked of the new server, not the old one, whether it is running
         ->and(collect(FakeServerManager::$calls)->contains(['checkStatus', $new->id, $instance->id]))->toBeTrue()
         ->and(collect(FakeServerManager::$calls)->contains(['checkStatus', $old->id, $instance->id]))->toBeFalse();
@@ -170,7 +170,7 @@ it('stops the app, waits for its volume, installs it on the new server against i
 
 it('puts the old settings and server back, and scales the old release up, when the install fails', function () {
     [$instance, $old] = appOnWebServer();
-    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
+    $instance->settings = array_merge($instance->settings ?? [], ['volumes' => ['data' => ['claim' => 'old-claim']]]);
     $instance->save();
 
     $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2'), ['volume' => 'existing', 'claim' => 'restored-data']));
@@ -179,7 +179,7 @@ it('puts the old settings and server back, and scales the old release up, when t
     // Past the wait, into the install
     app(TaskRunner::class)->poll($task);
     $install = Task::find($task->fresh()->getValue('update_task_id'));
-    expect($instance->fresh()->setting('existing_claim'))->toBe('restored-data');
+    expect($instance->fresh()->setting('volumes.data.claim'))->toBe('restored-data');
 
     $install->status = TaskStatus::FAILED;
     $install->error_message = 'helm install failed';
@@ -190,7 +190,7 @@ it('puts the old settings and server back, and scales the old release up, when t
     expect($task->fresh()->status)->toBe(TaskStatus::FAILED)
         ->and($task->fresh()->error_message)->toContain('helm install failed')->toContain('old-cluster')
         ->and($instance->web_server_id)->toBe($old->id)
-        ->and($instance->setting('existing_claim'))->toBe('old-claim')
+        ->and($instance->setting('volumes.data.claim'))->toBe('old-claim')
         ->and($instance->setting('quiesced_for_move'))->toBeFalse();
 
     // Another update, which scales the old release up
@@ -492,13 +492,13 @@ it('waits for the volume that was chosen when it was started, without asking for
 
     $instance = $instance->fresh();
     expect($task->status)->toBe(TaskStatus::COMPLETE)
-        ->and($instance->setting('existing_claim'))->toBe('restored-data')
-        ->and($instance->setting('configurations.persistence-accessMode'))->toBe('ReadWriteMany');
+        ->and($instance->setting('volumes.data.claim'))->toBe('restored-data')
+        ->and($instance->setting('volumes.data.access_mode'))->toBe('ReadWriteMany');
 });
 
 it('does not wait at all for an app that is to start with a new volume', function () {
     [$instance] = appOnWebServer();
-    $instance->settings = array_merge($instance->settings ?? [], ['existing_claim' => 'old-claim']);
+    $instance->settings = array_merge($instance->settings ?? [], ['volumes' => ['data' => ['claim' => 'old-claim']]]);
     $instance->save();
 
     $task = advanceWebMove(startWebMove($instance, webServer('new-cluster', '10.0.0.2'), ['volume' => 'new']));
@@ -506,7 +506,7 @@ it('does not wait at all for an app that is to start with a new volume', functio
     // Nothing to restore: it goes straight on, and the old volume's claim is not looked for there
     expect($task->status)->toBe(TaskStatus::COMPLETE)
         ->and(AwaitConfirmation::waiting($instance))->toBeNull()
-        ->and($instance->fresh()->setting('existing_claim'))->toBe('');
+        ->and($instance->fresh()->setting('volumes.data.claim'))->toBe('');
 });
 
 it('keeps the volume that was chosen when it is started over', function () {

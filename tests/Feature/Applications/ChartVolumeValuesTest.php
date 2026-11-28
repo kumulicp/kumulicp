@@ -70,18 +70,26 @@ describe('Nextcloud', function () {
         expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->not->toBe('from-configuration');
     });
 
-    it('takes the volume size from chart_storage, which only ever grows', function () {
-        $grown = Fixtures::instance('nextcloud', settings: ['chart_storage' => 50]);
+    it('takes the volume size from the volume, which only ever grows', function () {
+        $grown = Fixtures::instance('nextcloud', settings: ['volumes' => ['data' => ['size' => 50]]]);
 
         // The plan gives less than the instance already has; the larger stays
         expect(Fixtures::values($grown)['persistence']['size'])->toBe('50Gi')
-            ->and($grown->fresh()->setting('chart_storage'))->toBe(50);
+            ->and($grown->fresh()->setting('volumes.data.size'))->toBe(50);
 
         $new = Fixtures::instance('nextcloud');
         Fixtures::values($new);
 
-        // The size the plan gave is kept on the instance as what it was given
-        expect($new->fresh()->setting('chart_storage'))->toBe(2);
+        // The size the plan gave is kept on the instance as what it was given, in the volume's own place:
+        // chart_storage is not read, or written
+        expect($new->fresh()->setting('volumes.data.size'))->toBe(2)
+            ->and($new->fresh()->setting('chart_storage'))->toBeNull();
+    });
+
+    it('does not read chart_storage, which the migration copies into the volume', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['chart_storage' => 50]);
+
+        expect(Fixtures::values($app_instance)['persistence']['size'])->toBe('2Gi');
     });
 
     it('passes the Redis volume settings through as the configuration says', function () {

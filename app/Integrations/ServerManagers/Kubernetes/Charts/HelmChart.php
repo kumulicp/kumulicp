@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -172,7 +173,16 @@ abstract class HelmChart extends Chart
 
     public function appStorage()
     {
-        // A chart can be given the storage of the release it belongs to; 0 is no storage worked out yet
+        // The size of the volume that holds the files, which follows the quota and only grows. A chart can be
+        // given the storage of the release it belongs to; 0 is no storage worked out yet
+        $volumes = Volumes::for($this->app_instance, $this->app_storage);
+
+        if ($volumes->has('data')) {
+            return $volumes->get('data')->size();
+        }
+
+        // The generic app has no volume of that name: its volumes are a list the plan defines, and the ones
+        // with no size of their own are sized as the app was
         if (is_int($this->app_storage) && $this->app_storage > 0) {
             return $this->app_storage;
         }
