@@ -92,13 +92,12 @@ it('leaves out concerns the chart does not have', function () {
     expect((new ChartConventionDetector)->configurations($convention, []))->toBe([]);
 });
 
-it('builds plan options only for the supported concerns, defaulted from the chart', function () {
+it('builds plan options only for the supported concerns, defaulted from the chart, and none for the volume', function () {
     $detector = new ChartConventionDetector;
     $configs = $detector->configurations($detector->detect(groupedChartDefaults()), groupedChartDefaults());
 
     expect(array_keys($configs))->toEqualCanonicalizing([
         'replicaCount',
-        'persistence-storageClass',
         'resources-requests-cpu',
         'resources-requests-memory',
         'resources-limits-cpu',

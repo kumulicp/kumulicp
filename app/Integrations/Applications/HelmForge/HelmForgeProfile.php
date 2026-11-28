@@ -6,6 +6,7 @@ use App\AppChart;
 use App\AppInstance;
 use App\Application;
 use App\Integrations\Applications\AppProfile;
+use Illuminate\Support\Arr;
 
 /**
  * The profile of an app imported from a chart source. Unlike the hand-written
@@ -31,7 +32,8 @@ class HelmForgeProfile extends AppProfile
     public function __construct(Application $application, ?AppChart $chart = null)
     {
         $this->name = $application->slug;
-        $this->configurations = ($chart->catalog ?? $application->catalog)['configurations'] ?? [];
+        // The volume's class is the volume's now; a chart synced before has it as a configuration of its own
+        $this->configurations = Arr::except(($chart->catalog ?? $application->catalog)['configurations'] ?? [], ['persistence-storageClass']);
         $this->has_volume = (bool) (($chart->catalog ?? $application->catalog)['convention']['persistence'] ?? null);
     }
 

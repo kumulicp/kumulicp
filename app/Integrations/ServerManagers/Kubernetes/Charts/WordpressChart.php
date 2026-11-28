@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 
 class WordpressChart extends HelmChart
 {
@@ -13,6 +14,10 @@ class WordpressChart extends HelmChart
         $organization = $this->organization;
         $app_instance = Application::instance($this->app_instance);
         $version = $app_instance->version;
+
+        // The volume that holds the files, and the MariaDB's
+        $volumes = Volumes::for($this->app_instance, $this->app_storage);
+        $data = $volumes->get('data');
 
         if ($database_server = $app_instance->server('database')) {
             $database_server = $database_server->server;
@@ -68,13 +73,13 @@ class WordpressChart extends HelmChart
                 'hostname' => $app_instance->domain(),
                 'tls' => $app_instance->configuration('ingress-tls'),
             ],
-            'mariadb' => $app_instance->configuration('mariadb', true),
+            'mariadb' => $this->withVolumes($app_instance->configuration('mariadb', true), ['primary' => ['mariadb', false]], $volumes),
             'persistence' => [
-                'size' => $this->appStorage().'Gi',
-                'accessModes' => $app_instance->configuration('persistence-accessModes', true),
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'existingClaim' => $app_instance->getOverride('pvc.name') ?? '',
+                'size' => $data->size().'Gi',
+                'accessModes' => array_filter([$data->accessMode()]),
+                'storageClass' => $data->storageClass(),
+                'enabled' => $data->enabled(),
+                'existingClaim' => $data->claim() ?? '',
             ],
             'resources' => [
                 'requests' => [

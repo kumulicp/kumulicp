@@ -7,6 +7,7 @@ use App\Enums\ApplicationSource;
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Organization;
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Arr;
 
 /**
@@ -91,16 +92,17 @@ class HelmForgeChart extends HelmChart
 
     private function setPersistence(array &$values, array $persistence): void
     {
-        $app_instance = Application::instance($this->app_instance);
+        $data = Volumes::for($this->app_instance, $this->app_storage)->get('data');
 
-        Arr::set($values, $persistence['size'], $this->appStorage().'Gi');
+        Arr::set($values, $persistence['size'], $data->size().'Gi');
 
-        if (($path = $persistence['storage_class']) && $storage_class = $app_instance->configuration('persistence-storageClass')) {
-            Arr::set($values, $path, $storage_class);
+        // Only what there is a key for and a value for: the chart's own defaults stay for the rest
+        if (($path = $persistence['storage_class']) && $data->storageClass() !== '') {
+            Arr::set($values, $path, $data->storageClass());
         }
 
-        if (($path = $persistence['existing_claim']) && $claim = $app_instance->getOverride('pvc.name')) {
-            Arr::set($values, $path, $claim);
+        if (($path = $persistence['existing_claim']) && $data->claim()) {
+            Arr::set($values, $path, $data->claim());
         }
     }
 

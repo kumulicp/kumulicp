@@ -55,10 +55,6 @@ class ChartConventionDetector
             $configs[] = $this->config('replicaCount', 'int', is_int($replicas) ? $replicas : 1, 'integer|required|min:0');
         }
 
-        if ($convention['persistence']) {
-            $configs[] = $this->config('persistence-storageClass', 'string', '', 'nullable|string', persistent: true);
-        }
-
         if ($convention['resources']) {
             foreach (['requests', 'limits'] as $kind) {
                 foreach (['cpu', 'memory'] as $resource) {
