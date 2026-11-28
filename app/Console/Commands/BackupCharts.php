@@ -4,12 +4,12 @@ namespace App\Console\Commands;
 
 use App\AppInstance;
 use App\Services\AppInstanceService;
+use App\Support\ChartArchiveLayout;
 use App\Support\CoreVersion;
 use App\Support\SafeErrorMessage;
 use Illuminate\Console\Command;
 use Illuminate\Http\File;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 use ZipArchive;
@@ -29,8 +29,6 @@ class BackupCharts extends Command
 
     protected $description = 'Write the Helm values of every app to a zip of YAML files, secrets masked (a record of what is deployed, not something to restore from)';
 
-    private const FOLDER = 'chart-values';
-
     public function handle(): int
     {
         $archive = tempnam(sys_get_temp_dir(), 'charts');
@@ -39,17 +37,11 @@ class BackupCharts extends Command
 
         $files = [];
         $failures = [];
-        $used = [];
+        $layout = new ChartArchiveLayout;
         $instances = 0;
 
-        $apps = AppInstance::query()
-            ->notDeactivated()
-            ->whereNotNull('web_server_id')
-            ->with(['organization', 'application', 'version']);
-
-        foreach ($apps->lazyById() as $app_instance) {
-            // A shared app's child is covered by the release of the app it lives in
-            if (! $app_instance->usesOwnResources()) {
+        foreach (ChartArchiveLayout::instances()->lazyById() as $app_instance) {
+            if (! ChartArchiveLayout::covers($app_instance)) {
                 continue;
             }
 
@@ -66,10 +58,10 @@ class BackupCharts extends Command
                 continue;
             }
 
-            $folder = $this->folder($app_instance, $used);
+            $folder = $layout->folder($app_instance);
 
             foreach ($charts as $chart) {
-                $path = $folder.'/'.$this->segment($chart['name']).'.yaml';
+                $path = ChartArchiveLayout::file($folder, $chart['name']);
                 $yaml = Yaml::dump($chart['values'], 10, 2);
 
                 $zip->addFromString($path, $yaml);
@@ -100,7 +92,7 @@ class BackupCharts extends Command
         $zip->close();
 
         $disk = Storage::disk(config('filesystems.app_backup'));
-        $stored = $disk->putFileAs(self::FOLDER, new File($archive), 'chart-values-'.now()->format('Y-m-d-His').'.zip');
+        $stored = $disk->putFileAs(ChartArchiveLayout::FOLDER, new File($archive), 'chart-values-'.now()->format('Y-m-d-His').'.zip');
         @unlink($archive);
 
         $this->components->info(count($files).' files of '.($instances - count($failures))." of {$instances} app instances: ".$this->where($disk, $stored));
@@ -125,30 +117,6 @@ class BackupCharts extends Command
             'application' => $app_instance->application->slug,
             'version' => $app_instance->version?->name,
         ];
-    }
-
-    /**
-     * `<organization>/<app instance>`, made different from another's when the two would be the same.
-     *
-     * @param  array<string, true>  $used
-     */
-    private function folder(AppInstance $app_instance, array &$used): string
-    {
-        $folder = $this->segment($app_instance->organization->slug).'/'.$this->segment($app_instance->name);
-
-        if (isset($used[$folder])) {
-            $folder .= '-'.$app_instance->id;
-        }
-
-        $used[$folder] = true;
-
-        return $folder;
-    }
-
-    // Only what is safe in a path inside a zip
-    private function segment(?string $name): string
-    {
-        return Str::of((string) $name)->replaceMatches('/[^A-Za-z0-9._-]+/', '-')->trim('-.')->toString() ?: 'unnamed';
     }
 
     private function where($disk, string $stored): string
