@@ -44,7 +44,7 @@ function backupChartsManifest(array $files): array
 }
 
 describe('what it writes', function () {
-    it('is one zip on the backups disk, with two files for each chart of each app and a manifest', function () {
+    it('is one zip on the backups disk, with one file for each chart of each app and a manifest', function () {
         $nextcloud = Fixtures::instance('nextcloud');
         $wordpress = Fixtures::instance('wordpress');
 
@@ -57,12 +57,12 @@ describe('what it writes', function () {
             $folder = "{$app_instance->organization->slug}/{$app_instance->name}";
             $chart = (new AppInstanceService($app_instance))->renderedCharts()[0]['name'];
 
-            return ["{$folder}/{$chart}.values.yaml", "{$folder}/{$chart}.deployed.yaml"];
+            return ["{$folder}/{$chart}.yaml"];
         })->all();
 
         expect(array_keys($files))->toEqualCanonicalizing([...$expected, 'manifest.json'])
             ->and($manifest)->toMatchArray(['core_version' => CoreVersion::current(), 'instances' => 2, 'failures' => []])
-            ->and($manifest['files'])->toHaveCount(4);
+            ->and($manifest['files'])->toHaveCount(2);
     });
 
     it('has a manifest that says what each file is and its hash', function () {
@@ -79,41 +79,51 @@ describe('what it writes', function () {
             'application' => 'wordpress',
             'version' => $app_instance->version->name,
         ])
-            ->and($entry['kind'])->toBeIn(['values', 'deployed'])
+            ->and($entry)->not->toHaveKey('kind')
             ->and($entry['sha256'])->toBe(hash('sha256', $files[$entry['path']]));
     });
 
-    it('is what the Helm values page shows, both ways', function () {
+    it('is what the Helm values page shows', function () {
         $app_instance = Fixtures::instance('nextcloud');
 
         $this->artisan('backup:charts')->assertSuccessful();
 
         $files = backupChartsArchive();
         $rendered = (new AppInstanceService($app_instance->fresh()))->renderedCharts()[0];
-        $folder = "{$app_instance->organization->slug}/{$app_instance->name}/{$rendered['name']}";
 
-        expect(Yaml::parse($files["{$folder}.values.yaml"]))->toEqual($rendered['values'])
-            ->and(Yaml::parse($files["{$folder}.deployed.yaml"]))->toEqual($rendered['deployed']);
+        expect(Yaml::parse($files["{$app_instance->organization->slug}/{$app_instance->name}/{$rendered['name']}.yaml"]))->toEqual($rendered['values']);
     });
 
-    it('has in what is deployed what the chart does not build, the labels among it', function (string $slug, array $label_keys) {
+    it('is what a release is given: the chart\'s values and the labels', function (string $slug, array $label_keys) {
         $app_instance = Fixtures::instance($slug);
 
         $this->artisan('backup:charts')->assertSuccessful();
 
         $files = backupChartsArchive();
-        $folder = "{$app_instance->organization->slug}/{$app_instance->name}/".(new AppInstanceService($app_instance))->renderedCharts()[0]['name'];
+        $chart = (new AppInstanceService($app_instance))->renderedCharts()[0]['name'];
+        $values = Yaml::parse($files["{$app_instance->organization->slug}/{$app_instance->name}/{$chart}.yaml"]);
 
-        $values = Yaml::parse($files["{$folder}.values.yaml"]);
-        $deployed = Yaml::parse($files["{$folder}.deployed.yaml"]);
-
-        // Each chart takes the labels under keys of its own
-        expect(array_keys($values))->not->toContain(...$label_keys)
-            ->and(array_keys($deployed))->toContain(...$label_keys);
+        // What the chart builds from the app's settings, and what is put on it for the release. Each chart
+        // takes the labels under keys of its own
+        expect($values)->toHaveKey('persistence')
+            ->and(array_keys($values))->toContain(...$label_keys);
     })->with([
         'WordPress' => ['wordpress', ['commonLabels']],
         'Nextcloud' => ['nextcloud', ['deploymentLabels', 'podLabels']],
     ]);
+
+    it('has the plan\'s extra configurations, which the chart does not build', function () {
+        $extra = ['name' => 'extra-flag', 'type' => 'string', 'persistent' => true, 'additional' => true];
+        $app_instance = Fixtures::instance('wordpress', ['extra-flag' => 'on'], [], ['extra-flag' => $extra]);
+
+        $this->artisan('backup:charts')->assertSuccessful();
+
+        $files = backupChartsArchive();
+        $chart = (new AppInstanceService($app_instance))->renderedCharts()[0]['name'];
+
+        // A plan's extra configuration is written at the Helm path its name spells
+        expect(Yaml::parse($files["{$app_instance->organization->slug}/{$app_instance->name}/{$chart}.yaml"]))->toHaveKey('extra.flag', 'on');
+    });
 });
 
 describe('what it leaves alone', function () {

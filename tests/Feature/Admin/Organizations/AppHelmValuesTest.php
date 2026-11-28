@@ -22,27 +22,33 @@ beforeEach(function () {
     $this->url = "/admin/organizations/{$this->appInstance->organization_id}/apps/{$this->appInstance->id}/helm-values";
 });
 
-it('shows, for each chart, its own values and what a release is given', function () {
+it('shows, for each chart, what a release is given', function () {
     $this->actingAs($this->admin)->get($this->url)->assertInertia(fn ($page) => $page
         ->component('Admin/Organizations/Apps/AppHelmValues')
         ->has('charts', 1)
         ->where('charts.0.name', fn ($name) => is_string($name) && $name !== '')
         ->has('charts.0.values.persistence')
-        ->has('charts.0.deployed.persistence')
-        // What the chart does not build: the labels, which a release is given
-        ->missing('charts.0.values.podLabels')
-        ->has('charts.0.deployed.podLabels')
+        // Not only what the chart builds: the labels put on it for the release
+        ->has('charts.0.values.podLabels')
     );
 });
 
-it('masks the secrets in both', function () {
+it('shows the plan\'s extra configurations, which the chart does not build', function () {
+    $extra = ['name' => 'extra-flag', 'type' => 'string', 'persistent' => true, 'additional' => true];
+    $app_instance = Fixtures::instance('wordpress', ['extra-flag' => 'on'], [], ['extra-flag' => $extra]);
+
+    $this->actingAs($this->admin)
+        ->get("/admin/organizations/{$app_instance->organization_id}/apps/{$app_instance->id}/helm-values")
+        ->assertInertia(fn ($page) => $page->where('charts.0.values.extra.flag', 'on'));
+});
+
+it('masks the secrets', function () {
     $password = Application::instance($this->appInstance)->api_password();
 
     $response = $this->actingAs($this->admin)->get($this->url);
 
     $response->assertInertia(fn ($page) => $page
         ->where('charts.0.values.nextcloud.password', '••••••••')
-        ->where('charts.0.deployed.nextcloud.password', '••••••••')
     );
 
     expect($password)->not->toBeEmpty()

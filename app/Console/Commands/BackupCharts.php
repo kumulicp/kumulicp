@@ -17,8 +17,8 @@ use ZipArchive;
 /**
  * A record of the Helm values every app was given: one zip of YAML files on the backups disk, to look at
  * before a change that should leave them as they are, and again after it (see docs/volumes-and-settings-plan.md).
- * Each chart has two files, as the app's Helm values page shows them: `<chart>.values.yaml`, what the chart
- * builds, and `<chart>.deployed.yaml`, what a release is given.
+ * Each chart has one file, `<chart>.yaml`, which is what a release is given and what the app's Helm values
+ * page shows.
  *
  * It does not change anything, and the secrets are masked as they are on the page. It is a record of
  * rendered values, not something to restore from: that is what `backup:run` is for.
@@ -69,19 +69,16 @@ class BackupCharts extends Command
             $folder = $this->folder($app_instance, $used);
 
             foreach ($charts as $chart) {
-                foreach (['values', 'deployed'] as $kind) {
-                    $path = $folder.'/'.$this->segment($chart['name']).".{$kind}.yaml";
-                    $yaml = Yaml::dump($chart[$kind], 10, 2);
+                $path = $folder.'/'.$this->segment($chart['name']).'.yaml';
+                $yaml = Yaml::dump($chart['values'], 10, 2);
 
-                    $zip->addFromString($path, $yaml);
+                $zip->addFromString($path, $yaml);
 
-                    $files[] = $this->describe($app_instance) + [
-                        'path' => $path,
-                        'chart' => $chart['name'],
-                        'kind' => $kind,
-                        'sha256' => hash('sha256', $yaml),
-                    ];
-                }
+                $files[] = $this->describe($app_instance) + [
+                    'path' => $path,
+                    'chart' => $chart['name'],
+                    'sha256' => hash('sha256', $yaml),
+                ];
             }
         }
 

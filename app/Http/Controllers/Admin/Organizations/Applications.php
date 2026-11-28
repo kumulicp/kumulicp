@@ -285,7 +285,7 @@ class Applications extends Controller
                     'name' => $app->version->name,
                 ],
             ],
-            // Each chart's own values, and what a release is given
+            // What a release is given
             'charts' => (new AppInstanceService($app))->renderedCharts(),
             'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);

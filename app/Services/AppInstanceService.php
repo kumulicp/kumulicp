@@ -84,14 +84,15 @@ class AppInstanceService
     }
 
     /**
-     * What each of the app's charts is given, as the Helm values page and `backup:charts` show it, with the
-     * secrets masked: the chart's own values, and what a release deploys, which is those and also the plan's
-     * extra configurations, the kumulicp labels and the version's image overrides.
+     * What each of the app's charts is given when a release is made, with the secrets masked: the chart's own
+     * values and also the plan's extra configurations, the kumulicp labels, the changes extensions make and the
+     * version's image overrides (HelmChart::valuesWithAdditionalConfigs()). It is what the Helm values page shows
+     * and what `backup:charts` writes.
      *
      * Building a chart writes small bookkeeping settings (the release name, the storage ratchet), so it is
      * done in a transaction that is always rolled back, and the instance is left as it was found.
      *
-     * @return array<int, array{name: string, values: array<string, mixed>, deployed: array<string, mixed>}>
+     * @return array<int, array{name: string, values: array<string, mixed>}>
      */
     public function renderedCharts(): array
     {
@@ -103,8 +104,7 @@ class AppInstanceService
             return collect($this->charts())
                 ->map(fn (HelmChart $chart) => [
                     'name' => $chart->chartName(),
-                    'values' => Redactor::redact($chart->values()),
-                    'deployed' => Redactor::redact($chart->valuesWithAdditionalConfigs()),
+                    'values' => Redactor::redact($chart->valuesWithAdditionalConfigs()),
                 ])
                 ->all();
         } finally {
