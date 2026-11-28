@@ -23,10 +23,15 @@ function ownVolume(string $name, array $fields): array
 
 describe('which volumes an app has', function () {
     it('is the one every app has, unless its profile says more', function () {
-        $volumes = Volumes::for(Fixtures::instance('nextcloud'));
+        $volumes = Volumes::for(Fixtures::instance('civicrm-standalone'));
 
         expect(array_keys($volumes->all()))->toBe(['data'])
             ->and($volumes->get('data'))->followsQuota()->toBeTrue()->takesClaim()->toBeTrue()->optional()->toBeFalse();
+    });
+
+    it('is more for an app whose profile says so: Nextcloud\'s Redis and MariaDB, WordPress\'s MariaDB', function () {
+        expect(array_keys(Volumes::for(Fixtures::instance('nextcloud'))->all()))->toBe(['data', 'redis-master', 'redis-replica', 'mariadb'])
+            ->and(array_keys(Volumes::for(Fixtures::instance('wordpress'))->all()))->toBe(['data', 'mariadb']);
     });
 
     it('is what its profile declares', function () {

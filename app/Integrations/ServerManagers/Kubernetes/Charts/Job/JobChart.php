@@ -4,6 +4,7 @@ namespace App\Integrations\ServerManagers\Kubernetes\Charts\Job;
 
 use App\Integrations\ServerManagers\Kubernetes\Charts\Chart;
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
@@ -25,10 +26,16 @@ class JobChart extends Chart
         return Str::slug("{$this->organization->slug}-{$this->name}-job-{$this->secretsSuffix}-secrets");
     }
 
+    /**
+     * The claim a job mounts: the one that was chosen for the volume that holds the files, else what the
+     * cluster says the release has. What the cluster says is not kept, so it is never taken for a choice.
+     */
     public function persistentVolumeClaim()
     {
-        if ($pvc_name = $this->app_instance->getOverride('pvc.name')) {
-            return $pvc_name;
+        $volumes = Volumes::for($this->app_instance);
+
+        if ($volumes->has('data') && $claim = $volumes->get('data')->claim()) {
+            return $claim;
         }
 
         $app = Application::instance($this->app_instance)->connect('web')->get();
@@ -36,8 +43,6 @@ class JobChart extends Chart
         if (Arr::get($app, 'status') == 'success') {
             foreach (Arr::get($app, 'response.spec.resources', []) as $resource) {
                 if (Arr::get($resource, 'kind') == 'PersistentVolumeClaim') {
-                    $this->app_instance->updateSetting('override.pvc.name', $resource['name']);
-
                     return $resource['name'];
                 }
             }

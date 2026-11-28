@@ -45,7 +45,7 @@ it('reads the volume layout of the instance from the chart it runs, not from its
 });
 
 it('gives the instance on the added chart its claim at the place that chart was detected to take it', function () {
-    $values = Fixtures::values($this->added);
+    $values = Fixtures::values(Fixtures::migrated($this->added));
 
     // The application has no catalog data of its own: this is the chart's
     expect(Fixtures::only($values, ['persistence.existingClaim', 'persistence.size']))->toBe([

@@ -4,6 +4,7 @@ namespace App\Integrations\Applications\CiviCRMStandalone;
 
 use App\Integrations\ServerManagers\Kubernetes\Charts\HelmChart;
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 
 class CiviCRMStandaloneChart extends HelmChart
 {
@@ -14,6 +15,9 @@ class CiviCRMStandaloneChart extends HelmChart
         $organization = $this->organization;
         $app_instance = Application::instance($this->app_instance);
         $version = $app_instance->version;
+
+        // The volume that holds the files
+        $data = Volumes::for($this->app_instance, $this->app_storage)->get('data');
 
         if ($database_server = $app_instance->server('database')) {
             $database_server = $database_server->server;
@@ -68,11 +72,11 @@ class CiviCRMStandaloneChart extends HelmChart
             ],
             'mariadb' => $app_instance->configuration('mariadb', true),
             'persistence' => [
-                'size' => $this->appStorage().'Gi',
-                'accessModes' => [$app_instance->configuration('persistence-accessModes', true)],
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'existingClaim' => $app_instance->getOverride('pvc.override') ? $app_instance->getOverride('pvc.name') : '',
+                'size' => $data->size().'Gi',
+                'accessModes' => array_filter([$data->accessMode()]),
+                'storageClass' => $data->storageClass(),
+                'enabled' => $data->enabled(),
+                'existingClaim' => $data->claim() ?? '',
             ],
             'resources' => [
                 'requests' => [

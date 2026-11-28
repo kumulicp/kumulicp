@@ -78,6 +78,14 @@ class WordpressProfile extends AppProfile
         ],
     ];
 
+    /**
+     * The volume that holds the files, and the MariaDB's next to the app, which is off until it is turned on.
+     */
+    protected $volumes = [
+        'data' => ['label' => 'admin.volumes.data', 'size' => 'quota', 'claim' => true, 'enabled' => false, 'storage_class' => '', 'access_mode' => 'ReadWriteOnce'],
+        'mariadb' => ['label' => 'admin.volumes.mariadb', 'optional' => true, 'size' => 4, 'enabled' => false, 'storage_class' => ''],
+    ];
+
     protected $configurations = [
         'image-pullPolicy' => [
             'name' => 'image-pullPolicy',
@@ -92,36 +100,6 @@ class WordpressProfile extends AppProfile
             'persistent' => false,
             'default' => 1,
             'validations' => 'integer|required',
-        ],
-        'persistence-enabled' => [
-            'name' => 'persistence-enabled',
-            'type' => 'bool',
-            'persistent' => true,
-            'default' => false,
-            'validations' => 'boolean',
-        ],
-        'persistence-storageClass' => [
-            'name' => 'persistence-storageClass',
-            'type' => 'string',
-            'persistent' => true,
-            'validations' => 'nullable',
-            'default' => '',
-        ],
-        'persistence-accessModes' => [
-            'name' => 'persistence-accessModes',
-            'type' => 'json',
-            'persistent' => true,
-            'validations' => 'nullable|json',
-            'default' => [
-                'ReadWriteOnce',
-            ],
-        ],
-        'persistence-existingClaim' => [
-            'name' => 'persistence-existingClaim',
-            'type' => 'string',
-            'persistent' => true,
-            'validations' => 'nullable',
-            'default' => '',
         ],
         'updateStrategy-type' => [
             'name' => 'updateStrategy-type',
@@ -175,13 +153,6 @@ class WordpressProfile extends AppProfile
                 'auth' => [
                     'password' => 'password',
                     'rootPassword' => 'root_password',
-                ],
-                'primary' => [
-                    'persistence' => [
-                        'enabled' => false,
-                        'size' => '4Gi',
-                        'storageClass' => '',
-                    ],
                 ],
             ],
         ],

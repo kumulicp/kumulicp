@@ -193,41 +193,6 @@ class NextcloudChart extends HelmChart
         return $chart;
     }
 
-    /**
-     * The configuration of a subchart, which the chart takes as it is, with the volumes of its workloads as
-     * the volumes say: whether each is on, how big it is and its class (and its access mode, for one that takes
-     * one). Only the volume that holds the files takes a claim, so one a configuration still has is cleared.
-     *
-     * @param  array<string, mixed>|null  $configuration
-     * @param  array<string, array{0: string, 1: bool}>  $workloads  the workload's key in it => the volume's name, and whether it takes an access mode
-     * @return array<string, mixed>|null
-     */
-    private function withVolumes(?array $configuration, array $workloads, Volumes $volumes): ?array
-    {
-        if ($configuration === null) {
-            return null;
-        }
-
-        foreach ($workloads as $key => [$name, $takes_access_mode]) {
-            $volume = $volumes->get($name);
-            $persistence = ['enabled' => $volume->enabled(), 'size' => $volume->size().'Gi', 'storageClass' => $volume->storageClass()];
-
-            if ($takes_access_mode) {
-                $persistence['accessMode'] = $volume->accessMode();
-            }
-
-            $kept = Arr::get($configuration, "{$key}.persistence", []);
-
-            if (array_key_exists('existingClaim', $kept)) {
-                $persistence['existingClaim'] = '';
-            }
-
-            $configuration[$key]['persistence'] = array_replace($kept, $persistence);
-        }
-
-        return $configuration;
-    }
-
     // Imaginary's image is one of the version's own (see HelmChart::applyImageOverrides()), which
     // is written over this. A version without one runs the image the profile recommends: the
     // chart's own (h2non/imaginary 1.2.4) is years old, and doesn't fit the chart's template

@@ -33,19 +33,27 @@ function claim(string $name): array
 }
 
 it('mounts the claim the instance names, without asking the server', function () {
-    $app_instance = Fixtures::instance('wordpress', settings: ['override' => ['pvc' => ['name' => 'restored-data']]]);
+    $app_instance = Fixtures::instance('wordpress', settings: ['volumes' => ['data' => ['claim' => 'restored-data']]]);
     FakeServerManager::$get_response = releaseWith([claim('found-on-the-cluster')]);
 
     expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('restored-data');
 });
 
-it('asks the server for the claim when the instance names none, and keeps what it is told', function () {
+it('mounts the claim the instance had before the migration, once it is migrated', function () {
+    $app_instance = Fixtures::migrated(Fixtures::instance('wordpress', settings: ['override' => ['pvc' => ['name' => 'restored-data']]]));
+    FakeServerManager::$get_response = releaseWith([claim('found-on-the-cluster')]);
+
+    expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('restored-data');
+});
+
+it('asks the server for the claim when the instance names none, and keeps nothing', function () {
     $app_instance = Fixtures::instance('wordpress');
+    $settings = $app_instance->settings;
     FakeServerManager::$get_response = releaseWith([['kind' => 'ConfigMap', 'name' => 'settings'], claim('wp-data')]);
 
     expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('wp-data')
-        // In the same setting a chosen claim is kept in
-        ->and($app_instance->fresh()->setting('override.pvc.name'))->toBe('wp-data');
+        // What the cluster says is not kept: nothing says it was chosen, and the release would be given it
+        ->and($app_instance->fresh()->settings)->toBe($settings);
 });
 
 it('takes the first claim the release has, whichever volume it is for, as it is today', function () {
@@ -53,30 +61,38 @@ it('takes the first claim the release has, whichever volume it is for, as it is 
     $app_instance = Fixtures::instance('wordpress');
     FakeServerManager::$get_response = releaseWith([claim('data-mariadb-0'), claim('wp-data')]);
 
-    expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('data-mariadb-0')
-        ->and($app_instance->fresh()->setting('override.pvc.name'))->toBe('data-mariadb-0');
+    expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('data-mariadb-0');
 });
 
 it('finds no claim, and writes nothing, when the server has none or does not answer', function (?array $answer) {
     $app_instance = Fixtures::instance('wordpress');
+    $settings = $app_instance->settings;
     FakeServerManager::$get_response = $answer;
 
     expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBeNull()
-        ->and($app_instance->fresh()->setting('override.pvc.name'))->toBeNull();
+        ->and($app_instance->fresh()->settings)->toBe($settings);
 })->with([
     'no answer' => [null],
     'a failure' => [['status' => 'failed', 'response' => 'unreachable']],
     'a release with no claim' => [releaseWith([['kind' => 'ConfigMap', 'name' => 'settings']])],
 ]);
 
-it('gives the claim a job found to the next release as a claim that exists, as it is today', function () {
+it('does not give the claim a job found to the next release as a claim that exists', function () {
     $app_instance = Fixtures::instance('wordpress');
     FakeServerManager::$get_response = releaseWith([claim('wp-data')]);
 
     (new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim();
 
-    // The chart's own claim, found on the cluster, is now what the chart is told to use instead of making one
-    expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->toBe('wp-data');
+    // The chart's own claim, found on the cluster, is not what the chart is told to use: it makes it itself
+    expect(Fixtures::values($app_instance->fresh())['persistence']['existingClaim'])->toBe('');
+});
+
+it('finds the claim of an app that has no volume of that name by asking the server', function () {
+    // The generic app's volumes are a list the plan defines
+    $app_instance = Fixtures::instance('generic', ['persistence-enabled' => true]);
+    FakeServerManager::$get_response = releaseWith([claim('generic-data')]);
+
+    expect((new JobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('generic-data');
 });
 
 describe('Nextcloud', function () {

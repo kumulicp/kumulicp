@@ -139,7 +139,7 @@ describe('Nextcloud', function () {
 
 describe('WordPress', function () {
     it('gives the app one volume and no claim of its own', function () {
-        $values = Fixtures::values(Fixtures::instance('wordpress'));
+        $values = Fixtures::values(Fixtures::migrated(Fixtures::instance('wordpress')));
 
         expect(Fixtures::only($values, WORDPRESS_VOLUME_KEYS))->toBe([
             'persistence.enabled' => false,
@@ -160,7 +160,7 @@ describe('WordPress', function () {
             ],
         ]);
 
-        expect(Fixtures::only(Fixtures::values($app_instance), ['persistence.existingClaim', 'persistence.accessModes', 'persistence.storageClass']))->toBe([
+        expect(Fixtures::only(Fixtures::values(Fixtures::migrated($app_instance)), ['persistence.existingClaim', 'persistence.accessModes', 'persistence.storageClass']))->toBe([
             'persistence.existingClaim' => 'restored-data',
             'persistence.accessModes' => ['ReadWriteMany'],
             'persistence.storageClass' => 'longhorn-restored',
@@ -172,7 +172,7 @@ describe('WordPress', function () {
         // whether a name there was chosen or found, so the next release is given it either way
         $app_instance = Fixtures::instance('wordpress', settings: ['override' => ['pvc' => ['name' => 'found-by-a-job']]]);
 
-        expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->toBe('found-by-a-job');
+        expect(Fixtures::values(Fixtures::migrated($app_instance))['persistence']['existingClaim'])->toBe('found-by-a-job');
     });
 
     it('passes the MariaDB volume settings through as the configuration says', function () {
@@ -182,7 +182,7 @@ describe('WordPress', function () {
             'primary' => ['persistence' => ['enabled' => true, 'size' => '8Gi', 'storageClass' => 'fast']],
         ];
 
-        $values = Fixtures::values(Fixtures::instance('wordpress', settings: ['configurations' => ['mariadb' => $mariadb]]));
+        $values = Fixtures::values(Fixtures::migrated(Fixtures::instance('wordpress', settings: ['configurations' => ['mariadb' => $mariadb]])));
 
         expect($values['mariadb'])->toBe($mariadb);
     });
@@ -190,7 +190,7 @@ describe('WordPress', function () {
 
 describe('CiviCRM', function () {
     it('gives the app one volume and no claim of its own', function () {
-        $values = Fixtures::values(Fixtures::instance('civicrm-standalone'));
+        $values = Fixtures::values(Fixtures::migrated(Fixtures::instance('civicrm-standalone')));
 
         // Its MariaDB configuration has no volume settings, unlike WordPress's and Nextcloud's
         expect(Fixtures::only($values, WORDPRESS_VOLUME_KEYS))->toBe([
@@ -203,22 +203,22 @@ describe('CiviCRM', function () {
         ]);
     });
 
-    it('uses the claim name only when it is told to', function (array $pvc, ?string $claim) {
+    it('uses the claim name only when it is told to, once migrated', function (array $pvc, string $claim) {
         $app_instance = Fixtures::instance('civicrm-standalone', settings: ['override' => ['pvc' => $pvc]]);
 
-        expect(Fixtures::values($app_instance)['persistence']['existingClaim'])->toBe($claim);
+        expect(Fixtures::values(Fixtures::migrated($app_instance))['persistence']['existingClaim'])->toBe($claim);
     })->with([
         'a name, and told to use it' => [['name' => 'restored-data', 'override' => true], 'restored-data'],
         'a name, not told to' => [['name' => 'found-by-a-job'], ''],
         'a name, told not to' => [['name' => 'old-claim', 'override' => false], ''],
-        // As it is today: the name is read as it is, so a missing one is null and not ''
-        'told to, with no name' => [['override' => true], null],
+        // Was null while the chart read the name as it was; a claim that is not there is '' as for the others
+        'told to, with no name' => [['override' => true], ''],
     ]);
 
     it('wraps the access mode it keeps as one value into a list', function () {
         $app_instance = Fixtures::instance('civicrm-standalone', settings: ['configurations' => ['persistence-accessModes' => 'ReadWriteMany']]);
 
-        expect(Fixtures::values($app_instance)['persistence']['accessModes'])->toBe(['ReadWriteMany']);
+        expect(Fixtures::values(Fixtures::migrated($app_instance))['persistence']['accessModes'])->toBe(['ReadWriteMany']);
     });
 });
 
@@ -233,7 +233,7 @@ describe('Generic', function () {
             ],
         ]);
 
-        $persistence = Fixtures::values($app_instance)['persistence'];
+        $persistence = Fixtures::values(Fixtures::migrated($app_instance))['persistence'];
 
         // A claim that exists is mounted and not made, so the size and mode that went with a new one are unused
         expect($persistence)->not->toHaveKey('persistentVolumeClaims')
@@ -249,7 +249,7 @@ describe('Generic', function () {
             ],
         ]);
 
-        $values = Fixtures::values($app_instance);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
 
         expect($values['persistence']['persistentVolumeClaims'])->toBe([[
             'name' => 'data',
@@ -261,7 +261,7 @@ describe('Generic', function () {
     });
 
     it('sizes a volume with no size of its own from the plan', function () {
-        $values = Fixtures::values(Fixtures::instance('generic', ['persistence-enabled' => true]));
+        $values = Fixtures::values(Fixtures::migrated(Fixtures::instance('generic', ['persistence-enabled' => true])));
 
         expect($values['persistence']['persistentVolumeClaims'][0]['storage'])->toBe('2Gi');
     });
@@ -282,7 +282,7 @@ describe('Generic', function () {
             'persistence-1-existingClaim' => $extra('existingClaim'),
         ]);
 
-        $persistence = Fixtures::values($app_instance)['persistence'];
+        $persistence = Fixtures::values(Fixtures::migrated($app_instance))['persistence'];
 
         expect(array_column($persistence['persistentVolumeClaims'], 'storage', 'name'))->toBe(['data' => '2Gi', 'uploads' => '5Gi'])
             ->and(array_column($persistence['mounts'], 'mountPath', 'name'))->toBe(['data' => '/data', 'uploads' => '/uploads']);
@@ -294,7 +294,7 @@ describe('a chart from the catalog', function () {
     $flat = ['persistence' => ['enabled' => true, 'storageClass' => '', 'size' => '10Gi', 'existingClaim' => '']];
 
     it('is given the size, and nothing else, while it has no class and no claim to give', function () use ($flat) {
-        $values = Fixtures::values(Fixtures::catalogInstance($flat));
+        $values = Fixtures::values(Fixtures::migrated(Fixtures::catalogInstance($flat)));
 
         // Only what is written is in the values: the chart's own defaults for the rest are not repeated
         expect($values['persistence'])->toBe(['size' => '2Gi']);
@@ -305,7 +305,7 @@ describe('a chart from the catalog', function () {
             'override' => ['pvc' => ['name' => 'restored-data']],
         ]);
 
-        $values = Fixtures::values($app_instance);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
 
         expect(Fixtures::only($values, ['persistence.existingClaim', 'persistence.storageClass', 'persistence.size']))->toBe([
             'persistence.existingClaim' => 'restored-data',
@@ -317,7 +317,7 @@ describe('a chart from the catalog', function () {
     it('knows no access mode, whatever the instance keeps for one', function () use ($flat) {
         $app_instance = Fixtures::catalogInstance($flat, [], ['configurations' => ['persistence-accessMode' => 'ReadWriteMany']]);
 
-        expect(Fixtures::values($app_instance)['persistence'])->not->toHaveKeys(['accessMode', 'accessModes']);
+        expect(Fixtures::values(Fixtures::migrated($app_instance))['persistence'])->not->toHaveKeys(['accessMode', 'accessModes']);
     });
 
     it('is given only the one volume it picks when it has several', function () {
@@ -328,7 +328,7 @@ describe('a chart from the catalog', function () {
             ],
         ], [], ['override' => ['pvc' => ['name' => 'restored-data']]]);
 
-        $values = Fixtures::values($app_instance);
+        $values = Fixtures::values(Fixtures::migrated($app_instance));
 
         // The first enabled volume is the app's; the other keeps what the chart says
         expect($values['persistence']['data'])->toBe(['size' => '2Gi', 'existingClaim' => 'restored-data'])
