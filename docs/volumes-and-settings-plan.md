@@ -175,7 +175,7 @@ php artisan backup:charts                      # on the release AFTER: the "afte
   snapshot, so a person and the command look at the same thing.
 - **The visual audit**: an admin takes the before archive from the server and compares its files with the app's
   Helm values page (`Admin\Organizations\Applications@helmValues`); after the release they compare the page
-  with the same files. The page shows the same two renders the archive holds, so they should be identical.
+  with the same files. The page and the archive show the same render, so they should be identical.
 
 Both check the whole chain and not the migration's own idea of it. The Slice 0 tests do the same for the
 shapes a test can build.
@@ -188,10 +188,10 @@ from the release that is running now. It is a command and nothing more: no admin
 **The command**
 
 - For every app instance that has a chart (not deactivated, and with a web server), render each chart and
-  write it as YAML, masked through the existing `Redactor`. Each chart gives two files: `<chart>.values.yaml`
-  (what `values()` returns, which is what the Helm values page shows today) and `<chart>.deployed.yaml`
-  (what `valuesWithAdditionalConfigs()` returns: also the plan's extra configurations, the kumulicp labels and
-  the version's image overrides, which is what a release deploys).
+  write it as YAML, masked through the existing `Redactor`. Each chart gives one file, `<chart>.yaml`: what
+  `valuesWithAdditionalConfigs()` returns, which is what a release deploys (the chart's own values, and also the
+  changes extensions make, the plan's extra configurations, the kumulicp labels and the version's image
+  overrides).
 - Write one zip to the private `backups` disk (`config('filesystems.app_backup')`), in `chart-values/`,
   named `chart-values-<date and time>.zip`, laid out `<organization slug>/<app instance name>/<file>`, and print
   its path. A `manifest.json` has when it was taken, the core version, and for each file the instance, app,
@@ -199,12 +199,12 @@ from the release that is running now. It is a command and nothing more: no admin
   that fails does not stop the others.
 - Older archives are left where they are; they are small, and removing them is by hand.
 
-**The values page shows both**
+**The values page shows that render**
 
-Today the page shows `values()` only. It will show, for each chart, **Chart values** and **As deployed**,
-the same two renders the archive holds. Both are possible: `valuesWithAdditionalConfigs()` is public on
-`HelmChart`, and `PlanValuesPreview` already calls it. The page and the command use one method on
-`AppInstanceService` that returns each chart's name and both renders, masked.
+Until now the page showed `values()`, which leaves out what is added for the release. It will show
+`valuesWithAdditionalConfigs()`, the same render the archive holds, and only that: a second render would
+add nothing a person needs, since it contains the first. The page and the command use one method on
+`AppInstanceService` that returns each chart's name and its values, masked.
 
 **Things it has to get right**
 
@@ -219,13 +219,14 @@ the same two renders the archive holds. Both are possible: `valuesWithAdditional
   scheduled in `routes/console.php` and back up the app itself. The command's description should say this one
   is a record of rendered values, not something to restore from.
 
-**Tests**: the command (one archive, the layout, both files, the manifest, a chart that fails and the others
-still written), that nothing in the database changed, that no secret is in the archive, and the page (both
-renders shown, masked, and nothing written by opening it).
+**Tests**: the command (one archive, the layout, the labels and the plan's extra configurations in the file,
+the manifest, a chart that fails and the others still written), that nothing in the database changed, that no
+secret is in the archive, and the page (the labels and the plan's extra configurations shown, masked, and
+nothing written by opening it).
 
 ## Build order
 
-0. **`backup:charts`, and the values page showing both renders**, a separate PR to `main`, merged and
+0. **`backup:charts`, and the values page showing what a release is given**, a separate PR to `main`, merged and
    released first, and run by hand on the release that is live before the migration release goes out.
 1. **The store.** `AppProfile::$volumes` and its default, `Volumes`, `Volume` (`enabled()`, `size()`,
    `storageClass()`, `accessMode()`, `claim()`), `assign()` / `restore()` over `SettingsSnapshot`, and

@@ -24,7 +24,6 @@ use App\Support\AdminAppDomain;
 use App\Support\AppMaintenance;
 use App\Support\Facades\Action;
 use App\Support\OrgAppBreadcrumbs;
-use App\Support\Redactor;
 use App\Support\SafeErrorMessage;
 use App\Support\ServerChoices;
 use App\Support\ServerReach;
@@ -273,8 +272,6 @@ class Applications extends Controller
 
     public function helmValues(Organization $organization, AppInstance $app)
     {
-        $charts = (new AppInstanceService($app))->charts();
-
         return inertia()->render('Admin/Organizations/Apps/AppHelmValues', [
             'organization' => [
                 'id' => $organization->id,
@@ -288,10 +285,8 @@ class Applications extends Controller
                     'name' => $app->version->name,
                 ],
             ],
-            'charts' => collect($charts)->map(fn ($chart) => [
-                'name' => $chart->chartName(),
-                'values' => Redactor::redact($chart->values()),
-            ])->values(),
+            // What a release is given
+            'charts' => (new AppInstanceService($app))->renderedCharts(),
             'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
     }
