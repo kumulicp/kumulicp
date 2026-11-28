@@ -19,7 +19,9 @@ use App\Support\Facades\Action;
 use App\Support\Facades\Application;
 use App\Support\Facades\Domain;
 use App\Support\Facades\ServerInterface;
+use App\Support\Redactor;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AppInstanceService
@@ -79,6 +81,38 @@ class AppInstanceService
         }
 
         return $return_charts;
+    }
+
+    /**
+     * What each of the app's charts is given, as the Helm values page and `backup:charts` show it, with the
+     * secrets masked: the chart's own values, and what a release deploys, which is those and also the plan's
+     * extra configurations, the kumulicp labels and the version's image overrides.
+     *
+     * Building a chart writes small bookkeeping settings (the release name, the storage ratchet), so it is
+     * done in a transaction that is always rolled back, and the instance is left as it was found.
+     *
+     * @return array<int, array{name: string, values: array<string, mixed>, deployed: array<string, mixed>}>
+     */
+    public function renderedCharts(): array
+    {
+        $original = $this->app_instance->getAttributes();
+
+        DB::beginTransaction();
+
+        try {
+            return collect($this->charts())
+                ->map(fn (HelmChart $chart) => [
+                    'name' => $chart->chartName(),
+                    'values' => Redactor::redact($chart->values()),
+                    'deployed' => Redactor::redact($chart->valuesWithAdditionalConfigs()),
+                ])
+                ->all();
+        } finally {
+            DB::rollBack();
+
+            // What was written lives on the model too
+            $this->app_instance->setRawAttributes($original, true);
+        }
     }
 
     // The release that serves the maintenance page while the app is in maintenance
