@@ -29,6 +29,8 @@ use App\Support\ServerChoices;
 use App\Support\ServerReach;
 use App\Support\SharedAppContext;
 use App\Support\StorageHandover;
+use App\Support\Volumes\Volumes;
+use App\Support\Volumes\VolumesForm;
 use App\Task;
 use App\Updates\PendingUpdates;
 use App\Updates\ShadowedImages;
@@ -190,6 +192,7 @@ class Applications extends Controller
                 'deployed' => AdminAppDomain::isDeployed($app),
                 ...AdminAppDomain::options($app),
             ],
+            'volumes' => VolumesForm::fields($app, Volumes::for($app)),
             'maintenance' => [
                 'enabled' => $app->inMaintenance(),
                 // Whether the app is deployed in a way that can have a maintenance page
@@ -268,6 +271,22 @@ class Applications extends Controller
 
         return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}")
             ->with('success', __($enable ? 'admin.organizations.apps.maintenance_enabling' : 'admin.organizations.apps.maintenance_disabling', ['app' => $app->label]));
+    }
+
+    public function updateVolumes(Request $request, Organization $organization, AppInstance $app)
+    {
+        abort_unless($app->organization_id === $organization->id, 404);
+
+        if ($redirect = $this->notYetActivated($app)) {
+            return $redirect;
+        }
+
+        $volumes = Volumes::for($app);
+        $validated = $request->validate(VolumesForm::rules($volumes));
+
+        VolumesForm::apply($volumes, $validated['volumes']);
+
+        return redirect("/admin/organizations/{$organization->id}/apps/{$app->id}/edit")->with('success', __('admin.volumes.updated', ['app' => $app->label]));
     }
 
     public function helmValues(Organization $organization, AppInstance $app)

@@ -738,6 +738,15 @@
       "massUpgradeConfirm": "Upgrade apps"
     },
     "volumes": {
+      "title": "Volumes",
+      "enabled": "Enabled",
+      "size": "Size (Gi)",
+      "quota_size": "Follows the plan's storage: {size} Gi",
+      "storage_class": "Storage class",
+      "access_mode": "Access mode",
+      "claim": "Existing claim",
+      "follows_plan": "Blank follows the plan",
+      "save": "Save volumes",
       "data": "Data",
       "redis_master": "Redis master",
       "redis_replica": "Redis replica",

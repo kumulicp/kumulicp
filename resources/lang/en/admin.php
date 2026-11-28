@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'volumes' => [
+        'updated' => ':app volumes updated',
+        'unknown' => 'The app has no such volume',
+    ],
     'dashboard' => [
         'dashboard' => 'Dashboard',
         'warning_messages' => [

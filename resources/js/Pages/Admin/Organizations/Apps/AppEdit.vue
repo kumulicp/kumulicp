@@ -170,6 +170,26 @@ import ChangeSummary from '@/components/updates/ChangeSummary.vue'
       </form>
     </va-collapse>
     <va-list-separator class="my-3" fit />
+    <form v-if="volumes.length" id="volumesForm" class="mt-3" @submit.prevent="volumesForm.put('/admin/organizations/'+organization.id+'/apps/'+app.id+'/volumes')">
+      <va-card class="mb-3">
+        <va-card-title>{{ $t('admin.volumes.title') }}</va-card-title>
+        <va-card-content>
+          <p class="va-text-secondary mb-3">{{ $t('admin.volumes.follows_plan') }}</p>
+          <div v-for="volume in volumes" :key="volume.name" :id="'volume-' + volume.name" class="mb-4">
+            <h4 class="va-h6">{{ $t(volume.label) }}</h4>
+            <div class="row">
+              <va-switch v-if="volume.optional" v-model="volumesForm.volumes[volume.name].enabled" class="flex sm12 mb-2" :label="$t('admin.volumes.enabled')" />
+              <va-input v-if="!volume.follows_quota" v-model="volumesForm.volumes[volume.name].size" type="number" min="1" class="flex sm12 md3 mb-2" :label="$t('admin.volumes.size')" :placeholder="String(volume.effective.size)" :error="!!volumesForm.errors['volumes.' + volume.name + '.size']" :error-messages="volumesForm.errors['volumes.' + volume.name + '.size']" />
+              <p v-else class="flex sm12 md3 mb-2">{{ $t('admin.volumes.quota_size', { size: volume.effective.size }) }}</p>
+              <va-input v-model="volumesForm.volumes[volume.name].storage_class" class="flex sm12 md3 mb-2" :label="$t('admin.volumes.storage_class')" :placeholder="volume.effective.storage_class" :error="!!volumesForm.errors['volumes.' + volume.name + '.storage_class']" :error-messages="volumesForm.errors['volumes.' + volume.name + '.storage_class']" />
+              <va-select v-model="volumesForm.volumes[volume.name].access_mode" class="flex sm12 md3 mb-2" :options="volume.access_modes" clearable :label="$t('admin.volumes.access_mode')" :placeholder="volume.effective.access_mode" />
+              <va-input v-if="volume.takes_claim" v-model="volumesForm.volumes[volume.name].claim" class="flex sm12 md3 mb-2" :label="$t('admin.volumes.claim')" :error="!!volumesForm.errors['volumes.' + volume.name + '.claim']" :error-messages="volumesForm.errors['volumes.' + volume.name + '.claim']" />
+            </div>
+          </div>
+          <va-button type="submit" id="saveVolumes" :disabled="volumesForm.processing">{{ $t('admin.volumes.save') }}</va-button>
+        </va-card-content>
+      </va-card>
+    </form>
     <form @submit.prevent="form.put('/admin/organizations/'+organization.id+'/apps/'+app.id)">
 
       <div class="row mt-3">
@@ -463,6 +483,10 @@ export default {
       type: Array,
       default: () => []
     },
+    volumes: {
+      type: Array,
+      default: () => []
+    },
     ignored_image_settings: {
       type: Array,
       default: () => []
@@ -547,6 +571,16 @@ export default {
       // Saving the settings never sends servers: moving those is a separate, confirmed action
       form: useForm({
         settings
+      }),
+      // What is sent is every field of every volume; one left blank is forgotten, so the plan applies again
+      volumesForm: useForm({
+        volumes: Object.fromEntries(this.volumes.map(volume => [volume.name, {
+          ...(volume.optional ? { enabled: volume.own.enabled ?? null } : {}),
+          ...(volume.follows_quota ? {} : { size: volume.own.size ?? null }),
+          storage_class: volume.own.storage_class ?? null,
+          access_mode: volume.own.access_mode ?? null,
+          ...(volume.takes_claim ? { claim: volume.own.claim ?? null } : {})
+        }]))
       }),
       showRepair: false,
       confirmRepair: false,

@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'volumes' => [
+        'updated' => 'Volúmenes de :app actualizados',
+        'unknown' => 'La aplicación no tiene ese volumen',
+    ],
     'servers' => [
         'authentik' => [
             'host' => 'Configura aquí el nombre de dominio: authentik.example.com. Esto sobrescribirá el nombre de host predeterminado para la instancia de la aplicación. (Requiere actualización manual de la aplicación)',
