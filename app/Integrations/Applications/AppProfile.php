@@ -111,17 +111,25 @@ class AppProfile
     }
 
     /**
-     * Where the app's chart reads the claim of its persistent volume and the settings of the
-     * volume from, in the instance's settings (see App\Support\StorageHandover); null when
-     * the chart has no way to be given a claim that already exists. Each entry has a `path`
-     * (dot notation) and, where it differs, `as` ('list' for a value the chart takes as a list).
-     * `claim` may also have `with` / `without`: settings that go with using or not using one.
+     * Where the volume that holds the app's files, and can be given a claim that exists, keeps what a move gives it
+     * (App\Support\StorageHandover), in the instance's settings; null when the app has none. It is the same for every
+     * app, since they all keep a volume at `volumes.<name>` (see App\Support\Volumes\Volumes). Each entry has a `path`
+     * (dot notation).
      *
      * @return array<string, array<string, mixed>>|null
      */
     public function storageHandover(AppInstance $app_instance): ?array
     {
-        return null;
+        if (! ($this->volumes()['data']['claim'] ?? false)) {
+            return null;
+        }
+
+        return [
+            'claim' => ['path' => 'volumes.data.claim'],
+            'access_mode' => ['path' => 'volumes.data.access_mode'],
+            'storage_class' => ['path' => 'volumes.data.storage_class'],
+            'size' => ['path' => 'volumes.data.size'],
+        ];
     }
 
     public function configuration(string $config)

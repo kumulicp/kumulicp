@@ -46,10 +46,10 @@ class HelmForgeProfile extends AppProfile
     public function storageHandover(AppInstance $app_instance): ?array
     {
         // Its chart is never given an access mode
-        return [
-            'claim' => ['path' => 'override.pvc.name'],
-            'storage_class' => ['path' => 'configurations.persistence-storageClass'],
-            'size' => ['path' => 'chart_storage'],
-        ];
+        $handover = parent::storageHandover($app_instance);
+
+        unset($handover['access_mode']);
+
+        return $handover;
     }
 }

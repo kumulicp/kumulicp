@@ -35,16 +35,13 @@ it('deploys each instance with the chart it runs, though they are the same app',
 });
 
 it('reads the volume layout of the instance from the chart it runs, not from its app', function () {
-    // The app's own profile has no way to be given a claim; the added chart's has
-    expect(StorageHandover::supports($this->own))->toBeFalse()
-        ->and(StorageHandover::supports($this->added))->toBeTrue()
-        ->and(StorageHandover::map($this->added)['claim'])->toBe(['path' => 'override.pvc.name']);
+    // What the app's own chart says, which the demo profile is told
+    DemoAppProfile::$storage_handover = ['claim' => ['path' => 'existing_claim'], 'access_mode' => ['path' => 'existing_mode']];
 
-    // Whichever the app is registered with does not change what an instance on the added chart is given
-    DemoAppProfile::$storage_handover = ['claim' => ['path' => 'existing_claim']];
-
-    expect(StorageHandover::map($this->own)['claim'])->toBe(['path' => 'existing_claim'])
-        ->and(StorageHandover::map($this->added)['claim'])->toBe(['path' => 'override.pvc.name']);
+    // The added catalog chart says its own: it is never given an access mode
+    expect(StorageHandover::fields($this->own))->toBe(['claim', 'access_mode'])
+        ->and(StorageHandover::fields($this->added))->toBe(['claim', 'storage_class', 'size'])
+        ->and(StorageHandover::map($this->added)['claim'])->toBe(['path' => 'volumes.data.claim']);
 });
 
 it('gives the instance on the added chart its claim at the place that chart was detected to take it', function () {

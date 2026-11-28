@@ -2,7 +2,6 @@
 
 namespace App\Integrations\Applications\Wordpress;
 
-use App\AppInstance;
 use App\Integrations\Applications\AppProfile;
 use App\Integrations\ServerManagers\Kubernetes\Charts\WordpressChart;
 
@@ -306,14 +305,4 @@ class WordpressProfile extends AppProfile
             'validations' => 'nullable|string',
         ],
     ];
-
-    public function storageHandover(AppInstance $app_instance): ?array
-    {
-        return [
-            'claim' => ['path' => 'override.pvc.name'],
-            'access_mode' => ['path' => 'configurations.persistence-accessModes', 'as' => 'list'],
-            'storage_class' => ['path' => 'configurations.persistence-storageClass'],
-            'size' => ['path' => 'chart_storage'],
-        ];
-    }
 }
