@@ -149,7 +149,7 @@ class VerifyVolumes extends Command
 
             // A class or a claim that is null, or is an empty text, is not set either way, and the chart gives the
             // release no class or no claim for either. Only a key that is there on both sides is not a difference
-            if ($old !== $new) {
+            if ($old !== $new && ! ($this->empty($old) && $this->empty($new))) {
                 $lines[] = "  {$key}: ".$this->show($old).' -> '.$this->show($new);
             }
         }
