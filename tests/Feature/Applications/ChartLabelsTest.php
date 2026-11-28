@@ -83,7 +83,7 @@ it('points the nextcloud job at the release claim without asking the cluster', f
 
     expect($job->persistentVolumeClaim())->toBe("{$organization->slug}-nextcloud-{$app_instance->id}-nextcloud");
 
-    $app_instance->updateSetting('existing_claim', 'my-claim');
+    $app_instance->updateSetting('volumes.data.claim', 'my-claim');
 
     expect((new NextcloudJobChart($organization, $app_instance))->persistentVolumeClaim())->toBe('my-claim');
 });

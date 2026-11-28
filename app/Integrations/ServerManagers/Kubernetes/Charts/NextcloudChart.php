@@ -3,6 +3,7 @@
 namespace App\Integrations\ServerManagers\Kubernetes\Charts;
 
 use App\Support\Facades\Application;
+use App\Support\Volumes\Volumes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Crypt;
 
@@ -27,6 +28,10 @@ class NextcloudChart extends HelmChart
         $organization = $this->organization;
         $app_instance = Application::instance($this->app_instance);
         $version = $app_instance->version;
+
+        // The volume that holds the files, and those of the Redis and MariaDB next to the app
+        $volumes = Volumes::for($this->app_instance, $this->app_storage);
+        $data = $volumes->get('data');
 
         $ingress_enabled = $app_instance->configuration('ingress-enabled', true);
 
@@ -98,7 +103,7 @@ class NextcloudChart extends HelmChart
             'internalDatabase' => [
                 'enabled' => false,
             ],
-            'mariadb' => $app_instance->configuration('mariadb', true),
+            'mariadb' => $this->withVolumes($app_instance->configuration('mariadb', true), ['primary' => ['mariadb', true]], $volumes),
             'metrics' => [
                 'enabled' => $app_instance->configuration('metrics-enabled', true),
                 'https' => $app_instance->configuration('metrics-https', true),
@@ -150,11 +155,11 @@ class NextcloudChart extends HelmChart
                 'extraSidecarContainers' => $this->sidecars(),
             ],
             'persistence' => [
-                'enabled' => $app_instance->configuration('persistence-enabled', true),
-                'storageClass' => $app_instance->configuration('persistence-storageClass', true),
-                'size' => $this->appStorage().'Gi',
-                'existingClaim' => $app_instance->setting('existing_claim', ''),
-                'accessMode' => $app_instance->configuration('persistence-accessMode', true),
+                'enabled' => $data->enabled(),
+                'storageClass' => $data->storageClass(),
+                'size' => $data->size().'Gi',
+                'existingClaim' => $data->claim(),
+                'accessMode' => $data->accessMode(),
             ],
             'rbac' => [
                 'enabled' => $app_instance->configuration('rbac-enabled', true),
@@ -169,7 +174,7 @@ class NextcloudChart extends HelmChart
                     'memory' => $app_instance->configuration('resources-limits-memory'),
                 ],
             ],
-            'redis' => $app_instance->configuration('redis'),
+            'redis' => $this->withVolumes($app_instance->configuration('redis'), ['master' => ['redis-master', false], 'replica' => ['redis-replica', false]], $volumes),
             'startupProbe' => [
                 'enabled' => $app_instance->configuration('startupProbe-enabled'),
                 'initialDelaySeconds' => $app_instance->configuration('startupProbe-initialDelaySeconds'),
@@ -186,6 +191,41 @@ class NextcloudChart extends HelmChart
         ];
 
         return $chart;
+    }
+
+    /**
+     * The configuration of a subchart, which the chart takes as it is, with the volumes of its workloads as
+     * the volumes say: whether each is on, how big it is and its class (and its access mode, for one that takes
+     * one). Only the volume that holds the files takes a claim, so one a configuration still has is cleared.
+     *
+     * @param  array<string, mixed>|null  $configuration
+     * @param  array<string, array{0: string, 1: bool}>  $workloads  the workload's key in it => the volume's name, and whether it takes an access mode
+     * @return array<string, mixed>|null
+     */
+    private function withVolumes(?array $configuration, array $workloads, Volumes $volumes): ?array
+    {
+        if ($configuration === null) {
+            return null;
+        }
+
+        foreach ($workloads as $key => [$name, $takes_access_mode]) {
+            $volume = $volumes->get($name);
+            $persistence = ['enabled' => $volume->enabled(), 'size' => $volume->size().'Gi', 'storageClass' => $volume->storageClass()];
+
+            if ($takes_access_mode) {
+                $persistence['accessMode'] = $volume->accessMode();
+            }
+
+            $kept = Arr::get($configuration, "{$key}.persistence", []);
+
+            if (array_key_exists('existingClaim', $kept)) {
+                $persistence['existingClaim'] = '';
+            }
+
+            $configuration[$key]['persistence'] = array_replace($kept, $persistence);
+        }
+
+        return $configuration;
     }
 
     // Imaginary's image is one of the version's own (see HelmChart::applyImageOverrides()), which

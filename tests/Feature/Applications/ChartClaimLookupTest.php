@@ -81,7 +81,7 @@ it('gives the claim a job found to the next release as a claim that exists, as i
 
 describe('Nextcloud', function () {
     it('mounts the claim it was given, else the one its chart names after its release', function () {
-        $app_instance = Fixtures::instance('nextcloud', settings: ['existing_claim' => 'restored-data']);
+        $app_instance = Fixtures::instance('nextcloud', settings: ['volumes' => ['data' => ['claim' => 'restored-data']]]);
 
         expect((new NextcloudJobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('restored-data');
 
@@ -90,9 +90,15 @@ describe('Nextcloud', function () {
         expect((new NextcloudJobChart($named->organization, $named))->persistentVolumeClaim())->toBe('acme-nextcloud-nextcloud');
     });
 
-    it('does not read override.pvc.name for a claim it was given, only for one found', function () {
-        // existing_claim wins over everything, including a claim an earlier lookup kept
-        $app_instance = Fixtures::instance('nextcloud', settings: ['existing_claim' => 'restored-data', 'override' => ['pvc' => ['name' => 'found-earlier']]]);
+    it('mounts the claim it was given before the migration, once it is migrated', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['existing_claim' => 'restored-data']);
+        $app_instance = Fixtures::migrated($app_instance);
+
+        expect((new NextcloudJobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('restored-data');
+    });
+
+    it('mounts the claim it was given before anything a job found', function () {
+        $app_instance = Fixtures::instance('nextcloud', settings: ['volumes' => ['data' => ['claim' => 'restored-data']], 'override' => ['pvc' => ['name' => 'found-earlier']]]);
 
         expect((new NextcloudJobChart($app_instance->organization, $app_instance))->persistentVolumeClaim())->toBe('restored-data');
     });

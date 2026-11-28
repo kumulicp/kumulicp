@@ -15,6 +15,7 @@ use App\Support\Catalog\ChartCatalogSync;
 use App\Support\Facades\Application;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\VersionUpdates\ChartArchive;
 
@@ -178,6 +179,17 @@ class VolumeFixtures
         ]);
 
         return self::finish($organization, Application::activate($organization, $app, $version, $plan)->get(), $settings);
+    }
+
+    /**
+     * The instance after `volumes:migrate`, as it is once the release that reads volumes.<name> is out: its
+     * old settings copied to where the charts read them.
+     */
+    public static function migrated(AppInstance $app_instance): AppInstance
+    {
+        Artisan::call('volumes:migrate');
+
+        return $app_instance->fresh();
     }
 
     /**
