@@ -733,6 +733,9 @@
       "massUpgradeWarning": "{count} aplicación(es) usan una versión anterior. Esto actualiza todas a {version} ahora, y cada actualización puede causar tiempo de inactividad en esa aplicación. ¿Seguro?",
       "massUpgradeConfirm": "Actualizar aplicaciones"
     },
+    "volumes": {
+      "data": "Datos"
+    },
     "apps": {
       "viewInDiscover": "Ver en Descubrir",
       "appSettings": "Configuración de la Aplicación",

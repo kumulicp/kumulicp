@@ -158,6 +158,29 @@ class VolumeFixtures
     }
 
     /**
+     * An instance of an app that declares several volumes (VolumesDemoProfile).
+     *
+     * @param  array<string, array<string, mixed>>  $plan_volumes  what the plan says about each, by name
+     * @param  array<string, mixed>  $settings  the instance's, merged over its own
+     */
+    public static function volumesInstance(array $plan_volumes = [], array $settings = []): AppInstance
+    {
+        Application::register(new VolumesDemoProfile);
+
+        $organization = Organization::factory()->create();
+        $app = ApplicationModel::where('slug', 'volumes_demo')->first() ?? Application::initialize('volumes_demo');
+        Application::roles($app);
+
+        $version = AppVersion::factory()->create(['application_id' => $app->id]);
+        $plan = AppPlan::factory()->create([
+            'application_id' => $app->id,
+            'settings' => self::planSettings([]) + ['volumes' => $plan_volumes],
+        ]);
+
+        return self::finish($organization, Application::activate($organization, $app, $version, $plan)->get(), $settings);
+    }
+
+    /**
      * The chart the instance is deployed with, found the way a release finds it.
      */
     public static function chart(AppInstance $app_instance): HelmChart

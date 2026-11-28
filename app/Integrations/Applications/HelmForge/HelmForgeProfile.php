@@ -22,6 +22,9 @@ class HelmForgeProfile extends AppProfile
 
     protected $helm_chart = HelmForgeChart::class;
 
+    // Whether the chart was detected to keep a volume (see ChartConventionDetector)
+    private bool $has_volume = false;
+
     /**
      * @param  AppChart|null  $chart  a catalog chart added to an app that is deployed another way, whose own data is used instead of the app's
      */
@@ -29,6 +32,15 @@ class HelmForgeProfile extends AppProfile
     {
         $this->name = $application->slug;
         $this->configurations = ($chart->catalog ?? $application->catalog)['configurations'] ?? [];
+        $this->has_volume = (bool) (($chart->catalog ?? $application->catalog)['convention']['persistence'] ?? null);
+    }
+
+    /**
+     * The volume the chart was detected to have, if it was.
+     */
+    public function volumes(): array
+    {
+        return $this->has_volume ? parent::volumes() : [];
     }
 
     public function storageHandover(AppInstance $app_instance): ?array

@@ -737,6 +737,9 @@
       "massUpgradeWarning": "{count} app(s) run an older version. This upgrades every one of them to {version} now, and each upgrade may cause downtime for that app. Are you sure?",
       "massUpgradeConfirm": "Upgrade apps"
     },
+    "volumes": {
+      "data": "Data"
+    },
     "apps": {
       "viewInDiscover": "View in Discover",
       "appSettings": "App Settings",

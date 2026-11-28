@@ -186,6 +186,15 @@ class GenericAppProfile extends AppProfile
         ],
     ];
 
+    /**
+     * None yet: its volumes are a list the plan defines (`persistence-<index>-*`), not a fixed few, so
+     * they do not fit a profile's `$volumes`. See docs/volumes-and-settings-plan.md.
+     */
+    public function volumes(): array
+    {
+        return [];
+    }
+
     public function storageHandover(AppInstance $app_instance): ?array
     {
         // One volume only: which of several the claim is for is not something to guess
