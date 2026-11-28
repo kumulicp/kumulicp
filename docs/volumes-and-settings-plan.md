@@ -177,6 +177,36 @@ php artisan backup:charts                      # on the release AFTER: the "afte
   Helm values page (`Admin\Organizations\Applications@helmValues`); after the release they compare the page
   with the same files. The page and the archive show the same render, so they should be identical.
 
+#### Runbook
+
+1. On the release **before**, run `php artisan backup:charts`. Keep the archive (and its name). It is the only
+   record of what the apps were given, so do it before anything else, on the data the migration will run on.
+2. Release the code that reads `volumes.<name>`. The charts stop reading the old keys at once.
+3. `php artisan volumes:migrate --dry-run`, and read what it prints: a claim that may have been found and not
+   chosen (WordPress and catalog charts), a size that is not whole Gi, several access modes, a claim that can't be kept.
+   Then `php artisan volumes:migrate`. It can be run again; it never writes over a value that is there.
+4. `php artisan volumes:verify <archive> --ignore=...`, with the patterns below, and look at every difference
+   that is left. **Steps 2 to 4 are one maintenance window: until step 3 has run, the apps render without
+   their claims.**
+5. `php artisan backup:charts` again, and compare an app's file with its Helm values page.
+
+These differences are meant, and are what `--ignore` is for:
+
+| Difference | Pattern |
+|---|---|
+| Nextcloud's Redis volumes say their size (8Gi, the subchart's own default) where the configuration said nothing | `redis.*.persistence.size` |
+| A claim kept in a MariaDB configuration is cleared: only the volume that holds the files takes a claim | `mariadb.primary.persistence.existingClaim` |
+| CiviCRM told to use a claim with no name gets `''` where it got `null` | `persistence.existingClaim` (only for that case) |
+| A WordPress list of several access modes is cut to the first | `persistence.accessModes` (only where the migration said so) |
+
+`volumes:verify` does not count `null` and an empty text as different for a key that is on both sides: a class
+or a claim that is either is not set, and Helm gives the release none. A key that is there on one side only is
+still a difference. (A site's plan can store `persistence-storageClass` as `null` where the chart now says `''`;
+Nextcloud's `persistence.existingClaim` is `''` where an instance had no claim setting and `null` where it had
+the setting empty, and is `null` now.)
+
+Anything else is a stop: a claim or a size that moved, a class that changed, or an app that is no longer rendered.
+
 Both check the whole chain and not the migration's own idea of it. The Slice 0 tests do the same for the
 shapes a test can build.
 
