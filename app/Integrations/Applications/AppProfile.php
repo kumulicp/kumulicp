@@ -29,6 +29,32 @@ class AppProfile
 
     protected $configurations = [];
 
+    /**
+     * The volumes the app's chart deploys, by name, next to the configurations (see App\Support\Volumes\Volumes).
+     * Each has the defaults of what a plan or an instance can change (`enabled`, `storage_class`, `access_mode`, and
+     * `size` for a volume with a size of its own) and:
+     *
+     * - `size`: 'quota' for the volume that holds the customer's files, which follows what the subscription gives
+     *   the app, or a number of Gi for a volume with a size of its own;
+     * - `claim`: true if it can be given a claim that already exists, which only that volume can;
+     * - `optional`: true if the app can do without it, so it is off until `enabled` says otherwise.
+     *
+     * The same name is used by the plan's settings (`volumes.<name>.*`), the instance's settings, the forms and the chart.
+     * An app that declares none has the one every app has.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    protected $volumes = [
+        'data' => [
+            'label' => 'admin.volumes.data',
+            'size' => 'quota',
+            'claim' => true,
+            'enabled' => true,
+            'storage_class' => '',
+            'access_mode' => 'ReadWriteOnce',
+        ],
+    ];
+
     protected $roles = [];
 
     protected $role_groups = [];
@@ -106,6 +132,14 @@ class AppProfile
     public function configurations()
     {
         return $this->configurations;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function volumes(): array
+    {
+        return $this->volumes;
     }
 
     /**
