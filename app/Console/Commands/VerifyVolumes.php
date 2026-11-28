@@ -147,6 +147,8 @@ class VerifyVolumes extends Command
             $old = array_key_exists($key, $was) ? $was[$key] : self::ABSENT;
             $new = array_key_exists($key, $is) ? $is[$key] : self::ABSENT;
 
+            // A class or a claim that is null, or is an empty text, is not set either way, and the chart gives the
+            // release no class or no claim for either. Only a key that is there on both sides is not a difference
             if ($old !== $new) {
                 $lines[] = "  {$key}: ".$this->show($old).' -> '.$this->show($new);
             }
@@ -161,6 +163,11 @@ class VerifyVolumes extends Command
         }
 
         return count($lines);
+    }
+
+    private function empty(mixed $value): bool
+    {
+        return $value === null || $value === '';
     }
 
     /**

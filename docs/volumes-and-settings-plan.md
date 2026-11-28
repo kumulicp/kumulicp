@@ -199,6 +199,12 @@ These differences are meant, and are what `--ignore` is for:
 | CiviCRM told to use a claim with no name gets `''` where it got `null` | `persistence.existingClaim` (only for that case) |
 | A WordPress list of several access modes is cut to the first | `persistence.accessModes` (only where the migration said so) |
 
+`volumes:verify` does not count `null` and an empty text as different for a key that is on both sides: a class
+or a claim that is either is not set, and Helm gives the release none. A key that is there on one side only is
+still a difference. (A site's plan can store `persistence-storageClass` as `null` where the chart now says `''`;
+Nextcloud's `persistence.existingClaim` is `''` where an instance had no claim setting and `null` where it had
+the setting empty, and is `null` now.)
+
 Anything else is a stop: a claim or a size that moved, a class that changed, or an app that is no longer rendered.
 
 Both check the whole chain and not the migration's own idea of it. The Slice 0 tests do the same for the

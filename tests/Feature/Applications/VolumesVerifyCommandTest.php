@@ -89,6 +89,23 @@ describe('when something differs', function () {
             ->expectsOutputToContain('1 differences in 1 files compared');
     });
 
+    it('does not count null and an empty text as different, for a key that is there on both sides', function () {
+        $app_instance = Fixtures::instance('nextcloud');
+        $archive = takeArchive();
+
+        // What an archive has of a class or a claim a plan stored as null
+        $disk = Storage::disk(config('filesystems.app_backup'));
+        $zip = new ZipArchive;
+        $zip->open($disk->path("chart-values/{$archive}"));
+        $file = archivedFile($app_instance);
+        $yaml = $zip->getFromName($file);
+        expect($yaml)->toContain("storageClass: ''");
+        $zip->addFromString($file, str_replace("storageClass: ''", 'storageClass: null', $yaml));
+        $zip->close();
+
+        $this->artisan('volumes:verify', ['archive' => $archive])->assertSuccessful();
+    });
+
     it('says a key that is new or gone, and a size that changed', function () {
         $app_instance = Fixtures::instance('nextcloud');
         $archive = takeArchive();
