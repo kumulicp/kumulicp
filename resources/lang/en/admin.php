@@ -258,6 +258,7 @@ return [
             'migrating_database' => ':app\'s database is being migrated to :server',
             'moving_sso' => ':app\'s sign-in is being moved to :server',
             'moving_web' => ':app is being moved to :server',
+            'moving_web_children' => ':app is being moved to :server, and the :count apps that run with it are stopped until it is done',
             'removing_old_release' => 'Removing :app from :server',
             'removing_old_sso' => 'Removing :app\'s sign-in entry from :server',
             'confirmed' => 'Thanks: :app will carry on shortly',

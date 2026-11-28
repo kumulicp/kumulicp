@@ -665,6 +665,38 @@ class SharedAppsTest extends TestCase
         $this->assertNull($shared->refresh()->primary_domain_id);
     }
 
+    public function test_the_shared_app_has_a_move_tab_once_it_is_deployed_and_says_when_it_is_being_moved()
+    {
+        [$admin, $shared] = $this->readyToTest();
+        $show = "/admin/service/shared-apps/{$shared->id}";
+        $props = fn () => $this->actingAs($admin)->get($show)->viewData('page')['props']['shared_app'];
+
+        // Waiting to be set up: nothing is deployed to move
+        $this->assertNull($props()['urls']['move']);
+        $this->assertFalse($props()['moving']);
+
+        $shared->status = 'active';
+        $shared->save();
+
+        $this->assertSame("/admin/organizations/{$shared->organization_id}/apps/{$shared->id}/move", $props()['urls']['move']);
+        $this->assertFalse($props()['moving']);
+
+        $move = Task::forceCreate([
+            'organization_id' => $shared->organization_id,
+            'app_instance_id' => $shared->id,
+            'action_group' => 'system',
+            'action_slug' => 'application_web_move',
+            'status' => TaskStatus::IN_PROGRESS,
+        ]);
+
+        $this->assertTrue($props()['moving']);
+
+        $move->status = TaskStatus::COMPLETE;
+        $move->save();
+
+        $this->assertFalse($props()['moving']);
+    }
+
     public function test_the_shared_app_says_when_its_plan_changed_after_the_instance_was_last_updated()
     {
         [$admin, $shared, , $plan] = $this->readyToTest();

@@ -121,6 +121,7 @@ class SharedAppContext
                 'edit' => $state === self::ACTIVE || $external ? "{$instance}/edit" : null,
                 // The chart is reviewed while setting it up, too
                 'helm_values' => $state === self::ACTIVE || $state === self::SETUP ? "{$instance}/helm-values" : null,
+                'move' => $state === self::ACTIVE ? "{$instance}/move" : null,
                 'backups' => $state === self::ACTIVE && Toggle::active('app-backups') ? "{$instance}/backups" : null,
                 'plan' => $external ? null : $plan,
                 'plan_edit' => $external ? null : "{$plan}/edit",
@@ -130,7 +131,20 @@ class SharedAppContext
             ],
             'setup' => $state === self::SETUP ? self::setup($shared_app) : null,
             'update_required' => $state === self::ACTIVE && self::updateRequired($shared_app),
+            'moving' => $state === self::ACTIVE && self::moving($shared_app),
         ];
+    }
+
+    /**
+     * Whether the shared app is being moved to another server. Until it is done the apps of
+     * organizations that are being added to it wait: they are activated on the shared app once it is active.
+     */
+    public static function moving(AppInstance $shared_app): bool
+    {
+        return $shared_app->tasks()
+            ->where('action_slug', 'application_web_move')
+            ->whereIn('status', TaskStatus::openValues())
+            ->exists();
     }
 
     /**

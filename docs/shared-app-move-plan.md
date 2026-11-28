@@ -165,6 +165,13 @@ Tests (Pest, fake driver, like `WebMoveTest`/`WebMoveWithServersTest`):
 
 ## Phase 2: the move page and entry points
 
+Built. Two things came out differently from what is written below: (3) did not need new code, because
+a child's activation already waits for its parent to be active (`application_required`) and the move
+keeps the parent `updating` from start to end, so the answer to the "wait or refuse" question is
+"wait", and the shared app's pages now say a move is running (`shared_app.moving`); (5), the
+announcement, is not built. Child updates and deletions started *during* a move are not held (see
+Open questions).
+
 1. Add a **Move** tab to the shared-app layout: `SharedAppContext::payload()['urls']['move']`
    (`{$instance}/move`, `null` unless `ACTIVE`), and the matching tab in the shared-app tabs
    component (`SharedAppView.vue`, `SharedAppTabs`). The same for the existing Edit tab's
@@ -302,8 +309,9 @@ moves like any other instance (see "Two kinds of shared app"). Still open:
    `ApplicationActivate` for an addon, which nobody has checked yet; the plan works either way
    but step 3 of the addon section depends on it. (Resolved: the family is in scope, with its
    own database and the parent's sign-in.)
-2. During a move, should a child activation wait for the move or be refused? Waiting is friendlier
-   but holds a subscription flow open for up to the move's timeouts (about 1.5 hours in total).
+2. Resolved: a child activation waits for the move (it already waits for its parent to be active). Still
+   open: a child's update or deletion started during a move rebuilds the parent's release, which
+   the move is stopping and starting. `CHILD_TASKS_OPEN` only checks when the move starts.
 3. Should the announcement to children (Phase 2, step 5) be sent automatically for apps with
    more than N children, or always left to the administrator?
 4. Resolved: an ERPNext child's database is never on a different server than the hub's, and one

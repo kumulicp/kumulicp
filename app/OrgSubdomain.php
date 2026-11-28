@@ -4,6 +4,8 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -30,22 +32,34 @@ class OrgSubdomain extends Model
      */
     protected $fillable = ['host'];
 
-    public function organization()
+    /**
+     * @return BelongsTo<Organization, $this>
+     */
+    public function organization(): BelongsTo
     {
         return $this->belongsTo('App\Organization', 'organization_id');
     }
 
-    public function app_instance()
+    /**
+     * @return BelongsTo<AppInstance, $this>
+     */
+    public function app_instance(): BelongsTo
     {
         return $this->belongsTo('App\AppInstance', 'app_instance_id');
     }
 
-    public function domain()
+    /**
+     * @return BelongsTo<OrgDomain, $this>
+     */
+    public function domain(): BelongsTo
     {
         return $this->belongsTo('App\OrgDomain', 'parent_domain_id');
     }
 
-    public function primary_app_instance()
+    /**
+     * @return HasOne<AppInstance, $this>
+     */
+    public function primary_app_instance(): HasOne
     {
         return $this->hasOne('App\AppInstance', 'primary_domain');
     }

@@ -13,6 +13,7 @@ use App\Actions\Apps\WebMove\RestoreNewDatabase;
 use App\Actions\Apps\WebMove\RunSettingsJob;
 use App\Actions\Apps\WebMove\SetUpNewSignIn;
 use App\Actions\Apps\WebMove\SwitchServer;
+use App\Actions\Apps\WebMove\UpdatePlanServers;
 use App\Actions\Apps\WebMove\Verify;
 use App\AppInstance;
 use App\Server;
@@ -38,6 +39,7 @@ use Illuminate\Support\Arr;
  *     the release to be installed)
  *  9. refresh the DNS records the app's domains were given the old server's address in, and those of the
  *     apps that run in its release (the apps shared from a shared app, an addon)
+ * 10. for a shared app, tell its own plan where it is now
  *
  * The servers the app uses are changed here only when the new app server can't reach them, or the
  * administrator wants others, and then only as part of the move: the old release is never updated
@@ -204,6 +206,6 @@ class ApplicationWebMove extends ApplicationServerMove
 
     public static function steps(): array
     {
-        return [PrepareWebMove::class, Quiesce::class, BackupOldDatabase::class, RestoreNewDatabase::class, SetUpNewSignIn::class, AwaitVolume::class, SwitchServer::class, Verify::class, RunSettingsJob::class, RefreshDns::class];
+        return [PrepareWebMove::class, Quiesce::class, BackupOldDatabase::class, RestoreNewDatabase::class, SetUpNewSignIn::class, AwaitVolume::class, SwitchServer::class, Verify::class, RunSettingsJob::class, RefreshDns::class, UpdatePlanServers::class];
     }
 }

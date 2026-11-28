@@ -480,8 +480,29 @@ class Applications extends Controller
             // What is being done to the app now, so that the page can say so and look again
             'running' => $this->runningMoves($app),
             'awaiting' => $this->awaiting($app),
+            // The apps that run in its release go down with it, so they are listed for the move to be agreed to
+            'children' => $this->releaseChildren($app),
             'breadcrumbs' => OrgAppBreadcrumbs::for($organization, $app),
         ]);
+    }
+
+    /**
+     * The apps that run in the app's release (the apps shared from a shared app, an addon), which a web move
+     * stops along with it.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function releaseChildren(AppInstance $app): array
+    {
+        return $app->children()->notDeactivated()->with(['organization', 'primary_domain.domain'])->get()
+            ->map(fn (AppInstance $child) => [
+                'id' => $child->id,
+                'label' => $child->label,
+                'organization' => $child->organization?->name,
+                'domain' => $child->domain(),
+                // A domain that is not managed here has to be pointed at the new server by hand
+                'managed' => $child->primary_domain?->domain?->type === 'managed',
+            ])->values()->all();
     }
 
     /**
@@ -594,6 +615,8 @@ class Applications extends Controller
             // What the chart is to be given for the app's volume, chosen now so that the move does not stop to ask
             'storage' => 'required|array',
             ...StorageHandover::rulesFor($app, 'storage.'),
+            // The apps that run in its release are stopped with it, which is agreed to
+            'acknowledge' => $app->children()->notDeactivated()->exists() ? 'accepted' : 'nullable|boolean',
         ]);
 
         abort_unless($app->organization_id === $organization->id, 404);
@@ -612,7 +635,11 @@ class Applications extends Controller
             return redirect($this->backTo($request, $organization, $app))->with('error', __('admin.organizations.apps.denied.web_move_running'));
         }
 
-        return redirect($this->backTo($request, $organization, $app))->with('success', __('admin.organizations.apps.moving_web', ['app' => $app->label, 'server' => $server->name]));
+        $children = $app->children()->notDeactivated()->count();
+
+        return redirect($this->backTo($request, $organization, $app))->with('success', $children
+            ? __('admin.organizations.apps.moving_web_children', ['app' => $app->label, 'server' => $server->name, 'count' => $children])
+            : __('admin.organizations.apps.moving_web', ['app' => $app->label, 'server' => $server->name]));
     }
 
     public function remove_old_release(Request $request, Organization $organization, AppInstance $app)

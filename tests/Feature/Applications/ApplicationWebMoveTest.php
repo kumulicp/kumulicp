@@ -5,7 +5,9 @@ use App\Actions\Apps\ApplicationWebCleanup;
 use App\Actions\Apps\ApplicationWebMove;
 use App\Actions\Apps\WebMove\AwaitVolume;
 use App\Actions\Apps\WebMove\RunSettingsJob;
+use App\Actions\Apps\WebMove\UpdatePlanServers;
 use App\Actions\Apps\WebMove\Verify;
+use App\Actions\Prerequisites;
 use App\Actions\Steps\AwaitConfirmation;
 use App\AppInstance;
 use App\AppPlan;
@@ -309,6 +311,85 @@ it('records no children for an app that has none', function () {
     expect($task->status)->toBe(TaskStatus::COMPLETE)
         ->and($task->getValue('child_ids'))->toBeNull()
         ->and($task->getValue('child_dns_manual'))->toBeNull();
+});
+
+it('keeps the apps being added to the app waiting while it is moved, and not once it is done', function () {
+    [$instance] = appOnWebServer();
+
+    $task = startWebMove($instance, webServer('new-cluster', '10.0.0.2'));
+    $waiting = new Prerequisites;
+    $waiting->check('application_required', ['app_id' => $instance->id]);
+
+    expect($waiting->passed)->toBeFalse();
+
+    AwaitVolume::confirm(advanceWebMove($task));
+    advanceWebMove($task);
+    $done = new Prerequisites;
+    $done->check('application_required', ['app_id' => $instance->id]);
+
+    expect($task->fresh()->status)->toBe(TaskStatus::COMPLETE)
+        ->and($done->passed)->toBeTrue();
+});
+
+/**
+ * A shared app's move that went from "old-cluster" to "new-cluster", as the task of it says, with the plan
+ * pointed at $plan_server.
+ *
+ * @return array{AppInstance, Task, OrgServer, OrgServer}
+ */
+function sharedAppMoved(?Closure $plan_server = null, bool $shared = true): array
+{
+    [$instance, $old] = appOnWebServer();
+
+    if ($shared) {
+        $instance->organization_id = Organization::factory()->create(['type' => 'shared'])->id;
+        $instance->save();
+    }
+
+    $new = OrgServer::forceCreate(['organization_id' => $instance->organization_id, 'server_id' => webServer('new-cluster', '10.0.0.2')->id]);
+    $plan = $instance->plan;
+    $plan->web_server_id = $plan_server ? $plan_server($old) : $old->server_id;
+    $plan->save();
+
+    $task = Task::forceCreate([
+        'organization_id' => $instance->organization_id,
+        'app_instance_id' => $instance->id,
+        'action_slug' => 'application_web_move',
+        'action_group' => 'system',
+        'description' => 'Moving',
+        'status' => TaskStatus::IN_PROGRESS,
+        'custom_values' => ['previous_org_server_id' => $old->id, 'target_org_server_id' => $new->id],
+    ]);
+
+    return [$instance->fresh(), $task, $old, $new];
+}
+
+it('tells a shared app\'s plan where the app is now', function () {
+    [$instance, $task, , $new] = sharedAppMoved();
+
+    $result = (new UpdatePlanServers)->run($task);
+
+    expect($result->outcome)->toBe(ActionResult::DONE)
+        ->and($instance->plan->fresh()->web_server_id)->toBe($new->server_id)
+        ->and($result->values)->toBe(['plan_servers_updated' => ['web']]);
+});
+
+it('leaves a shared app\'s plan alone when it has been pointed somewhere else since', function () {
+    [$instance, $task] = sharedAppMoved(fn () => webServer('chosen-cluster', '10.0.0.9')->id);
+    $chosen = $instance->plan->fresh()->web_server_id;
+
+    $result = (new UpdatePlanServers)->run($task);
+
+    expect($instance->plan->fresh()->web_server_id)->toBe($chosen)
+        ->and($result->values)->toBe(['plan_servers_updated' => []]);
+});
+
+it('leaves the plan of an app that is not a shared app alone', function () {
+    [$instance, $task, $old] = sharedAppMoved(shared: false);
+
+    (new UpdatePlanServers)->run($task);
+
+    expect($instance->plan->fresh()->web_server_id)->toBe($old->server_id);
 });
 
 it('lists everything in the way of the move at once', function () {
